@@ -251,6 +251,21 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private bool useTransformer;
+		public bool UseTransformer
+		{
+			get { return useTransformer; }
+			set
+			{
+				useTransformer = value;
+				OnPropertyChanged(() => UseTransformer);
+				Requery();
+			}
+		}
+
+		public Observable<string> SelectedTransformer { get; set; }
+		public List<string> Transformers { get; set; } 
+
 	    public bool SkipTransformResults
 	    {
 	        get { return skipTransformResults; }
@@ -377,28 +392,41 @@ namespace Raven.Studio.Models
 
 	    private void BeginUpdateFieldsAndSortOptions(string collection)
 	    {
-	        DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
-	                                    new IndexQuery() {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
-	            .ContinueOnSuccessInTheUIThread(result =>
-	                                                {
-                                                        if (result.Results.Count > 0)
-                                                        {
-                                                            var fields = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true)
-                                                                .ToList();
+		    DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
+		                                new IndexQuery {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
+		                    .ContinueOnSuccessInTheUIThread(result =>
+		                    {
+			                    if (result.Results.Count > 0)
+			                    {
+				                    var fields =
+					                    DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties: true,
+					                                                              includeMetadata: false,
+					                                                              excludeParentPropertyNames: true)
+					                                   .ToList();
 
-                                                            SetSortByOptions(fields);
-                                                            QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
-                                                            RestoreHistory();
-                                                        }
-	                                                });
+				                    SetSortByOptions(fields);
+				                    QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
+				                    RestoreHistory();
+			                    }
+		                    });
 	    }
 
 	    public QueryModel()
 		{
 			ModelUrl = "/query";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+
+		    ApplicationModel.DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
+		    {
+				SelectedTransformer = new Observable<string>{Value = "None"};
+			    SelectedTransformer.PropertyChanged += (sender, args) => Requery();
+				Transformers = new List<string>{"None"};
+			    Transformers.AddRange(transformers.Select(definition => definition.Name));
+			    
+			    OnPropertyChanged(() => Transformers);
+		    });
             
-			queryDocument = new EditorDocument()
+			queryDocument = new EditorDocument
             {
                 Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
             };
