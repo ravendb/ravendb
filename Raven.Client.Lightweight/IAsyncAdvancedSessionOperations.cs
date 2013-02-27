@@ -5,8 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 
 namespace Raven.Client
 {
@@ -19,7 +22,6 @@ namespace Raven.Client
 		/// Load documents with the specified key prefix
 		/// </summary>
 		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25);
-
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax
@@ -54,5 +56,42 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
 		void Store(object entity, string id);
+
+
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query);
+
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query);
+
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+
+
+		/// <summary>
+		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag = null, string startsWith = null, string matches = null,
+												int start = 0, int pageSize = int.MaxValue);
 	}
 }

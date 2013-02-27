@@ -8,6 +8,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -354,5 +355,43 @@ namespace Raven.Client.Embedded
 		{
 			return new CompletedTask<JsonDocumentMetadata>(databaseCommands.Head(key));
 		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		{
+			QueryHeaderInformation info;
+			var result = databaseCommands.StreamQuery(index, query, out info);
+			queryHeaderInfo.Value = info;
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(result));
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                            int pageSize = 2147483647)
+		{
+			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(streamDocs));
+	
+		}
+	}
+
+	internal class AsyncEnumeratorBridge : IAsyncEnumerator<RavenJObject>
+	{
+		private readonly IEnumerator<RavenJObject> enumerator;
+
+		public AsyncEnumeratorBridge(IEnumerator<RavenJObject> enumerator)
+		{
+			this.enumerator = enumerator;
+		}
+
+		public void Dispose()
+		{
+			enumerator.Dispose();
+		}
+
+		public Task<bool> MoveNextAsync()
+		{
+			return new CompletedTask<bool>(enumerator.MoveNext());
+		}
+
+		public RavenJObject Current { get { return enumerator.Current; } }
 	}
 }

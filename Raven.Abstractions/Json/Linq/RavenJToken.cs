@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
@@ -774,5 +775,34 @@ namespace Raven.Json.Linq
 			return new RavenJValue(value);
 		}
 		#endregion
+
+		public static async Task<RavenJToken> ReadFromAsync(JsonTextReaderAsync reader)
+		{
+			if (reader.TokenType == JsonToken.None)
+			{
+				if (!await reader.ReadAsync())
+					throw new Exception("Error reading RavenJToken from JsonReader.");
+			}
+
+			switch (reader.TokenType)
+			{
+				case JsonToken.StartObject:
+					return await RavenJObject.LoadAsync(reader);
+				case JsonToken.StartArray:
+					return await RavenJArray.LoadAsync(reader);
+				case JsonToken.String:
+				case JsonToken.Integer:
+				case JsonToken.Float:
+				case JsonToken.Date:
+				case JsonToken.Boolean:
+				case JsonToken.Bytes:
+				case JsonToken.Null:
+				case JsonToken.Undefined:
+					return new RavenJValue(reader.Value);
+			}
+
+			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+
+		}
 	}
 }
