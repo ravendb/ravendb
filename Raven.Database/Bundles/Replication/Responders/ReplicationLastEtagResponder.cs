@@ -62,18 +62,19 @@ namespace Raven.Bundles.Replication.Responders
 
 				SourceReplicationInformation sourceReplicationInformation;
 
+				Guid serverInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote serve
+
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						ServerInstanceId = Database.TransactionalStorage.Id,
 						Source = src
 					};
 				}
 				else
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 				}
 
 				var currentEtag = context.Request.QueryString["currentEtag"];
@@ -101,12 +102,15 @@ namespace Raven.Bundles.Replication.Responders
 				{
 					attachmentEtag = val;
 				}
-
+				Guid serverInstanceId;
+				if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
+					serverInstanceId = Database.TransactionalStorage.Id;
+				
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						ServerInstanceId = Database.TransactionalStorage.Id,
+						ServerInstanceId = serverInstanceId,
 						LastAttachmentEtag = attachmentEtag ?? Guid.Empty,
 						LastDocumentEtag = docEtag??Guid.Empty,
 						Source = src
@@ -115,7 +119,7 @@ namespace Raven.Bundles.Replication.Responders
 				else
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 					sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
 					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
 				}
