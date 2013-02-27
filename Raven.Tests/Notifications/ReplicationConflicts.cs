@@ -274,22 +274,23 @@ namespace Raven.Tests.Notifications
 				ReplicationConflictNotification replicationConflictNotification;
 				Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
 
-				var conflictedDocumentDeleted = false;
+				var conflictedDocumentsDeleted = false;
 
 				for (int i = 0; i < RetriesCount; i++)
 				{
-					var document = store2.DatabaseCommands.Get(replicationConflictNotification.Conflicts[0]);
+					var document1 = store2.DatabaseCommands.Get(replicationConflictNotification.Conflicts[0]);
+					var document2 = store2.DatabaseCommands.Get(replicationConflictNotification.Conflicts[1]);
 
-					if (document == null)
+					if (document1 == null && document2 == null)
 					{
-						conflictedDocumentDeleted = true;
+						conflictedDocumentsDeleted = true;
 						break;
 					}
 
 					Thread.Sleep(200);
 				}
 
-				Assert.True(conflictedDocumentDeleted);
+				Assert.True(conflictedDocumentsDeleted);
 
 				var jsonDocument = store2.DatabaseCommands.Get("users/1");
 
