@@ -228,7 +228,7 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 				try
 				{
-					var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl();
+					var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
 					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
@@ -504,7 +504,8 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" +
+				          UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
@@ -560,7 +561,8 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl()
+				          + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
 
