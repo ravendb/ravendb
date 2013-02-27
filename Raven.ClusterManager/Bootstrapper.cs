@@ -91,10 +91,12 @@ namespace Raven.ClusterManager
 				var fileName = Path.GetFileName(path);
 
 				var assembly = typeof (Bootstrapper).Assembly;
-				if (assembly.GetManifestResourceInfo(resourcePath + "." + fileName) != null)
-					return new EmbeddedFileResponse(assembly, resourcePath, fileName);
-
-				return null;
+				if (assembly.GetManifestResourceInfo(resourcePath + "." + fileName) == null)
+				{
+					fileName = "index.html";
+				}
+				
+				return new EmbeddedFileResponse(assembly, resourcePath, fileName);
 			});
 		}
 	}
