@@ -111,6 +111,8 @@ namespace Raven.Studio.Models
 					if (indexStats == null)
 						return;
 					Priority = indexStats.Priority;
+					if(Priority == 0)
+						Priority = Abstractions.Data.IndexingPriority.Normal;
 					if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Normal))
 						IndexingPriority.Value = "Normal";
 					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Idle))
