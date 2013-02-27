@@ -109,8 +109,8 @@
     <Content Include="Assets\styles\vendor\bootstrap\bootstrap.min.css" />
     <Content Include="Assets\images\glyphicons-halflings-white.png" />
     <Content Include="Assets\images\glyphicons-halflings.png" />
-    <Content Include="Scripts\bootstrap.js" />
-    <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.js" />
+    <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.min.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
