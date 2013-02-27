@@ -631,15 +631,42 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (memberExpression.Type == typeof (bool))
 			{
-				var memberInfo = GetMember(memberExpression);
-
-				luceneQuery.WhereEquals(new WhereParams
+				ExpressionInfo memberInfo;
+				if (memberExpression.Member.Name == "HasValue" &&
+				    Nullable.GetUnderlyingType(memberExpression.Member.DeclaringType) != null)
 				{
-					FieldName = memberInfo.Path,
-					Value = boolValue,
-					IsAnalyzed = true,
-					AllowWildcards = false
-				});
+					memberInfo = GetMember(memberExpression.Expression);
+					if (boolValue)
+					{
+						luceneQuery.OpenSubclause();
+						luceneQuery.Where("*:*");
+						luceneQuery.AndAlso();
+						luceneQuery.NegateNext();
+					}
+					luceneQuery.WhereEquals(new WhereParams
+					{
+						FieldName = memberInfo.Path,
+						Value = null,
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
+					if (boolValue)
+					{
+						luceneQuery.CloseSubclause();
+					}
+				}
+				else
+				{
+					memberInfo = GetMember(memberExpression);
+
+					luceneQuery.WhereEquals(new WhereParams
+					{
+						FieldName = memberInfo.Path,
+						Value = boolValue,
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
+				}
 			}
 			else if (memberExpression.Type == typeof(string))
 			{
