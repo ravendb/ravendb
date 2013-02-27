@@ -37,6 +37,7 @@ namespace Raven.VisualHost
 			for (int i = 0; i < NumberOfServers.Value; i++)
 			{
 				var port = 8079 - i;
+				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 				var ravenDbServer = new RavenDbServer(new RavenConfiguration
 				{
 					Port = port,
