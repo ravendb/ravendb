@@ -96,12 +96,11 @@ namespace Raven.Database.Server.Connections
 		{
 			var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
 
-			if (watchAllReplicationConflicts > 0)
+			if (watchAllReplicationConflicts <= 0)
 			{
-				Enqueue(value);
 				return;
 			}
-
+			
 			Enqueue(value);
 		}
 
