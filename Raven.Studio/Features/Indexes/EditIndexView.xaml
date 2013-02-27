@@ -12,7 +12,7 @@
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
              xmlns:controls="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance Models:IndexDefinitionModel, IsDesignTimeCreatable=False}">
+             d:DataContext="{d:DesignInstance Models:IndexDefinitionModel}">
     <UserControl.Resources>
         <DataTemplate x:Key="IndexFieldTemplate">
             <Border BorderBrush="#FFE9E9E9"
