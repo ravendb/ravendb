@@ -72,7 +72,7 @@ namespace Raven.Database.Indexing
 			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
 			var start = SystemTime.UtcNow;
-			var deleted = new HashSet<ReduceKeyAndBucket>();
+			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
 				sourceCount++;
@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			var changed = allState.SelectMany(x => x.Item1).Concat(deleted)
+			var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
 			        .Distinct()
 			        .ToList();
 
@@ -265,7 +265,7 @@ namespace Raven.Database.Indexing
 		{
 			context.TransactionalStorage.Batch(actions =>
 			{
-				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
+				var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
 				foreach (var key in keys)
 				{
 					actions.MapReduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
@@ -274,7 +274,7 @@ namespace Raven.Database.Indexing
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, reduceKeyAndBuckets);
 				foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
 				{
-					actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBucket);
+					actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBucket.Key);
 				}
 			});
 			Write((writer, analyzer, stats) =>

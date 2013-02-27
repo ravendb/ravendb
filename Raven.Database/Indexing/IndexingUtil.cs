@@ -12,9 +12,9 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingUtil
 	{
-		public static int AbsStableInvariantIgnoreCaseStringHash(string s)
+		public static int StableInvariantIgnoreCaseStringHash(string s)
 		{
-			return Math.Abs(s.Aggregate(11, (current, ch) => (char.ToUpperInvariant(ch).GetHashCode() * 397) ^ current));
+			return s.Aggregate(11, (current, ch) => (char.ToUpperInvariant(ch).GetHashCode() * 397) ^ current);
 		}
 
 		public static int MapBucket(string docId)
@@ -22,15 +22,16 @@ namespace Raven.Database.Indexing
 			int hash;
 			if (char.IsDigit(docId[docId.Length - 1]))// ends with a number, probably users/123, so we will use that
 			{
-				hash = docId.Where(char.IsDigit).Aggregate(0, (current, ch) => current*10 + (ch - '0'));
+				hash = docId.Where(char.IsDigit).Aggregate(0, (current, ch) => current*10 + (ch - '0'))
+					/ 1024; // will force concentration of more items under the normal case to the same bucket
 			}
 			else
 			{
 				if (docId.Length > 3) // try to achieve a more common prefix
 					docId = docId.Substring(0, docId.Length - 2);
-				hash = AbsStableInvariantIgnoreCaseStringHash(docId);
+				hash = StableInvariantIgnoreCaseStringHash(docId);
 			}
-			return hash % (1024 * 1024);
+			return Math.Abs(hash) % (1024 * 1024);
 		}
 	}
 }

@@ -12,7 +12,8 @@ namespace Raven.Client.WinRT.MissingFromWinRT
 		public static void Sleep(int ms)
 		{
 #if NETFX_CORE
-			new ManualResetEvent(false).WaitOne(ms);
+			using(var e = new ManualResetEvent(false))
+				e.WaitOne(ms);
 #else
 			Thread.Sleep(ms);
 #endif
