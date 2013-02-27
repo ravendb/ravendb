@@ -210,7 +210,7 @@ namespace Raven.Client.Connection.Async
 		{
 			var requestUri = operationUrl + "/indexes/" + name;
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 			webRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
