@@ -830,6 +830,13 @@ namespace Raven.Client.Document
 
 			base.AfterSessionCreated(session);
 		}
+
+
+		public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
+		{
+			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);
+			return changes == null ? new CompletedTask() : changes.ConnectionTask;
+		}
 #endif
 
 	}

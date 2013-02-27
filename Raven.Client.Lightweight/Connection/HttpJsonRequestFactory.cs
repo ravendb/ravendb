@@ -121,7 +121,14 @@ namespace Raven.Client.Connection
 		/// The number of cache evictions forced by
 		/// tracking changes if aggressive cache was enabled
 		/// </summary>
-		public int NumberOfCacheResets { get; private set; }
+		public int NumberOfCacheResets
+		{
+			get { return numberOfCacheResets; }
+			private set
+			{
+				numberOfCacheResets = value;
+			}
+		}
 
 		/// <summary>
 		/// The number of requests that we got 304 for 
@@ -187,6 +194,7 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
+		private volatile int numberOfCacheResets;
 
 		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders = null)
 		{

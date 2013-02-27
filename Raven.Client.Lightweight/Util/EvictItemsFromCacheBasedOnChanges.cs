@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 
@@ -16,15 +17,24 @@ namespace Raven.Client.Util
 		private readonly Action<string> evictCacheOldItems;
 		private readonly IDisposable documentsSubscription;
 		private readonly IDisposable indexesSubscription;
+		private readonly Task connectionTask;
 
 		public EvictItemsFromCacheBasedOnChanges(string databaseName, IDatabaseChanges changes, Action<string> evictCacheOldItems)
 		{
 			this.databaseName = databaseName;
 			this.changes = changes;
 			this.evictCacheOldItems = evictCacheOldItems;
+			var docSub = changes.ForAllDocuments();
+			documentsSubscription = docSub.Subscribe(this);
+			var indexSub = changes.ForAllIndexes();
+			indexesSubscription = indexSub.Subscribe(this);
 
-			documentsSubscription = changes.ForAllDocuments().Subscribe(this);
-			indexesSubscription = changes.ForAllIndexes().Subscribe(this);
+			connectionTask = TaskEx.WhenAll(docSub.Task, indexSub.Task);
+		}
+
+		public Task ConnectionTask
+		{
+			get { return connectionTask; }
 		}
 
 		public void OnNext(DocumentChangeNotification change)
