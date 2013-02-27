@@ -72,7 +72,7 @@ namespace Raven.Studio.Models
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
-			UpdatePriprity(indexDefinition.Name);
+			UpdatePriority(indexDefinition.Name);
 			index = indexDefinition;
 
 			if (index.Maps.Count == 0)
@@ -101,7 +101,7 @@ namespace Raven.Studio.Models
 			OnEverythingChanged();
 		}
 
-		private void UpdatePriprity(string name)
+		private void UpdatePriority(string name)
 		{
 			DatabaseCommands
 				.GetStatisticsAsync()
@@ -111,6 +111,8 @@ namespace Raven.Studio.Models
 					if (indexStats == null)
 						return;
 					Priority = indexStats.Priority;
+					if(Priority == 0)
+						Priority = Abstractions.Data.IndexingPriority.Normal;
 					if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Normal))
 						IndexingPriority.Value = "Normal";
 					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Idle))
@@ -551,11 +553,10 @@ namespace Raven.Studio.Models
 						priority = Abstractions.Data.IndexingPriority.Abandoned | Abstractions.Data.IndexingPriority.Forced;
 						break;
 				}
-
-				ApplicationModel.Current.Server.Value.DocumentStore
-				                .AsyncDatabaseCommands
-				                .CreateRequest(
-					                "/indexes/set-priority/" + indexDefinitionModel.Name + "?priority=" + priority.ToString(), "POST")
+				var priorityString = priority.ToString().Replace(" ", "");
+				ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+								.AsyncDatabaseCommands
+								.CreateRequest(string.Format("/indexes/set-priority/{0}?priority={1}", Uri.EscapeUriString(indexDefinitionModel.Name), priorityString), "POST")
 				                .ExecuteRequestAsync();
 			}
 
@@ -661,8 +662,6 @@ namespace Raven.Studio.Models
 				}
 			}
 		}
-
-
 
 		public class FieldProperties : NotifyPropertyChangedBase
 		{

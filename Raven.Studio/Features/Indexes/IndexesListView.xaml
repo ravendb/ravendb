@@ -58,7 +58,7 @@
 										   VerticalAlignment="Center"
 										   Margin="2"
 										   Grid.Column="0" />
-									<HyperlinkButton Content="{Binding Name}"
+									<HyperlinkButton Content="{Binding ModifiedName}"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding Name, StringFormat=/query/\{0\}}"
 													 VerticalAlignment="Center"
@@ -174,7 +174,7 @@
 							<Delay:SplitButton.ButtonMenuItemsSource>
 								<ContextMenu:MenuItem Header="Delete All Idle Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Idle"/>
 								<ContextMenu:MenuItem Header="Delete All Disabled Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Disabled"/>
-								<ContextMenu:MenuItem Header="Delete All Abandonded Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Abandonded"/>
+								<ContextMenu:MenuItem Header="Delete All Abandoned Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Abandoned"/>
 								<ContextMenu:Separator/>
 								<ContextMenu:MenuItem Header="Delete All Indexes" Command="{Binding DeleteIndexes}" CommandParameter="All"/>
 							</Delay:SplitButton.ButtonMenuItemsSource>

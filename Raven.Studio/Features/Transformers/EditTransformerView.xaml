@@ -1,0 +1,157 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Transformers.EditTransformerView"
+			 x:Name="this"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:toolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
+			 xmlns:Models="clr-namespace:Raven.Studio.Models"
+             xmlns:controls="clr-namespace:Raven.Studio.Controls"
+             xmlns:ContextMenu="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+             xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+             mc:Ignorable="d"
+			 d:DataContext="{d:DesignInstance Models:TransformerDefinitionModel, IsDesignTimeCreatable=False}"
+			 d:DesignHeight="300" d:DesignWidth="400">
+
+	<Grid x:Name="LayoutRoot">
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="{StaticResource Margin_ContentPage}">
+			<i:Interaction.Triggers>
+				<Behaviors:StudioKeyTrigger Key="N"
+                                        Modifiers="Control">
+					<i:InvokeCommandAction Command="{StaticResource NavigateToCommand}"
+                                       CommandParameter="/transformers/new?mode=new" />
+				</Behaviors:StudioKeyTrigger>
+
+				<Behaviors:StudioKeyTrigger Key="S"
+                                        Modifiers="Control">
+					<i:InvokeCommandAction Command="{Binding SaveTransformer}" />
+				</Behaviors:StudioKeyTrigger>
+			</i:Interaction.Triggers>
+
+			<toolkit:HeaderedContentControl.Header>
+				<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+					<Image Style="{StaticResource Style_Image_TransformerPageHeader}"/>
+					<HyperlinkButton Content="Indexes"
+                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="/Indexes" />
+					<controls:NavTriangle/>
+					<HyperlinkButton Content="Transformers"
+                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="/Transformers" />
+					<controls:NavTriangle/>
+
+					<TextBlock Text="{Binding Header}"
+                           Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                           VerticalAlignment="Center" />
+				</StackPanel>
+			</toolkit:HeaderedContentControl.Header>
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+				<Border Background="{StaticResource Brush_ToolbarBackground}">
+					<StackPanel  VerticalAlignment="Center" Orientation="Horizontal" Margin="0,5">
+						<Button x:Name="Save"
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                HorizontalAlignment="Left"
+                                Margin="4 0 0 0"
+                                ToolTipService.ToolTip="Save Transformer"
+                                Command="{Binding SaveTransformer}">
+							<Image Source="{StaticResource Image_Save_Small}"
+                                   Stretch="None" />
+						</Button>
+						<Button x:Name="Delete"
+                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                            HorizontalAlignment="Left"
+                            Margin="4 0 0 0"
+                            ToolTipService.ToolTip="Delete this transformer"
+                            Command="{Binding DeleteTransformer}"
+                            IsEnabled="{Binding IsNewTransformer, Converter={StaticResource NegatingBool}}">
+							<Image Source="{StaticResource Image_Delete_Tiny}"
+                               Stretch="None" />
+						</Button>
+					</StackPanel>
+				</Border>
+
+				<Grid Grid.Row="1">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="100" />
+						<ColumnDefinition />
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="*" />
+					</Grid.RowDefinitions>
+
+					<TextBlock Text="Name"
+                               Margin="5,10"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+					<TextBox Grid.Column="1"
+                             Text="{Binding Transformer.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,10,24,10"
+                             VerticalAlignment="Center" />
+
+					<StackPanel Grid.Row="1" 
+								Margin="5,10,5,0" 
+								Orientation="Horizontal">
+						<TextBlock Text="Transform"
+									Margin="0,0,10,0"
+									Style="{StaticResource Style_TextBlock_PagePartHeader}"
+									VerticalAlignment="Top" />
+
+						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+							<i:Interaction.Behaviors>
+								<Behaviors:ShowPopupWhilstMouseOver>
+									<Behaviors:ShowPopupWhilstMouseOver.Popup>
+										<Popup>
+											<ContentControl Style="{StaticResource Style_InfoToolTip}">
+												<RichTextBlock MaxWidth="370" Margin="5">
+													<Paragraph>The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax</Paragraph>
+													<Paragraph>
+														<LineBreak/> Example:
+														<Span FontFamily="Consolas">
+															<LineBreak/>
+															<Span Foreground="Blue">from</Span> order
+															<Span Foreground="Blue">in</Span> orders
+															<LineBreak/>
+															<Span Foreground="Blue">let</Span> region = Database.Load(result.RegionId)
+															<LineBreak/>
+															<Span Foreground="Blue">select new</Span> {
+															<LineBreak/> result.Date,
+															<LineBreak/> result.Amount,
+															<LineBreak/> Region = region.Name,
+															<LineBreak/> Manager = region.Manager
+															<LineBreak/> }
+														</Span>
+														<LineBreak/>
+													</Paragraph>
+												</RichTextBlock>
+											</ContentControl>
+										</Popup>
+									</Behaviors:ShowPopupWhilstMouseOver.Popup>
+								</Behaviors:ShowPopupWhilstMouseOver>
+							</i:Interaction.Behaviors>
+						</Image>
+					</StackPanel>
+
+					<Grid Grid.Row="1"
+							  Grid.Column="1"
+							  Margin="0,10,24,10">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+						</Grid.ColumnDefinitions>
+						<Editors:LinqEditor Text="{Binding Transformer.TransformResults, Mode=TwoWay}"/>
+					</Grid>
+
+				</Grid>
+			</Grid>
+		</toolkit:HeaderedContentControl>
+	</Grid>
+</UserControl>

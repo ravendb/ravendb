@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
@@ -17,6 +18,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Esent.Debug;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -241,7 +243,9 @@ namespace Raven.Storage.Esent.StorageActions
             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
             Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-                throw new IndexDoesNotExistsException("There is no index named: " + index);
+            {
+	            throw new IndexDoesNotExistsException("There is no index named: " + index);
+            }
 
             using (var update = new Update(session, IndexesStats, JET_prep.Replace))
             {
