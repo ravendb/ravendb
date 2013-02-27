@@ -16,25 +16,27 @@ namespace Raven.Tests.Notifications
 {
 	public class ReplicationConflicts_Embedded : ReplicationBase
 	{
-		[Fact(Skip = "Sometimes fails when running all test because of getting requests from already disposed store (?)")]
+		[Fact]
 		public void CanGetNotificationsAboutConflictedDocuments()
 		{
-			using (var documentStore = CreateStore())
+			PortRangeStart = 8079;
+
+			using (var store1 = CreateEmbeddableStore())
 			{
-				using (var embeddableStore = CreateEmbeddableStore())
+				using (var store2 = CreateEmbeddableStore())
 				{
-					documentStore.DatabaseCommands.Put("users/1", null, new RavenJObject
+					store1.DatabaseCommands.Put("users/1", null, new RavenJObject
 					{
 						{"Name", "Ayende"}
 					}, new RavenJObject());
 
-					embeddableStore.DatabaseCommands.Put("users/1", null, new RavenJObject
+					store2.DatabaseCommands.Put("users/1", null, new RavenJObject
 					{
 						{"Name", "Rahien"}
 					}, new RavenJObject());
 
 					var list = new BlockingCollection<ReplicationConflictNotification>();
-					var taskObservable = embeddableStore.Changes();
+					var taskObservable = store2.Changes();
 					taskObservable.Task.Wait();
 					var observableWithTask = taskObservable.ForAllReplicationConflicts();
 					observableWithTask.Task.Wait();
@@ -54,27 +56,29 @@ namespace Raven.Tests.Notifications
 			}
 		}
 
-		[Fact(Skip = "Sometimes fails when running all test because of getting requests from already disposed store (?)")]
+		[Fact]
 		public void CanGetNotificationsConflictedDocumentsCausedByDelete()
 		{
-			using (var documentStore = CreateStore())
+			PortRangeStart = 8069;
+
+			using (var store1 = CreateEmbeddableStore())
 			{
-				using (var embeddableStore = CreateEmbeddableStore())
+				using (var store2 = CreateEmbeddableStore())
 				{
-					documentStore.DatabaseCommands.Put("users/1", null, new RavenJObject
+					store1.DatabaseCommands.Put("users/1", null, new RavenJObject
 					{
 						{"Name", "Ayende"}
 					}, new RavenJObject());
 
-					embeddableStore.DatabaseCommands.Put("users/1", null, new RavenJObject
+					store2.DatabaseCommands.Put("users/1", null, new RavenJObject
 					{
 						{"Name", "Rahien"}
 					}, new RavenJObject());
 
-					documentStore.DatabaseCommands.Delete("users/1", null);
+					store1.DatabaseCommands.Delete("users/1", null);
 
 					var list = new BlockingCollection<ReplicationConflictNotification>();
-					var taskObservable = embeddableStore.Changes();
+					var taskObservable = store2.Changes();
 					taskObservable.Task.Wait();
 					var observableWithTask = taskObservable.ForAllReplicationConflicts();
 					observableWithTask.Task.Wait();
@@ -94,9 +98,11 @@ namespace Raven.Tests.Notifications
 			}
 		}
 
-		[Fact(Skip = "Sometimes fails when running all test because of getting requests from already disposed store (?)")]
+		[Fact]
 		public void ConflictShouldBeResolvedByRegisiteredConflictListenerWhenNotificationArrives()
 		{
+			PortRangeStart = 8059;
+
 			using (var store1 = CreateEmbeddableStore())
 			using (var store2 = CreateEmbeddableStore())
 			{

@@ -29,7 +29,7 @@ namespace Raven.Tests.Bundles.Replication
 		private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 
-		private const int PortRangeStart = 8079;
+		protected int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
 		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
