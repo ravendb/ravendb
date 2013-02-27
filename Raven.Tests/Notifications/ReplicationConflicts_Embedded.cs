@@ -19,90 +19,80 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void CanGetNotificationsAboutConflictedDocuments()
 		{
-			PortRangeStart = 8079;
-
 			using (var store1 = CreateEmbeddableStore())
+			using (var store2 = CreateEmbeddableStore())
 			{
-				using (var store2 = CreateEmbeddableStore())
+				store1.DatabaseCommands.Put("users/1", null, new RavenJObject
 				{
-					store1.DatabaseCommands.Put("users/1", null, new RavenJObject
-					{
-						{"Name", "Ayende"}
-					}, new RavenJObject());
+					{"Name", "Ayende"}
+				}, new RavenJObject());
 
-					store2.DatabaseCommands.Put("users/1", null, new RavenJObject
-					{
-						{"Name", "Rahien"}
-					}, new RavenJObject());
+				store2.DatabaseCommands.Put("users/1", null, new RavenJObject
+				{
+					{"Name", "Rahien"}
+				}, new RavenJObject());
 
-					var list = new BlockingCollection<ReplicationConflictNotification>();
-					var taskObservable = store2.Changes();
-					taskObservable.Task.Wait();
-					var observableWithTask = taskObservable.ForAllReplicationConflicts();
-					observableWithTask.Task.Wait();
-					observableWithTask
-						.Subscribe(list.Add);
+				var list = new BlockingCollection<ReplicationConflictNotification>();
+				var taskObservable = store2.Changes();
+				taskObservable.Task.Wait();
+				var observableWithTask = taskObservable.ForAllReplicationConflicts();
+				observableWithTask.Task.Wait();
+				observableWithTask
+					.Subscribe(list.Add);
 
-					TellFirstInstanceToReplicateToSecondInstance();
+				TellFirstInstanceToReplicateToSecondInstance();
 
-					ReplicationConflictNotification replicationConflictNotification;
-					Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
+				ReplicationConflictNotification replicationConflictNotification;
+				Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
 
-					Assert.Equal("users/1", replicationConflictNotification.Id);
-					Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
-					Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
-					Assert.Equal(ReplicationOperationTypes.Put, replicationConflictNotification.OperationType);
-				}
+				Assert.Equal("users/1", replicationConflictNotification.Id);
+				Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
+				Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
+				Assert.Equal(ReplicationOperationTypes.Put, replicationConflictNotification.OperationType);
 			}
 		}
 
 		[Fact]
 		public void CanGetNotificationsConflictedDocumentsCausedByDelete()
 		{
-			PortRangeStart = 8069;
-
 			using (var store1 = CreateEmbeddableStore())
+			using (var store2 = CreateEmbeddableStore())
 			{
-				using (var store2 = CreateEmbeddableStore())
+				store1.DatabaseCommands.Put("users/1", null, new RavenJObject
 				{
-					store1.DatabaseCommands.Put("users/1", null, new RavenJObject
-					{
-						{"Name", "Ayende"}
-					}, new RavenJObject());
+					{"Name", "Ayende"}
+				}, new RavenJObject());
 
-					store2.DatabaseCommands.Put("users/1", null, new RavenJObject
-					{
-						{"Name", "Rahien"}
-					}, new RavenJObject());
+				store2.DatabaseCommands.Put("users/1", null, new RavenJObject
+				{
+					{"Name", "Rahien"}
+				}, new RavenJObject());
 
-					store1.DatabaseCommands.Delete("users/1", null);
+				store1.DatabaseCommands.Delete("users/1", null);
 
-					var list = new BlockingCollection<ReplicationConflictNotification>();
-					var taskObservable = store2.Changes();
-					taskObservable.Task.Wait();
-					var observableWithTask = taskObservable.ForAllReplicationConflicts();
-					observableWithTask.Task.Wait();
-					observableWithTask
-						.Subscribe(list.Add);
+				var list = new BlockingCollection<ReplicationConflictNotification>();
+				var taskObservable = store2.Changes();
+				taskObservable.Task.Wait();
+				var observableWithTask = taskObservable.ForAllReplicationConflicts();
+				observableWithTask.Task.Wait();
+				observableWithTask
+					.Subscribe(list.Add);
 
-					TellFirstInstanceToReplicateToSecondInstance();
+				TellFirstInstanceToReplicateToSecondInstance();
 
-					ReplicationConflictNotification replicationConflictNotification;
-					Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
+				ReplicationConflictNotification replicationConflictNotification;
+				Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
 
-					Assert.Equal("users/1", replicationConflictNotification.Id);
-					Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
-					Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
-					Assert.Equal(ReplicationOperationTypes.Delete, replicationConflictNotification.OperationType);
-				}
+				Assert.Equal("users/1", replicationConflictNotification.Id);
+				Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.DocumentReplicationConflict);
+				Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
+				Assert.Equal(ReplicationOperationTypes.Delete, replicationConflictNotification.OperationType);
 			}
 		}
 
 		[Fact]
 		public void ConflictShouldBeResolvedByRegisiteredConflictListenerWhenNotificationArrives()
 		{
-			PortRangeStart = 8059;
-
 			using (var store1 = CreateEmbeddableStore())
 			using (var store2 = CreateEmbeddableStore())
 			{
