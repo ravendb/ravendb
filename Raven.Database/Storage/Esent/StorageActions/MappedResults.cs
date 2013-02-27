@@ -424,7 +424,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 		}
-		public void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed)
+		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_doc_key");
 			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -448,16 +448,17 @@ namespace Raven.Storage.Esent.StorageActions
 														   Encoding.Unicode);
 				var bucket = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
 
-				removed.Add(new ReduceKeyAndBucket(bucket, reduceKey));
+				var key = new ReduceKeyAndBucket(bucket, reduceKey);
+				removed[key] = removed.GetOrDefault(key) + 1;
 				Api.JetDelete(session, MappedResults);
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-		public void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed)
+		public void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			foreach (var keyAndBucket in removed)
 			{
-				DecrementReduceKeyCounter(view, keyAndBucket.ReduceKey);
+				DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
 			}
 		}
 
@@ -486,7 +487,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			foreach (var reduceKey in deletedReduceKeys)
 			{
-				DecrementReduceKeyCounter(view, reduceKey);
+				DecrementReduceKeyCounter(view, reduceKey, 1);
 			}
 		}
 
@@ -959,14 +960,14 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		private void DecrementReduceKeyCounter(string view, string reduceKey)
+		private void DecrementReduceKeyCounter(string view, string reduceKey, int value)
 		{
 			var removeReducedKeyStatus = false;
 
 			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
 				() =>
 				{
-					var result = Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -1);
+					var result = Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -value);
 					if (result == 1)
 					{
 						Api.JetDelete(session, ReduceKeysCounts);

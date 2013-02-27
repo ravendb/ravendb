@@ -18,8 +18,8 @@ namespace Raven.Database.Storage
 
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		void IncrementReduceKeyCounter(string view, string reduceKey, int val);
-		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
-		void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed);
+		void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed);
+		void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed);
 		void DeleteMappedResultsForView(string view);
 
 		IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take);
