@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Models
+﻿using Raven.Abstractions.Data;
+
+namespace Raven.Studio.Models
 {
 	public class IndexListItem
 	{
@@ -11,5 +13,6 @@
 
 	public class IndexItem : IndexListItem
 	{
+		public IndexStats IndexStats { get; set; }
 	}
 }

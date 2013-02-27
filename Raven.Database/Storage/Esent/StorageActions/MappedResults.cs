@@ -968,7 +968,7 @@ namespace Raven.Storage.Esent.StorageActions
 				() =>
 				{
 					var result = Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], -value);
-					if (result == 1)
+					if (result == value)
 					{
 						Api.JetDelete(session, ReduceKeysCounts);
 						removeReducedKeyStatus = true;

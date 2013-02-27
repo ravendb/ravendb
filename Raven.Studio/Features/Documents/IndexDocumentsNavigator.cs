@@ -5,6 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -53,17 +54,20 @@ namespace Raven.Studio.Features.Documents
                 return
                     DatabaseCommands.QueryAsync(indexName, query, null)
                         .ContinueWith(
-                            t => new DocumentAndNavigationInfo
-                                     {
-                                         Document = t.Result.Results.Count > 0 ? t.Result.Results[0].ToJsonDocument() : null,
-                                         TotalDocuments = t.Result.TotalResults,
-                                         Index = itemIndex,
-                                         ParentPath = GetParentPath(),
-                                         UrlForFirst = GetUrlForIndex(0),
-                                         UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
-                                         UrlForNext = itemIndex < t.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
-                                         UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1),
-                                     });
+                            t =>
+                            {
+                                var info = PopulateDocumentOrConflictsFromDocuments(
+                                                t.Result.Results.Select(r => r.ToJsonDocument()));
+
+                                info.TotalDocuments = t.Result.TotalResults;
+                                info.Index = itemIndex;
+                                info.ParentPath = GetParentPath();
+                                info.UrlForFirst = GetUrlForIndex(0);
+                                info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+                                info.UrlForNext = itemIndex < t.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null;
+                                info.UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1);
+                                return info;
+                            });
             }
             else
             {
@@ -71,18 +75,21 @@ namespace Raven.Studio.Features.Documents
                 var getStatisticsTask = QueryIndexForDocument();
 
                 return TaskEx.WhenAll(getDocumentTask, getStatisticsTask)
-                    .ContinueWith(_ =>
-                                  new DocumentAndNavigationInfo
-                                      {
-                                          Document = getDocumentTask.Result,
-                                          Index = itemIndex,
-                                          TotalDocuments = getStatisticsTask.Result.TotalResults,
-                                          ParentPath = GetParentPath(),
-                                          UrlForFirst = GetUrlForIndex(0),
-                                          UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
-                                          UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
-                                          UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1),
-                                      }
+                             .ContinueWith(_ =>
+                             {
+                                 var info = PopulateDocumentOrConflictsFromTask(getDocumentTask, id);
+                                 info.Index = itemIndex;
+                                 info.TotalDocuments = getStatisticsTask.Result.TotalResults;
+                                 info.ParentPath = GetParentPath();
+                                 info.UrlForFirst = GetUrlForIndex(0);
+                                 info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+                                 info.UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1
+                                                       ? GetUrlForIndex(itemIndex + 1)
+                                                       : null;
+                                 info.UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1);
+
+                                 return info;
+                             }
                     );
             }
         }

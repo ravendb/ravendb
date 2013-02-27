@@ -1,33 +1,44 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
-using Raven.Client.Connection;
 
 namespace Raven.Client.Embedded.Changes
 {
 	internal class EmbeddableDatabaseChanges : IDatabaseChanges, IDisposable
 	{
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
 		private readonly Action onDispose;
+		private readonly Func<string, Etag, string[], bool> tryResolveConflictByUsingRegisteredConflictListeners;
 		private readonly EmbeddableObservableWithTask<IndexChangeNotification> indexesObservable;
 		private readonly EmbeddableObservableWithTask<DocumentChangeNotification> documentsObservable;
+		private readonly EmbeddableObservableWithTask<ReplicationConflictNotification> replicationConflictsObservable;
 
 		private readonly BlockingCollection<Action> enqueuedActions = new BlockingCollection<Action>();
 		private readonly Task enqueuedTask;
 
-		public EmbeddableDatabaseChanges(EmbeddableDocumentStore embeddableDocumentStore, Action onDispose)
+		public EmbeddableDatabaseChanges(EmbeddableDocumentStore embeddableDocumentStore, Action onDispose, Func<string, Etag, string[], bool> tryResolveConflictByUsingRegisteredConflictListeners)
 		{
 			this.onDispose = onDispose;
+			this.tryResolveConflictByUsingRegisteredConflictListeners = tryResolveConflictByUsingRegisteredConflictListeners;
 			Task = new CompletedTask<IDatabaseChanges>(this);
 			indexesObservable = new EmbeddableObservableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObservableWithTask<DocumentChangeNotification>();
+			replicationConflictsObservable = new EmbeddableObservableWithTask<ReplicationConflictNotification>();
 
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) => 
 				enqueuedActions.Add(() => indexesObservable.Notify(o, notification));
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += (o, notification) =>
 				 enqueuedActions.Add(() => documentsObservable.Notify(o, notification));
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnReplicationConflictNotification += (o, notification) =>
+				 enqueuedActions.Add(() => replicationConflictsObservable.Notify(o, notification));
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnReplicationConflictNotification += TryResolveConflict;
 
 			enqueuedTask = System.Threading.Tasks.Task.Factory.StartNew(() =>
 			{
@@ -39,6 +50,26 @@ namespace Raven.Client.Embedded.Changes
 					action();
 				}
 			});
+		}
+
+		void TryResolveConflict(object obj, ReplicationConflictNotification conflictNotification)
+		{
+			if (conflictNotification.ItemType == ReplicationConflictTypes.DocumentReplicationConflict)
+			{
+				System.Threading.Tasks.Task.Factory.StartNew(() =>
+					  tryResolveConflictByUsingRegisteredConflictListeners(conflictNotification.Id, conflictNotification.Etag, conflictNotification.Conflicts))
+						.ContinueWith(t =>
+						{
+							t.AssertNotFailed();
+
+							if (t.Result)
+							{
+								logger.Debug(
+									"Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+									conflictNotification.Id);
+							}
+						});
+			}
 		}
 
 		public bool Connected { get; private set; }
@@ -75,6 +106,12 @@ namespace Raven.Client.Embedded.Changes
 
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
 				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
+		}
+
+		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
+		{
+			return new FilteringObservableWithTask<ReplicationConflictNotification>(replicationConflictsObservable,
+			                                                                        notification => true);
 		}
 
 		public void WaitForAllPendingSubscriptions()

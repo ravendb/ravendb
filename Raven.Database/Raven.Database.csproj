@@ -280,6 +280,7 @@
     <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
     <Compile Include="Server\Responders\DocsStreams.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
+    <Compile Include="Server\Responders\IndexPriorityResponder.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />

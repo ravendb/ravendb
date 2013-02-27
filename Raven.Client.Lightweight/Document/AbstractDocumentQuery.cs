@@ -208,6 +208,14 @@ namespace Raven.Client.Document
 			get { return indexName; }
 		}
 
+		/// <summary>
+		///   Get the name of the index being queried
+		/// </summary>
+		public string AsyncIndexQueried
+		{
+			get { return indexName; }
+		}
+
 #if !SILVERLIGHT
 		/// <summary>
 		///   Grant access to the database commands

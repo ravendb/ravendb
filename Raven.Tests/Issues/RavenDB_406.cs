@@ -220,6 +220,7 @@ namespace Raven.Tests.Issues
 
 					session.SaveChanges();
 				}
+				WaitForIndexing(store);
 
 				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 				{
@@ -229,6 +230,7 @@ namespace Raven.Tests.Issues
 						var user = session.Load<User>(new[] {"users/1"}).First();
 						Assert.Equal("John", user.Name);
 					}
+					((DocumentStore) store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 
 					// change object
 					using (var session = store.OpenSession())
@@ -241,9 +243,10 @@ namespace Raven.Tests.Issues
 
 						session.SaveChanges();
 					}
+					WaitForIndexing(store);
+					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets == 2, 10000));
 
-					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
-
+					WaitForAllRequestsToComplete(server);
 					server.Server.ResetNumberOfRequests();
 
 					using (var session = store.OpenSession())
@@ -259,7 +262,7 @@ namespace Raven.Tests.Issues
 					}
 
 					WaitForAllRequestsToComplete(server);
-
+					
 					Assert.Equal(1, server.Server.NumberOfRequests);
 				}
 			}

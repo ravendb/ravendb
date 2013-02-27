@@ -71,6 +71,15 @@ namespace Raven.Database.Server
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
+#if DEBUG
+		private readonly ConcurrentQueue<string> recentRequests = new ConcurrentQueue<string>();
+
+		public ConcurrentQueue<string> RecentRequests
+		{
+			get { return recentRequests; }
+		}
+#endif
+
 		public int NumberOfRequests
 		{
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
@@ -485,6 +494,15 @@ namespace Raven.Database.Server
 			try
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
+#if DEBUG
+				recentRequests.Enqueue(ctx.Request.RawUrl);
+				while (recentRequests.Count > 50)
+				{
+					string _;
+					recentRequests.TryDequeue(out _);
+				}
+#endif
+
 				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
 					HandleChangesRequest(ctx, () => { });
 				else
@@ -1289,6 +1307,13 @@ namespace Raven.Database.Server
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
+#if DEBUG
+			while (recentRequests.Count > 0)
+			{
+				string _;
+				recentRequests.TryDequeue(out _);
+			}
+#endif
 		}
 
 		public Task<DocumentDatabase> GetDatabaseInternal(string name)

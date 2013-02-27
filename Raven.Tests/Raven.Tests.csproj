@@ -515,7 +515,9 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
+    <Compile Include="Bundles\Replication\ConflictsInEmbeddableStore.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
+    <Compile Include="Bundles\Replication\Issues\RavenDB693_Embeddable.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
     <Compile Include="Bundles\Replication\Issues\ReplicationWithReferencedIndexes.cs" />
@@ -537,6 +539,7 @@
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
+    <Compile Include="Issues\RavenDB937.cs" />
     <Compile Include="Issues\RavenDB815.cs" />
     <Compile Include="Issues\RavenDB820.cs" />
     <Compile Include="Issues\RavenDb827.cs" />
@@ -547,6 +550,8 @@
     <Compile Include="Issues\RavenDB921.cs" />
     <Compile Include="Issues\RavenDB934.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
+    <Compile Include="Issues\RavenDB953.cs" />
+    <Compile Include="Issues\RavenDB955.cs" />
     <Compile Include="Issues\RavenDB957.cs" />
     <Compile Include="Issues\RavenDB_752.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
@@ -653,6 +658,7 @@
     <Compile Include="MailingList\LuceneSearchSample.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
+    <Compile Include="MailingList\MoreLikeThisEvaluation.cs" />
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
@@ -695,6 +701,8 @@
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
+    <Compile Include="Notifications\ReplicationConflicts.cs" />
+    <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
