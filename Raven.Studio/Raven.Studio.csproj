@@ -230,7 +230,7 @@
     <Compile Include="Commands\CsvImportCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
-    <Compile Include="Commands\DeleteAllIndexesCommand.cs" />
+    <Compile Include="Commands\DeleteIndexesCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\ExportDocumentDetailsCommand.cs" />
     <Compile Include="Commands\RestoreCommand.cs" />
@@ -246,11 +246,17 @@
     <Compile Include="Controls\DateTimePicker.xaml.cs">
       <DependentUpon>DateTimePicker.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\GoToDatabaseControl.xaml.cs">
+      <DependentUpon>GoToDatabaseControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\NavTriangle.xaml.cs">
       <DependentUpon>NavTriangle.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ResetReplication.xaml.cs">
+      <DependentUpon>ResetReplication.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
     <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
@@ -281,6 +287,8 @@
     <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
+    <Compile Include="Infrastructure\Converters\PriorityToFontColorConverter.cs" />
+    <Compile Include="Infrastructure\Converters\PriorityToFontStyleConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibilityByParamInEqualityConverter.cs" />
     <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
@@ -901,6 +909,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\GoToDatabaseControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\GoToDocumentControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -922,6 +934,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\RecentQueriesButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ResetReplication.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

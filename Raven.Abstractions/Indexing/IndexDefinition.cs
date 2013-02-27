@@ -236,7 +236,7 @@ namespace Raven.Abstractions.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Auto"))
+				if (name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
 					return "Auto";
 				if (IsCompiled)
 					return "Compiled";
@@ -307,4 +307,38 @@ namespace Raven.Abstractions.Indexing
 			return indexDefinition;
 		}
 	}
+
+
+	public class TransformerDefinition
+	{
+		/// <summary>
+		/// Gets or sets the translator function
+		/// </summary>
+		public string TransformResults { get; set; }
+		public string Name { get; set; }
+
+		public bool Equals(TransformerDefinition other)
+		{
+			return string.Equals(TransformResults, other.TransformResults);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((TransformerDefinition) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			return (TransformResults != null ? TransformResults.GetHashCode() : 0);
+		}
+
+		public TransformerDefinition Clone()
+		{
+			return (TransformerDefinition) base.MemberwiseClone();
+		}
+	}
+
 }

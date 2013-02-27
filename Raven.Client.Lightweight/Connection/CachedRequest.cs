@@ -13,6 +13,8 @@ namespace Raven.Client.Connection
 		public RavenJToken Data { get; set; }
 		public DateTimeOffset Time;
 		public NameValueCollection Headers;
+		public string Database;
+		public bool ForceServerCheck;
 	}
 
 	internal class CachedRequestOp

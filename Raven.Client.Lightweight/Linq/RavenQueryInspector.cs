@@ -12,6 +12,8 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Connection.Async;
+using Raven.Client.Indexes;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
 {
@@ -127,7 +129,20 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-		/// <summary>
+	    public IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask<T>, new()
+	    {
+	        var transformer = new TTransformer();
+	        provider.TransformWith(transformer.TransfomerName);
+	        return (IRavenQueryable<TResult>)this.As<TResult>();
+	    }
+
+	    public IRavenQueryable<T> AddQueryInput(string input, RavenJToken foo)
+	    {
+	        provider.AddQueryInput(input, foo);
+	        return this;
+	    }
+
+	    /// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>
 		/// <returns>
@@ -157,7 +172,9 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
+		    return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName,
+		                                              new HashSet<string>(), new List<RenamedField>(), isMapReduce,
+                                                      provider.ResultTransformer, provider.QueryInputs);
 		}
 
 		/// <summary>
@@ -167,7 +184,8 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, 
+                    provider.ResultTransformer, provider.QueryInputs);
 				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
@@ -180,7 +198,8 @@ namespace Raven.Client.Linq
 		{
 			get
 			{
-				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
+				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
+                    provider.ResultTransformer, provider.QueryInputs);
 				var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
 				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
 			}
@@ -229,7 +248,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce);
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, provider.ResultTransformer, provider.QueryInputs);
 			if (isAsync)
 			{
 				var luceneQueryAsync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);

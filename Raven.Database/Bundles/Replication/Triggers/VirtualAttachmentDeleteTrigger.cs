@@ -107,14 +107,14 @@ namespace Raven.Bundles.Replication.Triggers
 
 		private void HandleAttachment(Attachment document)
 		{
-			deletedHistory.Value = new RavenJArray(document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
-
-			deletedHistory.Value.Add(
-					new RavenJObject
-					{
-						{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
-						{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
-					});
+			deletedHistory.Value = new RavenJArray(document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory))
+			{
+				new RavenJObject
+				{
+					{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
+					{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
+				}
+			};
 		}
 
 		private bool HasConflict(Attachment attachment)

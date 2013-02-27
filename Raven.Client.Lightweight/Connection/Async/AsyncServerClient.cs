@@ -202,6 +202,14 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
+		/// Puts the transfomer definition for the specified name asynchronously
+		/// </summary>
+		public Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition)
+		{
+			return ExecuteWithReplication("PUT", opUrl => DirectPutTransformerAsync(name, transformerDefinition, opUrl));
+		}
+
+		/// <summary>
 		/// Puts the index definition for the specified name asynchronously with url
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -243,9 +251,27 @@ namespace Raven.Client.Connection.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 					return request.WriteAsync(serializeObject)
 						.ContinueWith(writeTask => request.ReadResponseJsonAsync()
-													.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("index"); })).
+													.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("Index"); })).
 						Unwrap();
 				}).Unwrap();
+		}
+
+		/// <summary>
+		/// Puts the transfromer definition for the specified name asynchronously with url
+		/// </summary>
+		public Task<string> DirectPutTransformerAsync(string name, TransformerDefinition transformerDefinition, string operationUrl)
+		{
+			var requestUri = operationUrl + "/transformers/" + name;
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+
+			var serializeObject = JsonConvert.SerializeObject(transformerDefinition, Default.Converters);
+			return request.WriteAsync(serializeObject)
+				.ContinueWith(writeTask => request.ReadResponseJsonAsync()
+											.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("Transfomer"); })).
+				Unwrap();
 		}
 
 		/// <summary>
@@ -597,27 +623,30 @@ namespace Raven.Client.Connection.Async
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
-			return ExecuteWithReplication( "GET", operationUrl => {
-				var requestUri = operationUrl + string.Format( "/facets/{0}?facetDoc={1}&query={2}&facetStart={3}&facetPageSize={4}",
-				Uri.EscapeUriString( index ),
-				Uri.EscapeDataString( facetSetupDoc ),
-				Uri.EscapeUriString( Uri.EscapeDataString( query.Query ) ),
+		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}&facetStart={3}&facetPageSize={4}",
+				Uri.EscapeUriString(index),
+				Uri.EscapeDataString(facetSetupDoc),
+				Uri.EscapeUriString(Uri.EscapeDataString(query.Query)),
 				start,
-				pageSize );
+				pageSize);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams( this, requestUri.NoCache(), "GET", credentials, convention )
-						.AddOperationHeaders( OperationsHeaders ) );
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
 
-				request.AddReplicationStatusHeaders( url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges );
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
-					.ContinueWith( task => {
-						var json = ( RavenJObject )task.Result;
+					.ContinueWith(task =>
+					{
+						var json = (RavenJObject)task.Result;
 						return json.JsonDeserialization<FacetResults>();
-					} );
-			} );
+					});
+			});
 		}
 
 
@@ -700,9 +729,9 @@ namespace Raven.Client.Connection.Async
 			                                 }.ToString(Formatting.None));
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null)
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentials, convention));
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore?defrag=" + defrag).NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.ExecuteWriteAsync(new RavenJObject
 			{
@@ -853,7 +882,10 @@ namespace Raven.Client.Connection.Async
 			}
 			var request =
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
-																						 convention));
+				                                                                         convention)
+				{
+					AvoidCachingRequest = query.DisableCaching
+				});
 
 			request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1264,16 +1296,16 @@ namespace Raven.Client.Connection.Async
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
-			                                                                   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
-				                                                                   .AddOperationHeaders(OperationsHeaders))
-			                                            .AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+																			   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
+																				   .AddOperationHeaders(OperationsHeaders))
+														.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync().ContinueWith(task =>
 			{
 				try
 				{
 					var deserializeJsonDocumentMetadata = SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
-					return (Task<JsonDocumentMetadata>) new CompletedTask<JsonDocumentMetadata>(deserializeJsonDocumentMetadata);
+					return (Task<JsonDocumentMetadata>)new CompletedTask<JsonDocumentMetadata>(deserializeJsonDocumentMetadata);
 				}
 				catch (AggregateException e)
 				{
@@ -1284,11 +1316,11 @@ namespace Raven.Client.Connection.Async
 					if (httpWebResponse == null)
 						throw;
 					if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						return new CompletedTask<JsonDocumentMetadata>((JsonDocumentMetadata) null);
+						return new CompletedTask<JsonDocumentMetadata>((JsonDocumentMetadata)null);
 					if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 					{
 						throw new ConflictException("Conflict detected on " + key +
-						                            ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+													", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
 						{
 							Etag = httpWebResponse.GetEtagHeader()
 						};

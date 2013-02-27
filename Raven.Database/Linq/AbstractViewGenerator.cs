@@ -204,6 +204,9 @@ namespace Raven.Database.Linq
 			SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree,
 			int maxTreeLevel = 0, double distanceErrorPct = 0.025)
 		{
+			if (string.IsNullOrEmpty(shapeWKT))
+				return Enumerable.Empty<IFieldable>();
+
 			if (maxTreeLevel == 0)
 			{
 				switch (spatialSearchStrategy)

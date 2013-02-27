@@ -77,6 +77,11 @@ namespace Raven.Client.Embedded.Changes
 				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 		}
 
+		public void WaitForAllPendingSubscriptions()
+		{
+			// nothing there to do
+		}
+
 		public void Dispose()
 		{
 			enqueuedActions.Add(null);

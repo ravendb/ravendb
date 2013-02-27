@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -43,6 +45,11 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
+
+        /// <summary>
+        /// Additional query inputs
+        /// </summary>
+        public Dictionary<string, RavenJToken> QueryInputs { get; set; }
 
 		/// <summary>
 		/// Gets or sets the start of records to read.
@@ -156,6 +163,16 @@ namespace Raven.Abstractions.Data
         /// </summary>
 	    public string[] HighlighterPostTags { get; set; }
 
+        /// <summary>
+        /// Gets or sets the results transformer
+        /// </summary>
+	    public string ResultsTransformer { get; set; }
+
+		/// <summary>
+		/// Whatever we should disable caching of query results
+		/// </summary>
+		public bool DisableCaching { get; set; }
+
 	    /// <summary>
 		/// Gets the index query URL.
 		/// </summary>
@@ -221,6 +238,19 @@ namespace Raven.Abstractions.Data
             {
                 path.Append("&skipTransformResults=true");
             }
+
+            if (ResultsTransformer != null)
+            {
+                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
+            }
+
+			if (QueryInputs != null)
+			{
+				foreach (var input in QueryInputs)
+				{
+					path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+				}
+			}
 
 			if (Cutoff != null)
 			{

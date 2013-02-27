@@ -71,6 +71,9 @@
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
     <Compile Include="Changes\TaskErrorExtensions.cs" />
+    <Compile Include="Document\RavenLoadConfiguration.cs" />
+    <Compile Include="ILoadConfiguration.cs" />
+    <Compile Include="Indexes\AbstractResultsTransformer.cs" />
     <Compile Include="Util\CSharpClassName.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
@@ -237,6 +240,7 @@
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\LastEtagHolder.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparer.cs" />
+    <Compile Include="Util\RequestsCacheExtensions.cs" />
     <Compile Include="Util\SimpleCache.cs" />
     <Compile Include="Util\Types.cs" />
     <Compile Include="WhereEqualsParams.cs" />

@@ -44,7 +44,7 @@ namespace Raven.Tests.Bugs
 				for (int i = 0; i < 1; i++)
 				{
 					var count = session.Query<object>("view" + (i + 1))
-					                   .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(3))).Count();
+					                   .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(30))).Count();
 
 					Assert.Equal(shouldBe, count);
 				}

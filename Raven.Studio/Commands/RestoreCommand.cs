@@ -21,7 +21,8 @@ namespace Raven.Studio.Commands
 			var backupLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Backup Location");
 			var databaseLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Location");
 			var name = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Name");
-
+			TaskCheckBox attachmentUI = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Defrag") as TaskCheckBox;
+			var defrag = attachmentUI != null && (bool)attachmentUI.Value;
 			if (backupLocation == null || name == null || databaseLocation == null)
 				return;
 
@@ -30,13 +31,19 @@ namespace Raven.Studio.Commands
 			DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync("Raven/Restore/Status")
 			                .ContinueOnSuccessInTheUIThread(() =>
 			                {
-				                DatabaseCommands.StartRestoreAsync(backupLocation.Value.ToString(), databaseLocation.Value.ToString(), name.Value.ToString()).Catch();
-				                failCount = 0;
-				                UpdateStatus();
+								failCount = 0;
+				                DatabaseCommands.StartRestoreAsync(backupLocation.Value.ToString(),
+				                                                   databaseLocation.Value.ToString(), name.Value.ToString())
+												.ContinueOnSuccess(() => UpdateStatus())
+				                                .Catch(exception =>
+				                                {
+													startRestoreTask.CanExecute.Value = true;
+													startRestoreTask.TaskStatus = TaskStatus.Ended;
+				                                });
 			                });
 		}
 
-		int failCount = 0;
+		int failCount;
 		private void UpdateStatus()
 		{
 			DatabaseCommands.ForSystemDatabase().GetAsync("Raven/Restore/Status").ContinueOnSuccessInTheUIThread(doc =>

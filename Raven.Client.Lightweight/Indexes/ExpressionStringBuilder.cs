@@ -1433,7 +1433,7 @@ namespace Raven.Client.Indexes
 					Out("Database");
 				}
 #if !SILVERLIGHT
-				else if (typeof(AbstractIndexCreationTask).IsAssignableFrom(expression.Type))
+				else if (typeof(AbstractCommonApiForIndexesAndTransformers).IsAssignableFrom(expression.Type))
 				{
 					// this is a method that
 					// exists on both the server side and the client side

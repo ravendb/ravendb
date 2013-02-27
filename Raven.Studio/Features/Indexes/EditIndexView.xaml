@@ -296,7 +296,11 @@
                             </Button.Content>
                         </Button>
 
-                    <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+						
+						<TextBlock Text="Index Priority " VerticalAlignment="Center"/>
+					<ComboBox ItemsSource="{Binding Priorities}" SelectedValue="{Binding IndexingPriority.Value, Mode=TwoWay}" VerticalAlignment="Center"/>
+						<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
                         
                     <Button x:Name="Terms"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
