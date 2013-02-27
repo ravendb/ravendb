@@ -42,6 +42,8 @@ namespace Raven.Abstractions.Data
 
 		public ActualIndexingBatchSize[] ActualIndexingBatchSize { get; set; }
 		public FutureBatchStats[] Prefetches { get; set; }
+
+		public Guid DatabaseId { get; set; }
 	}
 
 	public class ActualIndexingBatchSize
