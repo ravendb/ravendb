@@ -5,6 +5,11 @@
 var clusterManagerApp = angular.module('ClusterManagerApp', []);
 
 clusterManagerApp.config(function ($routeProvider, $locationProvider) {
+    $routeProvider.when('/servers', {
+        templateUrl: '/views/servers.html',
+        controller: 'ServersCtrl'
+    });
+
     $routeProvider.when('/', {
         templateUrl: '/views/main.html',
         controller: 'MainCtrl'

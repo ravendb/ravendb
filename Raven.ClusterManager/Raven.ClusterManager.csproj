@@ -81,6 +81,7 @@
   <ItemGroup>
     <Content Include="Assets\images\logo.png" />
     <Content Include="Assets\index.html" />
+    <Content Include="Assets\scripts\controllers\serversCtrl.js" />
     <Content Include="Assets\scripts\controllers\mainCtrl.js" />
     <Content Include="Assets\scripts\main.js" />
     <Content Include="Assets\styles\main.css" />
@@ -112,6 +113,7 @@
     <Content Include="Assets\images\glyphicons-halflings.png" />
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.js" />
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.min.js" />
+    <Content Include="Assets\views\servers.html" />
     <Content Include="Assets\views\main.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
