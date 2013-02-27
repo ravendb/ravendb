@@ -89,7 +89,12 @@ namespace Raven.ClusterManager
 					resourcePath += "." + directoryName.Replace('\\', '.');
 				}
 				var fileName = Path.GetFileName(path);
-				return new EmbeddedFileResponse(typeof (Bootstrapper).Assembly, resourcePath, fileName);
+
+				var assembly = typeof (Bootstrapper).Assembly;
+				if (assembly.GetManifestResourceInfo(resourcePath + "." + fileName) != null)
+					return new EmbeddedFileResponse(assembly, resourcePath, fileName);
+
+				return null;
 			});
 		}
 	}
