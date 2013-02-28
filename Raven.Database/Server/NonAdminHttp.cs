@@ -137,7 +137,7 @@ namespace Raven.Database.Server
 			else
 			{
 				cmd = "httpcfg";
-				args = string.Format(@"set urlacl /u {2}+:{0}/ /a D:(A;;GX;;;""{1}"")", port, WindowsIdentity.GetCurrent().User, useSsl ? "https://" : "http://");
+				args = string.Format(@"delete urlacl /u {1}+:{0}/", port, useSsl ? "https://" : "http://");
 			}
 		}
 
