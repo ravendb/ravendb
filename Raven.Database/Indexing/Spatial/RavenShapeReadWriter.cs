@@ -98,6 +98,12 @@ namespace Raven.Database.Indexing.Spatial
 		public bool TryParseGeoUri(string uriString, out Shape shape)
 		{
 			shape = default(Shape);
+
+			// Geo URI should be used for geographic locations,
+			// so for the time-being we'll only support if for geography indexes
+			if (options.Type != SpatialFieldType.Geography)
+				return false;
+
 			if (string.IsNullOrWhiteSpace(uriString))
 				return false;
 
@@ -124,8 +130,8 @@ namespace Raven.Database.Indexing.Spatial
 				if (u.Success)
 				{
 					uncertainty = double.Parse(u.Groups[1].Value);
-					if (options.Type == SpatialFieldType.Geography)
-						uncertainty = TranslateCircleFromKmToRadians(uncertainty);
+					if (options.Type == SpatialFieldType.Geography && uncertainty > 0)
+						uncertainty = TranslateCircleFromKmToRadians(uncertainty / 1000); // meters
 				}
 			}
 
