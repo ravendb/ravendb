@@ -89,7 +89,7 @@ namespace Raven.Database.Config
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
-				                                                    MaxNumberOfItemsToIndexInSingleBatch);
+																	MaxNumberOfItemsToIndexInSingleBatch);
 			}
 			else
 			{
@@ -99,7 +99,7 @@ namespace Raven.Database.Config
 			}
 			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
 
-		
+
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
 			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default?
@@ -134,9 +134,9 @@ namespace Raven.Database.Config
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
-		    
+
 			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
-		    TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
+			TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
 
 			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
 			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
@@ -158,6 +158,9 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
+				UseSsl = ravenSettings.UseSsl.Value;
+			}
+
 			SetVirtualDirectory();
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
@@ -190,15 +193,15 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-	    public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
-		
+		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+
 		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
-        
+
 		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
 
-		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; } 
+		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
 
-	    private void FilterActiveBundles()
+		private void FilterActiveBundles()
 		{
 			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
 
@@ -221,7 +224,7 @@ namespace Raven.Database.Config
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
-			if (catalogs.Count != 1) 
+			if (catalogs.Count != 1)
 				return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
 			return GetUnfilteredCatalog(catalogs.First());
 		}
@@ -690,7 +693,7 @@ namespace Raven.Database.Config
 
 		internal bool IsTenantDatabase { get; set; }
 
-	    [Browsable(false)]
+		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{
