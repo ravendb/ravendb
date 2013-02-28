@@ -279,6 +279,9 @@
     <Compile Include="Features\Settings\SqlReplicationsSettingsSectionView.xaml.cs">
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Stats\UserInfoView.xaml.cs">
+      <DependentUpon>UserInfoView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Features\Transformers\EditTransformerView.xaml.cs">
       <DependentUpon>EditTransformerView.xaml</DependentUpon>
@@ -306,6 +309,7 @@
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
+    <Compile Include="Models\UserInfoModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">
       <DependentUpon>BundlesSelect.xaml</DependentUpon>
@@ -617,6 +621,9 @@
     </Compile>
     <Compile Include="Views\Transformers.xaml.cs">
       <DependentUpon>Transformers.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\User-Info.xaml.cs">
+      <DependentUpon>User-Info.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
@@ -1057,6 +1064,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Stats\UserInfoView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Tasks\TaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1142,6 +1153,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Transformers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\User-Info.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
