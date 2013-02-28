@@ -160,8 +160,6 @@ namespace Raven.Database.Config
 			{ 
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
 				UseSsl = ravenSettings.UseSsl.Value;
-				SslCertificatePath = ravenSettings.SslCertificatePath.Value;
-				SslCertificatePassword = ravenSettings.SslCertificatePassword.Value;
 			}
 
 			SetVirtualDirectory();

@@ -13,7 +13,7 @@ namespace Raven.Database.Server
 {
 	public static class NonAdminHttp
 	{
-		public static void EnsureCanListenToWhenInNonAdminContext(int port, bool useSsl = false, string sslCertificatePath = null, string sslCertificatePassword = null)
+		public static void EnsureCanListenToWhenInNonAdminContext(int port, bool useSsl = false)
 		{
 			int errorCode;
 			int grantCode;
@@ -21,21 +21,16 @@ namespace Raven.Database.Server
 			HttpListenerException listenerException;
 
 			if (CanStartHttpListener(port, useSsl, out errorCode, out listenerException))
-			{
-				RebindCertificates(port, useSsl, sslCertificatePath, sslCertificatePassword);
 				return;
-			}
 
 			switch (errorCode)
 			{
 				case 5:		// access denied
 					grantCode = TryGrantingHttpPrivileges(port, useSsl);
-					RebindCertificates(port, useSsl, sslCertificatePath, sslCertificatePassword);
 					break;
 				case 183:	// conflict
 					unregisterCode = TryUnregisterHttpPort(port, useSsl);
 					grantCode = TryGrantingHttpPrivileges(port, useSsl);
-					RebindCertificates(port, useSsl, sslCertificatePath, sslCertificatePassword);
 					break;
 				default:
 					throw new InvalidOperationException("Could not listen to port " + port, listenerException);
@@ -45,22 +40,14 @@ namespace Raven.Database.Server
 				Console.WriteLine("Failed to grant rights for listening to http, exit codes: ({0} and {1})", grantCode, unregisterCode);
 		}
 
-		private static void RebindCertificates(int port, bool useSsl, string sslCertificatePath, string sslCertificatePassword)
-		{
-			if (string.IsNullOrEmpty(sslCertificatePath) && useSsl)
-				throw new InvalidOperationException("Certificate path cannot be null when SSL is enabled.");
-
-			X509Certificate2 certificate = null;
-
-			if (!string.IsNullOrEmpty(sslCertificatePath))
-			{
-				certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificatePath, sslCertificatePassword) : new X509Certificate2(sslCertificatePath);
-			}
-				
+		public static void UnbindCertificate(int port, X509Certificate2 certificate)
+		{			
 			UnbindCertificates(port, certificate != null ? certificate.Thumbprint : null);
+		}
 
-			if (useSsl)
-				BindCertificate(port, certificate != null ? certificate.Thumbprint : null);
+		public static void BindCertificate(int port, X509Certificate2 certificate)
+		{
+			BindCertificate(port, certificate != null ? certificate.Thumbprint : null);
 		}
 
 		private static void UnbindCertificates(int port, string certificateThumbprint)
