@@ -251,6 +251,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private bool showSkipTransform = true;
 		private bool useTransformer;
 		public bool UseTransformer
 		{
@@ -258,7 +259,17 @@ namespace Raven.Studio.Models
 			set
 			{
 				useTransformer = value;
+				if (value == true)
+				{
+					SkipTransformResults = true;
+					showSkipTransform = false;
+				}
+				else
+				{
+					showSkipTransform = true;
+				}
 				OnPropertyChanged(() => UseTransformer);
+				OnPropertyChanged(() => HasTransform);
 				Requery();
 			}
 		}
@@ -599,7 +610,7 @@ namespace Raven.Studio.Models
 
 	    public bool HasTransform
 	    {
-            get { return hasTransform; }
+            get { return hasTransform && showSkipTransform; }
             private set
             {
                 hasTransform = value;
@@ -614,7 +625,7 @@ namespace Raven.Studio.Models
                 return;
             } 
 
-            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value), IsSpatialQuery, Latitude, Longitude, Radius);
+            var state = new QueryState(this);
 
             PerDatabaseState.QueryHistoryManager.StoreQuery(state);
 		}
@@ -644,11 +655,25 @@ namespace Raven.Studio.Models
 	        if (state == null)
 	            return;
 
-	        Query = state.Query;
+	        UpdateFromState(state);
+
+	        Requery();
+	    }
+
+		private void UpdateFromState(QueryState state)
+		{
+			Query = state.Query;
 	        IsSpatialQuery = state.IsSpatialQuery;
 	        Latitude = state.Latitude;
 	        Longitude = state.Longitude;
 	        Radius = state.Radius;
+	        UseTransformer = state.UseTransformer;
+			DefaultOperator = state.DefaultOperator;
+			SelectedTransformer.Value = state.Transformer;
+			SkipTransformResults = state.SkipTransform;
+			ShowFields = state.ShowFields;
+			ShowEntries = state.ShowEntries;
+
 
 	        SortBy.Clear();
 
@@ -657,11 +682,9 @@ namespace Raven.Studio.Models
 		        if (SortByOptions.Contains(sortOption))
 			        SortBy.Add(new StringRef() {Value = sortOption});
 	        }
+		}
 
-	        Requery();
-	    }
-
-        public ICommand DeleteMatchingResults { get
+		public ICommand DeleteMatchingResults { get
         {
             return deleteMatchingResultsCommand ??
                    (deleteMatchingResultsCommand = new ActionCommand(HandleDeleteMatchingResults));
@@ -758,11 +781,15 @@ namespace Raven.Studio.Models
 		}
 
 	    public IndexQuery CreateTemplateQuery()
-        {
+	    {
+		    var transfomer = SelectedTransformer.Value;
+			if (transfomer == "None")
+				transfomer = "";
             var q = new IndexQuery
             {
                 Query = Query,
-                DefaultOperator = DefaultOperator
+                DefaultOperator = DefaultOperator,
+				ResultsTransformer = transfomer
             };
 
             if (SortBy != null && SortBy.Count > 0)
