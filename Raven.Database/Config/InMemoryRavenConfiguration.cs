@@ -810,10 +810,10 @@ namespace Raven.Database.Config
 		public void CustomizeValuesForTenant(string tenantId)
 		{
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
 
 			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Tenants", tenantId);
+				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
 		}
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)

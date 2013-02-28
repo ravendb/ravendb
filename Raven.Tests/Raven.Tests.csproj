@@ -506,6 +506,7 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
+    <Compile Include="Bundles\Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
@@ -526,6 +527,8 @@
     <Compile Include="Issues\RavenDB814.cs" />
     <Compile Include="Issues\RavenDB845.cs" />
     <Compile Include="Issues\RavenDB903.cs" />
+    <Compile Include="Issues\RavenDB953.cs" />
+    <Compile Include="Issues\RavenDB955.cs" />
     <Compile Include="Issues\RavenDB957.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />

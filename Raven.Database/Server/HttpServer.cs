@@ -472,7 +472,14 @@ namespace Raven.Database.Server
 
 			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
 			{
-				HandleTooBusyError(ctx);
+				try
+				{
+					HandleTooBusyError(ctx);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not send a too busy error to the client", e);
+				}
 				return;
 			}
 			try

@@ -86,13 +86,16 @@ namespace Raven.Bundles.Replication.Responders
 							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
 								LastAttachmentEtag;
 					}
+					Guid serverInstanceId;
+					if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
+						serverInstanceId = Database.TransactionalStorage.Id;
 					Database.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 Source = src,
 									 LastDocumentEtag = new Guid(lastEtag),
 									 LastAttachmentEtag = lastAttachmentId,
-									 ServerInstanceId = Database.TransactionalStorage.Id
+									 ServerInstanceId = serverInstanceId
 								 }),
 								 new RavenJObject(), null);
 				});
