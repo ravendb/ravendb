@@ -32,6 +32,7 @@ namespace Raven.Database.Server
 					grantCode = TryGrantingHttpPrivileges(port, useSsl);
 					RebindCertificates(port, useSsl, sslCertificatePath, sslCertificatePassword);
 					break;
+				case 32: // already in use, try resetting that
 				case 183:	// conflict
 					unregisterCode = TryUnregisterHttpPort(port, useSsl);
 					grantCode = TryGrantingHttpPrivileges(port, useSsl);
