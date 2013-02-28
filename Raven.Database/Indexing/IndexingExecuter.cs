@@ -42,6 +42,9 @@ namespace Raven.Database.Indexing
 			if (isStale == false)
 				return false;
 
+			if (indexingPriority == IndexingPriority.None)
+				return true;
+
 			if (indexingPriority.HasFlag(IndexingPriority.Normal))
 			{
 				onlyFoundIdleWork.Value = false;
