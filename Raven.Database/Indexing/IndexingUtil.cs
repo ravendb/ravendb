@@ -14,7 +14,7 @@ namespace Raven.Database.Indexing
 	{
 		public static int AbsStableInvariantIgnoreCaseStringHash(string s)
 		{
-			return Math.Abs(s.Aggregate(11, (current, ch) => (char.ToUpperInvariant(ch).GetHashCode() * 397) ^ current));
+            return Math.Abs((s.Length > 3 ? s.Substring(0, s.Length - 2) : s).Aggregate(11, (current, ch) => (char.ToUpperInvariant(ch).GetHashCode() * 397) ^ current));
 		}
 
 		public static int MapBucket(string docId)
