@@ -18,7 +18,7 @@ namespace Raven.Studio.Infrastructure.Converters
 					return "Must set both name and secret to get a direct link";
 
 				var url = ApplicationModel.Current.Server.Value.Url;
-				return string.Format(@"{0}{1}raven/studio.html#?api-key={2}",
+				return string.Format(@"{0}{1}raven/studio.html#/home?api-key={2}",
 													 url, 
 													 url.EndsWith("/") ? "" : "/",
 													 fullApiKey);
