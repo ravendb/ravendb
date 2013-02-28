@@ -168,8 +168,6 @@ namespace Raven.Database.Config
 
 		public StringSetting Port { get; private set; }
 
-		public BooleanSetting UseSsl { get; private set; }
-
 		public StringSetting SslCertificatePath { get; private set; }
 
 		public StringSetting SslCertificatePassword { get; private set; }

@@ -102,8 +102,8 @@ namespace Raven.Database.Config
 
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
-			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default?
-				 defaultInitialNumberOfItemsToIndexInSingleBatch/2 :
+			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch / 2 :
 				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
@@ -157,6 +157,7 @@ namespace Raven.Database.Config
 			HostName = ravenSettings.HostName.Value;
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
 				UseSsl = ravenSettings.UseSsl.Value;
 			}
@@ -320,7 +321,7 @@ namespace Raven.Database.Config
 						Query = ""
 					}.Uri.ToString();
 				}
-				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+				return new UriBuilder(UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
@@ -432,6 +433,11 @@ namespace Raven.Database.Config
 		/// Default: none, binds to all host names
 		/// </summary>
 		public string HostName { get; set; }
+
+		/// <summary>
+		/// Whatever we should use SSL for this connection
+		/// </summary>
+		public bool UseSsl { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
