@@ -37,6 +37,8 @@ namespace Raven.Abstractions.Data
     [Flags]
     public enum IndexingPriority
     {
+		None = 0,
+
         Normal = 1,
 		
 		Disabled = 2,
