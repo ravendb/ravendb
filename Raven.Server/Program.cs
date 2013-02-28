@@ -336,7 +336,7 @@ Configuration options:
 		{
 			ConfigureDebugLogging();
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.UseSsl, ravenConfiguration.SslCertificatePath, ravenConfiguration.SslCertificatePassword);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			while (RunServerInDebugMode(ravenConfiguration, launchBrowser))

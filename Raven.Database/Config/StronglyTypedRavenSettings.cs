@@ -67,12 +67,6 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
 				new StringSetting(settings["Raven/Port"], (string) null);
-			UseSsl = 
-				new BooleanSetting(settings["Raven/UseSsl"], false);
-			SslCertificatePath = 
-				new StringSetting(settings["Raven/SslCertificatePath"], (string) null);
-			SslCertificatePassword =
-				new StringSetting(settings["Raven/SslCertificatePassword"], (string)null);
 			HttpCompression =
 				new BooleanSetting(settings["Raven/HttpCompression"], true);
 			AccessControlAllowOrigin =
@@ -175,12 +169,6 @@ namespace Raven.Database.Config
 		public StringSetting HostName { get; private set; }
 
 		public StringSetting Port { get; private set; }
-
-		public BooleanSetting UseSsl { get; private set; }
-
-		public StringSetting SslCertificatePath { get; private set; }
-
-		public StringSetting SslCertificatePassword { get; private set; }
 
 		public BooleanSetting HttpCompression { get; private set; }
 
