@@ -10,8 +10,11 @@ using Nancy;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Listeners;
 using Raven.ClusterManager.Discovery;
+using Raven.ClusterManager.Infrastructure;
 using Raven.ClusterManager.Models;
 using Nancy.ModelBinding;
 using System.Linq;
@@ -20,57 +23,69 @@ namespace Raven.ClusterManager.Modules
 {
 	public class DiscoveryModule : NancyModule
 	{
-		private readonly IDocumentStore store;
-		private readonly static Guid senderId = Guid.NewGuid();
-		private readonly ClusterDiscoveryClient discoveryClient;
+		private readonly IAsyncDocumentSession session;
+		private readonly static Guid SenderId = Guid.NewGuid();
 
-		public DiscoveryModule(IDocumentSession session, IDocumentStore store): base("/api/discovery")
+		public DiscoveryModule(IAsyncDocumentSession session): base("/api/discovery")
 		{
-			this.store = store;
-			discoveryClient = new ClusterDiscoveryClient(senderId, "http://localhost:9020/api/discovery/notify");
+			this.session = session;
 
 			Get["/start"] = parameters =>
 			{
-				discoveryClient.PublishMyPresence();
+				var discoveryClient = new ClusterDiscoveryClient(SenderId, "http://localhost:9020/api/discovery/notify");
+				Dispatcher.HandleResult(discoveryClient.PublishMyPresenceAsync());
 				return "started";
 			};
 
-			Post["/notify"] = parameters =>
+			Func<dynamic, Task<string>> asyncNotify = async parameters =>
 			{
-				var input = this.Bind<Server>("Id");
+				var input = this.Bind<ServerRecord>("Id");
 
-				var server = session.Query<Server>().FirstOrDefault(server1 => server1.Url == input.Url) ?? new Server();
+				var server = (await session.Query<ServerRecord>()
+				                           .Take(1)
+				                           .Where(s => s.Url == input.Url).ToListAsync()).FirstOrDefault() ?? new ServerRecord();
 				this.BindTo(server, "Id");
-				session.Store(server);
+				await session.StoreAsync(server);
 
-				FetchServerDatabases(server);
+				await FetchServerDatabasesAsync(server);
 
 				return "notified";
 			};
+
+			Post["/notify"] = parameters => asyncNotify(parameters);
+
+			/*Get["/servers"] = async parameters =>
+			{
+				var servers = await session.Query<ServerRecord>().ToListAsync();
+				return new ClusterStatistics
+				{
+					Servers = servers,
+				};
+			};*/
 		}
 
-		private async Task FetchServerDatabases(Server server)
+		private async Task FetchServerDatabasesAsync(ServerRecord server)
 		{
-			var databaseStore = new DocumentStore {Url = server.Url}.Initialize();
-			var databaseNames = await databaseStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024);
+			var documentStore = (DocumentStore)session.Advanced.DocumentStore;
+			var client = new AsyncServerClient(server.Url, documentStore.Conventions, documentStore.Credentials, 
+				documentStore.JsonRequestFactory, null, s => null, null, new IDocumentConflictListener[0]);
+			var databaseNames = await client.GetDatabaseNamesAsync(1024);
 
-			var session = store.OpenSession();
-			FetchDatabase(server, null, session, databaseStore);
+			await HandleDatabaseInServerAsync(server, Constants.SystemDatabase, client);
 			foreach (var databaseName in databaseNames)
 			{
-				FetchDatabase(server, databaseName, session, databaseStore);
+				await HandleDatabaseInServerAsync(server, databaseName, client.ForDatabase(databaseName));
 			}
-			session.SaveChanges();
 		}
 
-		private static void FetchDatabase(Server server, string databaseName, IDocumentSession session, IDocumentStore databaseStore)
+		private async Task HandleDatabaseInServerAsync(ServerRecord server, string databaseName, IAsyncDatabaseCommands dbCmds)
 		{
 			var databaseRecord = new DatabaseRecord {Name = databaseName, ServerId = server.Id, ServerUrl = server.Url};
-			session.Store(databaseRecord);
-
-			var databaseSession = databaseStore.OpenSession(databaseRecord.Name);
-			var replicationDocument = databaseSession.Load<ReplicationDocument>(Constants.RavenReplicationDestinations);
-			if (replicationDocument != null)
+			await session.StoreAsync(databaseRecord);
+			var document = await dbCmds.HeadAsync(Constants.RavenReplicationDestinations);
+			server.IsOnline = true;
+			server.LastOnlineTime = DateTimeOffset.Now;
+			if (document != null)
 			{
 				databaseRecord.IsReplicationEnabled = true;
 			}

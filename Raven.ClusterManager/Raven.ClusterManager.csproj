@@ -53,8 +53,11 @@
   <ItemGroup>
     <Compile Include="Bootstrapper.cs" />
     <Compile Include="Discovery\ClusterDiscoveryClient.cs" />
+    <Compile Include="Infrastructure\Dispatcher.cs" />
+    <Compile Include="JsonNetSerializer.cs" />
+    <Compile Include="Models\ClusterStatistics.cs" />
     <Compile Include="Models\DatabaseRecord.cs" />
-    <Compile Include="Models\Server.cs" />
+    <Compile Include="Models\ServerRecord.cs" />
     <Compile Include="Modules\DiscoveryModule.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -80,6 +83,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\images\logo.png" />
+    <Content Include="Assets\images\server_error.png" />
+    <Content Include="Assets\images\server_ok.png" />
     <Content Include="Assets\index.html" />
     <Content Include="Assets\scripts\controllers\serversCtrl.js" />
     <Content Include="Assets\scripts\controllers\mainCtrl.js" />

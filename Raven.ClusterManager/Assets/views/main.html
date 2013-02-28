@@ -1,1 +1,18 @@
-﻿Hello!
+﻿<div>
+    <div>
+        Servers: 2
+    </div>
+    <div ng-show="isDiscovering">Discovering...</div>
+    <a ng-click="startDiscovering()">Discover</a>
+</div>
+
+<div>
+    <div>Servers</div>
+    <div ng-repeat="server in stats.servers" class="server">
+        <div>
+            <img src="/images/server_ok.png" ng-show="server.isOnline">
+            <img src="/images/server_error.png" ng-hide="server.isOnline">
+        </div>
+        <div>{{ server.url }}</div>
+    </div>
+</div>

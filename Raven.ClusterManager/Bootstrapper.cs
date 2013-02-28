@@ -11,7 +11,6 @@ using Nancy.Responses;
 using Nancy.TinyIoc;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.ClusterManager.Models;
 
 namespace Raven.ClusterManager
 {
@@ -38,7 +37,7 @@ namespace Raven.ClusterManager
 			var store = container.Resolve<IDocumentStore>();
 			var documentSession = store.OpenSession();
 
-			container.Register<IDocumentSession>(documentSession);
+			container.Register(documentSession);
 		}
 
 		protected override void RequestStartup(TinyIoCContainer container, IPipelines pipelines, NancyContext context)
