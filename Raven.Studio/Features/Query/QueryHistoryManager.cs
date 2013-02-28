@@ -97,7 +97,7 @@ namespace Raven.Studio.Features.Query
 
             if (!queriesByHash.TryGetValue(hash, out node))
             {
-                node = new LinkedListNode<SavedQuery>(new SavedQuery(state.IndexName, state.Query));
+                node = new LinkedListNode<SavedQuery>(new SavedQuery(state));
                 queriesByHash.Add(hash, node);
             }
             else
@@ -195,7 +195,7 @@ namespace Raven.Studio.Features.Query
 
         private static QueryState ToQueryState(SavedQuery savedQuery)
         {
-            return new QueryState(savedQuery.IndexName, savedQuery.Query, savedQuery.SortOptions, savedQuery.IsSpatialQuery, savedQuery.Latitude, savedQuery.Longitude, savedQuery.Radius);
+            return new QueryState(savedQuery);
         }
 
         public IEnumerable<SavedQuery> RecentQueries

@@ -139,7 +139,9 @@
     <Reference Include="System.Windows.Controls.Data.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Data.Toolkit.dll</HintPath>
     </Reference>
-    <Reference Include="system.windows.controls.datavisualization.toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.DataVisualization.Toolkit">
+      <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.DataVisualization.Toolkit.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Controls.Input, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.Windows.Controls.Input.dll</HintPath>
@@ -207,6 +209,7 @@
     <Compile Include="Behaviors\ClosePopupAction.cs" />
     <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
@@ -256,12 +259,16 @@
     <Compile Include="Controls\ResetReplication.xaml.cs">
       <DependentUpon>ResetReplication.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Bundles\SqlReplicationConfigModel.cs" />
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
     <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ConflictsView.xaml.cs">
       <DependentUpon>ConflictsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\ConflictDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\ConflictVersionsView.xaml.cs">
+      <DependentUpon>ConflictVersionsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
@@ -271,6 +278,9 @@
     <Compile Include="Features\Settings\SqlReplicationScriptIntelliPromptProvider.cs" />
     <Compile Include="Features\Settings\SqlReplicationsSettingsSectionView.xaml.cs">
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Stats\UserInfoView.xaml.cs">
+      <DependentUpon>UserInfoView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
     <Compile Include="Features\Transformers\EditTransformerView.xaml.cs">
@@ -299,6 +309,7 @@
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
+    <Compile Include="Models\UserInfoModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">
       <DependentUpon>BundlesSelect.xaml</DependentUpon>
@@ -610,6 +621,9 @@
     </Compile>
     <Compile Include="Views\Transformers.xaml.cs">
       <DependentUpon>Transformers.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\User-Info.xaml.cs">
+      <DependentUpon>User-Info.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
@@ -966,6 +980,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\ConflictVersionsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Input\InputWindowWithSuggestion.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1043,6 +1061,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Stats\ReplicationStatisticsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Stats\UserInfoView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1131,6 +1153,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Transformers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\User-Info.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

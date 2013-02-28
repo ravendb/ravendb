@@ -11,6 +11,7 @@
              xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
              xmlns:controls="clr-namespace:Raven.Studio.Controls"
+             xmlns:documents="clr-namespace:Raven.Studio.Features.Documents"
              mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance models:ConflictsModel}">
     
@@ -52,7 +53,7 @@
                                                      CanUserReorder="False" 
                                                      CanUserResize="True" 
                                                      CanUserSort="False" 
-                                                     ClipboardContentBinding="{Binding Item.Id}">
+                                                     ClipboardContentBinding="{Binding Item.Document.DataAsJson[Id]}">
                     <sdk:DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Grid>
@@ -71,8 +72,8 @@
                                                    RadiusX="1"
                                                    RadiusY="1">
                                 </Rectangle>
-                                
-                                <TextBlock Text="{Binding Item.Id}" 
+
+                                <TextBlock Text="{Binding Item.Document.DataAsJson[Id]}" 
                                                    Behaviors:FadeTrimming.IsEnabled="True" 
                                                    Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
                                                    VerticalAlignment="Center" 
@@ -86,16 +87,28 @@
                                                      CanUserReorder="False" 
                                                      CanUserResize="True" 
                                                      CanUserSort="False" 
-                                                     ClipboardContentBinding="{Binding Item.LastModified}">
+                                                     ClipboardContentBinding="{Binding Item.Document.DataAsJson[ConflictDetectedAt]}">
                     <sdk:DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Grid>
                                 <TextBlock Text="{Binding Item.LastModified}" 
                                                    Behaviors:FadeTrimming.IsEnabled="True" 
                                                    Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
                                                    VerticalAlignment="Center" 
                                                    Margin="10,0,0,0"/>
-                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellTemplate>
+                </sdk:DataGridTemplateColumn>
+                <sdk:DataGridTemplateColumn  Header="Versions" 
+                                                     Width="400" 
+                                                     CanUserReorder="False" 
+                                                     CanUserResize="True" 
+                                                     CanUserSort="False" 
+                                                     ClipboardContentBinding="{Binding Item.Document.DataAsJson[Versions]}">
+                    <sdk:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <documents:ConflictVersionsView ConflictVersionInfo="{Binding Item.Document.DataAsJson[Versions]}" VerticalAlignment="Center"
+                                                            ReplicationSourcesLookup="{Binding DataContext.ReplicationSourcesLookup, RelativeSource={RelativeSource FindAncestor, AncestorType=sdk:DataGrid}}"
+                                                   Margin="10,0,0,0"/>
                         </DataTemplate>
                     </sdk:DataGridTemplateColumn.CellTemplate>
                 </sdk:DataGridTemplateColumn>
