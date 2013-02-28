@@ -283,7 +283,7 @@
 								Background="IndianRed"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Left"
-								ToolTipService.ToolTip="Index Transform has been replaced with Transformers, we suggest using transformers instead of this"
+								ToolTipService.ToolTip="Index Transform is deprecated and has been replaced with Result Transformers, we suggest using Result Transformers instead"
                                 Margin="0">
 						<Button.Content>
 							<StackPanel Orientation="Horizontal"
@@ -594,7 +594,7 @@
 								Orientation="Horizontal">
 						<Grid Margin="0,0,10,0" VerticalAlignment="Top" Background="IndianRed">
 							<TextBlock Text="Transform"
-									   ToolTipService.ToolTip="Index Transform has been replaced with Transformers, we suggest using transformers instead of this"/>
+									   ToolTipService.ToolTip="Index Transform is deprecated and has been replaced with Result Transformers, we suggest using Result Transformers instead"/>
 						</Grid>
 						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
 							<i:Interaction.Behaviors>
@@ -603,7 +603,7 @@
 										<Popup>
 											<ContentControl Style="{StaticResource Style_InfoToolTip}">
 												<RichTextBlock MaxWidth="370" Margin="5">
-													<Paragraph>Index Transform has been replaced with Transformers, we suggest using transformers instead of this</Paragraph>
+													<Paragraph>Index Transform is deprecated and has been replaced with Result Transformers, we suggest using Result Transformers instead</Paragraph>
 													<Paragraph>The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax</Paragraph>
 
 													<Paragraph>
