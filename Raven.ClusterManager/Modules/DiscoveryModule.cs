@@ -4,17 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Nancy;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Listeners;
 using Raven.ClusterManager.Discovery;
-using Raven.ClusterManager.Infrastructure;
 using Raven.ClusterManager.Models;
 using Nancy.ModelBinding;
 using System.Linq;
@@ -23,52 +22,62 @@ namespace Raven.ClusterManager.Modules
 {
 	public class DiscoveryModule : NancyModule
 	{
-		private readonly IAsyncDocumentSession session;
+		private readonly IDocumentSession session;
 		private readonly static Guid SenderId = Guid.NewGuid();
 
-		public DiscoveryModule(IAsyncDocumentSession session): base("/api/discovery")
+		public DiscoveryModule(IDocumentSession session)
+			: base("/api/discovery")
 		{
 			this.session = session;
 
 			Get["/start"] = parameters =>
 			{
 				var discoveryClient = new ClusterDiscoveryClient(SenderId, "http://localhost:9020/api/discovery/notify");
-				Dispatcher.HandleResult(discoveryClient.PublishMyPresenceAsync());
+				discoveryClient.PublishMyPresenceAsync();
 				return "started";
 			};
 
-			Func<dynamic, Task<string>> asyncNotify = async parameters =>
+			Post["/notify"] = parameters =>
 			{
 				var input = this.Bind<ServerRecord>("Id");
 
-				var server = (await session.Query<ServerRecord>()
-				                           .Take(1)
-				                           .Where(s => s.Url == input.Url).ToListAsync()).FirstOrDefault() ?? new ServerRecord();
+				var server = session.Query<ServerRecord>().FirstOrDefault(s => s.Url == input.Url) ?? new ServerRecord();
 				this.BindTo(server, "Id");
-				await session.StoreAsync(server);
+				session.Store(server);
 
-				await FetchServerDatabasesAsync(server);
+				try
+				{
+					FetchServerDatabasesAsync(server)
+						.Wait();
+				}
+				catch (SocketException)
+				{
+					server.IsOnline = false;
+				}
 
 				return "notified";
 			};
 
-			Post["/notify"] = parameters => asyncNotify(parameters);
-
-			/*Get["/servers"] = async parameters =>
+			Get["/servers"] = parameters =>
 			{
-				var servers = await session.Query<ServerRecord>().ToListAsync();
+				var servers = this.session.Query<ServerRecord>().ToList();
 				return new ClusterStatistics
 				{
 					Servers = servers,
 				};
-			};*/
+			};
 		}
 
 		private async Task FetchServerDatabasesAsync(ServerRecord server)
 		{
 			var documentStore = (DocumentStore)session.Advanced.DocumentStore;
-			var client = new AsyncServerClient(server.Url, documentStore.Conventions, documentStore.Credentials, 
-				documentStore.JsonRequestFactory, null, s => null, null, new IDocumentConflictListener[0]);
+			var replicationInformer = new ReplicationInformer(new DocumentConvention
+			{
+				FailoverBehavior = FailoverBehavior.FailImmediately
+			});
+
+			var client = new AsyncServerClient(server.Url, documentStore.Conventions, documentStore.Credentials,
+				documentStore.JsonRequestFactory, null, s => replicationInformer, null, new IDocumentConflictListener[0]);
 			var databaseNames = await client.GetDatabaseNamesAsync(1024);
 
 			await HandleDatabaseInServerAsync(server, Constants.SystemDatabase, client);
@@ -80,12 +89,12 @@ namespace Raven.ClusterManager.Modules
 
 		private async Task HandleDatabaseInServerAsync(ServerRecord server, string databaseName, IAsyncDatabaseCommands dbCmds)
 		{
-			var databaseRecord = new DatabaseRecord {Name = databaseName, ServerId = server.Id, ServerUrl = server.Url};
-			await session.StoreAsync(databaseRecord);
-			var document = await dbCmds.HeadAsync(Constants.RavenReplicationDestinations);
+			var databaseRecord = new DatabaseRecord { Name = databaseName, ServerId = server.Id, ServerUrl = server.Url };
+			session.Store(databaseRecord);
+			var replicationDocument = await dbCmds.GetAsync(Constants.RavenReplicationDestinations);
 			server.IsOnline = true;
 			server.LastOnlineTime = DateTimeOffset.Now;
-			if (document != null)
+			if (replicationDocument != null)
 			{
 				databaseRecord.IsReplicationEnabled = true;
 			}
