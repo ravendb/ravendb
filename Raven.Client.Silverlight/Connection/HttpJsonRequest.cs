@@ -507,5 +507,19 @@ namespace Raven.Client.Silverlight.Connection
 			var uriBuilder = new UriBuilder(primaryUrl);
 			return uriBuilder.Uri.ToString();
 		}
+
+		public Task<WebResponse> RawExecuteRequestAsync()
+		{
+			if (requestSendToServer)
+				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
+
+			requestSendToServer = true;
+
+			return WaitForTask.ContinueWith(_ => webRequest
+				                                     .GetResponseAsync()
+				                                     .ConvertSecurityExceptionToServerNotFound()
+				                                     .AddUrlIfFaulting(webRequest.RequestUri))
+													 .Unwrap();
+		}
 	}
 }

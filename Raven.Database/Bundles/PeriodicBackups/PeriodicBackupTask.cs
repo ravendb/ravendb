@@ -55,11 +55,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 		private void ReadSetupValuesFromDocument()
 		{
-			using (LogManager.OpenMappedContext("database", Database.Name ?? Constants.SystemDatabase))
-			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+			using (LogContext.WithDatabase(Database.Name))
 			{
-				LogContext.DatabaseName.Value = Database.Name;
-
 				try
 				{
 					// Not having a setup doc means this DB isn't enabled for periodic backups
@@ -111,11 +108,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					return;
 				currentTask = Task.Factory.StartNew(() =>
 				{
-					using (LogManager.OpenMappedContext("database", Database.Name ?? Constants.SystemDatabase))
-					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+					using (LogContext.WithDatabase(Database.Name))
 					{
-						LogContext.DatabaseName.Value = Database.Name;
-
 						try
 						{
 							var localBackupConfigs = backupConfigs;

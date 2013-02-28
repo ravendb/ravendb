@@ -71,6 +71,15 @@ namespace Raven.Database.Server
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
+#if DEBUG
+		private readonly ConcurrentQueue<string> recentRequests = new ConcurrentQueue<string>();
+
+		public ConcurrentQueue<string> RecentRequests
+		{
+			get { return recentRequests; }
+		}
+#endif
+
 		public int NumberOfRequests
 		{
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
@@ -341,8 +350,15 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
-			listener.Prefixes.Add(uri);
+			
+			if (SystemConfiguration.UseSsl)
+			{
+				SetupHttps(listener, virtualDirectory);
+			}
+			else
+			{
+				SetupHttp(listener, virtualDirectory);
+			}
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
 			{
@@ -354,6 +370,18 @@ namespace Raven.Database.Server
 
 
 			listener.BeginGetContext(GetContext, null);
+		}
+
+		private void SetupHttps(HttpListener httpListener, string virtualDirectory)
+		{
+			var uri = "https://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+			httpListener.Prefixes.Add(uri);
+		}
+
+		private void SetupHttp(HttpListener httpListener, string virtualDirectory)
+		{
+			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+			httpListener.Prefixes.Add(uri);
 		}
 
 		public void Init()
@@ -472,12 +500,28 @@ namespace Raven.Database.Server
 
 			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
 			{
-				HandleTooBusyError(ctx);
+				try
+				{
+					HandleTooBusyError(ctx);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not send a too busy error to the client", e);
+				}
 				return;
 			}
 			try
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
+#if DEBUG
+				recentRequests.Enqueue(ctx.Request.RawUrl);
+				while (recentRequests.Count > 50)
+				{
+					string _;
+					recentRequests.TryDequeue(out _);
+				}
+#endif
+
 				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
 					HandleChangesRequest(ctx, () => { });
 				else
@@ -1282,6 +1326,13 @@ namespace Raven.Database.Server
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
+#if DEBUG
+			while (recentRequests.Count > 0)
+			{
+				string _;
+				recentRequests.TryDequeue(out _);
+			}
+#endif
 		}
 
 		public Task<DocumentDatabase> GetDatabaseInternal(string name)

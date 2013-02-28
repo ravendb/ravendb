@@ -27,6 +27,9 @@ namespace Raven.Database.Config
 			// Network
 			{"Raven/HostName", "string", null, "The hostname to bind the embedded http server to, if we want to bind to a specific hostname, rather than all. Default: none."},
 			{"Raven/Port", "int", "1 - 65,536, *", "The port to bind the embedded http server. Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward."},
+			{"Raven/UseSsl", "bool", "false", "Enable/disable SSL. Default: false."},
+			{"Raven/SslCertificatePath", "string", "null", "Full path to the X509 certificate. Default: null."},
+			{"Raven/SslCertificatePassword", "string", "null", "Password to the X509 certificate. Default: null."},
 			{"Raven/HttpCompression", "bool", "true,false", "Whatever http compression is enabled. Default: true."},
 			{"Raven/VirtualDirectory", "string", null, "The virtual directory for the RavenDB server. Default: none."},
 

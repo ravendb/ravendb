@@ -8,7 +8,8 @@
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
 			 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
-             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" mc:Ignorable="d"
+             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+             xmlns:Delay="clr-namespace:Delay" mc:Ignorable="d"
 			 x:Name="this"
 			 x:Class="Raven.Studio.Features.Indexes.IndexesListView"
 			 d:DesignWidth="600"
@@ -57,12 +58,14 @@
 										   VerticalAlignment="Center"
 										   Margin="2"
 										   Grid.Column="0" />
-									<HyperlinkButton Content="{Binding Name}"
+									<HyperlinkButton Content="{Binding ModifiedName}"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding Name, StringFormat=/query/\{0\}}"
 													 VerticalAlignment="Center"
 													 HorizontalAlignment="Left"
-													 Style="{StaticResource Style_Link_DrillDown}"
+													 FontStyle="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontStyle}}"
+													 Foreground="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontColor}}"
+													 Style="{StaticResource Style_Link_Index_Name}"
 													 ToolTipService.ToolTip="{Binding Name}"
 													 Grid.Column="1" />
 									<HyperlinkButton Grid.Column="2"
@@ -163,20 +166,24 @@
 
 						<Controls1:RecentQueriesButton/>
 
-						<HyperlinkButton Command="{Binding DeleteAllIndexes}"
-										 Style="{StaticResource Style_Button_MouseOverChrome}"
-										 VerticalAlignment="Center">
-							<HyperlinkButton.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_DeleteIndex_Tiny}"
-										   Stretch="None"
-										   VerticalAlignment="Center"
-										   Margin="4,0,4,0" />
-									<TextBlock Text="Delete All Indexes"
-											   VerticalAlignment="Center" />
-								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+						<Delay:SplitButton Command="{Binding DeleteIndexes}"
+										   CommandParameter="Idle"
+										   DropDownToolTip="More Options"
+										   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,5" 
+										   VerticalAlignment="Center">
+							<Delay:SplitButton.ButtonMenuItemsSource>
+								<ContextMenu:MenuItem Header="Delete All Idle Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Idle"/>
+								<ContextMenu:MenuItem Header="Delete All Disabled Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Disabled"/>
+								<ContextMenu:MenuItem Header="Delete All Abandoned Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Abandoned"/>
+								<ContextMenu:Separator/>
+								<ContextMenu:MenuItem Header="Delete All Indexes" Command="{Binding DeleteIndexes}" CommandParameter="All"/>
+							</Delay:SplitButton.ButtonMenuItemsSource>
+							<StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Delete All Idle Indexes">
+								<Image Source="{StaticResource Image_DeleteIndex_Tiny}" Width="14" Height="14"
+									   VerticalAlignment="Center" Margin="0,0,4,0"/>
+								<TextBlock Text="Delete All Idle Indexes" VerticalAlignment="Center" />
+							</StackPanel>
+						</Delay:SplitButton>
 					</StackPanel>
 				</Border>
 			</toolkit:DockPanel>

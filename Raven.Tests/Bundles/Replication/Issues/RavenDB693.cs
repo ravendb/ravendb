@@ -66,22 +66,5 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			 Assert.Equal("Ayende Rahien", jsonDocument.DataAsJson.Value<string>("Name"));
 		 }
-
-
-		 public class ClientSideConflictResolution : IDocumentConflictListener
-		 {
-			 public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
-			 {
-				 resolvedDocument = new JsonDocument
-				 {
-					 DataAsJson = new RavenJObject
-					 {
-						 {"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x=>x))}
-					 },
-					 Metadata = new RavenJObject()
-				 };
-				 return true;
-			 }
-		 }
 	}
 }

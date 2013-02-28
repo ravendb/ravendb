@@ -24,6 +24,7 @@ namespace Raven.Database.Server.Connections
 
 		private int watchAllDocuments;
 		private int watchAllIndexes;
+		private int watchAllReplicationConflicts;
 
 		public ConnectionState(EventsTransport eventsTransport)
 		{
@@ -88,6 +89,18 @@ namespace Raven.Database.Server.Connections
 			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
 				return;
 
+			Enqueue(value);
+		}
+
+		public void Send(ReplicationConflictNotification replicationConflictNotification)
+		{
+			var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
+
+			if (watchAllReplicationConflicts <= 0)
+			{
+				return;
+			}
+			
 			Enqueue(value);
 		}
 
@@ -164,6 +177,16 @@ namespace Raven.Database.Server.Connections
 		{
 			if (eventsTransport != null)
 				eventsTransport.Disconnect();
+		}
+
+		public void WatchAllReplicationConflicts()
+		{
+			Interlocked.Increment(ref watchAllReplicationConflicts);
+		}
+
+		public void UnwatchAllReplicationConflicts()
+		{
+			Interlocked.Decrement(ref watchAllReplicationConflicts);
 		}
 	}
 }

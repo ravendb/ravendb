@@ -107,7 +107,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog", new HashSet<ReduceKeyAndBucket>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog", new Dictionary<ReduceKeyAndBucket, int>());
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
 			});
 
@@ -130,8 +130,8 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2", new HashSet<ReduceKeyAndBucket>());
-				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1", new HashSet<ReduceKeyAndBucket>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2", new Dictionary<ReduceKeyAndBucket, int>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1", new Dictionary<ReduceKeyAndBucket, int>());
 			});
 
 			transactionalStorage.Batch(actions =>

@@ -52,7 +52,6 @@ namespace Raven.Studio.Models
 			this.documentStore = documentStore;
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
-				new ImportTask(),
 				new ExportTask(),
 				new StartBackupTask(),
 				new IndexingTask(),

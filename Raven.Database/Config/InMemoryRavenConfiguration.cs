@@ -95,7 +95,7 @@ namespace Raven.Database.Config
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
-				                                                    MaxNumberOfItemsToIndexInSingleBatch);
+																	MaxNumberOfItemsToIndexInSingleBatch);
 			}
 			else
 			{
@@ -105,11 +105,11 @@ namespace Raven.Database.Config
 			}
 			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
 
-		
+
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
-			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default?
-				 defaultInitialNumberOfItemsToIndexInSingleBatch/2 :
+			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch / 2 :
 				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
@@ -140,9 +140,9 @@ namespace Raven.Database.Config
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
-		    
+
 			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
-		    TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
+			TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
 
 			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
 			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
@@ -163,7 +163,13 @@ namespace Raven.Database.Config
 			HostName = ravenSettings.HostName.Value;
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+			{ 
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
+				UseSsl = ravenSettings.UseSsl.Value;
+				SslCertificatePath = ravenSettings.SslCertificatePath.Value;
+				SslCertificatePassword = ravenSettings.SslCertificatePassword.Value;
+			}
+
 			SetVirtualDirectory();
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
@@ -196,15 +202,15 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-	    public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
-		
+		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+
 		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
-        
+
 		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
 
-		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; } 
+		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
 
-	    private void FilterActiveBundles()
+		private void FilterActiveBundles()
 		{
 			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
 
@@ -227,7 +233,7 @@ namespace Raven.Database.Config
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
-			if (catalogs.Count != 1) 
+			if (catalogs.Count != 1)
 				return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
 			return GetUnfilteredCatalog(catalogs.First());
 		}
@@ -323,7 +329,7 @@ namespace Raven.Database.Config
 						Query = ""
 					}.Uri.ToString();
 				}
-				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+				return new UriBuilder(UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
@@ -441,6 +447,12 @@ namespace Raven.Database.Config
 		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
 		/// </summary>
 		public int Port { get; set; }
+
+		public bool UseSsl { get; set; }
+
+		public string SslCertificatePath { get; set; }
+
+		public string SslCertificatePassword { get; set; }
 
 		/// <summary>
 		/// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
@@ -830,10 +842,10 @@ namespace Raven.Database.Config
 		public void CustomizeValuesForTenant(string tenantId)
 		{
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
 
 			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Tenants", tenantId);
+				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
 		}
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)

@@ -37,22 +37,68 @@ namespace Raven.Abstractions.Data
     [Flags]
     public enum IndexingPriority
     {
-        Normal = 0,
-		
-		Disabled = 1,
-        Idle = 2,
-		Abandoned = 4,
+		None = 0,
 
-        Forced = 256,
+        Normal = 1,
+		
+		Disabled = 2,
+        
+		Idle = 4,
+		
+		Abandoned = 8,
+
+        Forced = 512,
     }
 
     public class IndexingPerformanceStats
 	{
-		public string Operation { get; set; }
+	    protected bool Equals(IndexingPerformanceStats other)
+	    {
+		    return string.Equals(Operation, other.Operation) && OutputCount == other.OutputCount && InputCount == other.InputCount && Duration.Equals(other.Duration) && Started.Equals(other.Started);
+	    }
+
+	    public override int GetHashCode()
+	    {
+		    unchecked
+		    {
+			    var hashCode = (Operation != null ? Operation.GetHashCode() : 0);
+			    hashCode = (hashCode*397) ^ OutputCount;
+			    hashCode = (hashCode*397) ^ InputCount;
+			    hashCode = (hashCode*397) ^ Duration.GetHashCode();
+			    hashCode = (hashCode*397) ^ Started.GetHashCode();
+			    return hashCode;
+		    }
+	    }
+
+	    public string Operation { get; set; }
 		public int OutputCount { get; set; }
 		public int InputCount { get; set; }
 		public TimeSpan Duration { get; set; }
 		public DateTime Started { get; set; }
 		public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((IndexingPerformanceStats) obj);
+		}
+
+	    public override string ToString()
+	    {
+		    return string.Format(@"
+Operation:         {0}
+Input:              {1:#,#}
+Output:              {2:#,#}
+Duration:          {3}
+Duration in ms: {4:#,#}
+", Operation,
+		                         InputCount,
+		                         OutputCount,
+		                         Duration,
+		                         DurationMilliseconds);
+
+	    }
 	}
 }

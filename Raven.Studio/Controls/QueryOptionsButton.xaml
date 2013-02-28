@@ -7,7 +7,8 @@
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
              xmlns:System="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:QueryModel}">
+    d:DesignHeight="50
+			 " d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:QueryModel}">
 
     <Delay:PopupButton Margin="4,0"
                        ToolTipService.ToolTip="Show Advanced Query Options">
@@ -58,8 +59,21 @@
                               ToolTipService.ToolTip="Show the raw index entries instead of matching documents"
                               Margin="4" Content="Index Entries">
                     </CheckBox>
+					
+					<ContextMenu:Separator Style="{StaticResource Style_Separator_Horizontal}"/>
 
-                    <CheckBox IsChecked="{Binding SkipTransformResults, Mode=TwoWay}"
+					<CheckBox IsChecked="{Binding UseTransformer, Mode=TwoWay}" 
+							  HorizontalAlignment="Left"
+							  ToolTipService.ToolTip="Select a transformer to use"
+							  Margin="4"
+							  Content="Use Transformer"/>
+					
+					<ComboBox SelectedValue="{Binding SelectedTransformer.Value, Mode=TwoWay}"
+							  ItemsSource="{Binding Transformers}"
+							  Margin="4"
+							  Visibility="{Binding UseTransformer, Converter={StaticResource BooleanToVisibility}}"/>
+					
+					<CheckBox IsChecked="{Binding SkipTransformResults, Mode=TwoWay}"
                               HorizontalAlignment="Left"
                               ToolTipService.ToolTip="Prevents the Transform Results stage of the index being applied"
                               Margin="4"

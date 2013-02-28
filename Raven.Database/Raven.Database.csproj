@@ -280,6 +280,7 @@
     <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
     <Compile Include="Server\Responders\DocsStreams.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
+    <Compile Include="Server\Responders\IndexPriorityResponder.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -698,7 +699,7 @@
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
-    <Compile Include="Storage\Esent\StorageActions\EsentUtil.cs" />
+    <Compile Include="Storage\Esent\Debug\EsentUtil.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />

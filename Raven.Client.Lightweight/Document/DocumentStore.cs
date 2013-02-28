@@ -705,7 +705,8 @@ namespace Raven.Client.Document
 				jsonRequestFactory,
 				Conventions,
 				GetReplicationInformerForDatabase(database),
-				() => databaseChanges.Remove(database));
+				() => databaseChanges.Remove(database),
+				((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
 		}
 
 		/// <summary>
@@ -829,6 +830,13 @@ namespace Raven.Client.Document
 			}
 
 			base.AfterSessionCreated(session);
+		}
+
+
+		public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
+		{
+			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);
+			return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}
 #endif
 

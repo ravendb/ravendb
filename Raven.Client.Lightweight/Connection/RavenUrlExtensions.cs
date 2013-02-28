@@ -26,6 +26,11 @@ namespace Raven.Client.Connection
 			return url + "/indexes/" + index + "?definition=yes";
 		}
 
+		public static string Transformer(this string url, string transformer)
+		{
+			return url + "/transformers/" + transformer;
+		}
+
 		public static string IndexNames(this string url, int start, int pageSize)
 		{
 			return url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize;
