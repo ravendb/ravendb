@@ -341,8 +341,15 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
-			listener.Prefixes.Add(uri);
+			
+			if (SystemConfiguration.UseSsl)
+			{
+				SetupHttps(listener, virtualDirectory);
+			}
+			else
+			{
+				SetupHttp(listener, virtualDirectory);
+			}
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
 			{
@@ -354,6 +361,18 @@ namespace Raven.Database.Server
 
 
 			listener.BeginGetContext(GetContext, null);
+		}
+
+		private void SetupHttps(HttpListener httpListener, string virtualDirectory)
+		{
+			var uri = "https://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+			httpListener.Prefixes.Add(uri);
+		}
+
+		private void SetupHttp(HttpListener httpListener, string virtualDirectory)
+		{
+			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+			httpListener.Prefixes.Add(uri);
 		}
 
 		public void Init()
