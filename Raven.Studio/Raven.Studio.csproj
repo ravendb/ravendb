@@ -139,7 +139,9 @@
     <Reference Include="System.Windows.Controls.Data.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Data.Toolkit.dll</HintPath>
     </Reference>
-    <Reference Include="system.windows.controls.datavisualization.toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.Windows.Controls.DataVisualization.Toolkit">
+      <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.DataVisualization.Toolkit.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Controls.Input, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.Windows.Controls.Input.dll</HintPath>
@@ -207,6 +209,7 @@
     <Compile Include="Behaviors\ClosePopupAction.cs" />
     <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
@@ -256,12 +259,16 @@
     <Compile Include="Controls\ResetReplication.xaml.cs">
       <DependentUpon>ResetReplication.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Bundles\SqlReplicationConfigModel.cs" />
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
     <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ConflictsView.xaml.cs">
       <DependentUpon>ConflictsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\ConflictDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\ConflictVersionsView.xaml.cs">
+      <DependentUpon>ConflictVersionsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
@@ -963,6 +970,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\ConflictsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\ConflictVersionsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

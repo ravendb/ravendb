@@ -254,6 +254,7 @@
                         <Behaviors:StringCollection>
 							<System:String>/statistics</System:String>
 							<System:String>/logs</System:String>
+							<System:String>/logs/error</System:String>
                             <System:String>/alerts</System:String>
                             <System:String>/indexes-errors</System:String>
                             <System:String>/replicationStatistics</System:String>
