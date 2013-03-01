@@ -5,7 +5,7 @@
 # Custom for Visual Studio
 *.cs       text diff=csharp eol=crlf
 *.sln      text merge=union eol=crlf
-*.csproj   text merge=union
+*.csproj   text merge=union eol=crlf
 *.vbproj   text merge=union
 *.fsproj   text merge=union
 *.dbproj   text merge=union
