@@ -21,10 +21,10 @@ namespace Raven.Abstractions.Indexing
 				switch (strategy)
 				{
 					case SpatialSearchStrategy.GeohashPrefixTree:
-						maxTreeLevel = 9; // about 2 meters, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
+						maxTreeLevel = SpatialOptions.DefaultGeohashLevel;
 						break;
 					case SpatialSearchStrategy.QuadPrefixTree:
-						maxTreeLevel = 25; // about 1 meter, should be good enough
+						maxTreeLevel = SpatialOptions.DefaultQuadTreeLevel;
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("strategy");

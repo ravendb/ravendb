@@ -59,32 +59,32 @@ namespace Raven.Database.Indexing
 			return context;
 		}
 
-		private NtsSpatialContext GetContext(SpatialOptions options)
+		private NtsSpatialContext GetContext(SpatialOptions opt)
 		{
-			if (options.Type == SpatialFieldType.Cartesian)
+			if (opt.Type == SpatialFieldType.Cartesian)
 			{
 				var nts = new NtsSpatialContext(new GeometryFactory(), false, new CartesianDistCalc(), null);
-				nts.GetWorldBounds().Reset(options.MinX, options.MaxX, options.MinY, options.MaxY);
+				nts.GetWorldBounds().Reset(opt.MinX, opt.MaxX, opt.MinY, opt.MaxY);
 				return nts;
 			}
 			return GeoContext;
 		}
 
-		private NtsShapeReadWriter GetShapeReadWriter(SpatialOptions options, NtsSpatialContext ntsContext)
+		private NtsShapeReadWriter GetShapeReadWriter(SpatialOptions opt, NtsSpatialContext ntsContext)
 		{
-			if (options.Type == SpatialFieldType.Cartesian)
+			if (opt.Type == SpatialFieldType.Cartesian)
 				return new NtsShapeReadWriter(ntsContext);
 			return GeoShapeReadWriter;
 		}
 
-		private SpatialStrategy CreateStrategy(string fieldName, SpatialOptions options)
+		private SpatialStrategy CreateStrategy(string fieldName, SpatialOptions opt)
 		{
-			switch (options.Strategy)
+			switch (opt.Strategy)
 			{
 				case SpatialSearchStrategy.GeohashPrefixTree:
-					return new RecursivePrefixTreeStrategyThatSupportsWithin(new GeohashPrefixTree(context, options.MaxTreeLevel), fieldName);
+					return new RecursivePrefixTreeStrategyThatSupportsWithin(new GeohashPrefixTree(context, opt.MaxTreeLevel), fieldName);
 				case SpatialSearchStrategy.QuadPrefixTree:
-					return new RecursivePrefixTreeStrategyThatSupportsWithin(new QuadPrefixTree(context, options.MaxTreeLevel), fieldName);
+					return new RecursivePrefixTreeStrategyThatSupportsWithin(new QuadPrefixTree(context, opt.MaxTreeLevel), fieldName);
 			}
 			return null;
 		}
