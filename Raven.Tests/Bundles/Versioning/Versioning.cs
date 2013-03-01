@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
+using Raven.Json.Linq;
 using Raven.Smuggler;
 using Xunit;
 
@@ -376,7 +377,7 @@ namespace Raven.Tests.Bundles.Versioning
 				session.SaveChanges();
 
 				var metadata = session.Advanced.GetMetadataFor(company);
-				Assert.Equal(4, metadata.Value<int>("Raven-Document-Revision"));
+				Assert.Equal(3, metadata.Value<int>("Raven-Document-Revision"));
 			}
 		}
 
@@ -408,15 +409,13 @@ namespace Raven.Tests.Bundles.Versioning
 			using (var session = documentStore.OpenSession())
 			{
 				var doc = session.Load<Company>("companies/1");
-				var metadata = session.Advanced.GetMetadataFor(doc);
-				Assert.Equal(2, metadata.Value<int>("Raven-Document-Revision"));
+				Assert.Equal(2, session.Advanced.GetMetadataFor(doc).Value<int>("Raven-Document-Revision"));
 
 				session.Delete(doc);
 				session.SaveChanges();
 			}
 
-			var options = new SmugglerOptions {BackupPath = Path.GetTempFileName()};
-
+			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
 			try
 			{
 				var exportSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = documentStore.Url });
@@ -432,9 +431,15 @@ namespace Raven.Tests.Bundles.Versioning
 					{
 						session.Store(company);
 						session.SaveChanges();
+						Assert.Equal(3, session.Advanced.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
+					}
 
-						var metadata = session.Advanced.GetMetadataFor(company);
-						Assert.Equal(4, metadata.Value<int>("Raven-Document-Revision"));
+					using (var session = documentStore2.OpenSession())
+					{
+						var doc = session.Load<Company>("companies/1");
+						doc.Name = "Company Name 3";
+						session.SaveChanges();
+						Assert.Equal(4, session.Advanced.GetMetadataFor(doc).Value<int>("Raven-Document-Revision"));
 					}
 				}
 			}
