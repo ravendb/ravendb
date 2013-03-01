@@ -34,6 +34,7 @@ namespace Raven.Tests.Issues
 
 				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 				{
+
 					// make sure that object is cached
 					using (var session = store.OpenSession())
 					{
@@ -43,6 +44,7 @@ namespace Raven.Tests.Issues
 
 						Assert.Equal("John", users[0].Name);
 					}
+					((DocumentStore)store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 
 					// change object
 					using (var session = store.OpenSession())
@@ -99,6 +101,7 @@ namespace Raven.Tests.Issues
 						Assert.Equal("John", users[0].Name);
 					}
 
+					((DocumentStore)store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 					// change object
 					using (var session = store.OpenSession())
 					{
@@ -164,6 +167,7 @@ namespace Raven.Tests.Issues
 						Assert.Equal("John", users[0].Name);
 					}
 
+					((DocumentStore)store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 					using (var session = store.OpenSession("Northwind_2"))
 					{
 						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
@@ -230,7 +234,7 @@ namespace Raven.Tests.Issues
 						var user = session.Load<User>(new[] {"users/1"}).First();
 						Assert.Equal("John", user.Name);
 					}
-					((DocumentStore) store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
+					((DocumentStore)store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 
 					// change object
 					using (var session = store.OpenSession())
