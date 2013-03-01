@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+    <DirectoryRef Id='INSTALLFOLDER'>
+      <Directory Id='bin' Name='bin'>
+        <Component Id="Raven.Web" Guid="135622C2-2005-4316-90E8-B54887128834">
+          <File Id="Raven.Web" Name='$(var.Raven.Web.ProjectName).dll' DiskId='1' Source='$(var.Raven.Web.TargetPath)' KeyPath='yes' />
+          <!--<File Id='Nlog.dll_Web' Name='Nlog.dll' DiskId='1' Source='$(var.Raven.Web.TargetDir)\Nlog.dll' />-->
+          <!--<File Id='web.config' Name='web.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\Web.config' />-->
+        </Component>
+      </Directory>
+    </DirectoryRef>
+	</Fragment>
+</Wix>

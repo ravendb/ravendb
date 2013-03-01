@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+    <UI Id="InstallerUI">
+
+      <UIRef Id="WixUI_InstallDir" />
+      <UIRef Id="WixUI_ErrorProgressText" />
+
+      <DialogRef Id="IisSetupDlg" />
+      <!-- Injection of custom UI. -->
+      <Publish Dialog="LicenseAgreementDlg" Control="Next"
+           Event="NewDialog" Value="InstallationType"
+           Order="3">LicenseAccepted = "1"</Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back"
+           Event="NewDialog" Value="InstallationType">1</Publish>
+
+    </UI>
+	</Fragment>
+</Wix>
