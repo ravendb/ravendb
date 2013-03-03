@@ -6,6 +6,8 @@
 
 		public string Name { get; set; }
 
+		public bool Disabled { get; set; }
+
 		public string RavenEntityName { get; set; }
 		public string Script { get; set; }
 		public string FactoryName { get; set; }

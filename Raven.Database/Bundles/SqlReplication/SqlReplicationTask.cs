@@ -127,6 +127,8 @@ namespace Raven.Database.Bundles.SqlReplication
                         .Where(x => ByteArrayComparer.Instance.Compare(GetLastEtagFor(localReplicationStatus, x), latestEtag) <= 0) // haven't replicate the etag yet
                         .Where(x =>
                         {
+	                        if (x.Disabled)
+		                        return false;
 	                        var sqlReplicationStatistics = statistics.GetOrDefault(x.Name);
 	                        if (sqlReplicationStatistics == null)
 		                        return true;
