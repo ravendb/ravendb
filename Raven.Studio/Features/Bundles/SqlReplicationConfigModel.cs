@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Bundles
@@ -101,5 +102,41 @@ namespace Raven.Studio.Features.Bundles
                 OnPropertyChanged(() => ConnectionStringSettingName);
             }
         }
+
+		public SqlReplicationConfig ToSqlReplicationConfig()
+		{
+			var result = new SqlReplicationConfig
+			{
+				Id = Id,
+				Name = Name,
+				FactoryName = FactoryName,
+				RavenEntityName = RavenEntityName,
+				Script = Script
+			};
+
+			if (string.IsNullOrWhiteSpace(ConnectionString) == false)
+				result.ConnectionString = ConnectionString;
+			else if (string.IsNullOrWhiteSpace(ConnectionStringName) == false)
+				result.ConnectionStringName = connectionStringName;
+			else
+				result.ConnectionStringSettingName = connectionStringSettingName;
+
+			return result;
+		}	
+
+		public static SqlReplicationConfigModel FromSqlReplicationConfig(SqlReplicationConfig config)
+		{
+			return new SqlReplicationConfigModel
+			{
+				Id = config.Id,
+				Name = config.Name,
+				FactoryName = config.FactoryName,
+				RavenEntityName = config.RavenEntityName,
+				Script = config.Script,
+				ConnectionString = config.ConnectionString,
+				ConnectionStringName = config.ConnectionStringName,
+				ConnectionStringSettingName = config.ConnectionStringSettingName
+			};
+		}
     }
 }
