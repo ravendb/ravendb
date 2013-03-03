@@ -1413,6 +1413,7 @@
     <Resource Include="Assets\Images\transformer_delete_tiny.png" />
     <Resource Include="Assets\Images\transformer_tiny.png" />
     <Resource Include="Assets\Images\transformer_small.png" />
+    <Resource Include="Assets\Images\index_down.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

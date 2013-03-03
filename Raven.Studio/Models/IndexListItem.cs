@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
+using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Models
 {
@@ -27,5 +29,17 @@ namespace Raven.Studio.Models
 
 			return Name;
 		}}
+		public ICommand MakeIndexPersisted
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					var req = ApplicationModel.DatabaseCommands
+										  .CreateRequest("/indexes/" + Name + "/forceWriteToDisk" , "POST");
+					req.ExecuteRequestAsync();
+				});
+			}
+		}
 	}
 }

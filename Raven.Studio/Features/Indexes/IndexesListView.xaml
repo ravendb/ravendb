@@ -52,6 +52,7 @@
 										<ColumnDefinition Width="Auto" />
 										<ColumnDefinition Width="*" />
 										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="Auto" />
 									</Grid.ColumnDefinitions>
 									<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 										   Stretch="None"
@@ -69,6 +70,18 @@
 													 ToolTipService.ToolTip="{Binding Name}"
 													 Grid.Column="1" />
 									<HyperlinkButton Grid.Column="2"
+													 Command="{Binding MakeIndexPersisted}"
+													 VerticalAlignment="Center"
+													 Style="{StaticResource Style_Button_MouseOverChrome}"
+													 Padding="4"
+													 Margin="2"
+													 ToolTipService.ToolTip="Make Index Persisted">
+										<HyperlinkButton.Content>
+											<Image Source="{StaticResource Image_Index_Down}"
+												   Stretch="None" />
+										</HyperlinkButton.Content>
+									</HyperlinkButton>
+									<HyperlinkButton Grid.Column="3"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding Name, StringFormat=/indexes/\{0\}}"
 													 VerticalAlignment="Center"
