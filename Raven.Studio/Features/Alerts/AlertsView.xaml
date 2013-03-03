@@ -89,6 +89,10 @@
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
+									<Rectangle Fill="#06000000"
+											   Width="1"
+											   VerticalAlignment="Stretch"
+											   HorizontalAlignment="Left"/>
 									<TextBlock Text="{Binding Database}" 
                                                Behaviors:FadeTrimming.IsEnabled="True" 
                                                Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
@@ -112,9 +116,14 @@
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
+									<Rectangle Fill="#06000000"
+											   Width="1"
+											   VerticalAlignment="Stretch"
+											   HorizontalAlignment="Left"/>
 									<TextBlock Text="{Binding Title}" 
                                                Behaviors:FadeTrimming.IsEnabled="True" 
                                                Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+											   Margin="5"
                                                VerticalAlignment="Center"/>
 									<Rectangle Fill="Black" 
                                                Height="1" 
@@ -136,9 +145,14 @@
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
+									<Rectangle Fill="#06000000"
+											   Width="1"
+											   VerticalAlignment="Stretch"
+											   HorizontalAlignment="Left"/>
 									<TextBlock Text="{Binding Message}" 
                                                Behaviors:FadeTrimming.IsEnabled="True" 
                                                Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+											   Margin="5"
                                                VerticalAlignment="Center"/>
 									<Rectangle Fill="Black" 
                                                Height="1" 
@@ -329,7 +343,6 @@
 									ContentTemplate="{StaticResource DataTemplate_List_DetailsView}"
 									HorizontalContentAlignment="Stretch"
 									VerticalContentAlignment="Stretch" Margin="0,0,0,4"/>
-					
 					<ContentControl Grid.Row="2"
 									Visibility="{Binding ShowObserved.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
 									Content="{Binding}" 
