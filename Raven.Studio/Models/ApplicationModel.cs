@@ -4,9 +4,11 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
@@ -39,8 +41,54 @@ namespace Raven.Studio.Models
 
 			Alerts = new ObservableCollection<Alert>();
 
-			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
+			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) =>
+			{
+				Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
+				RegisterToAlerts();
+			};
+
+			RegisterToAlerts();
 			State = new ApplicationState();
+			
+		}
+
+		private void RegisterToAlerts()
+		{
+			Server.Value.SelectedDatabase.Value.Changes()
+			      .ForDocument(Constants.RavenAlerts)
+			      .Subscribe(notification => UpdateAlerts());
+			UpdateAlerts();
+		}
+
+		private void UpdateAlerts()
+		{
+			Server.Value.DocumentStore.OpenAsyncSession(Server.Value.SelectedDatabase.Value.Name).LoadAsync<AlertsDocument>(Constants.RavenAlerts).ContinueOnSuccessInTheUIThread(
+				alertsDoc =>
+				{
+					Alerts.Clear();
+					if (alertsDoc != null)
+					{
+						foreach (var alert in alertsDoc.Alerts)
+						{
+							Alerts.Add(alert);
+						}
+					}
+
+					OnPropertyChanged(() => Alerts);
+					OnPropertyChanged(() => UnOnserverdAlerts);
+					OnPropertyChanged(() => AlertsTitle);
+				});
+		}
+
+		public int UnOnserverdAlerts { get { return Alerts.Count(alert => alert.Observed == false); } }
+		public string AlertsTitle
+		{
+			get
+			{
+				if (UnOnserverdAlerts == 0)
+					return "Alerts";
+				return "Alerts (" + UnOnserverdAlerts + ")";
+			}
 		}
 
 		public ApplicationState State { get; private set; }
@@ -171,20 +219,6 @@ namespace Raven.Studio.Models
 		public BindableCollection<Notification> Notifications { get; set; }
 
 		public ObservableCollection<Alert> Alerts { get; set; }
-
-		public void UpdateAlerts()
-		{
-			//Alerts.Clear();
-
-			//Server.Value.DocumentStore.OpenAsyncSession(null).Query<Alert>().ToListAsync().ContinueOnSuccessInTheUIThread(
-			//	list =>
-			//	{
-			//		foreach (var alert in list)
-			//		{
-			//			Alerts.Add(alert);
-			//		}
-			//	});
-		}
 
 		public int ErrorCount { get { return Notifications.Count(n => n.Level == NotificationLevel.Error); } }
 
