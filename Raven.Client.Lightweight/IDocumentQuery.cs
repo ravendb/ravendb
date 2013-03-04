@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Client.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client
@@ -74,6 +76,8 @@ namespace Raven.Client
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
 
+		IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+		IDocumentQuery<T> Spatial(string name, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 	}
 }

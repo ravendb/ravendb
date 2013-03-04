@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -39,5 +40,7 @@ namespace Raven.Client.Linq
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>
 	    IRavenQueryable<T> AddQueryInput(string name, RavenJToken value);
+
+		IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 	}
 }

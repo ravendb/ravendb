@@ -128,6 +128,8 @@ namespace Raven.Client
 		/// <returns></returns>
 		IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel);
 
+		IDocumentQueryCustomization Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
 		/// <summary>
 		/// When using spatial queries, instruct the query to sort by the distance from the origin point
 		/// </summary>

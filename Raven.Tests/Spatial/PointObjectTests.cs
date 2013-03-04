@@ -50,11 +50,8 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					var matches = session.Query<SpatialDoc, PointIndex>()
-					                     .Customize(x =>
-					                     {
-						                     x.WithinRadiusOf("Point", 700, 40, 40);
-						                     x.WaitForNonStaleResults();
-					                     }).Count();
+										 .Spatial(x => x.Point, x => x.WithinRadiusOf(700, 40, 40))
+					                     .Count();
 
 					Assert.Equal(8, matches);
 				}

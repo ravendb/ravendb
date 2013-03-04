@@ -39,6 +39,7 @@ namespace Raven.Client.Document
 	///   A query against a Raven index
 	/// </summary>
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
+															where TSelf : AbstractDocumentQuery<T, TSelf>
 	{
 		protected bool isSpatialQuery;
 		protected string spatialFieldName, queryShape;
@@ -415,12 +416,30 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQueryCustomization IDocumentQueryCustomization.Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+		{
+			var criteria = clause(new SpatialCriteriaFactory());
+			GenerateSpatialQueryData(fieldName, criteria.Shape, criteria.Relation);
+			return this;
+		}
+
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-        protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+        protected TSelf GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
+		{
+			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius, radiusUnits), SpatialRelation.Within, distanceErrorPct);
+		}
 
-		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025);
+		protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025)
+		{
+			isSpatialQuery = true;
+			spatialFieldName = fieldName;
+			queryShape = shapeWKT;
+			spatialRelation = relation;
+			this.distanceErrorPct = distanceErrorPct;
+			return (TSelf) this;
+		}
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.

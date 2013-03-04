@@ -1093,6 +1093,12 @@
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\SpatialCriteria.cs">
+      <Link>Imports\SpatialCriteria.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\SpatialCriteriaFactory.cs">
+      <Link>Imports\SpatialCriteriaFactory.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
     </Compile>
