@@ -40,6 +40,13 @@ namespace Raven.Client.Document
 			operation.Dispose();
 		}
 
+		public void Store(RavenJObject document, RavenJObject metadata, string id)
+		{
+			OnBeforeEntityInsert(id, document, metadata);
+
+			operation.Write(id, metadata, document);
+		}
+
 		public void Store(object entity)
 		{
 			Store(entity, GetId(entity));

@@ -4,12 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -18,6 +15,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
@@ -25,8 +23,6 @@ namespace Raven.Smuggler
 	{
 		const int retriesCount = 5;
 
-		private int total;
-		private int count;
 		protected override RavenJArray GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
@@ -42,13 +38,33 @@ namespace Raven.Smuggler
 				return str.Substring(1, str.Length - 2);
 			return str;
 		}
+
 		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
+
+		private RemoteBulkInsertOperation bulkInsertOperation = null;
 
 		public SmugglerApi(SmugglerOptions smugglerOptions, RavenConnectionStringOptions connectionStringOptions)
 			: base(smugglerOptions)
 		{
 			ConnectionStringOptions = connectionStringOptions;
+		}
+
+		public override void ImportData(SmugglerOptions options, bool incremental = false)
+		{
+			using (bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions(), ConnectionStringOptions, CreateRequest, text => ShowProgress(text)))
+			{
+				base.ImportData(options, incremental);
+			}
+		}
+
+		protected override void PutDocument(RavenJObject document)
+		{
+			var metadata = document.Value<RavenJObject>("@metadata");
+			var id = metadata.Value<string>("@id");
+			document.Remove("@metadata");
+
+			bulkInsertOperation.Write(id, metadata, document);
 		}
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
@@ -186,64 +202,6 @@ namespace Raven.Smuggler
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			Console.WriteLine(format, args);
-		}
-
-		protected override Guid FlushBatch(List<RavenJObject> batch)
-		{
-			var sw = Stopwatch.StartNew();
-
-			var commands = new RavenJArray();
-			foreach (var doc in batch)
-			{
-				var metadata = doc.Value<RavenJObject>("@metadata");
-
-			    doc.Remove("@metadata");
-				commands.Add(new RavenJObject
-								{
-									{"Method", "PUT"},
-									{"Document", doc},
-									{"Metadata", metadata},
-									{"Key", metadata.Value<string>("@id")}
-								});
-			}
-
-			var retries = retriesCount;
-			HttpRavenRequest request = null;
-			BatchResult[] results;
-			while (true)
-			{
-				try
-				{
-					request = CreateRequest("/bulk_docs", "POST");
-					request.Write(commands);
-					results = request.ExecuteRequest<BatchResult[]>();
-					sw.Stop();
-					break;
-				}
-				catch (Exception e)
-				{
-					if (--retries == 0 || request == null)
-						throw;
-					sw.Stop();
-					LastRequestErrored = true;
-					ShowProgress("Error flushing to database, remaining attempts {0} - time {2:#,#} ms, will retry [{3:#,#.##;;0} kb compressed to {4:#,#.##;;0} kb]. Error: {1}",
-								 retriesCount - retries, e, sw.ElapsedMilliseconds,
-								 (double)request.NumberOfBytesWrittenUncompressed / 1024,
-								 (double)request.NumberOfBytesWrittenCompressed / 1024);
-				}
-			}
-			total += batch.Count;
-			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} in {1,6:#,#;;0} ms ({6:0.00} ms per doc) (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb]",
-				batch.Count, sw.ElapsedMilliseconds, ++count, total,
-				(double)request.NumberOfBytesWrittenUncompressed / 1024,
-				(double)request.NumberOfBytesWrittenCompressed / 1024,
-				Math.Round((double)sw.ElapsedMilliseconds / Math.Max(1, batch.Count), 2));
-
-			batch.Clear();
-
-			if (results.Length == 0)
-				return Guid.Empty;
-			return results.Last().Etag.Value;
 		}
 
 		public bool LastRequestErrored { get; set; }

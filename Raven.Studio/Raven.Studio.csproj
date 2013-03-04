@@ -84,14 +84,14 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="AsyncCtpLibrary_Silverlight5">
-      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
-    </Reference>
     <Reference Include="Kent.Boogaart.HelperTrinity">
       <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.4.0.0\lib\sl40\Kent.Boogaart.HelperTrinity.dll</HintPath>
     </Reference>
     <Reference Include="Kent.Boogaart.KBCsv">
       <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5">
+      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\sl50\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -1274,6 +1274,7 @@
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

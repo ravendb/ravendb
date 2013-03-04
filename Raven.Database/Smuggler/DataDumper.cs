@@ -4,11 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -62,34 +59,6 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		protected override Guid FlushBatch(List<RavenJObject> batch)
-		{
-			var sw = Stopwatch.StartNew();
-
-			var results = _database.Batch(batch.Select(x =>
-			{
-				var metadata = x.Value<RavenJObject>("@metadata");
-				var key = metadata.Value<string>("@id");
-				x.Remove("@metadata");
-				return new PutCommandData
-				{
-					Document = x,
-					Etag = null,
-					Key = key,
-					Metadata = metadata
-				};
-			}).ToArray());
-
-			ShowProgress("Wrote {0:#,#} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds);
-			batch.Clear();
-
-
-			if(results.Length == 0)
-				return Guid.Empty;
-
-			return results.Last().Etag.Value;
-		}
-
 		protected override RavenJArray GetDocuments(Guid lastEtag)
 		{
 			const int dummy = 0;
@@ -109,6 +78,15 @@ namespace Raven.Database.Smuggler
 			// instead, we rely on the actual size of the data provided for us
 			attachmentExportInfo.Metadata.Remove("Content-Length");
 			_database.PutStatic(attachmentExportInfo.Key, null, new MemoryStream(attachmentExportInfo.Data), attachmentExportInfo.Metadata);
+		}
+
+		protected override void PutDocument(RavenJObject document)
+		{
+			var metadata = document.Value<RavenJObject>("@metadata");
+			var key = metadata.Value<string>("@id");
+			document.Remove("@metadata");
+
+			_database.Put(key, null, document, metadata, null);
 		}
 
 		protected override void PutIndex(string indexName, RavenJToken index)
