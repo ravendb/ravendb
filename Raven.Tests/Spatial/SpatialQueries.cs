@@ -87,7 +87,7 @@ namespace Raven.Tests.Spatial
 
 				// Expected is that 5.0 will return 3 results
 				var nearbyDocs = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
-					.WithinRadiusOf(radius, lat, lng)
+                    .WithinRadiusOf(radius, lat, lng)
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -101,6 +101,55 @@ namespace Raven.Tests.Spatial
 				session.Dispose();
 			}
 		}
+
+        [Fact]
+        public void CanSuccessfullyQueryByMiles()
+        {
+            var myHouse = new DummyGeoDoc(44.757767, -93.355322);
+
+            // The gym is about 7.32 miles (11.79 kilometers) from my house.
+            var gym = new DummyGeoDoc(44.682861, -93.25);
+
+            using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+            using (var session = documentStore.OpenSession())
+            {
+                session.Store(myHouse);
+                session.Store(gym);
+                session.SaveChanges();
+
+                var indexDefinition = new IndexDefinition
+                {
+                    Map = "from doc in docs select new { _ = SpatialGenerate(doc.Latitude, doc.Longitude) }"
+                };
+
+                documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
+
+                // Wait until the index is built
+                session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                    .WaitForNonStaleResults()
+                    .ToArray();
+
+                const double radius = 8;
+
+                // Find within 8 miles.
+                // We should find both my house and the gym.
+                var matchesWithinMiles = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                    .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Miles)
+                    .WaitForNonStaleResults()
+                    .ToArray();
+                Assert.NotEqual(null, matchesWithinMiles);
+                Assert.Equal(2, matchesWithinMiles.Length);
+
+                // Find within 8 kilometers.
+                // We should find only my house, since the gym is ~11 kilometers out.
+                var matchesWithinKilometers = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                    .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Kilometers)
+                    .WaitForNonStaleResults()
+                    .ToArray();
+                Assert.NotEqual(null, matchesWithinKilometers);
+                Assert.Equal(1, matchesWithinKilometers.Length);
+            }
+        }
 
 		public class DummyGeoDoc
 		{
