@@ -224,6 +224,25 @@ namespace Raven.Database.Indexing
 						Take = int.MaxValue// just get all, we do the rate limit when we load the number of keys to reduce, anyway
 					};
 					var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
+					
+					if (scheduledItems.Count == 0) 
+					{
+						if (Log.IsWarnEnabled)
+						{
+							Log.Warn("Found single reduce items ({0}) that didn't have any items to reduce. Deleting level 1 & level 2 items for those keys. (If you can reproduce this, please contact support@ravendb.net)",
+								string.Join(", ", keysToReduce));
+						}
+						// Here we have an interesting issue. We have scheduled reductions, because GetReduceTypesPerKeys() returned them
+						// and at the same time, we don't have any at level 0. That probably means that we have them at level 1 or 2.
+						// They shouldn't be here, and indeed, we remove them just a little down from here in this function.
+						// That said, they might bave smuggled in between versions, or something happened to cause them to be here.
+						// In order to avoid that, we forcibly delete those extra items from the scheduled reductions, and move on
+						foreach (var reduceKey in keysToReduce)
+						{
+							actions.MapReduce.DeleteScheduledReduction(index.IndexName, 1, reduceKey);
+							actions.MapReduce.DeleteScheduledReduction(index.IndexName, 2, reduceKey);
+						}
+					}
 
 					foreach (var reduceKey in localKeys)
 					{

@@ -155,6 +155,32 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
+		public void DeleteScheduledReduction(string indexName, int level, string reduceKey)
+		{
+			var keyCriteria = new RavenJObject
+			                  {
+				                  {"view", indexName},
+				                  {"level", level},
+								  {"reduceKey", reduceKey}
+			                  };
+
+			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(keyCriteria))
+			{
+				var indexFromDb = result.Value<string>("view");
+				var levelFromDb = result.Value<int>("level");
+				var reduceKeyFromDb = result.Value<string>("reduceKey");
+
+				if (string.Equals(indexFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
+				    levelFromDb != level)
+					break;
+
+				if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					break;
+
+				storage.ScheduleReductions.Remove(reduceKey);
+			}
+		}
+
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			var seenLocally = new HashSet<Tuple<string, int>>();

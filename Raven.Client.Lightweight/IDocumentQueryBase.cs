@@ -312,19 +312,21 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-		/// <param name = "radius">The radius in KM.</param>
+		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-		TSelf WithinRadiusOf(double radius, double latitude, double longitude);
+        /// <param name = "radiusUnits">The units of the <paramref name="radius"/>.</param>
+        TSelf WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
 
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
 		/// <param name="fieldName">The field name for the radius</param>
-		/// <param name = "radius">The radius in KM.</param>
+		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-		TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+        /// <param name = "radiusUnits">The units of the <paramref name="radius"/>.</param>
+        TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
 
 		/// <summary>
 		/// Filter matches based on a given shape - only documents with the shape defined in fieldName that
