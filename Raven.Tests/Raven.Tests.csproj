@@ -217,6 +217,7 @@
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
     <Compile Include="Bugs\Indexing\CanHaveEscapedSecialCharactersInDefinition.cs" />
     <Compile Include="Bugs\Indexing\CannotCreateIndexWithoutReduce.cs" />
+    <Compile Include="Bugs\Indexing\DataContracts.cs" />
     <Compile Include="Bugs\Indexing\WillRemoveTypesThatNotExistsOnTheServer.cs" />
     <Compile Include="Bugs\Indexing\IndexBuilderShouldCastNull.cs" />
     <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
