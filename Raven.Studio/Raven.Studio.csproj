@@ -289,6 +289,7 @@
     <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
       <DependentUpon>TransformersListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Models\TransformerDefinitionModel.cs" />
     <Compile Include="Models\TransformersModel.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
