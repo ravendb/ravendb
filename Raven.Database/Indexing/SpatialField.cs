@@ -133,7 +133,7 @@ namespace Raven.Database.Indexing
 
 		public bool TryReadShape(object value, out Shape shape)
 		{
-			return shapeReadWriter.TryReadShape(value, out shape);
+			return shapeReadWriter.TryRead(value, out shape);
 		}
 
 		public Shape ReadShape(string shapeWKT)

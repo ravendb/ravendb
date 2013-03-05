@@ -40,11 +40,47 @@ namespace Raven.Tests.Spatial
 
 				using (var session = store.OpenSession())
 				{
-					var matches = session.Query<SpatialDoc, CartesianIndex>()
+					var matches1 = session.Query<SpatialDoc, CartesianIndex>()
 						.Spatial(x => x.Geometry, x => x.Intersects(new Point(1900, 1900)))
 						.Any();
 
-					Assert.True(matches);
+					Assert.True(matches1);
+
+					var matches2 = session.Query<SpatialDoc, CartesianIndex>()
+						.Spatial(x => x.Geometry, x => x.Intersects(new[] { 1900, 1900 }))
+						.Any();
+
+					Assert.True(matches2);
+
+					var matches3 = session.Query<SpatialDoc, CartesianIndex>()
+						.Spatial(x => x.Geometry, x => x.Intersects(new { Latitude = 1900, Longitude = 1900 }))
+						.Any();
+
+					Assert.True(matches3);
+
+					var matches4 = session.Query<SpatialDoc, CartesianIndex>()
+						.Spatial(x => x.Geometry, x => x.Intersects(new { X = 1900, Y = 1900 }))
+						.Any();
+
+					Assert.True(matches4);
+
+					var matches5 = session.Query<SpatialDoc, CartesianIndex>()
+						.Spatial(x => x.Geometry, x => x.Intersects(new { lat = 1900, lng = 1900 }))
+						.Any();
+
+					Assert.True(matches5);
+
+					var matches6 = session.Query<SpatialDoc, CartesianIndex>()
+						.Spatial(x => x.Geometry, x => x.Intersects(new { lat = 1900, Long = 1900 }))
+						.Any();
+
+					Assert.True(matches6);
+
+					var matches7 = session.Query<SpatialDoc, CartesianIndex>()
+						.Spatial(x => x.Geometry, x => x.Intersects(new { lat = 1900, lon = 1900 }))
+						.Any();
+
+					Assert.True(matches7);
 				}
 			}
 		}

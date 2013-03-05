@@ -11,6 +11,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Listeners;
+using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document

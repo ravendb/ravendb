@@ -720,6 +720,7 @@
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
+    <Compile Include="Spatial\AbstractSpatialShapeReader.cs" />
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />

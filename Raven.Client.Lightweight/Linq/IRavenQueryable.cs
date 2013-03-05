@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Indexes;
+using Raven.Client.Spatial;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Linq

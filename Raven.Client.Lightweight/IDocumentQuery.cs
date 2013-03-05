@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Linq;
+using Raven.Client.Spatial;
 using Raven.Json.Linq;
 
 namespace Raven.Client

@@ -27,6 +27,7 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Spatial;
 using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -446,15 +447,9 @@ namespace Raven.Client.Document
 			var wkt = criteria.Shape as string;
 			if (wkt == null)
 			{
-				var jsonSerializer = this.DocumentConvention.CreateSerializer();
-
-				var json = new RavenJTokenWriter();
-				jsonSerializer.Serialize(json, criteria.Shape);
-				var jValue = json.Token as RavenJValue;
-				if (jValue != null && jValue.Value is string)
-				{
-					wkt = jValue.Value as string;
-				}
+				var converter = new SpatialClientShapeReader(DocumentConvention.CreateSerializer());
+				if (!converter.TryRead(criteria.Shape, out wkt))
+					throw new ArgumentException("Shape");
 			}
 
 			if (wkt == null)

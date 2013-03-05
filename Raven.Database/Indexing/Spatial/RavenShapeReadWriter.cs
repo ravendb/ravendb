@@ -4,30 +4,25 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Spatial;
 using Raven.Database.Indexing.Spatial.GeoJson;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Io;
 using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing.Spatial
 {
-	public class RavenShapeReadWriter
+	public class RavenShapeReadWriter : AbstractSpatialShapeReader<Shape>
 	{
 		private readonly NtsSpatialContext context;
 		private readonly SpatialOptions options;
 		private readonly NtsShapeReadWriter shapeReadWriter;
 
-		private static readonly Regex RegexX = new Regex("^(?:X|Longitude|Lng|Lon|Long)$", RegexOptions.IgnoreCase);
-		private static readonly Regex RegexY = new Regex("^(?:Y|Latitude|Lat)$", RegexOptions.IgnoreCase);
 		private static readonly Regex RegexGeoUriCoord = new Regex(@"([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* , \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ,? \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+))?",
 				RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase);
 		private static readonly Regex RegexGeoUriUncert = new Regex(@"u \s* = \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+))",
@@ -40,62 +35,51 @@ namespace Raven.Database.Indexing.Spatial
 			this.shapeReadWriter = shapeReadWriter;
 		}
 
-		public bool TryReadShape(object value, out Shape shape)
+		public override bool TryRead(object value, out Shape result)
 		{
-			shape = null;
-
 			if (value == null)
-				return false;
-
-			var enumerable = value as IEnumerable;
-			if (enumerable != null)
 			{
-				var list = enumerable.Cast<object>().ToList();
-				if (list.Count > 1 && list.All(IsNumber))
-				{
-					shape = context.MakePoint(GetDouble(list[0]), GetDouble(list[1]));
-					return true;
-				}
-
-				var keyValues = list.OfType<KeyValuePair<string, object>>()
-					.Where(x => IsNumber(x.Value))
-					.ToDictionary(x => x.Key, x => x.Value);
-
-				if (keyValues.Count > 1)
-				{
-					var x1 = keyValues.Select(x => x.Key).FirstOrDefault(c => RegexX.IsMatch(c));
-					var y1 = keyValues.Select(x => x.Key).FirstOrDefault(c => RegexY.IsMatch(c));
-
-					if (x1 != null && y1 != null)
-					{
-						shape = context.MakePoint(GetDouble(keyValues[x1]), GetDouble(keyValues[y1]));
-						return true;
-					}
-				}
+				result = default(Shape);
+				return false;
 			}
+
+			if (TryReadInner(value, out result))
+				return true;
 
 			var jsonObject = value as IDynamicJsonObject;
 			if (jsonObject != null)
 			{
 				var geoJson = new GeoJsonShapeConverter(context);
-				return geoJson.TryConvert(jsonObject.Inner, out shape);
+				return geoJson.TryConvert(jsonObject.Inner, out result);
 			}
 
 			var str = value as string;
 			if (!string.IsNullOrWhiteSpace(str))
 			{
-				if (TryParseGeoUri(str, out shape))
+				if (TryParseGeoUri(str, out result))
 					return true;
 
 				if (options.Type == SpatialFieldType.Geography)
 					str = TranslateCircleFromKmToRadians(str);
-				shape = shapeReadWriter.ReadShape(str);
+				result = shapeReadWriter.ReadShape(str);
 				return true;
 			}
+
+			result = default(Shape);
 			return false;
 		}
 
-		public bool TryParseGeoUri(string uriString, out Shape shape)
+		protected override Shape MakePoint(double x, double y)
+		{
+			return context.MakePoint(x, y);
+		}
+
+		protected override Shape MakeCircle(double x, double y, double radius)
+		{
+			return context.MakeCircle(x, y, radius);
+		}
+
+		private bool TryParseGeoUri(string uriString, out Shape shape)
 		{
 			shape = default(Shape);
 
@@ -177,29 +161,6 @@ namespace Raven.Database.Indexing.Spatial
 
 			return shapeWKT.Substring(0, radCapture.Index) + radius.ToString("F6", CultureInfo.InvariantCulture) +
 				   shapeWKT.Substring(radCapture.Index + radCapture.Length);
-		}
-
-		private bool IsNumber(object obj)
-		{
-			var rValue = obj as RavenJValue;
-			return obj is double
-			       || obj is float
-			       || obj is int
-			       || obj is long
-			       || obj is short
-				   || rValue != null && (rValue.Type == JTokenType.Float || rValue.Type == JTokenType.Integer);
-		}
-
-		private double GetDouble(object obj)
-		{
-			if (obj is double || obj is float || obj is int || obj is long || obj is short)
-				return Convert.ToDouble(obj);
-
-			var rValue = obj as RavenJValue;
-			if (rValue != null && (rValue.Type == JTokenType.Float || rValue.Type == JTokenType.Integer))
-				return Convert.ToDouble(rValue.Value);
-
-			return 0d;
 		}
 
 		/// <summary>

@@ -841,6 +841,9 @@
     <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
       <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Spatial\AbstractSpatialShapeReader.cs">
+      <Link>Imports\Spatial\AbstractSpatialShapeReader.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
     </Compile>
@@ -1093,11 +1096,14 @@
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\SpatialCriteria.cs">
-      <Link>Imports\SpatialCriteria.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Spatial\SpatialCriteria.cs">
+      <Link>Imports\Spatial\SpatialCriteria.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\SpatialCriteriaFactory.cs">
-      <Link>Imports\SpatialCriteriaFactory.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Spatial\SpatialCriteriaFactory.cs">
+      <Link>Imports\Spatial\SpatialCriteriaFactory.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Spatial\SpatialClientShapeReader.cs">
+      <Link>Imports\Spatial\SpatialClientShapeReader.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
