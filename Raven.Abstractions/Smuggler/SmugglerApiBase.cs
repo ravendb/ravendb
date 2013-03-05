@@ -280,6 +280,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public void ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
 		{
+#if!MONO
 			EnsureDatabaseExists();
 			Stream sizeStream;
 
@@ -415,6 +416,9 @@ namespace Raven.Abstractions.Smuggler
 				PutAttachment(attachmentExportInfo);
 			}
 			ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", totalCount, attachmentCount, sw.ElapsedMilliseconds);
+#else
+			throw new NotImplementedException();
+#endif
 		}
 
 		private void HandleBatch(SmugglerOptions options, List<RavenJObject> batch, long sizeOfDisk)
