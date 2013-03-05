@@ -4,14 +4,14 @@
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 
   <Fragment>
-    <?include ConfigurationInitialize.wxi ?>
+    <?include IISSettings.wxi ?>
 
     <!-- Install to default web site -->
     <iis:WebSite Id="DefaultWebSite" Description='Default Web Site'>
       <iis:WebAddress Id="AllUnassigned" Port="80" />
     </iis:WebSite>
 
-    <DirectoryRef Id="MYWEBWEBSITE">
+    <DirectoryRef Id="INSTALLFOLDER">
       <!-- Configuring app pool -->
       <Component Id="MyWebAppPoolCmp" Guid="" KeyPath="yes">
         <util:User Id="MyWebAppPoolUser"
@@ -30,7 +30,7 @@
              Guid="{751DEB01-ECC1-48ff-869A-65BCEE9E0528}"
              KeyPath="yes" >
         <iis:WebVirtualDir Id="MyWebVirtualDir"
-                  Alias="[VIRTUAL_DIR_VAL]" Directory="MYWEBWEBSITE"
+                  Alias="[VIRTUAL_DIR_VAL]" Directory="INSTALLFOLDER"
                   WebSite="DefaultWebSite">
           <iis:WebDirProperties Id="MyWebVirtDirProperties"
              AnonymousAccess="no" BasicAuthentication="no"

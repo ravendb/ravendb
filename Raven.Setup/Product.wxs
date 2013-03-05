@@ -10,15 +10,14 @@
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' />
 
     <Property Id="RAVEN_INSTALLATION_TYPE" Value="IIS" /> <!-- default value -->
-    
+
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder">
         <Directory Id='HibernatingRhinos' Name='HibernatingRhinos'>
           <Directory Id="INSTALLFOLDER" Name="RavenDB">
-            <Directory Id="MYWEBWEBSITE" Name="Website">
-
+            <Directory Id="Bin" Name="bin">
             </Directory>
           </Directory>
         </Directory>
@@ -38,42 +37,39 @@
     </Directory>
 
     <Feature Id='Service' 
-             Title='RavenDB Windows Service' 
-             Description='RavenDB service'
+             Title='RavenDB Service' 
+             Description='RavenDB Windows service'
              Display='expand' 
-             Level='1' 
              ConfigurableDirectory='INSTALLFOLDER'>
       <ComponentRef Id='Raven.Server' />
-      <ComponentRef Id='Raven.Database' />
-      <ComponentRef Id='Raven.Abstractions' />
-      <Condition Level='0'><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Condition>
+      <ComponentRef Id='Raven.Database.Service' />
+      <ComponentRef Id='Raven.Abstractions.Service' />
     </Feature>
 
     <Feature Id='IIS'
-             Title='RavenDB hosted in IIS'
-             Description='RavenDB service'
+             Title='RavenDB IIS'
+             Description='RavenDB hosted by IIS'
              Display='expand'
-             Level='1'
              ConfigurableDirectory='INSTALLFOLDER'>
-      <Condition Level='0'><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Condition>
       <ComponentRef Id='Raven.Web' />
-      <ComponentRef Id='Raven.Database' />
-      <ComponentRef Id='Raven.Abstractions' />
+      <ComponentRef Id='Raven.Database.Web' />
+      <ComponentRef Id='Raven.Abstractions.Web' />
+      <ComponentRef Id='Raven.Web.Config'/>
       
       <!-- Include IIS Configuration. -->
       <ComponentGroupRef Id="MyWebIssConfiguration" />
 
       <!-- Perform changes in the web.config file. -->
-      <ComponentRef Id="WebConfigCmp" />
+      <!--<ComponentRef Id="WebConfigCmp" />-->
     </Feature>
 
-    <DirectoryRef Id="MYWEBWEBSITE">
-      <!-- Component handling the web.config -->
+    <!--<DirectoryRef Id="MYWEBWEBSITE">
+      --><!-- Component handling the web.config --><!--
       <Component Id="WebConfigCmp" Guid="">
-        <!-- Copy web.config to MYWEBWEBSITE folder. -->
+        --><!-- Copy web.config to MYWEBWEBSITE folder. --><!--
         <File Id="WebConfigFile" KeyPath="yes"
           Source="$(var.SolutionDir)\DefaultConfigs\Web.config" Vital="yes" />
-        <!--<util:XmlFile Id="ModifyConnectionString"
+        --><!--<util:XmlFile Id="ModifyConnectionString"
                  Action="setValue"
                  Permanent="yes"
                  ElementPath="/configuration/connectionStrings/
@@ -82,12 +78,16 @@
                  File="[#WebConfigFile]"
                  Value="[CONNECTION_STRING]"
                  SelectionLanguage="XSLPattern"
-                 Sequence="1" />-->
+                 Sequence="1" />--><!--
       </Component>
-    </DirectoryRef>
+    </DirectoryRef>-->
 
     <UIRef Id="InstallerUI" />
-
+    
+    <WixVariable Id="WixUILicenseRtf" Value="License\RavenDB.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="Images\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="Images\dialog.bmp" />
+    
     <!--<Property Id="PIDTemplate"><![CDATA[12345<### ###>@@@@@]]></Property>-->
 
     <!--<Icon Id="Raven.ico" SourceFile="$(var.Raven.Server.ProjectDir)\favicon.ico" />-->

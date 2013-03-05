@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <Property Id="SERVICE_NAME" Value="RavenDB" />
+
+  <Property Id="SERVICE_PORT" Value="8080" />
+
+  <Property Id="SERVICE_USER_NAME" Value="LocalSystem" />
+</Include>

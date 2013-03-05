@@ -7,13 +7,20 @@
       <UIRef Id="WixUI_ErrorProgressText" />
 
       <DialogRef Id="IisSetupDlg" />
+      
       <!-- Injection of custom UI. -->
       <Publish Dialog="LicenseAgreementDlg" Control="Next"
            Event="NewDialog" Value="InstallationType"
            Order="3">LicenseAccepted = "1"</Publish>
-      <Publish Dialog="InstallDirDlg" Control="Back"
-           Event="NewDialog" Value="InstallationType">1</Publish>
 
+      <Publish Dialog="InstallDirDlg" Control="Back"
+           Event="NewDialog" Value="ServiceSettings">
+        <![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]>
+      </Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back"
+           Event="NewDialog" Value="PoolSettingsDlg">
+        <![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]>
+      </Publish>
     </UI>
 	</Fragment>
 </Wix>

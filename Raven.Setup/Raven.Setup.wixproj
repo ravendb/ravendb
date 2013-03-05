@@ -23,12 +23,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Components\IIS\IISConfiguration.wxs" />
+    <Compile Include="Components\IIS\Raven.Web.wxs" />
     <Compile Include="Components\Raven.Abstractions.wxs" />
     <Compile Include="Components\Raven.Database.wxs" />
-    <Compile Include="Components\Raven.Server.wxs" />
-    <Compile Include="Components\Raven.Web.wxs" />
+    <Compile Include="Components\Service\Raven.Server.wxs" />
     <Compile Include="Product.wxs" />
-    <Compile Include="UI\UIDialogs.wxs" />
+    <Compile Include="UI\IIS\ApplicationPoolSettings.wxs" />
+    <Compile Include="UI\IIS\IISSetup.wxs" />
+    <Compile Include="UI\InstallationType.wxs" />
+    <Compile Include="UI\Service\Settings.wxs" />
     <Compile Include="UI\Wizard.wxs" />
   </ItemGroup>
   <ItemGroup>
@@ -80,11 +83,18 @@
     </WixExtension>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Components\IIS\ConfigurationInitialize.wxi" />
+    <Content Include="Components\IIS\IISSettings.wxi" />
+    <Content Include="Components\Service\ServiceSettings.wxi" />
+    <Content Include="Images\banner.bmp" />
+    <Content Include="Images\dialog.bmp" />
+    <Content Include="License\RavenDB.rtf" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Components" />
     <Folder Include="Components\IIS" />
+    <Folder Include="Components\Service" />
+    <Folder Include="Images\" />
+    <Folder Include="License" />
     <Folder Include="UI" />
     <Folder Include="UI\IIS" />
     <Folder Include="UI\Service" />
