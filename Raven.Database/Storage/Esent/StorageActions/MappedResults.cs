@@ -188,6 +188,41 @@ namespace Raven.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
+		public void DeleteScheduledReduction(string indexName, int level, string reduceKey)
+		{
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
+			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+			Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
+			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ) == false)
+				return;
+
+			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+			Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
+			Api.TrySetIndexRange(session, ScheduledReductions,
+									 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+			do
+			{
+				var indexFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+				var levelFromDb =
+							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], RetrieveColumnGrbit.RetrieveFromIndex).
+								Value;
+				var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
+											   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
+
+				if (string.Equals(indexName, indexFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					continue;
+				if (levelFromDb != level)
+					continue;
+				if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					continue;
+
+				Api.JetDelete(Session, ScheduledReductions);
+			} while (Api.TryMoveNext(Session, ScheduledReductions));
+		}
+
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
@@ -198,7 +233,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 				if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ) == false)
-					yield break;
+					continue;
 
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
