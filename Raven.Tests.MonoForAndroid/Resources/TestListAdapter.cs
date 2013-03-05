@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using Android.App;
-using Android.Content;
 using Android.Views;
 using Android.Widget;
 using Raven.Tests.MonoForAndroid.Models;

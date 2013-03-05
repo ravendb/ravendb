@@ -60,7 +60,7 @@ namespace Raven.Tests.MonoForAndroid
 		private List<TestItem> GetAllTests()
 		{
 			return Assembly.GetExecutingAssembly().GetTypes()
-			               .Where(type => type.IsAssignableFrom(typeof (MonoForAndroidTestBase)))
+			               .Where(type => type.IsSubclassOf(typeof (MonoForAndroidTestBase)))
 			               .SelectMany(testType => testType.GetMethods())
 			               .Where(method => method.GetCustomAttributes(typeof (TestAttribute), true).Length > 0)
 			               .Select(testMethod => new TestItem

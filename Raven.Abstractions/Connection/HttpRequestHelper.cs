@@ -23,9 +23,10 @@ namespace Raven.Abstractions.Connection
 				writer.Write(data);
 
 				writer.Flush();
-
+#if !MONO
 				if (disableCompression == false)
 					dataStream.Flush();
+#endif
 				requestStream.Flush();
 			}
 		}
