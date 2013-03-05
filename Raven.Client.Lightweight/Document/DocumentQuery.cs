@@ -946,7 +946,7 @@ namespace Raven.Client.Document
 		{
 			double distanceErrorPct = 0.025;
 			var criteria = clause(new SpatialCriteriaFactory());
-			return (IDocumentQuery<T>)GenerateSpatialQueryData(fieldName, criteria.Shape, criteria.Relation, distanceErrorPct);
+			return GenerateSpatialQueryData(fieldName, criteria, distanceErrorPct);
 		}
 
 		/// <summary>

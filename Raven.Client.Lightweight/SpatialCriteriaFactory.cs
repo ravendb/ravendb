@@ -5,7 +5,7 @@ namespace Raven.Client
 {
 	public class SpatialCriteriaFactory
 	{
-		public SpatialCriteria RelatesToShape(string shape, SpatialRelation relation)
+		public SpatialCriteria RelatesToShape(object shape, SpatialRelation relation)
 		{
 			return new SpatialCriteria
 			       {
@@ -14,12 +14,12 @@ namespace Raven.Client
 			       };
 		}
 
-		public SpatialCriteria Within(string shape)
+		public SpatialCriteria Within(object shape)
 		{
 			return RelatesToShape(shape, SpatialRelation.Within);
 		}
 
-		public SpatialCriteria Intersects(string shape)
+		public SpatialCriteria Intersects(object shape)
 		{
 			return RelatesToShape(shape, SpatialRelation.Intersects);
 		}

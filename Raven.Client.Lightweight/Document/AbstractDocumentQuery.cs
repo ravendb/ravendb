@@ -419,7 +419,7 @@ namespace Raven.Client.Document
 		IDocumentQueryCustomization IDocumentQueryCustomization.Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
 		{
 			var criteria = clause(new SpatialCriteriaFactory());
-			GenerateSpatialQueryData(fieldName, criteria.Shape, criteria.Relation);
+			GenerateSpatialQueryData(fieldName, criteria);
 			return this;
 		}
 
@@ -437,6 +437,33 @@ namespace Raven.Client.Document
 			spatialFieldName = fieldName;
 			queryShape = shapeWKT;
 			spatialRelation = relation;
+			this.distanceErrorPct = distanceErrorPct;
+			return (TSelf) this;
+		}
+
+		protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria, double distanceErrorPct = 0.025)
+		{
+			var wkt = criteria.Shape as string;
+			if (wkt == null)
+			{
+				var jsonSerializer = this.DocumentConvention.CreateSerializer();
+
+				var json = new RavenJTokenWriter();
+				jsonSerializer.Serialize(json, criteria.Shape);
+				var jValue = json.Token as RavenJValue;
+				if (jValue != null && jValue.Value is string)
+				{
+					wkt = jValue.Value as string;
+				}
+			}
+
+			if (wkt == null)
+				throw new ArgumentException("Shape");
+
+			isSpatialQuery = true;
+			spatialFieldName = fieldName;
+			queryShape = wkt;
+			spatialRelation = criteria.Relation;
 			this.distanceErrorPct = distanceErrorPct;
 			return (TSelf) this;
 		}
