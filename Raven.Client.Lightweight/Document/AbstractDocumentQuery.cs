@@ -447,8 +447,8 @@ namespace Raven.Client.Document
 			var wkt = criteria.Shape as string;
 			if (wkt == null)
 			{
-				var converter = new SpatialClientShapeReader(DocumentConvention.CreateSerializer());
-				if (!converter.TryRead(criteria.Shape, out wkt))
+				var converter = new ClientShapeConverter(DocumentConvention.CreateSerializer());
+				if (!converter.TryConvert(criteria.Shape, out wkt))
 					throw new ArgumentException("Shape");
 			}
 

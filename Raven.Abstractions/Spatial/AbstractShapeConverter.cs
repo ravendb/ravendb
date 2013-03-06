@@ -1,25 +1,32 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Linq;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Spatial
 {
-	public abstract class AbstractSpatialShapeReader<T>
+	public abstract class AbstractShapeConverter
 	{
+		private static readonly GeoJsonWktConverter GeoJsonConverter = new GeoJsonWktConverter();
 		private static readonly Regex RegexX = new Regex("^(?:X|Longitude|Lng|Lon|Long)$", RegexOptions.IgnoreCase);
 		private static readonly Regex RegexY = new Regex("^(?:Y|Latitude|Lat)$", RegexOptions.IgnoreCase);
 
-		public abstract bool TryRead(object value, out T result);
+		public abstract bool TryConvert(object value, out string result);
 
-		protected abstract T MakePoint(double x, double y);
-		protected abstract T MakeCircle(double x, double y, double radius);
-
-		public bool TryReadInner(object value, out T result)
+		public bool TryConvertInner(object value, out string result)
 		{
+			var jValue = value as RavenJValue;
+			if (jValue != null && jValue.Type == JTokenType.String)
+			{
+				result = (string)jValue.Value;
+				return true;
+			}
+
 			var enumerable = value as IEnumerable;
 			if (enumerable != null)
 			{
@@ -54,7 +61,13 @@ namespace Raven.Abstractions.Spatial
 				}
 			}
 
-			result = default(T);
+			var djObj = value as IDynamicJsonObject;
+			var jObj = djObj != null ? djObj.Inner : value as RavenJObject;
+
+			if (jObj != null && GeoJsonConverter.TryConvert(jObj, out result))
+				return true;
+
+			result = default(string);
 			return false;
 		}
 
@@ -79,6 +92,16 @@ namespace Raven.Abstractions.Spatial
 				return Convert.ToDouble(rValue.Value);
 
 			return 0d;
+		}
+
+		protected string MakePoint(double x, double y)
+		{
+			return string.Format(CultureInfo.InvariantCulture, "POINT ({0} {1})", x, y);
+		}
+
+		protected string MakeCircle(double x, double y, double radius)
+		{
+			return string.Format(CultureInfo.InvariantCulture, "Circle({0} {1} d={2})", x, y, radius);
 		}
 	}
 }

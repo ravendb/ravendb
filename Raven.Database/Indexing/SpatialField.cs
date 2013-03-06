@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using GeoAPI;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Function;
@@ -32,7 +34,8 @@ namespace Raven.Database.Indexing
 		private readonly SpatialOptions options;
 		private readonly NtsSpatialContext context;
 		private readonly SpatialStrategy strategy;
-		private readonly RavenShapeReadWriter shapeReadWriter;
+		private readonly RavenShapeConverter shapeConverter;
+		private readonly NtsShapeReadWriter ntsShapeReadWriter;
 
 		static SpatialField()
 		{
@@ -46,7 +49,8 @@ namespace Raven.Database.Indexing
 			this.options = options;
 			context = GetContext(options);
 			strategy = CreateStrategy(fieldName, options);
-			shapeReadWriter = new RavenShapeReadWriter(context, options, GetShapeReadWriter(options, context));
+			shapeConverter = new RavenShapeConverter(options);
+			ntsShapeReadWriter = GetShapeReadWriter(options, context);
 		}
 
 		public SpatialStrategy GetStrategy()
@@ -127,23 +131,65 @@ namespace Raven.Database.Indexing
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, shapeReadWriter.ReadShape(spatialQry.QueryShape));
+			var args = new SpatialArgs(SpatialOperation.IsWithin, ReadShape(spatialQry.QueryShape));
 			return spatialStrategy.MakeFilter(args);
 		}
 
 		public bool TryReadShape(object value, out Shape shape)
 		{
-			return shapeReadWriter.TryRead(value, out shape);
+			string shapeWkt;
+			if (shapeConverter.TryConvert(value, out shapeWkt))
+			{
+				shape = ReadShape(shapeWkt);
+				return true;
+			}
+			shape = default(Shape);
+			return false;
 		}
 
 		public Shape ReadShape(string shapeWKT)
 		{
-			return shapeReadWriter.ReadShape(shapeWKT);
+			if (options.Type == SpatialFieldType.Geography)
+				shapeWKT = TranslateCircleFromKmToRadians(shapeWKT);
+			return ntsShapeReadWriter.ReadShape(shapeWKT);
 		}
 
 		public string WriteShape(Shape shape)
 		{
-			return shapeReadWriter.WriteShape(shape);
+			return ntsShapeReadWriter.WriteShape(shape);
 		}
+
+		private double TranslateCircleFromKmToRadians(double radius)
+		{
+			return (radius / EarthMeanRadiusKm) * RadiansToDegrees;
+		}
+
+		private string TranslateCircleFromKmToRadians(string shapeWKT)
+		{
+			var match = CircleShape.Match(shapeWKT);
+			if (match.Success == false)
+				return shapeWKT;
+
+			var radCapture = match.Groups[3];
+			var radius = double.Parse(radCapture.Value, CultureInfo.InvariantCulture);
+
+			radius = TranslateCircleFromKmToRadians(radius);
+
+			return shapeWKT.Substring(0, radCapture.Index) + radius.ToString("F6", CultureInfo.InvariantCulture) +
+				   shapeWKT.Substring(radCapture.Index + radCapture.Length);
+		}
+
+		/// <summary>
+		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
+		///
+		/// [1] http://en.wikipedia.org/wiki/Earth_radius
+		/// </summary>
+		private const double EarthMeanRadiusKm = 6371.0087714;
+		private const double DegreesToRadians = Math.PI / 180;
+		private const double RadiansToDegrees = 1 / DegreesToRadians;
+
+		private static readonly Regex CircleShape =
+			new Regex(@"Circle \s* \( \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ d=([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* \)",
+					  RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled | RegexOptions.IgnoreCase);
 	}
 }

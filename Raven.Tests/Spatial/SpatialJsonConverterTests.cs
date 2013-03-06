@@ -40,6 +40,16 @@ namespace Raven.Tests.Spatial
 
 				using (var session = store.OpenSession())
 				{
+					var matches = session.Query<SpatialDoc, CartesianIndex>()
+						.Spatial(x => x.Geometry, x => x.Intersects(new
+						{
+							type = "Point",
+							coordinates = new[] { 1900, 1900 }
+						}))
+						.Any();
+
+					Assert.True(matches);
+
 					var matches1 = session.Query<SpatialDoc, CartesianIndex>()
 						.Spatial(x => x.Geometry, x => x.Intersects(new Point(1900, 1900)))
 						.Any();
