@@ -9,6 +9,8 @@ namespace Raven.ClusterManager.Models
 		public string Url { get; set; }
 		public string ClusterName { get; set; }
 		public bool IsOnline { get; set; }
+
 		public DateTimeOffset LastOnlineTime { get; set; }
+		public DateTimeOffset LastTriedToConnectAt { get; set; }
 	}
 }

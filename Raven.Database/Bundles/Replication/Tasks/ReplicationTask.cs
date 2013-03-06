@@ -270,7 +270,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private static string EscapeDestinationName(string url)
+		public static string EscapeDestinationName(string url)
 		{
 			return Uri.EscapeDataString(url.Replace("http://", "").Replace("/", "").Replace(":", ""));
 		}

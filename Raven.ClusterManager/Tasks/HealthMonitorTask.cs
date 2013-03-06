@@ -14,6 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -31,11 +32,18 @@ namespace Raven.ClusterManager.Tasks
 		private Timer timer;
 		private static DateTimeOffset lastRun;
 
+		static HealthMonitorTask()
+		{
+			MonitorInterval = TimeSpan.FromMinutes(2);
+		}
+
 		public HealthMonitorTask(IDocumentStore store)
 		{
 			this.store = store;
-			timer = new Timer(TimerTick, null, TimeSpan.Zero, TimeSpan.FromMinutes(2));
+			timer = new Timer(TimerTick, null, TimeSpan.Zero, MonitorInterval);
 		}
+
+		private static TimeSpan MonitorInterval { get; set; }
 
 		private void TimerTick(object _)
 		{
@@ -50,9 +58,11 @@ namespace Raven.ClusterManager.Tasks
 				{
 					FetchServerDatabases(server, session);
 				}
+
+				session.SaveChanges();
 			}
 
-			lastRun = DateTimeOffset.Now;
+			lastRun = DateTimeOffset.UtcNow;
 		}
 
 		public static void FetchServerDatabases(ServerRecord server, IDocumentSession session)
@@ -60,7 +70,7 @@ namespace Raven.ClusterManager.Tasks
 			FetchServerDatabasesAsync(server, session)
 				.Wait();
 
-			lastRun = DateTimeOffset.Now;
+			lastRun = DateTimeOffset.UtcNow;
 		}
 
 		private static async Task FetchServerDatabasesAsync(ServerRecord server, IDocumentSession session)
@@ -109,21 +119,38 @@ namespace Raven.ClusterManager.Tasks
 			{
 				Log.ErrorException("Error", ex);
 			}
+			finally
+			{
+				server.LastTriedToConnectAt = DateTimeOffset.UtcNow;
+			}
 		}
 
 		private static async Task HandleDatabaseInServerAsync(ServerRecord server, string databaseName, IAsyncDatabaseCommands dbCmds, IDocumentSession session)
 		{
 			var databaseRecord = new DatabaseRecord { Name = databaseName, ServerId = server.Id, ServerUrl = server.Url };
 			session.Store(databaseRecord);
+
 			var replicationDocument = await dbCmds.GetAsync(Constants.RavenReplicationDestinations);
 			server.IsOnline = true;
-			server.LastOnlineTime = DateTimeOffset.Now;
+			server.LastOnlineTime = DateTimeOffset.UtcNow;
+
 			if (replicationDocument != null)
 			{
 				databaseRecord.IsReplicationEnabled = true;
-				ReplicationDocument jsonDeserialization;
 				var document = replicationDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
 				databaseRecord.ReplicationDestinations = document.Destinations;
+
+				foreach (var replicationDestination in databaseRecord.ReplicationDestinations)
+				{
+					if (replicationDestination.Disabled)
+						continue;
+
+					var replicationDestinationServer = session.Load<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url)) ?? new ServerRecord();
+					if (DateTimeOffset.UtcNow - server.LastTriedToConnectAt <= MonitorInterval)
+						continue;
+
+					await FetchServerDatabasesAsync(replicationDestinationServer, session);
+				}
 			}
 		}
 	}

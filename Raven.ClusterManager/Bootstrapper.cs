@@ -9,8 +9,10 @@ using Nancy.Bootstrapper;
 using Nancy.Conventions;
 using Nancy.Responses;
 using Nancy.TinyIoc;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.ClusterManager.Models;
 using Raven.ClusterManager.Tasks;
 
 namespace Raven.ClusterManager
@@ -27,6 +29,8 @@ namespace Raven.ClusterManager
 				ConnectionStringName = "RavenDB",
 			};
 			store.Initialize();
+
+			store.Conventions.RegisterIdConvention<ServerRecord>((s, commands, serverRecord) => "serverRecords/" + ReplicationTask.EscapeDestinationName(serverRecord.Url));
 
 			container.Register<IDocumentStore>(store);
 		}
