@@ -33,7 +33,7 @@
           <Text>User name:</Text>
         </Control>
         <Control Type="Edit" Id="ServiceName" Width="172" Height="15" X="109" Y="88" Property="SERVICE_NAME" Text="{60}" />
-        <Control Type="Edit" Id="Port" Width="50" Height="15" X="109" Y="109" Property="SERVICE_PORT" Text="{4}" />
+        <Control Type="Edit" Id="Port" Width="50" Height="15" X="109" Y="109" Property="SERVICE_PORT" Text="{6}" />
         <Control Type="Edit" Id="UserName" Width="172" Height="15" X="109" Y="131" Property="SERVICE_USER_NAME" Text="{60}" />
       </Dialog>
     </UI>

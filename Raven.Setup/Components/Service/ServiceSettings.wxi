@@ -2,7 +2,7 @@
 <Include>
   <Property Id="SERVICE_NAME" Value="RavenDB" />
 
-  <Property Id="SERVICE_PORT" Value="8080" />
+  <Property Id="SERVICE_PORT" Value="*" />
 
-  <Property Id="SERVICE_USER_NAME" Value="LocalSystem" />
+  <SetProperty Id="SERVICE_USER_NAME" Value="[%USERDOMAIN]\[%USERNAME]" Before="CostFinalize" Sequence="ui"/>
 </Include>

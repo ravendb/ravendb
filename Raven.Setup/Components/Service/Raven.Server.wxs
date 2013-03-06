@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 	<Fragment>
     <?include ServiceSettings.wxi ?>
     
@@ -13,7 +14,16 @@
                 <Shortcut Id="RavenDesktop" Directory="DesktopFolder" Name="RavenDB Service"
                   WorkingDirectory='INSTALLDIR' Icon="Raven.ico" Advertise="yes" />-->
         </File>
-        <ServiceInstall
+        <util:XmlFile Id="ModifyPort"
+                 Action="setValue"
+                 Permanent="yes"
+                 ElementPath="/configuration/appSettings/add[\[]@key='Raven/Port'[\]]"
+                 Name="value"
+                 File="[#Raven.Server.exe.config]"
+                 Value="[SERVICE_PORT]"
+                 SelectionLanguage="XSLPattern"
+                 Sequence="1" />
+        <!--<ServiceInstall
               Id="ServiceInstaller"
               Type="ownProcess"
               Vital="yes"
@@ -25,7 +35,12 @@
               ErrorControl="ignore"
               Interactive="no">
         </ServiceInstall>
-        <ServiceControl Id="StartService" Start="install" Stop="uninstall" Remove="uninstall" Name="[SERVICE_NAME]" Wait="yes" />
+        <ServiceControl Id="StartService" Start="install" Stop="uninstall" Remove="uninstall" Name="[SERVICE_NAME]" Wait="yes" />-->
+      </Component>
+      <Component Id="Raven.Server.ProvidedServiceName" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
+        <RegistryKey Root="HKCU" Key="Software\HibernatingRhinos\RavenDB" >
+          <RegistryValue Type="string" Name="ServiceName" Value="[SERVICE_NAME]"  />
+        </RegistryKey>
       </Component>
     </DirectoryRef>
 	</Fragment>

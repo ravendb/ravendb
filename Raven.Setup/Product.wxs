@@ -44,6 +44,7 @@
       <ComponentRef Id='Raven.Server' />
       <ComponentRef Id='Raven.Database.Service' />
       <ComponentRef Id='Raven.Abstractions.Service' />
+      <ComponentRef Id='Raven.Server.ProvidedServiceName' />
     </Feature>
 
     <Feature Id='IIS'
@@ -59,28 +60,7 @@
       <!-- Include IIS Configuration. -->
       <ComponentGroupRef Id="MyWebIssConfiguration" />
 
-      <!-- Perform changes in the web.config file. -->
-      <!--<ComponentRef Id="WebConfigCmp" />-->
     </Feature>
-
-    <!--<DirectoryRef Id="MYWEBWEBSITE">
-      --><!-- Component handling the web.config --><!--
-      <Component Id="WebConfigCmp" Guid="">
-        --><!-- Copy web.config to MYWEBWEBSITE folder. --><!--
-        <File Id="WebConfigFile" KeyPath="yes"
-          Source="$(var.SolutionDir)\DefaultConfigs\Web.config" Vital="yes" />
-        --><!--<util:XmlFile Id="ModifyConnectionString"
-                 Action="setValue"
-                 Permanent="yes"
-                 ElementPath="/configuration/connectionStrings/
-                                      add[\[]@name='MyConnectionString'[\]]"
-                 Name="connectionString"
-                 File="[#WebConfigFile]"
-                 Value="[CONNECTION_STRING]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="1" />--><!--
-      </Component>
-    </DirectoryRef>-->
 
     <UIRef Id="InstallerUI" />
     
@@ -91,6 +71,31 @@
     <!--<Property Id="PIDTemplate"><![CDATA[12345<### ###>@@@@@]]></Property>-->
 
     <!--<Icon Id="Raven.ico" SourceFile="$(var.Raven.Server.ProjectDir)\favicon.ico" />-->
+
+    <Property Id="SERVICE_NAME_FROM_REGISTRY">
+      <RegistrySearch Id="ServiceNaneFromRegistry"
+                      Root="HKCU"
+                      Key="Software\HibernatingRhinos\RavenDB"
+                      Name="ServiceName"
+                      Type="raw" />
+    </Property>
+    
+    <CustomAction Id='InstallRavenService' Directory='INSTALLFOLDER' Execute='immediate' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=[SERVICE_NAME] /install' Return='check'/>
+    <CustomAction Id='UninstallRavenService' Directory='INSTALLFOLDER' Execute='immediate' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=[SERVICE_NAME_FROM_REGISTRY] /uninstall' Return='check'/>
+    <CustomAction Id='SetupPerformanceCounters' Directory='INSTALLFOLDER' Execute='immediate' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /user=[SERVICE_USER_NAME] /setup-perf-counters' Return='check'/>
+    
+    <InstallExecuteSequence>
+      <Custom Action='InstallRavenService' After='InstallFinalize'>
+        <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
+      </Custom>
+      <Custom Action='SetupPerformanceCounters' After='InstallRavenService'>
+        <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
+      </Custom>
+      <Custom Action='UninstallRavenService' Before="RemoveFiles">
+        <![CDATA[(&Service=2) AND (!Service=3)]]>
+      </Custom>
+    </InstallExecuteSequence>
+
 
   </Product>
 </Wix>
