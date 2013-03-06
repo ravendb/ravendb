@@ -24,7 +24,7 @@ namespace Raven.Studio.Commands
 		private StreamWriter streamWriter;
 		private JsonTextWriter jsonWriter;
 		private TaskModel taskModel;
-	    private bool includeAttachments;
+		private bool includeAttachments, includeDocuments, includeIndexes;
 
 		public ExportDatabaseCommand(TaskModel taskModel, Action<string> output)
 		{
@@ -34,8 +34,14 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-            TaskCheckBox attachmentUI = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Attachments") as TaskCheckBox;
-            includeAttachments = attachmentUI != null && (bool)attachmentUI.Value;
+			var attachmentUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Attachments") as TaskCheckBox;
+			includeAttachments = attachmentUi != null && (bool)attachmentUi.Value;
+
+			var documentsUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Documents") as TaskCheckBox;
+			includeDocuments = documentsUi != null && (bool)documentsUi.Value;
+
+			var indexesUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Indexes") as TaskCheckBox;
+			includeIndexes = indexesUi != null && (bool)indexesUi.Value;
 
 			var saveFile = new SaveFileDialog
 			{
@@ -76,7 +82,7 @@ namespace Raven.Studio.Commands
 		    };
 
 		    Action readAttachments = () => ReadAttachments(Guid.Empty, 0, callback: finalized);
-		    Action readDocuments = () => ReadDocuments(Guid.Empty, 0, callback: includeAttachments ? readAttachments : finalized);
+		    Action readDocuments = () => ReadDocuments(Guid.Empty, 0, callback: readAttachments);
 
             try
             {
@@ -91,6 +97,12 @@ namespace Raven.Studio.Commands
 
 		private void ReadIndexes(int totalCount, Action callback)
 		{
+			if (includeIndexes == false)
+			{
+				callback();
+				return;
+			}
+
             if (totalCount == 0)
             {
                 output("Begin reading indexes");
@@ -128,6 +140,12 @@ namespace Raven.Studio.Commands
 
 		private void ReadDocuments(Guid lastEtag, int totalCount, Action callback)
 		{
+			if (includeDocuments == false)
+			{
+				callback();
+				return;
+			}
+
             if (totalCount == 0)
             {
                 output("Begin reading documents");
@@ -165,7 +183,14 @@ namespace Raven.Studio.Commands
 		           });
 		}
 
-        private void ReadAttachments(Guid lastEtag, int totalCount, Action callback) {
+        private void ReadAttachments(Guid lastEtag, int totalCount, Action callback) 
+		{
+			if (includeAttachments == false)
+			{
+				callback();
+				return;
+			}
+
             if (totalCount == 0)
             {
                 output("Begin reading attachments");
