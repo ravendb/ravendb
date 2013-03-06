@@ -114,9 +114,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions.Mono\Raven.Abstractions.Mono.csproj">
+    <ProjectReference Include="..\Raven.Abstractions.MonoForAndroid\Raven.Abstractions.MonoForAndroid.csproj">
       <Project>{1793d7f5-40b4-43c1-90a6-9df0d2fb93d3}</Project>
-      <Name>Raven.Abstractions.Mono</Name>
+      <Name>Raven.Abstractions.MonoForAndroid</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
