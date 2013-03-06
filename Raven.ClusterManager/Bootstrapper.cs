@@ -11,6 +11,7 @@ using Nancy.Responses;
 using Nancy.TinyIoc;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.ClusterManager.Tasks;
 
 namespace Raven.ClusterManager
 {
@@ -96,6 +97,12 @@ namespace Raven.ClusterManager
 				
 				return new EmbeddedFileResponse(assembly, resourcePath, fileName);
 			});
+		}
+
+		protected override void ApplicationStartup(TinyIoCContainer container, IPipelines pipelines)
+		{
+			var store = container.Resolve<IDocumentStore>();
+			var healthMonitorTask = new HealthMonitorTask(store);
 		}
 	}
 }

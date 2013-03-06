@@ -17,6 +17,7 @@ using Raven.ClusterManager.Discovery;
 using Raven.ClusterManager.Models;
 using Nancy.ModelBinding;
 using System.Linq;
+using Raven.ClusterManager.Tasks;
 
 namespace Raven.ClusterManager.Modules
 {
@@ -45,15 +46,7 @@ namespace Raven.ClusterManager.Modules
 				this.BindTo(server, "Id");
 				session.Store(server);
 
-				try
-				{
-					FetchServerDatabasesAsync(server)
-						.Wait();
-				}
-				catch (SocketException)
-				{
-					server.IsOnline = false;
-				}
+				HealthMonitorTask.FetchServerDatabases(server, session);
 
 				return "notified";
 			};
@@ -66,38 +59,6 @@ namespace Raven.ClusterManager.Modules
 					Servers = servers,
 				};
 			};
-		}
-
-		private async Task FetchServerDatabasesAsync(ServerRecord server)
-		{
-			var documentStore = (DocumentStore)session.Advanced.DocumentStore;
-			var replicationInformer = new ReplicationInformer(new DocumentConvention
-			{
-				FailoverBehavior = FailoverBehavior.FailImmediately
-			});
-
-			var client = new AsyncServerClient(server.Url, documentStore.Conventions, documentStore.Credentials,
-				documentStore.JsonRequestFactory, null, s => replicationInformer, null, new IDocumentConflictListener[0]);
-			var databaseNames = await client.GetDatabaseNamesAsync(1024);
-
-			await HandleDatabaseInServerAsync(server, Constants.SystemDatabase, client);
-			foreach (var databaseName in databaseNames)
-			{
-				await HandleDatabaseInServerAsync(server, databaseName, client.ForDatabase(databaseName));
-			}
-		}
-
-		private async Task HandleDatabaseInServerAsync(ServerRecord server, string databaseName, IAsyncDatabaseCommands dbCmds)
-		{
-			var databaseRecord = new DatabaseRecord { Name = databaseName, ServerId = server.Id, ServerUrl = server.Url };
-			session.Store(databaseRecord);
-			var replicationDocument = await dbCmds.GetAsync(Constants.RavenReplicationDestinations);
-			server.IsOnline = true;
-			server.LastOnlineTime = DateTimeOffset.Now;
-			if (replicationDocument != null)
-			{
-				databaseRecord.IsReplicationEnabled = true;
-			}
 		}
 	}
 }
