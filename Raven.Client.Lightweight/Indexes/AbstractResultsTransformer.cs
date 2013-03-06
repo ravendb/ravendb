@@ -22,7 +22,9 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
+#if !MONO
 	[System.ComponentModel.Composition.InheritedExport]
+#endif
 	public abstract class AbstractTransformerCreationTask : AbstractCommonApiForIndexesAndTransformers
 	{
 		/// <summary>

@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<!-- Properties required to use the Xamarin compiler instead of the Microsoft compiler -->
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -83,6 +84,9 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Internal\*.cs">
       <Link>Extentions\Internal\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs">
+      <Link>Imports\Nowtonsoft.Json\JsonTextReaderAsync.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\*.cs">
       <Link>Indexing\%(FileName)</Link>
     </Compile>
@@ -107,6 +111,9 @@
     <Compile Include="..\Raven.Abstractions\MEF\*.cs">
       <Link>MEF\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\OAuth\*.cs">
       <Link>OAuth\%(FileName)</Link>
     </Compile>
@@ -120,6 +127,7 @@
       <Link>Util\%(FileName)</Link>
     </Compile>
     <Compile Include="Mono\LazyOfTTMetadata.cs" />
+    <Compile Include="Mono\TraceLevel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
