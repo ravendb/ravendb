@@ -145,19 +145,19 @@ namespace Raven.Smuggler
 				incremental = true;
 			}
 
-			var smugglerApi = new SmugglerApi(options,connectionStringOptions);
+			var smugglerApi = new SmugglerApi(options, connectionStringOptions);
 
 			try
 			{
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(options, incremental);
-						if(waitForIndexing)
-							smugglerApi.WaitForIndexing(options);
+						smugglerApi.ImportData(options, incremental).Wait();
+						if (waitForIndexing)
+							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(options, incremental);
+						smugglerApi.ExportData(options, incremental).Wait();
 						break;
 				}
 			}

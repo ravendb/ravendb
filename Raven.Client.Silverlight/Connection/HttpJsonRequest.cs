@@ -85,10 +85,10 @@ namespace Raven.Client.Silverlight.Connection
 		/// <value>The response headers.</value>
 		public NameValueCollection ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions, HttpJsonRequestFactory factory)
+		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
-			this.url = url;
-			this.conventions = conventions;
+			this.url = requestParams.Url;
+			this.conventions = requestParams.Convention;
 			this.factory = factory;
 			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
 			noopWaitForTask = new CompletedTask();
@@ -96,16 +96,17 @@ namespace Raven.Client.Silverlight.Connection
 
 			webRequest.Headers["Raven-Client-Version"] = ClientVersion;
 
-			WriteMetadata(metadata);
-			webRequest.Method = method;
-			if (method != "GET")
+			WriteMetadata(requestParams.Metadata);
+			webRequest.Method = requestParams.Method;
+			if (requestParams.Method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
-		
-			if(factory.DisableRequestCompression)
-				return;
 
-			if (method == "POST" || method == "PUT" || method == "PATCH" || method == "EVAL")
-				webRequest.Headers["Content-Encoding"] = "gzip";
+			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
+			{
+				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
+					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+					webRequest.Headers["Content-Encoding"] = "gzip";
+			}
 		}
 
 		public Task<RavenJToken> ReadResponseJsonAsync()
@@ -148,13 +149,13 @@ namespace Raven.Client.Silverlight.Connection
 				return task;
 
 			var webResponse = exception.Response as HttpWebResponse;
-			if (webResponse == null || 
-				(webResponse.StatusCode != HttpStatusCode.Unauthorized && 
-				 webResponse.StatusCode != HttpStatusCode.Forbidden && 
+			if (webResponse == null ||
+				(webResponse.StatusCode != HttpStatusCode.Unauthorized &&
+				 webResponse.StatusCode != HttpStatusCode.Forbidden &&
 				 webResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 				task.AssertNotFailed();
 
-			if(webResponse.StatusCode == HttpStatusCode.Forbidden)
+			if (webResponse.StatusCode == HttpStatusCode.Forbidden)
 			{
 				HandleForbiddenResponseAsync(webResponse);
 				task.AssertNotFailed();
@@ -263,7 +264,7 @@ namespace Raven.Client.Silverlight.Connection
 			{
 				ResponseHeaders[key] = response.Headers[key];
 			}
-			
+
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
@@ -311,7 +312,7 @@ namespace Raven.Client.Silverlight.Connection
 				if (headerName == "ETag")
 					headerName = "If-None-Match";
 				if (headerName.StartsWith("@") ||
-					headerName == Constants.LastModified || 
+					headerName == Constants.LastModified ||
 					headerName == Constants.RavenLastModified)
 					continue;
 				switch (headerName)
@@ -412,7 +413,7 @@ namespace Raven.Client.Silverlight.Connection
 																						   }
 																						   catch (Exception)
 																						   {
-																							 // we expect an exception, because we aborted the connection
+																							   // we expect an exception, because we aborted the connection
 																						   }
 																					   });
 					   observableLineStream.Start();
@@ -425,13 +426,13 @@ namespace Raven.Client.Silverlight.Connection
 						   return task;// effectively throw
 
 					   var httpWebResponse = webException.Response as HttpWebResponse;
-					   if (httpWebResponse == null || 
-							(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized && 
-							 httpWebResponse.StatusCode != HttpStatusCode.Forbidden && 
+					   if (httpWebResponse == null ||
+							(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+							 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
 							 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 						   return task; // effectively throw
 
-					   if(httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+					   if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
 					   {
 						   HandleForbiddenResponseAsync(httpWebResponse);
 						   return task;
@@ -506,6 +507,46 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			var uriBuilder = new UriBuilder(primaryUrl);
 			return uriBuilder.Uri.ToString();
+		}
+
+		public void PrepareForLongRequest()
+		{
+			Timeout = TimeSpan.FromHours(6);
+			webRequest.AllowWriteStreamBuffering = false;
+		}
+
+		public Task<Stream> GetRawRequestStream()
+		{
+			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
+		}
+
+		public Task<WebResponse> RawExecuteRequestAsync()
+		{
+			try
+			{
+				return webRequest.GetResponseAsync();
+			}
+			catch (WebException we)
+			{
+				var httpWebResponse = we.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				var sb = new StringBuilder()
+					.Append(httpWebResponse.StatusCode)
+					.Append(" ")
+					.Append(httpWebResponse.StatusDescription)
+					.AppendLine();
+
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						sb.AppendLine(line);
+					}
+				}
+				throw new InvalidOperationException(sb.ToString(), we);
+			}
 		}
 	}
 }

@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -27,10 +28,10 @@ namespace Raven.Database.Smuggler
 
 		protected override void EnsureDatabaseExists()
 		{
-			ensuredDatabaseExists = true;
+			EnsuredDatabaseExists = true;
 		}
 
-		protected override Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
+		protected override async Task<Guid> ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
 		{
 			var totalCount = 0;
 			while (true)
@@ -38,11 +39,11 @@ namespace Raven.Database.Smuggler
 				var array = GetAttachments(totalCount, lastEtag);
 				if (array.Length == 0)
 				{
-					var databaseStatistics = GetStats();
+					var databaseStatistics = await GetStats();
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						lastEtag = Etag.Increment(lastEtag, SmugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -59,18 +60,18 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		protected override RavenJArray GetDocuments(Guid lastEtag)
+		protected override Task<RavenJArray> GetDocuments(Guid lastEtag)
 		{
 			const int dummy = 0;
-			return _database.GetDocuments(dummy, smugglerOptions.BatchSize, lastEtag);
+			return new CompletedTask<RavenJArray>(_database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag));
 		}
 
-		protected override RavenJArray GetIndexes(int totalCount)
+		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
-			return _database.GetIndexes(totalCount, 128);
+			return new CompletedTask<RavenJArray>(_database.GetIndexes(totalCount, 128)); 
 		}
 
-		protected override void PutAttachment(AttachmentExportInfo attachmentExportInfo)
+		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
 			// we filter out content length, because getting it wrong will cause errors 
 			// in the server side when serving the wrong value for this header.
@@ -78,25 +79,28 @@ namespace Raven.Database.Smuggler
 			// instead, we rely on the actual size of the data provided for us
 			attachmentExportInfo.Metadata.Remove("Content-Length");
 			_database.PutStatic(attachmentExportInfo.Key, null, new MemoryStream(attachmentExportInfo.Data), attachmentExportInfo.Metadata);
+			return new CompletedTask();
 		}
 
-		protected override void PutDocument(RavenJObject document)
+		protected override Task PutDocument(RavenJObject document)
 		{
 			var metadata = document.Value<RavenJObject>("@metadata");
 			var key = metadata.Value<string>("@id");
 			document.Remove("@metadata");
 
 			_database.Put(key, null, document, metadata, null);
+			return new CompletedTask();
 		}
 
-		protected override void PutIndex(string indexName, RavenJToken index)
+		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
 			_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+			return new CompletedTask();
 		}
 
-		protected override DatabaseStatistics GetStats()
+		protected override Task<DatabaseStatistics> GetStats()
 		{
-			return _database.Statistics;
+			return new CompletedTask<DatabaseStatistics>(_database.Statistics);
 		}
 
 		protected override void ShowProgress(string format, params object[] args)

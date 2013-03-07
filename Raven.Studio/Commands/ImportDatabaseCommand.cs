@@ -6,12 +6,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Ionic.Zlib;
+using Raven.Abstractions.Smuggler;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Input;
+using Raven.Studio.Features.Smuggler;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using TaskStatus = Raven.Studio.Models.TaskStatus;
@@ -27,10 +29,13 @@ namespace Raven.Studio.Commands
 		private int totalIndexes;
 		private readonly TaskModel taskModel;
 
+		private readonly ISmugglerApi smuggler;
+
 		public ImportDatabaseCommand(TaskModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;
+			this.smuggler = new SmugglerApi(new SmugglerOptions(), DatabaseCommands);
 		}
 
 		public override void Execute(object parameter)
@@ -70,113 +75,117 @@ namespace Raven.Studio.Commands
 			var sw = Stopwatch.StartNew();
 
 			var stream = openFile.File.OpenRead();
-			JsonTextReader jsonReader;
-			if (TryGetJsonReader(stream, out jsonReader) == false)
-			{
-				stream.Dispose();
-				return;
-			}
-			try
-			{
-				if (jsonReader.TokenType != JsonToken.StartObject)
-				{
-					taskModel.ReportError("StartObject was expected");
-					throw new InvalidOperationException("StartObject was expected");
-				}
 
-				// should read indexes now
-				if (jsonReader.Read() == false)
-				{
-					taskModel.ReportError("Invalid Json file specified!");
-					stream.Dispose();
-					return;
-				}
+			smuggler.ImportData(stream, new SmugglerOptions(), false)
+				.Catch(exception => taskModel.ReportError(exception));
 
-				output(String.Format("Begin reading indexes"));
+			//JsonTextReader jsonReader;
+			//if (TryGetJsonReader(stream, out jsonReader) == false)
+			//{
+			//	stream.Dispose();
+			//	return;
+			//}
+			//try
+			//{
+			//	if (jsonReader.TokenType != JsonToken.StartObject)
+			//	{
+			//		taskModel.ReportError("StartObject was expected");
+			//		throw new InvalidOperationException("StartObject was expected");
+			//	}
 
-				if (jsonReader.TokenType != JsonToken.PropertyName)
-				{
-					taskModel.ReportError("PropertyName was expected");
-					throw new InvalidOperationException("PropertyName was expected");
-				}
+			//	// should read indexes now
+			//	if (jsonReader.Read() == false)
+			//	{
+			//		taskModel.ReportError("Invalid Json file specified!");
+			//		stream.Dispose();
+			//		return;
+			//	}
 
-				if (Equals("Indexes", jsonReader.Value) == false)
-				{
-					taskModel.ReportError("Indexes property was expected");
-					throw new InvalidOperationException("Indexes property was expected");
-				}
+			//	output(String.Format("Begin reading indexes"));
 
-				if (jsonReader.Read() == false)
-					return;
+			//	if (jsonReader.TokenType != JsonToken.PropertyName)
+			//	{
+			//		taskModel.ReportError("PropertyName was expected");
+			//		throw new InvalidOperationException("PropertyName was expected");
+			//	}
 
-				if (jsonReader.TokenType != JsonToken.StartArray)
-				{
-					taskModel.ReportError("StartArray was expected");
-					throw new InvalidOperationException("StartArray was expected");
-				}
+			//	if (Equals("Indexes", jsonReader.Value) == false)
+			//	{
+			//		taskModel.ReportError("Indexes property was expected");
+			//		throw new InvalidOperationException("Indexes property was expected");
+			//	}
 
-				// import Indexes
-				WriteIndexes(jsonReader)
-					.ContinueOnSuccess(() =>
-					{
-						output(String.Format("Done with reading indexes, total: {0}", totalIndexes));
+			//	if (jsonReader.Read() == false)
+			//		return;
 
-						output(String.Format("Begin reading documents"));
+			//	if (jsonReader.TokenType != JsonToken.StartArray)
+			//	{
+			//		taskModel.ReportError("StartArray was expected");
+			//		throw new InvalidOperationException("StartArray was expected");
+			//	}
 
-						// should read documents now
-						if (jsonReader.Read() == false)
-						{
-							output("There were no documents to load");
-							stream.Dispose();
-							return;
-						}
+			//	// import Indexes
+			//	WriteIndexes(jsonReader)
+			//		.ContinueOnSuccess(() =>
+			//		{
+			//			output(String.Format("Done with reading indexes, total: {0}", totalIndexes));
 
-						if (jsonReader.TokenType != JsonToken.PropertyName)
-						{
-							taskModel.ReportError("PropertyName was expected");
-							throw new InvalidOperationException("PropertyName was expected");
-						}
+			//			output(String.Format("Begin reading documents"));
 
-						if (Equals("Docs", jsonReader.Value) == false)
-						{
-							taskModel.ReportError("Docs property was expected");
-							throw new InvalidOperationException("Docs property was expected");
-						}
+			//			// should read documents now
+			//			if (jsonReader.Read() == false)
+			//			{
+			//				output("There were no documents to load");
+			//				stream.Dispose();
+			//				return;
+			//			}
 
-						if (jsonReader.Read() == false)
-						{
-							output("There were no documents to load");
-							stream.Dispose();
-							return;
-						}
+			//			if (jsonReader.TokenType != JsonToken.PropertyName)
+			//			{
+			//				taskModel.ReportError("PropertyName was expected");
+			//				throw new InvalidOperationException("PropertyName was expected");
+			//			}
 
-						if (jsonReader.TokenType != JsonToken.StartArray)
-						{
-							taskModel.ReportError("StartArray was expected");
-							throw new InvalidOperationException("StartArray was expected");
-						}
+			//			if (Equals("Docs", jsonReader.Value) == false)
+			//			{
+			//				taskModel.ReportError("Docs property was expected");
+			//				throw new InvalidOperationException("Docs property was expected");
+			//			}
 
-						WriteDocuments(jsonReader)
-							.ContinueOnSuccess(
-								() =>
-								output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds)))
-							.Catch(exception => taskModel.ReportError(exception))
-							.Finally(() =>
-							{
-								taskModel.TaskStatus = TaskStatus.Ended;
-								taskModel.CanExecute.Value = true;
-							});
-					})
-					.Catch(exception => taskModel.ReportError(exception));
-			}
+			//			if (jsonReader.Read() == false)
+			//			{
+			//				output("There were no documents to load");
+			//				stream.Dispose();
+			//				return;
+			//			}
 
-			catch (Exception e)
-			{
-				taskModel.TaskStatus = TaskStatus.Ended;
-				taskModel.CanExecute.Value = true;
-				taskModel.ReportError(e);
-				throw e;
-			}
+			//			if (jsonReader.TokenType != JsonToken.StartArray)
+			//			{
+			//				taskModel.ReportError("StartArray was expected");
+			//				throw new InvalidOperationException("StartArray was expected");
+			//			}
+
+			//			WriteDocuments(jsonReader)
+			//				.ContinueOnSuccess(
+			//					() =>
+			//					output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds)))
+			//				.Catch(exception => taskModel.ReportError(exception))
+			//				.Finally(() =>
+			//				{
+			//					taskModel.TaskStatus = TaskStatus.Ended;
+			//					taskModel.CanExecute.Value = true;
+			//				});
+			//		})
+			//		.Catch(exception => taskModel.ReportError(exception));
+			//}
+
+			//catch (Exception e)
+			//{
+			//	taskModel.TaskStatus = TaskStatus.Ended;
+			//	taskModel.CanExecute.Value = true;
+			//	taskModel.ReportError(e);
+			//	throw e;
+			//}
 		}
 
 		private Task WriteIndexes(JsonTextReader jsonReader)

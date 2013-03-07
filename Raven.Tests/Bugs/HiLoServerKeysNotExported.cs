@@ -64,7 +64,7 @@ namespace Raven.Tests.Bugs
 			}
 
 			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
-			smugglerApi.ExportData(new SmugglerOptions { BackupPath = DumpFile });
+			smugglerApi.ExportData(new SmugglerOptions { BackupPath = DumpFile }, false);
 			Assert.True(File.Exists(DumpFile));
 
 			using (var session = documentStore.OpenSession())
@@ -110,7 +110,7 @@ namespace Raven.Tests.Bugs
 													Value = "Something1"
 			                       				}
 			                       			}
-									});
+									}, false);
 			Assert.True(File.Exists(DumpFile));
 
 			server.Dispose();
@@ -135,7 +135,7 @@ namespace Raven.Tests.Bugs
 									{
 										BackupPath = DumpFile,
 										OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
-									});
+									}, false);
 
 			Assert.True(File.Exists(DumpFile));
 

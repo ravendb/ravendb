@@ -24,41 +24,39 @@ namespace Raven.Abstractions.Smuggler
 {
 	public abstract class SmugglerApiBase : ISmugglerApi
 	{
-		protected readonly SmugglerOptions smugglerOptions;
+		protected readonly SmugglerOptions SmugglerOptions;
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 
-		protected abstract RavenJArray GetIndexes(int totalCount);
-		protected abstract RavenJArray GetDocuments(Guid lastEtag);
-		protected abstract Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
+		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
+		protected abstract Task<RavenJArray> GetDocuments(Guid lastEtag);
+		protected abstract Task<Guid> ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
 
-		protected abstract void PutIndex(string indexName, RavenJToken index);
-		protected abstract void PutAttachment(AttachmentExportInfo attachmentExportInfo);
-		protected abstract void PutDocument(RavenJObject document);
-		protected abstract DatabaseStatistics GetStats();
+		protected abstract Task PutIndex(string indexName, RavenJToken index);
+		protected abstract Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
+		protected abstract Task PutDocument(RavenJObject document);
+		protected abstract Task<DatabaseStatistics> GetStats();
 
 		protected abstract void ShowProgress(string format, params object[] args);
 
-		protected bool ensuredDatabaseExists;
+		protected bool EnsuredDatabaseExists;
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		protected double maximumBatchChangePercentage = 0.3;
-
-		protected int minimumBatchSize = 10;
-		protected int maximumBatchSize = 1024 * 4;
+		protected int MinimumBatchSize = 10;
+		protected int MaximumBatchSize = 1024 * 4;
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
-			this.smugglerOptions = smugglerOptions;
+			SmugglerOptions = smugglerOptions;
 		}
 
-		public string ExportData(SmugglerOptions options, bool incremental = false)
+		public Task<string> ExportData(SmugglerOptions options, bool incremental)
 		{
 			return ExportData(options, incremental, true);
 		}
 
-		public string ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		public async Task<string> ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
 		{
-			options = options ?? smugglerOptions;
+			options = options ?? SmugglerOptions;
 			if (options == null)
 				throw new ArgumentNullException("options");
 
@@ -101,7 +99,7 @@ namespace Raven.Abstractions.Smuggler
 				jsonWriter.WriteStartArray();
 				if ((options.OperateOnTypes & ItemType.Indexes) == ItemType.Indexes)
 				{
-					ExportIndexes(jsonWriter);
+					await ExportIndexes(jsonWriter);
 				}
 				jsonWriter.WriteEndArray();
 
@@ -109,7 +107,7 @@ namespace Raven.Abstractions.Smuggler
 				jsonWriter.WriteStartArray();
 				if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
 				{
-					options.LastDocsEtag = ExportDocuments(options, jsonWriter, options.LastDocsEtag);
+					options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
 				}
 				jsonWriter.WriteEndArray();
 
@@ -117,7 +115,7 @@ namespace Raven.Abstractions.Smuggler
 				jsonWriter.WriteStartArray();
 				if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
 				{
-					options.LastAttachmentEtag = ExportAttachments(jsonWriter, options.LastAttachmentEtag);
+					options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
 				}
 				jsonWriter.WriteEndArray();
 
@@ -160,23 +158,23 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private Guid ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Guid lastEtag)
+		private async Task<Guid> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Guid lastEtag)
 		{
 			int totalCount = 0;
 
 			while (true)
 			{
 				var watch = Stopwatch.StartNew();
-				var documents = GetDocuments(lastEtag);
+				var documents = await GetDocuments(lastEtag);
 				watch.Stop();
 
 				if (documents.Length == 0)
 				{
-					var databaseStatistics = GetStats();
+					var databaseStatistics = await GetStats();
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, smugglerOptions.BatchSize);
+						lastEtag = Etag.Increment(lastEtag, SmugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -201,13 +199,13 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		public void WaitForIndexing(SmugglerOptions options)
+		public async Task WaitForIndexing(SmugglerOptions options)
 		{
 			var justIndexingWait = Stopwatch.StartNew();
 			int tries = 0;
 			while (true)
 			{
-				var databaseStatistics = GetStats();
+				var databaseStatistics = await GetStats();
 				if (databaseStatistics.StaleIndexes.Length != 0)
 				{
 					if (tries++ % 10 == 0)
@@ -223,7 +221,8 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		public virtual async void ImportData(SmugglerOptions options, bool incremental = false)
+#if !SILVERLIGHT
+		public virtual async Task ImportData(SmugglerOptions options, bool incremental = false)
 		{
 			if (incremental == false)
 			{
@@ -263,6 +262,7 @@ namespace Raven.Abstractions.Smuggler
 				await ImportData(fileStream, options);
 			}
 		}
+#endif
 
 		protected class AttachmentExportInfo
 		{
@@ -273,7 +273,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract void EnsureDatabaseExists();
 
-		public async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
+		public virtual async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
 		{
 			EnsureDatabaseExists();
 			Stream sizeStream;
@@ -441,12 +441,12 @@ namespace Raven.Abstractions.Smuggler
 			});
 		}
 
-		protected void ExportIndexes(JsonTextWriter jsonWriter)
+		protected async Task ExportIndexes(JsonTextWriter jsonWriter)
 		{
 			int totalCount = 0;
 			while (true)
 			{
-				RavenJArray indexes = GetIndexes(totalCount);
+				var indexes = await GetIndexes(totalCount);
 
 				if (indexes.Length == 0)
 				{
@@ -455,9 +455,9 @@ namespace Raven.Abstractions.Smuggler
 				}
 				totalCount += indexes.Length;
 				ShowProgress("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", indexes.Length, totalCount);
-				foreach (RavenJToken item in indexes)
+				foreach (var index in indexes)
 				{
-					item.WriteTo(jsonWriter);
+					index.WriteTo(jsonWriter);
 				}
 			}
 		}
@@ -471,7 +471,7 @@ namespace Raven.Abstractions.Smuggler
 			else
 				options.BatchSize += change;
 
-			options.BatchSize = Math.Min(maximumBatchSize, Math.Max(minimumBatchSize, options.BatchSize));
+			options.BatchSize = Math.Min(MaximumBatchSize, Math.Max(MinimumBatchSize, options.BatchSize));
 		}
 
 	}

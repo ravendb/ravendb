@@ -34,7 +34,7 @@ namespace Raven.Tests.MailingList
                         session.SaveChanges();
                     }
                     var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions() {Url = documentStore.Url});
-                    smugglerApi.ExportData(options);
+                    smugglerApi.ExportData(options, false);
                 }
 
                 using (var documentStore = NewRemoteDocumentStore())

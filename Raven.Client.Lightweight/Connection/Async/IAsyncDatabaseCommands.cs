@@ -14,6 +14,7 @@ using Raven.Client.Connection.Profiling;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #endif
+using Raven.Client.Document;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -136,12 +137,10 @@ namespace Raven.Client.Connection.Async
 		/// <param name="metadata">The metadata.</param>
 		Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
 
-#if SILVERLIGHT
 		/// <summary>
 		/// Create a http request to the specified relative url on the current database
 		/// </summary>
-		HttpJsonRequest CreateRequest(string relativeUrl, string method);
-#endif
+		HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
@@ -296,5 +295,12 @@ namespace Raven.Client.Connection.Async
 		/// <param name="key">The key.</param>
 		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
 		Task<JsonDocumentMetadata> HeadAsync(string key);
+
+#if SILVERLIGHT
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+#endif
 	}
 }

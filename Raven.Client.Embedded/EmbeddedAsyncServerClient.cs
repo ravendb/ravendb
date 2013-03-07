@@ -210,6 +210,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<PutResult>(databaseCommands.Put(key, etag, document, metadata));
 		}
 
+		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false)
+		{
+			throw new NotImplementedException();
+		}
+
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
 			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
