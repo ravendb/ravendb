@@ -37,7 +37,7 @@ namespace Raven.Client.Silverlight.Connection
 	{
 		private readonly string url;
 		private readonly DocumentConvention conventions;
-		internal HttpWebRequest webRequest;
+		internal volatile HttpWebRequest webRequest;
 		private byte[] postedData;
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
@@ -48,6 +48,16 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
+		public string ContentType
+		{
+			get { return webRequest.ContentType; }
+			set { webRequest.ContentType = value; }
+		}
+
+		public WebHeaderCollection Headers
+		{
+			get { return webRequest.Headers; }
+		}
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{

@@ -1,13 +1,17 @@
 ﻿using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Smuggler
 {
@@ -15,25 +19,34 @@ namespace Raven.Studio.Features.Smuggler
 	{
 		private readonly IAsyncDatabaseCommands commands;
 
-		private ILowLevelBulkInsertOperation bulkInsertOperation;
+		private readonly Action<string> output;
 
-		public SmugglerApi(SmugglerOptions smugglerOptions, IAsyncDatabaseCommands commands)
+		private readonly IList<RavenJObject> batch; 
+
+		private static string StripQuotesIfNeeded(RavenJToken value)
+		{
+			var str = value.ToString(Formatting.None);
+			if (str.StartsWith("\"") && str.EndsWith("\""))
+				return str.Substring(1, str.Length - 2);
+			return str;
+		}
+
+		public SmugglerApi(SmugglerOptions smugglerOptions, IAsyncDatabaseCommands commands, Action<string> output)
 			: base(smugglerOptions)
 		{
 			this.commands = commands;
-		}
-
-		public override async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
-		{
-			using (bulkInsertOperation = commands.GetBulkInsertOperation(new BulkInsertOptions()))
-			{
-				await base.ImportData(stream, options, importIndexes);
-			}
+			this.output = output;
+			batch = new List<RavenJObject>();
 		}
 
 		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
-			throw new NotImplementedException();
+			var url = ("/indexes?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount).NoCache();
+			var request = commands.CreateRequest(url, "GET");
+
+			return request
+				.ReadResponseJsonAsync()
+				.ContinueWith(task => ((RavenJArray) task.Result));
 		}
 
 		protected override Task<RavenJArray> GetDocuments(Guid lastEtag)
@@ -48,25 +61,50 @@ namespace Raven.Studio.Features.Smuggler
 
 		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
-			return commands.CreateRequest("/indexes/" + indexName, "PUT")
-						   .ExecuteWriteAsync(index.Value<RavenJObject>("definition").ToString(Formatting.None));
+			var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<RavenJObject>("definition").ToString());
+
+			return commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
-			return commands
-				.PutAttachmentAsync(attachmentExportInfo.Key, null, attachmentExportInfo.Data, attachmentExportInfo.Metadata);
+			var url = ("/static/" + attachmentExportInfo.Key).NoCache();
+			var request = commands.CreateRequest(url, "PUT");
+			if (attachmentExportInfo.Metadata != null)
+			{
+				foreach (var header in attachmentExportInfo.Metadata)
+				{
+					switch (header.Key)
+					{
+						case "Content-Type":
+							request.ContentType = header.Value.Value<string>();
+							break;
+						default:
+							request.Headers[header.Key] = StripQuotesIfNeeded(header.Value);
+							break;
+					}
+				}
+			}
+
+			return request
+				.ExecuteWriteAsync(attachmentExportInfo.Data);
 		}
 
 		protected override Task PutDocument(RavenJObject document)
 		{
-			var metadata = document.Value<RavenJObject>("@metadata");
-			var id = metadata.Value<string>("@id");
-			document.Remove("@metadata");
+			if (document != null)
+			{
+				batch.Add(document);
 
-			bulkInsertOperation.Write(id, metadata, document);
+				if (batch.Count >= SmugglerOptions.BatchSize)
+				{
+					return FlushBatch();
+				}
 
-			return new CompletedTask();
+				return new CompletedTask();
+			}
+
+			return FlushBatch();
 		}
 
 		protected override Task<DatabaseStatistics> GetStats()
@@ -76,11 +114,30 @@ namespace Raven.Studio.Features.Smuggler
 
 		protected override void ShowProgress(string format, params object[] args)
 		{
-			throw new NotImplementedException();
+			if (output != null)
+				output(string.Format(format, args));
 		}
 
-		protected override void EnsureDatabaseExists()
+		protected override Task EnsureDatabaseExists()
 		{
+			return new CompletedTask();
+		}
+
+		protected override Task FlushBatch()
+		{
+			var putCommands = (from doc in batch
+			                   let metadata = doc.Value<RavenJObject>("@metadata")
+			                   let removal = doc.Remove("@metadata")
+			                   select new PutCommandData
+			                   {
+				                   Metadata = metadata,
+				                   Document = doc,
+				                   Key = metadata.Value<string>("@id"),
+			                   }).ToArray();
+
+			return commands
+				.BatchAsync(putCommands)
+				.ContinueOnSuccess(task => batch.Clear());
 		}
 	}
 }

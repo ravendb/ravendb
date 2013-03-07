@@ -26,9 +26,10 @@ namespace Raven.Database.Smuggler
 
 		private readonly DocumentDatabase _database;
 
-		protected override void EnsureDatabaseExists()
+		protected override Task EnsureDatabaseExists()
 		{
 			EnsuredDatabaseExists = true;
+			return new CompletedTask();
 		}
 
 		protected override async Task<Guid> ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
@@ -101,6 +102,11 @@ namespace Raven.Database.Smuggler
 		protected override Task<DatabaseStatistics> GetStats()
 		{
 			return new CompletedTask<DatabaseStatistics>(_database.Statistics);
+		}
+
+		protected override Task FlushBatch()
+		{
+			return new CompletedTask();
 		}
 
 		protected override void ShowProgress(string format, params object[] args)

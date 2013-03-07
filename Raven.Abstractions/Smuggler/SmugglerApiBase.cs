@@ -36,6 +36,8 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract Task PutDocument(RavenJObject document);
 		protected abstract Task<DatabaseStatistics> GetStats();
 
+		protected abstract Task FlushBatch();
+
 		protected abstract void ShowProgress(string format, params object[] args);
 
 		protected bool EnsuredDatabaseExists;
@@ -49,12 +51,12 @@ namespace Raven.Abstractions.Smuggler
 			SmugglerOptions = smugglerOptions;
 		}
 
-		public Task<string> ExportData(SmugglerOptions options, bool incremental)
+		public virtual Task<string> ExportData(SmugglerOptions options, bool incremental)
 		{
 			return ExportData(options, incremental, true);
 		}
 
-		public async Task<string> ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		public virtual async Task<string> ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
 		{
 			options = options ?? SmugglerOptions;
 			if (options == null)
@@ -271,11 +273,15 @@ namespace Raven.Abstractions.Smuggler
 			public string Key { get; set; }
 		}
 
-		protected abstract void EnsureDatabaseExists();
+		protected abstract Task EnsureDatabaseExists();
 
 		public virtual async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
 		{
-			EnsureDatabaseExists();
+			options = options ?? SmugglerOptions;
+			if (options == null)
+				throw new ArgumentNullException("options");
+
+			await EnsureDatabaseExists();
 			Stream sizeStream;
 
 			var sw = Stopwatch.StartNew();
@@ -307,138 +313,144 @@ namespace Raven.Abstractions.Smuggler
 			if (jsonReader.TokenType != JsonToken.StartObject)
 				throw new InvalidDataException("StartObject was expected");
 
-			// should read indexes now
+			ShowProgress("Begin reading indexes");
 			var indexCount = await ImportIndexes(jsonReader, options);
+			ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
 
-			// should read documents now
+			ShowProgress("Begin reading documents");
 			var documentCount = await ImportDocuments(jsonReader, sizeStream, options);
+			ShowProgress(string.Format("Done with reading documents, total: {0}", documentCount));
 
-			// should read attachments now
+			ShowProgress("Begin reading attachments");
 			var attachmentCount = await ImportAttachments(jsonReader, options);
+			ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
 
 			sw.Stop();
 
 			ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", documentCount, attachmentCount, sw.ElapsedMilliseconds);
 		}
 
-		private Task<int> ImportAttachments(JsonTextReader jsonReader, SmugglerOptions options)
+		private async Task<int> ImportAttachments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
-			return Task.Factory.StartNew(() =>
+			var count = 0;
+
+			if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
+				return count;
+			if (jsonReader.TokenType != JsonToken.PropertyName)
+				throw new InvalidDataException("PropertyName was expected");
+			if (Equals("Attachments", jsonReader.Value) == false)
+				throw new InvalidDataException("Attachment property was expected");
+			if (jsonReader.Read() == false)
+				return count;
+			if (jsonReader.TokenType != JsonToken.StartArray)
+				throw new InvalidDataException("StartArray was expected");
+			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-				var count = 0;
+				var item = RavenJToken.ReadFrom(jsonReader);
+				if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
+					continue;
 
-				if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
-					return count;
-				if (jsonReader.TokenType != JsonToken.PropertyName)
-					throw new InvalidDataException("PropertyName was expected");
-				if (Equals("Attachments", jsonReader.Value) == false)
-					throw new InvalidDataException("Attachment property was expected");
-				if (jsonReader.Read() == false)
-					return count;
-				if (jsonReader.TokenType != JsonToken.StartArray)
-					throw new InvalidDataException("StartArray was expected");
-				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-				{
-					var item = RavenJToken.ReadFrom(jsonReader);
-					if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
-						continue;
-
-					var attachmentExportInfo =
-						new JsonSerializer
-						{
-							Converters =
+				var attachmentExportInfo =
+					new JsonSerializer
+					{
+						Converters =
 							{
 								new JsonToJsonConverter()
 							}
-						}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
+					}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 
-					ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
+				ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
 
-					PutAttachment(attachmentExportInfo);
+				await PutAttachment(attachmentExportInfo);
 
-					count++;
-				}
+				count++;
+			}
 
-				return count;
-			});
+			await FlushBatch();
+
+			return count;
 		}
 
-		private Task<int> ImportDocuments(JsonTextReader jsonReader, Stream sizeStream, SmugglerOptions options)
+		private async Task<int> ImportDocuments(JsonTextReader jsonReader, Stream sizeStream, SmugglerOptions options)
 		{
-			return Task.Factory.StartNew(() =>
-			{
-				var count = 0;
+			var count = 0;
 
-				if (jsonReader.Read() == false)
-					return count;
-				if (jsonReader.TokenType != JsonToken.PropertyName)
-					throw new InvalidDataException("PropertyName was expected");
-				if (Equals("Docs", jsonReader.Value) == false)
-					throw new InvalidDataException("Docs property was expected");
-				if (jsonReader.Read() == false)
-					return count;
-				if (jsonReader.TokenType != JsonToken.StartArray)
-					throw new InvalidDataException("StartArray was expected");
-
-				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-				{
-					var before = sizeStream.Position;
-					var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-					var size = sizeStream.Position - before;
-					if (size > 1024 * 1024)
-					{
-						Console.WriteLine("{0:#,#.##;;0} kb - {1}",
-										  (double)size / 1024,
-										  document["@metadata"].Value<string>("@id"));
-					}
-					if ((options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
-						continue;
-					if (options.MatchFilters(document) == false)
-						continue;
-
-					PutDocument(document);
-
-					count++;
-				}
-
+			if (jsonReader.Read() == false)
 				return count;
-			});
+			if (jsonReader.TokenType != JsonToken.PropertyName)
+				throw new InvalidDataException("PropertyName was expected");
+			if (Equals("Docs", jsonReader.Value) == false)
+				throw new InvalidDataException("Docs property was expected");
+			if (jsonReader.Read() == false)
+				return count;
+			if (jsonReader.TokenType != JsonToken.StartArray)
+				throw new InvalidDataException("StartArray was expected");
+
+			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			{
+				var before = sizeStream.Position;
+				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+				var size = sizeStream.Position - before;
+				if (size > 1024 * 1024)
+				{
+					Console.WriteLine("{0:#,#.##;;0} kb - {1}",
+									  (double)size / 1024,
+									  document["@metadata"].Value<string>("@id"));
+				}
+				if ((options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
+					continue;
+				if (options.MatchFilters(document) == false)
+					continue;
+
+				await PutDocument(document);
+
+				count++;
+
+				if (count % 100 == 0)
+				{
+					ShowProgress("Read {0} documents", count);
+				}
+			}
+
+			await FlushBatch();
+
+			return count;
 		}
 
-		private Task<int> ImportIndexes(JsonReader jsonReader, SmugglerOptions options)
+		private async Task<int> ImportIndexes(JsonReader jsonReader, SmugglerOptions options)
 		{
-			return Task.Factory.StartNew(() =>
-			{
-				var count = 0;
+			var count = 0;
 
-				if (jsonReader.Read() == false)
-					return count;
-				if (jsonReader.TokenType != JsonToken.PropertyName)
-					throw new InvalidDataException("PropertyName was expected");
-				if (Equals("Indexes", jsonReader.Value) == false)
-					throw new InvalidDataException("Indexes property was expected");
-				if (jsonReader.Read() == false)
-					return count;
-				if (jsonReader.TokenType != JsonToken.StartArray)
-					throw new InvalidDataException("StartArray was expected");
-
-				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-				{
-					var index = RavenJToken.ReadFrom(jsonReader);
-					if ((options.OperateOnTypes & ItemType.Indexes) != ItemType.Indexes)
-						continue;
-					var indexName = index.Value<string>("name");
-					if (indexName.StartsWith("Temp/"))
-						continue;
-					if (index.Value<RavenJObject>("definition").Value<bool>("IsCompiled"))
-						continue; // can't import compiled indexes
-					PutIndex(indexName, index);
-
-					count++;
-				}
-
+			if (jsonReader.Read() == false)
 				return count;
-			});
+			if (jsonReader.TokenType != JsonToken.PropertyName)
+				throw new InvalidDataException("PropertyName was expected");
+			if (Equals("Indexes", jsonReader.Value) == false)
+				throw new InvalidDataException("Indexes property was expected");
+			if (jsonReader.Read() == false)
+				return count;
+			if (jsonReader.TokenType != JsonToken.StartArray)
+				throw new InvalidDataException("StartArray was expected");
+
+			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			{
+				var index = RavenJToken.ReadFrom(jsonReader);
+				if ((options.OperateOnTypes & ItemType.Indexes) != ItemType.Indexes)
+					continue;
+				var indexName = index.Value<string>("name");
+				if (indexName.StartsWith("Temp/"))
+					continue;
+				if (index.Value<RavenJObject>("definition").Value<bool>("IsCompiled"))
+					continue; // can't import compiled indexes
+
+				await PutIndex(indexName, index);
+
+				count++;
+			}
+
+			await FlushBatch();
+
+			return count;
 		}
 
 		protected async Task ExportIndexes(JsonTextWriter jsonWriter)

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -11,12 +12,14 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
@@ -33,6 +36,14 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJArray>(indexes);
 		}
 
+		private static string StripQuotesIfNeeded(RavenJToken value)
+		{
+			var str = value.ToString(Formatting.None);
+			if (str.StartsWith("\"") && str.EndsWith("\""))
+				return str.Substring(1, str.Length - 2);
+			return str;
+		}
+
 		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
 
@@ -43,11 +54,6 @@ namespace Raven.Smuggler
 		{
 			get
 			{
-				if (store == null)
-				{
-					store = CreateStore();
-				}
-
 				return store.AsyncDatabaseCommands;
 			}
 		}
@@ -60,14 +66,43 @@ namespace Raven.Smuggler
 
 		public override async Task ImportData(SmugglerOptions options, bool incremental = false)
 		{
-			using (var documentStore = CreateStore())
+			using (store = CreateStore())
 			{
-				using (operation = documentStore.BulkInsert())
+				using (operation = store.BulkInsert())
 				{
 					operation.Report += text => ShowProgress(text);
 
 					await base.ImportData(options, incremental);
 				}
+			}
+		}
+
+		public override async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
+		{
+			using (store = CreateStore())
+			{
+				using (operation = store.BulkInsert())
+				{
+					operation.Report += text => ShowProgress(text);
+
+					await base.ImportData(stream, options, importIndexes);
+				}
+			}
+		}
+
+		public override async Task<string> ExportData(SmugglerOptions options, bool incremental)
+		{
+			using (store = CreateStore())
+			{
+				return await base.ExportData(options, incremental);
+			}
+		}
+
+		public override async Task<string> ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		{
+			using (store = CreateStore())
+			{
+				return await base.ExportData(options, incremental, lastEtagsFromFile);
 			}
 		}
 
@@ -194,18 +229,44 @@ namespace Raven.Smuggler
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
-			return Commands.PutAttachmentAsync(attachmentExportInfo.Key, null, attachmentExportInfo.Data, attachmentExportInfo.Metadata);
+			var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
+			if (attachmentExportInfo.Metadata != null)
+			{
+				foreach (var header in attachmentExportInfo.Metadata)
+				{
+					switch (header.Key)
+					{
+						case "Content-Type":
+							request.WebRequest.ContentType = header.Value.Value<string>();
+							break;
+						default:
+							request.WebRequest.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
+							break;
+					}
+				}
+			}
+
+			request.Write(attachmentExportInfo.Data);
+			request.ExecuteRequest();
+
+			return new CompletedTask();
 		}
 
 		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
-			return Commands.CreateRequest("/indexes/" + indexName, "PUT")
-						   .ExecuteWriteAsync(index.Value<RavenJObject>("definition").ToString(Formatting.None));
+			var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<JObject>("definition").ToString());
+
+			return Commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
 		}
 
 		protected override Task<DatabaseStatistics> GetStats()
 		{
 			return Commands.GetStatisticsAsync();
+		}
+
+		protected override Task FlushBatch()
+		{
+			return new CompletedTask();
 		}
 
 		protected override void ShowProgress(string format, params object[] args)
@@ -215,11 +276,11 @@ namespace Raven.Smuggler
 
 		public bool LastRequestErrored { get; set; }
 
-		protected override void EnsureDatabaseExists()
+		protected override Task EnsureDatabaseExists()
 		{
 			if (EnsuredDatabaseExists ||
 				string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase))
-				return;
+				return new CompletedTask();
 
 			EnsuredDatabaseExists = true;
 
@@ -229,7 +290,7 @@ namespace Raven.Smuggler
 			try
 			{
 				httpRavenRequestFactory.Create(docUrl, "GET", ConnectionStringOptions).ExecuteRequest();
-				return;
+				return new CompletedTask(); ;
 			}
 			catch (WebException e)
 			{
@@ -242,6 +303,8 @@ namespace Raven.Smuggler
 			var document = MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase);
 			request.Write(document);
 			request.ExecuteRequest();
+
+			return new CompletedTask();
 		}
 	}
 }

@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
@@ -58,7 +57,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					BackupPath = backupPath
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
-				dataDumper.ImportData(smugglerOptions, true);
+				dataDumper.ImportData(smugglerOptions, true).Wait(TimeSpan.FromSeconds(15));
 
 				using (var session = store.OpenSession())
 				{
@@ -110,7 +109,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					BackupPath = backupPath
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
-				dataDumper.ImportData(smugglerOptions, true);
+				dataDumper.ImportData(smugglerOptions, true).Wait(TimeSpan.FromSeconds(15));
 
 				using (var session = store.OpenSession())
 				{
