@@ -251,6 +251,32 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private bool showSkipTransform = true;
+		private bool useTransformer;
+		public bool UseTransformer
+		{
+			get { return useTransformer; }
+			set
+			{
+				useTransformer = value;
+				if (value == true)
+				{
+					SkipTransformResults = true;
+					showSkipTransform = false;
+				}
+				else
+				{
+					showSkipTransform = true;
+				}
+				OnPropertyChanged(() => UseTransformer);
+				OnPropertyChanged(() => HasTransform);
+				Requery();
+			}
+		}
+
+		public Observable<string> SelectedTransformer { get; set; }
+		public List<string> Transformers { get; set; } 
+
 	    public bool SkipTransformResults
 	    {
 	        get { return skipTransformResults; }
@@ -377,28 +403,41 @@ namespace Raven.Studio.Models
 
 	    private void BeginUpdateFieldsAndSortOptions(string collection)
 	    {
-	        DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
-	                                    new IndexQuery() {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
-	            .ContinueOnSuccessInTheUIThread(result =>
-	                                                {
-                                                        if (result.Results.Count > 0)
-                                                        {
-                                                            var fields = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true)
-                                                                .ToList();
+		    DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
+		                                new IndexQuery {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
+		                    .ContinueOnSuccessInTheUIThread(result =>
+		                    {
+			                    if (result.Results.Count > 0)
+			                    {
+				                    var fields =
+					                    DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties: true,
+					                                                              includeMetadata: false,
+					                                                              excludeParentPropertyNames: true)
+					                                   .ToList();
 
-                                                            SetSortByOptions(fields);
-                                                            QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
-                                                            RestoreHistory();
-                                                        }
-	                                                });
+				                    SetSortByOptions(fields);
+				                    QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
+				                    RestoreHistory();
+			                    }
+		                    });
 	    }
 
 	    public QueryModel()
 		{
 			ModelUrl = "/query";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+
+		    ApplicationModel.DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
+		    {
+				SelectedTransformer = new Observable<string>{Value = "None"};
+			    SelectedTransformer.PropertyChanged += (sender, args) => Requery();
+				Transformers = new List<string>{"None"};
+			    Transformers.AddRange(transformers.Select(definition => definition.Name));
+			    
+			    OnPropertyChanged(() => Transformers);
+		    });
             
-			queryDocument = new EditorDocument()
+			queryDocument = new EditorDocument
             {
                 Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
             };
@@ -571,7 +610,7 @@ namespace Raven.Studio.Models
 
 	    public bool HasTransform
 	    {
-            get { return hasTransform; }
+            get { return hasTransform && showSkipTransform; }
             private set
             {
                 hasTransform = value;
@@ -586,7 +625,7 @@ namespace Raven.Studio.Models
                 return;
             } 
 
-            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value), IsSpatialQuery, Latitude, Longitude, Radius);
+            var state = new QueryState(this);
 
             PerDatabaseState.QueryHistoryManager.StoreQuery(state);
 		}
@@ -616,11 +655,25 @@ namespace Raven.Studio.Models
 	        if (state == null)
 	            return;
 
-	        Query = state.Query;
+	        UpdateFromState(state);
+
+	        Requery();
+	    }
+
+		private void UpdateFromState(QueryState state)
+		{
+			Query = state.Query;
 	        IsSpatialQuery = state.IsSpatialQuery;
 	        Latitude = state.Latitude;
 	        Longitude = state.Longitude;
 	        Radius = state.Radius;
+	        UseTransformer = state.UseTransformer;
+			DefaultOperator = state.DefaultOperator;
+			SelectedTransformer.Value = state.Transformer;
+			SkipTransformResults = state.SkipTransform;
+			ShowFields = state.ShowFields;
+			ShowEntries = state.ShowEntries;
+
 
 	        SortBy.Clear();
 
@@ -629,11 +682,9 @@ namespace Raven.Studio.Models
 		        if (SortByOptions.Contains(sortOption))
 			        SortBy.Add(new StringRef() {Value = sortOption});
 	        }
+		}
 
-	        Requery();
-	    }
-
-        public ICommand DeleteMatchingResults { get
+		public ICommand DeleteMatchingResults { get
         {
             return deleteMatchingResultsCommand ??
                    (deleteMatchingResultsCommand = new ActionCommand(HandleDeleteMatchingResults));
@@ -730,11 +781,15 @@ namespace Raven.Studio.Models
 		}
 
 	    public IndexQuery CreateTemplateQuery()
-        {
+	    {
+		    var transfomer = SelectedTransformer.Value;
+			if (transfomer == "None")
+				transfomer = "";
             var q = new IndexQuery
             {
                 Query = Query,
-                DefaultOperator = DefaultOperator
+                DefaultOperator = DefaultOperator,
+				ResultsTransformer = transfomer
             };
 
             if (SortBy != null && SortBy.Count > 0)

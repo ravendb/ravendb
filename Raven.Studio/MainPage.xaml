@@ -178,7 +178,11 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/indexes"
 								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                            </StackPanel>
+								<HyperlinkButton Content="Transformers"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/transformers"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+							</StackPanel>
                         </Border>
                     </Delay:SplitHyperlinkButtonPopup.PopupContent>
                 </Delay:SplitHyperlinkButtonPopup>
@@ -250,10 +254,12 @@
                         <Behaviors:StringCollection>
 							<System:String>/statistics</System:String>
 							<System:String>/logs</System:String>
+							<System:String>/logs/error</System:String>
                             <System:String>/alerts</System:String>
                             <System:String>/indexes-errors</System:String>
-                            <System:String>/replicationStatistics</System:String>
-                        </Behaviors:StringCollection>
+							<System:String>/replicationStatistics</System:String>
+							<System:String>/user-info</System:String>
+						</Behaviors:StringCollection>
                     </Behaviors:LinkHighlighter.AlternativeUris>
                     <Delay:SplitHyperlinkButtonPopup.PopupContent>
                         <Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
@@ -278,7 +284,11 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/replicationStatistics"
 								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                            </StackPanel>
+								<HyperlinkButton Content="User Info"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/user-info"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+							</StackPanel>
                         </Border>
                     </Delay:SplitHyperlinkButtonPopup.PopupContent>
                 </Delay:SplitHyperlinkButtonPopup>
@@ -381,6 +391,8 @@
 											  MappedUri="/Views/IndexesErrors.xaml" />
 						<sdk:UriMapping Uri="/indexes/{indexName}"
 											  MappedUri="/Views/Index.xaml" />
+						<sdk:UriMapping Uri="/transformers/{transformerName}"
+											  MappedUri="/Views/Transformer.xaml" />
 						<sdk:UriMapping Uri="/query/{indexName}"
 											  MappedUri="/Views/Query.xaml" />
 						<sdk:UriMapping Uri="/logs/{errors}"

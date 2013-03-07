@@ -4330,6 +4330,10 @@
 		<Setter Property="Source" Value="{StaticResource Image_DocumentIndex_Small}"/>
 	</Style>
 
+	<Style x:Key="Style_Image_TransformerPageHeader" TargetType="Image" BasedOn="{StaticResource Style_Image_PageHeader}">
+		<Setter Property="Source" Value="{StaticResource Image_Transformer_Small}"/>
+	</Style>
+
 	<Style x:Key="Style_Image_DocumentsPageHeader" TargetType="Image" BasedOn="{StaticResource Style_Image_PageHeader}">
 		<Setter Property="Source" Value="{StaticResource Image_Document_Small}"/>
 	</Style>

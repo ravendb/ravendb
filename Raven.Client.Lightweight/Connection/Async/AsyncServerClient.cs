@@ -154,6 +154,29 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
+		/// Gets the transformers from the server asynchronously
+		/// </summary>
+		public Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize)
+		{
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var url2 = (operationUrl + "/transformers?start=" + start + "&pageSize=" + pageSize).NoCache();
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
+				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var json = ((RavenJArray)task.Result);
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the transformer definition
+						return json
+							.Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+							.ToArray();
+					});
+			});
+		}
+
+		/// <summary>
 		/// Resets the specified index asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -187,6 +210,28 @@ namespace Raven.Client.Connection.Async
 						var json = (RavenJObject)task.Result;
 						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 						return convention.CreateSerializer().Deserialize<IndexDefinition>(new RavenJTokenReader(json["Index"]));
+					});
+			});
+		}
+
+		/// <summary>
+		/// Gets the transformer definition for the specified name asynchronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public Task<TransformerDefinition> GetTransformerAsync(string name)
+		{
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				return operationUrl.Transformer(name)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention)
+				.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var json = (RavenJObject)task.Result;
+						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+						return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(json));
 					});
 			});
 		}
@@ -313,6 +358,14 @@ namespace Raven.Client.Connection.Async
 						return task;
 					}).Unwrap();
 			});
+		}
+
+		public Task DeleteTransformerAsync(string name)
+		{
+			return ExecuteWithReplication("DELETE", operationUrl => operationUrl.Transformer(name)
+																		.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+																		.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+																		.ExecuteRequestAsync());
 		}
 
 		/// <summary>

@@ -8,6 +8,7 @@ using Raven.Client.Extensions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
 using Raven.Studio.Controls;
+using Raven.Studio.Features.Bundles;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -93,7 +94,7 @@ namespace Raven.Studio.Commands
 				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)) == false)
 				{
 					var hasChanges = new List<string>();
-					session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+                    session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
 					       .ContinueOnSuccessInTheUIThread(documents =>
 					       {
 						       sqlReplicationSettings.UpdateIds();
@@ -117,8 +118,6 @@ namespace Raven.Studio.Commands
 
 						       }
 
-							   hasChanges.Add("test");
-							   hasChanges.Add("test2");
 							   if (hasChanges != null && hasChanges.Count > 0)
 							   {
 								   var resetReplication = new ResetReplication(hasChanges);
@@ -148,7 +147,7 @@ namespace Raven.Studio.Commands
 						       foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
 						       {
 							       sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
-							       session.Store(sqlReplicationConfig);
+							       session.Store(sqlReplicationConfig.ToSqlReplicationConfig());
 						       }
 
 						       session.SaveChangesAsync().Catch();
@@ -216,7 +215,7 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-		private bool HasChanges(SqlReplicationConfig local, SqlReplicationConfig remote)
+        private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
 		{
 			if (remote == null)
 				return false;

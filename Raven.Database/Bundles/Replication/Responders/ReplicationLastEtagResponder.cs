@@ -49,7 +49,7 @@ namespace Raven.Bundles.Replication.Responders
 					break;
 				case "PUT":
 					OnPut(context, src);
-					break;
+					break;	
 
 			}
 		}
@@ -62,18 +62,19 @@ namespace Raven.Bundles.Replication.Responders
 
 				SourceReplicationInformation sourceReplicationInformation;
 
+				Guid serverInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote serve
+
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						ServerInstanceId = Database.TransactionalStorage.Id,
 						Source = src
 					};
 				}
 				else
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 				}
 
 				var currentEtag = context.Request.QueryString["currentEtag"];
@@ -108,12 +109,15 @@ namespace Raven.Bundles.Replication.Responders
 				{
 
 				}
+				Guid serverInstanceId;
+				if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
+					serverInstanceId = Database.TransactionalStorage.Id;
 
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						ServerInstanceId = Database.TransactionalStorage.Id,
+						ServerInstanceId = serverInstanceId,
 						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
 						LastDocumentEtag = docEtag ?? Etag.Empty,
 						Source = src
@@ -122,7 +126,7 @@ namespace Raven.Bundles.Replication.Responders
 				else
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 					sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
 					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
 				}
@@ -134,7 +138,7 @@ namespace Raven.Bundles.Replication.Responders
 				log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
 								  sourceReplicationInformation.LastDocumentEtag,
 								  sourceReplicationInformation.LastAttachmentEtag);
-
+		
 				Database.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
 			}
 		}

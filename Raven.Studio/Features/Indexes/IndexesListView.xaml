@@ -52,13 +52,14 @@
 										<ColumnDefinition Width="Auto" />
 										<ColumnDefinition Width="*" />
 										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="Auto" />
 									</Grid.ColumnDefinitions>
 									<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 										   Stretch="None"
 										   VerticalAlignment="Center"
 										   Margin="2"
 										   Grid.Column="0" />
-									<HyperlinkButton Content="{Binding Name}"
+									<HyperlinkButton Content="{Binding ModifiedName}"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding Name, StringFormat=/query/\{0\}}"
 													 VerticalAlignment="Center"
@@ -69,6 +70,18 @@
 													 ToolTipService.ToolTip="{Binding Name}"
 													 Grid.Column="1" />
 									<HyperlinkButton Grid.Column="2"
+													 Command="{Binding MakeIndexPersisted}"
+													 VerticalAlignment="Center"
+													 Style="{StaticResource Style_Button_MouseOverChrome}"
+													 Padding="4"
+													 Margin="2"
+													 ToolTipService.ToolTip="Make Index Persisted">
+										<HyperlinkButton.Content>
+											<Image Source="{StaticResource Image_Index_Down}"
+												   Stretch="None" />
+										</HyperlinkButton.Content>
+									</HyperlinkButton>
+									<HyperlinkButton Grid.Column="3"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding Name, StringFormat=/indexes/\{0\}}"
 													 VerticalAlignment="Center"
@@ -174,7 +187,7 @@
 							<Delay:SplitButton.ButtonMenuItemsSource>
 								<ContextMenu:MenuItem Header="Delete All Idle Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Idle"/>
 								<ContextMenu:MenuItem Header="Delete All Disabled Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Disabled"/>
-								<ContextMenu:MenuItem Header="Delete All Abandonded Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Abandonded"/>
+								<ContextMenu:MenuItem Header="Delete All Abandoned Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Abandoned"/>
 								<ContextMenu:Separator/>
 								<ContextMenu:MenuItem Header="Delete All Indexes" Command="{Binding DeleteIndexes}" CommandParameter="All"/>
 							</Delay:SplitButton.ButtonMenuItemsSource>

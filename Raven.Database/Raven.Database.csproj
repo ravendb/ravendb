@@ -232,7 +232,7 @@
     <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexedItemsInfo.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
-    <Compile Include="Indexing\IndexSegmentsInfo.cs" /> 
+    <Compile Include="Indexing\IndexSegmentsInfo.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseKeywordTokenizer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceTokenizer.cs" />
@@ -409,7 +409,6 @@
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
-    <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
@@ -699,7 +698,7 @@
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
-    <Compile Include="Storage\Esent\StorageActions\EsentUtil.cs" />
+    <Compile Include="Storage\Esent\Debug\EsentUtil.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />

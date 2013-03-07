@@ -90,6 +90,11 @@ namespace Raven.Client.Connection.Async
 		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
 
 		/// <summary>
+		/// Gets the transformers from the server asynchronously
+		/// </summary>
+		Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize);
+
+		/// <summary>
 		/// Resets the specified index asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -102,6 +107,12 @@ namespace Raven.Client.Connection.Async
 		Task<IndexDefinition> GetIndexAsync(string name);
 
 		/// <summary>
+		/// Gets the transformer definition for the specified name asynchronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task<TransformerDefinition> GetTransformerAsync(string name);
+
+		/// <summary>
 		/// Puts the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -110,7 +121,7 @@ namespace Raven.Client.Connection.Async
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
 
 		/// <summary>
-		/// Puts the transfomer definition for the specified name asynchronously
+		/// Puts the transformer definition for the specified name asynchronously
 		/// </summary>
 		Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition);
 
@@ -127,6 +138,12 @@ namespace Raven.Client.Connection.Async
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale);
+
+		/// <summary>
+		/// Deletes the transformer definition for the specified name asynchronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task DeleteTransformerAsync(string name);
 
 		/// <summary>
 		/// Deletes the document for the specified id asynchronously

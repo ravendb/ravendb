@@ -21,7 +21,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
         {
             using (var table = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
             {
-                byte[] defaultValue = BitConverter.GetBytes(0);
+                byte[] defaultValue = BitConverter.GetBytes(1);
                 JET_COLUMNID columnid;
                 Api.JetAddColumn(session, table, "priority", new JET_COLUMNDEF
                 {
@@ -29,7 +29,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                     grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
                 }, defaultValue, defaultValue.Length, out columnid);
 
-                Api.JetAddColumn(session, table, "created_timestamp", new JET_COLUMNDEF
+				defaultValue = BitConverter.GetBytes(0);
+				Api.JetAddColumn(session, table, "created_timestamp", new JET_COLUMNDEF
                 {
                     cbMax = 8, //64 bits
                     coltyp = JET_coltyp.Binary,

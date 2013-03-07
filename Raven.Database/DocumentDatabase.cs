@@ -343,6 +343,7 @@ namespace Raven.Database
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
+					DatabaseId = TransactionalStorage.Id,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
 						.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
@@ -2306,6 +2307,11 @@ namespace Raven.Database
 				}
 			});
 			return result;
+		}
+
+		public TransformerDefinition GetTransformerDefinition(string name)
+		{
+			return IndexDefinitionStorage.GetTransformerDefinition(name);
 		}
 	}
 }

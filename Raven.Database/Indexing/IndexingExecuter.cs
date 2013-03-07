@@ -42,7 +42,10 @@ namespace Raven.Database.Indexing
 			if (isStale == false)
 				return false;
 
-			if (indexingPriority == IndexingPriority.Normal)
+			if (indexingPriority == IndexingPriority.None)
+				return true;
+
+			if (indexingPriority.HasFlag(IndexingPriority.Normal))
 			{
 				onlyFoundIdleWork.Value = false;
 				return true;
@@ -58,7 +61,7 @@ namespace Raven.Database.Indexing
 				return true;
 
 			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
-		{
+			{
 				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
 
 				return (timeSinceLastIndexing > context.Configuration.TimeToWaitBeforeRunningAbandonedIndexes);

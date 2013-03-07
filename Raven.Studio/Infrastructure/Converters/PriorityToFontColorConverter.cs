@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Globalization;
-using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using Raven.Abstractions.Data;
@@ -13,10 +12,7 @@ namespace Raven.Studio.Infrastructure.Converters
 		{
 			var priority = value is IndexingPriority ? (IndexingPriority)value : IndexingPriority.Normal;
 
-			if(priority.HasFlag(IndexingPriority.Disabled))
-			return new SolidColorBrush(Colors.Gray);
-
-			if (priority.HasFlag(IndexingPriority.Abandoned))
+			if (priority.HasFlag(IndexingPriority.Abandoned) || priority.HasFlag(IndexingPriority.Disabled))
 				return new SolidColorBrush(Colors.LightGray);
 
 			return new SolidColorBrush(Colors.Black);

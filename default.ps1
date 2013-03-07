@@ -526,7 +526,7 @@ task CreateNugetPackages -depends Compile {
 	$sourceFeed = "https://nuget.org/api/v2"
 	
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$accessPath += "NyGet-Access-Key.txt"
+		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
 		
 		if ($global:uploadMode -eq "Vnext") {
 			$sourceFeed = "http://www.myget.org/F/ravendbvnext/api/v2/package"
@@ -546,7 +546,7 @@ task CreateNugetPackages -depends Compile {
 		}
 	}
 	else {
-		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
 }
 

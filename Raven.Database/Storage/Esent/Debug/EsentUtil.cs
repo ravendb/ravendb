@@ -4,40 +4,37 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Data;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using System.Linq;
 
-namespace Raven.Storage.Esent.StorageActions
+namespace Raven.Database.Storage.Esent.Debug
 {
 	public class EsentUtil
 	{
 		public static void DumpTable(Session session, Table table, Stream stream)
 		{
-			using (var writer = new StreamWriter(stream))
+			var writer = new StreamWriter(stream);
+			var cols = Api.GetTableColumns(session, table).ToArray();
+			foreach (var col in cols)
 			{
-				var cols = Api.GetTableColumns(session, table).ToArray();
+				writer.Write(col);
+				writer.Write(",");
+			}
+			writer.WriteLine("#");
+			Api.MoveBeforeFirst(session, table);
+			int count = 0;
+			while (Api.TryMoveNext(session, table))
+			{
 				foreach (var col in cols)
 				{
-					writer.Write(col);
+					var val = GetvalueFromTable(session, table, col) ?? "NULL";
+					writer.Write(val);
 					writer.Write(",");
 				}
-				writer.WriteLine("#");
-				Api.MoveBeforeFirst(session, table);
-				int count = 0;
-				while (Api.TryMoveNext(session, table))
-				{
-					foreach (var col in cols)
-					{
-						var val = GetvalueFromTable(session, table, col) ?? "NULL";
-						writer.Write(val);
-						writer.Write(",");
-					}
-					writer.WriteLine(++count);
-				}
-				writer.Flush();
+				writer.WriteLine(++count);
 			}
+			writer.Flush();
 		}
 
 		private static object GetvalueFromTable(Session session, Table table, ColumnInfo col)

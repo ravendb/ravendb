@@ -619,6 +619,9 @@
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\AccessTokenBody.cs">
+      <Link>Imports\Data\AccessTokenBody.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
       <Link>Imports\Data\Alert.cs</Link>
     </Compile>
@@ -699,6 +702,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\StreamResult.cs">
       <Link>Imports\Data\StreamResult.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\UserInfo.cs">
+      <Link>Imports\Data\UserInfo.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\UuidType.cs">
       <Link>Imports\Data\UuidType.cs</Link>
