@@ -126,7 +126,7 @@ namespace Raven.Client.Indexes
 			if (Reduce != null)
 				IndexDefinitionHelper.ValidateReduce(Reduce);
 
-			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 			var indexDefinition = new IndexDefinition
 			{
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
@@ -176,10 +176,11 @@ namespace Raven.Client.Indexes
 			return indexDefinition;
 		}
 
-		private static bool ContainsWhereEntityIs(Expression body)
+		private bool ContainsWhereEntityIs()
 		{
+		    if (Map == null) return false;
 			var whereEntityIsVisitor = new WhereEntityIsVisitor();
-			whereEntityIsVisitor.Visit(body);
+			whereEntityIsVisitor.Visit(Map.Body);
 			return whereEntityIsVisitor.HasWhereEntityIs;
 		}
 

@@ -45,7 +45,6 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => RawUrl);
 			}
 		}
-
 		public DocumentConvention Conventions
 		{
 			get { return documentStore.Conventions; }

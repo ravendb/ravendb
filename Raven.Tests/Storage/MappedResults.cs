@@ -30,7 +30,7 @@ namespace Raven.Tests.Storage
 			using (var tx = NewTransactionalStorage())
 			{
 				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
-				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
+				var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
 				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForDocumentId("users/ayende","test", reduceKeyAndBuckets));
 
 				Assert.NotEmpty(reduceKeyAndBuckets);

@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
@@ -38,8 +39,10 @@ namespace Raven.Client.Linq
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
 		private int subClauseDepth;
+	    private string resultsTransformer;
+	    private readonly Dictionary<string, RavenJToken> queryInputs;
 
-		private LinqPathProvider linqPathProvider;
+	    private LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// The index name
 		/// </summary>
@@ -53,23 +56,19 @@ namespace Raven.Client.Linq
 			get { return currentPath; }
 		}
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor{T}"/> class.
-		/// </summary>
-		/// <param name="queryGenerator">The document query generator.</param>
-		/// <param name="customizeQuery">The customize query.</param>
-		/// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
-		/// <param name="indexName">The name of the index the query is executed against.</param>
-		/// <param name="fieldsToFetch">The fields to fetch in this query</param>
-		/// <param name="fieldsTRename">The fields to rename for the results of this query</param>
-		public RavenQueryProviderProcessor(
-			IDocumentQueryGenerator queryGenerator,
-			Action<IDocumentQueryCustomization> customizeQuery,
-			Action<QueryResult> afterQueryExecuted,
-			string indexName,
-			HashSet<string> fieldsToFetch,
-			List<RenamedField> fieldsTRename,
-			bool isMapReduce)
+	    /// <summary>
+	    /// Initializes a new instance of the <see cref="RavenQueryProviderProcessor{T}"/> class.
+	    /// </summary>
+	    /// <param name="queryGenerator">The document query generator.</param>
+	    /// <param name="customizeQuery">The customize query.</param>
+	    /// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
+	    /// <param name="indexName">The name of the index the query is executed against.</param>
+	    /// <param name="fieldsToFetch">The fields to fetch in this query</param>
+	    /// <param name="fieldsTRename">The fields to rename for the results of this query</param>
+	    /// <param name="isMapReduce"></param>
+	    /// <param name="resultsTransformer"></param>
+	    /// <param name="queryInputs"></param>
+	    public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> queryInputs)
 		{
 			FieldsToFetch = fieldsToFetch;
 			FieldsToRename = fieldsTRename;
@@ -79,7 +78,9 @@ namespace Raven.Client.Linq
 			this.isMapReduce = isMapReduce;
 			this.afterQueryExecuted = afterQueryExecuted;
 			this.customizeQuery = customizeQuery;
-			linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
+		    this.resultsTransformer = resultsTransformer;
+	        this.queryInputs = queryInputs;
+	        linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
 		}
 
 		/// <summary>
@@ -411,7 +412,7 @@ namespace Raven.Client.Linq
 		}
 
 		private static readonly Regex castingRemover = new Regex(@"(?<!\\)[\(\)]",
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 				RegexOptions.None
 #else
 				RegexOptions.Compiled
@@ -475,12 +476,16 @@ namespace Raven.Client.Linq
 				switch ((StringComparison) ((ConstantExpression) expression.Arguments[1]).Value)
 				{
 					case StringComparison.CurrentCulture:
-					case StringComparison.Ordinal:
+#if !NETFX_CORE
 					case StringComparison.InvariantCulture:
+#endif
+					case StringComparison.Ordinal:
 						isAnalyzed = false;
 						break;
 					case StringComparison.CurrentCultureIgnoreCase:
+#if !NETFX_CORE
 					case StringComparison.InvariantCultureIgnoreCase:
+#endif
 					case StringComparison.OrdinalIgnoreCase:
 						isAnalyzed = true;
 						break;
@@ -631,15 +636,42 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (memberExpression.Type == typeof (bool))
 			{
-				var memberInfo = GetMember(memberExpression);
-
-				luceneQuery.WhereEquals(new WhereParams
+				ExpressionInfo memberInfo;
+				if (memberExpression.Member.Name == "HasValue" &&
+				    Nullable.GetUnderlyingType(memberExpression.Member.DeclaringType) != null)
 				{
-					FieldName = memberInfo.Path,
-					Value = boolValue,
-					IsAnalyzed = true,
-					AllowWildcards = false
-				});
+					memberInfo = GetMember(memberExpression.Expression);
+					if (boolValue)
+					{
+						luceneQuery.OpenSubclause();
+						luceneQuery.Where("*:*");
+						luceneQuery.AndAlso();
+						luceneQuery.NegateNext();
+					}
+					luceneQuery.WhereEquals(new WhereParams
+					{
+						FieldName = memberInfo.Path,
+						Value = null,
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
+					if (boolValue)
+					{
+						luceneQuery.CloseSubclause();
+					}
+				}
+				else
+				{
+					memberInfo = GetMember(memberExpression);
+
+					luceneQuery.WhereEquals(new WhereParams
+					{
+						FieldName = memberInfo.Path,
+						Value = boolValue,
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
+				}
 			}
 			else if (memberExpression.Type == typeof(string))
 			{
@@ -972,7 +1004,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				case "Select":
 				{
-					if (expression.Arguments[0].Type.IsGenericType &&
+					if (expression.Arguments[0].Type.IsGenericType() &&
 					    expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof (IQueryable<>) &&
 					    expression.Arguments[0].Type != expression.Arguments[1].Type)
 					{
@@ -1112,7 +1144,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private bool insideSelect;
 		private readonly bool isMapReduce;
 
-		private void VisitSelect(Expression operand)
+	    private void VisitSelect(Expression operand)
 		{
 			var lambdaExpression = operand as LambdaExpression;
 			var body = lambdaExpression != null ? lambdaExpression.Body : operand;
@@ -1296,10 +1328,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
 		{
-			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof (T));
+			var identityProperty = luceneQuery.DocumentConvention.GetIdentityProperty(typeof(T));
 			if (identityProperty != null && identityProperty.Name == expression.Path)
 				return Constants.DocumentIdFieldName;
-			if (value is int || value is long || value is double || value is float || value is decimal)
+			if (luceneQuery.DocumentConvention.UsesRangeType(value) && !expression.Path.EndsWith("_Range"))
 				return expression.Path + "_Range";
 			return expression.Path;
 		}
@@ -1371,6 +1403,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			var finalQuery = ((IDocumentQuery<T>) luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
 
+		    finalQuery.SetResultTransformer(this.resultsTransformer);
+		    finalQuery.SetQueryInputs(this.queryInputs);
 
 			if (FieldsToRename.Count > 0)
 			{

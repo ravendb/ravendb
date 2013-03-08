@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -179,8 +181,10 @@ namespace Raven.Json.Linq
 		{
 			if (value == null)
 				return JTokenType.Null;
+#if !NETFX_CORE
 			else if (value == DBNull.Value)
 				return JTokenType.Null;
+#endif
 			else if (value is string)
 				return GetStringValueType(current);
 			else if (value is long || value is int || value is short || value is sbyte
@@ -206,6 +210,8 @@ namespace Raven.Json.Linq
 				return JTokenType.Uri;
 			else if (value is TimeSpan)
 				return JTokenType.TimeSpan;
+			else if (value is Etag)
+				return JTokenType.String;
 
 			throw new ArgumentException("Could not determine JSON object type for type {0}.".FormatWith(CultureInfo.InvariantCulture, value.GetType()));
 		}
@@ -665,6 +671,33 @@ namespace Raven.Json.Linq
 		public static RavenJValue Null
 		{
 			get { return new RavenJValue(null, JTokenType.Null); }
+		}
+
+		public static RavenJToken Load(JsonTextReaderAsync reader)
+		{
+			RavenJValue v;
+			switch (reader.TokenType)
+			{
+				case JsonToken.String:
+				case JsonToken.Integer:
+				case JsonToken.Float:
+				case JsonToken.Date:
+				case JsonToken.Boolean:
+				case JsonToken.Bytes:
+					v = new RavenJValue(reader.Value);
+					break;
+				case JsonToken.Null:
+					v = new RavenJValue(null, JTokenType.Null);
+					break;
+				case JsonToken.Undefined:
+					v = new RavenJValue(null, JTokenType.Undefined);
+					break;
+				default:
+					throw new InvalidOperationException("The JsonReader should not be on a token of type {0}."
+															.FormatWith(CultureInfo.InvariantCulture,
+																		reader.TokenType));
+			}
+			return v;
 		}
 	}
 }

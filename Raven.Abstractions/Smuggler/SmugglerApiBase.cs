@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -28,15 +29,13 @@ namespace Raven.Abstractions.Smuggler
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
-		protected abstract Task<RavenJArray> GetDocuments(Guid lastEtag);
-		protected abstract Task<Guid> ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
+		protected abstract Task<RavenJArray> GetDocuments(Etag lastEtag);
+		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
 		protected abstract Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
 		protected abstract Task PutDocument(RavenJObject document);
 		protected abstract Task<DatabaseStatistics> GetStats();
-
-		protected abstract Task FlushBatch();
 
 		protected abstract void ShowProgress(string format, params object[] args);
 
@@ -133,16 +132,26 @@ namespace Raven.Abstractions.Smuggler
 
 		public static void ReadLastEtagsFromFile(SmugglerOptions options)
 		{
+			var log = LogManager.GetCurrentClassLogger();
 			var etagFileLocation = Path.Combine(options.BackupPath, IncrementalExportStateFile);
-			if (File.Exists(etagFileLocation))
+			if (!File.Exists(etagFileLocation)) 
+				return;
+
+			using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
+			using (var jsonReader = new JsonTextReader(streamReader))
 			{
-				using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
-				using (var jsonReader = new JsonTextReader(streamReader))
+				RavenJObject ravenJObject;
+				try
 				{
-					var ravenJObject = RavenJObject.Load(jsonReader);
-					options.LastDocsEtag = new Guid(ravenJObject.Value<string>("LastDocEtag"));
-					options.LastAttachmentEtag = new Guid(ravenJObject.Value<string>("LastAttachmentEtag"));
+					ravenJObject = RavenJObject.Load(jsonReader);
 				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not parse etag document from file : " + etagFileLocation + ", ignoring, will start from scratch", e);
+					return;
+				}
+				options.LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
+				options.LastAttachmentEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
 			}
 		}
 
@@ -160,7 +169,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private async Task<Guid> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Guid lastEtag)
+		private async Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			int totalCount = 0;
 
@@ -176,8 +185,9 @@ namespace Raven.Abstractions.Smuggler
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, SmugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+
 						continue;
 					}
 					ShowProgress("Done with reading documents, total: {0}", totalCount);
@@ -197,7 +207,7 @@ namespace Raven.Abstractions.Smuggler
 				totalCount += final.Count;
 
 				ShowProgress("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", documents.Length, totalCount);
-				lastEtag = new Guid(documents.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+				lastEtag = Etag.Parse(documents.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
 			}
 		}
 
@@ -366,7 +376,7 @@ namespace Raven.Abstractions.Smuggler
 				count++;
 			}
 
-			await FlushBatch();
+			await PutAttachment(null); // force flush
 
 			return count;
 		}
@@ -412,7 +422,7 @@ namespace Raven.Abstractions.Smuggler
 				}
 			}
 
-			await FlushBatch();
+			await PutDocument(null); // force flush
 
 			return count;
 		}
@@ -437,6 +447,7 @@ namespace Raven.Abstractions.Smuggler
 				var index = RavenJToken.ReadFrom(jsonReader);
 				if ((options.OperateOnTypes & ItemType.Indexes) != ItemType.Indexes)
 					continue;
+
 				var indexName = index.Value<string>("name");
 				if (indexName.StartsWith("Temp/"))
 					continue;
@@ -448,7 +459,7 @@ namespace Raven.Abstractions.Smuggler
 				count++;
 			}
 
-			await FlushBatch();
+			await PutIndex(null, null);
 
 			return count;
 		}

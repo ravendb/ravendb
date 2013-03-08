@@ -27,8 +27,10 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -81,6 +83,8 @@ namespace Raven.Client.Document
 		private int currentClauseDepth;
 
 		private KeyValuePair<string, string> lastEquality;
+
+        protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
 
 		/// <summary>
 		///   The list of fields to project directly from the results
@@ -181,10 +185,33 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
 
+        /// <summary>
+        /// The name of the results transformer to use after executing this query
+        /// </summary>
+	    protected string resultsTransformer;
+
+		/// <summary>
+		/// Determines if entities should be tracked and kept in memory
+		/// </summary>
+		protected bool disableEntitiesTracking;
+
+		/// <summary>
+		/// Determine if query results should be cached.
+		/// </summary>
+		protected bool disableCaching;
+
 		/// <summary>
 		///   Get the name of the index being queried
 		/// </summary>
 		public string IndexQueried
+		{
+			get { return indexName; }
+		}
+
+		/// <summary>
+		///   Get the name of the index being queried
+		/// </summary>
+		public string AsyncIndexQueried
 		{
 			get { return indexName; }
 		}
@@ -231,7 +258,7 @@ namespace Raven.Client.Document
 		}
 
 		protected Action<QueryResult> afterQueryExecutedCallback;
-		protected Guid? cutoffEtag;
+		protected Etag cutoffEtag;
 
 		private TimeSpan DefaultTimeout
 		{
@@ -331,6 +358,9 @@ namespace Raven.Client.Document
 			highlightedFields = other.highlightedFields;
 			highlighterPreTags = other.highlighterPreTags;
 			highlighterPostTags = other.highlighterPostTags;
+		    queryInputs = other.queryInputs;
+			disableEntitiesTracking = other.disableEntitiesTracking;
+			disableCaching = other.disableCaching;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -479,7 +509,8 @@ namespace Raven.Client.Document
 									  setOperationHeaders,
 									  timeout,
 									  transformResultsFunc,
-									  includes);
+									  includes,
+									  disableEntitiesTracking);
 		}
 
 		public IndexQuery GetIndexQuery(bool isAsync)
@@ -489,7 +520,7 @@ namespace Raven.Client.Document
 			return indexQuery;
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT  && !NETFX_CORE
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -534,7 +565,7 @@ namespace Raven.Client.Document
 					var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
 					if (queryOperation.IsAcceptable(result) == false)
 					{
-						Thread.Sleep(100);
+						ThreadSleep.Sleep(100);
 						continue;
 					}
 					break;
@@ -552,7 +583,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -682,6 +713,18 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQueryCustomization NoTracking()
+		{
+			disableEntitiesTracking = true;
+			return this;
+		}
+
+		public IDocumentQueryCustomization NoCaching()
+		{
+			disableCaching = true;
+			return this;
+		}
+
 		public void SetHighlighterTags(string preTag, string postTag)
 		{
 			this.SetHighlighterTags(new[] {preTag}, new[] {postTag});
@@ -731,8 +774,7 @@ namespace Raven.Client.Document
 			highlighterPostTags = postTags;
 		}
 
-
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
@@ -1155,15 +1197,13 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
 		{
-			fieldName = EnsureValidFieldName(new WhereParams {FieldName = fieldName});
+			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
 
-			if(fieldName == Constants.DocumentIdFieldName)
+			if (fieldName == Constants.DocumentIdFieldName)
 				return fieldName;
 
 			var val = (start ?? end);
-			var isNumeric = val is int || val is long || val is decimal || val is double || val is float || val is TimeSpan;
-
-			if (isNumeric && fieldName.EndsWith("_Range") == false)
+			if (conventions.UsesRangeType(val) && !fieldName.EndsWith("_Range"))
 				fieldName = fieldName + "_Range";
 			return fieldName;
 		}
@@ -1428,7 +1468,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag);
 			return this;
@@ -1439,7 +1479,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;
@@ -1492,7 +1532,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
-		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		public void WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, DefaultTimeout);
 		}
@@ -1500,7 +1540,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
-		public void WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		public void WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
 			timeout = waitTimeout;
@@ -1590,6 +1630,9 @@ If you really want to do in memory filtering on the data returned from the query
 
 		private static Task TaskDelay(int dueTimeMilliseconds)
 		{
+#if NETFX_CORE
+			return Task.Delay(dueTimeMilliseconds);
+#else
 			var taskCompletionSource = new TaskCompletionSource<object>();
 			var cancellationTokenRegistration = new CancellationTokenRegistration();
 			var timer = new Timer(o =>
@@ -1600,6 +1643,7 @@ If you really want to do in memory filtering on the data returned from the query
 			});
 			timer.Change(dueTimeMilliseconds, -1);
 			return taskCompletionSource.Task;
+#endif
 		}
 
 		/// <summary>
@@ -1630,16 +1674,18 @@ If you really want to do in memory filtering on the data returned from the query
 					DefaultOperator = defaultOperator,
 					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 					HighlighterPreTags = highlighterPreTags.ToArray(),
-					HighlighterPostTags = highlighterPostTags.ToArray()
+					HighlighterPostTags = highlighterPostTags.ToArray(),
+                    ResultsTransformer = resultsTransformer,
+                    QueryInputs  = queryInputs,
+					DisableCaching = disableCaching
 				};
 			}
 
-			return new IndexQuery
+			var indexQuery = new IndexQuery
 			{
 				GroupBy = groupByFields,
 				AggregationOperation = aggregationOp,
 				Query = query,
-				PageSize = pageSize ?? 128,
 				Start = start,
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
@@ -1649,15 +1695,23 @@ If you really want to do in memory filtering on the data returned from the query
 				DefaultOperator = defaultOperator,
 				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 				HighlighterPreTags = highlighterPreTags.ToArray(),
-				HighlighterPostTags = highlighterPostTags.ToArray()
+				HighlighterPostTags = highlighterPostTags.ToArray(),
+                ResultsTransformer = this.resultsTransformer,
+                QueryInputs = queryInputs,
+				DisableCaching = disableCaching
 			};
+
+			if (pageSize != null)
+				indexQuery.PageSize = pageSize.Value;
+
+			return indexQuery;
 		}
 
-		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", 
-#if !SILVERLIGHT
+		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled
 #else
-			RegexOptions.None
+ RegexOptions.None
 #endif
 
 			);

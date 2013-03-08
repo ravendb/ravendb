@@ -19,7 +19,8 @@ namespace Raven.Database.Smuggler
 {
 	public class DataDumper : SmugglerApiBase
 	{
-		public DataDumper(DocumentDatabase database, SmugglerOptions options) : base(options)
+		public DataDumper(DocumentDatabase database, SmugglerOptions options)
+			: base(options)
 		{
 			_database = database;
 		}
@@ -32,7 +33,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask();
 		}
 
-		protected override async Task<Guid> ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
+		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
 			while (true)
@@ -41,10 +42,10 @@ namespace Raven.Database.Smuggler
 				if (array.Length == 0)
 				{
 					var databaseStatistics = await GetStats();
-					var lastEtagComparable = new ComparableByteArray(lastEtag);
-					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					if (lastEtag == null) lastEtag = Etag.Empty;
+					if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, SmugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -57,11 +58,11 @@ namespace Raven.Database.Smuggler
 				{
 					item.WriteTo(jsonWriter);
 				}
-				lastEtag = new Guid(array.Last().Value<string>("Etag"));
+				lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
 			}
 		}
 
-		protected override Task<RavenJArray> GetDocuments(Guid lastEtag)
+		protected override Task<RavenJArray> GetDocuments(Etag lastEtag)
 		{
 			const int dummy = 0;
 			return new CompletedTask<RavenJArray>(_database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag));
@@ -69,44 +70,52 @@ namespace Raven.Database.Smuggler
 
 		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
-			return new CompletedTask<RavenJArray>(_database.GetIndexes(totalCount, 128)); 
+			return new CompletedTask<RavenJArray>(_database.GetIndexes(totalCount, 128));
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
-			// we filter out content length, because getting it wrong will cause errors 
-			// in the server side when serving the wrong value for this header.
-			// worse, if we are using http compression, this value is known to be wrong
-			// instead, we rely on the actual size of the data provided for us
-			attachmentExportInfo.Metadata.Remove("Content-Length");
-			_database.PutStatic(attachmentExportInfo.Key, null, new MemoryStream(attachmentExportInfo.Data), attachmentExportInfo.Metadata);
+			if (attachmentExportInfo != null)
+			{
+				// we filter out content length, because getting it wrong will cause errors 
+				// in the server side when serving the wrong value for this header.
+				// worse, if we are using http compression, this value is known to be wrong
+				// instead, we rely on the actual size of the data provided for us
+				attachmentExportInfo.Metadata.Remove("Content-Length");
+				_database.PutStatic(attachmentExportInfo.Key, null, new MemoryStream(attachmentExportInfo.Data),
+									attachmentExportInfo.Metadata);
+			}
+
 			return new CompletedTask();
 		}
 
 		protected override Task PutDocument(RavenJObject document)
 		{
-			var metadata = document.Value<RavenJObject>("@metadata");
-			var key = metadata.Value<string>("@id");
-			document.Remove("@metadata");
+			if (document != null)
+			{
+				var metadata = document.Value<RavenJObject>("@metadata");
+				var key = metadata.Value<string>("@id");
+				document.Remove("@metadata");
 
-			_database.Put(key, null, document, metadata, null);
+				_database.Put(key, null, document, metadata, null);
+			}
+
 			return new CompletedTask();
 		}
 
 		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
-			_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+			if (index != null)
+			{
+				_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+			}
+
 			return new CompletedTask();
 		}
 
 		protected override Task<DatabaseStatistics> GetStats()
 		{
 			return new CompletedTask<DatabaseStatistics>(_database.Statistics);
-		}
-
-		protected override Task FlushBatch()
-		{
-			return new CompletedTask();
 		}
 
 		protected override void ShowProgress(string format, params object[] args)
@@ -117,10 +126,10 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		private RavenJArray GetAttachments(int start, Guid? etag)
+		private RavenJArray GetAttachments(int start, Etag etag)
 		{
 			var array = new RavenJArray();
-			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024*1024*10);
+			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024 * 1024 * 10);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{

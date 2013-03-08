@@ -17,6 +17,10 @@ the JsonSerializer.
 -Supports Silverlight and Windows Phone
 
 
+Documentation:
+
+http://james.newtonking.com/projects/json/help/
+
 
 Versions:
 
@@ -38,16 +42,13 @@ Json.NET comes in different versions for the various .NET frameworks.
   Windows Phone 7 & 7.1
 
 -Metro
-  Windows 8 Metro, WinRT 4.5
+  Windows 8, WinRT 4.5
 
 -Portable
   Portable Class Library (.NET 4.0, WP7, SL4)
 
 
 Notes:
-
-The Silverlight and Windows Phone builds are not strong-named.
-Use the assemblies in the Signed sub-directories for the strong-named versions.
 
 Microsoft stopped support for the Compact Framework in Visual Studio 2010.
 For a Compact Framework 3.5 build download Json.NET 3.5.

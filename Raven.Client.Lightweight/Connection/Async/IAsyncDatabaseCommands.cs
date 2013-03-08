@@ -9,7 +9,9 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
@@ -89,6 +91,11 @@ namespace Raven.Client.Connection.Async
 		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
 
 		/// <summary>
+		/// Gets the transformers from the server asynchronously
+		/// </summary>
+		Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize);
+
+		/// <summary>
 		/// Resets the specified index asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -101,12 +108,23 @@ namespace Raven.Client.Connection.Async
 		Task<IndexDefinition> GetIndexAsync(string name);
 
 		/// <summary>
+		/// Gets the transformer definition for the specified name asynchronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task<TransformerDefinition> GetTransformerAsync(string name);
+
+		/// <summary>
 		/// Puts the index definition for the specified name asynchronously
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">Should overwrite index</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
+
+		/// <summary>
+		/// Puts the transformer definition for the specified name asynchronously
+		/// </summary>
+		Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition);
 
 		/// <summary>
 		/// Deletes the index definition for the specified name asynchronously
@@ -123,6 +141,12 @@ namespace Raven.Client.Connection.Async
 		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale);
 
 		/// <summary>
+		/// Deletes the transformer definition for the specified name asynchronously
+		/// </summary>
+		/// <param name="name">The name.</param>
+		Task DeleteTransformerAsync(string name);
+
+		/// <summary>
 		/// Deletes the document for the specified id asynchronously
 		/// </summary>
 		/// <param name="id">The id.</param>
@@ -135,7 +159,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
-		Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
+        Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Create a http request to the specified relative url on the current database
@@ -177,7 +201,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata);
+        Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata);
 
 		/// <summary>
 		/// Gets the attachment by the specified key asynchronously
@@ -191,7 +215,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		Task DeleteAttachmentAsync(string key, Guid? etag);
+        Task DeleteAttachmentAsync(string key, Etag etag);
 
 		///<summary>
 		/// Get the possible terms for the specified field in the index asynchronously
@@ -262,7 +286,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async restore operation
 		/// </summary>
-		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null);
+		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
 
 		/// <summary>
 		/// Sends an async command that enables indexing
@@ -295,6 +319,19 @@ namespace Raven.Client.Connection.Async
 		/// <param name="key">The key.</param>
 		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
 		Task<JsonDocumentMetadata> HeadAsync(string key);
+
+		/// <summary>
+		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+		/// of the number of items that might be returned.
+		/// </summary>
+		Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo);
+
+		/// <summary>
+		/// Streams the documents by etag OR starts with the prefix and match the matches
+		/// Will return *all* results, regardless of the number of itmes that might be returned.
+		/// </summary>
+		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue);
+
 
 #if SILVERLIGHT
 		/// <summary>

@@ -3,13 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
@@ -38,7 +35,11 @@ namespace Raven.Database.Server.Responders
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
-			var transactionInformation = GetRequestTransaction(context);
+		    var transfomer = context.Request.QueryString["transformer"];
+
+		    var queryInputs = context.ExtractQueryInputs();
+            
+            var transactionInformation = GetRequestTransaction(context);
 		    var includedEtags = new List<byte>();
 			Database.TransactionalStorage.Batch(actions =>
 			{
@@ -47,14 +48,16 @@ namespace Raven.Database.Server.Responders
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)
 						continue;
-					var documentByKey = Database.Get(value, transactionInformation);
-					if (documentByKey == null)
+					JsonDocument documentByKey = string.IsNullOrEmpty(transfomer)
+				                        ? Database.Get(value, transactionInformation)
+                                        : Database.GetWithTransformer(value, transfomer, transactionInformation, queryInputs);
+				    if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());
 
 					if (documentByKey.Etag != null)
 					{
-						includedEtags.AddRange(documentByKey.Etag.Value.ToByteArray());
+						includedEtags.AddRange(documentByKey.Etag.ToByteArray());
 					}
 					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
 				}
@@ -71,12 +74,12 @@ namespace Raven.Database.Server.Responders
 				}
 			});
 
-			Guid computedEtag;
+			Etag computedEtag;
 
 			using (var md5 = MD5.Create())
 			{
 				var computeHash = md5.ComputeHash(includedEtags.ToArray());
-				computedEtag = new Guid(computeHash);
+				computedEtag = Etag.Parse(computeHash);
 			}
 
 			if (context.MatchEtag(computedEtag))

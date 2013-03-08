@@ -62,18 +62,19 @@ namespace Raven.Bundles.Replication.Responders
 
 				SourceReplicationInformation sourceReplicationInformation;
 
+				Guid serverInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote serve
+
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						ServerInstanceId = Database.TransactionalStorage.Id,
 						Source = src
 					};
 				}
 				else
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 				}
 
 				var currentEtag = context.Request.QueryString["currentEtag"];
@@ -91,36 +92,46 @@ namespace Raven.Bundles.Replication.Responders
 
 				SourceReplicationInformation sourceReplicationInformation;
 
-				Guid? docEtag = null, attachmentEtag = null;
-				Guid val;
-				if(Guid.TryParse(context.Request.QueryString["docEtag"], out val))
+				Etag docEtag = null, attachmentEtag = null;
+				try
 				{
-					docEtag = val;
+					docEtag = Etag.Parse(context.Request.QueryString["docEtag"]);
 				}
-				if(Guid.TryParse(context.Request.QueryString["attachmentEtag"], out val))
+				catch
 				{
-					attachmentEtag = val;
+
 				}
+				try
+				{
+					attachmentEtag = Etag.Parse(context.Request.QueryString["attachmentEtag"]);
+				}
+				catch
+				{
+
+				}
+				Guid serverInstanceId;
+				if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
+					serverInstanceId = Database.TransactionalStorage.Id;
 
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						ServerInstanceId = Database.TransactionalStorage.Id,
-						LastAttachmentEtag = attachmentEtag ?? Guid.Empty,
-						LastDocumentEtag = docEtag??Guid.Empty,
+						ServerInstanceId = serverInstanceId,
+						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
+						LastDocumentEtag = docEtag ?? Etag.Empty,
 						Source = src
 					};
 				}
 				else
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 					sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
 					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
 				}
 
-				var etag = document == null ? Guid.Empty : document.Etag;
+				var etag = document == null ? Etag.Empty : document.Etag;
 				var metadata = document == null ? new RavenJObject() : document.Metadata;
 
 				var newDoc = RavenJObject.FromObject(sourceReplicationInformation);

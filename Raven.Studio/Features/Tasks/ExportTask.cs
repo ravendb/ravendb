@@ -13,7 +13,9 @@ namespace Raven.Studio.Features.Tasks
 		    IconResource = "Image_Export_Tiny";
 			Description = "Export your database to a dump file. Both indexes and documents are exported.";
 
-            TaskInputs.Add(new TaskCheckBox("Include Attachments", false));
+			TaskInputs.Add(new TaskCheckBox("Include Documents", true));
+			TaskInputs.Add(new TaskCheckBox("Include Indexes", true));
+			TaskInputs.Add(new TaskCheckBox("Include Attachments", false));
 		}
 
 		public override ICommand Action

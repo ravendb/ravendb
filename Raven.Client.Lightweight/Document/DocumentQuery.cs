@@ -1,16 +1,19 @@
-﻿#if !SILVERLIGHT
+﻿#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
+using Raven.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {
@@ -19,7 +22,9 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
-		/// <summary>
+
+
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
@@ -50,11 +55,22 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			var props = typeof (TProjection).GetProperties().Select(x => x.Name).ToArray();
+			var props = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Select(x => x.Name).ToArray();
 			return SelectFields<TProjection>(props, props);
 		}
 
-		/// <summary>
+	    public IDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+	    {
+	        this.resultsTransformer = resultsTransformer;
+	        return this;
+	    }
+
+        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+	    {
+	        this.queryInputs = queryInputs;
+	    }
+
+	    /// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
@@ -106,7 +122,11 @@ namespace Raven.Client.Document
 				afterQueryExecutedCallback = afterQueryExecutedCallback,
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
-				highlighterPostTags = highlighterPostTags
+				highlighterPostTags = highlighterPostTags,
+                resultsTransformer = resultsTransformer,
+                queryInputs = queryInputs,
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching
 			};
 			return documentQuery;
 		}
@@ -267,6 +287,18 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
 		{
 			UsingDefaultOperator(queryOperator);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoTracking()
+		{
+			NoTracking();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
+		{
+			NoCaching();
 			return this;
 		}
 
@@ -875,7 +907,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <returns></returns>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag);
 			return this;
@@ -886,7 +918,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;

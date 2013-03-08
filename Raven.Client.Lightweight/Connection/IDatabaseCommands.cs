@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Commands;
@@ -16,6 +15,12 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
+
+#if SILVERLIGHT || NETFX_CORE
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
+#endif
 
 namespace Raven.Client.Connection
 {
@@ -42,14 +47,16 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		JsonDocument Get(string key);
 
-		/// <summary>
-		/// Retrieves documents with the specified ids, optionally specifying includes to fetch along
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
+	    /// <summary>
+	    /// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Get documents from server
@@ -70,14 +77,14 @@ namespace Raven.Client.Connection
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata);
+        PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Deletes the document with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		void Delete(string key, Guid? etag);
+        void Delete(string key, Etag etag);
 
 		/// <summary>
 		/// Puts a byte array as attachment with the specified key
@@ -86,7 +93,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata);
+        void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
 		/// Updates just the attachment with the specified key's metadata
@@ -94,7 +101,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="metadata">The metadata.</param>
-		void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata);
+        void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
 		/// Retrieves the attachment with the specified key
@@ -121,7 +128,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		void DeleteAttachment(string key, Guid? etag);
+        void DeleteAttachment(string key, Etag etag);
 
 		/// <summary>
 		/// Returns the names of all tenant databases on the RavenDB server
@@ -164,6 +171,11 @@ namespace Raven.Client.Connection
 		string PutIndex(string name, IndexDefinition indexDef);
 
 		/// <summary>
+		/// Creates a transformer with the specified name, based on an transfomer definition
+		/// </summary>
+		string PutTransformer(string name, TransformerDefinition indexDef);
+
+		/// <summary>
 		/// Creates an index with the specified name, based on an index definition
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -200,6 +212,18 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
+		
+		/// <summary>
+		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+		/// of the number of items that might be returned.
+		/// </summary>
+		IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo);
+
+		/// <summary>
+		/// Streams the documents by etag OR starts with the prefix and match the matches
+		/// Will return *all* results, regardless of the number of itmes that might be returned.
+		/// </summary>
+		IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue);
 
 		/// <summary>
 		/// Deletes the specified index
@@ -342,6 +366,16 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+        /// </summary>
+        /// <param name="index">Name of the index</param>
+        /// <param name="query">Query to build facet results</param>
+        /// <param name="facets">List of Facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
+
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
@@ -362,7 +396,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		void Patch(string key, PatchRequest[] patches, Guid? etag);
+        void Patch(string key, PatchRequest[] patches, Etag etag);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -370,7 +404,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		void Patch(string key, ScriptedPatchRequest patch, Guid? etag);
+        void Patch(string key, ScriptedPatchRequest patch, Etag etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope
@@ -409,10 +443,31 @@ namespace Raven.Client.Connection
 		/// </summary>
 		void ForceReadFromMaster();
 
+#if !NETFX_CORE
+
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+#endif
+		/// <summary>
+		/// Gets the transformers from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		TransformerDefinition[] GetTransformers(int start, int pageSize);
+
+		/// <summary>
+		/// Gets the transformer definition for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		TransformerDefinition GetTransformer(string name);
+
+		/// <summary>
+		/// Deletes the specified transformer
+		/// </summary>
+		/// <param name="name">The name.</param>
+		void DeleteTransformer(string name);
 	}
 }
 #endif

@@ -77,7 +77,7 @@ namespace Raven.Database.Queries
 					if (stopWordsSetup.StopWords != null)
 					{
 						var stopWords = stopWordsSetup.StopWords;
-						var ht = new Hashtable(StringComparer.InvariantCultureIgnoreCase);
+						var ht = new Hashtable(StringComparer.OrdinalIgnoreCase);
 						foreach (var stopWord in stopWords)
 						{
 							ht[stopWord] = stopWord;
@@ -104,7 +104,7 @@ namespace Raven.Database.Queries
 
 					var result = new MultiLoadResult();
 
-					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.Value.ToByteArray()));
+					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.ToByteArray()));
 					includedEtags.AddRange(database.GetIndexEtag(query.IndexName, null).ToByteArray());
 					var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
 					var addIncludesCommand = new AddIncludesCommand(database, transactionInformation, (etag, includedDoc) =>
@@ -119,11 +119,11 @@ namespace Raven.Database.Queries
 						addIncludesCommand.Execute(jsonDocument.DataAsJson);
 					}
 
-					Guid computedEtag;
+					Etag computedEtag;
 					using (var md5 = MD5.Create())
 					{
 						var computeHash = md5.ComputeHash(includedEtags.ToArray());
-						computedEtag = new Guid(computeHash);
+						computedEtag = Etag.Parse(computeHash);
 					}
 
 					return new MoreLikeThisQueryResult

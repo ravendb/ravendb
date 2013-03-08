@@ -20,13 +20,14 @@ namespace Raven.Abstractions.Data
 
 		public int IntervalMilliseconds { get; set; }
 
-		public Guid LastDocsEtag { get; set; }
-		public Guid LastAttachmentsEtag { get; set; }
+		public Etag LastDocsEtag { get; set; }
+
+		public Etag LastAttachmentsEtag { get; set; }
 
 		public PeriodicBackupSetup()
 		{
-			LastAttachmentsEtag = Guid.Empty;
-			LastDocsEtag = Guid.Empty;
+			LastDocsEtag = Etag.Empty;
+			LastAttachmentsEtag = Etag.Empty;
 		}
 	}
 }

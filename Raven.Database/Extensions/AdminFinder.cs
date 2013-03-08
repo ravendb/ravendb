@@ -23,13 +23,13 @@ namespace Raven.Database.Extensions
 			if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
 			{
 				if (mode == AnonymousUserAccessMode.Admin)
-					return true; 
+					return true;
 				return false;
 			}
 
 			var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
 			var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
-			
+
 			if (windowsPrincipal != null)
 			{
 				var current = WindowsIdentity.GetCurrent();
@@ -144,11 +144,11 @@ namespace Raven.Database.Extensions
 			private static bool? useLocalMachine;
 			private static PrincipalContext GeneratePrincipalContext()
 			{
-				if(useLocalMachine == true)
+				if (useLocalMachine == true)
 					return new PrincipalContext(ContextType.Machine);
 				try
 				{
-					if(useLocalMachine == null)
+					if (useLocalMachine == null)
 					{
 						Domain.GetComputerDomain();
 						useLocalMachine = false;
@@ -183,15 +183,13 @@ namespace Raven.Database.Extensions
 			if (databaseAccessPrincipal != null)
 			{
 				if (databaseAccessPrincipal.AdminDatabases.Any(name => name == "*")
-				    && databaseNane != null && databaseNane != Constants.SystemDatabase)
+					&& databaseNane != null && databaseNane != Constants.SystemDatabase)
 					return true;
-				if (
-					databaseAccessPrincipal.AdminDatabases.Any(
-						name => string.Equals(name, databaseNane, StringComparison.InvariantCultureIgnoreCase)))
+				if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, databaseNane, StringComparison.InvariantCultureIgnoreCase)))
 					return true;
 				if (databaseNane == null &&
-				    databaseAccessPrincipal.AdminDatabases.Any(
-					    name => string.Equals(name, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase)))
+					databaseAccessPrincipal.AdminDatabases.Any(
+						name => string.Equals(name, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase)))
 					return true;
 				return false;
 			}
@@ -206,9 +204,8 @@ namespace Raven.Database.Extensions
 					if (string.Equals(dbAccess.TenantId, databaseNane, StringComparison.InvariantCultureIgnoreCase))
 						return true;
 					if (databaseNane == null &&
-					    string.Equals(dbAccess.TenantId, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))
-						return true;
-					return false;
+						string.Equals(dbAccess.TenantId, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))
+						return false;
 				}
 			}
 

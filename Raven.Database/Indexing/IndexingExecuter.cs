@@ -9,7 +9,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
@@ -33,9 +35,39 @@ namespace Raven.Database.Indexing
 			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
-			return actions.Staleness.IsMapStale(indexesStat.Name);
+			var isStale = actions.Staleness.IsMapStale(indexesStat.Name);
+			var indexingPriority = indexesStat.Priority;
+			if (isStale == false)
+				return false;
+
+			if (indexingPriority == IndexingPriority.None)
+				return true;
+
+			if (indexingPriority.HasFlag(IndexingPriority.Normal))
+			{
+				onlyFoundIdleWork.Value = false;
+				return true;
+			}
+
+			if (indexingPriority.HasFlag(IndexingPriority.Disabled))
+				return false;
+
+			if (isIdle == false)
+				return false; // everything else is only valid on idle runs
+
+			if (indexingPriority.HasFlag(IndexingPriority.Idle))
+				return true;
+
+			if (indexingPriority.HasFlag(IndexingPriority.Abandoned))
+			{
+				var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
+
+				return (timeSinceLastIndexing > context.Configuration.TimeToWaitBeforeRunningAbandonedIndexes);
+			}
+
+			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Name + ": " + indexesStat.Priority);
 		}
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
@@ -61,14 +93,14 @@ namespace Raven.Database.Indexing
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
-			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
+			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
 
 			context.CancellationToken.ThrowIfCancellationRequested();
 
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
 			List<JsonDocument> jsonDocs = null;
-			var lastEtag = Guid.Empty;
+			var lastEtag = Etag.Empty;
 			try
 			{
 				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedGuidForAllIndexes);
@@ -105,14 +137,14 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private Guid DoActualIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
+		private Etag DoActualIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
 		{
 			var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(jsonDocs);
 			var lastModified = lastByEtag.LastModified.Value;
-			var lastEtag = lastByEtag.Etag.Value;
+			var lastEtag = lastByEtag.Etag;
 
 			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
-			var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
 
 			ExecuteAllInterleaved(result, index => HandleIndexingFor(index, lastEtag, lastModified));
 
@@ -169,7 +201,7 @@ namespace Raven.Database.Indexing
 
 						return done;
 					}
-					finally
+					finally 
 					{
 						indexingSemaphore.Release();
 						indexingCompletedEvent.Set();
@@ -204,7 +236,7 @@ namespace Raven.Database.Indexing
 			var totalWaitTime = Stopwatch.StartNew();
 			while (indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks)
 			{
-				int timeout = timeToWait - (int) totalWaitTime.ElapsedMilliseconds;
+				int timeout = timeToWait - (int)totalWaitTime.ElapsedMilliseconds;
 				if (timeout <= 0)
 					break;
 				indexingCompletedEvent.Reset();
@@ -246,7 +278,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Guid lastEtag, DateTime lastModified)
+		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{
 			try
 			{
@@ -287,19 +319,19 @@ namespace Raven.Database.Indexing
 
 			public Index Index { get; set; }
 
-			public Guid LastIndexedEtag { get; set; }
+			public Etag LastIndexedEtag { get; set; }
 
 			public IndexingBatch Batch { get; set; }
 		}
 
-		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)
+		private IEnumerable<IndexingBatchForIndex> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs, Etag highestETagInBatch)
 		{
 			var last = jsonDocs.Last();
 
 			Debug.Assert(last.Etag != null);
 			Debug.Assert(last.LastModified != null);
 
-			var lastEtag = last.Etag.Value;
+			var lastEtag = last.Etag;
 			var lastModified = last.LastModified.Value;
 
 			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
@@ -337,7 +369,7 @@ namespace Raven.Database.Indexing
 				if (viewGenerator == null)
 					return; // probably deleted
 
-				var batch = new IndexingBatch();
+				var batch = new IndexingBatch(highestETagInBatch);
 
 				foreach (var item in filteredDocs)
 				{
@@ -349,7 +381,7 @@ namespace Raven.Database.Indexing
 					if (etag == null)
 						continue;
 
-					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
+					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.ToByteArray())) >= 0)
 						continue;
 
 

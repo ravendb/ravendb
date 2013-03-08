@@ -52,45 +52,50 @@ namespace Raven.Bundles.Replication.Responders
 			{
 				Database.TransactionalStorage.Batch(actions =>
 				{
-					byte[] lastEtag = Guid.Empty.ToByteArray();
+					Etag lastEtag = Etag.Empty;
 					foreach (RavenJObject attachment in array)
 					{
 						var metadata = attachment.Value<RavenJObject>("@metadata");
-						if(metadata[Constants.RavenReplicationSource] == null)
+						if (metadata[Constants.RavenReplicationSource] == null)
 						{
 							// not sure why, old attachment from when the user didn't have replication
 							// that we suddenly decided to replicate, choose the source for that
 							metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
 						}
-						lastEtag = attachment.Value<byte[]>("@etag");
+
+						lastEtag = Etag.Parse(attachment.Value<byte[]>("@etag"));
 						var id = attachment.Value<string>("@id");
-						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), new Guid(lastEtag), src);
+
+						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), lastEtag, src);
 					}
 
 
 					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
-					var replicationDocument = Database.Get(replicationDocKey,null);
-					var lastDocId = Guid.Empty;
-					if(replicationDocument != null)
+					var replicationDocument = Database.Get(replicationDocKey, null);
+					Etag lastDocId = null;
+					if (replicationDocument != null)
 					{
 						lastDocId =
 							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
 								LastDocumentEtag;
 					}
+					Guid serverInstanceId;
+					if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
+						serverInstanceId = Database.TransactionalStorage.Id;
 					Database.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 Source = src,
 									 LastDocumentEtag = lastDocId,
-									 LastAttachmentEtag = new Guid(lastEtag),
-									 ServerInstanceId = Database.TransactionalStorage.Id
+									 LastAttachmentEtag = lastEtag,
+									 ServerInstanceId = serverInstanceId
 								 }),
 								 new RavenJObject(), null);
 				});
 			}
 		}
 
-		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, Guid lastEtag ,string src)
+		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, Etag lastEtag, string src)
 		{
 			new AttachmentReplicationBehavior
 			{

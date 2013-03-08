@@ -101,9 +101,7 @@
 					<Infrastructure:FlexibleTemplateItemsControl.ItemTemplate>
 						<DataTemplate DataType="Documents:PathSegment">
 							<StackPanel Orientation="Horizontal">
-								<TextBlock x:Name="Arrow" Text=">"
-							       VerticalAlignment="Center"
-							       Margin="4,0" />
+								<controls:NavTriangle/>
 								<HyperlinkButton Content="{Binding Name, Converter={StaticResource TrimmedString}, ConverterParameter=35}"
                                                  ToolTipService.ToolTip="{Binding Name}"
                                                  Style="{StaticResource Style_Link_Breadcrumb_Initial}"
@@ -138,9 +136,7 @@
 					</Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
 				</Infrastructure:FlexibleTemplateItemsControl>
 
-				<TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0"/>
+				<controls:NavTriangle/>
 
 				<TextBlock Text="{Binding DisplayId}"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
@@ -590,6 +586,7 @@
 								</Grid.RowDefinitions>
 
 								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt.Value, Mode=TwoWay}"/>
+								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt, Mode=TwoWay}"/>
 							</Grid>
 						</StackPanel>
 					</Border>

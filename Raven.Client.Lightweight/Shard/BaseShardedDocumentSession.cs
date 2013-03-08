@@ -74,7 +74,7 @@ namespace Raven.Client.Shard
 			{
 				// Only load items which aren't already loaded
 				idsToLoad = ids.Where(id => IsLoaded(id) == false)
-					.Distinct(StringComparer.InvariantCultureIgnoreCase)
+					.Distinct(StringComparer.OrdinalIgnoreCase)
 					.ToArray();
 			}
 
@@ -164,7 +164,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected override void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			string modifyDocumentId = null;
 			if (id != null)
@@ -222,11 +222,13 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
+#if !NETFX_CORE
 		protected override void TryEnlistInAmbientTransaction()
 		{
 			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
 			// turns out to be pretty much the same thing
 		}
+#endif
 
 		#endregion
 

@@ -132,8 +132,18 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
-    <Reference Include="System.Reactive">
-      <HintPath>..\packages\Rx-Main.1.0.11226\lib\Net4\System.Reactive.dll</HintPath>
+    <Reference Include="System.Net" />
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.0.21114\lib\Net40\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces">
+      <HintPath>..\packages\Rx-Interfaces.2.0.21114\lib\Net40\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq">
+      <HintPath>..\packages\Rx-Linq.2.0.21114\lib\Net40\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.PlatformServices">
+      <HintPath>..\packages\Rx-PlatformServices.2.0.21114\lib\Net40\System.Reactive.PlatformServices.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
@@ -459,7 +469,6 @@
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
     <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\Queries\WithAs.cs" />
-    <Compile Include="Bugs\QueryAfterAdHocIndexIsReset.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
     <Compile Include="Bugs\QueryByTypeOnlyRemote.cs" />
     <Compile Include="Bugs\QueryingOnEqualToNull.cs" />
@@ -506,19 +515,32 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
+    <Compile Include="Bundles\Replication\ConflictsInEmbeddableStore.cs" />
+    <Compile Include="Bundles\Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
+    <Compile Include="Bundles\Replication\Issues\RavenDB693_Embeddable.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
     <Compile Include="Bundles\Replication\Issues\ReplicationWithReferencedIndexes.cs" />
     <Compile Include="Bundles\SqlReplication\CanReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
+    <Compile Include="Faceted\ConditionalGetHelper.cs" />
+    <Compile Include="Faceted\DynamicFacets.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
+    <Compile Include="Faceted\FacetTestBase.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
+    <Compile Include="Indexes\Recovery\MapReduceRecoveryTestIndex.cs" />
+    <Compile Include="Indexes\Recovery\IndexMessing.cs" />
+    <Compile Include="Indexes\Recovery\MapIndexRecoveryTests.cs" />
+    <Compile Include="Indexes\Recovery\MapReduceIndexRecoveryTests.cs" />
+    <Compile Include="Indexes\Recovery\Recovery.cs" />
+    <Compile Include="Indexes\Recovery\MapRecoveryTestIndex.cs" />
     <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
+    <Compile Include="Issues\RavenDB937.cs" />
     <Compile Include="Issues\RavenDB815.cs" />
     <Compile Include="Issues\RavenDB820.cs" />
     <Compile Include="Issues\RavenDb827.cs" />
@@ -526,8 +548,15 @@
     <Compile Include="Issues\RavenDB814.cs" />
     <Compile Include="Issues\RavenDB845.cs" />
     <Compile Include="Issues\RavenDB903.cs" />
+    <Compile Include="Issues\RavenDB921.cs" />
+    <Compile Include="Issues\RavenDB934.cs" />
+    <Compile Include="Issues\RavenDB_406.cs" />
+    <Compile Include="Issues\RavenDB953.cs" />
+    <Compile Include="Issues\RavenDB955.cs" />
     <Compile Include="Issues\RavenDB957.cs" />
+    <Compile Include="Issues\RavenDB_752.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
+    <Compile Include="Issues\RavenDB_790.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />
     <Compile Include="Issues\RavenDB_851.cs" />
     <Compile Include="Issues\RavenDB_863.cs" />
@@ -630,6 +659,7 @@
     <Compile Include="MailingList\LuceneSearchSample.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
+    <Compile Include="MailingList\MoreLikeThisEvaluation.cs" />
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
@@ -672,8 +702,12 @@
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
+    <Compile Include="Notifications\ReplicationConflicts.cs" />
+    <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
+    <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
+    <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
@@ -817,7 +851,6 @@
     <Compile Include="Indexes\AnalyzerResolution.cs" />
     <Compile Include="Faceted\Camera.cs" />
     <Compile Include="Faceted\FacetedIndex.cs" />
-    <Compile Include="Faceted\FacetedIndexTestHelper.cs" />
     <Compile Include="Indexes\BoostingDuringIndexing.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />

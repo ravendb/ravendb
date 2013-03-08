@@ -30,7 +30,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			var backupPath = GetPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
-				Guid? etagForBackups;
+				Etag etagForBackups;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -73,7 +73,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			var backupPath = GetPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
-				Guid? etagForBackups;
+				Etag etagForBackups;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });

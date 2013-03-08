@@ -40,9 +40,9 @@ using Raven.Imports.Newtonsoft.Json.Utilities;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 
 namespace Raven.Imports.Newtonsoft.Json.Tests
@@ -575,7 +575,7 @@ now brown cow?", '"', true);
         {
           Assert.AreEqual(value, parsed);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           long valueTicks = GetTicks(value);
           long parsedTicks = GetTicks(parsed);
@@ -601,7 +601,7 @@ now brown cow?", '"', true);
       {
         Assert.AreEqual(value, parsed);
       }
-      catch (Exception ex)
+      catch (Exception)
       {
         // JavaScript ticks aren't as precise, recheck after rounding
         long valueTicks = GetTicks(value);

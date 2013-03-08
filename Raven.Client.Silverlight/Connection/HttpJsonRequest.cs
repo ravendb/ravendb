@@ -496,7 +496,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
-			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return this;
 			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
 				return this; // not because of failover, no need to do this.
@@ -532,31 +532,16 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Task<WebResponse> RawExecuteRequestAsync()
 		{
-			try
-			{
-				return webRequest.GetResponseAsync();
-			}
-			catch (WebException we)
-			{
-				var httpWebResponse = we.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				var sb = new StringBuilder()
-					.Append(httpWebResponse.StatusCode)
-					.Append(" ")
-					.Append(httpWebResponse.StatusDescription)
-					.AppendLine();
+			if (requestSendToServer)
+				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						sb.AppendLine(line);
-					}
-				}
-				throw new InvalidOperationException(sb.ToString(), we);
-			}
+			requestSendToServer = true;
+
+			return WaitForTask.ContinueWith(_ => webRequest
+													 .GetResponseAsync()
+													 .ConvertSecurityExceptionToServerNotFound()
+													 .AddUrlIfFaulting(webRequest.RequestUri))
+													 .Unwrap();
 		}
 	}
 }

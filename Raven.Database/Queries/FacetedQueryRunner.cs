@@ -19,14 +19,8 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc, int start = 0, int? pageSize = null)
+		public FacetResults GetFacets(string index, IndexQuery indexQuery, List<Facet> facets, int start = 0, int? pageSize = null)
 		{
-			var facetSetup = database.Get(facetSetupDoc, null);
-			if (facetSetup == null)
-				throw new InvalidOperationException("Could not find facets document: " + facetSetupDoc);
-
-			var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
-
 			var results = new FacetResults();
 			var defaultFacets = new Dictionary<string, Facet>();
 			var rangeFacets = new Dictionary<string, List<ParsedRange>>();
@@ -39,7 +33,7 @@ namespace Raven.Database.Queries
 						//Remember the facet, so we can run them all under one query
 						defaultFacets[facet.Name] = facet;
 						results.Results[facet.Name] = new FacetResult();
-						break;
+				        break;
 					case FacetMode.Ranges:
 						rangeFacets[facet.Name] = facet.Ranges.Select(range => ParseRange(facet.Name, range)).ToList();
 						results.Results[facet.Name] = new FacetResult

@@ -38,7 +38,7 @@ namespace Raven.Bundles.IndexedProperties
 			private readonly IndexedPropertiesSetupDoc setupDoc;
 			private readonly string index;
 			private readonly AbstractViewGenerator viewGenerator;
-			private readonly ConcurrentSet<string> itemsToRemove = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			private readonly ConcurrentSet<string> itemsToRemove = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 			public IndexPropertyBatcher(DocumentDatabase database, IndexedPropertiesSetupDoc setupDoc, string index, AbstractViewGenerator viewGenerator)
 			{

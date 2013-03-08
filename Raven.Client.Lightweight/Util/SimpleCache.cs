@@ -11,7 +11,7 @@ namespace Raven.Client.Util
 	public class SimpleCache<T> : IDisposable
 	{
 		readonly ConcurrentLruLSet<string> lruKeys;
-		readonly ConcurrentDictionary<string, T> actualCache;
+		internal readonly ConcurrentDictionary<string, T> actualCache;
 
 		public SimpleCache(int maxNumberOfCacheEntries)
 		{
@@ -120,6 +120,11 @@ namespace Raven.Client.Util
 				}
 			}
 			return value;
+		}
+
+		public int CurrentSize
+		{
+			get { return actualCache.Count; }
 		}
 
 		public void Dispose()

@@ -206,8 +206,14 @@ namespace Raven.Abstractions.Json
 									writer.WriteRaw(new string(writer.IndentChar, writer.Indentation));
 								}
 							}
+							if(first)
+								writer.WriteRawValue(line);
+							else
+								writer.WriteRaw(line);
+
+
 							first = false;
-							writer.WriteRaw(line);
+
 						}
 					}
 					continue;

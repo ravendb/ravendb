@@ -47,7 +47,7 @@ namespace Raven.Client
 		/// <summary>
 		/// The etag of the queried index
 		/// </summary>
-		public Guid IndexEtag { get; set; }
+		public Etag IndexEtag { get; set; }
 
 		/// <summary>
 		/// Gets or sets a value indicating whether any of the documents returned by this query

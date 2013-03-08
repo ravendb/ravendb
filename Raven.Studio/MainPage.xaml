@@ -83,52 +83,41 @@
 				  x:Name="Logo">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
-					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="34" />
 					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
 
-				<Image Grid.Column="4"
-					   ToolTipService.ToolTip="{Binding Server.Value.SelectedDatabase.Value.Status.Value, StringFormat='Server status: {0}'}"
-					   Source="{Binding Server.Value.SelectedDatabase.Value.StatusImage.Value}"
-					   VerticalAlignment="Center"/>
+                <Databases:DatabaseSelectionView VerticalAlignment="Center"
+												 HorizontalAlignment="Right" />
 
-				<HyperlinkButton Grid.Column="3"
-								 HorizontalAlignment="Left"
-								 Margin="0,5,5,1"
-								 Command="{StaticResource NavigateToExternalUrlCommand}"
-								 CommandParameter="http://ravendb.net/"
-								 TargetName="_blank">
-					<Image Source="{StaticResource Image_RavenDBLogo}"
-						   Stretch="Uniform"
-						   Height="25" />
-				</HyperlinkButton>
-
-				<Button Grid.Column="2"
+                <Button Grid.Column="1"
 						Command="{StaticResource ShowErrorListWindowCommand}"
 						Style="{StaticResource Style_Button_MouseOverChrome}"
 						HorizontalAlignment="Center"
 						VerticalAlignment="Center"
 						ToolTipService.ToolTip="Show recent errors"
 						Visibility="{Binding ErrorCount, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
-					<Image Source="{StaticResource Image_Error_Small}"
+                    <Image Source="{StaticResource Image_Error_Small}"
 						   Stretch="Fill" Width="24" Height="24"/>
-				</Button>
+                </Button>
 
-				<Button Grid.Column="1"
+                <HyperlinkButton Grid.Column="2"
 								 HorizontalAlignment="Left"
-								 VerticalAlignment="Center"
-								 Margin="0,0,5,0"
-								  Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/settings"
-                        Style="{StaticResource Style_Button_MouseOverChrome}"
-                        ToolTipService.ToolTip="Edit Database Settings">
-					<Image Source="{StaticResource Image_Settings_Tiny}"/>
-				</Button>
+								 Margin="0,5,5,1"
+								 Command="{StaticResource NavigateToExternalUrlCommand}"
+								 CommandParameter="http://ravendb.net/"
+								 TargetName="_blank">
+                    <Image Source="{StaticResource Image_RavenDBLogo}"
+						   Stretch="Uniform"
+						   Height="25" />
+                </HyperlinkButton>
+                
+                <Image Grid.Column="3"
+					   ToolTipService.ToolTip="{Binding Server.Value.SelectedDatabase.Value.Status.Value, StringFormat='Server status: {0}'}"
+					   Source="{Binding Server.Value.SelectedDatabase.Value.StatusImage.Value}"
+					   VerticalAlignment="Center"/>
 
-				<Databases:DatabaseSelectionView VerticalAlignment="Center"
-												 HorizontalAlignment="Right" />
 			</Grid>
 
 			<StackPanel x:Name="MainLinks"
@@ -137,63 +126,176 @@
 						Margin="{StaticResource Margin_MainPageLeftRight}">
 
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-			
-				<HyperlinkButton Content="Documents"
+
+                <Delay:SplitHyperlinkButtonPopup Content="Documents"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/documents"
-								 Style="{StaticResource Style_Text_HeaderLink}">
+								 CommandParameter="/documents">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
 							<System:String>/Edit</System:String>
+							<System:String>/collections</System:String>
+							<System:String>/patch</System:String>
+							<System:String>/conflicts</System:String>
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
-				</HyperlinkButton>
-				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<HyperlinkButton Content="Collections"
+                    <Delay:SplitHyperlinkButtonPopup.PopupContent>
+                        <Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
+                            <StackPanel>
+                                <HyperlinkButton Content="Documents"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/documents"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Collections"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/collections"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<HyperlinkButton Content="Indexes"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Conflicts"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/indexes"
-								 Style="{StaticResource Style_Text_HeaderLink}">
+								 CommandParameter="/conflicts"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Patch"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/patch"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                            </StackPanel>
+                        </Border>
+                    </Delay:SplitHyperlinkButtonPopup.PopupContent>
+                </Delay:SplitHyperlinkButtonPopup>
+				
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+                <Delay:SplitHyperlinkButtonPopup Content="Indexes"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/indexes">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
 							<System:String>/query</System:String>
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
-				</HyperlinkButton>
+                    <Delay:SplitHyperlinkButtonPopup.PopupContent>
+                        <Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
+                            <StackPanel>
+                                <HyperlinkButton Content="Indexes"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/indexes"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Transformers"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/transformers"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+							</StackPanel>
+                        </Border>
+                    </Delay:SplitHyperlinkButtonPopup.PopupContent>
+                </Delay:SplitHyperlinkButtonPopup>
 				
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-
-				<HyperlinkButton Content="Patch"
+				<Delay:SplitHyperlinkButtonPopup Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/patch"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-
-				<HyperlinkButton Content="Tasks"
+								 CommandParameter="/import">
+					<Behaviors:LinkHighlighter.AlternativeUris>
+						<Behaviors:StringCollection>
+							<System:String>/import</System:String>
+							<System:String>/export</System:String>
+							<System:String>/backup</System:String>
+							<System:String>/restore</System:String>
+							<System:String>/toggleindexing</System:String>
+							<System:String>/sample</System:String>
+							<System:String>/csvimport</System:String>
+						</Behaviors:StringCollection>
+					</Behaviors:LinkHighlighter.AlternativeUris>
+					<Delay:SplitHyperlinkButtonPopup.PopupContent>
+						<Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
+							<StackPanel>
+								<HyperlinkButton Content="Import Database"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/tasks"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
+								 CommandParameter="/import"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Export Database"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/export"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Backup Database"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/backup"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Restore Databases"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/restore"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Toggle Indexing"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/toggleindexing"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Create Sample Data"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/sampledata"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Csv Import"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/csvimport"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+							</StackPanel>
+						</Border>
+					</Delay:SplitHyperlinkButtonPopup.PopupContent>
+				</Delay:SplitHyperlinkButtonPopup>
 				
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
 
-				<HyperlinkButton Content="Alerts"
+                <HyperlinkButton Content="Settings"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/alerts"
-								 Style="{StaticResource Style_Text_HeaderLink}"/>
-				
-				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				
-				<HyperlinkButton Content="Logs"
+								 CommandParameter="/settings"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+
+                <ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+                
+                <Delay:SplitHyperlinkButtonPopup Content="Status"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/statistics">
+                    <Behaviors:LinkHighlighter.AlternativeUris>
+                        <Behaviors:StringCollection>
+							<System:String>/statistics</System:String>
+							<System:String>/logs</System:String>
+							<System:String>/logs/error</System:String>
+                            <System:String>/alerts</System:String>
+                            <System:String>/indexes-errors</System:String>
+							<System:String>/replicationStatistics</System:String>
+							<System:String>/user-info</System:String>
+						</Behaviors:StringCollection>
+                    </Behaviors:LinkHighlighter.AlternativeUris>
+                    <Delay:SplitHyperlinkButtonPopup.PopupContent>
+                        <Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
+                            <StackPanel>
+								<HyperlinkButton Content="Statistics"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/statistics"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Logs"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/logs"
-								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Alerts"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/alerts"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Index Errors"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/indexes-errors"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Replication Statistics"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/replicationStatistics"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="User Info"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/user-info"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+							</StackPanel>
+                        </Border>
+                    </Delay:SplitHyperlinkButtonPopup.PopupContent>
+                </Delay:SplitHyperlinkButtonPopup>
 
-				<Delay:SplitButton Command="{StaticResource NavigateToCommand}"
+                <ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+                
+                <Delay:SplitButton Command="{StaticResource NavigateToCommand}"
 								CommandParameter="/edit?mode=new"
 						DropDownToolTip="More Options"
 								   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,5" 
@@ -289,6 +391,8 @@
 											  MappedUri="/Views/IndexesErrors.xaml" />
 						<sdk:UriMapping Uri="/indexes/{indexName}"
 											  MappedUri="/Views/Index.xaml" />
+						<sdk:UriMapping Uri="/transformers/{transformerName}"
+											  MappedUri="/Views/Transformer.xaml" />
 						<sdk:UriMapping Uri="/query/{indexName}"
 											  MappedUri="/Views/Query.xaml" />
 						<sdk:UriMapping Uri="/logs/{errors}"

@@ -50,22 +50,13 @@ namespace Raven.Database.Config
 				new IntegerSetting(settings["Raven/NumberOfItemsToExecuteReduceInSingleStep"], 1024);
 			MaxNumberOfParallelIndexTasks =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
-			TempIndexPromotionMinimumQueryCount =
-				new IntegerSetting(settings["Raven/TempIndexPromotionMinimumQueryCount"], 100);
-			TempIndexPromotionThreshold =
-				new IntegerSetting(settings["Raven/TempIndexPromotionThreshold"], 60000 /* once a minute */);
-			TempIndexCleanupPeriod =
-				new TimeSpanSetting(settings["Raven/TempIndexCleanupPeriod"], TimeSpan.FromMinutes(10),
-				                    TimeSpanArgumentType.FromSeconds);
-			TempIndexCleanupThreshold =
-				new TimeSpanSetting(settings["Raven/TempIndexCleanupThreshold"], TimeSpan.FromMinutes(20),
-				                    TimeSpanArgumentType.FromSeconds);
-			TempIndexInMemoryMaxMb =
-				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/TempIndexInMemoryMaxMB"], 25, 1), 1024*1024);
+
+			NewIndexInMemoryMaxMb =
+				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024*1024);
 			RunInMemory =
 				new BooleanSetting(settings["Raven/RunInMemory"], false);
-			CreateTemporaryIndexesForAdHocQueriesIfNeeded =
-				new BooleanSetting(settings["Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded"], true);
+			CreateAutoIndexesForAdHocQueriesIfNeeded =
+				new BooleanSetting(settings["Raven/CreateAutoIndexesForAdHocQueriesIfNeeded"], true);
 			ResetIndexOnUncleanShutdown =
 				new BooleanSetting(settings["Raven/ResetIndexOnUncleanShutdown"], false);
 			DataDir =
@@ -76,6 +67,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
 				new StringSetting(settings["Raven/Port"], (string) null);
+			UseSsl = 
+				new BooleanSetting(settings["Raven/UseSsl"], false);
 			HttpCompression =
 				new BooleanSetting(settings["Raven/HttpCompression"], true);
 			AccessControlAllowOrigin =
@@ -98,8 +91,25 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
 				new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
+			MaxIndexCommitPointStoreTimeInterval =
+				new TimeSpanSetting(settings["Raven/MaxIndexCommitPointStoreTimeInterval"], TimeSpan.FromMinutes(5),
+				                    TimeSpanArgumentType.FromParse);
+			MaxNumberOfStoredCommitPoints =
+				new IntegerSetting(settings["Raven/MaxNumberOfStoredCommitPoints"], 5);
+			MinIndexingTimeIntervalToStoreCommitPoint =
+				new TimeSpanSetting(settings["Raven/MinIndexingTimeIntervalToStoreCommitPoint"], TimeSpan.FromMinutes(1),
+				                    TimeSpanArgumentType.FromParse);
+            
+			TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
+            
+			TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
+
+			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned"], TimeSpan.FromHours(72), TimeSpanArgumentType.FromParse);
+
+			TimeToWaitBeforeRunningAbandonedIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningAbandonedIndexes"], TimeSpan.FromHours(3), TimeSpanArgumentType.FromParse);
 		}
 
+	    
 		private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
@@ -142,19 +152,11 @@ namespace Raven.Database.Config
 
 		public IntegerSettingWithMin MaxNumberOfParallelIndexTasks { get; private set; }
 
-		public IntegerSetting TempIndexPromotionMinimumQueryCount { get; private set; }
-
-		public IntegerSetting TempIndexPromotionThreshold { get; private set; }
-
-		public TimeSpanSetting TempIndexCleanupPeriod { get; private set; }
-
-		public TimeSpanSetting TempIndexCleanupThreshold { get; private set; }
-
-		public MultipliedIntegerSetting TempIndexInMemoryMaxMb { get; private set; }
+		public MultipliedIntegerSetting NewIndexInMemoryMaxMb { get; private set; }
 
 		public BooleanSetting RunInMemory { get; private set; }
 
-		public BooleanSetting CreateTemporaryIndexesForAdHocQueriesIfNeeded { get; private set; }
+		public BooleanSetting CreateAutoIndexesForAdHocQueriesIfNeeded { get; private set; }
 
 		public BooleanSetting ResetIndexOnUncleanShutdown { get; private set; }
 
@@ -165,6 +167,12 @@ namespace Raven.Database.Config
 		public StringSetting HostName { get; private set; }
 
 		public StringSetting Port { get; private set; }
+
+		public StringSetting SslCertificatePath { get; private set; }
+
+		public StringSetting SslCertificatePassword { get; private set; }
+
+		public BooleanSetting UseSsl { get; private set; }
 
 		public BooleanSetting HttpCompression { get; private set; }
 
@@ -187,5 +195,18 @@ namespace Raven.Database.Config
 		public StringSetting TaskScheduler { get; private set; }
 
 		public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
+
+		public TimeSpanSetting MaxIndexCommitPointStoreTimeInterval { get; private set; }
+
+		public TimeSpanSetting MinIndexingTimeIntervalToStoreCommitPoint { get; private set; }
+
+		public IntegerSetting MaxNumberOfStoredCommitPoints { get; private set; }
+        public TimeSpanSetting TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+
+	    public TimeSpanSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
+
+		public TimeSpanSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
+
+		public TimeSpanSetting TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
 	}
 }

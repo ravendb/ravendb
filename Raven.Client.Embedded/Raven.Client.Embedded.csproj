@@ -46,6 +46,7 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Net" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -59,6 +60,7 @@
     <Compile Include="Changes\EmbeddableDatabaseChanges.cs" />
     <Compile Include="Changes\EmbeddableObservableWithTask.cs" />
     <Compile Include="Changes\FilteringObservableWithTask.cs" />
+    <Compile Include="DisposableEnumerator.cs" />
     <Compile Include="EmbeddableDocumentStore.cs" />
     <Compile Include="EmbeddedAsyncServerClient.cs" />
     <Compile Include="EmbeddedBulkInsertOperation.cs" />

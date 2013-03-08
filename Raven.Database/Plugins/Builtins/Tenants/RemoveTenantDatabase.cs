@@ -8,7 +8,7 @@ namespace Raven.Database.Plugins.Builtins.Tenants
 
 		public override void AfterCommit(string key)
 		{
-			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.OrdinalIgnoreCase) == false)
 				return;
 
 			TenantDatabaseModified.Invoke(this, new TenantDatabaseModified.Event

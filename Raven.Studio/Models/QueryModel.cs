@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
@@ -14,6 +15,7 @@ using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
@@ -25,7 +27,7 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
-	public class QueryModel : PageViewModel, IHasPageTitle
+	public class QueryModel : PageViewModel, IHasPageTitle, IAutoCompleteSuggestionProvider
 	{
         private ICommand executeQuery;
         private RavenQueryStatistics results;
@@ -84,6 +86,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		public RangeUnits RangeUnits { get; set; }
+
 		private double? latitude;
 		public double? Latitude
 		{
@@ -91,6 +95,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				latitude = value;
+				address = null;
+				OnPropertyChanged(() => Address);
 				OnPropertyChanged(() => Latitude);
 			}
 		}
@@ -102,6 +108,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				longitude = value;
+				address = null;
+				OnPropertyChanged(() => Address);
 				OnPropertyChanged(() => Longitude);
 			}
 		}
@@ -123,9 +131,49 @@ namespace Raven.Studio.Models
 			get { return address; }
 			set
 			{
-				address = value;
+				UpdateAddress(value);
+				OnPropertyChanged(() => Latitude);
+				OnPropertyChanged(() => Longitude);
 				OnPropertyChanged(() => Address);
 			}
+		}
+
+		private void UpdateAddress(string value)
+		{
+			var set = false;
+			if (PerDatabaseState.RecentAddresses.ContainsKey(IndexName) && PerDatabaseState.RecentAddresses[IndexName].ContainsKey(value))
+			{
+				var data = PerDatabaseState.RecentAddresses[IndexName][value];
+				if (data != null)
+				{
+					address = data.Address;
+					latitude = data.Latitude;
+					longitude = data.Longitude;
+					set = true;
+				}
+			}
+			
+			if(set == false)
+			{
+				address = value;
+				latitude = null;
+				longitude = null;
+			}
+		}
+
+		public void UpdateResultsFromCalculate(AddressData addressData)
+		{
+			latitude = addressData.Latitude;
+			longitude = addressData.Longitude;
+
+			var addresses = PerDatabaseState.RecentAddresses.ContainsKey(IndexName) ? PerDatabaseState.RecentAddresses[IndexName] : new Dictionary<string, AddressData>();
+
+			addresses[addressData.Address] = addressData;
+
+			PerDatabaseState.RecentAddresses[IndexName] = addresses;
+
+			OnPropertyChanged(() => Latitude);
+			OnPropertyChanged(() => Longitude);
 		}
 
 		public ICommand CalculateFromAddress { get { return new CalculateGeocodeFromAddressCommand(this); } }
@@ -202,6 +250,32 @@ namespace Raven.Studio.Models
 				Requery();
 			}
 		}
+
+		private bool showSkipTransform = true;
+		private bool useTransformer;
+		public bool UseTransformer
+		{
+			get { return useTransformer; }
+			set
+			{
+				useTransformer = value;
+				if (value == true)
+				{
+					SkipTransformResults = true;
+					showSkipTransform = false;
+				}
+				else
+				{
+					showSkipTransform = true;
+				}
+				OnPropertyChanged(() => UseTransformer);
+				OnPropertyChanged(() => HasTransform);
+				Requery();
+			}
+		}
+
+		public Observable<string> SelectedTransformer { get; set; }
+		public List<string> Transformers { get; set; } 
 
 	    public bool SkipTransformResults
 	    {
@@ -329,28 +403,41 @@ namespace Raven.Studio.Models
 
 	    private void BeginUpdateFieldsAndSortOptions(string collection)
 	    {
-	        DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
-	                                    new IndexQuery() {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
-	            .ContinueOnSuccessInTheUIThread(result =>
-	                                                {
-                                                        if (result.Results.Count > 0)
-                                                        {
-                                                            var fields = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true)
-                                                                .ToList();
+		    DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
+		                                new IndexQuery {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
+		                    .ContinueOnSuccessInTheUIThread(result =>
+		                    {
+			                    if (result.Results.Count > 0)
+			                    {
+				                    var fields =
+					                    DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties: true,
+					                                                              includeMetadata: false,
+					                                                              excludeParentPropertyNames: true)
+					                                   .ToList();
 
-                                                            SetSortByOptions(fields);
-                                                            QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
-                                                            RestoreHistory();
-                                                        }
-	                                                });
+				                    SetSortByOptions(fields);
+				                    QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
+				                    RestoreHistory();
+			                    }
+		                    });
 	    }
 
 	    public QueryModel()
 		{
 			ModelUrl = "/query";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+
+		    ApplicationModel.DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
+		    {
+				SelectedTransformer = new Observable<string>{Value = "None"};
+			    SelectedTransformer.PropertyChanged += (sender, args) => Requery();
+				Transformers = new List<string>{"None"};
+			    Transformers.AddRange(transformers.Select(definition => definition.Name));
+			    
+			    OnPropertyChanged(() => Transformers);
+		    });
             
-			queryDocument = new EditorDocument()
+			queryDocument = new EditorDocument
             {
                 Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
             };
@@ -523,7 +610,7 @@ namespace Raven.Studio.Models
 
 	    public bool HasTransform
 	    {
-            get { return hasTransform; }
+            get { return hasTransform && showSkipTransform; }
             private set
             {
                 hasTransform = value;
@@ -538,7 +625,7 @@ namespace Raven.Studio.Models
                 return;
             } 
 
-            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value), IsSpatialQuery, Latitude, Longitude, Radius);
+            var state = new QueryState(this);
 
             PerDatabaseState.QueryHistoryManager.StoreQuery(state);
 		}
@@ -568,11 +655,25 @@ namespace Raven.Studio.Models
 	        if (state == null)
 	            return;
 
-	        Query = state.Query;
+	        UpdateFromState(state);
+
+	        Requery();
+	    }
+
+		private void UpdateFromState(QueryState state)
+		{
+			Query = state.Query;
 	        IsSpatialQuery = state.IsSpatialQuery;
 	        Latitude = state.Latitude;
 	        Longitude = state.Longitude;
 	        Radius = state.Radius;
+	        UseTransformer = state.UseTransformer;
+			DefaultOperator = state.DefaultOperator;
+			SelectedTransformer.Value = state.Transformer;
+			SkipTransformResults = state.SkipTransform;
+			ShowFields = state.ShowFields;
+			ShowEntries = state.ShowEntries;
+
 
 	        SortBy.Clear();
 
@@ -581,11 +682,9 @@ namespace Raven.Studio.Models
 		        if (SortByOptions.Contains(sortOption))
 			        SortBy.Add(new StringRef() {Value = sortOption});
 	        }
+		}
 
-	        Requery();
-	    }
-
-        public ICommand DeleteMatchingResults { get
+		public ICommand DeleteMatchingResults { get
         {
             return deleteMatchingResultsCommand ??
                    (deleteMatchingResultsCommand = new ActionCommand(HandleDeleteMatchingResults));
@@ -682,11 +781,15 @@ namespace Raven.Studio.Models
 		}
 
 	    public IndexQuery CreateTemplateQuery()
-        {
+	    {
+		    var transfomer = SelectedTransformer.Value;
+			if (transfomer == "None")
+				transfomer = "";
             var q = new IndexQuery
             {
                 Query = Query,
-                DefaultOperator = DefaultOperator
+                DefaultOperator = DefaultOperator,
+				ResultsTransformer = transfomer
             };
 
             if (SortBy != null && SortBy.Count > 0)
@@ -714,9 +817,13 @@ namespace Raven.Studio.Models
             q.SkipTransformResults = SkipTransformResults;
             if (IsSpatialQuerySupported && Latitude.HasValue && Longitude.HasValue)
             {
+	            var radiusValue = Radius.HasValue ? Radius.Value : 1;
+	            if (RangeUnits == RangeUnits.Mile)
+		            radiusValue *= 1.60934;
+
                 q = new SpatialIndexQuery(q)
                 {
-                    QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(Latitude.Value, Longitude.Value, Radius.HasValue ? Radius.Value : 1),
+                    QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(Latitude.Value, Longitude.Value, radiusValue),
                     SpatialRelation = SpatialRelation.Within,
                     SpatialFieldName = Constants.DefaultSpatialFieldName,
                     DefaultOperator = DefaultOperator
@@ -772,5 +879,32 @@ namespace Raven.Studio.Models
 	    {
 	        get { return queryDocument; }
 	    }
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			var list = new List<object>();
+			if(PerDatabaseState.RecentAddresses.ContainsKey(IndexName))
+				list = PerDatabaseState.RecentAddresses[IndexName].Keys.Cast<object>().ToList();
+			return TaskEx.FromResult<IList<object>>(list);			
+		}
+
+	
+	}
+
+	public enum RangeUnits
+	{
+		KM,
+		Mile
+	}
+
+	public class AddressData
+	{
+		public string Address { get; set; }
+		public double Latitude { get; set; }
+		public double Longitude { get; set; }
+
+		public override string ToString()
+		{
+			return Address;
+		}
 	}
 }

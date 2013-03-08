@@ -1,6 +1,9 @@
 using System;
 using System.Linq;
 using System.Reflection;
+#if NETFX_CORE
+using Raven.Client.WinRT.MissingFromWinRT;
+#endif
 
 namespace Raven.Abstractions.Logging.LogProviders
 {

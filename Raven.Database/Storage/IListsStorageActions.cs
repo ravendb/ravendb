@@ -1,6 +1,5 @@
-using System;
 using System.Collections.Generic;
-using Raven.Database.Impl;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
@@ -11,17 +10,17 @@ namespace Raven.Database.Storage
 		
 		void Remove(string name, string key);
 
-		IEnumerable<ListItem> Read(string name, Guid start, Guid? end, int take);
+		IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take);
 
 		ListItem Read(string name, string key);
 
-		void RemoveAllBefore(string name, Guid etag);
+		void RemoveAllBefore(string name, Etag etag);
 	}
 
 	public class ListItem
 	{
 		public string Key;
-		public Guid Etag;
+		public Etag Etag;
 		public RavenJObject Data;
 	}
 }

@@ -49,45 +49,56 @@ namespace Raven.Studio.Features.Smuggler
 				.ContinueWith(task => ((RavenJArray) task.Result));
 		}
 
-		protected override Task<RavenJArray> GetDocuments(Guid lastEtag)
+		protected override Task<RavenJArray> GetDocuments(Etag lastEtag)
 		{
 			throw new NotImplementedException();
 		}
 
-		protected override Task<Guid> ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
+		protected override Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			throw new NotImplementedException();
 		}
 
 		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
-			var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<RavenJObject>("definition").ToString());
+			if (index != null)
+			{
+				var indexDefinition =
+					JsonConvert.DeserializeObject<IndexDefinition>(index.Value<RavenJObject>("definition").ToString());
 
-			return commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
+				return commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
+			}
+
+			return FlushBatch();
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
-			var url = ("/static/" + attachmentExportInfo.Key).NoCache();
-			var request = commands.CreateRequest(url, "PUT");
-			if (attachmentExportInfo.Metadata != null)
+			if (attachmentExportInfo != null)
 			{
-				foreach (var header in attachmentExportInfo.Metadata)
+				var url = ("/static/" + attachmentExportInfo.Key).NoCache();
+				var request = commands.CreateRequest(url, "PUT");
+				if (attachmentExportInfo.Metadata != null)
 				{
-					switch (header.Key)
+					foreach (var header in attachmentExportInfo.Metadata)
 					{
-						case "Content-Type":
-							request.ContentType = header.Value.Value<string>();
-							break;
-						default:
-							request.Headers[header.Key] = StripQuotesIfNeeded(header.Value);
-							break;
+						switch (header.Key)
+						{
+							case "Content-Type":
+								request.ContentType = header.Value.Value<string>();
+								break;
+							default:
+								request.Headers[header.Key] = StripQuotesIfNeeded(header.Value);
+								break;
+						}
 					}
 				}
+
+				return request
+					.ExecuteWriteAsync(attachmentExportInfo.Data);
 			}
 
-			return request
-				.ExecuteWriteAsync(attachmentExportInfo.Data);
+			return FlushBatch();
 		}
 
 		protected override Task PutDocument(RavenJObject document)
@@ -123,8 +134,11 @@ namespace Raven.Studio.Features.Smuggler
 			return new CompletedTask();
 		}
 
-		protected override Task FlushBatch()
+		private Task FlushBatch()
 		{
+			if (batch.Count == 0)
+				return new CompletedTask();
+
 			var putCommands = (from doc in batch
 			                   let metadata = doc.Value<RavenJObject>("@metadata")
 			                   let removal = doc.Remove("@metadata")

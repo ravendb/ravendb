@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -280,6 +281,49 @@ namespace Raven.Json.Linq
 				throw new InvalidOperationException("Cannot create snapshot without previously calling EnsureSnapShot");
 
 			return new RavenJArray(Items);
+		}
+
+		public static async Task<RavenJToken> LoadAsync(JsonTextReaderAsync reader)
+		{
+			if (reader.TokenType == JsonToken.None)
+			{
+				if (!await reader.ReadAsync())
+					throw new Exception("Error reading RavenJArray from JsonReader.");
+			}
+
+			if (reader.TokenType != JsonToken.StartArray)
+				throw new Exception("Error reading RavenJArray from JsonReader. Current JsonReader item is not an array: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+
+			if (await reader.ReadAsync() == false)
+				throw new Exception("Unexpected end of json array");
+
+			var ar = new RavenJArray();
+			RavenJToken val = null;
+			do
+			{
+				switch (reader.TokenType)
+				{
+					case JsonToken.Comment:
+						// ignore comments
+						break;
+					case JsonToken.EndArray:
+						return ar;
+					case JsonToken.StartObject:
+						val = await RavenJObject.LoadAsync(reader);
+						ar.Items.Add(val);
+						break;
+					case JsonToken.StartArray:
+						val = await RavenJArray.LoadAsync(reader);
+						ar.Items.Add(val);
+						break;
+					default:
+						val = RavenJValue.Load(reader);
+						ar.Items.Add(val);
+						break;
+				}
+			} while (await reader.ReadAsync());
+
+			throw new Exception("Error reading RavenJArray from JsonReader.");
 		}
 	}
 }

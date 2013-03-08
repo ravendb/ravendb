@@ -27,6 +27,7 @@ namespace Raven.Database.Config
 			// Network
 			{"Raven/HostName", "string", null, "The hostname to bind the embedded http server to, if we want to bind to a specific hostname, rather than all. Default: none."},
 			{"Raven/Port", "int", "1 - 65,536, *", "The port to bind the embedded http server. Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward."},
+			{"Raven/UseSsl", "bool", "false", "Enable/disable SSL. Default: false."},
 			{"Raven/HttpCompression", "bool", "true,false", "Whatever http compression is enabled. Default: true."},
 			{"Raven/VirtualDirectory", "string", null, "The virtual directory for the RavenDB server. Default: none."},
 
@@ -52,15 +53,20 @@ namespace Raven.Database.Config
 			{"Raven/DisableDocumentPreFetchingForIndexing", "bool", "false","Disable document prefetching for indexes"},
 			{"Raven/NumberOfItemsToExecuteReduceInSingleStep", "int", "10 - 100,000", "The number of items that will cause RavenDB to move to multi step reduce, default: 1,024"},
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
+			{"Raven/NewIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing. Default: 64 MB."},
 			
-			// Temp Indexing
-			{"Raven/TempIndexPromotionMinimumQueryCount", "int", "1 or higher","The number of times a temporary index has to be queried during the promotion threshold to become a permanent auto index. Default: 100."},
-			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permanent auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 60000 (once a minute)."},
-			{"Raven/TempIndexCleanupPeriod","int", null, "How often will temp dynamic indexes be purged from the system. The value is in seconds. Default: 10 minutes."},
-			{"Raven/TempIndexCleanupThreshold","int",null, "How long does a temporary index hang around if there are no queries made to it. The value is in seconds. Default: 20 minutes."},
-			{"Raven/TempIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a temporary index held in memory. When a temporary dynamic index exceeds that value, it will be using on disk indexing, rather then RAM indexing. Default: 25 MB."},
-			{"Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of temporary indexes on dynamic queries"},
-			// Memory
+            // Idle 
+            {"Raven/TimeToWaitBeforeRunningIdleIndexes", "TimeSpan", "00:10:00", "How long the database should be idle for before updating low priority indexes, default: 10 minutes"},
+            {"Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle", "TimeSpan", "1:00:00", "How long the database should wait before marking an index with the idle flag, default: 1 hour"},
+
+			{"Raven/TimeToWaitBeforeRunningAbandonedIndexes", "TimeSpan", "3:00:00", "How long the database should be idle for before updating abandoned indexes, default: 3 hours"},
+            {"Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned", "TimeSpan", "72:00:00", "How long the database should wait before marking an index with the abandoned flag, default: 72 hours"},
+
+
+			// Auto Indexing
+			{"Raven/CreateAutoIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of auto indexes on dynamic queries"},
+			
+            // Memory
 			{"Raven/IntegerSetting", "int", null, "The max size in MB for the internal document cache inside RavenDB server, default is half of the machine available RAM minus the size of the esent cache."},
 			{"Raven/MemoryCacheLimitPercentage","int", "0-99", "The percentage of memory that the internal document cache inside RavenDB server will use, default: auto."},
 			{"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned."},

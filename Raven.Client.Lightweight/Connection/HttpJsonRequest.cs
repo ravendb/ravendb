@@ -5,13 +5,15 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+#if SILVERLIGHT || NETFX_CORE
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
 using System.Collections.Specialized;
+#endif
 using System.Diagnostics;
 using System.IO;
 #if !SILVERLIGHT
 using System.IO.Compression;
-#else
-using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 using System.Net;
 using System.Text;
@@ -494,7 +496,7 @@ namespace Raven.Client.Connection
 
 		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
-			if (thePrimaryUrl.Equals(currentUrl, StringComparison.InvariantCultureIgnoreCase))
+			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return this;
 			if (replicationInformer.GetFailureCount(thePrimaryUrl) <= 0)
 				return this; // not because of failover, no need to do this.
@@ -831,7 +833,7 @@ namespace Raven.Client.Connection
 					.Append(httpWebResponse.StatusDescription)
 					.AppendLine();
 
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()))
 				{
 					string line;
 					while ((line = reader.ReadLine()) != null)
@@ -842,6 +844,36 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
 		}
+
+		public async Task<WebResponse> RawExecuteRequestAsync()
+		{
+			try
+			{
+				return await webRequest.GetResponseAsync();
+			}
+			catch (WebException we)
+			{
+				var httpWebResponse = we.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				var sb = new StringBuilder()
+					.Append(httpWebResponse.StatusCode)
+					.Append(" ")
+					.Append(httpWebResponse.StatusDescription)
+					.AppendLine();
+
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						sb.AppendLine(line);
+					}
+				}
+				throw new InvalidOperationException(sb.ToString(), we);
+			}
+		}
+
 
 		public void PrepareForLongRequest()
 		{

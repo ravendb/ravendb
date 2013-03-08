@@ -102,11 +102,11 @@ namespace Raven.Studio.Commands
 
 						try
 						{
-							if (string.Equals("id", column, StringComparison.InvariantCultureIgnoreCase))
+							if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
 							{
 								id = record[column];
 							}
-							else if (string.Equals("Raven-Entity-Name", column, StringComparison.InvariantCultureIgnoreCase))
+							else if (string.Equals("Raven-Entity-Name", column, StringComparison.OrdinalIgnoreCase))
 							{
 								metadata = new RavenJObject { { "Raven-Entity-Name", record[column] } };
 								id = id ?? record[column] + "/";

@@ -7,6 +7,9 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Extensions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
+using Raven.Studio.Controls;
+using Raven.Studio.Features.Bundles;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;
@@ -90,12 +93,21 @@ namespace Raven.Studio.Commands
 			{
 				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)) == false)
 				{
-					session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+					var hasChanges = new List<string>();
+                    session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
 					       .ContinueOnSuccessInTheUIThread(documents =>
 					       {
 						       sqlReplicationSettings.UpdateIds();
 						       if (documents != null)
 						       {
+							       hasChanges = sqlReplicationSettings.SqlReplicationConfigs.Where(config =>
+							                                                                       HasChanges(config,
+							                                                                                  documents.FirstOrDefault(
+								                                                                                  replicationConfig =>
+								                                                                                  replicationConfig.Name ==
+								                                                                                  config.Name)))
+							                                          .Select(config => config.Name).ToList();
+
 							       foreach (var sqlReplicationConfig in documents)
 							       {
 								       if (sqlReplicationSettings.SqlReplicationConfigs.All(config => config.Id != sqlReplicationConfig.Id))
@@ -103,12 +115,39 @@ namespace Raven.Studio.Commands
 									       session.Delete(sqlReplicationConfig);
 								       }
 							       }
+
 						       }
+
+							   if (hasChanges != null && hasChanges.Count > 0)
+							   {
+								   var resetReplication = new ResetReplication(hasChanges);
+								   resetReplication.ShowAsync().ContinueOnSuccessInTheUIThread(() =>
+								   {
+									   if (resetReplication.Selected.Count == 0)
+										   return;
+									   const string ravenSqlreplicationStatus = "Raven/SqlReplication/Status";
+
+									   session.LoadAsync<SqlReplicationStatus>(ravenSqlreplicationStatus).ContinueOnSuccess(status =>
+									   {
+										   foreach (var name in resetReplication.Selected)
+										   {
+											   var lastReplicatedEtag = status.LastReplicatedEtags.FirstOrDefault(etag => etag.Name == name);
+											   if (lastReplicatedEtag != null)
+												   lastReplicatedEtag.LastDocEtag = Etag.Empty;
+										   }
+
+										   session.Store(status);
+										   session.SaveChangesAsync().Catch();
+									   });
+								   });
+
+								  
+							   }
 
 						       foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
 						       {
 							       sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
-							       session.Store(sqlReplicationConfig);
+							       session.Store(sqlReplicationConfig.ToSqlReplicationConfig());
 						       }
 
 						       session.SaveChangesAsync().Catch();
@@ -136,7 +175,7 @@ namespace Raven.Studio.Commands
 
                 foreach (var versioningConfiguration in versioningSettings.VersioningConfigurations)
 				{
-					if (versioningConfiguration.Id.StartsWith("Raven/Versioning/",StringComparison.InvariantCultureIgnoreCase) == false)
+					if (versioningConfiguration.Id.StartsWith("Raven/Versioning/",StringComparison.OrdinalIgnoreCase) == false)
 						versioningConfiguration.Id = "Raven/Versioning/" + versioningConfiguration.Id;
 					session.Store(versioningConfiguration);
 				}
@@ -174,6 +213,32 @@ namespace Raven.Studio.Commands
 
 			session.SaveChangesAsync()
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
+		}
+
+        private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
+		{
+			if (remote == null)
+				return false;
+
+			if (local.RavenEntityName != remote.RavenEntityName)
+				return true;
+
+			if (local.Script != remote.Script)
+				return true;
+
+			if (local.ConnectionString != remote.ConnectionString)
+				return true;
+
+			if (local.ConnectionStringName != remote.ConnectionStringName)
+				return true;
+
+			if (local.ConnectionStringSettingName != remote.ConnectionStringSettingName)
+				return true;
+
+			if (local.FactoryName != remote.FactoryName)
+				return true;
+
+			return false;
 		}
 
 		private void SavePeriodicBackup(string databaseName, PeriodicBackupSettingsSectionModel periodicBackup)

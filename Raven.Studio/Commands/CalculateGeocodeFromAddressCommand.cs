@@ -34,8 +34,10 @@ namespace Raven.Studio.Commands
 
 				if (result != null)
 				{
-					queryModel.Latitude = double.Parse(result.Value<string>("latitude"));
-					queryModel.Longitude = double.Parse(result.Value<string>("longitude"));
+					var latitude = double.Parse(result.Value<string>("latitude"));
+					var longitude = double.Parse(result.Value<string>("longitude"));
+					var addressData = new AddressData { Address = queryModel.Address, Latitude = latitude, Longitude = longitude };
+					queryModel.UpdateResultsFromCalculate(addressData);
 				}
 
 			}).Catch();

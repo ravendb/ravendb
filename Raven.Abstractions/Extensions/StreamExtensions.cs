@@ -7,11 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Abstractions.Extensions
 {
-	using Raven.Abstractions.Logging;
-
 	/// <summary>
 	/// Extensions for working with streams
 	/// </summary>

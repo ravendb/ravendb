@@ -40,6 +40,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       Path = path;
     }
 
+    internal bool Traced { get; set; }
+
     /// <summary>
     /// Gets or sets the error.
     /// </summary>

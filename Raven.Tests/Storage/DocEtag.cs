@@ -3,8 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -31,11 +31,10 @@ namespace Raven.Tests.Storage
 				{
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
 					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
-					Assert.Equal(1, doc2.Etag.Value.CompareTo(doc1.Etag));
+					Assert.Equal(1, doc2.Etag.CompareTo(doc1.Etag));
 
 				});
 			}
-
 		}
 
 		[Fact]
@@ -55,11 +54,11 @@ namespace Raven.Tests.Storage
 			{
 				tx.Batch(viewer =>
 				{
-					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Guid.Empty,5).Count());
+					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Etag.Empty, 5).Count());
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
-					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag.Value,5).Count());
+					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag, 5).Count());
 					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
-					Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag.Value,5).Count());
+					Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag, 5).Count());
 				});
 			}
 		}

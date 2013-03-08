@@ -1,8 +1,8 @@
 ﻿using System;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
 #endif
 using Raven.Json.Linq;
 
@@ -13,6 +13,8 @@ namespace Raven.Client.Connection
 		public RavenJToken Data { get; set; }
 		public DateTimeOffset Time;
 		public NameValueCollection Headers;
+		public string Database;
+		public bool ForceServerCheck;
 	}
 
 	internal class CachedRequestOp

@@ -20,6 +20,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		string IndexQueried { get; }
 
+		/// <summary>
+		/// Get the name of the index being queried in async queries
+		/// </summary>
+		string AsyncIndexQueried { get; }
+
 #if !SILVERLIGHT
 		/// <summary>
 		/// Grant access to the database commands
@@ -45,6 +50,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Get the index query for this query
 		/// </summary>
-		IndexQuery GetIndexQuery(bool isAsync );
+		IndexQuery GetIndexQuery(bool isAsync);
 	}
 }

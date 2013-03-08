@@ -4,12 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Json;
+using Raven.Client.Exceptions;
+using Raven.Client.Listeners;
 using Raven.Database.Data;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -27,6 +32,7 @@ using Raven.Database.Server;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -38,7 +44,10 @@ namespace Raven.Client.Embedded
 	{
 		private readonly DocumentDatabase database;
 		private readonly DocumentConvention convention;
+		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly ProfilingInformation profilingInformation;
+		private bool resolvingConflict;
+		private bool resolvingConflictRetries;
 		private TransactionInformation TransactionInformation
 		{
 			get { return convention.EnlistInDistributedTransactions ? RavenTransactionAccessor.GetTransactionInformation() : null; }
@@ -47,11 +56,12 @@ namespace Raven.Client.Embedded
 		///<summary>
 		/// Create a new instance
 		///</summary>
-		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention, Guid? sessionId)
+		public EmbeddedDatabaseCommands(DocumentDatabase database, DocumentConvention convention, Guid? sessionId, IDocumentConflictListener[] conflictListeners)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.database = database;
 			this.convention = convention;
+			this.conflictListeners = conflictListeners;
 			OperationsHeaders = new NameValueCollection();
 			if (database.Configuration.IsSystemDatabase() == false)
 				throw new InvalidOperationException("Database must be a system database");
@@ -119,10 +129,40 @@ namespace Raven.Client.Embedded
 		public JsonDocument Get(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.Get(key, TransactionInformation);
+			var jsonDocument = database.Get(key, TransactionInformation);
+
+			if (AssertNonConflictedDocumentAndCheckIfNeedToReload(jsonDocument))
+			{
+				if (resolvingConflictRetries)
+					throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+
+				resolvingConflictRetries = true;
+				try
+				{
+					return Get(key);
+				}
+				finally
+				{
+					resolvingConflictRetries = false;
+				}
+			}
+
+			return jsonDocument;
 		}
 
-		/// <summary>
+	    /// <summary>
+	    /// Retrieves the document with the specified key and performs the transform operation specified on that document
+	    /// </summary>
+	    /// <param name="key">The key</param>
+	    /// <param name="transformer">The transformer to use</param>
+	    /// <param name="queryInputs">Inputs to the transformer</param>
+	    /// <returns></returns>
+	    public JsonDocument Get(string key, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+	    {
+            return database.GetWithTransformer(key, transformer, TransactionInformation, queryInputs);
+	    }
+
+	    /// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -130,7 +170,7 @@ namespace Raven.Client.Embedded
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
+		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.Put(key, etag, document, metadata, TransactionInformation);
@@ -141,7 +181,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		public void Delete(string key, Guid? etag)
+		public void Delete(string key, Etag etag)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.Delete(key, etag, TransactionInformation);
@@ -154,7 +194,7 @@ namespace Raven.Client.Embedded
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Guid? etag, Stream data, RavenJObject metadata)
+		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			// we filter out content length, because getting it wrong will cause errors 
@@ -171,7 +211,7 @@ namespace Raven.Client.Embedded
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void UpdateAttachmentMetadata(string key, Guid? etag, RavenJObject metadata)
+		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			// we filter out content length, because getting it wrong will cause errors 
@@ -193,6 +233,7 @@ namespace Raven.Client.Embedded
 			Attachment attachment = database.GetStatic(key);
 			if (attachment == null)
 				return null;
+
 			Func<Stream> data = attachment.Data;
 			attachment.Data = () =>
 			{
@@ -201,6 +242,9 @@ namespace Raven.Client.Embedded
 				memoryStream.Position = 0;
 				return memoryStream;
 			};
+
+			AssertNonConflictedAttachement(attachment, false);
+
 			return attachment;
 		}
 
@@ -241,6 +285,9 @@ namespace Raven.Client.Embedded
 			{
 				throw new InvalidOperationException("Cannot get attachment data from an attachment header");
 			};
+
+			AssertNonConflictedAttachement(attachment, true);
+
 			return attachment;
 		}
 
@@ -249,7 +296,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		public void DeleteAttachment(string key, Guid? etag)
+		public void DeleteAttachment(string key, Etag etag)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.DeleteStatic(key, etag);
@@ -293,6 +340,39 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Gets the transformers from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		public TransformerDefinition[] GetTransformers(int start, int pageSize)
+		{
+			return database.GetTransformers(start, pageSize)
+				.Select(x =>JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject) x)["definition"].ToString(),new JsonToJsonConverter()))
+				.ToArray();
+
+		}
+
+		/// <summary>
+		/// Gets the transformer definition for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public TransformerDefinition GetTransformer(string name)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database.GetTransformerDefinition(name);
+		}
+
+		/// <summary>
+		/// Deletes the transformer.
+		/// </summary>
+		/// <param name="name">The name.</param>
+		public void DeleteTransformer(string name)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			database.DeleteTransfom(name);
+		}
+
+		/// <summary>
 		/// Resets the specified index
 		/// </summary>
 		/// <param name="name">The name.</param>
@@ -321,6 +401,15 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return PutIndex(name, definition, false);
+		}
+
+		/// <summary>
+		/// Creates a transformer with the specified name, based on an transfomer definition
+		/// </summary>
+		public string PutTransformer(string name, TransformerDefinition indexDef)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database.PutTransform(name, indexDef);
 		}
 
 		/// <summary>
@@ -381,7 +470,7 @@ namespace Raven.Client.Embedded
 			// indexEntriesOnly is not supported for embedded
 
 			QueryResultWithIncludes queryResult;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase))
+			if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
 			{
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
@@ -413,7 +502,79 @@ namespace Raven.Client.Embedded
 				includeCmd.AlsoInclude(queryResult.IdsToInclude);
 			}
 
-			return queryResult;
+			var docResults = queryResult.Results.Concat(queryResult.Includes);
+			return RetryOperationBecauseOfConflict(docResults, queryResult,
+			                                       () => Query(index, query, includes, metadataOnly, indexEntriesOnly));
+		}
+
+		/// <summary>
+		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+		/// of the number of items that might be returned.
+		/// </summary>
+		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+		{
+			if (query.PageSizeSet == false)
+				query.PageSize = int.MaxValue;
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var items = new BlockingCollection<RavenJObject>();
+			using (var waitForHeaders = new ManualResetEventSlim(false))
+			{
+				QueryHeaderInformation localQueryHeaderInfo = null;
+				var task = Task.Factory.StartNew(() =>
+				{
+					database.Query(index, query, information =>
+					{
+						localQueryHeaderInfo = information;
+						waitForHeaders.Set();
+					}, items.Add);
+				});
+				waitForHeaders.Wait();
+				queryHeaderInfo = localQueryHeaderInfo;
+				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+			}
+		}
+
+		/// <summary>
+		/// Streams the documents by etag OR starts with the prefix and match the matches
+		/// Will return *all* results, regardless of the number of itmes that might be returned.
+		/// </summary>
+		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+		{
+			if(fromEtag != null && startsWith != null)
+				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+
+			var items = new BlockingCollection<RavenJObject>();
+			var task = Task.Factory.StartNew(() =>
+			{
+				if (string.IsNullOrEmpty(startsWith))
+				{
+					database.GetDocuments(start, pageSize, fromEtag,
+					                      items.Add);
+				}
+				else
+				{
+					database.GetDocumentsWithIdStartingWith(
+						startsWith,
+						matches,
+						start,
+						pageSize,
+						items.Add);
+				}
+			});
+			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+		}
+
+		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
+		{
+			task.ContinueWith(_ => items.Add(null));
+			while (true)
+			{
+				var ravenJObject = items.Take();
+				if (ravenJObject == null)
+					break;
+				yield return ravenJObject;
+			}
+			task.Wait();
 		}
 
 		/// <summary>
@@ -426,14 +587,16 @@ namespace Raven.Client.Embedded
 			database.DeleteIndex(name);
 		}
 
-		/// <summary>
-		/// Gets the results for the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <param name="includes">The includes.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
+	    /// <summary>
+	    /// Gets the results for the specified ids.
+	    /// </summary>
+	    /// <param name="ids">The ids.</param>
+	    /// <param name="includes">The includes.</param>
+	    /// <param name="transformer"></param>
+	    /// <param name="queryInputs"></param>
+	    /// <param name="metadataOnly">Load just the document metadata</param>
+	    /// <returns></returns>
+	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
@@ -442,7 +605,12 @@ namespace Raven.Client.Embedded
 			var multiLoadResult = new MultiLoadResult
 			                      {
 				                      Results = ids
-					                      .Select(id => database.Get(id, TransactionInformation))
+					                      .Select(id =>
+					                      {
+					                          if (string.IsNullOrEmpty(transformer))
+					                              return database.Get(id, TransactionInformation);
+                                              return database.GetWithTransformer(id, transformer, TransactionInformation,  queryInputs);
+					                      })
 					                      .ToArray()
 					                      .Select(x => x == null ? null : x.ToJson())
 					                      .ToList(),
@@ -458,7 +626,10 @@ namespace Raven.Client.Embedded
 				}
 			}
 
-			return multiLoadResult;
+			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
+
+		    return RetryOperationBecauseOfConflict(docResults, multiLoadResult,
+		                                           () => Get(ids, includes, transformer, queryInputs, metadataOnly));
 		}
 
 		/// <summary>
@@ -710,6 +881,20 @@ namespace Raven.Client.Embedded
 			return database.ExecuteGetTermsQuery( index, query, facetSetupDoc, start, pageSize );
 		}
 
+        /// <summary>
+        /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+        /// </summary>
+        /// <param name="index">Name of the index</param>
+        /// <param name="query">Query to build facet results</param>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database.ExecuteGetTermsQuery(index, query, facets, start, pageSize);
+        }
+
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
@@ -736,7 +921,7 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, PatchRequest[] patches, Guid? etag)
+		public void Patch(string key, PatchRequest[] patches, Etag etag)
 		{
 			Batch(new[]
 			      {
@@ -755,7 +940,7 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, ScriptedPatchRequest patch, Guid? etag)
+		public void Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
 			Batch(new[]
 			      {
@@ -818,7 +1003,11 @@ namespace Raven.Client.Embedded
 		public JsonDocumentMetadata Head(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetDocumentMetadata(key, TransactionInformation);
+			var metadata = database.GetDocumentMetadata(key, TransactionInformation);
+
+			AssertNonConflictedDocumentForHead(metadata);
+
+			return metadata;
 		}
 
 		/// <summary>
@@ -845,6 +1034,162 @@ namespace Raven.Client.Embedded
 		public ProfilingInformation ProfilingInformation
 		{
 			get { return profilingInformation; }
+		}
+
+		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+		{
+			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
+			if (!requiresRetry)
+				return currentResult;
+
+			if (resolvingConflictRetries)
+				throw new InvalidOperationException(
+					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+			resolvingConflictRetries = true;
+			try
+			{
+				return nextTry();
+			}
+			finally
+			{
+				resolvingConflictRetries = false;
+			}
+		}
+
+		private void AssertNonConflictedAttachement(Attachment attachment, bool headRequest)
+		{
+			if (attachment == null)
+				return;
+
+			if (attachment.Metadata == null)
+				return;
+
+			if (attachment.Metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				if (headRequest)
+				{
+					throw new ConflictException("Conflict detected on " + attachment.Key +
+												", conflict must be resolved before the attachment will be accessible", true)
+					{
+						Etag = attachment.Etag
+					};
+				}
+
+				var conflictsDoc = RavenJObject.Load(new BsonReader(attachment.Data()));
+				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+				throw new ConflictException("Conflict detected on " + attachment.Key +
+											", conflict must be resolved before the attachement will be accessible", true)
+				{
+					Etag = attachment.Etag,
+					ConflictedVersionIds = conflictIds
+				};
+			}
+		}
+
+		private void AssertNonConflictedDocumentForHead(JsonDocumentMetadata metadata)
+		{
+			if (metadata == null)
+				return;
+
+			if (metadata.Metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				throw new ConflictException("Conflict detected on " + metadata.Key +
+												", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+				{
+					Etag = metadata.Etag
+				};
+			}
+		}
+
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(JsonDocument jsonDocument)
+		{
+			if (jsonDocument == null)
+				return false;
+
+			if (jsonDocument.DataAsJson == null)
+				return false;
+
+			if (jsonDocument.Metadata == null)
+				return false;
+
+			if (jsonDocument.Metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				var conflictException = TryResolveConflictOrCreateConflictException(jsonDocument.Key, jsonDocument.DataAsJson,
+				                                                                    jsonDocument.Etag);
+				if (conflictException == null)
+					return true;
+				throw conflictException;
+			}
+			return false;
+		}
+
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
+		{
+			if (docResult == null)
+				return false;
+			var metadata = docResult[Constants.Metadata];
+			if (metadata == null)
+				return false;
+
+			if (metadata.Value<int>("@Http-Status-Code") == 409)
+			{
+				var concurrencyException = TryResolveConflictOrCreateConflictException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
+				if (concurrencyException == null)
+					return true;
+				throw concurrencyException;
+			}
+			return false;
+		}
+
+		private ConflictException TryResolveConflictOrCreateConflictException(string key, RavenJObject conflictsDoc, Etag etag)
+		{
+			var ravenJArray = conflictsDoc.Value<RavenJArray>("Conflicts");
+			if (ravenJArray == null)
+				throw new InvalidOperationException("Could not get conflict ids from conflicted document, are you trying to resolve a conflict when using metadata-only?");
+
+			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
+
+			if (TryResolveConflictByUsingRegisteredListeners(key, etag, conflictIds))
+				return null;
+
+			return new ConflictException("Conflict detected on " + key +
+										", conflict must be resolved before the document will be accessible", true)
+			{
+				ConflictedVersionIds = conflictIds,
+				Etag = etag
+			};
+		}
+
+		internal bool TryResolveConflictByUsingRegisteredListeners(string key, Etag etag, string[] conflictIds)
+		{
+			if (conflictListeners.Length > 0 && resolvingConflict == false)
+			{
+				resolvingConflict = true;
+				try
+				{
+					var multiLoadResult = Get(conflictIds, null);
+
+					var results = multiLoadResult.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
+
+					foreach (var conflictListener in conflictListeners)
+					{
+						JsonDocument resolvedDocument;
+						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
+						{
+							Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
+
+							return true;
+						}
+					}
+				}
+				finally
+				{
+					resolvingConflict = false;
+				}
+			}
+
+			return false;
 		}
 	}
 }

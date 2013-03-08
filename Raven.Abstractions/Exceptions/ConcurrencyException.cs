@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Exceptions
 {
@@ -58,11 +59,11 @@ namespace Raven.Abstractions.Exceptions
 		/// Gets or sets the expected E tag.
 		/// </summary>
 		/// <value>The expected E tag.</value>
-		public Guid ExpectedETag { get; set; }
+		public Etag ExpectedETag { get; set; }
 		/// <summary>
 		/// Gets or sets the actual E tag.
 		/// </summary>
 		/// <value>The actual E tag.</value>
-		public Guid ActualETag { get; set; }
+		public Etag ActualETag { get; set; }
 	}
 }

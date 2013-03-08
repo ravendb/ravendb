@@ -70,6 +70,15 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
     /// </summary>
     /// <param name="value">The value.</param>
+    public JValue(char value)
+      : this(value, JTokenType.String)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+    /// </summary>
+    /// <param name="value">The value.</param>
     [CLSCompliant(false)]
     public JValue(ulong value)
       : this(value, JTokenType.Integer)
@@ -81,6 +90,15 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// </summary>
     /// <param name="value">The value.</param>
     public JValue(double value)
+      : this(value, JTokenType.Float)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JValue"/> class with the given value.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    public JValue(float value)
       : this(value, JTokenType.Float)
     {
     }
@@ -117,7 +135,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// </summary>
     /// <param name="value">The value.</param>
     public JValue(Guid value)
-      : this(value, JTokenType.String)
+      : this(value, JTokenType.Guid)
     {
     }
 
@@ -126,7 +144,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// </summary>
     /// <param name="value">The value.</param>
     public JValue(Uri value)
-      : this(value, JTokenType.String)
+      : this(value, (value != null) ? JTokenType.Uri : JTokenType.Null)
     {
     }
 
@@ -135,7 +153,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// </summary>
     /// <param name="value">The value.</param>
     public JValue(TimeSpan value)
-      : this(value, JTokenType.String)
+      : this(value, JTokenType.TimeSpan)
     {
     }
 
@@ -207,19 +225,28 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
           if (objA is DateTime)
           {
 #endif
-            DateTime date1 = Convert.ToDateTime(objA, CultureInfo.InvariantCulture);
-            DateTime date2 = Convert.ToDateTime(objB, CultureInfo.InvariantCulture);
+            DateTime date1 = (DateTime)objA;
+            DateTime date2;
+
+#if !NET20
+            if (objB is DateTimeOffset)
+              date2 = ((DateTimeOffset)objB).DateTime;
+            else
+#endif
+              date2 = Convert.ToDateTime(objB, CultureInfo.InvariantCulture);
 
             return date1.CompareTo(date2);
 #if !NET20
           }
           else
           {
-            if (!(objB is DateTimeOffset))
-              throw new ArgumentException("Object must be of type DateTimeOffset.");
-
             DateTimeOffset date1 = (DateTimeOffset) objA;
-            DateTimeOffset date2 = (DateTimeOffset) objB;
+            DateTimeOffset date2;
+
+            if (objB is DateTimeOffset)
+              date2 = (DateTimeOffset)objB;
+            else
+              date2 = new DateTimeOffset(Convert.ToDateTime(objB, CultureInfo.InvariantCulture));
 
             return date1.CompareTo(date2);
           }
@@ -502,10 +529,20 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
     public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
     {
+      if (converters != null && converters.Length > 0 && _value != null)
+      {
+        JsonConverter matchingConverter = JsonSerializer.GetMatchingConverter(converters, _value.GetType());
+        if (matchingConverter != null)
+        {
+          matchingConverter.WriteJson(writer, _value, new JsonSerializer());
+          return;
+        }
+      }
+
       switch (_valueType)
       {
         case JTokenType.Comment:
-          writer.WriteComment(_value.ToString());
+          writer.WriteComment((_value != null) ? _value.ToString() : null);
           return;
         case JTokenType.Raw:
           writer.WriteRawValue((_value != null) ? _value.ToString() : null);
@@ -516,27 +553,18 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         case JTokenType.Undefined:
           writer.WriteUndefined();
           return;
-      }
-
-      JsonConverter matchingConverter;
-      if (_value != null && ((matchingConverter = JsonSerializer.GetMatchingConverter(converters, _value.GetType())) != null))
-      {
-        matchingConverter.WriteJson(writer, _value, new JsonSerializer());
-        return;
-      }
-
-      switch (_valueType)
-      {
         case JTokenType.Integer:
           writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
           return;
         case JTokenType.Float:
-		  if (_value is decimal)
-		  {
-			  writer.WriteValue((decimal)_value);
-			  return;
-		  }
-          writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
+          if (_value is decimal)
+            writer.WriteValue((decimal)_value);
+          else if (_value is double)
+            writer.WriteValue((double)_value);
+          else if (_value is float)
+            writer.WriteValue((float)_value);
+          else
+            writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
           return;
         case JTokenType.String:
           writer.WriteValue((_value != null) ? _value.ToString() : null);

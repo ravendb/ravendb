@@ -35,27 +35,30 @@
 
 					using (var session = docStore.OpenSession())
 					{
+						var oldIndexes = session
+							.Advanced
+							.DocumentStore
+							.DatabaseCommands
+							.GetIndexNames(0, 100);
 						session.Query<Person>()
 							.Customize(x => x.WaitForNonStaleResults())
 							.Where(x => x.FirstName == "John" || x.FirstName == "Paul")
 							.ToList();
 
-						var indexes = session
+						var newIdnexes = session
 							.Advanced
 							.DocumentStore
 							.DatabaseCommands
 							.GetIndexNames(0, 100);
 
-						var newIndexes = indexes
-							.Where(x => x.StartsWith("Temp"));
 
-						Assert.Equal(1, newIndexes.Count());
+						var newIndex = newIdnexes.Except(oldIndexes).Single();
 
 						var queryResult = session
 							.Advanced
 							.DocumentStore
 							.DatabaseCommands
-							.Query(newIndexes.First(), new IndexQuery(), null, false, true);
+							.Query(newIndex, new IndexQuery(), null, false, true);
 
 						foreach (var result in queryResult.Results)
 						{

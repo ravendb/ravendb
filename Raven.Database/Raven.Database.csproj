@@ -107,7 +107,7 @@
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
     </Reference>
@@ -131,6 +131,7 @@
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
+    <Reference Include="System.Net" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
@@ -224,10 +225,15 @@
     <Compile Include="Extensions\AdminFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\CurrentIndexingScope.cs" />
+    <Compile Include="Indexing\CurrentTransformationScope.cs" />
+    <Compile Include="Indexing\IndexCommitPoint.cs" />
+    <Compile Include="Indexing\IndexCommitPointDirectory.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
+    <Compile Include="Indexing\IndexedItemsInfo.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
+    <Compile Include="Indexing\IndexSegmentsInfo.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseKeywordTokenizer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceTokenizer.cs" />
@@ -236,9 +242,12 @@
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
+    <Compile Include="Linq\AbstractTransformer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
+    <Compile Include="Linq\DynamicCompilerBase.cs" />
+    <Compile Include="Linq\DynamicTransofrmerCompiler.cs" />
     <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
     <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />
     <Compile Include="Linq\Mono.Reflection\Disassembler.cs" />
@@ -270,7 +279,9 @@
     <Compile Include="Server\Responders\Debugging\DebugConfig.cs" />
     <Compile Include="Server\Responders\Debugging\DebugDocReferences.cs" />
     <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
+    <Compile Include="Server\Responders\DocsStreams.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
+    <Compile Include="Server\Responders\IndexPriorityResponder.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -393,11 +404,12 @@
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
+    <Compile Include="Server\Responders\QueryStreams.cs" />
+    <Compile Include="Server\Responders\Transformers.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
-    <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
@@ -596,7 +608,6 @@
     <Compile Include="Plugins\AbstractBackgroundTask.cs" />
     <Compile Include="Plugins\AbstractDocumentCodec.cs" />
     <Compile Include="Plugins\AbstractDynamicCompilationExtension.cs" />
-    <Compile Include="Plugins\Builtins\CleanupOldDynamicIndexes.cs" />
     <Compile Include="Plugins\Builtins\CreateFolderIcon.cs" />
     <Compile Include="Plugins\Builtins\DeleteRemovedIndexes.cs" />
     <Compile Include="Plugins\Builtins\FilterRavenInternalDocumentsReadTrigger.cs" />
@@ -604,7 +615,6 @@
     <Compile Include="Plugins\AbstractReadTrigger.cs" />
     <Compile Include="Plugins\Builtins\SpatialDynamicCompilationExtension.cs" />
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
-    <Compile Include="Plugins\Builtins\DeleteTemporaryIndexes.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
@@ -685,10 +695,11 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From40To41.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From43To44.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
-    <Compile Include="Storage\Esent\StorageActions\EsentUtil.cs" />
+    <Compile Include="Storage\Esent\Debug\EsentUtil.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
@@ -761,6 +772,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
     <Compile Include="Util\PortUtil.cs" />

@@ -31,7 +31,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
 
-		PeriodicBackupSetup backupConfigs;
+		private volatile PeriodicBackupSetup backupConfigs;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -55,11 +55,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 		private void ReadSetupValuesFromDocument()
 		{
-			using (LogManager.OpenMappedContext("database", Database.Name ?? Constants.SystemDatabase))
-			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+			using (LogContext.WithDatabase(Database.Name))
 			{
-				LogContext.DatabaseName.Value = Database.Name;
-
 				try
 				{
 					// Not having a setup doc means this DB isn't enabled for periodic backups
@@ -111,11 +108,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					return;
 				currentTask = Task.Factory.StartNew(async () =>
 				{
-					using (LogManager.OpenMappedContext("database", Database.Name ?? Constants.SystemDatabase))
-					using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+					using (LogContext.WithDatabase(Database.Name))
 					{
-						LogContext.DatabaseName.Value = Database.Name;
-
 						try
 						{
 							var localBackupConfigs = backupConfigs;
@@ -134,8 +128,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var filePath = await dd.ExportData(null, true);
 
 							// No-op if nothing has changed
-							if (options.LastDocsEtag == localBackupConfigs.LastDocsEtag &&
-								options.LastAttachmentEtag == localBackupConfigs.LastAttachmentsEtag)
+							if (options.LastDocsEtag == backupConfigs.LastDocsEtag &&
+								options.LastAttachmentEtag == backupConfigs.LastAttachmentsEtag)
 							{
 								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
@@ -153,13 +147,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							ravenJObject.Remove("Id");
 							var putResult = Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, ravenJObject,
 														 new RavenJObject(), null);
-
-							localBackupConfigs = backupConfigs;
-							if (localBackupConfigs != null)
-							{
-								if (Etag.Increment(localBackupConfigs.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
-									localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
-							}
+							if (localBackupConfigs.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
+								localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
 						}
 						catch (ObjectDisposedException)
 						{

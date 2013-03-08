@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Raven.Abstractions.Data;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
@@ -31,7 +32,7 @@ namespace Raven.Studio.Models
 		public override Task TimerTickedAsync()
 		{
 			return DatabaseCommands
-				.GetIndexNamesAsync(0, 256)
+				.GetStatisticsAsync()
 				.ContinueOnSuccessInTheUIThread(UpdateGroupedIndexList);
 		}
 
@@ -40,14 +41,15 @@ namespace Raven.Studio.Models
 		public ICommand PromoteIndex { get { return promoteIndex ?? (promoteIndex = new PromoteToAutoIndexCommand(this)); } }
 		public ICommand DeleteIndex { get { return deleteIndex ?? (deleteIndex = new DeleteIndexCommand(this)); } }
 		public ICommand ResetIndex { get { return resetIndex ?? (resetIndex = new ResetIndexCommand(this)); } }
-		public ICommand DeleteAllIndexes { get { return new DeleteAllIndexesCommand(this); } }
+		public ICommand DeleteIndexes { get { return new DeleteIndexesCommand(this); } }
 
-		private void UpdateGroupedIndexList(IList<string> indexes)
+		private void UpdateGroupedIndexList(DatabaseStatistics statistics)
 		{
+			var indexes = statistics.Indexes;
 			var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
 
 			var indexGroups = from index in indexes
-							  let groupDetails = GetIndexGroup(index)
+							  let groupDetails = GetIndexGroup(index.Name)
 							  let indexGroup = groupDetails.Item1
 							  let indexOrder = groupDetails.Item2
 							  orderby indexOrder
@@ -55,7 +57,7 @@ namespace Raven.Studio.Models
 
 			var indexesAndGroupHeaders =
 				indexGroups.SelectMany(group => new IndexListItem[] {new IndexGroupHeader {Name = group.Key}}
-													.Concat(group.Select(index => new IndexItem {Name = index})));
+													.Concat(group.Select(index => new IndexItem {Name = index.Name, IndexStats = index})));
 
 			GroupedIndexes.Clear();
 			GroupedIndexes.AddRange(indexesAndGroupHeaders.ToList());
@@ -67,11 +69,25 @@ namespace Raven.Studio.Models
 
 		private Tuple<string, int> GetIndexGroup(string indexName)
 		{
-			if (indexName.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase))
-				return Tuple.Create("Temp Indexes", 1);
-			if (indexName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase))
+			if (indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
 				return Tuple.Create("Auto Indexes", 2);
 			return Tuple.Create("Indexes", 3);
+		}
+
+		public List<IndexListItem> IndexesOfPriority(string deleteItems)
+		{
+			if (deleteItems == "All")
+				return GroupedIndexes.ToList();
+			if (deleteItems == "Idle")
+				return
+					GroupedIndexes.Where(
+						item => item is IndexItem && ((IndexItem) item).IndexStats.Priority.HasFlag(IndexingPriority.Idle)).ToList();
+			if (deleteItems == "Disabled")
+				return GroupedIndexes.Where(item => item is IndexItem && ((IndexItem)item).IndexStats.Priority.HasFlag(IndexingPriority.Disabled)).ToList();
+			if (deleteItems == "Abandoned")
+				return GroupedIndexes.Where(item => item is IndexItem && ((IndexItem)item).IndexStats.Priority.HasFlag(IndexingPriority.Abandoned)).ToList();
+
+			return null;
 		}
 	}
 }

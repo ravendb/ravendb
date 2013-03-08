@@ -29,6 +29,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
+using Raven.Client.Util;
 #endif
 
 
@@ -46,10 +47,11 @@ namespace Raven.Client.Document
 		protected static Guid? currentSessionId;
 		private const int DefaultNumberOfCachedRequests = 2048;
 		private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
+		private bool aggressiveCachingUsed;
 
 
 #if SILVERLIGHT
-		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 		private readonly object replicationInformersLocker = new object();
 #else
 		/// <summary>
@@ -57,19 +59,21 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 
-		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 #endif
 
-		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
-		private HttpJsonRequestFactory jsonRequestFactory = 
+		private HttpJsonRequestFactory jsonRequestFactory =
 #if !SILVERLIGHT
-			  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+ new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
 #endif
 
-
+#if !SILVERLIGHT
+		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
+#endif
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
 		///</summary>
@@ -180,7 +184,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public string ApiKey { get; set; }
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		private string connectionStringName;
 
 		/// <summary>
@@ -252,6 +256,12 @@ namespace Raven.Client.Document
 			GC.SuppressFinalize(this);
 #endif
 
+#if !SILVERLIGHT
+			foreach (var observeChangesAndEvictItemsFromCacheForDatabase in observeChangesAndEvictItemsFromCacheForDatabases)
+			{
+				observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
+			}
+#endif
 
 			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
@@ -529,7 +539,7 @@ namespace Raven.Client.Document
 				}
 				oauthSource = Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(Url,oauthSource);
+				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource);
 			};
 
 		}
@@ -695,7 +705,8 @@ namespace Raven.Client.Document
 				jsonRequestFactory,
 				Conventions,
 				GetReplicationInformerForDatabase(database),
-				() => databaseChanges.Remove(database));
+				() => databaseChanges.Remove(database),
+				((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
 		}
 
 		/// <summary>
@@ -717,7 +728,12 @@ namespace Raven.Client.Document
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
+			aggressiveCachingUsed = true;
+
+			return new DisposableAction(() =>
+			{
+				jsonRequestFactory.AggressiveCacheDuration = old;
+			});
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
@@ -800,6 +816,29 @@ namespace Raven.Client.Document
 		{
 			return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions());
 		}
+
+		protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+		{
+			if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
+			{
+				var databaseName = session.DatabaseName;
+				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
+																		  _ => new EvictItemsFromCacheBasedOnChanges(
+																			  databaseName ?? Constants.SystemDatabase,
+																			  CreateDatabaseChanges(databaseName),
+																			  jsonRequestFactory.ExpireItemsFromCache));
+			}
+
+			base.AfterSessionCreated(session);
+		}
+
+
+		public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
+		{
+			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);
+			return changes == null ? new CompletedTask() : changes.ConnectionTask;
+		}
 #endif
+
 	}
 }

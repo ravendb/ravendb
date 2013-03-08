@@ -84,8 +84,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="Kent.Boogaart.HelperTrinity">
-      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.4.0.0\lib\sl40\Kent.Boogaart.HelperTrinity.dll</HintPath>
+    <Reference Include="Kent.Boogaart.HelperTrinity, Version=1.5.0.0, Culture=neutral, PublicKeyToken=cc96fa93a217f7a1, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.5.0.0\lib\sl50\Kent.Boogaart.HelperTrinity.dll</HintPath>
     </Reference>
     <Reference Include="Kent.Boogaart.KBCsv">
       <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
@@ -102,11 +103,21 @@
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.ComponentModel.DataAnnotations, Version=5.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217, processorArchitecture=MSIL" />
-    <Reference Include="System.Reactive, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL4\System.Reactive.dll</HintPath>
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.0.21114\lib\SL5\System.Reactive.Core.dll</HintPath>
     </Reference>
-    <Reference Include="System.Reactive.Windows.Threading, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Silverlight.1.0.11226\lib\SL4\System.Reactive.Windows.Threading.dll</HintPath>
+    <Reference Include="System.Reactive.Interfaces">
+      <HintPath>..\packages\Rx-Interfaces.2.0.21114\lib\SL5\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq">
+      <HintPath>..\packages\Rx-Linq.2.0.21114\lib\SL5\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.PlatformServices">
+      <HintPath>..\packages\Rx-PlatformServices.2.0.21114\lib\SL5\System.Reactive.PlatformServices.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Windows.Threading, Version=2.0.20823.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Xaml.2.0.21114\lib\SL5\System.Reactive.Windows.Threading.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows" />
@@ -127,6 +138,9 @@
     </Reference>
     <Reference Include="System.Windows.Controls.Data.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Data.Toolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Controls.DataVisualization.Toolkit">
+      <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.DataVisualization.Toolkit.dll</HintPath>
     </Reference>
     <Reference Include="System.Windows.Controls.Input, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -194,8 +208,8 @@
     <Compile Include="..\Raven.Abstractions\Util\ComparableByteArray.cs">
       <Link>Imports\Util\ComparableByteArray.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\Etag.cs">
-      <Link>Imports\Util\Etag.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Util\EtagUtil.cs">
+      <Link>Imports\Util\EtagUtil.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Bundles\Replication\Data\SourceReplicationInformation.cs">
       <Link>Features\Bundles\SourceReplicationInformation.cs</Link>
@@ -213,14 +227,17 @@
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
+    <Compile Include="Behaviors\ClosePopupAction.cs" />
     <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\FocusElementAction.cs" />
+    <Compile Include="Behaviors\HandledMouseLeftButtonUpTrigger.cs" />
     <Compile Include="Behaviors\HighlightSyntaxErrorAction.cs" />
     <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
@@ -235,7 +252,7 @@
     <Compile Include="Commands\CsvImportCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
-    <Compile Include="Commands\DeleteAllIndexesCommand.cs" />
+    <Compile Include="Commands\DeleteIndexesCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\ExportDocumentDetailsCommand.cs" />
     <Compile Include="Commands\RestoreCommand.cs" />
@@ -251,10 +268,28 @@
     <Compile Include="Controls\DateTimePicker.xaml.cs">
       <DependentUpon>DateTimePicker.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\GoToDatabaseControl.xaml.cs">
+      <DependentUpon>GoToDatabaseControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\NavTriangle.xaml.cs">
+      <DependentUpon>NavTriangle.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\ResetReplication.xaml.cs">
+      <DependentUpon>ResetReplication.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Bundles\SqlReplicationConfigModel.cs" />
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
+    <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\ConflictsView.xaml.cs">
+      <DependentUpon>ConflictsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ConflictDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\ConflictVersionsView.xaml.cs">
+      <DependentUpon>ConflictVersionsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
@@ -266,8 +301,20 @@
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Smuggler\SmugglerApi.cs" />
+    <Compile Include="Features\Stats\UserInfoView.xaml.cs">
+      <DependentUpon>UserInfoView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\StartRestoreTask.cs" />
+    <Compile Include="Features\Transformers\EditTransformerView.xaml.cs">
+      <DependentUpon>EditTransformerView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
+      <DependentUpon>TransformersListView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Models\TransformerDefinitionModel.cs" />
+    <Compile Include="Models\TransformersModel.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
+    <Compile Include="Impl\SplitButton\SplitHyperlinkButtonPopup.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
     <Compile Include="Infrastructure\Converters\FromEnumWithDescription.cs" />
@@ -275,13 +322,17 @@
     <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
+    <Compile Include="Infrastructure\Converters\PriorityToFontColorConverter.cs" />
+    <Compile Include="Infrastructure\Converters\PriorityToFontStyleConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibilityByParamInEqualityConverter.cs" />
+    <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\TaskUITemplateSelector.cs" />
     <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
+    <Compile Include="Models\UserInfoModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BundlesSelect.xaml.cs">
       <DependentUpon>BundlesSelect.xaml</DependentUpon>
@@ -549,11 +600,32 @@
     <Compile Include="Views\Alerts.xaml.cs">
       <DependentUpon>Alerts.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Backup.xaml.cs">
+      <DependentUpon>Backup.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Conflicts.xaml.cs">
+      <DependentUpon>Conflicts.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\CsvImport.xaml.cs">
+      <DependentUpon>CsvImport.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Export.xaml.cs">
+      <DependentUpon>Export.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Import.xaml.cs">
+      <DependentUpon>Import.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Patch.xaml.cs">
       <DependentUpon>Patch.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ReplicationStatistics.xaml.cs">
       <DependentUpon>ReplicationStatistics.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Restore.xaml.cs">
+      <DependentUpon>Restore.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\SampleData.xaml.cs">
+      <DependentUpon>SampleData.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
@@ -563,6 +635,18 @@
     </Compile>
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ToggleIndexing.xaml.cs">
+      <DependentUpon>ToggleIndexing.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Transformer.xaml.cs">
+      <DependentUpon>Transformer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Transformers.xaml.cs">
+      <DependentUpon>Transformers.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\User-Info.xaml.cs">
+      <DependentUpon>User-Info.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
@@ -660,9 +744,6 @@
     </Compile>
     <Compile Include="Features\Tasks\ExportTask.cs" />
     <Compile Include="Features\Tasks\ImportTask.cs" />
-    <Compile Include="Features\Tasks\TasksView.xaml.cs">
-      <DependentUpon>TasksView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Logs\LogsView.xaml.cs">
       <DependentUpon>LogsView.xaml</DependentUpon>
     </Compile>
@@ -777,9 +858,6 @@
     <Compile Include="Views\Documents.xaml.cs">
       <DependentUpon>Documents.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\Tasks.xaml.cs">
-      <DependentUpon>Tasks.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Edit.xaml.cs">
       <DependentUpon>Edit.xaml</DependentUpon>
     </Compile>
@@ -829,6 +907,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Assets\SplitHyperlinkButtonPopupStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Assets\TextBoxStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -873,7 +955,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\GoToDatabaseControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\GoToDocumentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\NavTriangle.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -893,6 +983,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\ResetReplication.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\ShowEncryptionMessage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -902,6 +996,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Alerts\AlertsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\ConflictsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\ConflictVersionsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -985,11 +1087,23 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Stats\UserInfoView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Tasks\TaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Terms\TermsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Transformers\EditTransformerView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Transformers\TransformersListView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1005,11 +1119,39 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Views\Backup.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Conflicts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\CsvImport.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Export.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Import.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\Patch.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ReplicationStatistics.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Restore.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\SampleData.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1022,6 +1164,22 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Terms.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ToggleIndexing.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Transformer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Transformers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\User-Info.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1081,10 +1239,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Tasks\TasksView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Util\MessageBoxWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -1106,10 +1260,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Documents.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\Tasks.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -1204,7 +1354,9 @@
     <EmbeddedResource Include="Controls\Editors\Definitions\Xaml.langdef" />
     <EmbeddedResource Include="Controls\Editors\Definitions\RavenQuery.langdef" />
     <EmbeddedResource Include="Features\Logs\DefaultLogging.config" />
-    <Resource Include="app.config" />
+    <Resource Include="app.config">
+      <SubType>Designer</SubType>
+    </Resource>
     <None Include="packages.config" />
     <None Include="Properties\AppManifest.xml" />
     <EmbeddedResource Include="Settings.dat" />
@@ -1279,6 +1431,12 @@
     <Resource Include="Assets\Images\restore_tiny.png" />
     <Resource Include="Assets\Images\export_details_tiny.png" />
     <Resource Include="Assets\Images\import_csv_tiny.png" />
+    <Resource Include="Assets\Images\transformers_edit_tiny.png" />
+    <Resource Include="Assets\Images\transformer_add_tiny.png" />
+    <Resource Include="Assets\Images\transformer_delete_tiny.png" />
+    <Resource Include="Assets\Images\transformer_tiny.png" />
+    <Resource Include="Assets\Images\transformer_small.png" />
+    <Resource Include="Assets\Images\index_down.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

@@ -15,7 +15,12 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+#if !NETFX_CORE
+using Raven.Abstractions.MissingFromBCL;
+#endif
 
 namespace Raven.Client.Indexes
 {
@@ -667,7 +672,7 @@ namespace Raven.Client.Indexes
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
 					var expression = ((UnaryExpression)left).Operand;
-					if (expression.Type.IsEnum == false)
+					if (expression.Type.IsEnum() == false)
 						return;
 					var constantExpression = right as ConstantExpression;
 					if (constantExpression == null)
@@ -983,14 +988,14 @@ namespace Raven.Client.Indexes
 
 		private bool TypeExistsOnServer(Type type)
 		{
-			if (type.Assembly == typeof(object).Assembly)
+			if (type.Assembly() == typeof(object).Assembly())
 				return true;
 
-			if (type.Assembly == typeof(RavenJObject).Assembly)
+			if (type.Assembly() == typeof(RavenJObject).Assembly())
 				return true;
 
-			if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
-				type.Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181")) 
+			if (type.Assembly().FullName.StartsWith("Lucene.Net") &&
+				type.Assembly().FullName.Contains("PublicKeyToken=85089178b9ac3181")) 
 				return true;
 
 			return false;
@@ -1026,6 +1031,7 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+#if !NETFX_CORE
 		/// <summary>
 		///   Visits the children of the <see cref = "T:System.Linq.Expressions.DynamicExpression" />.
 		/// </summary>
@@ -1039,6 +1045,7 @@ namespace Raven.Client.Indexes
 			VisitExpressions('(', node.Arguments, ')');
 			return node;
 		}
+#endif
 
 		/// <summary>
 		///   Visits the element init.
@@ -1084,7 +1091,7 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitExtension(Expression node)
 		{
 			const BindingFlags bindingAttr = BindingFlags.ExactBinding | BindingFlags.Public | BindingFlags.Instance;
-			if (node.GetType().GetMethod("ToString", bindingAttr, null, Type.EmptyTypes, null).DeclaringType !=
+			if (node.GetType().GetMethod("ToString", bindingAttr, null, ReflectionUtils.EmptyTypes, null).DeclaringType !=
 				typeof(Expression))
 			{
 				Out(node.ToString());
@@ -1105,7 +1112,11 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitGoto(GotoExpression node)
 		{
+#if NETFX_CORE
+			Out(node.Kind.ToString().ToLower());
+#else
 			Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
+#endif
 			DumpLabel(node.Target);
 			if (node.Value != null)
 			{
@@ -1422,7 +1433,7 @@ namespace Raven.Client.Indexes
 					Out("Database");
 				}
 #if !SILVERLIGHT
-				else if (typeof(AbstractIndexCreationTask).IsAssignableFrom(expression.Type))
+				else if (typeof(AbstractCommonApiForIndexesAndTransformers).IsAssignableFrom(expression.Type))
 				{
 					// this is a method that
 					// exists on both the server side and the client side
@@ -1537,7 +1548,12 @@ namespace Raven.Client.Indexes
 		}
 		private static bool IsExtensionMethod(MethodCallExpression node)
 		{
-			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
+#if NETFX_CORE
+			var attribute = node.Method.GetType().GetTypeInfo().GetCustomAttribute(typeof (ExtensionAttribute));
+#else
+			var attribute = Attribute.GetCustomAttribute(node.Method, typeof (ExtensionAttribute));
+#endif
+			if (attribute == null)
 				return false;
 
 			if (node.Method.DeclaringType.Name == "Enumerable")
@@ -1613,7 +1629,7 @@ namespace Raven.Client.Indexes
 
 		private void VisitType(Type type)
 		{
-			if (type.IsGenericType == false || CheckIfAnonymousType(type))
+			if (type.IsGenericType() == false || CheckIfAnonymousType(type))
 			{
 				if(type.IsArray)
 				{
@@ -1689,10 +1705,10 @@ namespace Raven.Client.Indexes
 		private static bool CheckIfAnonymousType(Type type)
 		{
 			// hack: the only way to detect anonymous types right now
-			return Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute), false)
-				&& type.IsGenericType && type.Name.Contains("AnonymousType")
+			return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
+				&& type.IsGenericType() && type.Name.Contains("AnonymousType")
 				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
-				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+				&& type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
 		}
 
 		public static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
@@ -2023,10 +2039,10 @@ namespace Raven.Client.Indexes
 
 		private static bool ShouldConvert(Type nonNullableType)
 		{
-			if(nonNullableType.IsEnum)
+			if(nonNullableType.IsEnum())
 				return true;
 
-			return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
+			return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType() == false);
 		}
 	}
 }

@@ -33,9 +33,19 @@ namespace Raven.Database.Storage
 		private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
 
 		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
-			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.OrdinalIgnoreCase);
+
+		private readonly ConcurrentDictionary<string, AbstractTransformer> transformCache =
+			new ConcurrentDictionary<string, AbstractTransformer>(StringComparer.InvariantCultureIgnoreCase);
+
+		private readonly ConcurrentDictionary<string, TransformerDefinition> trasformDefinitions =
+			new ConcurrentDictionary<string, TransformerDefinition>(StringComparer.InvariantCultureIgnoreCase);
+
+
 		private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
-			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentDictionary<string, IndexDefinition>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentDictionary<string, IndexDefinition> newDefinitionsThisSession = new ConcurrentDictionary<string, IndexDefinition>();
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly string path;
@@ -57,11 +67,18 @@ namespace Raven.Database.Storage
 				Directory.CreateDirectory(this.path);
 
 			if (configuration.RunInMemory == false)
-				ReadIndexesFromDisk();
+				ReadFromDisk();
 
 			//compiled view generators always overwrite dynamic views
 			ReadIndexesFromCatalog(compiledGenerators, transactionalStorage);
+			
+			newDefinitionsThisSession.Clear();
 		}
+
+        public bool IsNewThisSession(IndexDefinition definition)
+        {
+            return this.newDefinitionsThisSession.ContainsKey(definition.Name);
+        }
 
 		private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)
 		{
@@ -98,7 +115,7 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		private void ReadIndexesFromDisk()
+		private void ReadFromDisk()
 		{
 			foreach (var index in Directory.GetFiles(path, "*.index"))
 			{
@@ -110,6 +127,22 @@ namespace Raven.Database.Storage
 					ResolveAnalyzers(indexDefinition);
 					AddAndCompileIndex(indexDefinition);
 					AddIndex(indexDefinition.Name, indexDefinition);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
+				}
+			}
+
+			foreach (var index in Directory.GetFiles(path, "*.transfom"))
+			{
+				try
+				{
+					var indexDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(index), Default.Converters);
+					if (indexDefinition.Name == null)
+						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
+					AddAndCompileTransform(indexDefinition);
+					AddTransform(indexDefinition.Name, indexDefinition);
 				}
 				catch (Exception e)
 				{
@@ -133,6 +166,11 @@ namespace Raven.Database.Storage
 			get { return path; }
 		}
 
+		public string[] TransformerNames
+		{
+			get { return trasformDefinitions.Keys.OrderBy(name => name).ToArray(); }
+		}
+
 		public string CreateAndPersistIndex(IndexDefinition indexDefinition)
 		{
 			var transformer = AddAndCompileIndex(indexDefinition);
@@ -146,6 +184,20 @@ namespace Raven.Database.Storage
 			return transformer.Name;
 		}
 
+		public string CreateAndPersistTransform(TransformerDefinition transformerDefinition)
+		{
+			var transformer = AddAndCompileTransform(transformerDefinition);
+			if (configuration.RunInMemory == false)
+			{
+				var encodeIndexNameIfNeeded = FixupIndexName(transformerDefinition.Name, path);
+				var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".transform");
+				// Hash the name if it's too long (as a path)
+				File.WriteAllText(indexName, JsonConvert.SerializeObject(transformerDefinition, Formatting.Indented, Default.Converters));
+			}
+			return transformer.Name;
+		}
+
+
 		private DynamicViewCompiler AddAndCompileIndex(IndexDefinition indexDefinition)
 		{
 			var name = FixupIndexName(indexDefinition.Name, path);
@@ -158,6 +210,18 @@ namespace Raven.Database.Storage
 			return transformer;
 		}
 
+		private DynamicTransofrmerCompiler AddAndCompileTransform(TransformerDefinition transformerDefinition)
+		{
+			var name = FixupIndexName(transformerDefinition.Name, path);
+			var transformer = new DynamicTransofrmerCompiler(transformerDefinition, configuration,extensions, name, path);
+			var generator = transformer.GenerateInstance();
+			transformCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
+
+			logger.Info("New traansformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
+							  transformer.CompiledQueryText);
+			return transformer;
+		}
+
 		public void AddIndex(string name, IndexDefinition definition)
 		{
 			indexDefinitions.AddOrUpdate(name, definition, (s1, def) =>
@@ -166,6 +230,12 @@ namespace Raven.Database.Storage
 					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
 				return definition;
 			});
+		    newDefinitionsThisSession.TryAdd(name, definition);
+		}
+
+		public void AddTransform(string name, TransformerDefinition definition)
+		{
+			trasformDefinitions.AddOrUpdate(name, definition, (s1, def) => definition);
 		}
 
 		public void RemoveIndex(string name)
@@ -174,28 +244,32 @@ namespace Raven.Database.Storage
 			indexCache.TryRemove(name, out ignoredViewGenerator);
 			IndexDefinition ignoredIndexDefinition;
 			indexDefinitions.TryRemove(name, out ignoredIndexDefinition);
+            newDefinitionsThisSession.TryRemove(name, out ignoredIndexDefinition);
 			if (configuration.RunInMemory)
 				return;
-			File.Delete(GetIndexPath(name));
-			File.Delete(GetIndexSourcePath(name));
+			File.Delete(GetIndexSourcePath(name) + ".index");
 		}
 
 		private string GetIndexSourcePath(string name)
 		{
 			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
-			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index.cs");
+			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded));
 		}
 
-		private string GetIndexPath(string name)
-		{
-			var encodeIndexNameIfNeeded = FixupIndexName(name, path);
-			return Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
-		}
 
 		public IndexDefinition GetIndexDefinition(string name)
 		{
 			IndexDefinition value;
 			indexDefinitions.TryGetValue(name, out value);
+			if (value != null && value.Name == null) // backward compact, mostly
+				value.Name = name;
+			return value;
+		}
+
+		public TransformerDefinition GetTransformerDefinition(string name)
+		{
+			TransformerDefinition value;
+			trasformDefinitions.TryGetValue(name, out value);
 			if (value != null && value.Name == null) // backward compact, mostly
 				value.Name = name;
 			return value;
@@ -278,6 +352,25 @@ namespace Raven.Database.Storage
 
 			return new DisposableAction(currentlyIndexingLock.ExitReadLock);
 
+		}
+
+		public void RemoveTransfomer(string name)
+		{
+			AbstractTransformer ignoredViewGenerator;
+			transformCache.TryRemove(name, out ignoredViewGenerator);
+			TransformerDefinition ignoredIndexDefinition;
+			trasformDefinitions.TryRemove(name, out ignoredIndexDefinition);
+			if (configuration.RunInMemory)
+				return;
+			File.Delete(GetIndexSourcePath(name) + ".transform");
+		}
+
+		public AbstractTransformer GetTransfomer(string name)
+		{
+			AbstractTransformer value;
+			if (transformCache.TryGetValue(name, out value) == false)
+				return null;
+			return value;
 		}
 	}
 }

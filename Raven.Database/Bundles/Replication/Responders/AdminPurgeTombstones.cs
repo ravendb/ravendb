@@ -20,27 +20,37 @@ namespace Raven.Bundles.Replication.Responders
 		public override void RespondToAdmin(IHttpContext context)
 		{
 			var docEtagStr = context.Request.QueryString["docEtag"];
-			Guid docEtag;
+			Etag docEtag = null;
 			var attachmentEtagStr = context.Request.QueryString["attachmentEtag"];
-			Guid attachmentEtag;
-			if (Guid.TryParse(docEtagStr, out docEtag) == false & // intentionally so, we want to eval both sides
-				Guid.TryParse(attachmentEtagStr, out attachmentEtag) == false)
+			Etag attachmentEtag = null;
+			try
 			{
-				context.SetStatusToBadRequest();
-				context.WriteJson(new
+				docEtag = Etag.Parse(docEtagStr);
+			}
+			catch
+			{
+				try
 				{
-					Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid guid"
-				});
-				return;
+					attachmentEtag = Etag.Parse(attachmentEtagStr);
+				}
+				catch (Exception)
+				{
+					context.SetStatusToBadRequest();
+					context.WriteJson(new
+					{
+						Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid guid"
+					});
+					return;
+				}
 			}
 
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				if(docEtag != Guid.Empty)
+				if (docEtag != null)
 				{
 					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationDocsTombstones, docEtag);
 				}
-				if(attachmentEtag != Guid.Empty)
+				if (attachmentEtag != null)
 				{
 					accessor.Lists.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones, attachmentEtag);
 				}

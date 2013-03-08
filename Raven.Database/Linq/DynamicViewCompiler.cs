@@ -1,20 +1,17 @@
 //-----------------------------------------------------------------------
-// <copyright file="DynamicViewCompiler.cs" company="Hibernating Rhinos LTD">
+// <copyright file="DynamicViewCompiler"" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using System.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Plugins;
@@ -23,18 +20,14 @@ using Raven.Database.Util;
 namespace Raven.Database.Linq
 {
 	/// <summary>
-	/// 	Takes two query expressions as strings, and compile them.
+	/// 	Takes a set of query expressions as strings, and compile them.
 	/// 	Along the way we apply some minimal transformations, the end result is an instance
 	/// 	of AbstractViewGenerator, representing the map/reduce functions
 	/// </summary>
-	public class DynamicViewCompiler
+	public class DynamicViewCompiler : DynamicCompilerBase
 	{
 		private readonly IndexDefinition indexDefinition;
-		private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
-		private readonly string basePath;
-		private const string mapReduceTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
-
-		private readonly string name;
+	
 		private readonly CaptureSelectNewFieldNamesVisitor captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
@@ -44,55 +37,13 @@ namespace Raven.Database.Linq
 		{ }
 
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
+			:base(configuration, extensions, name, basePath)
 		{
 			this.indexDefinition = indexDefinition;
-			this.extensions = extensions;
-			if (configuration.RunInMemory == false)
-			{
-				this.basePath = Path.Combine(basePath, "TemporaryIndexDefinitionsAsSource");
-				if (Directory.Exists(this.basePath) == false)
-				{
-					Directory.CreateDirectory(this.basePath);
-				}
-				else
-				{
-					MaybeCleanupDirectory(this.basePath);
-				}
-			}
-			this.name = MonoHttpUtility.UrlEncode(name);
 			RequiresSelectNewAnonymousType = true;
 		}
 
-		private static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
-		private static void MaybeCleanupDirectory(string path)
-		{
-			if (paths.TryAdd(path) == false)
-				return;
-
-			foreach (var file in Directory.GetFiles(path, "*.dll"))
-			{
-				try
-				{
-					File.Delete(file);
-				}
-				catch (Exception)
-				{
-					// failure here is expected, this is probably another index that is currently
-					// live that is locking the file, we will get it next restart
-				}
-			}
-		}
-
-		public string CompiledQueryText { get; set; }
-		public Type GeneratedType { get; set; }
-
-		public string Name
-		{
-			get { return name; }
-		}
-
-		public string CSharpSafeName { get; set; }
+		private static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		private void TransformQueryToClass()
 		{
@@ -117,7 +68,7 @@ namespace Raven.Database.Linq
 				new AssignmentExpression(
 					new MemberReferenceExpression(new ThisReferenceExpression(), "ViewText"),
 					AssignmentOperatorType.Assign,
-					new StringLiteralExpression(mapReduceTextToken)));
+					new StringLiteralExpression(uniqueTextToken)));
 			body.Statements.Add(viewText);
 
 			var ctor = new ConstructorDeclaration
@@ -158,7 +109,7 @@ namespace Raven.Database.Linq
 			sb.Length = sb.Length - 2;
 
 			sb.Append("\"");
-			CompiledQueryText = CompiledQueryText.Replace('"' + mapReduceTextToken + '"', sb.ToString());
+			CompiledQueryText = CompiledQueryText.Replace('"' + uniqueTextToken + '"', sb.ToString());
 		}
 
 		private bool firstMap = true;
@@ -462,7 +413,7 @@ Reduce only fields: {2}
 					new List<Expression> { new StringLiteralExpression(Constants.RavenEntityName) }
 					);
 
-				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
+				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
 						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
@@ -509,7 +460,7 @@ Reduce only fields: {2}
 					new List<Expression> { new StringLiteralExpression(Constants.RavenEntityName) }
 					);
 
-				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
+				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
 				var binaryOperatorExpression =
 					new InvocationExpression(
 						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),

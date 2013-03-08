@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Extensions;
@@ -27,7 +28,7 @@ namespace Raven.Client.Document.Async
 	/// </summary>
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
-		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+		private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -56,6 +57,75 @@ namespace Raven.Client.Document.Async
 		{
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize)
 			                            .ContinueWith(task => (IEnumerable<T>) task.Result.Select(TrackEntity<T>).ToList());
+		}
+		
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query)
+		{
+			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query)
+		{
+			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+		}
+
+		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)query);
+			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
+			var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery,  queryHeaderInformation);
+			return new YieldStream<T>(this, enumerator);
+		}
+
+		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)query);
+			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
+			var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation);
+			return new YieldStream<T>(this, enumerator);
+		}
+
+		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                           int pageSize = Int32.MaxValue)
+		{
+			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize);
+			return new YieldStream<T>(this, enumerator);
+		}
+
+		public class YieldStream<T> : IAsyncEnumerator<StreamResult<T>>
+		{
+			private readonly AsyncDocumentSession parent;
+			private readonly IAsyncEnumerator<RavenJObject> enumerator;
+
+			public YieldStream(AsyncDocumentSession parent,IAsyncEnumerator<RavenJObject> enumerator)
+			{
+				this.parent = parent;
+				this.enumerator = enumerator;
+			}
+
+			public void Dispose()
+			{
+				enumerator.Dispose();
+			}
+
+			public async Task<bool> MoveNextAsync()
+			{
+				if (await enumerator.MoveNextAsync() == false)
+					return false;
+				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
+
+				Current = new StreamResult<T>
+				{
+					Document = (T)parent.ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+					Etag = document.Etag,
+					Key = document.Key,
+					Metdata = document.Metadata
+				};
+
+				return true;
+			}
+
+			public StreamResult<T> Current { get; private set; }
 		}
 
 		/// <summary>

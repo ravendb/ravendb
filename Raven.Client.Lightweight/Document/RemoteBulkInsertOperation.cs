@@ -6,12 +6,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
+#else
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
+#endif
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 #if !SILVERLIGHT
 using System.IO.Compression;
-using Raven.Client.Connection;
 using Raven.Client.Extensions;
 #else
 using Raven.Client.Connection.Async;

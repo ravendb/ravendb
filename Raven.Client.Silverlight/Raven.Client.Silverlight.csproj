@@ -59,12 +59,12 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AsyncCtpLibrary_Silverlight5">
-      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
-    </Reference>
     <Reference Include="DH.Scrypt, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\DH.Scrypt.dll.1.0.3\lib\sl40\DH.Scrypt.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5">
+      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\sl50\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -79,8 +79,17 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.ComponentModel.Composition.dll</HintPath>
     </Reference>
-    <Reference Include="System.Reactive, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL5\System.Reactive.dll</HintPath>
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.0.21114\lib\SL5\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces">
+      <HintPath>..\packages\Rx-Interfaces.2.0.21114\lib\SL5\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq">
+      <HintPath>..\packages\Rx-Linq.2.0.21114\lib\SL5\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.PlatformServices">
+      <HintPath>..\packages\Rx-PlatformServices.2.0.21114\lib\SL5\System.Reactive.PlatformServices.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows" />
@@ -147,6 +156,9 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\JavaScriptDateTimeConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\JavaScriptDateTimeConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\JsonValueConverter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Converters\JsonValueConverter.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\KeyValuePairConverter.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Converters\KeyValuePairConverter.cs</Link>
@@ -397,6 +409,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DefaultSerializationBinder.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\DefaultSerializationBinder.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DynamicValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\DynamicValueProvider.cs</Link>
     </Compile>
@@ -411,6 +426,9 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IReferenceResolver.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IReferenceResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IValueProvider.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\IValueProvider.cs</Link>
@@ -472,6 +490,9 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\LateBoundMetadataTypeAttribute.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\LateBoundMetadataTypeAttribute.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\ObjectConstructor.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\ObjectConstructor.cs</Link>
     </Compile>
@@ -483,6 +504,12 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\StreamingContext.cs">
       <Link>Imports\Imports\Newtonsoft.Json\StreamingContext.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\StringEscapeHandling.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\StringEscapeHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\TraceLevel.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\TypeNameHandling.cs">
       <Link>Imports\Imports\Newtonsoft.Json\TypeNameHandling.cs</Link>
@@ -592,6 +619,9 @@
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\AccessTokenBody.cs">
+      <Link>Imports\Data\AccessTokenBody.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
       <Link>Imports\Data\Alert.cs</Link>
     </Compile>
@@ -618,6 +648,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\EnumerableExtension.cs">
       <Link>Imports\Data\EnumerableExtension.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Etag.cs">
+      <Link>Imports\Data\Etag.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Facet.cs">
       <Link>Imports\Data\Facet.cs</Link>
@@ -664,14 +697,29 @@
     <Compile Include="..\Raven.Abstractions\Data\PeriodicBackupSetup.cs">
       <Link>Imports\Data\PeriodicBackupSetup.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\QueryHeaderInformation.cs">
+      <Link>Imports\Data\QueryHeaderInformation.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
       <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\StreamResult.cs">
+      <Link>Imports\Data\StreamResult.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\UserInfo.cs">
+      <Link>Imports\Data\UserInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\UuidType.cs">
+      <Link>Imports\Data\UuidType.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Default.cs">
       <Link>Imports\Default.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
+      <Link>Imports\Extensions\CharExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\CryptoTransformExtensions.cs">
       <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
@@ -687,6 +735,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\Absdtractions\TaskExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\FieldTermVector.cs">
       <Link>Imports\Indexing\FieldTermVector.cs</Link>
@@ -793,6 +844,9 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>Imports\MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
       <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
     </Compile>
@@ -819,6 +873,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\EasyReaderWriterLock.cs">
       <Link>Imports\Util\EasyReaderWriterLock.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\IAsyncEnumerator.cs">
+      <Link>Imports\Util\IAsyncEnumerator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>
@@ -888,6 +945,12 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
       <Link>Connection\RavenUrlExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformerCache.cs">
+      <Link>Imports\Connection\ReplicationInformerCache.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerHash.cs">
+      <Link>Imports\Connection\ServerHash.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
       <Link>Imports\DocumentStoreBase.cs</Link>
@@ -1006,6 +1069,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractMultiMapIndexCreationTask.cs">
       <Link>Imports\Indexes\AbstractMultiMapIndexCreationTask.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractResultsTransformer.cs">
+      <Link>Imports\Indexes\AbstractResultsTransformer.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
       <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
     </Compile>
@@ -1078,6 +1144,9 @@
     <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
       <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
+      <Link>MissingFromSilverlight\ThreadSleep.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Bundles\SqlReplication\LastReplicatedEtag.cs">
       <Link>Imports\SqlReplication\LastReplicatedEtag.cs</Link>
     </Compile>
@@ -1133,7 +1202,7 @@
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
+    <EmbeddedResource Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\Dynamic.snk">
       <Link>Imports\Imports\Newtonsoft.Json\Dynamic.snk</Link>
     </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">

@@ -108,11 +108,14 @@ namespace Raven.Smuggler
 
 		protected override Task PutDocument(RavenJObject document)
 		{
-			var metadata = document.Value<RavenJObject>("@metadata");
-			var id = metadata.Value<string>("@id");
-			document.Remove("@metadata");
+			if (document != null)
+			{
+				var metadata = document.Value<RavenJObject>("@metadata");
+				var id = metadata.Value<string>("@id");
+				document.Remove("@metadata");
 
-			operation.Store(document, metadata, id);
+				operation.Store(document, metadata, id);
+			}
 
 			return new CompletedTask();
 		}
@@ -120,7 +123,7 @@ namespace Raven.Smuggler
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
 			var builder = new StringBuilder();
-			if (url.StartsWith("http", StringComparison.InvariantCultureIgnoreCase) == false)
+			if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase) == false)
 			{
 				builder.Append(ConnectionStringOptions.Url);
 				if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
@@ -159,7 +162,7 @@ namespace Raven.Smuggler
 			return s;
 		}
 
-		protected override Task<RavenJArray> GetDocuments(Guid lastEtag)
+		protected override Task<RavenJArray> GetDocuments(Etag lastEtag)
 		{
 			int retries = RetriesCount;
 			while (true)
@@ -181,7 +184,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override async Task<Guid> ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
+		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			int totalCount = 0;
 			while (true)
@@ -196,7 +199,7 @@ namespace Raven.Smuggler
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = Etag.Increment(lastEtag, SmugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -223,40 +226,48 @@ namespace Raven.Smuggler
 						.WriteTo(jsonWriter);
 				}
 
-				lastEtag = new Guid(attachmentInfo.Last().Value<string>("Etag"));
+				lastEtag = Etag.Parse(attachmentInfo.Last().Value<string>("Etag"));
 			}
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
-			var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
-			if (attachmentExportInfo.Metadata != null)
+			if (attachmentExportInfo != null)
 			{
-				foreach (var header in attachmentExportInfo.Metadata)
+				var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
+				if (attachmentExportInfo.Metadata != null)
 				{
-					switch (header.Key)
+					foreach (var header in attachmentExportInfo.Metadata)
 					{
-						case "Content-Type":
-							request.WebRequest.ContentType = header.Value.Value<string>();
-							break;
-						default:
-							request.WebRequest.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
-							break;
+						switch (header.Key)
+						{
+							case "Content-Type":
+								request.WebRequest.ContentType = header.Value.Value<string>();
+								break;
+							default:
+								request.WebRequest.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
+								break;
+						}
 					}
 				}
-			}
 
-			request.Write(attachmentExportInfo.Data);
-			request.ExecuteRequest();
+				request.Write(attachmentExportInfo.Data);
+				request.ExecuteRequest();
+			}
 
 			return new CompletedTask();
 		}
 
 		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
-			var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<JObject>("definition").ToString());
+			if (index != null)
+			{
+				var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<JObject>("definition").ToString());
 
-			return Commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
+				return Commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
+			}
+
+			return FlushBatch();
 		}
 
 		protected override Task<DatabaseStatistics> GetStats()
@@ -264,7 +275,7 @@ namespace Raven.Smuggler
 			return Commands.GetStatisticsAsync();
 		}
 
-		protected override Task FlushBatch()
+		private Task FlushBatch()
 		{
 			return new CompletedTask();
 		}
@@ -290,7 +301,7 @@ namespace Raven.Smuggler
 			try
 			{
 				httpRavenRequestFactory.Create(docUrl, "GET", ConnectionStringOptions).ExecuteRequest();
-				return new CompletedTask(); ;
+				return new CompletedTask();
 			}
 			catch (WebException e)
 			{
