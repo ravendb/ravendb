@@ -40,7 +40,7 @@ namespace Raven.Tests.MailingList
                 using (var documentStore = NewRemoteDocumentStore())
                 {
                     var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions() {Url = documentStore.Url});
-                    smugglerApi.ImportData(options).Wait();
+                    smugglerApi.ImportData(options).Wait(TimeSpan.FromSeconds(15));
                     
                     using (var session = documentStore.OpenSession())
                     {

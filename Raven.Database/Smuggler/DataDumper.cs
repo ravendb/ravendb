@@ -124,6 +124,11 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<DatabaseStatistics>(_database.Statistics);
 		}
 
+		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		{
+			return new CompletedTask<RavenJObject>(document);
+		}
+
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			if (Progress != null)

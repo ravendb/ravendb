@@ -562,6 +562,7 @@
     <Compile Include="Issues\RavenDB_863.cs" />
     <Compile Include="Issues\RavenDB_863_2.cs" />
     <Compile Include="Issues\RavenDB_868.cs" />
+    <Compile Include="Issues\RavenDB_895.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />

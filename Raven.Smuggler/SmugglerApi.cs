@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Jint;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -20,6 +21,7 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
@@ -79,6 +81,8 @@ namespace Raven.Smuggler
 
 		public override async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
 		{
+			SmugglerJintHelper.Initialize(options ?? SmugglerOptions);
+
 			var batchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
 
 			using (store = CreateStore())
@@ -262,6 +266,11 @@ namespace Raven.Smuggler
 		protected override Task<DatabaseStatistics> GetStats()
 		{
 			return Commands.GetStatisticsAsync();
+		}
+
+		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		{
+			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
 		}
 
 		private Task FlushBatch()

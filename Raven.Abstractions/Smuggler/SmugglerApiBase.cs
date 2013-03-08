@@ -37,6 +37,8 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract Task PutDocument(RavenJObject document);
 		protected abstract Task<DatabaseStatistics> GetStats();
 
+		protected abstract Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript);
+
 		protected abstract void ShowProgress(string format, params object[] args);
 
 		protected bool EnsuredDatabaseExists;
@@ -412,6 +414,12 @@ namespace Raven.Abstractions.Smuggler
 				if ((options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
 					continue;
 				if (options.MatchFilters(document) == false)
+					continue;
+
+				if (!string.IsNullOrEmpty(options.TransformScript))
+					document = await TransformDocument(document, options.TransformScript);
+
+				if (document == null)
 					continue;
 
 				await PutDocument(document);

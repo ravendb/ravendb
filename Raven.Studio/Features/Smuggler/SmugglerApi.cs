@@ -169,6 +169,11 @@ namespace Raven.Studio.Features.Smuggler
 			return commands.GetStatisticsAsync();
 		}
 
+		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		{
+			return new CompletedTask<RavenJObject>();
+		}
+
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			if (output != null)
