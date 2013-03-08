@@ -350,6 +350,14 @@ Configuration options:
 		{
 			try
 			{
+				for (var i = 0; i < cmdLineArgs.Length; i++)
+				{
+					if (cmdLineArgs[i].Contains(" "))
+					{
+						cmdLineArgs[i] = "\"" + cmdLineArgs[i] + "\"";
+					}
+				}
+
 				var process = Process.Start(new ProcessStartInfo
 				{
 					Arguments = string.Join(" ", cmdLineArgs),
