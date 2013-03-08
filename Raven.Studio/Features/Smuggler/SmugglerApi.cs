@@ -21,7 +21,7 @@ namespace Raven.Studio.Features.Smuggler
 
 		private readonly Action<string> output;
 
-		private readonly IList<RavenJObject> batch; 
+		private readonly IList<RavenJObject> batch;
 
 		private static string StripQuotesIfNeeded(RavenJToken value)
 		{
@@ -46,17 +46,63 @@ namespace Raven.Studio.Features.Smuggler
 
 			return request
 				.ReadResponseJsonAsync()
-				.ContinueWith(task => ((RavenJArray) task.Result));
+				.ContinueWith(task => ((RavenJArray)task.Result));
 		}
 
-		protected override Task<RavenJArray> GetDocuments(Etag lastEtag)
+		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
-			throw new NotImplementedException();
+			return commands.StreamDocsAsync(lastEtag);
 		}
 
-		protected override Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
+		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
-			throw new NotImplementedException();
+			int totalCount = 0;
+			while (true)
+			{
+				RavenJArray attachmentInfo = null;
+
+				await commands.CreateRequest("/static/?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag, "GET")
+				              .ReadResponseJsonAsync()
+				              .ContinueWith(task => attachmentInfo = (RavenJArray) task.Result);
+
+				if (attachmentInfo.Length == 0)
+				{
+					var databaseStatistics = await GetStats();
+					var lastEtagComparable = new ComparableByteArray(lastEtag);
+					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+					{
+						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
+						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
+						continue;
+					}
+
+					ShowProgress("Done with reading attachments, total: {0}", totalCount);
+					return lastEtag;
+				}
+
+				totalCount += attachmentInfo.Length;
+				ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length, totalCount);
+				foreach (var item in attachmentInfo)
+				{
+					ShowProgress("Downloading attachment: {0}", item.Value<string>("Key"));
+
+					byte[] attachmentData = null;
+
+					await commands.CreateRequest("/static/" + item.Value<string>("Key"), "GET")
+					              .ReadResponseBytesAsync()
+					              .ContinueWith(task => attachmentData = task.Result);
+
+					new RavenJObject
+					{
+						{"Data", attachmentData},
+						{"Metadata", item.Value<RavenJObject>("Metadata")},
+						{"Key", item.Value<string>("Key")}
+					}
+						.WriteTo(jsonWriter);
+				}
+
+				lastEtag = Etag.Parse(attachmentInfo.Last().Value<string>("Etag"));
+			}
 		}
 
 		protected override Task PutIndex(string indexName, RavenJToken index)
@@ -140,14 +186,14 @@ namespace Raven.Studio.Features.Smuggler
 				return new CompletedTask();
 
 			var putCommands = (from doc in batch
-			                   let metadata = doc.Value<RavenJObject>("@metadata")
-			                   let removal = doc.Remove("@metadata")
-			                   select new PutCommandData
-			                   {
-				                   Metadata = metadata,
-				                   Document = doc,
-				                   Key = metadata.Value<string>("@id"),
-			                   }).ToArray();
+							   let metadata = doc.Value<RavenJObject>("@metadata")
+							   let removal = doc.Remove("@metadata")
+							   select new PutCommandData
+							   {
+								   Metadata = metadata,
+								   Document = doc,
+								   Key = metadata.Value<string>("@id"),
+							   }).ToArray();
 
 			return commands
 				.BatchAsync(putCommands)

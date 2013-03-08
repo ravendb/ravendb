@@ -125,7 +125,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 								LastAttachmentEtag = localBackupConfigs.LastAttachmentsEtag
 							};
 							var dd = new DataDumper(Database, options);
-							var filePath = await dd.ExportData(null, true);
+							var filePath = await dd.ExportData(null, null, true);
 
 							// No-op if nothing has changed
 							if (options.LastDocsEtag == backupConfigs.LastDocsEtag &&

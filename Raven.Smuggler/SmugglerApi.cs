@@ -19,15 +19,12 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
 	public class SmugglerApi : SmugglerApiBase
 	{
-		const int RetriesCount = 5;
-
 		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
@@ -68,7 +65,10 @@ namespace Raven.Smuggler
 		{
 			using (store = CreateStore())
 			{
-				using (operation = store.BulkInsert())
+				using (operation = store.BulkInsert(options: new BulkInsertOptions
+				{
+					CheckForUpdates = true
+				}))
 				{
 					operation.Report += text => ShowProgress(text);
 
@@ -79,9 +79,15 @@ namespace Raven.Smuggler
 
 		public override async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
 		{
+			var batchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
+
 			using (store = CreateStore())
 			{
-				using (operation = store.BulkInsert())
+				using (operation = store.BulkInsert(options: new BulkInsertOptions
+				{
+					BatchSize = batchSize,
+					CheckForUpdates = true
+				}))
 				{
 					operation.Report += text => ShowProgress(text);
 
@@ -90,19 +96,19 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<string> ExportData(SmugglerOptions options, bool incremental)
+		public override async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental)
 		{
 			using (store = CreateStore())
 			{
-				return await base.ExportData(options, incremental);
+				return await base.ExportData(stream, options, incremental);
 			}
 		}
 
-		public override async Task<string> ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		public override async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
 		{
 			using (store = CreateStore())
 			{
-				return await base.ExportData(options, incremental, lastEtagsFromFile);
+				return await base.ExportData(stream, options, incremental, lastEtagsFromFile);
 			}
 		}
 
@@ -162,26 +168,9 @@ namespace Raven.Smuggler
 			return s;
 		}
 
-		protected override Task<RavenJArray> GetDocuments(Etag lastEtag)
+		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
-			int retries = RetriesCount;
-			while (true)
-			{
-				try
-				{
-					RavenJArray documents = null;
-					var request = CreateRequest("/docs?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag);
-					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
-					return new CompletedTask<RavenJArray>(documents);
-				}
-				catch (Exception e)
-				{
-					if (retries-- == 0)
-						throw;
-					LastRequestErrored = true;
-					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e, RetriesCount);
-				}
-			}
+			return Commands.StreamDocsAsync(lastEtag);
 		}
 
 		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
@@ -262,7 +251,7 @@ namespace Raven.Smuggler
 		{
 			if (index != null)
 			{
-				var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<JObject>("definition").ToString());
+				var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<RavenJObject>("definition").ToString());
 
 				return Commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
 			}

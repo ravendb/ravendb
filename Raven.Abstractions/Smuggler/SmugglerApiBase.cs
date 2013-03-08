@@ -29,7 +29,7 @@ namespace Raven.Abstractions.Smuggler
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
-		protected abstract Task<RavenJArray> GetDocuments(Etag lastEtag);
+		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag);
 		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
@@ -42,26 +42,25 @@ namespace Raven.Abstractions.Smuggler
 		protected bool EnsuredDatabaseExists;
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		protected int MinimumBatchSize = 10;
-		protected int MaximumBatchSize = 1024 * 4;
-
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
 			SmugglerOptions = smugglerOptions;
 		}
 
-		public virtual Task<string> ExportData(SmugglerOptions options, bool incremental)
+		public virtual Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental)
 		{
-			return ExportData(options, incremental, true);
+			return ExportData(stream, options, incremental, true);
 		}
 
-		public virtual async Task<string> ExportData(SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		public virtual async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
 		{
 			options = options ?? SmugglerOptions;
 			if (options == null)
 				throw new ArgumentNullException("options");
 
 			var file = options.BackupPath;
+
+#if !SILVERLIGHT
 			if (incremental)
 			{
 				if (Directory.Exists(options.BackupPath) == false)
@@ -88,8 +87,12 @@ namespace Raven.Abstractions.Smuggler
 					}
 				}
 			}
+#else
+			if(incremental)
+				throw new NotSupportedException("Incremental exports are not supported in SL.");
+#endif
 
-			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(file), CompressionMode.Compress)))
+			using (var streamWriter = new StreamWriter(new GZipStream(stream ?? File.Create(file), CompressionMode.Compress)))
 			{
 				var jsonWriter = new JsonTextWriter(streamWriter)
 									 {
@@ -134,7 +137,7 @@ namespace Raven.Abstractions.Smuggler
 		{
 			var log = LogManager.GetCurrentClassLogger();
 			var etagFileLocation = Path.Combine(options.BackupPath, IncrementalExportStateFile);
-			if (!File.Exists(etagFileLocation)) 
+			if (!File.Exists(etagFileLocation))
 				return;
 
 			using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
@@ -179,35 +182,34 @@ namespace Raven.Abstractions.Smuggler
 				var documents = await GetDocuments(lastEtag);
 				watch.Stop();
 
-				if (documents.Length == 0)
+				while (documents.MoveNextAsync().Result)
 				{
-					var databaseStatistics = await GetStats();
-					var lastEtagComparable = new ComparableByteArray(lastEtag);
-					if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
-					{
-						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
-						ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+					var document = documents.Current;
 
+					if (!options.MatchFilters(document))
 						continue;
-					}
-					ShowProgress("Done with reading documents, total: {0}", totalCount);
-					return lastEtag;
+
+					if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+						continue;
+
+					document.WriteTo(jsonWriter);
+					totalCount++;
+
+					lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 				}
 
-				var currentProcessingTime = watch.Elapsed;
+				var databaseStatistics = await GetStats();
+				var lastEtagComparable = new ComparableByteArray(lastEtag);
+				if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+				{
+					lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
+					ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 
-				ModifyBatchSize(options, currentProcessingTime);
+					continue;
+				}
 
-				var final = documents.Where(options.MatchFilters).ToList();
-
-				if (options.ShouldExcludeExpired)
-					final = documents.Where(options.ExcludeExpired).ToList();
-
-				final.ForEach(item => item.WriteTo(jsonWriter));
-				totalCount += final.Count;
-
-				ShowProgress("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", documents.Length, totalCount);
-				lastEtag = Etag.Parse(documents.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+				ShowProgress("Done with reading documents, total: {0}", totalCount);
+				return lastEtag;
 			}
 		}
 
@@ -484,18 +486,5 @@ namespace Raven.Abstractions.Smuggler
 				}
 			}
 		}
-
-		private void ModifyBatchSize(SmugglerOptions options, TimeSpan currentProcessingTime)
-		{
-			var change = Math.Max(1, options.BatchSize / 3);
-			int quarterTime = options.Timeout / 4;
-			if (currentProcessingTime > TimeSpan.FromMilliseconds(quarterTime))
-				options.BatchSize -= change;
-			else
-				options.BatchSize += change;
-
-			options.BatchSize = Math.Min(MaximumBatchSize, Math.Max(MinimumBatchSize, options.BatchSize));
-		}
-
 	}
 }

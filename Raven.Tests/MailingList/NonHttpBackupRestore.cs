@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
 			using (var store = NewDocumentStoreWithData())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase, options);
-				dumper.ExportData(options, false);
+				dumper.ExportData(null, options, false);
 			}
 
 			using (var store = NewDocumentStore())
@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 			using (var store = NewDocumentStoreWithData())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase,options);
-				dumper.ExportData(options, false);
+				dumper.ExportData(null, options, false);
 
 				using (var session = store.OpenSession())
 				{

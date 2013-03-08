@@ -157,7 +157,7 @@ namespace Raven.Smuggler
 							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(options, incremental).Wait();
+						smugglerApi.ExportData(null, options, incremental).Wait();
 						break;
 				}
 			}
