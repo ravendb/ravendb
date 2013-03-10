@@ -20,13 +20,6 @@ namespace Raven.Abstractions.Data
 		public decimal DatabaseCacheSizeInMB { get; set; }
 		public decimal ManagedMemorySizeInMB { get; set; }
 		public decimal TotalProcessMemorySizeInMB { get; set; }
-		public IEnumerable<DatabaseMemory> Databases { get; set; }
-	}
-
-	public class DatabaseMemory
-	{
-		public string Name { get; set; }
-		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
 	}
 
 	public class LoadedDatabaseStatistics
@@ -42,5 +35,6 @@ namespace Raven.Abstractions.Data
 		public long CountOfDocuments { get; set; }
 		public double RequestsPerSecond { get; set; }
 		public int ConcurrentRequests { get; set; }
+		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
 	}
 }

@@ -220,11 +220,6 @@ namespace Raven.Database.Server
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
 						ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
-						Databases = allDbs.Select(db => new DatabaseMemory
-						{
-							Name = db.Name,
-							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(db.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-						})
 					},
 					LoadedDatabases =
 						from documentDatabase in allDbs
@@ -248,7 +243,8 @@ namespace Raven.Database.Server
 							TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
 							CountOfDocuments = documentDatabase.Database.Statistics.CountOfDocuments,
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
-							ConcurrentRequests = documentDatabase.Database.WorkContext.ConcurrentRequests
+							ConcurrentRequests = documentDatabase.Database.WorkContext.ConcurrentRequests,
+							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						}
 				};
 			}
