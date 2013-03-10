@@ -67,6 +67,7 @@ namespace Raven.Client
 		public virtual IDictionary<string,string> SharedOperationsHeaders { get; protected set; }
 #endif
 
+		public abstract bool HasJsonRequestFactory { get; }
 		public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
 		public abstract string Identifier { get; set; }
 		public abstract IDocumentStore Initialize();
