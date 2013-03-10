@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
-using Raven.Studio.Commands;
 using Raven.Studio.Extensions;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -67,10 +66,7 @@ namespace Raven.Studio.Features.Logs
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (Database.Value == null)
-				return null;
-
-		    return ReloadLogs();
+			return Database.Value == null ? null : ReloadLogs();
 		}
 
 		private bool showErrorsOnly;

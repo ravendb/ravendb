@@ -176,6 +176,7 @@ namespace Raven.Studio.Commands
 		                   {
 		                       item.WriteTo(jsonWriter);
 		                   }
+
 		                   lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
                            ReadDocuments(lastEtag, totalCount, callback);

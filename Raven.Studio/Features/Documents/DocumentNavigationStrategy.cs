@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
@@ -102,20 +101,18 @@ namespace Raven.Studio.Features.Documents
             if (task.IsFaulted && task.Exception.GetBaseException() is ConflictException)
             {
                 var conflictException = task.Exception.GetBaseException() as ConflictException;
-                return new DocumentAndNavigationInfo()
+                return new DocumentAndNavigationInfo
                 {
                     ConflictingVersionIds = conflictException.ConflictedVersionIds,
                     ConflictEtag = conflictException.Etag,
                     ConflictDocumentId = documentId,
                 };
             }
-            else
-            {
-                return new DocumentAndNavigationInfo()
-                {
-                    Document = task.Result
-                };
-            }
+
+	        return new DocumentAndNavigationInfo()
+	        {
+		        Document = task.Result
+	        };
         }
 
         protected DocumentAndNavigationInfo PopulateDocumentOrConflictsFromDocuments(IEnumerable<JsonDocument> documents)
@@ -146,6 +143,5 @@ namespace Raven.Studio.Features.Documents
                 Document = document
             };
         }
-
     }
 }

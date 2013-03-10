@@ -23,7 +23,8 @@ namespace Raven.Studio.Behaviors
 		private void TextBoxTextChanged(object sender, TextChangedEventArgs e)
 		{
 			var binding = AssociatedObject.GetBindingExpression(TextBox.TextProperty);
-			if (binding != null) binding.UpdateSource();
+			if (binding != null) 
+				binding.UpdateSource();
 		}
 	}
 }

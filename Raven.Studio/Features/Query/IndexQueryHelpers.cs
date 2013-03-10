@@ -10,24 +10,21 @@ namespace Raven.Studio.Features.Query
 	{
 		public static IndexQuery FromQueryString(string queryString)
 		{
-			var fields = queryString.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(segment =>
-							{
-								var parts = segment.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
-								if (parts.Length == 1)
-								{
-									return new { Key = parts[0], Value = string.Empty };
-								}
-								else
-								{
-									return
-										new
-											{
-												Key = parts[0],
-												Value = Uri.UnescapeDataString(parts[1])
-											};
-								}
-							}).ToLookup(f => f.Key, f => f.Value);
+			var fields = queryString.Split(new[] {'&'}, StringSplitOptions.RemoveEmptyEntries)
+			                        .Select(segment =>
+			                        {
+				                        var parts = segment.Split(new[] {'='}, StringSplitOptions.RemoveEmptyEntries);
+				                        if (parts.Length == 1)
+				                        {
+					                        return new {Key = parts[0], Value = string.Empty};
+				                        }
+
+				                        return new
+				                        {
+					                        Key = parts[0],
+					                        Value = Uri.UnescapeDataString(parts[1])
+				                        };
+			                        }).ToLookup(f => f.Key, f => f.Value);
 
 			var query = new IndexQuery
 			{
@@ -56,6 +53,7 @@ namespace Raven.Studio.Features.Query
 					SpatialFieldName = Constants.DefaultSpatialFieldName, /* TODO */
 				};
 			}
+
 			return query;
 		}
 
@@ -104,6 +102,7 @@ namespace Raven.Studio.Features.Query
 					return result;
 				return null;
 			}
+
 			return null;
 		}
 
@@ -158,6 +157,7 @@ namespace Raven.Studio.Features.Query
 					return result;
 				return null;
 			}
+
 			return null;
 		}
 	}

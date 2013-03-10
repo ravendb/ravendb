@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using Raven.Studio.Extensions;
@@ -32,16 +31,16 @@ namespace Raven.Studio.Features.Query
 
 			Observable.FromEventPattern<VirtualCollectionSourceChangedEventArgs>(
 				h => model.CollectionSource.CollectionChanged += h, h => model.CollectionSource.CollectionChanged -= h)
-				.Where(p => p.EventArgs.ChangeType == ChangeType.Refresh)
-				.Take(1)
-				.ObserveOnDispatcher()
-				.Subscribe(_ =>
-							   {
-								   if (model.CollectionSource.Count == 0)
-								   {
-									   SuggestResults();
-								   }
-							   });
+			          .Where(p => p.EventArgs.ChangeType == ChangeType.Refresh)
+			          .Take(1)
+			          .ObserveOnDispatcher()
+			          .Subscribe(_ =>
+			          {
+				          if (model.CollectionSource.Count == 0)
+				          {
+					          SuggestResults();
+				          }
+			          });
 
             model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
 		    var templateQuery = model.CreateTemplateQuery();

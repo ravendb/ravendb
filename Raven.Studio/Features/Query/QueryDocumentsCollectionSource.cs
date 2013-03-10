@@ -46,18 +46,18 @@ namespace Raven.Studio.Features.Query
 
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
-            return GetQueryResults(start, pageSize)
-                .ContinueWith(task =>
-                {
-                    var documents =
-                        SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
-                            .Select(x => new ViewableDocument(x))
-                            .ToArray();
+	        return GetQueryResults(start, pageSize)
+		        .ContinueWith(task =>
+		        {
+			        var documents =
+				        SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
+				                           .Select(x => new ViewableDocument(x))
+				                           .ToArray();
 
-					SetCount(Math.Max(task.Result.TotalResults - task.Result.SkippedResults, documents.Length));
+			        SetCount(Math.Max(task.Result.TotalResults - task.Result.SkippedResults, documents.Length));
 
-                    return (IList<ViewableDocument>)documents;
-                });
+			        return (IList<ViewableDocument>) documents;
+		        });
         }
 
         private Task<QueryResult> GetQueryResults(int start, int pageSize)
@@ -81,50 +81,50 @@ namespace Raven.Studio.Features.Query
 			var queryStartTime = SystemTime.UtcNow.Ticks;
             var queryEndtime = DateTime.MinValue.Ticks;
 
-            return ApplicationModel.DatabaseCommands
-                .QueryAsync(indexName,
-                            query,
-                            new string[] { }, MetadataOnly)
-                            .ContinueWith(task =>
-                                              {
-												  queryEndtime = SystemTime.UtcNow.Ticks;
+	        return ApplicationModel.DatabaseCommands
+	                               .QueryAsync(indexName,
+	                                           query,
+	                                           new string[] {}, MetadataOnly)
+	                               .ContinueWith(task =>
+	                               {
+		                               queryEndtime = SystemTime.UtcNow.Ticks;
 
-                                                  var queryTime = new TimeSpan(queryEndtime - queryStartTime);
+		                               var queryTime = new TimeSpan(queryEndtime - queryStartTime);
 
-                                                  RavenQueryStatistics statistics;
-                                                  if (!task.IsFaulted)
-                                                  {
-                                                      statistics = new RavenQueryStatistics
-                                                                       {
-                                                                           IndexEtag = task.Result.IndexEtag,
-                                                                           IndexName = task.Result.IndexName,
-                                                                           IndexTimestamp =
-                                                                               task.Result.IndexTimestamp,
-                                                                           IsStale = task.Result.IsStale,
-                                                                           SkippedResults =
-                                                                               task.Result.SkippedResults,
-																		   Timestamp = SystemTime.UtcNow,
-                                                                           TotalResults = task.Result.TotalResults
-                                                                       };
-                                                  }
-                                                  else
-                                                  {
-													  statistics = new RavenQueryStatistics() { Timestamp = SystemTime.UtcNow };
-                                                  }
+		                               RavenQueryStatistics statistics;
+		                               if (!task.IsFaulted)
+		                               {
+			                               statistics = new RavenQueryStatistics
+			                               {
+				                               IndexEtag = task.Result.IndexEtag,
+				                               IndexName = task.Result.IndexName,
+				                               IndexTimestamp =
+					                               task.Result.IndexTimestamp,
+				                               IsStale = task.Result.IsStale,
+				                               SkippedResults =
+					                               task.Result.SkippedResults,
+				                               Timestamp = SystemTime.UtcNow,
+				                               TotalResults = task.Result.TotalResults
+			                               };
+		                               }
+		                               else
+		                               {
+			                               statistics = new RavenQueryStatistics {Timestamp = SystemTime.UtcNow};
+		                               }
 
-                                                  OnQueryStatisticsUpdated(new QueryStatisticsUpdatedEventArgs()
-                                                                               {
-                                                                                   QueryTime = queryTime,
-                                                                                   Statistics = statistics
-                                                                               });
+		                               OnQueryStatisticsUpdated(new QueryStatisticsUpdatedEventArgs()
+		                               {
+			                               QueryTime = queryTime,
+			                               Statistics = statistics
+		                               });
 
-                                                  if (task.IsFaulted)
-                                                  {
-                                                      OnQueryError(new QueryErrorEventArgs() { Exception = task.Exception});
-                                                  }
+		                               if (task.IsFaulted)
+		                               {
+			                               OnQueryError(new QueryErrorEventArgs {Exception = task.Exception});
+		                               }
 
-                                                  return task.Result;
-                                              }, TaskContinuationOptions.ExecuteSynchronously);
+		                               return task.Result;
+	                               }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         protected void OnQueryStatisticsUpdated(QueryStatisticsUpdatedEventArgs e)

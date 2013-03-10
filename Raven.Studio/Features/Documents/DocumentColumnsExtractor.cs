@@ -22,8 +22,7 @@ namespace Raven.Studio.Features.Documents
                 var extractor = new BoundValueExtractor();
                 extractor.SetBinding(BoundValueExtractor.ValueProperty, ColumnModelBindingExtensions.CreateBinding(c, "Document."));
                 return extractor;
-            })
-                                     .ToList();
+            }).ToList();
         }
 
         public IList<object> GetValues(ViewableDocument document)

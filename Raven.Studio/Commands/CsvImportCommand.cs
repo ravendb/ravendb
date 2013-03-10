@@ -32,9 +32,9 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var openFile = new OpenFileDialog
-							   {
-								   Filter = "csv|*.csv"
-							   };
+			{
+				Filter = "csv|*.csv"
+			};
 
 			if (openFile.ShowDialog() != true)
 				return;
@@ -78,6 +78,7 @@ namespace Raven.Studio.Commands
 				entity = Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(file)));
 				if (entity.Length > 0 &&  char.IsLower(entity[0]))
 					entity = char.ToUpper(entity[0]) + entity.Substring(1);
+
 				sw = Stopwatch.StartNew();
 
 				enumerator = csvReader.DataRecords.GetEnumerator();
@@ -87,6 +88,7 @@ namespace Raven.Studio.Commands
 			{
 				if (hadError)
 					return new CompletedTask();
+
 				var batch = new List<RavenJObject>();
 				var columns = header.Values.Where(x => x.StartsWith("@") == false).ToArray();
 				while (enumerator.MoveNext())
@@ -169,6 +171,7 @@ namespace Raven.Studio.Commands
 
 								return t;
 							}
+
 							return t.IsCompleted ? ImportAsync() : t;
 						})
 						.Unwrap();
@@ -183,11 +186,9 @@ namespace Raven.Studio.Commands
 			private static RavenJToken SetValueInDocument(string value)
 			{
 				if (string.IsNullOrEmpty(value))
-				{
 					return value;
-				}
 
-				char ch = value[0];
+				var ch = value[0];
 				if (ch == '[' || ch == '{')
 				{
 					try
@@ -222,7 +223,7 @@ namespace Raven.Studio.Commands
 				return value;
 			}
 
-			Task FlushBatch(List<RavenJObject> batch)
+			Task FlushBatch(ICollection<RavenJObject> batch)
 			{
 				totalCount += batch.Count;
 				var sw = Stopwatch.StartNew();

@@ -37,15 +37,16 @@
 		/// <returns>The <see cref="ISyntaxLanguage"/> that was loaded.</returns>		
 		public static ISyntaxLanguage LoadLanguageDefinitionFromResourceStream(string filename)
 		{
-			string path = DefinitionPath + filename;
-			using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path))
+			var path = DefinitionPath + filename;
+			using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path))
 			{
 				if (stream != null)
 				{
 					var serializer = new SyntaxLanguageDefinitionSerializer();
 					return serializer.LoadFromStream(stream);
 				}
-				else return SyntaxLanguage.PlainText;
+				
+				return SyntaxLanguage.PlainText;
 			}
 		}
 	}
