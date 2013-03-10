@@ -115,6 +115,10 @@ namespace Raven.ClusterManager.Tasks
 					}
 				}
 			}
+			catch (StopServerDiscoveringException)
+			{
+				// do nothing. Wait the user to fix the error (like adding credentials in order to avoid 401) for the next time. 
+			}
 			catch (Exception ex)
 			{
 				Log.ErrorException("Error", ex);
@@ -128,6 +132,7 @@ namespace Raven.ClusterManager.Tasks
 		private static async Task StoreDatabaseNames(ServerRecord server, HttpClient httpClient, IDocumentSession session)
 		{
 			var result = await httpClient.GetAsync(server.Url + "databases");
+			EnsureSuccessStatusCode(result, server);
 			var resultStream = await result.Content.ReadAsStreamAsync();
 			server.Databases = resultStream.JsonDeserialization<string[]>();
 
@@ -145,6 +150,7 @@ namespace Raven.ClusterManager.Tasks
 		private static async Task StoreActiveDatabaseNames(ServerRecord server, HttpClient httpClient, IDocumentSession session)
 		{
 			var result = await httpClient.GetAsync(server.Url + "admin/stats");
+			EnsureSuccessStatusCode(result, server);
 			var resultStream = await result.Content.ReadAsStreamAsync();
 			var adminStatistics = resultStream.JsonDeserialization<AdminStatistics>();
 
@@ -164,6 +170,22 @@ namespace Raven.ClusterManager.Tasks
 				databaseRecord.LoadedDatabaseStatistics = loadedDatabase;
 			}
 			server.LoadedDatabases = adminStatistics.LoadedDatabases.Select(database => database.Name).ToArray();
+		}
+
+		private static void EnsureSuccessStatusCode(HttpResponseMessage result, ServerRecord server)
+		{
+			Log.Debug("EnsureSuccessStatusCode: " + result.StatusCode);
+
+			switch (result.StatusCode)
+			{
+				case HttpStatusCode.Unauthorized:
+					server.IsUnauthorized = true;
+					throw new StopServerDiscoveringException(string.Format("Stop discovering server '0{0}'. Reason: {1}", server.Url, result.StatusCode)); 
+					break;
+				default:
+					result.EnsureSuccessStatusCode();
+					break;
+			}
 		}
 
 		private static async Task CheckReplicationStatusOfEachActiveDatabase(ServerRecord server, AsyncServerClient client, IDocumentSession session)

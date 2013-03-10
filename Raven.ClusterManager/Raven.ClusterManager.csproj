@@ -55,16 +55,20 @@
     <Compile Include="Discovery\ClusterDiscoveryClient.cs" />
     <Compile Include="Infrastructure\Dispatcher.cs" />
     <Compile Include="JsonNetSerializer.cs" />
+    <Compile Include="LoggingErrorHandler.cs" />
     <Compile Include="Models\ClusterStatistics.cs" />
     <Compile Include="Models\DatabaseRecord.cs" />
     <Compile Include="Models\ServerRecord.cs" />
     <Compile Include="Modules\DiscoveryModule.cs" />
+    <Compile Include="Modules\ServersModule.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tasks\HealthMonitorTask.cs" />
+    <Compile Include="Tasks\StopServerDiscoveringException.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="NLog.config" />
     <None Include="packages.config" />
     <None Include="Assets\scripts\vendor\jquery\jquery.min.map" />
   </ItemGroup>

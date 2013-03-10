@@ -17,6 +17,7 @@ namespace Raven.ClusterManager.Models
 		public string[] Databases { get; set; }
 		public string[] LoadedDatabases { get; set; }
 		public AdminMemoryStatistics MemoryStatistics { get; set; }
+		public bool IsUnauthorized { get; set; }
 
 		public ServerRecord()
 		{
