@@ -16,7 +16,10 @@ clusterManagerApp.controller('MainCtrl', function mainCtrl($scope, $http, $timeo
             $scope.stats = result;
             _.forEach($scope.stats.servers, function(value, index, array) {
                 value.cssClass = '';
-                if (value.isUnauthorized) {
+                if (value.isOnline == false) {
+                    value.cssClass += ' error';
+                }
+                else if (value.isUnauthorized) {
                     value.cssClass += ' warning';
                 }
             });
