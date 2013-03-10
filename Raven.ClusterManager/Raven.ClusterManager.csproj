@@ -88,8 +88,15 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\images\logo.png" />
+    <Content Include="Assets\images\server_add.png" />
+    <Content Include="Assets\images\server_delete.png" />
     <Content Include="Assets\images\server_error.png" />
+    <Content Include="Assets\images\server_lock.png" />
+    <Content Include="Assets\images\server_network.png" />
+    <Content Include="Assets\images\server_new.png" />
     <Content Include="Assets\images\server_ok.png" />
+    <Content Include="Assets\images\server_preferences.png" />
+    <Content Include="Assets\images\server_warning.png" />
     <Content Include="Assets\index.html" />
     <Content Include="Assets\scripts\controllers\serversCtrl.js" />
     <Content Include="Assets\scripts\controllers\mainCtrl.js" />

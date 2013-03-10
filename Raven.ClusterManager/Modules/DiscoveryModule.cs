@@ -50,15 +50,6 @@ namespace Raven.ClusterManager.Modules
 
 				return "notified";
 			};
-
-			Get["/servers"] = parameters =>
-			{
-				var servers = this.session.Query<ServerRecord>().ToList();
-				return new ClusterStatistics
-				{
-					Servers = servers,
-				};
-			};
 		}
 	}
 }

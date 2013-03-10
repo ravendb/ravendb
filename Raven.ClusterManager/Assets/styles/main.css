@@ -5,3 +5,7 @@
 	margin: 10px;
 	width: 400px;
 }
+
+div.navbar-fixed-top h1 {
+	font-size: 16px;
+}

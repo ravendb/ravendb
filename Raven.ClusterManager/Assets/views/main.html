@@ -1,7 +1,4 @@
 ﻿<div>
-    <div>
-        Servers: 2
-    </div>
     <div ng-show="isDiscovering">Discovering...</div>
     <a ng-click="startDiscovering()">Discover</a>
 </div>
@@ -12,9 +9,9 @@
         <ul class="thumbnails ">
             <li class="span3 server" ng-repeat="server in stats.servers">
                 <div>
-                    <div class="pull-left">
-                        <img src="/images/server_ok.png" ng-show="server.isOnline">
-                        <img src="/images/server_error.png" ng-hide="server.isOnline">
+                    <div class="pull-right">
+                        <img src="/images/server_ok.png" ng-show="server.isOnline" title="Status: online">
+                        <img src="/images/server_error.png" ng-hide="server.isOnline" title="Status: offline">
                     </div>
                     <div class="pull-left">
                         <div>Name: {{server.name}}</div>
@@ -22,6 +19,7 @@
                         <div>Cluster name: {{server.clusterName}}</div>
                         <div>Last online time: {{server.lastOnlineTime}}</div>
                         <div>Last tried to connect at: {{server.lastTriedToConnectAt}}</div>
+                        <div>isUnauthorized: {{server.isUnauthorized}}</div>
                     </div>
                 </div>
             </li>

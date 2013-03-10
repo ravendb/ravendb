@@ -26,18 +26,33 @@
 <body>
     <div class="container">
         <header>
-            <img src="/images/logo.png">
-            <h1>RavenDB Cluster Manager</h1>
+            <div>
+                <img src="/images/logo.png" style="height: 30px;">
+                <h1>RavenDB Cluster Manager</h1>
+            </div>
+            
+            <nav>
+                <ul>
+                    <li><a ng-href="/servers">Servers</a></li>
+                    <li><a ng-href="/replication">Replication</a></li>
+                </ul>
+            </nav>
         </header>
         
-        <nav>
-            <ul>
-                <li><a ng-href="/servers">Servers</a></li>
-                <li><a ng-href="/replication">Replication</a></li>
-            </ul>
-        </nav>
+        
 
         <div id="main-container" class="container" ng-view></div>
+        
+        <footer>
+            <div class="navbar navbar-fixed-bottom">
+                <ul>
+                    <li>
+                        <label>Servers: </label>
+                        <span>{{stats.servers.length}}</span>
+                    </li>
+                </ul>
+            </div>
+        </footer>
     </div>
 
     <!--[if lt IE 7]>

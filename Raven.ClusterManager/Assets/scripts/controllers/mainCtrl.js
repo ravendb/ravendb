@@ -12,7 +12,7 @@ clusterManagerApp.controller('MainCtrl', function mainCtrl($scope, $http, $timeo
 
     var timeoutPromise;
     $scope.getStats = function () {
-        $http.get('/api/discovery/servers').success(function (result) {
+        $http.get('/api/servers').success(function (result) {
             $scope.stats = result;
         });
         
