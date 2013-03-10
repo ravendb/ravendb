@@ -77,6 +77,7 @@ namespace Raven.ClusterManager
 		{
 			base.ConfigureConventions(conventions);
 
+			string rootAppPath = null;
 			conventions.StaticContentsConventions.Add((ctx, rootPath) =>
 			{
 				var path = ctx.Request.Url.Path.Substring(1); // Remove the starting '/'.
@@ -88,8 +89,11 @@ namespace Raven.ClusterManager
 
 #if DEBUG
 				// For debug, we want to edit the static HTML files and serve them without recompiling the assembly.
-				var rootAppPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath)) ?? rootPath;
-				GenericFileResponse.SafePaths.Add(rootAppPath);
+				if (rootAppPath == null)
+				{
+					rootAppPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath)) ?? rootPath;
+					GenericFileResponse.SafePaths.Add(rootAppPath);
+				}
 				var filePath = Path.Combine(rootAppPath, @"Assets", path);
 				if (File.Exists(filePath))
 				{
