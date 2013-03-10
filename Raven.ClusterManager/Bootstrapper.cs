@@ -85,6 +85,17 @@ namespace Raven.ClusterManager
 				if (path.StartsWith("api/"))
 					return null;
 
+#if DEBUG
+				// For debug, we want to edit the static HTML files and serve them without recompiling the assembly.
+				var rootAppPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath)) ?? rootPath;
+				GenericFileResponse.SafePaths.Add(rootAppPath);
+				var filePath = Path.Combine(rootAppPath, @"Assets", path);
+				if (File.Exists(filePath))
+				{
+					return new GenericFileResponse(filePath);
+				}
+#endif
+
 				var resourcePath = @"Raven.ClusterManager.Assets";
 				var directoryName = Path.GetDirectoryName(path);
 				if (string.IsNullOrEmpty(directoryName) == false)
