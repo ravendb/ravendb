@@ -734,10 +734,12 @@ more responsive application.
 		/// </summary>
 		protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
 		{
+#if !SILVERLIGHT
 			if (Conventions.ShouldAggressiveCacheTrackChanges &&  batchResults.Count != 0)
 			{
 				documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName ?? Constants.SystemDatabase);
 			}
+#endif
 			for (var i = saveChangesData.DeferredCommandsCount; i < batchResults.Count; i++)
 			{
 				var batchResult = batchResults[i];

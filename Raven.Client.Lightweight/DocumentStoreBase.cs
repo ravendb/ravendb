@@ -278,5 +278,12 @@ namespace Raven.Client
 			return profilingContext.TryGet(id);
 		}
 
+		/// <summary>
+		/// Setup the context for aggressive caching.
+		/// </summary>
+		public IDisposable AggressivelyCache()
+		{
+			return AggressivelyCacheFor(TimeSpan.FromDays(1));
+		}
 	}
 }
