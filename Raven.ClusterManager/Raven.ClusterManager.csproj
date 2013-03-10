@@ -132,6 +132,8 @@
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.min.js" />
     <Content Include="Assets\views\servers.html" />
     <Content Include="Assets\views\main.html" />
+    <Content Include="Assets\scripts\vendor\lodash\lodash.js" />
+    <Content Include="Assets\scripts\vendor\lodash\lodash.min.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
