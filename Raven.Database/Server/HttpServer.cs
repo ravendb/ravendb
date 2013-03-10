@@ -211,6 +211,8 @@ namespace Raven.Database.Server
 				var allDbs = activeDatabases.Concat(new[] {new {Name = "System", Database = SystemDatabase}}).ToArray();
 				return new
 				{
+					ServerName = currentConfiguration.Value.ServerName,
+					ClusterName = currentConfiguration.Value.ClusterName,
 					TotalNumberOfRequests = NumberOfRequests,
 					Uptime = SystemTime.UtcNow - startUpTime,
 					Memory = new

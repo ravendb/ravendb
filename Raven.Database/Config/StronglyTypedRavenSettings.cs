@@ -110,7 +110,8 @@ namespace Raven.Database.Config
 
 			DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
 
-			ClusterName = new StringSetting(settings["Raven/ClusterName"], (string)null);		
+			ClusterName = new StringSetting(settings["Raven/ClusterName"], (string)null);
+			ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);		
 		}
 
 	    
@@ -197,6 +198,8 @@ namespace Raven.Database.Config
 		public BooleanSetting DisableClusterDiscovery { get; private set; }
 
 		public StringSetting ClusterName { get; private set; }
+
+		public StringSetting ServerName { get; private set; }
 
 		public StringSetting PluginsDirectory { get; private set; }
 

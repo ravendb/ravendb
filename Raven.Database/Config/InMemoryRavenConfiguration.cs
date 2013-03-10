@@ -86,6 +86,8 @@ namespace Raven.Database.Config
 			// TODO: Validate the cluster name. Valid names are only valid chars in documents IDs.
 			ClusterName = ravenSettings.ClusterName.Value;
 
+			ServerName = ravenSettings.ServerName.Value;
+
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
 
@@ -714,6 +716,11 @@ namespace Raven.Database.Config
 		/// The cluster name
 		/// </summary>
 		public string ClusterName { get; set; }
+
+		/// <summary>
+		/// The server name
+		/// </summary>
+		public string ServerName { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
