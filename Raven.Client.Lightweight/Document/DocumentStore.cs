@@ -712,6 +712,14 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>
+		public IDisposable AggressivelyCache()
+		{
+			return AggressivelyCacheFor(TimeSpan.FromDays(1));
+		}
+
+		/// <summary>
+		/// Setup the context for aggressive caching.
+		/// </summary>
 		/// <param name="cacheDuration">Specify the aggressive cache duration</param>
 		/// <remarks>
 		/// Aggressive caching means that we will not check the server to see whatever the response
@@ -823,10 +831,9 @@ namespace Raven.Client.Document
 			{
 				var databaseName = session.DatabaseName;
 				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
-																		  _ => new EvictItemsFromCacheBasedOnChanges(
-																			  databaseName ?? Constants.SystemDatabase,
-																			  CreateDatabaseChanges(databaseName),
-																			  jsonRequestFactory.ExpireItemsFromCache));
+					_ => new EvictItemsFromCacheBasedOnChanges(databaseName ?? Constants.SystemDatabase,
+						CreateDatabaseChanges(databaseName),
+						jsonRequestFactory.ExpireItemsFromCache));
 			}
 
 			base.AfterSessionCreated(session);
