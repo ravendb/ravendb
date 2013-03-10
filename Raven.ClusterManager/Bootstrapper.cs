@@ -31,6 +31,7 @@ namespace Raven.ClusterManager
 			store.Initialize();
 
 			store.Conventions.RegisterIdConvention<ServerRecord>((s, commands, serverRecord) => "serverRecords/" + ReplicationTask.EscapeDestinationName(serverRecord.Url));
+			store.Conventions.RegisterIdConvention<DatabaseRecord>((s, commands, databaseRecord) => "databaseRecords/" + databaseRecord.Name);
 
 			container.Register<IDocumentStore>(store);
 		}

@@ -199,7 +199,7 @@ namespace Raven.Database.Server
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
-		public object Statistics
+		public AdminStatistics Statistics
 		{
 			get
 			{
@@ -209,20 +209,20 @@ namespace Raven.Database.Server
 					Database = x.Value.Result
 				});
 				var allDbs = activeDatabases.Concat(new[] {new {Name = "System", Database = SystemDatabase}}).ToArray();
-				return new
+				return new AdminStatistics
 				{
 					ServerName = currentConfiguration.Value.ServerName,
 					ClusterName = currentConfiguration.Value.ClusterName,
 					TotalNumberOfRequests = NumberOfRequests,
 					Uptime = SystemTime.UtcNow - startUpTime,
-					Memory = new
+					Memory = new AdminMemoryStatistics
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
 						ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
-						Databases = allDbs.Select(db => new
+						Databases = allDbs.Select(db => new DatabaseMemory
 						{
-							db.Name,
+							Name = db.Name,
 							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(db.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						})
 					},
@@ -231,24 +231,24 @@ namespace Raven.Database.Server
 						let indexStorageSize = documentDatabase.Database.GetIndexStorageSizeOnDisk()
 						let transactionalStorageSize = documentDatabase.Database.GetTransactionalStorageSizeOnDisk()
 						let totalDatabaseSize = indexStorageSize + transactionalStorageSize
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault( documentDatabase.Name )
-						select new
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
+						select new LoadedDatabaseStatistics
 						{
-							documentDatabase.Name,
+							Name = documentDatabase.Name,
 							LastActivity = new[]
 							{
 								lastUsed, 
 								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
 							TransactionalStorageSize = transactionalStorageSize,
-							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane( transactionalStorageSize ),
+							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize),
 							IndexStorageSize = indexStorageSize,
-							IndexStorageHumaneSize = DatabaseSize.Humane( indexStorageSize ),
+							IndexStorageHumaneSize = DatabaseSize.Humane(indexStorageSize),
 							TotalDatabaseSize = totalDatabaseSize,
-							TotalDatabaseHumaneSize = DatabaseSize.Humane( totalDatabaseSize ),
-							documentDatabase.Database.Statistics.CountOfDocuments,
+							TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
+							CountOfDocuments = documentDatabase.Database.Statistics.CountOfDocuments,
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
-							documentDatabase.Database.WorkContext.ConcurrentRequests
+							ConcurrentRequests = documentDatabase.Database.WorkContext.ConcurrentRequests
 						}
 				};
 			}

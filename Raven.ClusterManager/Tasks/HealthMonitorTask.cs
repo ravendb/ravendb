@@ -91,15 +91,15 @@ namespace Raven.ClusterManager.Tasks
 			
 			try
 			{
-				var result = await httpClient.GetAsync(server.Url + "databases");
-				var resultStream = await result.Content.ReadAsStreamAsync();
-				var databaseNames = resultStream.JsonDeserialization<string[]>();
+				await StoreDatabaseNames(server, httpClient, session);
+				// Mark server as online now, so if one of the later steps throw we'll have this value.
+				server.NotifyServerIsOnline();
 
-				await HandleDatabaseInServerAsync(server, Constants.SystemDatabase, client, session);
-				foreach (var databaseName in databaseNames)
-				{
-					await HandleDatabaseInServerAsync(server, databaseName, client.ForDatabase(databaseName), session);
-				}
+				await StoreActiveDatabaseNames(server, httpClient, session);
+				await CheckReplicationStatusOfEachActiveDatabase(server, client, session);
+
+				// Mark server as online at the LastOnlineTime.
+				server.NotifyServerIsOnline();
 			}
 			catch (HttpRequestException ex)
 			{
@@ -125,32 +125,80 @@ namespace Raven.ClusterManager.Tasks
 			}
 		}
 
+		private static async Task StoreDatabaseNames(ServerRecord server, HttpClient httpClient, IDocumentSession session)
+		{
+			var result = await httpClient.GetAsync(server.Url + "databases");
+			var resultStream = await result.Content.ReadAsStreamAsync();
+			server.Databases = resultStream.JsonDeserialization<string[]>();
+
+			foreach (var databaseName in server.Databases)
+			{
+				var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + databaseName);
+				if (databaseRecord == null)
+				{
+					databaseRecord = new DatabaseRecord { Name = databaseName, ServerId = server.Id, ServerUrl = server.Url };
+					session.Store(databaseRecord);
+				}
+			}
+		}
+
+		private static async Task StoreActiveDatabaseNames(ServerRecord server, HttpClient httpClient, IDocumentSession session)
+		{
+			var result = await httpClient.GetAsync(server.Url + "admin/stats");
+			var resultStream = await result.Content.ReadAsStreamAsync();
+			var adminStatistics = resultStream.JsonDeserialization<AdminStatistics>();
+
+			server.ClusterName = adminStatistics.ClusterName;
+			server.ServerName = adminStatistics.ServerName;
+			server.MemoryStatistics = adminStatistics.Memory;
+
+			foreach (var loadedDatabase in adminStatistics.LoadedDatabases)
+			{
+				var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + loadedDatabase.Name);
+				if (databaseRecord == null)
+				{
+					databaseRecord = new DatabaseRecord { Name = loadedDatabase.Name, ServerId = server.Id, ServerUrl = server.Url };
+					session.Store(databaseRecord);
+				}
+
+				databaseRecord.LoadedDatabaseStatistics = loadedDatabase;
+			}
+			server.LoadedDatabases = adminStatistics.LoadedDatabases.Select(database => database.Name).ToArray();
+		}
+
+		private static async Task CheckReplicationStatusOfEachActiveDatabase(ServerRecord server, AsyncServerClient client, IDocumentSession session)
+		{
+			await HandleDatabaseInServerAsync(server, Constants.SystemDatabase.Trim('<', '>'), client, session);
+			foreach (var databaseName in server.LoadedDatabases)
+			{
+				await HandleDatabaseInServerAsync(server, databaseName, client.ForDatabase(databaseName), session);
+			}
+		}
+
 		private static async Task HandleDatabaseInServerAsync(ServerRecord server, string databaseName, IAsyncDatabaseCommands dbCmds, IDocumentSession session)
 		{
-			var databaseRecord = new DatabaseRecord { Name = databaseName, ServerId = server.Id, ServerUrl = server.Url };
-			session.Store(databaseRecord);
+			var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + databaseName);
+			if (databaseRecord == null)
+				return;
 
 			var replicationDocument = await dbCmds.GetAsync(Constants.RavenReplicationDestinations);
-			server.IsOnline = true;
-			server.LastOnlineTime = DateTimeOffset.UtcNow;
+			if (replicationDocument == null)
+				return;
 
-			if (replicationDocument != null)
+			databaseRecord.IsReplicationEnabled = true;
+			var document = replicationDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
+			databaseRecord.ReplicationDestinations = document.Destinations;
+
+			foreach (var replicationDestination in databaseRecord.ReplicationDestinations)
 			{
-				databaseRecord.IsReplicationEnabled = true;
-				var document = replicationDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
-				databaseRecord.ReplicationDestinations = document.Destinations;
+				if (replicationDestination.Disabled)
+					continue;
 
-				foreach (var replicationDestination in databaseRecord.ReplicationDestinations)
-				{
-					if (replicationDestination.Disabled)
-						continue;
+				var replicationDestinationServer = session.Load<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url)) ?? new ServerRecord();
+				if (DateTimeOffset.UtcNow - server.LastTriedToConnectAt <= MonitorInterval)
+					continue;
 
-					var replicationDestinationServer = session.Load<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url)) ?? new ServerRecord();
-					if (DateTimeOffset.UtcNow - server.LastTriedToConnectAt <= MonitorInterval)
-						continue;
-
-					await FetchServerDatabasesAsync(replicationDestinationServer, session);
-				}
+				await FetchServerDatabasesAsync(replicationDestinationServer, session);
 			}
 		}
 	}

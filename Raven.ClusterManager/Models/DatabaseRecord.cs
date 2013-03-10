@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 
 namespace Raven.ClusterManager.Models
@@ -16,5 +17,6 @@ namespace Raven.ClusterManager.Models
 		public bool IsReplicationEnabled { get; set; }
 
 		public List<ReplicationDestination> ReplicationDestinations { get; set; }
+		public LoadedDatabaseStatistics LoadedDatabaseStatistics { get; set; }
 	}
 }
