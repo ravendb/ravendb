@@ -14,9 +14,15 @@ clusterManagerApp.controller('MainCtrl', function mainCtrl($scope, $http, $timeo
     $scope.getStats = function () {
         $http.get('/api/servers').success(function (result) {
             $scope.stats = result;
+            _.forEach($scope.stats.servers, function(value, index, array) {
+                value.cssClass = '';
+                if (value.isUnauthorized) {
+                    value.cssClass += ' warning';
+                }
+            });
         });
         
-        timeoutPromise = $timeout($scope.getStats, 5000);
+        // timeoutPromise = $timeout($scope.getStats, 5000);
     };
     $scope.getStats();
     

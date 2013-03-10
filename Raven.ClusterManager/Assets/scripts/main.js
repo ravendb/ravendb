@@ -1,4 +1,5 @@
 ﻿/// <reference path="vendor/angular/angular.js" />
+/// <reference path="vendor/lodash/lodash.js" />
 /*global angular:false */
 'use strict';
 

@@ -1,1 +1,32 @@
-﻿Hello servers!
+﻿<div class="row-fluid">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Server Name</th>
+                <th>Cluster Name</th>
+                <th>URL</th>
+                <th>Last online time</th>
+                <th>Last tried to connect at</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="{{server.cssClass}}" ng-repeat="server in stats.servers">
+                <td>{{server.name}}</td>
+                <td>{{server.clusterName}}</td>
+                <td>{{server.url}}</td>
+                <td>{{server.lastOnlineTime}}</td>
+                <td>{{server.lastTriedToConnectAt}}</td>
+                <td>
+                    <div class="pull-right">
+                        <img src="/images/server_ok.png" ng-show="server.isOnline" title="Status: online">
+                        <img src="/images/server_error.png" ng-hide="server.isOnline" title="Status: offline">
+                    </div>
+                    <div class="pull-right">
+                        <img src="/images/server_warning.png" ng-show="server.isUnauthorized" title="Status: Unauthorized">
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
