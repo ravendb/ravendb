@@ -253,7 +253,6 @@ namespace Raven.Tests.Issues
 						session.SaveChanges();
 					}
 					WaitForIndexing(store);
-					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets == 2, 10000));
 
 					WaitForAllRequestsToComplete(server);
 					server.Server.ResetNumberOfRequests();
