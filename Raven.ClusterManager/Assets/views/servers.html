@@ -8,6 +8,7 @@
                 <th>Last online time</th>
                 <th>Last tried to connect at</th>
                 <th>Status</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -17,14 +18,17 @@
                 <td>{{server.url}}</td>
                 <td>{{server.lastOnlineTime}}</td>
                 <td>{{server.lastTriedToConnectAt}}</td>
-                <td>
-                    <div class="pull-right">
+                <td style="text-align: right">
+                    <span ng-show="server.isOnline">
+                        <img src="/images/server_warning.png" ng-show="server.isUnauthorized" title="Status: Unauthorized">
+                    </span>
+                    <span>
                         <img src="/images/server_ok.png" ng-show="server.isOnline" title="Status: online">
                         <img src="/images/server_error.png" ng-hide="server.isOnline" title="Status: offline">
-                    </div>
-                    <div class="pull-right" ng-show="server.isOnline">
-                        <img src="/images/server_warning.png" ng-show="server.isUnauthorized" title="Status: Unauthorized">
-                    </div>
+                    </span>
+                </td>
+                <td style="text-align: right">
+                    <a ng-hide="server.isOnline"><img src="/images/server_delete.png" title="Delete"></a>
                 </td>
             </tr>
         </tbody>
