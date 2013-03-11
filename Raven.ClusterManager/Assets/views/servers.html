@@ -28,7 +28,9 @@
                     </span>
                 </td>
                 <td style="text-align: right">
-                    <a ng-hide="server.isOnline"><img src="/images/server_delete.png" title="Delete"></a>
+                    <a ng-hide="server.isOnline" ng-click="deleteServer(server.id)">
+                        <img src="/images/server_delete.png" title="Delete">
+                    </a>
                 </td>
             </tr>
         </tbody>

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Nancy;
 using Raven.Client;
 using Raven.ClusterManager.Models;
@@ -26,8 +27,9 @@ namespace Raven.ClusterManager.Modules
 
 			Delete["/{id}"] = parameters =>
 			{
-				// session.Advanced.DocumentStore.DatabaseCommands.Delete();
-				return null;
+				var id = (string)parameters.id;
+				session.Advanced.DocumentStore.DatabaseCommands.Delete(id, null);
+				return true;
 			};
 		}
 	}
