@@ -105,6 +105,16 @@ namespace Raven.Studio.Features.Smuggler
 			}
 		}
 
+		protected override Task<RavenJArray> GetTransformers(int totalCount)
+		{
+			var url = ("/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount).NoCache();
+			var request = commands.CreateRequest(url, "GET");
+
+			return request
+				.ReadResponseJsonAsync()
+				.ContinueWith(task => ((RavenJArray)task.Result));
+		}
+
 		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
 			if (index != null)
@@ -159,6 +169,18 @@ namespace Raven.Studio.Features.Smuggler
 				}
 
 				return new CompletedTask();
+			}
+
+			return FlushBatch();
+		}
+
+		protected override Task PutTransformer(string transformerName, RavenJToken transformer)
+		{
+			if (transformer != null)
+			{
+				var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
+
+				return commands.PutTransfomerAsync(transformerName, transformerDefinition);
 			}
 
 			return FlushBatch();

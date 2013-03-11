@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -38,7 +39,11 @@ namespace Raven.Tests.ResultsTransformer
         [Fact]
         public void CanUseResultsTransformerWithQueryOnLoad()
         {
-            using (var store = NewDocumentStore())
+            using (var store = new DocumentStore
+            {
+	            Url = "http://localhost:8080/",
+				DefaultDatabase = "DB3"
+            }.Initialize())
             {
                 new ProductWithQueryInput().Execute(store);
                 using (var session = store.OpenSession())

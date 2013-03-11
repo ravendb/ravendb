@@ -31,10 +31,13 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
 		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag);
 		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
+		protected abstract Task<RavenJArray> GetTransformers(int totalCount);
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
 		protected abstract Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
 		protected abstract Task PutDocument(RavenJObject document);
+		protected abstract Task PutTransformer(string transformerName, RavenJToken transformer);
+
 		protected abstract Task<DatabaseStatistics> GetStats();
 
 		protected abstract Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript);
@@ -125,6 +128,14 @@ namespace Raven.Abstractions.Smuggler
 				}
 				jsonWriter.WriteEndArray();
 
+				jsonWriter.WritePropertyName("Transformers");
+				jsonWriter.WriteStartArray();
+				if ((options.OperateOnTypes & ItemType.Transformers) == ItemType.Transformers)
+				{
+					await ExportTransformers(jsonWriter);
+				}
+				jsonWriter.WriteEndArray();
+
 				jsonWriter.WriteEndObject();
 				streamWriter.Flush();
 			}
@@ -171,6 +182,28 @@ namespace Raven.Abstractions.Smuggler
 						{"LastAttachmentEtag", options.LastAttachmentEtag.ToString()}
 					}.WriteTo(new JsonTextWriter(streamWriter));
 				streamWriter.Flush();
+			}
+		}
+
+		private async Task ExportTransformers(JsonTextWriter jsonWriter)
+		{
+			int totalCount = 0;
+			while (true)
+			{
+				var transformers = await GetTransformers(totalCount);
+				if (transformers.Length == 0)
+				{
+					ShowProgress("Done with reading transformers, total: {0}", totalCount);
+					break;
+				}
+
+				totalCount += transformers.Length;
+				ShowProgress("Reading batch of {0,3} transformers, read so far: {1,10:#,#;;0}", transformers.Length, totalCount);
+
+				foreach (var transformer in transformers)
+				{
+					transformer.WriteTo(jsonWriter);
+				}
 			}
 		}
 
@@ -339,9 +372,45 @@ namespace Raven.Abstractions.Smuggler
 			var attachmentCount = await ImportAttachments(jsonReader, options);
 			ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
 
+			ShowProgress("Begin reading transformers");
+			var transformersCount = await ImportTransformers(jsonReader, options);
+			ShowProgress(string.Format("Done with reading transformers, total: {0}", transformersCount));
+
 			sw.Stop();
 
 			ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", documentCount, attachmentCount, sw.ElapsedMilliseconds);
+		}
+
+		private async Task<int> ImportTransformers(JsonTextReader jsonReader, SmugglerOptions options)
+		{
+			var count = 0;
+
+			if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
+				return count;
+			if (jsonReader.TokenType != JsonToken.PropertyName)
+				throw new InvalidDataException("PropertyName was expected");
+			if (Equals("Transformers", jsonReader.Value) == false)
+				throw new InvalidDataException("Transformers property was expected");
+			if (jsonReader.Read() == false)
+				return count;
+			if (jsonReader.TokenType != JsonToken.StartArray)
+				throw new InvalidDataException("StartArray was expected");
+			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			{
+				var transformer = RavenJToken.ReadFrom(jsonReader);
+				if ((options.OperateOnTypes & ItemType.Transformers) != ItemType.Transformers)
+					continue;
+
+				var transformerName = transformer.Value<string>("name");
+
+				await PutTransformer(transformerName, transformer);
+
+				count++;
+			}
+
+			await PutTransformer(null, null); // force flush
+
+			return count;
 		}
 
 		private async Task<int> ImportAttachments(JsonTextReader jsonReader, SmugglerOptions options)

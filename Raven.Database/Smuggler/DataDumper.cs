@@ -62,6 +62,11 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
+		protected override Task<RavenJArray> GetTransformers(int totalCount)
+		{
+			return new CompletedTask<RavenJArray>(_database.GetTransformers(totalCount, SmugglerOptions.BatchSize));
+		}
+
 		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
 			const int dummy = 0;
@@ -104,6 +109,18 @@ namespace Raven.Database.Smuggler
 				document.Remove("@metadata");
 
 				_database.Put(key, null, document, metadata, null);
+			}
+
+			return new CompletedTask();
+		}
+
+		protected override Task PutTransformer(string transformerName, RavenJToken transformer)
+		{
+			if (transformer != null)
+			{
+				var transformerDefinition =
+					JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
+				_database.PutTransform(transformerName, transformerDefinition);
 			}
 
 			return new CompletedTask();

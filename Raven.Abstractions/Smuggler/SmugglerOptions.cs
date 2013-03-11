@@ -20,7 +20,7 @@ namespace Raven.Abstractions.Smuggler
 		public SmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
-			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
+			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
 			ShouldExcludeExpired = false;
@@ -123,7 +123,8 @@ namespace Raven.Abstractions.Smuggler
 	{
 		Documents = 0x1,
 		Indexes = 0x2,
-		Attachments = 0x4
+		Attachments = 0x4,
+		Transformers = 0x8
 	}
 
 	public class FilterSetting

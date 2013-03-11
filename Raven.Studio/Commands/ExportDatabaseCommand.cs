@@ -18,7 +18,7 @@ namespace Raven.Studio.Commands
 		private readonly Action<string> output;
 		private Stream stream;
 		private readonly TaskModel taskModel;
-		private bool includeAttachments, includeDocuments, includeIndexes;
+		private bool includeAttachments, includeDocuments, includeIndexes, includeTransformers;
 
 		private readonly ISmugglerApi smuggler;
 
@@ -26,7 +26,10 @@ namespace Raven.Studio.Commands
 		{
 			this.output = output;
 			this.taskModel = taskModel;
-			smuggler = new SmugglerApi(null, DatabaseCommands, output);
+			smuggler = new SmugglerApi(new SmugglerOptions
+			{
+				BatchSize = BatchSize
+			}, DatabaseCommands, output);
 		}
 
 		public override void Execute(object parameter)
@@ -40,7 +43,10 @@ namespace Raven.Studio.Commands
 			var indexesUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Indexes") as TaskCheckBox;
 			includeIndexes = indexesUi != null && (bool)indexesUi.Value;
 
-			if (includeDocuments == false && includeAttachments == false && includeIndexes == false)
+			var transformersUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Transformers") as TaskCheckBox;
+			includeTransformers = transformersUi != null && (bool)transformersUi.Value;
+
+			if (includeDocuments == false && includeAttachments == false && includeIndexes == false && includeTransformers == false)
 				return;
 
 			var saveFile = new SaveFileDialog
@@ -81,6 +87,11 @@ namespace Raven.Studio.Commands
 			if (includeIndexes)
 			{
 				operateOnTypes |= ItemType.Indexes;
+			}
+
+			if (includeTransformers)
+			{
+				operateOnTypes |= ItemType.Transformers;
 			}
 
 			smuggler.ExportData(stream, new SmugglerOptions

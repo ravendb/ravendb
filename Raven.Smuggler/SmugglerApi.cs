@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Jint;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -130,6 +129,18 @@ namespace Raven.Smuggler
 			return new CompletedTask();
 		}
 
+		protected override Task PutTransformer(string transformerName, RavenJToken transformer)
+		{
+			if (transformer != null)
+			{
+				var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
+
+				return Commands.PutTransfomerAsync(transformerName, transformerDefinition);
+			}
+
+			return FlushBatch();
+		}
+
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
 			var builder = new StringBuilder();
@@ -221,6 +232,14 @@ namespace Raven.Smuggler
 
 				lastEtag = Etag.Parse(attachmentInfo.Last().Value<string>("Etag"));
 			}
+		}
+
+		protected override Task<RavenJArray> GetTransformers(int totalCount)
+		{
+			RavenJArray transformers = null;
+			var request = CreateRequest("/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
+			request.ExecuteRequest(reader => transformers = RavenJArray.Load(new JsonTextReader(reader)));
+			return new CompletedTask<RavenJArray>(transformers);
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
