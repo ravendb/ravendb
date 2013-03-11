@@ -34,7 +34,7 @@ namespace Raven.ClusterManager.Tasks
 
 		static HealthMonitorTask()
 		{
-			MonitorInterval = TimeSpan.FromMinutes(2);
+			MonitorInterval = TimeSpan.FromMinutes(1);
 		}
 
 		public HealthMonitorTask(IDocumentStore store)
