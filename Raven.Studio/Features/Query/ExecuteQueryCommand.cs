@@ -29,18 +29,17 @@ namespace Raven.Studio.Features.Query
 			ClearRecentQuery();
 			model.RememberHistory();
 
-			Observable.FromEventPattern<VirtualCollectionSourceChangedEventArgs>(
-				h => model.CollectionSource.CollectionChanged += h, h => model.CollectionSource.CollectionChanged -= h)
-			          .Where(p => p.EventArgs.ChangeType == ChangeType.Refresh)
-			          .Take(1)
-			          .ObserveOnDispatcher()
-			          .Subscribe(_ =>
-			          {
-				          if (model.CollectionSource.Count == 0)
-				          {
-					          SuggestResults();
-				          }
-			          });
+			Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(
+				h => model.CollectionSource.QueryStatisticsUpdated += h, h => model.CollectionSource.QueryStatisticsUpdated -= h)
+				.Take(1)
+				.ObserveOnDispatcher()
+				.Subscribe(e =>
+				{
+					if (e.EventArgs.Statistics.TotalResults == 0)
+					{
+						SuggestResults();
+					}
+				});
 
             model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
 		    var templateQuery = model.CreateTemplateQuery();
