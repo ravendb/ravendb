@@ -79,7 +79,23 @@ namespace Raven.ClusterManager.Tasks
 			{
 				AllowAutoRedirect = false,
 			};
+
+			switch (server.AuthenticationMode)
+			{
+				case AuthenticationMode.User:
+					if (string.IsNullOrEmpty(server.Domain))
+					{
+						handler.Credentials = new NetworkCredential(server.Username, server.Password);
+					}
+					else
+					{
+						handler.Credentials = new NetworkCredential(server.Username, server.Password, server.Domain);
+					}
+					break;
+			}
+
 			var httpClient = new HttpClient(handler);
+			
 			var documentStore = (DocumentStore)session.Advanced.DocumentStore;
 			var replicationInformer = new ReplicationInformer(new DocumentConvention
 			{
@@ -153,6 +169,8 @@ namespace Raven.ClusterManager.Tasks
 			EnsureSuccessStatusCode(result, server);
 			var resultStream = await result.Content.ReadAsStreamAsync();
 			var adminStatistics = resultStream.JsonDeserialization<AdminStatistics>();
+
+			server.IsUnauthorized = false;
 
 			server.ClusterName = adminStatistics.ClusterName;
 			server.ServerName = adminStatistics.ServerName;

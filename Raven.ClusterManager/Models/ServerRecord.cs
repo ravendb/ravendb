@@ -40,7 +40,8 @@ namespace Raven.ClusterManager.Models
 
 	public enum AuthenticationMode
 	{
+		None,
 		ApiKey,
-		User
+		User,
 	}
 }
