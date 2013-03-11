@@ -9,6 +9,7 @@ using Nancy;
 using Nancy.IO;
 using Nancy.Responses;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.ClusterManager
@@ -22,7 +23,8 @@ namespace Raven.ClusterManager
 		{
 			var settings = new JsonSerializerSettings
 			{
-				ContractResolver = new CamelCasePropertyNamesContractResolver()
+				ContractResolver = new CamelCasePropertyNamesContractResolver(),
+				Converters = {new StringEnumConverter {CamelCaseText = true}},
 			};
 			serializer = JsonSerializer.Create(settings);
 		}
