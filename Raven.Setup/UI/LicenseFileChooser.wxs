@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
-    <Binary Id="Raven.Setup.CustomActions.CA.dll" src="$(var.Raven.Setup.CustomActions.TargetDir)\$(var.Raven.Setup.CustomActions.ProjectName).CA.dll" />
     <CustomAction Id="OpenLicenseFileChooser" Return="check" Execute="immediate" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="OpenLicenseFileChooser" />
     <CustomAction Id="LicenseFileExists" Return="check" Execute="immediate" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="LicenseFileExists" />
 
     <UI>
       <Dialog Id="LicenseFileChooser" Width="370" Height="270" Title="File Browser Example Dialog" NoMinimize="yes">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
-        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Condition Action="disable"><![CDATA[RAVEN_LICENSE_FILE_PATH = "" OR LICENSE_FILE_EXISTS = "False"]]></Condition>
+          <Condition Action="enable"><![CDATA[RAVEN_LICENSE_FILE_PATH <> "" AND LICENSE_FILE_EXISTS <> "False"]]></Condition>
+        </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel"/>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
@@ -24,11 +26,12 @@
 
         <Control Type="Edit" Id="txtFilePath" Width="283" Height="15" X="30" Y="82" Property="RAVEN_LICENSE_FILE_PATH" Text="[RAVEN_LICENSE_FILE_PATH]" />
         <Control Type="PushButton" Id="btnChange" Width="56" Height="17" X="30" Y="100" Text="Browse" />
-      </Dialog>
+      </Dialog> 
 
       <Publish Dialog="LicenseFileChooser" Control="btnChange" Event="DoAction" Value="OpenLicenseFileChooser" Order="1">1</Publish>
       <Publish Dialog="LicenseFileChooser" Control="btnChange" Property="RAVEN_LICENSE_FILE_PATH" Value="[RAVEN_LICENSE_FILE_PATH]" Order="2" >1</Publish>
       <Publish Dialog="LicenseFileChooser" Control="txtFilePath" Event="DoAction" Value="LicenseFileExists" Order="3" >1</Publish>
+      <Publish Dialog="LicenseFileChooser" Control="txtFilePath" Property="LICENSE_FILE_EXISTS" Value="[LICENSE_FILE_EXISTS]" Order="4" >1</Publish>
     </UI>
 	</Fragment>
 </Wix>

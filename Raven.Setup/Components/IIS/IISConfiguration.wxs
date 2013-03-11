@@ -7,43 +7,53 @@
     <?include IISSettings.wxi ?>
 
     <!-- Install to default web site -->
-    <iis:WebSite Id="DefaultWebSite" Description='Default Web Site'>
+    <iis:WebSite Id="SelectedWebSite" Description='[WEBSITE_DESCRIPTION]'>
       <iis:WebAddress Id="AllUnassigned" Port="80" />
     </iis:WebSite>
 
     <DirectoryRef Id="INSTALLFOLDER">
       <!-- Configuring app pool -->
-      <Component Id="MyWebAppPoolCmp" Guid="" KeyPath="yes">
-        <util:User Id="MyWebAppPoolUser"
+      <Component Id="DefaultApplicationPoolComponent" Guid="{50D5E86E-4ED9-4E9A-8904-09A2B94CEE2D}" KeyPath="yes">
+        <!--<util:User Id="ApplicationPoolUser"
                    CreateUser="no"
                    Name="[WEB_APP_POOL_IDENTITY_NAME]"
                    Password="[WEB_APP_POOL_IDENTITY_PWD]"
-                   Domain="[WEB_APP_POOL_IDENTITY_DOMAIN]" />
-        <iis:WebAppPool Id="MyWebAppPool"
-                        Name="[WEB_APP_NAME]"
+                   Domain="[WEB_APP_POOL_IDENTITY_DOMAIN]"/>-->
+        <iis:WebAppPool Id="RavenAppPool"
+                        Name="[WEB_APP_POOL_NAME]"
+                        ManagedPipelineMode="Integrated"
+                        ManagedRuntimeVersion="v4.0"
+                       />
+      
+      <!--<iis:WebAppPool Id="RavenAppPool"
+                        Name="[WEB_APP_POOL_NAME]"
                         Identity="other"
-                        User="MyWebAppPoolUser" />
+                        User="ApplicationPoolUser"
+                        ManagedPipelineMode="Integrated"
+                        ManagedRuntimeVersion="v4.0" />-->
       </Component>
 
       <!-- Configure virtual dir -->
-      <Component Id="MyWebVirtualDirCmp"
+      <Component Id="VirtualDirectoryComponent"
              Guid="{751DEB01-ECC1-48ff-869A-65BCEE9E0528}"
              KeyPath="yes" >
         <iis:WebVirtualDir Id="MyWebVirtualDir"
-                  Alias="[VIRTUAL_DIR_VAL]" Directory="INSTALLFOLDER"
-                  WebSite="DefaultWebSite">
+                  Alias="[VIRTUAL_DIR_VAL]" 
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
           <iis:WebDirProperties Id="MyWebVirtDirProperties"
-             AnonymousAccess="no" BasicAuthentication="no"
-             WindowsAuthentication="yes" />
+             AnonymousAccess="yes" 
+                                BasicAuthentication="no"
+             WindowsAuthentication="no"  />
           <iis:WebApplication Id="MyWebWebApplication"
-             Name="[VIRTUAL_DIR_VAL]" />
+             Name="[VIRTUAL_DIR_VAL]" WebAppPool="RavenAppPool" />
         </iis:WebVirtualDir>
       </Component>
     </DirectoryRef>
 
-    <ComponentGroup Id="MyWebIssConfiguration">
-      <ComponentRef Id="MyWebVirtualDirCmp" />
-      <ComponentRef Id="MyWebAppPoolCmp" />
+    <ComponentGroup Id="IssConfiguration">
+      <ComponentRef Id="VirtualDirectoryComponent" />
+      <ComponentRef Id="DefaultApplicationPoolComponent" />
     </ComponentGroup>
 
   </Fragment>

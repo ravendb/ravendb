@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Include>
+  <Property Id="WEBSITE_DESCRIPTION" Value="Default Web Site" />
+
   <Property Id="VIRTUAL_DIR_VAL" Value="RavenDB" />
 
-  <Property Id="WEB_APP_NAME" Value="RavenDB" />
-
-  <Property Id="WEB_APP_POOL_IDENTITY_DOMAIN" Value="POOL_DOMAIN" />
-  <Property Id="WEB_APP_POOL_IDENTITY_NAME" Value="account-name" />
+  <Property Id="WEB_APP_POOL_NAME" />
   <Property Id="WEB_APP_POOL_IDENTITY_PWD" Hidden="yes" />
 
+  <SetProperty Id="WEB_APP_POOL_IDENTITY_DOMAIN" Value="[%USERDOMAIN]" Before="CostFinalize" Sequence="ui"/>
+  <SetProperty Id="WEB_APP_POOL_IDENTITY_NAME" Value="[%USERNAME]" Before="CostFinalize" Sequence="ui"/>
 </Include>

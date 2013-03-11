@@ -65,7 +65,7 @@
         <ServiceControl Id="StartService" Start="install" Stop="uninstall" Remove="uninstall" Name="[SERVICE_NAME]" Wait="yes" />-->
       </Component>
       <Component Id="Raven.Server.ProvidedServiceName" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
-        <RegistryKey Root="HKCU" Key="Software\HibernatingRhinos\RavenDB" >
+        <RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]" >
           <RegistryValue Type="string" Name="ServiceName" Value="[SERVICE_NAME]"  />
         </RegistryKey>
       </Component>

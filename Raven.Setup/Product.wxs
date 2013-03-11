@@ -4,17 +4,18 @@
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <Product Id="*" Name="RavenDB" Language="1033" Version="2.5.0.0" Manufacturer="Hibernating Rhinos LTD" UpgradeCode="79a41e9e-dc99-4df8-9820-1de16e63c655">
     <Package InstallerVersion="200" Compressed="yes" />
-
+    
+    <!--InstallPrivileges="elevated" InstallScope="perMachine"-->
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' />
-
-    <Property Id="RAVEN_INSTALLATION_TYPE" Value="IIS" /> <!-- default value -->
-    <Property Id="RAVEN_LICENSE_FILE_PATH" />
-    <Property Id="LICENSE_FILE_EXISTS" />
-    
+ 
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     
+    <?include Settings.wxi ?>
+    <?include Conditions.wxi ?>
+    <?include Binaries.wxi ?>
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <!--<Directory Id="ProgramFilesFolder">
         <Directory Id='HibernatingRhinos' Name='HibernatingRhinos'>-->
@@ -60,8 +61,7 @@
       <ComponentRef Id='Raven.Web.Config'/>
       
       <!-- Include IIS Configuration. -->
-      <ComponentGroupRef Id="MyWebIssConfiguration" />
-
+      <ComponentGroupRef Id="IssConfiguration" />
     </Feature>
 
     <UIRef Id="InstallerUI" />
@@ -72,19 +72,18 @@
     
     <!--<Property Id="PIDTemplate"><![CDATA[12345<### ###>@@@@@]]></Property>-->
 
-    <!--<Icon Id="Raven.ico" SourceFile="$(var.Raven.Server.ProjectDir)\favicon.ico" />-->
 
     <Property Id="SERVICE_NAME_FROM_REGISTRY">
       <RegistrySearch Id="ServiceNaneFromRegistry"
-                      Root="HKCU"
-                      Key="Software\HibernatingRhinos\RavenDB"
+                      Root="HKLM"
+                      Key="SOFTWARE\[Manufacturer]\[ProductName]"
                       Name="ServiceName"
                       Type="raw" />
     </Property>
-    
-    <CustomAction Id='InstallRavenService' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=[SERVICE_NAME] /install' Return='check'/>
-    <CustomAction Id='UninstallRavenService' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=[SERVICE_NAME_FROM_REGISTRY] /uninstall' Return='check'/>
-    <CustomAction Id='SetupPerformanceCounters' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /user=[SERVICE_USER_NAME] /setup-perf-counters' Return='check'/>
+
+    <CustomAction Id='InstallRavenService' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME]&quot; /install' Return='check'/>
+    <CustomAction Id='UninstallRavenService' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME_FROM_REGISTRY]&quot; /uninstall' Return='check'/>
+    <CustomAction Id='SetupPerformanceCounters' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /user=&quot;[SERVICE_USER_NAME]&quot; /setup-perf-counters' Return='check'/>
     
     <InstallExecuteSequence>
       <Custom Action='SetupPerformanceCounters' Before='InstallFinalize'>
@@ -98,7 +97,6 @@
         <![CDATA[(&Service=2) AND (!Service=3)]]>
       </Custom>
     </InstallExecuteSequence>
-
-
+    
   </Product>
 </Wix>

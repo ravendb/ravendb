@@ -1,49 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
-    <UI>
-      
-      <Dialog Id="IisSetupDlg" Width="370" Height="270"
-               Title="IIS Settings - [ProductName]" NoMinimize="yes">
-        <!-- Virtual Dir prompt -->
-        <Control Id="VirtualDirLabel" Type="Text" X="45" Y="73"
-           Width="100" Height="15" TabSkip="no" Text="&amp;Virtual Directory:" />
-        <Control Id="VirtualDirEdit" Type="Edit" X="45"
-           Y="85" Width="220" Height="18" Property="VIRTUAL_DIR_VAL" Text="{80}" />
-        <!-- Back button -->
-        <Control Id="Back" Type="PushButton" X="180" Y="243"
-                Width="56" Height="17" Text="&amp;Back">
-          <Publish Event="NewDialog" Value="LicenseAgreementDlg">1</Publish>
-        </Control>
-        <Control Id="Next" Type="PushButton" X="236" Y="243"
-           Width="56" Height="17" Default="yes" Text="&amp;Next">
-          <Publish Event="NewDialog" Value="PoolSettingsDlg">
-            <!--if settings are correct, allow next dialog-->
-            <![CDATA[VIRTUAL_DIR_VAL <> ""]]>
-          </Publish>
 
+    <Property Id="CUSTOM_APPLICATION_POOL" />
+    
+    <UI>
+      <Dialog Id="IisSetupDlg" Width="370" Height="270" Title="IIS Settings - [ProductName]" NoMinimize="yes">
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
+        <Control Id="Next" Type="PushButton"  X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Condition Action="disable">WEBSITE_DESCRIPTION = "" OR VIRTUAL_DIR_VAL = ""</Condition>
+          <Condition Action="enable"><![CDATA[WEBSITE_DESCRIPTION <> "" AND VIRTUAL_DIR_VAL <> ""]]></Condition>
         </Control>
-        <Control Id="Cancel" Type="PushButton" X="304" Y="243"
-                   Width="56" Height="17" Cancel="yes" Text="Cancel">
-          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Please enter IIS configuration</Text>
         </Control>
-        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0"
-             Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
-        <Control Id="Description" Type="Text" X="25" Y="23"
-               Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>Please enter IIS Configuration</Text>
-        </Control>
-        <Control Id="BottomLine" Type="Line" X="0" Y="234"
-              Width="370" Height="0" />
-        <Control Id="Title" Type="Text" X="15" Y="6"
-                Width="200" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>{\WixUI_Font_Title}IIS Settings</Text>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}IIS settings</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+
+        <Control Id="WebSiteLabel" Type="Text" X="45" Y="73" Width="100" Height="15" TabSkip="no" Text="&amp;Web Site Name:" />
+        <Control Id="WebSiteEdit" Type="Edit" X="45"  Y="85" Width="220" Height="18" Property="WEBSITE_DESCRIPTION" Text="{80}" />
+        <Control Id="VirtualDirLabel" Type="Text" X="45" Y="103" Width="100" Height="15" TabSkip="no" Text="&amp;Virtual Directory:" />
+        <Control Id="VirtualDirEdit" Type="Edit" X="45" Y="115" Width="220" Height="18" Property="VIRTUAL_DIR_VAL" Text="{80}" />
+
+        <Control Id="CustomAppPoolCheckBox" Type="CheckBox" X="45" Y="134" Width="250" Height="15" Property="CUSTOM_APPLICATION_POOL" CheckBoxValue="1">
+          <Text>Use a custom application pool instead of the web site default</Text>
+          <!--<Publish Property="APPLICATION_POOL_TYPE" Value="EXISTING">NOT CUSTOM_APPLICATION_POOL</Publish>
+          <Publish Property="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity">NOT CUSTOM_APPLICATION_POOL</Publish>-->
+        </Control>
       </Dialog>
-
-      
-
     </UI>
   </Fragment>
 </Wix>

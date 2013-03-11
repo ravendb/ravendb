@@ -24,7 +24,21 @@
       <Publish Dialog="ServiceSettings" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="ServiceSettings"><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="PoolSettingsDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="AppPoolSettingsDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="IisSetupDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
+
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg"><![CDATA[WEBSITE_DESCRIPTION <> "" AND VIRTUAL_DIR_VAL <> "" AND CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"><![CDATA[WEBSITE_DESCRIPTION <> "" AND VIRTUAL_DIR_VAL <> "" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="IisSetupDlg" Control="Back" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
+      <Publish Dialog="IisSetupDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+
+      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg">
+        <![CDATA[WEB_APP_POOL_NAME <> "" or WEB_APP_POOL_IDENTITY_DOMAIN <> 
+                          "" or WEB_APP_POOL_IDENTITY_NAME <> "" 
+                          or WEB_APP_POOL_IDENTITY_PWD <> ""]]>
+      </Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Back" Event="NewDialog" Value="IisSetupDlg">1</Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
     </UI>
   </Fragment>
 </Wix>

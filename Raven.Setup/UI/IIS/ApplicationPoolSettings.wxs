@@ -1,62 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
+
+   
+    <Property Id="APPLICATION_POOL_TYPE" Value="EXISTING" />
+    <Property Id="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity" />
+    
     <UI>
-      <Dialog Id="PoolSettingsDlg" Width="370" Height="270"
-               Title="Application Pool Settings - [ProductName]" NoMinimize="yes">
-        <!-- name of the application pool -->
-        <Control Id="PoolNameLabel" Type="Text" X="45" Y="73"
-            Width="100" Height="15" TabSkip="no" Text="&amp;Pool name:" />
-        <Control Id="PoolNameEdit" Type="Edit" X="45" Y="85"
-            Width="220" Height="18" Property="WEB_APP_NAME" Text="{80}" />
-        <!-- domain -->
-        <Control Id="DomainPoolLabel" Type="Text" X="45" Y="105"
-            Width="100" Height="15" TabSkip="no" Text="&amp;Domain for AppPool:" />
-        <Control Id="DomainPoolEdit" Type="Edit" X="45" Y="117"
-            Width="220" Height="18"
-            Property="WEB_APP_POOL_IDENTITY_DOMAIN" Text="{80}" />
-        <!-- Login -->
-        <Control Id="LoginPoolLabel" Type="Text" X="45" Y="137"
-          Width="100" Height="15" TabSkip="no" Text="&amp;Login for AppPool:" />
-        <Control Id="LoginPoolEdit" Type="Edit" X="45" Y="149"
-          Width="220" Height="18" Property="WEB_APP_POOL_IDENTITY_NAME" Text="{80}" />
-        <!-- Password -->
-        <Control Id="PasswordPoolLabel" Type="Text" X="45" Y="169"
-          Width="100" Height="15" TabSkip="no" Text="&amp;Password for AppPool:" />
-        <Control Id="PasswordPoolEdit" Type="Edit" X="45" Y="181"
-          Width="220" Height="18" Property="WEB_APP_POOL_IDENTITY_PWD"
-          Text="{80}" Password="yes" />
-        <!-- Back button -->
-        <Control Id="Back" Type="PushButton" X="180" Y="243"
-          Width="56" Height="17" Text="&amp;Back">
-          <Publish Event="NewDialog" Value="IisSetupDlg">1</Publish>
+      <Dialog Id="AppPoolSettingsDlg" Width="370" Height="270" Title="Application Pool Settings - [ProductName]" NoMinimize="yes">
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <!--<Condition Action="disable">SERVICE_NAME = "" OR SERVICE_PORT = ""</Condition>
+          <Condition Action="enable"><![CDATA[SERVICE_NAME <> "" AND SERVICE_PORT <> ""]]></Condition>-->
         </Control>
-        <Control Id="Next" Type="PushButton" X="236" Y="243"
-          Width="56" Height="17" Default="yes" Text="&amp;Next">
-          <Publish Event="NewDialog" Value="InstallDirDlg">
-            <!--if settings are correct, allow next dialog-->
-            <![CDATA[WEB_APP_NAME <> "" or WEB_APP_POOL_IDENTITY_DOMAIN <> 
-                          "" or WEB_APP_POOL_IDENTITY_NAME <> "" 
-                          or WEB_APP_POOL_IDENTITY_PWD <> ""]]>
-          </Publish>
-        </Control>
-        <Control Id="Cancel" Type="PushButton" X="304" Y="243"
-                Width="56" Height="17" Cancel="yes" Text="Cancel">
-          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
-        </Control>
-        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0"
-          Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
-        <Control Id="Description" Type="Text" X="25" Y="23"
-               Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
           <Text>Please enter AppPool Configuration for IIS</Text>
         </Control>
-        <Control Id="BottomLine" Type="Line" X="0"
-                 Y="234" Width="370" Height="0" />
-        <Control Id="Title" Type="Text" X="15" Y="6"
-                 Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
           <Text>{\WixUI_Font_Title}Application Pool Settings</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="170" Height="31" X="15" Y="56">
+          <RadioButtonGroup Property="APPLICATION_POOL_TYPE">
+            <RadioButton Text="Use an existing one" Value="EXISTING" Height="17" Width="170" X="0" Y="0" />
+            <RadioButton Text="Create a new one" Value="NEW" Height="17" Width="170" X="0" Y="15" />
+          </RadioButtonGroup>
+          <!--<Publish Property="WEB_APP_POOL_NAME" Value="RavenApplicationPool"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Publish>
+          <Publish Property="WEB_APP_POOL_NAME" Value="DefaultAppPool"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Publish>-->
+        </Control>
+        <Control Id="PoolNameLabel" Type="Text" X="40" Y="94" Width="52" Height="15" TabSkip="no" Text="&amp;Pool name:" />
+        <Control Id="PoolNameEdit" Type="Edit" X="98" Y="92" Width="224" Height="15" Property="WEB_APP_POOL_NAME" Text="{80}" />
+        <Control Id="IdentityLabel" Type="Text" X="40" Y="114" Width="52" Height="15" TabSkip="no" Text="&amp;Identity:">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Type="ComboBox" Property="APPLICATION_POOL_IDENTITY_TYPE" Id="IdentityComboBox" Width="224" Height="16" X="98" Y="112">
+          <ComboBox Property="APPLICATION_POOL_IDENTITY_TYPE">
+            <ListItem Text="ApplicationPoolIdentity" Value="ApplicationPoolIdentity" />
+            <ListItem Text="LocalService" Value="LocalService" />
+            <ListItem Text="LocalSystem" Value="LocalSystem" />
+            <ListItem Text="NetworkService" Value="NetworkService" />
+            <ListItem Text="Other" Value="other" />
+          </ComboBox>
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Id="DomainPoolLabel" Type="Text" X="40" Y="135" Width="43" Height="15" TabSkip="no" Text="&amp;Domain:">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE = "other" AND APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE <> "other" OR APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Id="DomainPoolEdit" Type="Edit" X="98" Y="135" Width="225" Height="15" Property="WEB_APP_POOL_IDENTITY_DOMAIN" Text="{80}">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE = "other" AND APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE <> "other" OR APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Id="LoginPoolLabel" Type="Text" X="41" Y="156" Width="39" Height="15" TabSkip="no" Text="&amp;Login:">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE = "other" AND APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE <> "other" OR APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Id="LoginPoolEdit" Type="Edit" X="98" Y="154" Width="225" Height="15" Property="WEB_APP_POOL_IDENTITY_NAME" Text="{80}">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE = "other" AND APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE <> "other" OR APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Id="PasswordPoolLabel" Type="Text" X="40" Y="174" Width="48" Height="15" TabSkip="no" Text="&amp;Password:">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE = "other" AND APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE <> "other" OR APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Id="PasswordPoolEdit" Type="Edit" X="98" Y="172" Width="225" Height="15" Property="WEB_APP_POOL_IDENTITY_PWD" Text="{80}" Password="yes">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE = "other" AND APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_IDENTITY_TYPE <> "other" OR APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
       </Dialog>
     </UI>
 	</Fragment>

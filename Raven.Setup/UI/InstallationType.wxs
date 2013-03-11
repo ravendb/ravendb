@@ -25,8 +25,9 @@
         </Control>
       </Dialog>
 
-      <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="Service"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
-      <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="IIS"> <![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
+      <Publish Dialog="InstallationType" Control="Next" Event="AddLocal" Value="All" Order="1">1</Publish>
+      <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="Service" Order="2"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
+      <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="IIS" Order="3"> <![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
     </UI>
 	</Fragment>
 </Wix>
