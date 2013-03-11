@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Connection
 	{
 		public int? RequestTimeoutInMs { get; set; }
 
-		readonly ConcurrentDictionary<string, AbstractAuthenticator> authenticators = new ConcurrentDictionary<string, AbstractAuthenticator>();
+		readonly ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator> authenticators = new ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator>();
 
 		public void ConfigureRequest(RavenConnectionStringOptions options, WebRequest request)
 		{
@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Connection
 			var webRequestEventArgs = new WebRequestEventArgs { Request = request };
 
 			AbstractAuthenticator existingAuthenticator;
-			if (authenticators.TryGetValue(options.ApiKey, out existingAuthenticator))
+			if (authenticators.TryGetValue(GetCacheKey(options), out existingAuthenticator))
 			{
 				existingAuthenticator.ConfigureRequest(this, webRequestEventArgs);
 			}
@@ -39,6 +39,11 @@ namespace Raven.Abstractions.Connection
 				basicAuthenticator.ConfigureRequest(this, webRequestEventArgs);
 				securedAuthenticator.ConfigureRequest(this, webRequestEventArgs);
 			}
+		}
+
+		private static Tuple<string, string> GetCacheKey(RavenConnectionStringOptions options)
+		{
+			return Tuple.Create(options.Url, options.ApiKey);
 		}
 
 		public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions)
@@ -58,15 +63,15 @@ namespace Raven.Abstractions.Connection
 				oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false;
 
 			var authenticator = authenticators.GetOrAdd(
-				options.ApiKey,
-				apiKey =>
+				GetCacheKey(options),
+				_ =>
 				{
 					if (useBasicAuthenticator)
 					{
-						return new BasicAuthenticator(apiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
+						return new BasicAuthenticator(options.ApiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
 					}
 
-					return new SecuredAuthenticator(apiKey);
+					return new SecuredAuthenticator(options.ApiKey);
 				});
 
 			if (useBasicAuthenticator == false)
