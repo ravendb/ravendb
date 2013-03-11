@@ -631,6 +631,7 @@
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\FacetHits.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
     <Compile Include="MailingList\ChrisDNF.cs" />
