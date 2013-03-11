@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Http;
 using Nancy;
+using Nancy.ModelBinding;
 using Raven.Client;
 using Raven.ClusterManager.Models;
 
@@ -23,6 +25,30 @@ namespace Raven.ClusterManager.Modules
 				{
 					Servers = servers,
 				};
+			};
+
+			Post["/test-credentials"] = parameters =>
+			{
+				var input = this.Bind<ServerRecord>();
+
+				var serverRecord = session.Load<ServerRecord>(input.Id);
+				if (serverRecord == null)
+					return new NotFoundResponse();
+
+				var handler = new WebRequestHandler();
+				var httpClient = new HttpClient(handler);
+				try
+				{
+					// var result = await httpClient.GetAsync(serverRecord.Url + "admin/stats");
+					throw new NotSupportedException("Waiting for the nancyfx async support");
+					return true;
+				}
+				catch (HttpRequestException ex)
+				{
+					// Handle authentication.
+				}
+
+				return false;
 			};
 
 			Delete["/{id}"] = parameters =>

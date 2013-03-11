@@ -13,7 +13,7 @@ clusterManagerApp.controller('ServersCtrl', function mainCtrl($scope, $dialog) {
             templateUrl: '/views/authenticationDialog.html',
             controller: 'ServerAuthenticationDialogCtrl',
             resolve: {
-                server: function () {
+                getServer: function () {
                     return server;
                 }
             }
@@ -26,12 +26,20 @@ clusterManagerApp.controller('ServersCtrl', function mainCtrl($scope, $dialog) {
     };
 });
 
-clusterManagerApp.controller('ServerAuthenticationDialogCtrl', function mainCtrl($scope, dialog, server) {
-    if (!server.authenticationMode) {
-        server.authenticationMode = 'apiKey';
+clusterManagerApp.controller('ServerAuthenticationDialogCtrl', function mainCtrl($scope, dialog, getServer, $http) {
+    $scope.server = getServer;
+    if (!$scope.server.authenticationMode) {
+        $scope.server.authenticationMode = 'apiKey';
     }
-    $scope.server = server;
     $scope.close = function () {
         dialog.close();
+    };
+
+    $scope.testCredentials = function (server) {
+        $http.post('/api/servers/test-credentials', server)
+            .success(function(data) {
+            }).error(function(data) {
+                debugger
+            });
     };
 });
