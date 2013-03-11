@@ -277,7 +277,7 @@ namespace Raven.Client.Indexes
 					string propName;
 					switch (customAttribute.GetType().Name)
 					{
-						case "JsonProprtyAttribute":
+						case "JsonPropertyAttribute":
 							propName = ((dynamic) customAttribute).PropertyName;
 							break;
 						case "DataMemberAttribute":
