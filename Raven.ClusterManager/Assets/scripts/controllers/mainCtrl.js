@@ -31,12 +31,4 @@ clusterManagerApp.controller('MainCtrl', function mainCtrl($scope, $http, $timeo
         // timeoutPromise = $timeout($scope.getStats, 5000);
     };
     $scope.getStats();
-
-    $scope.deleteServer = function (serverId) {
-        $http.delete('/api/servers/' + serverId).success(function () {
-            $scope.stats.servers = $scope.stats.servers.filter(function(item) {
-                return item.id != serverId;
-            });
-        });
-    };
 });
