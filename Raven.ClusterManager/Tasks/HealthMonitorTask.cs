@@ -57,6 +57,7 @@ namespace Raven.ClusterManager.Tasks
 				foreach (var server in servers)
 				{
 					FetchServerDatabases(server, session);
+					session.SaveChanges();
 				}
 
 				session.SaveChanges();
