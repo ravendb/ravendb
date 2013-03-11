@@ -51,6 +51,23 @@ namespace Raven.ClusterManager.Modules
 				return false;
 			};
 
+			Post["/save-credentials"] = parameters =>
+			{
+				var input = this.Bind<ServerRecord>();
+
+				var serverRecord = session.Load<ServerRecord>(input.Id);
+				if (serverRecord == null)
+					return new NotFoundResponse();
+
+				serverRecord.AuthenticationMode = input.AuthenticationMode;
+				serverRecord.ApiKey = input.ApiKey;
+				serverRecord.Username = input.Username;
+				serverRecord.Password = input.Password;
+				serverRecord.Domain = input.Domain;
+
+				return null;
+			};
+
 			Delete["/{id}"] = parameters =>
 			{
 				var id = (string)parameters.id;

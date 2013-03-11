@@ -19,9 +19,7 @@ clusterManagerApp.controller('ServersCtrl', function mainCtrl($scope, $dialog) {
             }
         });
         dialog.open().then(function (result) {
-            if (result) {
-                alert('dialog closed with result: ' + result);
-            }
+            
         });
     };
 });
@@ -40,6 +38,13 @@ clusterManagerApp.controller('ServerAuthenticationDialogCtrl', function mainCtrl
             .success(function(data) {
             }).error(function(data) {
                 debugger
+            });
+    };
+
+    $scope.saveCredentials = function (server) {
+        $http.post('/api/servers/save-credentials', server)
+            .success(function () {
+                dialog.close('saved');
             });
     };
 });
