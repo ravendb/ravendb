@@ -38,6 +38,8 @@ namespace Raven.Studio.Features.Query
 
 	    public QueryState(SavedQuery savedQuery)
 	    {
+		    if (savedQuery == null)
+			    return;
 			IndexName = savedQuery.IndexName;
 			Query = savedQuery.Query;
 			SortOptions = savedQuery.SortOptions;
