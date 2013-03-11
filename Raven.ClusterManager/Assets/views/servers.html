@@ -28,6 +28,9 @@
                     </span>
                 </td>
                 <td style="text-align: right">
+                    <a ng-hide="server.isOnline" ng-click="exploreServer(server)">
+                        <img src="/images/server_into.png" title="Explore">
+                    </a>
                     <a ng-hide="server.isOnline" ng-click="deleteServer(server)">
                         <img src="/images/server_delete.png" title="Delete">
                     </a>

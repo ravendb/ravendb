@@ -24,11 +24,17 @@ clusterManagerApp.controller('ServersCtrl', function mainCtrl($scope, $dialog) {
     };
     
     $scope.deleteServer = function (server) {
-        $http.delete('/api/servers/' + server.id).success(function () {
-            $scope.stats.servers = $scope.stats.servers.filter(function (item) {
-                return item.id != server.id;
+        if (confirm("Really delete the server? (" + server.url + ')')) {
+            $http.delete('/api/servers/' + server.id).success(function () {
+                $scope.stats.servers = $scope.stats.servers.filter(function (item) {
+                    return item.id != server.id;
+                });
             });
-        });
+        }
+    };
+    
+    $scope.exploreServer = function (server) {
+        
     };
 });
 
