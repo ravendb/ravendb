@@ -39,11 +39,7 @@ namespace Raven.Tests.ResultsTransformer
         [Fact]
         public void CanUseResultsTransformerWithQueryOnLoad()
         {
-            using (var store = new DocumentStore
-            {
-	            Url = "http://localhost:8080/",
-				DefaultDatabase = "DB3"
-            }.Initialize())
+            using (var store = NewRemoteDocumentStore())
             {
                 new ProductWithQueryInput().Execute(store);
                 using (var session = store.OpenSession())
