@@ -1,0 +1,51 @@
+﻿<div class="modal-header">
+    <h1>Enter server credentials</h1>
+</div>
+<div class="modal-body">
+    <div class="modal-form">
+        <p>Connect to <a href="{{server.url}}">{{server.url}}</a> with:</p>
+
+        <div class="radio">
+            <label>
+                <input type="radio" ng-model="server.authenticationMode" name="server.authenticationMode" value="apiKey">
+                Connect using an Api Key
+            </label>
+        </div>
+        <div class="control-group">
+            <label class="control-label" for="inputEmail">Api Key</label>
+            <div class="controls">
+                <input type="text" name="apiKey" ng-disabled="server.authenticationMode == 'user'" placeholder="Api Key">
+            </div>
+        </div>
+
+        <div class="radio">
+            <label>
+                <input type="radio" ng-model="server.authenticationMode" name="server.authenticationMode" value="user">
+                Connect using a local user on the machine
+            </label>
+        </div>
+        <div class="control-group">
+            <label class="control-label" for="inputEmail">User Name</label>
+            <div class="controls">
+                <input type="text" name="username" ng-disabled="server.authenticationMode == 'apiKey'" placeholder="User Name">
+            </div>
+        </div>
+        <div class="control-group">
+            <label class="control-label" for="inputEmail">Password</label>
+            <div class="controls">
+                <input type="password" name="password" ng-disabled="server.authenticationMode == 'apiKey'" placeholder="Password">
+            </div>
+        </div>
+        <div class="control-group">
+            <label class="control-label" for="inputEmail">Domain (optional)</label>
+            <div class="controls">
+                <input type="text" name="domain" ng-disabled="server.authenticationMode == 'apiKey'" placeholder="Domain (optional)">
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-inverse pull-left" ng-click="close()">Cancel</button>
+    <button type="button" class="btn btn-info">Try Connection</button>
+    <button type="submit" class="btn btn-primary">Save Credentials</button>
+</div>

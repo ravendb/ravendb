@@ -1,4 +1,4 @@
-﻿<div class="row-fluid">
+﻿<div class="row-fluid" ng-controller="ServersCtrl">
     <table class="table">
         <thead>
             <tr>
@@ -19,9 +19,9 @@
                 <td>{{server.lastOnlineTime}}</td>
                 <td>{{server.lastTriedToConnectAt}}</td>
                 <td style="text-align: right">
-                    <span ng-show="server.isOnline">
+                    <a ng-show="server.isOnline" ng-click="openAuthenticationDialog(server)">
                         <img src="/images/server_warning.png" ng-show="server.isUnauthorized" title="Status: Unauthorized">
-                    </span>
+                    </a>
                     <span>
                         <img src="/images/server_ok.png" ng-show="server.isOnline" title="Status: online">
                         <img src="/images/server_error.png" ng-hide="server.isOnline" title="Status: offline">

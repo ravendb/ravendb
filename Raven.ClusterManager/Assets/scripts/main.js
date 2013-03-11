@@ -3,7 +3,7 @@
 /*global angular:false */
 'use strict';
 
-var clusterManagerApp = angular.module('ClusterManagerApp', []);
+var clusterManagerApp = angular.module('ClusterManagerApp', ['ui.bootstrap', 'ui.bootstrap.tpls']);
 
 clusterManagerApp.config(function ($routeProvider, $locationProvider) {
     $routeProvider.when('/servers', {

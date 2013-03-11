@@ -101,6 +101,7 @@
     <Content Include="Assets\scripts\controllers\serversCtrl.js" />
     <Content Include="Assets\scripts\controllers\mainCtrl.js" />
     <Content Include="Assets\scripts\main.js" />
+    <Content Include="Assets\scripts\vendor\angularui\ui-bootstrap-tpls-0.2.0.js" />
     <Content Include="Assets\styles\main.css" />
     <Content Include="Assets\scripts\vendor\angular\angular-bootstrap-prettify.js" />
     <Content Include="Assets\scripts\vendor\angular\angular-bootstrap-prettify.min.js" />
@@ -130,6 +131,7 @@
     <Content Include="Assets\images\glyphicons-halflings.png" />
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.js" />
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.min.js" />
+    <Content Include="Assets\views\authenticationDialog.html" />
     <Content Include="Assets\views\servers.html" />
     <Content Include="Assets\views\main.html" />
     <Content Include="Assets\scripts\vendor\lodash\lodash.js" />
