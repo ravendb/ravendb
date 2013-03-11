@@ -16,8 +16,8 @@
                 <td>{{server.name}}</td>
                 <td>{{server.clusterName}}</td>
                 <td>{{server.url}}</td>
-                <td>{{server.lastOnlineTime}}</td>
-                <td>{{server.lastTriedToConnectAt}}</td>
+                <td><span title="{{server.lastOnlineTime}}">{{server.lastOnlineTime | timeAgo}}</span></td>
+                <td><span title="{{server.lastTriedToConnectAt}}">{{server.lastTriedToConnectAt | timeAgo}}</span></td>
                 <td style="text-align: right">
                     <a ng-show="server.isOnline" ng-click="openAuthenticationDialog(server)">
                         <img src="/images/server_warning.png" ng-show="server.isUnauthorized" title="Status: Unauthorized">
