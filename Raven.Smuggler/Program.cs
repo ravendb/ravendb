@@ -103,7 +103,7 @@ namespace Raven.Smuggler
 
 		private NetworkCredential Credentials
 		{
-			get { return connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential()); }
+			get { return (NetworkCredential)(connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential())); }
 		}
 
 		static void Main(string[] args)

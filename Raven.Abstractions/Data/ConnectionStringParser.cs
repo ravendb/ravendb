@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Data
 #endif
 		}
 
-		public NetworkCredential Credentials { get; set; }
+		public ICredentials Credentials { get; set; }
 		public bool EnlistInDistributedTransactions { get; set; }
 		public string DefaultDatabase { get; set; }
 		public Guid ResourceManagerId { get; set; }
@@ -36,7 +36,7 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			var user = Credentials == null ? "<none>" : Credentials.UserName;
+			var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
 			return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
 		}
 	}

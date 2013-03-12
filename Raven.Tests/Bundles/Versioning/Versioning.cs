@@ -21,7 +21,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_set_metadata()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -40,8 +40,8 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Can_exclude_entities_from_versioning()
 		{
-			var user = new User {Name = "User Name"};
-			var comment = new Comment {Name = "foo"};
+			var user = new User { Name = "User Name" };
+			var comment = new Comment { Name = "foo" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(user);
@@ -66,7 +66,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_update_metadata_on_next_insert()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -87,7 +87,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_create_duplicate_on_first_insert()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -106,7 +106,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_create_duplicate_on_next_insert()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -164,7 +164,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_delete_old_revisions()
 		{
-			var company = new Company {Name = "Company #1"};
+			var company = new Company { Name = "Company #1" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -263,7 +263,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_delete_child_revisions_if_purge_is_true()
 		{
-			using(var session = documentStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
 				session.Store(new VersioningConfiguration
 				{
@@ -419,13 +419,20 @@ namespace Raven.Tests.Bundles.Versioning
 			try
 			{
 				var exportSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = documentStore.Url });
-				exportSmuggler.ExportData(options);
+				using (var file = File.Create(options.BackupPath))
+				{
+					exportSmuggler.ExportData(file, options, false).Wait();
+				}
 
 				using (CreateRavenDbServer(port: 8078))
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
 				{
-					var importSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = documentStore2.Url });
-					importSmuggler.ImportData(options);
+					var importSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions
+					{
+						Url = documentStore2.Url,
+						Credentials = documentStore2.Credentials
+					});
+					importSmuggler.ImportData(options).Wait();
 
 					using (var session = documentStore2.OpenSession())
 					{
