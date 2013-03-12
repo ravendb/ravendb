@@ -61,6 +61,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void LazyStartsWithForShardedDocumentStore()
 		{
+			shardedDocumentStore.ShardStrategy.ModifyDocumentId = (convention, id, documentId) => documentId + "-" + id; // postfix notation for shards
+
 			using (var session = shardedDocumentStore.OpenSession())
 			{
 				session.Store(new User { Id = "customers/1234/users/1" });
@@ -75,6 +77,13 @@ namespace Raven.Tests.Issues
 				session.Store(new User { Id = "customers/1234/users/5" });
 				session.Store(new User { Id = "customers/1234/users/6" });
 				session.SaveChanges();
+			}
+
+			using (var session = shardedDocumentStore.OpenSession())
+			{
+				var users = session.Advanced.LoadStartingWith<User>("customers/1234/users");
+
+				Assert.Equal(6, users.Length);
 			}
 
 			using (var session = shardedDocumentStore.OpenSession())
