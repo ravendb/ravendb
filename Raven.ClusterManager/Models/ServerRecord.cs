@@ -19,6 +19,8 @@ namespace Raven.ClusterManager.Models
 		public AdminMemoryStatistics MemoryStatistics { get; set; }
 		public bool IsUnauthorized { get; set; }
 
+		public ServerCredentials Credentials { get; set; }
+		
 		public ServerRecord()
 		{
 			Databases = new string[0];
@@ -30,12 +32,6 @@ namespace Raven.ClusterManager.Models
 			IsOnline = true;
 			LastOnlineTime = DateTimeOffset.UtcNow;
 		}
-
-		public AuthenticationMode AuthenticationMode { get; set; }
-		public string ApiKey { get; set; }
-		public string Username { get; set; }
-		public string Password { get; set; }
-		public string Domain { get; set; }
 	}
 
 	public enum AuthenticationMode

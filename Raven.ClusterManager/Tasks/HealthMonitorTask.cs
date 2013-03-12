@@ -81,18 +81,21 @@ namespace Raven.ClusterManager.Tasks
 				AllowAutoRedirect = false,
 			};
 
-			switch (server.AuthenticationMode)
+			if (server.Credentials != null)
 			{
-				case AuthenticationMode.User:
-					if (string.IsNullOrEmpty(server.Domain))
-					{
-						handler.Credentials = new NetworkCredential(server.Username, server.Password);
-					}
-					else
-					{
-						handler.Credentials = new NetworkCredential(server.Username, server.Password, server.Domain);
-					}
-					break;
+				switch (server.Credentials.AuthenticationMode)
+				{
+					case AuthenticationMode.User:
+						if (string.IsNullOrEmpty(server.Credentials.Domain))
+						{
+							handler.Credentials = new NetworkCredential(server.Credentials.Username, server.Credentials.Password);
+						}
+						else
+						{
+							handler.Credentials = new NetworkCredential(server.Credentials.Username, server.Credentials.Password, server.Credentials.Domain);
+						}
+						break;
+				}
 			}
 
 			var httpClient = new HttpClient(handler);

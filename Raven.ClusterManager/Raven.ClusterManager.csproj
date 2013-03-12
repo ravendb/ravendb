@@ -58,6 +58,7 @@
     <Compile Include="LoggingErrorHandler.cs" />
     <Compile Include="Models\ClusterStatistics.cs" />
     <Compile Include="Models\DatabaseRecord.cs" />
+    <Compile Include="Models\ServerCredentials.cs" />
     <Compile Include="Models\ServerRecord.cs" />
     <Compile Include="Modules\DiscoveryModule.cs" />
     <Compile Include="Modules\ReplicationModule.cs" />

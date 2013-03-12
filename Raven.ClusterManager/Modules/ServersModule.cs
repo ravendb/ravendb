@@ -59,11 +59,14 @@ namespace Raven.ClusterManager.Modules
 				if (serverRecord == null)
 					return new NotFoundResponse();
 
-				serverRecord.AuthenticationMode = input.AuthenticationMode;
-				serverRecord.ApiKey = input.ApiKey;
-				serverRecord.Username = input.Username;
-				serverRecord.Password = input.Password;
-				serverRecord.Domain = input.Domain;
+				serverRecord.Credentials = new ServerCredentials
+				{
+					AuthenticationMode = input.Credentials.AuthenticationMode,
+					ApiKey = input.Credentials.ApiKey,
+					Username = input.Credentials.Username,
+					Password = input.Credentials.Password,
+					Domain = input.Credentials.Domain,
+				};
 
 				return null;
 			};
