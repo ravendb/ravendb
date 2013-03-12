@@ -134,7 +134,7 @@ namespace Raven.Database.Storage
 				}
 			}
 
-			foreach (var index in Directory.GetFiles(path, "*.transfom"))
+			foreach (var index in Directory.GetFiles(path, "*.transform"))
 			{
 				try
 				{

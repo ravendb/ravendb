@@ -46,7 +46,7 @@ namespace Raven.Client.Connection
 		}
 
 		private readonly int maxNumberOfCachedRequests;
-		private SimpleCache<CachedRequest> cache;
+		private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
 
@@ -107,7 +107,7 @@ namespace Raven.Client.Connection
 			if (cache != null)
 				cache.Dispose();
 
-			cache = new SimpleCache<CachedRequest>(maxNumberOfCachedRequests);
+			cache = new SimpleCache(maxNumberOfCachedRequests);
 			NumOfCachedRequests = 0;
 		}
 

@@ -18,4 +18,10 @@
 		/// </summary>
 		Nearby
 	}
+
+    public enum SpatialUnits
+    {
+        Kilometers,
+        Miles
+    }
 }

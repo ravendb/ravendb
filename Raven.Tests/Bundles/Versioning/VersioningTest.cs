@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
@@ -10,30 +11,53 @@ namespace Raven.Tests.Bundles.Versioning
 	{
 		protected DocumentStore documentStore;
 		private RavenDbServer ravenDbServer;
-		private readonly string path;
+		private int dbCount;
+		private readonly string testAssemblyPath;
+		private readonly List<string> dbDirectories = new List<string>();
 
 		public VersioningTest()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			var cfg = new Raven.Database.Config.RavenConfiguration
-			          	{
-			          		Port = 8079,
-			          		DataDirectory = path,
-			          		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			          		Settings =
-			          			{
-			          				{"Raven/ActiveBundles", "Versioning"}
-			          			}
-			          	};
-			cfg.PostInit();
-			ravenDbServer = new RavenDbServer(cfg);
-			documentStore = new DocumentStore
+			testAssemblyPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
+
+			ravenDbServer = CreateRavenDbServer(port: 8079);
+			documentStore = CreateDocumentStore(port: 8079);
+		}
+
+		public void Dispose()
+		{
+			documentStore.Dispose();
+			ravenDbServer.Dispose();
+			dbDirectories.ForEach(Database.Extensions.IOExtensions.DeleteDirectory);
+		}
+
+		protected RavenDbServer CreateRavenDbServer(int port)
+		{
+			var path = Path.Combine(testAssemblyPath, "TestDb" + (++dbCount)).Substring(6);
+			Database.Extensions.IOExtensions.DeleteDirectory(path);
+			dbDirectories.Add(path);
+
+			var cfg = new Database.Config.RavenConfiguration
 			{
-				Url = "http://localhost:8079"
+				Port = port,
+				DataDirectory = path,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				Settings =
+					{
+						{"Raven/ActiveBundles", "Versioning"}
+					}
+			};
+			cfg.PostInit();
+			return new RavenDbServer(cfg);
+		}
+
+		protected static DocumentStore CreateDocumentStore(int port)
+		{
+			var documentStore = new DocumentStore
+			{
+				Url = "http://localhost:" + port
 			};
 			documentStore.Initialize();
+
 			using(var s = documentStore.OpenSession())
 			{
 				s.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
@@ -54,13 +78,7 @@ namespace Raven.Tests.Bundles.Versioning
 				});
 				s.SaveChanges();
 			}
-		}
-
-		public void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			return documentStore;
 		}
 	}
 }

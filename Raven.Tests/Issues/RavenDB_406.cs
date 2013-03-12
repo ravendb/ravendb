@@ -22,6 +22,7 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
+				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User()
@@ -76,6 +77,7 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
+				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
 				new RavenDocumentsByEntityName().Execute(store);
 
 				using (var session = store.OpenSession())
@@ -132,6 +134,8 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079"}.Initialize())
 			{
+				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
+
 				store.DatabaseCommands.EnsureDatabaseExists("Northwind_1");
 				store.DatabaseCommands.EnsureDatabaseExists("Northwind_2");
 
@@ -214,6 +218,7 @@ namespace Raven.Tests.Issues
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
+				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User()
@@ -248,7 +253,6 @@ namespace Raven.Tests.Issues
 						session.SaveChanges();
 					}
 					WaitForIndexing(store);
-					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets == 2, 10000));
 
 					WaitForAllRequestsToComplete(server);
 					server.Server.ResetNumberOfRequests();
