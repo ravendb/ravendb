@@ -13,3 +13,8 @@ div.navbar-fixed-top h1 {
 a[ng-click] {
 	cursor: pointer;
 }
+
+.value-title {
+	font-weight: bold;
+	width: 200px;
+}
