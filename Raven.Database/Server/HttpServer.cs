@@ -208,7 +208,7 @@ namespace Raven.Database.Server
 					Name = x.Key,
 					Database = x.Value.Result
 				});
-				var allDbs = activeDatabases.Concat(new[] {new {Name = "System", Database = SystemDatabase}}).ToArray();
+				var allDbs = activeDatabases.Concat(new[] {new {Name = Constants.SystemDatabase, Database = SystemDatabase}}).ToArray();
 				return new AdminStatistics
 				{
 					ServerName = currentConfiguration.Value.ServerName,
@@ -232,7 +232,7 @@ namespace Raven.Database.Server
 							Name = documentDatabase.Name,
 							LastActivity = new[]
 							{
-								lastUsed, 
+								lastUsed,
 								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
 							TransactionalStorageSize = transactionalStorageSize,

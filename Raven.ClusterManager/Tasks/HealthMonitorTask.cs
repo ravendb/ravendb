@@ -153,12 +153,12 @@ namespace Raven.ClusterManager.Tasks
 			var resultStream = await result.Content.ReadAsStreamAsync();
 			server.Databases = resultStream.JsonDeserialization<string[]>();
 
-			foreach (var databaseName in server.Databases)
+			foreach (var databaseName in server.Databases.Concat(new[] {Constants.SystemDatabase}))
 			{
 				var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + databaseName);
 				if (databaseRecord == null)
 				{
-					databaseRecord = new DatabaseRecord { Name = databaseName, ServerId = server.Id, ServerUrl = server.Url };
+					databaseRecord = new DatabaseRecord {Name = databaseName, ServerId = server.Id, ServerUrl = server.Url};
 					session.Store(databaseRecord);
 				}
 			}
