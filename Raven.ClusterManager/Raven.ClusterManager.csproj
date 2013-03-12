@@ -100,6 +100,7 @@
     <Content Include="Assets\images\server_view.png" />
     <Content Include="Assets\images\server_warning.png" />
     <Content Include="Assets\index.html" />
+    <Content Include="Assets\scripts\controllers\serverExplorerCtrl.js" />
     <Content Include="Assets\scripts\services\timeago.js" />
     <Content Include="Assets\scripts\controllers\serversCtrl.js" />
     <Content Include="Assets\scripts\controllers\mainCtrl.js" />
@@ -136,6 +137,7 @@
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.js" />
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.min.js" />
     <Content Include="Assets\views\authenticationDialog.html" />
+    <Content Include="Assets\views\serverExplorer.html" />
     <Content Include="Assets\views\servers.html" />
     <Content Include="Assets\views\main.html" />
     <Content Include="Assets\scripts\vendor\lodash\lodash.js" />

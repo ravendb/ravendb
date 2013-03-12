@@ -2,7 +2,7 @@
 /*global angular:false */
 'use strict';
 
-clusterManagerApp.controller('ServersCtrl', function mainCtrl($scope, $dialog) {
+clusterManagerApp.controller('ServersCtrl', function serverCtrl($scope, $dialog) {
 
     $scope.openAuthenticationDialog = function (server) {
         var dialog = $dialog.dialog({
@@ -32,13 +32,9 @@ clusterManagerApp.controller('ServersCtrl', function mainCtrl($scope, $dialog) {
             });
         }
     };
-    
-    $scope.exploreServer = function (server) {
-        
-    };
 });
 
-clusterManagerApp.controller('ServerAuthenticationDialogCtrl', function mainCtrl($scope, dialog, getServer, $http) {
+clusterManagerApp.controller('ServerAuthenticationDialogCtrl', function serverAuthenticationDialogCtrl($scope, dialog, getServer, $http) {
     $scope.server = getServer;
     if (!$scope.server.authenticationMode) {
         $scope.server.authenticationMode = 'apiKey';
