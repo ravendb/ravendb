@@ -876,9 +876,6 @@
     <Compile Include="..\raven.abstractions\json\JsonEnumConverter.cs">
       <Link>Imports\Json\JsonEnumConverter.cs</Link>
     </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonFloatConverter.cs">
-      <Link>Imports\Json\JsonFloatConverter.cs</Link>
-    </Compile>
     <Compile Include="..\raven.abstractions\json\JsonMultiDimensionalArrayConverter.cs">
       <Link>Imports\Json\JsonMultiDimensionalArrayConverter.cs</Link>
     </Compile>
@@ -1233,7 +1230,7 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\MultiTypeHiLoKeyGenerator.cs">
       <Link>Imports\Document\MultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
-    <Compile Include="..\raven.client.lightweight\document\oauth\BasicAuthenticator.cs">
+    <Compile Include="..\Raven.Abstractions\OAuth\BasicAuthenticator.cs">
       <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
