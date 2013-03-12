@@ -82,7 +82,10 @@ namespace Raven.Smuggler
 			            			              })
 			            			},
 			            		{
-			            			"transform-script:", "Transform documents using a given script (import only)", script => options.TransformScript = script
+			            			"transform:", "Transform documents using a given script (import only)", script => options.TransformScript = script
+			            		},
+								{
+			            			"transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
 			            		},
 								{"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s) },
 								{"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s) },
