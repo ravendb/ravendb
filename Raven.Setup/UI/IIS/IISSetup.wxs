@@ -2,7 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
 
-    <Property Id="CUSTOM_APPLICATION_POOL" />
+    <Property Id="CUSTOM_APPLICATION_POOL" Value="1" />
     
     <UI>
       <Dialog Id="IisSetupDlg" Width="370" Height="270" Title="IIS Settings - [ProductName]" NoMinimize="yes">
@@ -27,7 +27,7 @@
         <Control Id="VirtualDirLabel" Type="Text" X="45" Y="103" Width="100" Height="15" TabSkip="no" Text="&amp;Virtual Directory:" />
         <Control Id="VirtualDirEdit" Type="Edit" X="45" Y="115" Width="220" Height="18" Property="VIRTUAL_DIR_VAL" Text="{80}" />
 
-        <Control Id="CustomAppPoolCheckBox" Type="CheckBox" X="45" Y="134" Width="250" Height="15" Property="CUSTOM_APPLICATION_POOL" CheckBoxValue="1">
+        <Control Id="CustomAppPoolCheckBox" Type="CheckBox" X="45" Y="134" Width="250" Height="15" Property="CUSTOM_APPLICATION_POOL" CheckBoxValue="1" >
           <Text>Use a custom application pool instead of the web site default</Text>
           <!--<Publish Property="APPLICATION_POOL_TYPE" Value="EXISTING">NOT CUSTOM_APPLICATION_POOL</Publish>
           <Publish Property="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity">NOT CUSTOM_APPLICATION_POOL</Publish>-->

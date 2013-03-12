@@ -12,31 +12,144 @@
     </iis:WebSite>
 
     <DirectoryRef Id="INSTALLFOLDER">
-      <!-- Configuring app pool -->
-      <Component Id="DefaultApplicationPoolComponent" Guid="{50D5E86E-4ED9-4E9A-8904-09A2B94CEE2D}" KeyPath="yes">
-        <!--<util:User Id="ApplicationPoolUser"
+
+      
+      
+      <Component Id="DefaultWebSiteApplicationPool" Guid="{5358DD73-9D8D-43BF-9248-2040CFC41F63}" KeyPath="yes">
+        <Condition>NOT CUSTOM_APPLICATION_POOL</Condition>
+        <iis:WebVirtualDir Id="VirtualDir0"
+                  Alias="[VIRTUAL_DIR_VAL]"
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
+          <iis:WebApplication Id="Application0" Name="[VIRTUAL_DIR_VAL]" />
+        </iis:WebVirtualDir>
+      </Component>
+
+      <Component Id="UseExistingApplicationPool" Guid="{609F969B-8184-417B-9D05-5EE8A769248E}" KeyPath="yes">
+        <Condition><![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        <iis:WebAppPool Id="AppPool1"
+                        Name="[WEB_APP_POOL_NAME]" />
+        <iis:WebVirtualDir Id="VirtualDir1"
+                  Alias="[VIRTUAL_DIR_VAL]"
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
+          <iis:WebApplication Id="Application1" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool1" />
+        </iis:WebVirtualDir>
+      </Component>
+
+      <Component Id="NewApplicationPoolWithApplicationPoolIdentity" Guid="{D08D8A4A-31BD-436D-B2D0-EC8C6C9DD6B0}" KeyPath="yes">
+        <Condition><![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "ApplicationPoolIdentity"]]></Condition>
+        <iis:WebAppPool Id="AppPool2"
+                        Name="[WEB_APP_POOL_NAME]"
+                        ManagedPipelineMode="Integrated"
+                        ManagedRuntimeVersion="v4.0"/> <!-- no identity specified will make that default ApplicationPoolIdentity will be used -->
+        <iis:WebVirtualDir Id="VirtualDir2"
+                  Alias="[VIRTUAL_DIR_VAL]"
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
+          <iis:WebApplication Id="Application2" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool2" />
+        </iis:WebVirtualDir>
+      </Component>
+
+      <Component Id="NewApplicationPoolWithLocalServiceIdentity" Guid="{203658CA-E7D2-48EE-AB2C-FBAF3B4555D5}" KeyPath="yes">
+        <Condition>
+          <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "LocalService"]]></Condition>
+        <iis:WebAppPool Id="AppPool3"
+                        Name="[WEB_APP_POOL_NAME]"
+                        Identity="localService"
+                        ManagedPipelineMode="Integrated"
+                        ManagedRuntimeVersion="v4.0"/>
+        <iis:WebVirtualDir Id="VirtualDir3"
+                  Alias="[VIRTUAL_DIR_VAL]"
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
+          <iis:WebApplication Id="Application3" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool3" />
+        </iis:WebVirtualDir>
+      </Component>
+
+      <Component Id="NewApplicationPoolWithLocalSystemIdentity" Guid="{05396449-CCD3-4A2A-BA4F-552C0BC55F6F}" KeyPath="yes">
+        <Condition>
+          <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "LocalSystem"]]>
+        </Condition>
+        <iis:WebAppPool Id="AppPool4"
+                        Name="[WEB_APP_POOL_NAME]"
+                        Identity="localSystem"
+                        ManagedPipelineMode="Integrated"
+                        ManagedRuntimeVersion="v4.0"/>
+        <iis:WebVirtualDir Id="VirtualDir4"
+                  Alias="[VIRTUAL_DIR_VAL]"
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
+          <iis:WebApplication Id="Application4" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool4" />
+        </iis:WebVirtualDir>
+      </Component>
+
+      <Component Id="NewApplicationPoolWithNetworkServiceIdentity" Guid="{708A3B8B-7C8A-4B16-B5AC-E53FD78DF048}" KeyPath="yes">
+        <Condition>
+          <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "NetworkService"]]>
+        </Condition>
+        <iis:WebAppPool Id="AppPool5"
+                        Name="[WEB_APP_POOL_NAME]"
+                        Identity="networkService"
+                        ManagedPipelineMode="Integrated"
+                        ManagedRuntimeVersion="v4.0"/>
+        <iis:WebVirtualDir Id="VirtualDir5"
+                  Alias="[VIRTUAL_DIR_VAL]"
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
+          <iis:WebApplication Id="Application5" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool5" />
+        </iis:WebVirtualDir>
+      </Component>
+
+      <Component Id="NewApplicationPoolWithOtherIdentity" Guid="{909ED83E-B447-4E0A-85D4-9F767A027B9A}" KeyPath="yes">
+        <Condition>
+          <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "other"]]>
+        </Condition>
+        <util:User Id="OtherAppPoolUser"
                    CreateUser="no"
                    Name="[WEB_APP_POOL_IDENTITY_NAME]"
                    Password="[WEB_APP_POOL_IDENTITY_PWD]"
-                   Domain="[WEB_APP_POOL_IDENTITY_DOMAIN]"/>-->
+                   Domain="[WEB_APP_POOL_IDENTITY_DOMAIN]"/>
+        <iis:WebAppPool Id="AppPool6"
+                        Name="[WEB_APP_POOL_NAME]"
+                        Identity="other"
+                        User="OtherAppPoolUser"
+                        ManagedPipelineMode="Integrated"
+                        ManagedRuntimeVersion="v4.0"/>
+        <iis:WebVirtualDir Id="VirtualDir6"
+                  Alias="[VIRTUAL_DIR_VAL]"
+                  Directory="INSTALLFOLDER"
+                  WebSite="SelectedWebSite">
+          <iis:WebApplication Id="Application6" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool6" />
+        </iis:WebVirtualDir>
+      </Component>
+
+      <!--<Component Id="DefaultApplicationPoolComponent" Guid="{50D5E86E-4ED9-4E9A-8904-09A2B94CEE2D}" KeyPath="yes">
+        --><!--<Condition>TODO arek</Condition>--><!--
+        --><!--<util:User Id="ApplicationPoolUser"
+                   CreateUser="no"
+                   Name="[WEB_APP_POOL_IDENTITY_NAME]"
+                   Password="[WEB_APP_POOL_IDENTITY_PWD]"
+                   Domain="[WEB_APP_POOL_IDENTITY_DOMAIN]"/>--><!--
         <iis:WebAppPool Id="RavenAppPool"
                         Name="[WEB_APP_POOL_NAME]"
                         ManagedPipelineMode="Integrated"
                         ManagedRuntimeVersion="v4.0"
                        />
       
-      <!--<iis:WebAppPool Id="RavenAppPool"
+      --><!--<iis:WebAppPool Id="RavenAppPool"
                         Name="[WEB_APP_POOL_NAME]"
                         Identity="other"
                         User="ApplicationPoolUser"
                         ManagedPipelineMode="Integrated"
-                        ManagedRuntimeVersion="v4.0" />-->
-      </Component>
+                        ManagedRuntimeVersion="v4.0" />--><!--
+      </Component>-->
 
       <!-- Configure virtual dir -->
-      <Component Id="VirtualDirectoryComponent"
+      <!--<Component Id="VirtualDirectoryComponent"
              Guid="{751DEB01-ECC1-48ff-869A-65BCEE9E0528}"
              KeyPath="yes" >
+        --><!--<Condition>0</Condition>--><!--
         <iis:WebVirtualDir Id="MyWebVirtualDir"
                   Alias="[VIRTUAL_DIR_VAL]" 
                   Directory="INSTALLFOLDER"
@@ -48,12 +161,19 @@
           <iis:WebApplication Id="MyWebWebApplication"
              Name="[VIRTUAL_DIR_VAL]" WebAppPool="RavenAppPool" />
         </iis:WebVirtualDir>
-      </Component>
+      </Component>-->
     </DirectoryRef>
 
     <ComponentGroup Id="IssConfiguration">
-      <ComponentRef Id="VirtualDirectoryComponent" />
-      <ComponentRef Id="DefaultApplicationPoolComponent" />
+      <!--<ComponentRef Id="VirtualDirectoryComponent" />
+      <ComponentRef Id="DefaultApplicationPoolComponent" />-->
+      <ComponentRef Id="DefaultWebSiteApplicationPool" />
+      <ComponentRef Id="UseExistingApplicationPool" />
+      <ComponentRef Id="NewApplicationPoolWithApplicationPoolIdentity" />
+      <ComponentRef Id="NewApplicationPoolWithLocalServiceIdentity" />
+      <ComponentRef Id="NewApplicationPoolWithLocalSystemIdentity" />
+      <ComponentRef Id="NewApplicationPoolWithNetworkServiceIdentity" />
+      <ComponentRef Id="NewApplicationPoolWithOtherIdentity" />
     </ComponentGroup>
 
   </Fragment>

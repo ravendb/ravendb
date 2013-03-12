@@ -84,7 +84,7 @@
     <CustomAction Id='InstallRavenService' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME]&quot; /install' Return='check'/>
     <CustomAction Id='UninstallRavenService' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME_FROM_REGISTRY]&quot; /uninstall' Return='check'/>
     <CustomAction Id='SetupPerformanceCounters' Directory='INSTALLFOLDER' Execute='deferred' Impersonate='no' ExeCommand='&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /user=&quot;[SERVICE_USER_NAME]&quot; /setup-perf-counters' Return='check'/>
-    
+
     <InstallExecuteSequence>
       <Custom Action='SetupPerformanceCounters' Before='InstallFinalize'>
         <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
