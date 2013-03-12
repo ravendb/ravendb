@@ -8,6 +8,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -171,6 +172,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IndexDefinition[]>(databaseCommands.GetIndexes(start, pageSize));
 		}
 
+		public Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize)
+		{
+			return new CompletedTask<TransformerDefinition[]>(databaseCommands.GetTransformers(start, pageSize));
+		}
+
 		public Task ResetIndexAsync(string name)
 		{
 			databaseCommands.ResetIndex(name);
@@ -180,6 +186,11 @@ namespace Raven.Client.Embedded
 		public Task<IndexDefinition> GetIndexAsync(string name)
 		{
 			return new CompletedTask<IndexDefinition>(databaseCommands.GetIndex(name));
+		}
+
+		public Task<TransformerDefinition> GetTransformerAsync(string name)
+		{
+			return new CompletedTask<TransformerDefinition>(databaseCommands.GetTransformer(name));
 		}
 
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
@@ -201,6 +212,12 @@ namespace Raven.Client.Embedded
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
+			return new CompletedTask();
+		}
+
+		public Task DeleteTransformerAsync(string name)
+		{
+			databaseCommands.DeleteTransformer(name);
 			return new CompletedTask();
 		}
 
@@ -315,6 +332,12 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
+		{
+			// No sync equivalent on IDatabaseCommands.
+			throw new NotSupportedException();
+		}
+
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
 		{
 			// No sync equivalent on IDatabaseCommands.
@@ -354,5 +377,43 @@ namespace Raven.Client.Embedded
 		{
 			return new CompletedTask<JsonDocumentMetadata>(databaseCommands.Head(key));
 		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		{
+			QueryHeaderInformation info;
+			var result = databaseCommands.StreamQuery(index, query, out info);
+			queryHeaderInfo.Value = info;
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(result));
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                            int pageSize = 2147483647)
+		{
+			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(streamDocs));
+	
+		}
+	}
+
+	internal class AsyncEnumeratorBridge : IAsyncEnumerator<RavenJObject>
+	{
+		private readonly IEnumerator<RavenJObject> enumerator;
+
+		public AsyncEnumeratorBridge(IEnumerator<RavenJObject> enumerator)
+		{
+			this.enumerator = enumerator;
+		}
+
+		public void Dispose()
+		{
+			enumerator.Dispose();
+		}
+
+		public Task<bool> MoveNextAsync()
+		{
+			return new CompletedTask<bool>(enumerator.MoveNext());
+		}
+
+		public RavenJObject Current { get { return enumerator.Current; } }
 	}
 }

@@ -74,6 +74,14 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 #endif
+
+		/// <summary>
+		/// Whatever this instance has json request factory available
+		/// </summary>
+		public override bool HasJsonRequestFactory
+		{
+			get { return true; }
+		}
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
 		///</summary>
@@ -705,7 +713,8 @@ namespace Raven.Client.Document
 				jsonRequestFactory,
 				Conventions,
 				GetReplicationInformerForDatabase(database),
-				() => databaseChanges.Remove(database));
+				() => databaseChanges.Remove(database),
+				((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
 		}
 
 		/// <summary>
@@ -822,13 +831,19 @@ namespace Raven.Client.Document
 			{
 				var databaseName = session.DatabaseName;
 				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
-																		  _ => new EvictItemsFromCacheBasedOnChanges(
-																			  databaseName ?? Constants.SystemDatabase,
-																			  CreateDatabaseChanges(databaseName),
-																			  jsonRequestFactory.ExpireItemsFromCache));
+					_ => new EvictItemsFromCacheBasedOnChanges(databaseName ?? Constants.SystemDatabase,
+						CreateDatabaseChanges(databaseName),
+						jsonRequestFactory.ExpireItemsFromCache));
 			}
 
 			base.AfterSessionCreated(session);
+		}
+
+
+		public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
+		{
+			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);
+			return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}
 #endif
 

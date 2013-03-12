@@ -450,7 +450,24 @@ namespace Raven.Client.Connection
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
 #endif
+		/// <summary>
+		/// Gets the transformers from the server
+		/// </summary>
+		/// <param name="start">Paging start</param>
+		/// <param name="pageSize">Size of the page.</param>
+		TransformerDefinition[] GetTransformers(int start, int pageSize);
 
+		/// <summary>
+		/// Gets the transformer definition for the specified name
+		/// </summary>
+		/// <param name="name">The name.</param>
+		TransformerDefinition GetTransformer(string name);
+
+		/// <summary>
+		/// Deletes the specified transformer
+		/// </summary>
+		/// <param name="name">The name.</param>
+		void DeleteTransformer(string name);
 	}
 }
 #endif

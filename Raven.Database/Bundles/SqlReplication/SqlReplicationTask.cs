@@ -69,10 +69,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			var task = Task.Factory.StartNew(() =>
 			{
-				using (LogManager.OpenMappedContext("database", database.Name ?? Constants.SystemDatabase))
-				using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+				using (LogContext.WithDatabase(database.Name))
 				{
-					LogContext.DatabaseName.Value = database.Name ?? Constants.SystemDatabase;
 					try
 					{
 						BackgroundSqlReplication();
@@ -129,6 +127,8 @@ namespace Raven.Database.Bundles.SqlReplication
                         .Where(x => GetLastEtagFor(localReplicationStatus, x).CompareTo(latestEtag) <= 0) // haven't replicate the etag yet
                         .Where(x =>
                         {
+	                        if (x.Disabled)
+		                        return false;
 	                        var sqlReplicationStatistics = statistics.GetOrDefault(x.Name);
 	                        if (sqlReplicationStatistics == null)
 		                        return true;

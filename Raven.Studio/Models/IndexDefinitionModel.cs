@@ -26,11 +26,19 @@ namespace Raven.Studio.Models
 		private bool hasUnsavedChanges;
 		public string OriginalName { get; private set; }
 
+		public bool PriorityChanged = false;
+		public Observable<string> IndexingPriority { get; set; }
+		public IndexingPriority Priority { get; set; }
+		public List<string> Priorities { get; set; } 
+
 		public IndexDefinitionModel()
 		{
 			ModelUrl = "/indexes/";
+			Priorities = new List<string> {"Normal", "Idle", "Disabled", "Abandoned"};
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+			IndexingPriority = new Observable<string>();
 
+			IndexingPriority.PropertyChanged += (sender, args) => PriorityChanged = true;
 			index = new IndexDefinition();
 			Maps = new BindableCollection<MapItem>(x => x.Text)
 			{
@@ -68,6 +76,7 @@ namespace Raven.Studio.Models
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
+			UpdatePriority(indexDefinition.Name);
 			index = indexDefinition;
 
 			if (index.Maps.Count == 0)
@@ -112,6 +121,31 @@ namespace Raven.Studio.Models
 			hasUnsavedChanges = false;
 
 			OnEverythingChanged();
+		}
+
+		private void UpdatePriority(string name)
+		{
+			DatabaseCommands
+				.GetStatisticsAsync()
+				.ContinueOnSuccessInTheUIThread(databaseStatistics =>
+				{
+					var indexStats = databaseStatistics.Indexes.FirstOrDefault(stats => stats.Name == name);
+					if (indexStats == null)
+						return;
+					Priority = indexStats.Priority;
+					if(Priority == 0)
+						Priority = Abstractions.Data.IndexingPriority.Normal;
+					if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Normal))
+						IndexingPriority.Value = "Normal";
+					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Idle))
+						IndexingPriority.Value = "Idle";
+					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Disabled))
+						IndexingPriority.Value = "Disabled";
+					else if (Priority.HasFlag(Abstractions.Data.IndexingPriority.Abandoned))
+						IndexingPriority.Value = "Abandoned";
+
+					PriorityChanged = false;
+				});
 		}
 
 		private void RestoreDefaults(IndexDefinition indexDefinition)
@@ -170,7 +204,7 @@ namespace Raven.Studio.Models
 		{
 			if (string.IsNullOrWhiteSpace(name) == false)
 			{
-				var notification = new Notification(string.Format("Could not find '{0}' index", name), NotificationLevel.Warning);
+				var notification = new Notification(string.Format("Could not find index '{0}'", name), NotificationLevel.Warning);
 				ApplicationModel.Current.AddNotification(notification);
 			}
 			UrlUtil.Navigate("/indexes");
@@ -531,8 +565,8 @@ namespace Raven.Studio.Models
 
 				if (index.IsNewIndex == false && index.OriginalName != index.Name)
 				{
-					if (AskUser.Confirmation("Can not rename and index",
-						                     "If you wish to save a new index with this new name press OK, to cancel the save command press Cancel") ==false)
+					if (AskUser.Confirmation("Indexes cannot be renamed",
+						                     "If you continue, a new index will be created with this name.") ==false)
 					{
 						ApplicationModel.Current.Notifications.Add(new Notification("Index Not Saved"));
 						return;
@@ -553,16 +587,46 @@ namespace Raven.Studio.Models
 					index.Maps.RemoveAt(mapIndexes[i]);
 				}
 
-				ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
+				SavePriority(index);
+
+				ApplicationModel.Current.AddNotification(new Notification("Saving index " + index.Name));
 				DatabaseCommands.PutIndexAsync(index.Name, index.index, true)
 					.ContinueOnSuccess(() =>
 										   {
 											   ApplicationModel.Current.AddNotification(
-												   new Notification("index " + index.Name + " saved"));
+												   new Notification("Index " + index.Name + " saved"));
 											   index.hasUnsavedChanges = false;
 											   PutIndexNameInUrl(index.Name);
 										   })
 					.Catch();
+			}
+
+			private void SavePriority(IndexDefinitionModel indexDefinitionModel)
+			{
+				if (indexDefinitionModel.PriorityChanged == false)
+					return;
+
+				var priority = Abstractions.Data.IndexingPriority.Normal;
+				switch (indexDefinitionModel.IndexingPriority.Value)
+				{
+					case "Normal":
+						priority = Abstractions.Data.IndexingPriority.Normal;
+						break;
+					case "Idle":
+						priority = Abstractions.Data.IndexingPriority.Idle | Abstractions.Data.IndexingPriority.Forced;
+						break;
+					case "Disabled":
+						priority = Abstractions.Data.IndexingPriority.Disabled | Abstractions.Data.IndexingPriority.Forced;
+						break;
+					case "Abandoned":
+						priority = Abstractions.Data.IndexingPriority.Abandoned | Abstractions.Data.IndexingPriority.Forced;
+						break;
+				}
+				var priorityString = priority.ToString().Replace(" ", "");
+				ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+								.AsyncDatabaseCommands
+								.CreateRequest(string.Format("/indexes/set-priority/{0}?priority={1}", Uri.EscapeUriString(indexDefinitionModel.Name), priorityString), "POST")
+				                .ExecuteRequestAsync();
 			}
 
 			private void PutIndexNameInUrl(string name)
@@ -583,9 +647,9 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				ApplicationModel.Current.AddNotification(new Notification("resetting index " + index.Name));
+				ApplicationModel.Current.AddNotification(new Notification("Resetting index " + index.Name));
 				index.ResetToOriginal();
-				ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " was reset"));
+				ApplicationModel.Current.AddNotification(new Notification("Index " + index.Name + " was reset"));
 			}
 		}
 
@@ -605,7 +669,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				AskUser.ConfirmationAsync("Confirm Delete", "Really delete '" + index.Name + "' index?")
+				AskUser.ConfirmationAsync("Confirm Delete", "Are you sure you want to delete index '" + index.Name + "'?")
 					.ContinueWhenTrue(DeleteIndex);
 			}
 
@@ -617,11 +681,11 @@ namespace Raven.Studio.Models
 														{
 															if (t.IsFaulted)
 															{
-																ApplicationModel.Current.AddErrorNotification(t.Exception, "index " + index.Name + " could not be deleted");
+																ApplicationModel.Current.AddErrorNotification(t.Exception, "Index " + index.Name + " could not be deleted");
 															}
 															else
 															{
-																ApplicationModel.Current.AddInfoNotification("index " + index.Name + " successfully deleted");
+																ApplicationModel.Current.AddInfoNotification("Index '" + index.Name + "' successfully deleted");
 																UrlUtil.Navigate("/indexes");
 															}
 														});
@@ -667,8 +731,6 @@ namespace Raven.Studio.Models
 				}
 			}
 		}
-
-
 
 		public class FieldProperties : NotifyPropertyChangedBase
 		{

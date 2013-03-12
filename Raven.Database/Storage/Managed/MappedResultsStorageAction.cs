@@ -68,7 +68,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed)
+		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			foreach (var key in storage.MappedResults["ByViewAndDocumentId"].SkipTo(new RavenJObject
 			{
@@ -80,17 +80,17 @@ namespace Raven.Storage.Managed
 				storage.MappedResults.Remove(key);
 
 				var reduceKey = key.Value<string>("reduceKey");
-				removed.Add(new ReduceKeyAndBucket(key.Value<int>("bucket"), reduceKey));
-
+				var bucket = new ReduceKeyAndBucket(key.Value<int>("bucket"), reduceKey);
+				removed[bucket] = removed.GetOrDefault(bucket) + 1;
 			}
 		}
 
-		public void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed)
+		public void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			var statsByKey = new Dictionary<string, int>();
 			foreach (var reduceKeyAndBucket in removed)
 			{
-				statsByKey[reduceKeyAndBucket.ReduceKey] = statsByKey.GetOrDefault(reduceKeyAndBucket.ReduceKey) - 1;
+				statsByKey[reduceKeyAndBucket.Key.ReduceKey] = statsByKey.GetOrDefault(reduceKeyAndBucket.Key.ReduceKey) - reduceKeyAndBucket.Value;
 			}
 
 			foreach (var reduceKeyStat in statsByKey)
@@ -153,6 +153,32 @@ namespace Raven.Storage.Managed
 				storage.ScheduleReductions.Remove(token);
 			}
 			return hasResult ? result : null;
+		}
+
+		public void DeleteScheduledReduction(string indexName, int level, string reduceKey)
+		{
+			var keyCriteria = new RavenJObject
+			                  {
+				                  {"view", indexName},
+				                  {"level", level},
+								  {"reduceKey", reduceKey}
+			                  };
+
+			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(keyCriteria))
+			{
+				var indexFromDb = result.Value<string>("view");
+				var levelFromDb = result.Value<int>("level");
+				var reduceKeyFromDb = result.Value<string>("reduceKey");
+
+				if (string.Equals(indexFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
+				    levelFromDb != level)
+					break;
+
+				if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					break;
+
+				storage.ScheduleReductions.Remove(reduceKey);
+			}
 		}
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)

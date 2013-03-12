@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Text;
@@ -14,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Impl.Clustering;
+using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
 using Raven.Database.Extensions;
@@ -216,8 +218,15 @@ namespace Raven.Database.Commercial
 			}
 		}
 
-		private static string GetLicenseText(InMemoryRavenConfiguration config)
+		[Import(AllowDefault = true)]
+		private ILicenseProvider LicenseProvider { get; set; }
+
+		private string GetLicenseText(InMemoryRavenConfiguration config)
 		{
+			config.Container.SatisfyImportsOnce(this);
+			if (LicenseProvider != null && !string.IsNullOrEmpty(LicenseProvider.License))
+				return LicenseProvider.License;
+
 			var value = config.Settings["Raven/License"];
 			if (string.IsNullOrEmpty(value) == false)
 				return value;

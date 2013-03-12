@@ -2,9 +2,9 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Tasks : PageView
+	public partial class User_Info : PageView
 	{
-		public Tasks()
+		public User_Info()
 		{
 			InitializeComponent();
 		}

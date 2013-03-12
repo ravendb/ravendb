@@ -44,6 +44,9 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
+      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -579,6 +582,7 @@
     <Compile Include="Connection\OAuthHelper.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
@@ -636,6 +640,7 @@
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Data\UserInfo.cs" />
     <Compile Include="Data\UuidType.cs" />
     <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CharExtensions.cs" />
@@ -652,6 +657,7 @@
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Imports\Newtonsoft.Json\JsonTextReaderAsync.cs" />
     <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
     <Compile Include="Indexing\SpatialOptionsFactory.cs" />
@@ -730,6 +736,7 @@
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
     <Compile Include="Util\EtagUtil.cs" />
+    <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
@@ -740,6 +747,7 @@
       <Link>RavenDB.snk</Link>
     </None>
     <EmbeddedResource Include="Imports\Newtonsoft.Json\Dynamic.snk" />
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

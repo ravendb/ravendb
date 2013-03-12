@@ -257,6 +257,7 @@
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
     <Compile Include="Linq\StringLiteralExpression.cs" />
+    <Compile Include="Plugins\ILicenseProvider.cs" />
     <Compile Include="Plugins\PluginsStatus.cs" />
     <Compile Include="Queries\MoreLikeThisQueryRunner.cs" />
     <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />
@@ -281,6 +282,7 @@
     <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
     <Compile Include="Server\Responders\DocsStreams.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
+    <Compile Include="Server\Responders\IndexPriorityResponder.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -409,7 +411,6 @@
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
-    <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
@@ -699,7 +700,7 @@
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
-    <Compile Include="Storage\Esent\StorageActions\EsentUtil.cs" />
+    <Compile Include="Storage\Esent\Debug\EsentUtil.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />

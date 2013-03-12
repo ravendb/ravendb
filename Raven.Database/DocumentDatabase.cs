@@ -200,7 +200,7 @@ namespace Raven.Database
 				try
 				{
 
-					TransactionalStorage.Batch(actions =>
+					TransactionalStorage.Batch(actions => 
 						sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
 					TransportState = new TransportState();
@@ -317,10 +317,8 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
-			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+			using (LogContext.WithDatabase(Name))
 			{
-				LogContext.DatabaseName.Value = Name;
 				foreach (var task in StartupTasks)
 				{
 					var disposable = task.Value as IDisposable;
@@ -345,6 +343,7 @@ namespace Raven.Database
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
+					DatabaseId = TransactionalStorage.Id,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
 						.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
@@ -391,7 +390,7 @@ namespace Raven.Database
 			}
 		}
 
-
+	
 		private decimal ConvertBytesToMBs(long bytes)
 		{
 			return Math.Round(bytes / 1024.0m / 1024.0m, 2);
@@ -587,10 +586,14 @@ namespace Raven.Database
 			var onDocumentChange = OnDocumentChange;
 			if (onDocumentChange != null)
 				onDocumentChange(this, obj);
-
 		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
+		{
+			TransportState.Send(obj);
+		}
+
+		public void RaiseNotifications(ReplicationConflictNotification obj)
 		{
 			TransportState.Send(obj);
 		}
@@ -938,7 +941,7 @@ namespace Raven.Database
 								});
 								task.Keys.Add(key);
 							}
-							if (deletedETag != null)
+						    if (deletedETag != null)
 								indexingExecuter.PrefetchingBehavior.AfterDelete(key, deletedETag);
 							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
 						}
@@ -1249,10 +1252,10 @@ namespace Raven.Database
 							onResult(result);
 						}
 
-						if (transformerErrors.Count > 0)
-						{
-							throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
-						}
+					if (transformerErrors.Count > 0)
+					{
+						throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
+					}
 
 					}
 
@@ -2176,15 +2179,15 @@ namespace Raven.Database
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
 					lock (putSerialLock)
 					{
-						var inserts = 0;
-						var batch = 0;
+                        var inserts = 0;
+					    var batch = 0;
 						var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 						foreach (var doc in docs)
 						{
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
-							batch++;
+						    batch++;
 							AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
 							foreach (var trigger in PutTriggers)
 							{
@@ -2207,8 +2210,8 @@ namespace Raven.Database
 						}
 						accessor.Documents.IncrementDocumentCount(inserts);
 						accessor.General.PulseTransaction();
-						workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
-						workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+                        workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
+                        workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
 					}
 				}
 				RaiseNotifications(new DocumentChangeNotification
@@ -2304,6 +2307,11 @@ namespace Raven.Database
 				}
 			});
 			return result;
+		}
+
+		public TransformerDefinition GetTransformerDefinition(string name)
+		{
+			return IndexDefinitionStorage.GetTransformerDefinition(name);
 		}
 	}
 }

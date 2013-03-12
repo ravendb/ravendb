@@ -87,7 +87,7 @@
 
 				storage.Batch(accessor =>
 				{
-					var removed = new HashSet<ReduceKeyAndBucket>();
+					var removed = new Dictionary<ReduceKeyAndBucket, int>();
 					accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", "a", removed);
 					accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", "a", removed);
 
@@ -211,7 +211,7 @@
 
 				storage.Batch(accessor =>
 				{
-					var removed = new HashSet<ReduceKeyAndBucket>();
+					var removed = new Dictionary<ReduceKeyAndBucket, int>();
 					accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", "a", removed);
 					accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", "a", removed);
 					accessor.MapReduce.UpdateRemovedMapReduceStats("a", removed);

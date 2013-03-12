@@ -199,12 +199,19 @@ task ReleaseNoTests -depends Stable,DoRelease {
 
 }
 
+task Vnext {
+	$global:uploadCategory = "RavenDB-Unstable"
+	$global:uploadMode = "Vnext"
+}
+
 task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
+	$global:uploadMode = "-Unstable"
 }
 
 task Stable {
 	$global:uploadCategory = "RavenDB"
+	$global:uploadMode = "Stable"
 }
 
 task RunTests -depends Test,TestSilverlight
@@ -417,6 +424,8 @@ task UploadStable -depends Stable, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
+task UploadVnext -depends Vnext, DoRelease, Upload
+
 task CreateNugetPackages -depends Compile {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
@@ -514,17 +523,30 @@ task CreateNugetPackages -depends Compile {
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	$sourceFeed = "https://nuget.org/api/v2"
+	
+	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
+		
+		if ($global:uploadMode -eq "Vnext") {
+			$sourceFeed = "http://www.myget.org/F/ravendbvnext/api/v2/package"
+		} 
+		else {
+			$sourceFeed = "http://www.myget.org/F/ravendb/api/v2/package"
+		}
+	}
+	
 	if ( (Test-Path $accessPath) ) {
 		$accessKey = Get-Content $accessPath
 		$accessKey = $accessKey.Trim()
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey }
+			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey -Source $sourceFeed }
 		}
 	}
 	else {
-		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
 }
 

@@ -11,7 +11,8 @@
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
-                         xmlns:Models="clr-namespace:Raven.Studio.Models">
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls">
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="DataTemplate_List_DetailsView">
@@ -88,6 +89,10 @@
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
+									<Rectangle Fill="#06000000"
+											   Width="1"
+											   VerticalAlignment="Stretch"
+											   HorizontalAlignment="Left"/>
 									<TextBlock Text="{Binding Database}" 
                                                Behaviors:FadeTrimming.IsEnabled="True" 
                                                Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
@@ -111,9 +116,14 @@
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
+									<Rectangle Fill="#06000000"
+											   Width="1"
+											   VerticalAlignment="Stretch"
+											   HorizontalAlignment="Left"/>
 									<TextBlock Text="{Binding Title}" 
                                                Behaviors:FadeTrimming.IsEnabled="True" 
                                                Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+											   Margin="5"
                                                VerticalAlignment="Center"/>
 									<Rectangle Fill="Black" 
                                                Height="1" 
@@ -135,9 +145,14 @@
 						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Grid>
+									<Rectangle Fill="#06000000"
+											   Width="1"
+											   VerticalAlignment="Stretch"
+											   HorizontalAlignment="Left"/>
 									<TextBlock Text="{Binding Message}" 
                                                Behaviors:FadeTrimming.IsEnabled="True" 
                                                Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+											   Margin="5"
                                                VerticalAlignment="Center"/>
 									<Rectangle Fill="Black" 
                                                Height="1" 
@@ -164,6 +179,13 @@
 					</Grid.RowDefinitions>
 					<StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
 						<Image Style="{StaticResource Style_Image_DocumentsPageHeader}"/>
+						<HyperlinkButton Content="Statistics"
+                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="/statistics"
+                                VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                Margin="6"/>
+						<controls:NavTriangle/>
 						<TextBlock x:Name="HeaderText"
 								   Style="{StaticResource Style_Text_Header}"
 								   Text="Alerts"
@@ -321,7 +343,6 @@
 									ContentTemplate="{StaticResource DataTemplate_List_DetailsView}"
 									HorizontalContentAlignment="Stretch"
 									VerticalContentAlignment="Stretch" Margin="0,0,0,4"/>
-					
 					<ContentControl Grid.Row="2"
 									Visibility="{Binding ShowObserved.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
 									Content="{Binding}" 

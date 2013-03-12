@@ -83,6 +83,7 @@
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
@@ -93,7 +94,6 @@
 
 						<TextBlock Text="      "/>
 					</StackPanel>
-					
 
 					<StackPanel Orientation="Horizontal">
 						<TextBlock Text="Factory Name: " VerticalAlignment="Center"/>
@@ -133,8 +133,13 @@
 							 Visibility="{Binding ElementName=ConnectionStringMode, Path=SelectedIndex, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=2}"
 							 MinWidth="250"/>
 				</StackPanel>
-				
-				<Grid Grid.Row="2">
+
+				<StackPanel Grid.Row="2" Orientation="Horizontal" Margin="5">
+					<TextBlock Text="Disabled: " VerticalAlignment="Center"/>
+					<CheckBox IsChecked="{Binding SelectedReplication.Value.Disabled, Mode=TwoWay}" VerticalAlignment="Center"/>
+				</StackPanel>
+
+				<Grid Grid.Row="3">
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>
 						<RowDefinition Height="*"/>

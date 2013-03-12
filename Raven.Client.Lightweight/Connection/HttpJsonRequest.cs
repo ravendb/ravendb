@@ -845,6 +845,36 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public async Task<WebResponse> RawExecuteRequestAsync()
+		{
+			try
+			{
+				return await webRequest.GetResponseAsync();
+			}
+			catch (WebException we)
+			{
+				var httpWebResponse = we.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				var sb = new StringBuilder()
+					.Append(httpWebResponse.StatusCode)
+					.Append(" ")
+					.Append(httpWebResponse.StatusDescription)
+					.AppendLine();
+
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						sb.AppendLine(line);
+					}
+				}
+				throw new InvalidOperationException(sb.ToString(), we);
+			}
+		}
+
+
 		public void PrepareForLongRequest()
 		{
 			Timeout = TimeSpan.FromHours(6);

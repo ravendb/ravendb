@@ -46,7 +46,7 @@ namespace Raven.Client.Connection
 		}
 
 		private readonly int maxNumberOfCachedRequests;
-		private SimpleCache<CachedRequest> cache;
+		private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
 
@@ -107,7 +107,7 @@ namespace Raven.Client.Connection
 			if (cache != null)
 				cache.Dispose();
 
-			cache = new SimpleCache<CachedRequest>(maxNumberOfCachedRequests);
+			cache = new SimpleCache(maxNumberOfCachedRequests);
 			NumOfCachedRequests = 0;
 		}
 
@@ -121,7 +121,14 @@ namespace Raven.Client.Connection
 		/// The number of cache evictions forced by
 		/// tracking changes if aggressive cache was enabled
 		/// </summary>
-		public int NumberOfCacheResets { get; private set; }
+		public int NumberOfCacheResets
+		{
+			get { return numberOfCacheResets; }
+			private set
+			{
+				numberOfCacheResets = value;
+			}
+		}
 
 		/// <summary>
 		/// The number of requests that we got 304 for 
@@ -187,6 +194,7 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
+		private volatile int numberOfCacheResets;
 
 		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders = null)
 		{

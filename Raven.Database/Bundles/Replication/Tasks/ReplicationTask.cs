@@ -27,6 +27,7 @@ using Raven.Database.Bundles.Replication;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
+using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -86,69 +87,75 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void Execute()
 		{
-			var name = GetType().Name;
-
-			var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
-			bool runningBecauseOfDataModifications = false;
-			var context = docDb.WorkContext;
-			NotifySiblings();
-			while (context.DoWork)
+			using(LogContext.WithDatabase(docDb.Name))
 			{
-				try
+				var name = GetType().Name;
+
+				var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
+				bool runningBecauseOfDataModifications = false;
+				var context = docDb.WorkContext;
+				NotifySiblings();
+				while (context.DoWork)
 				{
-					using (docDb.DisableAllTriggersForCurrentThread())
+					try
 					{
-						var destinations = GetReplicationDestinations();
-
-						if (destinations.Length == 0)
+						using (docDb.DisableAllTriggersForCurrentThread())
 						{
-							WarnIfNoReplicationTargetsWereFound();
-						}
-						else
-						{
-							var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
+							var destinations = GetReplicationDestinations();
 
-							var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
-							var destinationForReplication = destinations
-								.Where(dest =>
-								{
-									if (copyOfrunningBecauseOfDataModifications == false)
-										return true;
-									return IsNotFailing(dest, currentReplicationAttempts);
-								});
-
-							foreach (var dest in destinationForReplication)
+							if (destinations.Length == 0)
 							{
-								var destination = dest;
-								var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, new IntHolder());
-								if (Thread.VolatileRead(ref holder.Value) == 1)
-									continue;
-								Thread.VolatileWrite(ref holder.Value, 1);
-								Task.Factory.StartNew(() => ReplicateTo(destination), TaskCreationOptions.LongRunning)
-									.ContinueWith(completedTask =>
+								WarnIfNoReplicationTargetsWereFound();
+							}
+							else
+							{
+								var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
+
+								var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
+								var destinationForReplication = destinations
+									.Where(dest =>
 									{
-										if (completedTask.Exception != null)
-										{
-											log.ErrorException("Could not replicate to " + destination, completedTask.Exception);
-											return;
-										}
-										if (completedTask.Result) // force re-evaluation of replication again
-											docDb.WorkContext.NotifyAboutWork();
+										if (copyOfrunningBecauseOfDataModifications == false)
+											return true;
+										return IsNotFailing(dest, currentReplicationAttempts);
 									});
 
+								foreach (var dest in destinationForReplication)
+								{
+									var destination = dest;
+									var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, new IntHolder());
+									if (Thread.VolatileRead(ref holder.Value) == 1)
+										continue;
+									Thread.VolatileWrite(ref holder.Value, 1);
+									Task.Factory.StartNew(() =>
+									{
+										using (LogContext.WithDatabase(docDb.Name))
+										{
+											try
+											{
+												if (ReplicateTo(destination))
+													docDb.WorkContext.NotifyAboutWork();
+											}
+											catch (Exception e)
+											{
+												log.ErrorException("Could not replicate to " + destination, e);
+											}
+										}
+									}, TaskCreationOptions.LongRunning);
+								}
 							}
 						}
 					}
-				}
-				catch (Exception e)
-				{
-					log.ErrorException("Failed to perform replication", e);
-				}
+					catch (Exception e)
+					{
+						log.ErrorException("Failed to perform replication", e);
+					}
 
-				runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
-				timeToWaitInMinutes = runningBecauseOfDataModifications
-										? TimeSpan.FromSeconds(30)
-										: TimeSpan.FromMinutes(5);
+					runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+					timeToWaitInMinutes = runningBecauseOfDataModifications
+											? TimeSpan.FromSeconds(30)
+											: TimeSpan.FromMinutes(5);
+				}
 			}
 		}
 
@@ -204,6 +211,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
 		{
+			using(LogContext.WithDatabase(docDb.Name))
 			while (true)
 			{
 				RavenConnectionStringOptions connectionStringOptions;
@@ -220,7 +228,7 @@ namespace Raven.Bundles.Replication.Tasks
 				}
 				try
 				{
-					var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl();
+					var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
 					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
@@ -495,7 +503,8 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" +
+				          UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
@@ -551,7 +560,8 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl()
+				          + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
 

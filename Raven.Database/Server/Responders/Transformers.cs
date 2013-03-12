@@ -14,34 +14,30 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "GET", "PUT" }; }
+			get { return new[] { "GET", "PUT", "DELETE" }; }
 		}
 
 		public override void Respond(IHttpContext context)
 		{
 			var match = urlMatcher.Match(context.GetRequestUrl());
-			var index = match.Groups[1].Value;
+			var transformer = match.Groups[1].Value;
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					if (string.IsNullOrEmpty(index) == false && index != "/")
+					if (string.IsNullOrEmpty(transformer) == false && transformer != "/")
 					{
-						context.SetStatusToBadRequest();
-						context.WriteJson(new
-						{
-							Error = "Cannot GET from a specific transformer but got a request for: " + index.Substring(0)
-						});
-						return;
+						context.WriteJson(RavenJObject.FromObject(Database.GetTransformerDefinition(transformer)));
+						break;
 					}
 
 					var namesOnlyString = context.Request.QueryString["namesOnly"];
 					bool namesOnly;
-					RavenJArray indexes;
+					RavenJArray transformers;
 					if (bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
-						indexes = Database.GetTransformerNames(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
+						transformers = Database.GetTransformerNames(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
 					else
-						indexes = Database.GetTransformers(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
-					context.WriteJson(indexes);
+						transformers = Database.GetTransformers(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
+					context.WriteJson(transformers);
 					break;
 				case "PUT":
 					var data = context.ReadJsonObject<TransformerDefinition>();
@@ -52,7 +48,11 @@ namespace Raven.Database.Server.Responders
 						return;
 					}
 					context.SetStatusToCreated("/transformers");
-					context.WriteJson(new { Transfomer = Database.PutTransform(index, data) });
+					context.WriteJson(new { Transfomer = Database.PutTransform(transformer, data) });
+					break;
+				case "DELETE":
+					context.SetStatusToDeleted();
+					Database.DeleteTransfom(transformer);
 					break;
 			}
 		}

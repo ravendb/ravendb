@@ -619,6 +619,9 @@
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\AccessTokenBody.cs">
+      <Link>Imports\Data\AccessTokenBody.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
       <Link>Imports\Data\Alert.cs</Link>
     </Compile>
@@ -691,8 +694,17 @@
     <Compile Include="..\Raven.Abstractions\Data\PeriodicBackupSetup.cs">
       <Link>Imports\Data\PeriodicBackupSetup.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\QueryHeaderInformation.cs">
+      <Link>Imports\Data\QueryHeaderInformation.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
       <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\StreamResult.cs">
+      <Link>Imports\Data\StreamResult.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\UserInfo.cs">
+      <Link>Imports\Data\UserInfo.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\UuidType.cs">
       <Link>Imports\Data\UuidType.cs</Link>
@@ -720,6 +732,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\Absdtractions\TaskExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\FieldTermVector.cs">
       <Link>Imports\Indexing\FieldTermVector.cs</Link>
@@ -864,6 +879,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\EasyReaderWriterLock.cs">
       <Link>Imports\Util\EasyReaderWriterLock.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\IAsyncEnumerator.cs">
+      <Link>Imports\Util\IAsyncEnumerator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>

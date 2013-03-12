@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
@@ -8,29 +7,31 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class DeleteAllIndexesCommand : Command
+	public class DeleteIndexesCommand : Command
 	{
 		private readonly IndexesModel model;
 
-		public DeleteAllIndexesCommand(IndexesModel model)
+		public DeleteIndexesCommand(IndexesModel model)
 		{
 			this.model = model;
 		}
 
 		public override void Execute(object parameter)
 		{
-			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure that you want to delete all indexes?"))
-				.ContinueWhenTrue(DeleteIndex);
+			var deleteItems = parameter as string;
+			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure that you want to delete all " + deleteItems + " indexes?"))
+				.ContinueWhenTrue(() => DeleteIndex(deleteItems));
 		}
 
-		private void DeleteIndex()
+		private void DeleteIndex(string deleteItems)
 		{
 			var ravenDocumentsByEntityNameIndexName = new RavenDocumentsByEntityName().IndexName;
-			var tasks = (from indexListItem in model.GroupedIndexes
+			var tasks = (from indexListItem in model.IndexesOfPriority(deleteItems)
 			             select indexListItem.Name
 			             into indexName
 			             where indexName != ravenDocumentsByEntityNameIndexName
 							 select new { Task = DatabaseCommands.DeleteIndexAsync(indexName), Name = indexName }).ToArray();
+			
 			Task.Factory.ContinueWhenAll(tasks.Select(x=>x.Task).ToArray(), taskslist =>
 			{
 				foreach (var task in taskslist)

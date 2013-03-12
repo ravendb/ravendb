@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using System.Linq;
@@ -11,45 +12,31 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			for (int i = 0; i < 2; i++)
+
+			var docStore = new DocumentStore
 			{
-				using (var store = new DocumentStore
+				Url = "http://localhost:8080",
+				DefaultDatabase = "Users",
+			};
+			docStore.Initialize();
+			while (true)
+			{
+				Console.ReadLine();
+				using (docStore.AggressivelyCache())
 				{
-					Url = "http://localhost:8080",
-					DefaultDatabase = "test",
-				}.Initialize())
-				{
-					var list = new List<string>();
-					var sp = Stopwatch.StartNew();
-					int start = 0;
-					while (true)
+					using (var s = docStore.OpenSession())
 					{
-						var result = store.DatabaseCommands.Query("PersonList", new IndexQuery
-						{
-							FieldsToFetch = new[] { Constants.DocumentIdFieldName },
-							PageSize = 1024,
-							Start = start
-						}, null);
-						if (result.Results.Count == 0)
-							break;
-						start += result.Results.Count;
-						list.AddRange(result.Results.Select(x => x.Value<string>(Constants.DocumentIdFieldName)));
-					}
-					sp.Stop();
-
-					Console.WriteLine("Read all ids {0:#,#} in {1:#,#} ms", list.Count, sp.ElapsedMilliseconds);
-
-					var rand = new Random();
-					list.Sort((s, s1) => rand.Next(-1, 1));
-					sp.Restart();
-
-					foreach (var id in list)
-					{
-						store.DatabaseCommands.Get(id);
+						var load = s.Advanced.LuceneQuery<dynamic>("dynamic/Users")
+									.SelectFields<string>("Name")
+						            .ToList();
+						Console.WriteLine(string.Join(" ", load));
 					}
 
-					sp.Stop();
-					Console.WriteLine("Read all docs {0:#,#} in {1:#,#} ms", list.Count, sp.ElapsedMilliseconds);
+					using (var s = docStore.OpenSession())
+					{
+						var load = s.Load<dynamic>("users/ayende");
+						Console.WriteLine(load.Name);
+					}
 				}
 			}
 		} 

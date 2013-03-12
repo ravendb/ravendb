@@ -10,6 +10,7 @@ using Raven.Client.Connection.Async;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
 using Raven.Studio.Controls.Editors;
+using Raven.Studio.Features.Bundles;
 using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 
@@ -33,8 +34,8 @@ namespace Raven.Studio.Models
 			UpdateAvailableFactoryNames();
 			AvailableObjects = new ObservableCollection<string>();
 			UpdateAvailableCollections();
-			SqlReplicationConfigs = new ObservableCollection<SqlReplicationConfig>();
-			SelectedReplication = new Observable<SqlReplicationConfig>();
+            SqlReplicationConfigs = new ObservableCollection<SqlReplicationConfigModel>();
+            SelectedReplication = new Observable<SqlReplicationConfigModel>();
 			FirstItemOfCollection = new Observable<RavenJObject>();
 			script = new EditorDocument { Language = JScriptLanguage };
 			Script.Language.RegisterService(new SqlReplicationScriptIntelliPromptProvider(FirstItemOfCollection));
@@ -46,7 +47,7 @@ namespace Raven.Studio.Models
 
 		private void UpdateAvailableFactoryNames()
 		{
-			AvilableFactoryNames = new ObservableCollection<string>
+			AvailableFactoryNames = new ObservableCollection<string>
 			{
 				"System.Data.SqlClient",
 				"System.Data.SqlServerCe.4.0",
@@ -66,7 +67,7 @@ namespace Raven.Studio.Models
 			SelectedReplication.Value.Script = ScriptData;
 		}
 
-		public ObservableCollection<string> AvilableFactoryNames { get; set; }
+		public ObservableCollection<string> AvailableFactoryNames { get; set; }
 		public ObservableCollection<string> AvailableObjects { get; private set; }
 		private void UpdateAvailableCollections()
 		{
@@ -85,7 +86,11 @@ namespace Raven.Studio.Models
 
 		private void UpdateParameters()
 		{
-			OnPropertyChanged(() => SqlReplicationConfigs);
+            if (SelectedReplication.Value == null)
+            {
+                return;
+            }
+
 			if (string.IsNullOrWhiteSpace(SelectedReplication.Value.ConnectionString) == false)
 				SelectedConnectionStringIndex = 0;
 			else if (string.IsNullOrWhiteSpace(SelectedReplication.Value.ConnectionStringName) == false)
@@ -95,10 +100,7 @@ namespace Raven.Studio.Models
 			else
 				SelectedConnectionStringIndex = 0;
 
-			OnPropertyChanged(() => SelectedConnectionStringIndex);
-
 			ScriptData = SelectedReplication.Value.Script;
-			OnPropertyChanged(() => Script);
 
 			if (!string.IsNullOrWhiteSpace(SelectedReplication.Value.RavenEntityName))
 			{
@@ -106,8 +108,6 @@ namespace Raven.Studio.Models
 			}
 			else
 				SelectedCollectionIndex = -1;
-
-			OnPropertyChanged(() => SelectedCollectionIndex);
 		}
 
 		public ICommand DeleteReplication
@@ -121,14 +121,20 @@ namespace Raven.Studio.Models
 			{
 				return addReplicationCommand ??
 					   (addReplicationCommand =
-						new ActionCommand(() => SqlReplicationConfigs.Add(new SqlReplicationConfig { Name = "Temp_Name" })));
+                        new ActionCommand(() =>
+                        {
+                            var model = new SqlReplicationConfigModel {Name = "Temp_Name"};
+                            SqlReplicationConfigs.Add(model);
+                            SelectedReplication.Value = model;
+                        }));
 			}
 		}
 
-		public Observable<SqlReplicationConfig> SelectedReplication { get; set; }
+        public Observable<SqlReplicationConfigModel> SelectedReplication { get; set; }
 		IEditorDocument script;
 		private int selectedCollectionIndex;
-		public IEditorDocument Script
+	    private int selectedConnectionStringIndex;
+	    public IEditorDocument Script
 		{
 			get
 			{
@@ -136,8 +142,16 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public int SelectedConnectionStringIndex { get; set; }
-		public int SelectedCollectionIndex
+	    public int SelectedConnectionStringIndex
+	    {
+	        get { return selectedConnectionStringIndex; }
+	        set
+	        {
+	            selectedConnectionStringIndex = value;
+	            OnPropertyChanged(() => SelectedConnectionStringIndex);
+	        }
+	    }
+	    public int SelectedCollectionIndex
 		{
 			get { return selectedCollectionIndex; }
 			set
@@ -157,6 +171,8 @@ namespace Raven.Studio.Models
 						                                                               FirstItemOfCollection.Value = result.Results.FirstOrDefault();
 					                                                               });
 				}
+
+                OnPropertyChanged(() => SelectedCollectionIndex);
 			}
 		}
 		protected Observable<RavenJObject> FirstItemOfCollection { get; set; }
@@ -167,28 +183,37 @@ namespace Raven.Studio.Models
 			set { Script.SetText(value); }
 		}
 
-		public ObservableCollection<SqlReplicationConfig> SqlReplicationConfigs { get; set; }
+        public ObservableCollection<SqlReplicationConfigModel> SqlReplicationConfigs { get; set; }
 
 		private void HandleDeleteReplication(object parameter)
 		{
-			if (SelectedReplication.Value == null)
+            var replication = parameter as SqlReplicationConfigModel ?? SelectedReplication.Value;
+
+            if (replication == null)
 				return;
 
-			SqlReplicationConfigs.Remove(SelectedReplication.Value);
-			SelectedReplication.Value = null;
-			OnPropertyChanged(() => SelectedReplication);
+            if (replication == SelectedReplication.Value)
+            {
+                SelectedReplication.Value = null;
+            }
+
+            SqlReplicationConfigs.Remove(replication);
 		}
 
 		public override void LoadFor(DatabaseDocument database)
 		{
 			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(database.Id)
-				.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+                .Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
 				.ContinueOnSuccessInTheUIThread(documents =>
 				{
 					if (documents == null)
 						return;
 
-					SqlReplicationConfigs = new ObservableCollection<SqlReplicationConfig>(documents);
+                    SqlReplicationConfigs = new ObservableCollection<SqlReplicationConfigModel>();
+					foreach (var doc in documents)
+					{
+						SqlReplicationConfigs.Add(SqlReplicationConfigModel.FromSqlReplicationConfig(doc));
+					}
 				});
 		}
 

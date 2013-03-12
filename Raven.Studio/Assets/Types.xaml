@@ -34,6 +34,8 @@
 	<Converters:BooleanToGridLengthConverter x:Key="HiddenWhenFalseStarSizedWhenTrue"
 																					 ValueWhenFalse="0"
 																					 ValueWhenTrue="*"/>
+	<Converters:PriorityToFontStyleConverter x:Key="PriorityToFontStyle"/>
+	<Converters:PriorityToFontColorConverter x:Key="PriorityToFontColor"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
 	<Converters:BundleNameToActiveConverter x:Key="BundleNameToActive"/>
 	<Converters:BundleNameToToolTipCoverter x:Key="BundleNameToToolTip"/>

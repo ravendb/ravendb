@@ -133,7 +133,7 @@ namespace Raven.Client.Embedded
 		protected override IDatabaseChanges CreateDatabaseChanges(string database)
 		{
 			IDatabaseChanges result = null;
-			result = new EmbeddableDatabaseChanges(this, () => result = null);
+			result = new EmbeddableDatabaseChanges(this, () => result = null, ((EmbeddedDatabaseCommands)  DatabaseCommands).TryResolveConflictByUsingRegisteredListeners);
 			return result;
 		}
 
@@ -151,6 +151,9 @@ namespace Raven.Client.Embedded
 				return;
 			wasDisposed = true;
 			base.Dispose();
+
+			if(databaseChanges != null)
+				databaseChanges.Dispose();
 			if (idleTimer != null)
 				idleTimer.Dispose();
 			if (DocumentDatabase != null)
@@ -234,7 +237,7 @@ namespace Raven.Client.Embedded
 						}
 					},null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 				}
-				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
+				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
 				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DatabaseCommands);
 			}
 			else

@@ -39,15 +39,16 @@ namespace Raven.Client.Document.Batches
 		public GetRequest CreateRequest()
 		{
 			return new GetRequest
-				   {
-					   Url =
-						   string.Format(
-							   "/docs?startsWith={0}&matches={3}&start={1}&pageSize={2}",
-							   Uri.EscapeDataString(keyPrefix),
-							   start.ToInvariantString(),
-							   pageSize.ToInvariantString(),
-							   Uri.EscapeDataString(matches ?? ""))
-				   };
+			{
+				Url = "/docs",
+				Query =
+					string.Format(
+						"startsWith={0}&matches={3}&start={1}&pageSize={2}",
+						Uri.EscapeDataString(keyPrefix),
+						start.ToInvariantString(),
+						pageSize.ToInvariantString(),
+						Uri.EscapeDataString(matches ?? ""))
+			};
 		}
 
 		public object Result { get; set; }

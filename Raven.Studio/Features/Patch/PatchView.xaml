@@ -14,7 +14,8 @@
                          xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 						 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
-                         xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" Title="PatchView Page"
+                         xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls" Title="PatchView Page"
                          d:DataContext="{d:DesignInstance Models:PatchModel}">
     <Infrastructure:PageView.Resources>
         <Storyboard x:Key="ShowErrorPanel">
@@ -41,6 +42,15 @@
 
 		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
 			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Patch_Small}"/>
+
+			<HyperlinkButton Content="Documents"
+                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="/documents"
+                                VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                Margin="6"/>
+			<controls:NavTriangle/>
+
 			<TextBlock Text="Patch Documents"
 					   Style="{StaticResource Style_Text_Header}" />
 			<TextBlock Text=" > " 
