@@ -1,3 +1,4 @@
+#if !NETFX_CORE
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -89,10 +90,11 @@ namespace Raven.Abstractions.Connection
 				{
 					foreach (var value in values)
 					{
-						dest.Headers.Add(header, value);
+						dest.Headers[header] = value;
 					}
 				}
 			}
 		}
 	}
 }
+#endif

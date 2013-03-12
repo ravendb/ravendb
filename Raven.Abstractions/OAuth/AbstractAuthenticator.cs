@@ -13,8 +13,12 @@ namespace Raven.Abstractions.OAuth
 			if (string.IsNullOrEmpty(CurrentOauthToken))
 				return;
 
+#if NETFX_CORE
+			e.Client.DefaultRequestHeaders.Add("Authorization", CurrentOauthToken);
+#else
 			SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
-		}
+#endif
+			}
 
 		protected static void SetHeader(WebHeaderCollection headers, string key, string value)
 		{

@@ -6,8 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,12 +18,14 @@ using Raven.Client.Linq;
 using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
+
 
 namespace Raven.Client.WinRT.Connection
 {
@@ -34,9 +38,10 @@ namespace Raven.Client.WinRT.Connection
 	/// </summary>
 	public class HttpJsonRequest
 	{
-		private readonly string url;
+		private readonly Uri url;
 		private readonly DocumentConvention conventions;
-		internal HttpWebRequest webRequest;
+		private readonly HttpMethod method;
+		internal HttpClient httpClient;
 		private byte[] postedData;
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly().FullName).Version.ToString();
@@ -50,7 +55,26 @@ namespace Raven.Client.WinRT.Connection
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
-			throw new NotImplementedException();
+			retries++;
+			// result(httpClient);
+
+			if (postedData == null)
+			{
+				var taskCompletionSource = new TaskCompletionSource<object>();
+				taskCompletionSource.SetResult(null);
+				return taskCompletionSource.Task;
+			}
+			else return WriteAsync(postedData);
+		}
+
+		public Uri Url
+		{
+			get { return url; }
+		}
+
+		public string Method
+		{
+			get { return method.ToString(); }
 		}
 
 		private HttpJsonRequestFactory factory;
@@ -65,7 +89,30 @@ namespace Raven.Client.WinRT.Connection
 
 		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions, HttpJsonRequestFactory factory)
 		{
-			throw new NotImplementedException();
+			this.url = new Uri(url);
+			this.conventions = conventions;
+			this.factory = factory;
+			this.method = new HttpMethod(method);
+
+			var handler = new HttpClientHandler
+			{
+				
+			};
+			httpClient = new HttpClient(handler);
+			httpClient.DefaultRequestHeaders.Add("Raven-Client-Version", ClientVersion);
+
+			noopWaitForTask = new CompletedTask();
+			WaitForTask = noopWaitForTask;
+
+			WriteMetadata(metadata);
+			if (method != "GET")
+				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json; charset=utf-8"));
+
+			if (factory.DisableRequestCompression)
+				return;
+
+			if (method == "POST" || method == "PUT" || method == "PATCH" || method == "EVAL")
+				httpClient.DefaultRequestHeaders.Add("Content-Encoding", "gzip");
 		}
 
 		public Task<RavenJToken> ReadResponseJsonAsync()
@@ -84,10 +131,10 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		private Task<string> ReadResponseStringAsync()
 		{
-			return WaitForTask.ContinueWith(_ => webRequest
-													.GetResponseAsync()
+			var requestMessage = new HttpRequestMessage(method, url);
+			return WaitForTask.ContinueWith(_ => httpClient.SendAsync(requestMessage)
 													.ConvertSecurityExceptionToServerNotFound()
-													.AddUrlIfFaulting(webRequest.RequestUri)
+													.AddUrlIfFaulting(url)
 													.ContinueWith(t => ReadStringInternal(() => t.Result))
 													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
 													.Unwrap())
@@ -154,10 +201,9 @@ namespace Raven.Client.WinRT.Connection
 
 		public Task<byte[]> ReadResponseBytesAsync()
 		{
-			return WaitForTask.ContinueWith(_ => webRequest
-													.GetResponseAsync()
+			return WaitForTask.ContinueWith(_ => httpClient.SendAsync(new HttpRequestMessage(method, url))
 													.ConvertSecurityExceptionToServerNotFound()
-													.AddUrlIfFaulting(webRequest.RequestUri)
+													.AddUrlIfFaulting(url)
 													.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
 													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
 													.Unwrap())
@@ -178,7 +224,7 @@ namespace Raven.Client.WinRT.Connection
 			}
 		}
 
-		private string ReadStringInternal(Func<WebResponse> getResponse)
+		private string ReadStringInternal(Func<HttpResponseMessage> getResponse)
 		{
 			return ReadResponse(getResponse, responseStream =>
 			{
@@ -190,9 +236,9 @@ namespace Raven.Client.WinRT.Connection
 
 		}
 
-		private T ReadResponse<T>(Func<WebResponse> getResponse, Func<Stream, T> handleResponse)
+		private T ReadResponse<T>(Func<HttpResponseMessage> getResponse, Func<Stream, T> handleResponse)
 		{
-			WebResponse response;
+			HttpResponseMessage response;
 			try
 			{
 				response = getResponse();
@@ -212,14 +258,17 @@ namespace Raven.Client.WinRT.Connection
 			}
 
 			ResponseHeaders = new NameValueCollection();
-			foreach (var key in response.Headers.AllKeys)
+			foreach (var header in response.Headers)
 			{
-				ResponseHeaders[key] = response.Headers[key];
+				ResponseHeaders[header.Key] = string.Join(";", header.Value);
 			}
 
-			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+			ResponseStatusCode = response.StatusCode;
 
-			throw new NotImplementedException();
+			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
+			{
+				return handleResponse(responseStream);
+			}
 		}
 
 
@@ -269,10 +318,10 @@ namespace Raven.Client.WinRT.Connection
 					case "Content-Length":
 						break;
 					case "Content-Type":
-						webRequest.ContentType = value;
+						httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
 						break;
 					default:
-						webRequest.Headers[headerName] = value;
+						httpClient.DefaultRequestHeaders.Add(headerName, value);
 						break;
 				}
 			}
@@ -283,7 +332,23 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		public Task WriteAsync(string data)
 		{
-			throw new NotImplementedException();
+			return WaitForTask.ContinueWith(_ => httpClient.GetStreamAsync(url)
+			                                               .ContinueWith(task =>
+			                                               {
+				                                               Stream dataStream = factory.DisableRequestCompression == false ?
+					                                                                   new GZipStream(task.Result, CompressionMode.Compress) :
+					                                                                   task.Result;
+				                                               var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
+				                                               return streamWriter.WriteAsync(data)
+				                                                                  .ContinueWith(writeTask =>
+				                                                                  {
+					                                                                  streamWriter.Dispose();
+					                                                                  dataStream.Dispose();
+					                                                                  task.Result.Dispose();
+					                                                                  return writeTask;
+				                                                                  }).Unwrap();
+			                                               }).Unwrap())
+			                  .Unwrap();
 		}
 
 		/// <summary>
@@ -291,7 +356,15 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		public Task WriteAsync(byte[] byteArray)
 		{
-			throw new NotImplementedException();
+			postedData = byteArray;
+			return WaitForTask.ContinueWith(_ => httpClient.GetStreamAsync(url).ContinueWith(t =>
+			{
+				var dataStream = new GZipStream(t.Result, CompressionMode.Compress);
+				using (dataStream)
+				{
+					dataStream.Write(byteArray, 0, byteArray.Length);
+				}
+			})).Unwrap();
 		}
 
 		/// <summary>
@@ -302,7 +375,7 @@ namespace Raven.Client.WinRT.Connection
 		{
 			foreach (var header in operationsHeaders)
 			{
-				webRequest.Headers[header.Key] = header.Value;
+				httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
 			}
 			return this;
 		}
@@ -312,13 +385,60 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		public HttpJsonRequest AddOperationHeader(string key, string value)
 		{
-			webRequest.Headers[key] = value;
+			httpClient.DefaultRequestHeaders.Add(key, value);
 			return this;
 		}
 
 		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
-			throw new NotImplementedException();
+			return WaitForTask.ContinueWith(__ =>
+			{
+				httpClient.DefaultRequestHeaders.Add("Requires-Big-Initial-Download", "True");
+				return httpClient.GetAsync(url)
+				   .ContinueWith(task =>
+				   {
+					   var stream = task.Result.Content.ReadAsStreamAsync().Result;
+					   var observableLineStream = new ObservableLineStream(stream, () =>
+					   {
+						   httpClient.CancelPendingRequests();
+					   });
+					   observableLineStream.Start();
+					   return (IObservable<string>)observableLineStream;
+				   })
+				   .ContinueWith(task =>
+				   {
+					   var webException = task.Exception.ExtractSingleInnerException() as WebException;
+					   if (webException == null || retries >= 3)
+						   return task;// effectively throw
+
+					   var httpWebResponse = webException.Response as HttpWebResponse;
+					   if (httpWebResponse == null ||
+							(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+							 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+							 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+						   return task; // effectively throw
+
+					   if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+					   {
+						   HandleForbiddenResponseAsync(httpWebResponse);
+						   return task;
+					   }
+
+					   var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+
+					   if (authorizeResponse == null)
+						   return task; // effectively throw
+
+					   return authorizeResponse
+						   .ContinueWith(_ =>
+						   {
+							   _.Wait(); //throw on error
+							   return ServerPullAsync(retries + 1);
+						   })
+						   .Unwrap();
+				   }).Unwrap();
+			})
+				.Unwrap();
 		}
 
 		public Task ExecuteWriteAsync(string data)
@@ -358,8 +478,8 @@ namespace Raven.Client.WinRT.Connection
 				return this; // not because of failover, no need to do this.
 
 			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
-			webRequest.Headers[Constants.RavenClientPrimaryServerUrl] = ToRemoteUrl(thePrimaryUrl);
-			webRequest.Headers[Constants.RavenClientPrimaryServerLastCheck] = lastPrimaryCheck.ToString("s");
+			httpClient.DefaultRequestHeaders.Add(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
+			httpClient.DefaultRequestHeaders.Add(Constants.RavenClientPrimaryServerLastCheck,  lastPrimaryCheck.ToString("s"));
 
 			primaryUrl = thePrimaryUrl;
 			operationUrl = currentUrl;

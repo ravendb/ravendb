@@ -294,6 +294,16 @@ namespace Raven.Client.Silverlight.Connection
 		/// The task to wait all other actions on
 		/// </summary>
 		public Task WaitForTask { get; set; }
+		
+		public string Method
+		{
+			get { return webRequest.Method; }
+		}
+
+		public string Url
+		{
+			get { return webRequest.RequestUri.ToString(); }
+		}
 
 		private void WriteMetadata(RavenJObject metadata)
 		{

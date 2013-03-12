@@ -624,8 +624,14 @@
     <Compile Include="..\Raven.Abstractions\Connection\CountingStream.cs">
       <Link>Imports\Connection\CountingStream.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpRequestHelper.cs">
+      <Link>Connection\HttpRequestHelper.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
       <Link>Imports\Connection\OAuthHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\WebRequestEventArgs.cs">
+      <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
@@ -678,6 +684,9 @@
     <Compile Include="..\raven.abstractions\data\EnumerableExtension.cs">
       <Link>Imports\Data\EnumerableExtension.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\Etag.cs">
+      <Link>Imports\Data\Etag.cs</Link>
+    </Compile>
     <Compile Include="..\raven.abstractions\data\Facet.cs">
       <Link>Imports\Data\Facet.cs</Link>
     </Compile>
@@ -704,6 +713,9 @@
     </Compile>
     <Compile Include="..\raven.abstractions\data\GetResponse.cs">
       <Link>Imports\Data\GetResponse.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\HighlightedField.cs">
+      <Link>Imports\Data\HighlightedField.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\data\IJsonDocumentMetadata.cs">
       <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
@@ -777,6 +789,9 @@
     <Compile Include="..\raven.abstractions\data\TransactionMode.cs">
       <Link>Imports\Data\TransactionMode.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\UuidType.cs">
+      <Link>Imports\Data\UuidType.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Default.cs">
       <Link>Imports\Default.cs</Link>
     </Compile>
@@ -816,11 +831,17 @@
     <Compile Include="..\raven.abstractions\extensions\StreamExtensions.cs">
       <Link>Imports\Extensions\StreamExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
+      <Link>Imports\Extensions\TaskExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\raven.abstractions\indexing\FieldIndexing.cs">
       <Link>Imports\Indexing\FieldIndexing.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\indexing\FieldStorage.cs">
       <Link>Imports\Indexing\FieldStorage.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\FieldTermVector.cs">
+      <Link>Imports\Indexing\FieldTermVector.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\indexing\IndexDefinition.cs">
       <Link>Imports\Indexing\IndexDefinition.cs</Link>
@@ -833,6 +854,9 @@
     </Compile>
     <Compile Include="..\raven.abstractions\indexing\SpatialOptions.cs">
       <Link>Imports\Indexing\SpatialOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\SuggestionOptions.cs">
+      <Link>Imports\Indexing\SuggestionOptions.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\json\DynamicUtil.cs">
       <Link>Imports\Json\DynamicUtil.cs</Link>
@@ -953,6 +977,12 @@
     </Compile>
     <Compile Include="..\raven.abstractions\logging\logproviders\NLogLogManager.cs">
       <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
+      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
+      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
     </Compile>
     <Compile Include="..\raven.abstractions\replication\ReplicationDestination.cs">
       <Link>Imports\Replication\ReplicationDestination.cs</Link>
@@ -1077,9 +1107,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\ServerHash.cs">
       <Link>Imports\Connection\ServerHash.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
-      <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
-    </Compile>
     <Compile Include="..\raven.client.lightweight\converters\GuidConverter.cs">
       <Link>Imports\Converters\GuidConverter.cs</Link>
     </Compile>
@@ -1118,6 +1145,9 @@
     </Compile>
     <Compile Include="..\raven.client.lightweight\document\async\AsyncDocumentKeyGeneration.cs">
       <Link>Imports\Document\Async\AsyncDocumentKeyGeneration.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Async\AsyncDocumentSession.cs">
+      <Link>Imports\Document\Async\AsyncDocumentSession.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
@@ -1164,6 +1194,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
       <Link>Imports\Document\DocumentSessionListeners.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentStore.cs">
+      <Link>Imports\Document\DocumentStore.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\EntityToJson.cs">
       <Link>Imports\Document\EntityToJson.cs</Link>
     </Compile>
@@ -1200,14 +1233,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\MultiTypeHiLoKeyGenerator.cs">
       <Link>Imports\Document\MultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
-    <Compile Include="..\raven.client.lightweight\document\oauth\AbstractAuthenticator.cs">
-      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
-    </Compile>
     <Compile Include="..\raven.client.lightweight\document\oauth\BasicAuthenticator.cs">
       <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\oauth\SecuredAuthenticator.cs">
-      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
       <Link>Imports\Document\OpenSessionOptions.cs</Link>
@@ -1260,8 +1287,11 @@
     <Compile Include="..\raven.client.lightweight\extensions\StringExtensions.cs">
       <Link>Imports\Extensions\StringExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\TaskExtensions.cs">
-      <Link>Imports\Extensions\TaskExtensions.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions2.cs">
+      <Link>Imports\Extensions\TaskExtensions2.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\FieldHighlightings.cs">
+      <Link>Imports\FieldHighlightings.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAdvancedDocumentSessionOperations.cs">
       <Link>Imports\IAdvancedDocumentSessionOperations.cs</Link>
@@ -1392,6 +1422,9 @@
     <Compile Include="..\raven.client.lightweight\publicextensions\SearchOptions.cs">
       <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\RavenQueryHighlightings.cs">
+      <Link>Imports\RavenQueryHighlightings.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
       <Link>Imports\RavenQueryStatistics.cs</Link>
     </Compile>
@@ -1489,8 +1522,10 @@
     <Compile Include="MissingFromWinRT\AssemblyExtentionsMissingsFromWinRT.cs" />
     <Compile Include="MissingFromWinRT\DescriptionAttribute.cs" />
     <Compile Include="MissingFromWinRT\ListExtenMissingFromWinRT.cs" />
+    <Compile Include="MissingFromWinRT\MD5.cs" />
     <Compile Include="MissingFromWinRT\StringExtensions.cs" />
     <Compile Include="MissingFromWinRT\ThreadSleep.cs" />
+    <Compile Include="MissingFromWinRT\TypeExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

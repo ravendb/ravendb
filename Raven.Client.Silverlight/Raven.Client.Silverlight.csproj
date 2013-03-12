@@ -1045,8 +1045,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\StringExtensions.cs">
       <Link>Extensions\StringExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
-      <Link>Imports\Extensions\TaskExtensions.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions2.cs">
+      <Link>Imports\Extensions\TaskExtensions2.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\FieldHighlightings.cs">
       <Link>Imports\FieldHighlightings.cs</Link>
