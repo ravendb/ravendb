@@ -14,6 +14,11 @@ clusterManagerApp.config(function ($routeProvider, $locationProvider) {
         templateUrl: '/views/servers.html',
         controller: 'ServersCtrl'
     });
+    
+    $routeProvider.when('/replication', {
+        templateUrl: '/views/replication.html',
+        controller: 'ReplicationCtrl'
+    });
 
     $routeProvider.when('/', {
         templateUrl: '/views/main.html',
