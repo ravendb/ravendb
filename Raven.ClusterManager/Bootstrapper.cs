@@ -113,6 +113,7 @@ namespace Raven.ClusterManager
 				if (assembly.GetManifestResourceInfo(resourcePath + "." + fileName) == null)
 				{
 					fileName = "index.html";
+					resourcePath = @"Raven.ClusterManager.Assets";
 				}
 				
 				return new EmbeddedFileResponse(assembly, resourcePath, fileName);
