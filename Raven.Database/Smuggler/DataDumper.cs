@@ -126,6 +126,11 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask();
 		}
 
+		protected override Task<string> GetVersion()
+		{
+			return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+		}
+
 		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
 			if (index != null)

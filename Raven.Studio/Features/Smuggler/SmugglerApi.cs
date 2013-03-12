@@ -186,6 +186,19 @@ namespace Raven.Studio.Features.Smuggler
 			return FlushBatch();
 		}
 
+		protected override Task<string> GetVersion()
+		{
+			var request = commands.CreateRequest("/build/version", "GET");
+
+			return request
+				.ReadResponseJsonAsync()
+				.ContinueWith(task =>
+				{
+					var version = (RavenJObject) task.Result;
+					return version["ProductVersion"].ToString();
+				});
+		}
+
 		protected override Task<DatabaseStatistics> GetStats()
 		{
 			return commands.GetStatisticsAsync();

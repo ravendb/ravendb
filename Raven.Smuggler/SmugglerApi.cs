@@ -26,6 +26,8 @@ namespace Raven.Smuggler
 {
 	public class SmugglerApi : SmugglerApiBase
 	{
+		const int RetriesCount = 5;
+
 		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
@@ -131,6 +133,9 @@ namespace Raven.Smuggler
 
 		protected override Task PutTransformer(string transformerName, RavenJToken transformer)
 		{
+			if (Mode == SmugglerMode.Legacy)
+				return new CompletedTask();
+
 			if (transformer != null)
 			{
 				var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
@@ -139,6 +144,14 @@ namespace Raven.Smuggler
 			}
 
 			return FlushBatch();
+		}
+
+		protected override Task<string> GetVersion()
+		{
+			var request = CreateRequest("/build/version");
+			var version = request.ExecuteRequest<RavenJObject>();
+
+			return new CompletedTask<string>(version["ProductVersion"].ToString());
 		}
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
@@ -185,6 +198,29 @@ namespace Raven.Smuggler
 
 		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
+			if (Mode == SmugglerMode.Legacy)
+			{
+				int retries = RetriesCount;
+				while (true)
+				{
+					try
+					{
+						RavenJArray documents = null;
+						var request = CreateRequest("/docs?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag);
+						request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
+
+						return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(documents.Values<RavenJObject>().GetEnumerator()));
+					}
+					catch (Exception e)
+					{
+						if (retries-- == 0)
+							throw;
+						LastRequestErrored = true;
+						ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e, RetriesCount);
+					}
+				}
+			}
+
 			return Commands.StreamDocsAsync(lastEtag);
 		}
 
@@ -236,6 +272,9 @@ namespace Raven.Smuggler
 
 		protected override Task<RavenJArray> GetTransformers(int totalCount)
 		{
+			if (Mode == SmugglerMode.Legacy)
+				return new CompletedTask<RavenJArray>(new RavenJArray());
+
 			RavenJArray transformers = null;
 			var request = CreateRequest("/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => transformers = RavenJArray.Load(new JsonTextReader(reader)));

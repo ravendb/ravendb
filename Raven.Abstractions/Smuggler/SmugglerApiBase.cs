@@ -38,6 +38,8 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract Task PutDocument(RavenJObject document);
 		protected abstract Task PutTransformer(string transformerName, RavenJToken transformer);
 
+		protected abstract Task<string> GetVersion();
+
 		protected abstract Task<DatabaseStatistics> GetStats();
 
 		protected abstract Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript);
@@ -46,6 +48,8 @@ namespace Raven.Abstractions.Smuggler
 
 		protected bool EnsuredDatabaseExists;
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
+
+		protected SmugglerMode Mode { get; private set; }
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
@@ -96,6 +100,7 @@ namespace Raven.Abstractions.Smuggler
 			if(incremental)
 				throw new NotSupportedException("Incremental exports are not supported in SL.");
 #endif
+			Mode = await GetMode();
 
 			using (var streamWriter = new StreamWriter(new GZipStream(stream ?? File.Create(file), CompressionMode.Compress)))
 			{
@@ -327,6 +332,8 @@ namespace Raven.Abstractions.Smuggler
 			options = options ?? SmugglerOptions;
 			if (options == null)
 				throw new ArgumentNullException("options");
+
+			Mode = await GetMode();
 
 			await EnsureDatabaseExists();
 			Stream sizeStream;
@@ -562,6 +569,39 @@ namespace Raven.Abstractions.Smuggler
 					index.WriteTo(jsonWriter);
 				}
 			}
+		}
+
+		private async Task<SmugglerMode> GetMode()
+		{
+#if !SILVERLIGHT
+			var serverVersion = await GetVersion();
+			if (string.IsNullOrEmpty(serverVersion))
+			{
+				ShowProgress("Running in legacy mode. Server version: N/A.");
+				return SmugglerMode.Legacy;
+			}
+
+			var smugglerVersion = FileVersionInfo.GetVersionInfo(typeof(SmugglerApiBase).Assembly.Location).ProductVersion;
+
+			var subServerVersion = serverVersion.Substring(0, 3);
+			var subSmugglerVersion = smugglerVersion.Substring(0, 3);
+
+			var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+			var intSmugglerVersion = int.Parse(subSmugglerVersion.Replace(".", string.Empty));
+
+			if (intServerVersion < intSmugglerVersion)
+			{
+				ShowProgress("Running in legacy mode. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+				return SmugglerMode.Legacy;
+			}
+#endif
+			return SmugglerMode.Normal;
+		}
+
+		public enum SmugglerMode
+		{
+			Normal,
+			Legacy
 		}
 	}
 }
