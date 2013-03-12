@@ -16,6 +16,7 @@ namespace Raven.Studio.Features.Tasks
 			TaskInputs.Add(new TaskCheckBox("Include Documents", true));
 			TaskInputs.Add(new TaskCheckBox("Include Indexes", true));
 			TaskInputs.Add(new TaskCheckBox("Include Attachments", false));
+			TaskInputs.Add(new TaskCheckBox("Include Transformers", true));
 		}
 
 		public override ICommand Action

@@ -7,8 +7,8 @@ namespace Raven.Tests.Silverlight
 {
 	public abstract class RavenTestBase : AsynchronousTaskTest
 	{
-		protected const int Port = 8079;
-		protected const string Url = "http://localhost:";
+		protected const int Port = 8080;
+		protected const string Url = "http://ppekrol-win:";
 
 		protected static string GenerateNewDatabaseName()
 		{

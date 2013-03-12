@@ -637,6 +637,9 @@
     <Compile Include="..\Raven.Abstractions\Data\BuildNumber.cs">
       <Link>Imports\Data\BuildNumber.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\BulkInsertOptions.cs">
+      <Link>Imports\Data\BulkInsertOptions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\ChangeNotification.cs">
       <Link>Imports\Data\ChangeNotification.cs</Link>
     </Compile>
@@ -985,6 +988,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyMultiLoadOperation.cs">
       <Link>Imports\Document\Batches\LazyMultiLoadOperation.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\BulkInsertOperation.cs">
+      <Link>Imports\Document\BulkInsertOperation.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
       <Link>Imports\Document\DocumentSessionListeners.cs</Link>
     </Compile>
@@ -1008,6 +1014,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
       <Link>Imports\Document\OpenSessionOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\RemoteBulkInsertOperation.cs">
+      <Link>Imports\Document\RemoteBulkInsertOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\LoadOperation.cs">
       <Link>Imports\Document\SessionOperations\LoadOperation.cs</Link>
@@ -1154,6 +1163,7 @@
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Imports\Connection\WebRequestEventArgs.cs" />
+    <Compile Include="MissingFromSilverlight\BlockingCollection.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
@@ -1186,6 +1196,7 @@
     <Compile Include="DotNetZip\ZlibStream.cs" />
     <Compile Include="DotNetZip\ZlibStreamFlavor.cs" />
     <Compile Include="MissingFromSilverlight\NameValueCollection.cs" />
+    <Compile Include="MissingFromSilverlight\SimpleRwLock.cs" />
     <Compile Include="MissingFromSilverlight\SpinWait.cs" />
     <Compile Include="MissingFromSilverlight\SplitOrderedList.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />

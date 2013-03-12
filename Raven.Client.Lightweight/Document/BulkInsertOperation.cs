@@ -1,6 +1,10 @@
 ﻿using System;
 using Raven.Abstractions.Data;
+#if !SILVERLIGHT
 using Raven.Client.Connection;
+#else
+using Raven.Client.Connection.Async;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -10,14 +14,18 @@ namespace Raven.Client.Document
 		private readonly IDocumentStore documentStore;
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
+#if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
+#else
+		private readonly IAsyncDatabaseCommands databaseCommands;
+#endif
 		private readonly EntityToJson entityToJson;
 
 		public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
 
-		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { }; 
+		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
 
-		public event Action<string>  Report
+		public event Action<string> Report
 		{
 			add { operation.Report += value; }
 			remove { operation.Report -= value; }
@@ -26,11 +34,19 @@ namespace Raven.Client.Document
 		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options)
 		{
 			this.documentStore = documentStore;
+#if !SILVERLIGHT
 			databaseCommands = database == null
-				                   ? documentStore.DatabaseCommands.ForSystemDatabase()
-				                   : documentStore.DatabaseCommands.ForDatabase(database);
+								   ? documentStore.DatabaseCommands.ForSystemDatabase()
+								   : documentStore.DatabaseCommands.ForDatabase(database);
 
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, databaseCommands, entity));
+#else
+			databaseCommands = database == null
+								   ? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
+								   : documentStore.AsyncDatabaseCommands.ForDatabase(database);
+
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, databaseCommands, entity).Result);
+#endif
 			operation = databaseCommands.GetBulkInsertOperation(options);
 			entityToJson = new EntityToJson(documentStore, listeners);
 		}
@@ -58,6 +74,13 @@ namespace Raven.Client.Document
 			OnBeforeEntityInsert(id, data, metadata);
 
 			operation.Write(id, metadata, data);
+		}
+
+		public void Store(RavenJObject document, RavenJObject metadata, string id)
+		{
+			OnBeforeEntityInsert(id, document, metadata);
+
+			operation.Write(id, metadata, document);
 		}
 
 		private string GetId(object entity)

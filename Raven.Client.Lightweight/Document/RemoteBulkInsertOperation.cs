@@ -2,12 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Extensions;
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #else
@@ -16,6 +14,14 @@ using Raven.Imports.Newtonsoft.Json;
 #endif
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
+#if !SILVERLIGHT
+using System.IO.Compression;
+using Raven.Client.Extensions;
+#else
+using Raven.Client.Connection.Async;
+using Raven.Client.Silverlight.Connection;
+using Ionic.Zlib;
+#endif
 
 namespace Raven.Client.Document
 {
@@ -32,48 +38,77 @@ namespace Raven.Client.Document
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
 		private readonly BulkInsertOptions options;
+#if !SILVERLIGHT
 		private readonly ServerClient client;
+#else
+		private readonly AsyncServerClient client;
+#endif
 		private readonly MemoryStream bufferedStream = new MemoryStream();
-		private readonly HttpJsonRequest httpJsonRequest;
+		private HttpJsonRequest httpJsonRequest;
 		private readonly BlockingCollection<RavenJObject> items;
-		private readonly Task nextTask;
+
+		private Task nextTask;
 		private int total;
 
+#if !SILVERLIGHT
 		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client)
+#else
+		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client)
+#endif
 		{
 			this.options = options;
 			this.client = client;
-			items = new BlockingCollection<RavenJObject>(options.BatchSize*8);
+			items = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 			string requestUrl = "/bulkInsert?";
 			if (options.CheckForUpdates)
 				requestUrl += "checkForUpdates=true";
 			if (options.CheckReferencesInIndexes)
 				requestUrl += "&checkReferencesInIndexes=true";
 
+#if !SILVERLIGHT
 			var expect100Continue = client.Expect100Continue();
 
 			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
 			HttpJsonRequest req = client.CreateRequest("POST", requestUrl + "&no-op=for-auth-only",
-			                                           disableRequestCompression: true);
+														disableRequestCompression: true);
 			req.PrepareForLongRequest();
 			req.ExecuteRequest();
 
-
 			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
+
 			// the request may take a long time to process, so we need to set a large timeout value
 			httpJsonRequest.PrepareForLongRequest();
 			nextTask = httpJsonRequest.GetRawRequestStream()
-			                          .ContinueWith(task =>
-			                          {
-				                          try
-				                          {
-					                          expect100Continue.Dispose();
-				                          }
-				                          catch (Exception)
-				                          {
-				                          }
+									  .ContinueWith(task =>
+									  {
+										  try
+										  {
+											  expect100Continue.Dispose();
+										  }
+										  catch (Exception)
+										  {
+										  }
 										  WriteQueueToServer(task);
-			                          });
+									  });
+#else
+			var request = client
+				.CreateRequest(requestUrl + "&no-op=for-auth-only", "POST", disableRequestCompression: true);
+			request.PrepareForLongRequest();
+
+			request
+				.ExecuteRequestAsync()
+				.ContinueWith(task =>
+				{
+					httpJsonRequest = client.CreateRequest(requestUrl, "POST", disableRequestCompression: true);
+					httpJsonRequest.PrepareForLongRequest();
+					httpJsonRequest.webRequest.ContentLength = 0;
+
+					nextTask = httpJsonRequest
+						.GetRawRequestStream()
+						.ContinueWith(WriteQueueToServer);
+				})
+				.Wait();
+#endif
 		}
 
 		private void WriteQueueToServer(Task<Stream> task)
@@ -125,19 +160,40 @@ namespace Raven.Client.Document
 				{
 					report("Finished writing all results to server");
 				}
-				long id;
 
+				long id = -1;
+
+#if !SILVERLIGHT
 				using (var response = httpJsonRequest.RawExecuteRequest())
-				using(var stream = response.GetResponseStream())
-				using(var streamReader = new StreamReader(stream))
+				using (var stream = response.GetResponseStream())
+				using (var streamReader = new StreamReader(stream))
 				{
 					var result = RavenJObject.Load(new JsonTextReader(streamReader));
 					id = result.Value<long>("OperationId");
 				}
-
+#else
+				httpJsonRequest.RawExecuteRequestAsync()
+				               .ContinueWith(t =>
+				               {
+					               var response = t.Result;
+					               using (var stream = response.GetResponseStream())
+					               {
+						               using (var streamReader = new StreamReader(stream))
+						               {
+							               var result = RavenJObject.Load(new JsonTextReader(streamReader));
+							               id = result.Value<long>("OperationId");
+						               }
+					               }
+				               })
+				               .Wait();
+#endif
 				while (true)
 				{
+#if !SILVERLIGHT
 					var status = client.GetOperationStatus(id);
+#else
+					var status = client.GetOperationStatusAsync(id).Result;
+#endif
 					if (status == null)
 						break;
 					if (status.Value<bool>("Completed"))
@@ -160,7 +216,7 @@ namespace Raven.Client.Document
 			WriteToBuffer(localBatch);
 
 			var requestBinaryWriter = new BinaryWriter(requestStream);
-			requestBinaryWriter.Write((int) bufferedStream.Position);
+			requestBinaryWriter.Write((int)bufferedStream.Position);
 			bufferedStream.WriteTo(requestStream);
 			requestStream.Flush();
 
@@ -169,9 +225,9 @@ namespace Raven.Client.Document
 			if (report != null)
 			{
 				report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
-				                     localBatch.Count,
-				                     bufferedStream.Position/1024,
-				                     total));
+									 localBatch.Count,
+									 bufferedStream.Position / 1024,
+									 total));
 			}
 		}
 

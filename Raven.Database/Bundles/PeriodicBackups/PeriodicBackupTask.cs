@@ -106,7 +106,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			{
 				if (currentTask != null)
 					return;
-				currentTask = Task.Factory.StartNew(() =>
+				currentTask = Task.Factory.StartNew(async () =>
 				{
 					using (LogContext.WithDatabase(Database.Name))
 					{
@@ -125,7 +125,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 								LastAttachmentEtag = localBackupConfigs.LastAttachmentsEtag
 							};
 							var dd = new DataDumper(Database, options);
-							var filePath = dd.ExportData(null, true);
+							var filePath = await dd.ExportData(null, null, true);
 
 							// No-op if nothing has changed
 							if (options.LastDocsEtag == backupConfigs.LastDocsEtag &&

@@ -120,9 +120,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
       <Link>Smuggler\Imports\MultiDatabase.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Smuggler\SmugglerApi.cs">
-      <Link>Smuggler\SmugglerApi.cs</Link>
-    </Compile>
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
     <Compile Include="Program.cs" />
