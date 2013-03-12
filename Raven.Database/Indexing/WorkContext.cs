@@ -313,7 +313,7 @@ namespace Raven.Database.Indexing
 				{"# of concurrent requests", PerformanceCounterType.NumberOfItems32}
 			};
 
-			if (IsValidCategory(categoryName, instances) == false)
+			if (IsValidCategory(categoryName, instances, name) == false)
 			{
 				var counterCreationDataCollection = new CounterCreationDataCollection();
 				foreach (var instance in instances)
@@ -336,13 +336,17 @@ namespace Raven.Database.Indexing
 			ConcurrentRequestsCounter = new PerformanceCounter(categoryName, "# of concurrent requests", name, false);
 		}
 
-		private bool IsValidCategory(string categoryName, Dictionary<string, PerformanceCounterType> instances)
+		private bool IsValidCategory(string categoryName, Dictionary<string, PerformanceCounterType> instances, string instanceName)
 		{
 			if (PerformanceCounterCategory.Exists(categoryName) == false)
 				return false;
 			foreach (var performanceCounterType in instances)
 			{
-				if (PerformanceCounterCategory.CounterExists(performanceCounterType.Key, categoryName) == false)
+				try
+				{
+					new PerformanceCounter(categoryName, performanceCounterType.Key, instanceName, readOnly: true).Dispose();
+				}
+				catch (Exception)
 				{
 					PerformanceCounterCategory.Delete(categoryName);
 					return false;
