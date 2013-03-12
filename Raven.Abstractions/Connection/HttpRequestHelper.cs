@@ -23,9 +23,10 @@ namespace Raven.Abstractions.Connection
 				writer.Write(data);
 
 				writer.Flush();
-
+#if !MONO
 				if (disableCompression == false)
 					dataStream.Flush();
+#endif
 				requestStream.Flush();
 			}
 		}
@@ -58,7 +59,9 @@ namespace Raven.Abstractions.Connection
 							// explicitly ignoring this
 							break;
 						case "Host":
+#if !MONO
 							dest.Host = src.Host;
+#endif
 							break;
 						case "If-Modified-Since":
 							dest.IfModifiedSince = src.IfModifiedSince;

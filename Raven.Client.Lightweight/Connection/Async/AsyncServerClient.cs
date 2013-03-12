@@ -741,6 +741,40 @@ namespace Raven.Client.Connection.Async
 				.ContinueWith(task => convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(task.Result)));
 		}
 
+#if MONO
+		public Task<LicensingStatus> GetLicenseStatus()
+		{
+			var actualUrl = string.Format("{0}/license/status", url).NoCache();
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+
+			return request.ReadResponseJsonAsync()
+			              .ContinueWith(task => new LicensingStatus
+			                                    {
+				                                    Error = task.Result.Value<bool>("Error"),
+				                                    Message = task.Result.Value<string>("Message"),
+				                                    Status = task.Result.Value<string>("Status"),
+			                                    });
+		}
+
+		public Task<BuildNumber> GetBuildNumber()
+		{
+			var actualUrl = string.Format("{0}/build/version", url).NoCache();
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+			new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
+			.AddOperationHeaders(OperationsHeaders));
+
+			return request.ReadResponseJsonAsync()
+			.ContinueWith(task => new BuildNumber
+			{
+				BuildVersion = task.Result.Value<string>("BuildVersion"),
+				ProductVersion = task.Result.Value<string>("ProductVersion")
+			});
+
+		}
+#else
+
 		public async Task<LicensingStatus> GetLicenseStatus()
 		{
 			var actualUrl = string.Format("{0}/license/status", url).NoCache();
@@ -771,7 +805,7 @@ namespace Raven.Client.Connection.Async
 				ProductVersion = result.Value<string>("ProductVersion")
 			};
 		}
-
+#endif
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention));
@@ -1334,6 +1368,20 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("HEAD", u => DirectHeadAsync(u, key));
 		}
 
+#if MONO
+		//TODO: Mono implement 
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                            int pageSize = Int32.MaxValue)
+		{
+			throw new NotImplementedException();
+		}
+
+#else
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
@@ -1359,6 +1407,7 @@ namespace Raven.Client.Connection.Async
 
 			return new YieldStreamResults(webResponse);
 		}
+
 		public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
 		{
 			private readonly WebResponse webResponse;
@@ -1457,7 +1506,7 @@ namespace Raven.Client.Connection.Async
 			var webResponse = await request.RawExecuteRequestAsync();
 			return new YieldStreamResults(webResponse);
 		}
-
+#endif
 #if SILVERLIGHT
 		/// <summary>
 		/// Get the low level  bulk insert operation

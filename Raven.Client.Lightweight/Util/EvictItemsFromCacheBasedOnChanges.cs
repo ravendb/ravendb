@@ -29,7 +29,10 @@ namespace Raven.Client.Util
 			var indexSub = changes.ForAllIndexes();
 			indexesSubscription = indexSub.Subscribe(this);
 
+#if !MONO
+			//TODO: mono check
 			connectionTask = TaskEx.WhenAll(docSub.Task, indexSub.Task);
+#endif
 		}
 
 		public Task ConnectionTask

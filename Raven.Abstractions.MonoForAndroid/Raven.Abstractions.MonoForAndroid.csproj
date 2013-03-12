@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<!-- Properties required to use the Xamarin compiler instead of the Microsoft compiler -->
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1793D7F5-40B4-43C1-90A6-9DF0D2FB93D3}</ProjectGuid>
+    <ProjectTypeGuids>{EFBA0AD7-5A72-4C68-AF49-83D382785DCF};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Abstractions.Mono</RootNamespace>
+    <AssemblyName>Raven.Abstractions.Mono</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;MONO</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Mono.Android" />
+    <Reference Include="mscorlib" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
+      <Link>Imports\Nowtonsoft.Json\Bson\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
+      <Link>Imports\Nowtonsoft.Json\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\*.cs">
+      <Link>Imports\Nowtonsoft.Json\Converters\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
+      <Link>Imports\Nowtonsoft.Json\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
+      <Link>Imports\Nowtonsoft.Json\Schema\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\*.cs">
+      <Link>Imports\Nowtonsoft.Json\Serialization\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
+      <Link>Imports\Nowtonsoft.Json\Utilities\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\*.cs" />
+    <Compile Include="..\Raven.Abstractions\Commands\*.cs">
+      <Link>Commands\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\*.cs">
+      <Link>Connection\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\*.cs">
+      <Link>Data\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Exceptions\*.cs">
+      <Link>Exeptions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\*.cs">
+      <Link>Extentions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Internal\*.cs">
+      <Link>Extentions\Internal\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs">
+      <Link>Imports\Nowtonsoft.Json\JsonTextReaderAsync.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\*.cs">
+      <Link>Indexing\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\*.cs">
+      <Link>Json\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\*.cs">
+      <Link>Json\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Utilities\*.cs">
+      <Link>Json\Utilities\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Linq\*.cs">
+      <Link>Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\*.cs">
+      <Link>Logging\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\*.cs">
+      <Link>Logging\LogProviders\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\MEF\*.cs">
+      <Link>MEF\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\*.cs">
+      <Link>OAuth\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Replication\*.cs">
+      <Link>Replication\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\*.cs">
+      <Link>Smuggler\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\*.cs">
+      <Link>Util\%(FileName)</Link>
+    </Compile>
+    <Compile Include="Mono\LazyOfTTMetadata.cs" />
+    <Compile Include="Mono\TraceLevel.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -83,12 +83,7 @@ namespace Raven.Studio.Features.Settings
 
 		private IEnumerable<string> GetPropertiesAtEndOfPath(RavenJObject document)
 		{
-			if (document != null)
-			{
-				return document.Keys;
-			}
-
-			return new string[0];
+			return document != null ? document.Keys : new string[0];
 		}
 
 		private CompletionContext GetCompletionContext(IEditorView view)

@@ -283,6 +283,7 @@ namespace Raven.Json.Linq
 			return new RavenJArray(Items);
 		}
 
+#if !MONO
 		public static async Task<RavenJToken> LoadAsync(JsonTextReaderAsync reader)
 		{
 			if (reader.TokenType == JsonToken.None)
@@ -325,5 +326,7 @@ namespace Raven.Json.Linq
 
 			throw new Exception("Error reading RavenJArray from JsonReader.");
 		}
+#endif
+
 	}
 }

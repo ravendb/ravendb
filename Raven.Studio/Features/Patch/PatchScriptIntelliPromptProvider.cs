@@ -1,27 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Net;
 using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using ActiproSoftware.Text;
-using ActiproSoftware.Text.Lexing;
 using ActiproSoftware.Text.Utility;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-using Raven.Studio.Features.Documents;
 using Raven.Studio.Models;
-using Raven.Abstractions.Extensions;
 using System.Linq;
 
 namespace Raven.Studio.Features.Patch
@@ -46,10 +33,7 @@ namespace Raven.Studio.Features.Patch
         
         public bool RequestSession(IEditorView view, bool canCommitWithoutPopup)
         {
-            var session = new CompletionSession()
-            {
-
-            };
+            var session = new CompletionSession();
 
             var completionContext = GetCompletionContext(view);
 
@@ -81,16 +65,15 @@ namespace Raven.Studio.Features.Patch
 
                 foreach (var patchValue in patchValues)
                 {
-                    session.Items.Add(new CompletionItem()
-                    {
-                        ImageSourceProvider = new CommonImageSourceProvider(CommonImage.ConstantPublic),
-                        Text = patchValue.Key,
-                        AutoCompletePreText = patchValue.Key,
-                        DescriptionProvider =
-                            new HtmlContentProvider(
-                                          string.Format("Script Parameter <em>{0}</em>. Current value: <em>{1}</em>",
-                                                        patchValue.Key, patchValue.Value))
-                    });
+	                session.Items.Add(new CompletionItem()
+	                {
+		                ImageSourceProvider = new CommonImageSourceProvider(CommonImage.ConstantPublic),
+		                Text = patchValue.Key,
+		                AutoCompletePreText = patchValue.Key,
+		                DescriptionProvider =
+			                new HtmlContentProvider(string.Format("Script Parameter <em>{0}</em>. Current value: <em>{1}</em>",
+			                                                      patchValue.Key, patchValue.Value))
+	                });
                 }
             }
 
@@ -99,10 +82,8 @@ namespace Raven.Studio.Features.Patch
                 session.Open(view);
                 return true;
             }
-            else
-            {
-                return false;
-            }
+			
+			return false;
         }
 
         private IEnumerable<string> GetProperties(string completedPropertyPath)
@@ -120,13 +101,9 @@ namespace Raven.Studio.Features.Patch
             var currentObject = document.DataAsJson.SelectToken(path);
 
             if (currentObject is RavenJObject)
-            {
                 return (currentObject as RavenJObject).Keys;
-            }
-            else
-            {
-                return new string[0];
-            }
+
+			return new string[0];
         }
 
         private CompletionContext GetCompletionContext(IEditorView view)
@@ -137,9 +114,7 @@ namespace Raven.Studio.Features.Patch
             var completionContext = new CompletionContext();
 
             if (token == null)
-            {
                 return completionContext;
-            }
 
             var tokenText = reader.PeekText(token.Length);
             if (token.Key == "Identifier" || (token.Key == "Punctuation" && tokenText == "."))
@@ -147,9 +122,7 @@ namespace Raven.Studio.Features.Patch
                 var memberExpression = DetermineFullMemberExpression(tokenText, reader);
 
                 if (memberExpression.Contains("."))
-                {
                     completionContext.IsObjectMember = true;
-                }
 
                 if (memberExpression.StartsWith("this."))
                 {
@@ -236,19 +209,15 @@ namespace Raven.Studio.Features.Patch
                         // before hitting the square brace
                         return null;
                     }
-                    else
-                    {
-                        break;
-                    }
+
+					break;
                 }
 
                 token = reader.ReadTokenReverse();
             }
 
             if (indexValue == null)
-            {
                 return null;
-            }
 
             return "[" + indexValue + "]";
         }

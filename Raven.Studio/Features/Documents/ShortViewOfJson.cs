@@ -50,9 +50,8 @@ namespace Raven.Studio.Features.Documents
 				case JTokenType.String:
 					sw.Write("\"");
 					sw.Write(token.ToString()
-								.NormalizeWhitespace()
-                                .TrimmedViewOfString(width - sw.CharactersOnCurrentLine -1)
-						);
+					              .NormalizeWhitespace()
+					              .TrimmedViewOfString(width - sw.CharactersOnCurrentLine - 1));
                     sw.Write("\"");
 					break;
 				default:
@@ -76,6 +75,7 @@ namespace Raven.Studio.Features.Documents
 					isFirstItem = false;
 				else
 					sw.WriteLine(",");
+
                 WriteValue(token, sw, width, numberOfLines);
 			}
 			sw.WriteLine("");
@@ -86,7 +86,6 @@ namespace Raven.Studio.Features.Documents
 	    public static string GetContentTrimmedToDimensions(RavenJObject dataAsJson, int widthInCharacters, int heightInLines)
 	    {
 	        var sw = new CountingWriter(2);
-
             WriteJsonObject(dataAsJson, sw, widthInCharacters, heightInLines);
 
 	        return sw.ToString();

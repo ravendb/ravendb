@@ -15,6 +15,8 @@ namespace Raven.Client.Connection
 		{
 #if SILVERLIGHT
 			return IsolatedStorageFile.GetUserStoreForSite();
+#elif MONO
+			return IsolatedStorageFile.GetUserStoreForApplication();
 #else
 			return IsolatedStorageFile.GetMachineStoreForDomain();
 #endif

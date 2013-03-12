@@ -844,7 +844,7 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
 		}
-
+#if !MONO
 		public async Task<WebResponse> RawExecuteRequestAsync()
 		{
 			try
@@ -873,7 +873,7 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
 		}
-
+#endif
 
 		public void PrepareForLongRequest()
 		{

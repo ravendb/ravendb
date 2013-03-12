@@ -73,25 +73,22 @@ namespace Raven.Studio.Features.Query
 	    {
 	        foreach (var field in fields)
 	        {
-	            session.Items.Add(new CompletionItem
-	                                  {
-	                                      Text = field,
-	                                      ImageSourceProvider = new CommonImageSourceProvider(CommonImage.PropertyPublic),
-	                                      AutoCompletePreText = field + ": ",
-	                                  });
+		        session.Items.Add(new CompletionItem
+		        {
+			        Text = field,
+			        ImageSourceProvider = new CommonImageSourceProvider(CommonImage.PropertyPublic),
+			        AutoCompletePreText = field + ": ",
+		        });
 	        }
 	    }
 
 	    private void PopulateTerm(string field, CompletionSession session, IEditorView view, string termPrefix)
 		{
 			if(termPrefix.StartsWith("\""))
-			{
 				termPrefix = termPrefix.Substring(1);
-			}
+			
 			if( termPrefix.EndsWith("\""))
-			{
 				termPrefix = termPrefix.Substring(0,termPrefix.Length - 1);
-			}
 
 			if (fieldTermsDictionary.ContainsKey(field) == false)
 				return;
@@ -107,18 +104,17 @@ namespace Raven.Studio.Features.Query
 				terms = new List<string>();
 				termsDictionary[termPrefix] = terms;
 
-			    QueryIndexAutoComplete.GetTermsForFieldAsync(indexName, field, terms, termPrefix)
-			        .ContinueOnSuccessInTheUIThread(
-			            () =>
-			                {
-			                    PopulateTerm(field, session, view, termPrefix);
-			                    var completionItem = session.Items.FirstOrDefault();
-			                    if (completionItem != null)
-			                    {
-			                        session.Selection = new CompletionSelection(completionItem,CompletionSelectionState.Partial);
-                                    session.Open(view);
-			                    }
-			                });
+				QueryIndexAutoComplete.GetTermsForFieldAsync(indexName, field, terms, termPrefix)
+				                      .ContinueOnSuccessInTheUIThread(() =>
+				                      {
+					                      PopulateTerm(field, session, view, termPrefix);
+					                      var completionItem = session.Items.FirstOrDefault();
+					                      if (completionItem != null)
+					                      {
+						                      session.Selection = new CompletionSelection(completionItem, CompletionSelectionState.Partial);
+						                      session.Open(view);
+					                      }
+				                      });
 			}
 
 			foreach (var term in terms)
@@ -155,20 +151,20 @@ namespace Raven.Studio.Features.Query
                 var tokenText = reader.PeekText(token.Length);
 
                 if (token.Key == "Field")
-                    return new CompletionContext() {Field = GetFieldName(tokenText), Prefix = ""};
+                    return new CompletionContext {Field = GetFieldName(tokenText), Prefix = ""};
 
                 if ((token.Key == "Operator" && preTermOperators.Contains(tokenText))
                     || token.Key == "OpenQuotes"
                     || token.Key == "RangeQueryStart")
                 {
                     var field = FindPrecedingField(reader);
-                    return new CompletionContext() {Field = field, Prefix = ""};
+                    return new CompletionContext {Field = field, Prefix = ""};
                 }
 
                 if (!hasSkippedWhitespace && (token.Key == "Value" || token.Key == "StringText") )
                 {
                     var field = FindPrecedingField(reader);
-                    return new CompletionContext() { Field = field, Prefix = tokenText };
+                    return new CompletionContext { Field = field, Prefix = tokenText };
                 }
 
                 return new CompletionContext();

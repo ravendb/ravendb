@@ -30,14 +30,7 @@ namespace Raven.Studio.Behaviors
                 .OfType<DataGridRow>()
                 .FirstOrDefault();
 
-            if (row != null)
-            {
-                AssociatedObject.SelectedItem = row.DataContext;
-            }
-            else
-            {
-                AssociatedObject.SelectedItem = null;
-            }
+            AssociatedObject.SelectedItem = row != null ? row.DataContext : null;
         }
     }
 }

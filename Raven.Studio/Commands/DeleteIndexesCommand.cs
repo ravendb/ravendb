@@ -30,7 +30,7 @@ namespace Raven.Studio.Commands
 			             select indexListItem.Name
 			             into indexName
 			             where indexName != ravenDocumentsByEntityNameIndexName
-							 select new { Task = DatabaseCommands.DeleteIndexAsync(indexName), Name = indexName }).ToArray();
+			             select new {Task = DatabaseCommands.DeleteIndexAsync(indexName), Name = indexName}).ToArray();
 			
 			Task.Factory.ContinueWhenAll(tasks.Select(x=>x.Task).ToArray(), taskslist =>
 			{
