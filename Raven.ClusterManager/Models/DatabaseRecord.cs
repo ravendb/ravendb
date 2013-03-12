@@ -11,6 +11,7 @@ namespace Raven.ClusterManager.Models
 {
 	public class DatabaseRecord
 	{
+		public string Id { get; set; }
 		public string Name { get; set; }
 		public string ServerId { get; set; }
 		public string ServerUrl { get; set; }
