@@ -31,7 +31,6 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				Assert.Equal(i + 1, hiLoKeyGenerator.NextId(store1.DatabaseCommands));
 			}
 
-
 			WaitForReplication(store2, key);
 
 			var jsonDocument = store2.DatabaseCommands.Get(key);

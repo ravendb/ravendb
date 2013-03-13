@@ -15,14 +15,6 @@ namespace Raven.Tests.Issues
 	{
 		public sealed class Categories_InUse_ByCity : AbstractIndexCreationTask<Restaurant, Categories_InUse_ByCity.Result>
 		{
-
-			public override IndexDefinition CreateIndexDefinition()
-			{
-				var indexDefinition = base.CreateIndexDefinition();
-				indexDefinition.TransformResults = indexDefinition.TransformResults.Replace("(decimal)", "");
-				return indexDefinition;
-			}
-
 			public Categories_InUse_ByCity()
 			{
 				Map = restaurants => from r in restaurants
