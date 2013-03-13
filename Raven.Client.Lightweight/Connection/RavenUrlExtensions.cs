@@ -39,7 +39,7 @@ namespace Raven.Client.Connection
 
 		public static string Databases(this string url, int pageSize, int start)
 		{
-			var databases = url + "/databases/?pageSize=" + pageSize;
+			var databases = url + "/databases?pageSize=" + pageSize;
 			return start > 0 ? databases + "&start=" + start : databases;
 		}
 
