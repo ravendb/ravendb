@@ -13,6 +13,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -23,6 +25,8 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
@@ -270,7 +274,7 @@ namespace Raven.Database.Linq
 
 		private static readonly ConcurrentDictionary<string, CacheEntry> cacheEntries = new ConcurrentDictionary<string, CacheEntry>();
 
-		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
+		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
 		{
 			source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
 
@@ -282,33 +286,20 @@ namespace Raven.Database.Linq
 				return entry.Type;
 			}
 
-            // It's not in the in-memory cache. See if it's been cached on disk.
-            //
-            // Q. Why do we cache on disk?
-            // A. It decreases the duration of individual test runs. Instead of  
-            //    recompiling the index each test run, we can just load them from disk.
-            //    It also decreases creation time for indexes that were 
-            //    previously created and deleted, affecting both production and test environments.
-            //
-            // For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
-            var indexCacheDir = Path.Combine(basePath, "RavenDBIndexCache");
-			if (Directory.Exists(indexCacheDir) == false)
-				Directory.CreateDirectory(indexCacheDir);
-			var indexFilePath = Path.Combine(indexCacheDir, IndexingUtil.StableInvariantIgnoreCaseStringHash(source).ToString(CultureInfo.InvariantCulture) + "." + (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
-            var diskCacheResult = TryGetIndexFromDisk(indexFilePath, name);
-            if (diskCacheResult != null)
-            {
-				cacheEntries.TryAdd(source, new CacheEntry
-				{
-					Source = source,
-					Type = diskCacheResult,
-					Usages = 1
-				});
-                return diskCacheResult;
-            }
+			Type type;
+			string indexFilePath;
+			if (TryGetDiskCacheResult(source, name, configuration, out indexFilePath, out type)) 
+				return type;
 
 			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath);
 
+			AddResultToCache(source, result);
+
+			return result;
+		}
+
+		private static void AddResultToCache(string source, Type result)
+		{
 			cacheEntries.TryAdd(source, new CacheEntry
 			{
 				Source = source,
@@ -325,8 +316,65 @@ namespace Raven.Database.Linq
 					cacheEntries.TryRemove(kvp.Key, out _);
 				}
 			}
+		}
 
-			return result;
+		private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, out string indexFilePath,
+		                                          out Type type)
+		{
+			// It's not in the in-memory cache. See if it's been cached on disk.
+			//
+			// Q. Why do we cache on disk?
+			// A. It decreases the duration of individual test runs. Instead of  
+			//    recompiling the index each test run, we can just load them from disk.
+			//    It also decreases creation time for indexes that were 
+			//    previously created and deleted, affecting both production and test environments.
+			//
+			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
+			var basePath = configuration.RunInMemory ? AppDomain.CurrentDomain.BaseDirectory : configuration.IndexStoragePath;
+			var indexCacheDir = Path.Combine(basePath, "Raven", "CompiledIndexCache");
+		
+			string sourceHashed;
+			using (var md5 = MD5.Create())
+			{
+				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
+				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+			}
+			indexFilePath = Path.Combine(indexCacheDir,
+			                             MonoHttpUtility.UrlEncode(name) + "." + sourceHashed + "." +
+			                             (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
+
+			try
+			{
+				if (Directory.Exists(indexCacheDir) == false)
+					Directory.CreateDirectory(indexCacheDir);
+				type = TryGetIndexFromDisk(indexFilePath, name);
+			}
+			catch (UnauthorizedAccessException)
+			{
+				// permission issues
+				type = null;
+				return false;
+			}
+			catch (IOException)
+			{
+				// permission issues, probably
+				type = null;
+				return false;
+			}
+
+			if (type != null)
+			{
+				cacheEntries.TryAdd(source, new CacheEntry
+				{
+					Source = source,
+					Type = type,
+					Usages = 1
+				});
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 
 		private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
@@ -379,9 +427,11 @@ namespace Raven.Database.Linq
 				throw new InvalidOperationException(sb.ToString());
 			}
 
-			CodeVerifier.AssertNoSecurityCriticalCalls(results.CompiledAssembly);
+			var asm = Assembly.Load(File.ReadAllBytes(indexFilePath)); // avoid locking the file
 
-			Type result = results.CompiledAssembly.GetType(name);
+			CodeVerifier.AssertNoSecurityCriticalCalls(asm);
+
+			Type result = asm.GetType(name);
 			if (result == null)
 				throw new InvalidOperationException(
 					"Could not get compiled index type. This probably means that there is something wrong with the assembly load context.");

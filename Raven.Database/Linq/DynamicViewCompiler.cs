@@ -506,7 +506,7 @@ Reduce only fields: {2}
 		{
 			TransformQueryToClass();
 
-			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath);
+			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath, configuration);
 
 			var abstractViewGenerator = (AbstractViewGenerator)Activator.CreateInstance(GeneratedType);
 			abstractViewGenerator.SourceCode = CompiledQueryText;
