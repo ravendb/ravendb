@@ -287,8 +287,10 @@ namespace Raven.Database.Linq
             //    previously created and deleted, affecting both production and test environments.
             //
             // For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
-            var indexFileName = Path.Combine(Path.GetTempPath(), source.GetHashCode().ToString());
-            var diskCacheResult = TryGetIndexFromDisk(indexFileName, name);
+            var indexCacheDir = Path.Combine(Path.GetTempPath(), "RavenDBIndexCache");
+            Directory.CreateDirectory(indexCacheDir);
+            var indexFilePath = Path.Combine(indexCacheDir, source.GetHashCode().ToString(CultureInfo.InvariantCulture) + ".dll");
+            var diskCacheResult = TryGetIndexFromDisk(indexFilePath, name);
             if (diskCacheResult != null)
             {
                 return diskCacheResult;
@@ -316,7 +318,7 @@ namespace Raven.Database.Linq
 				GenerateExecutable = false,
 				GenerateInMemory = false,
 				IncludeDebugInformation = false,
-                OutputAssembly = indexFileName
+                OutputAssembly = indexFilePath
 			};
 			if (basePath != null)
 				compilerParameters.TempFiles = new TempFileCollection(basePath, false);
@@ -367,20 +369,20 @@ namespace Raven.Database.Linq
 			return result;
 		}
 
-        private static Type TryGetIndexFromDisk(string indexFileName, string typeName)
+        private static Type TryGetIndexFromDisk(string indexFilePath, string typeName)
         {
             try
             {
-                if (File.Exists(indexFileName))
+                if (File.Exists(indexFilePath))
                 {
-                    return System.Reflection.Assembly.LoadFrom(indexFileName).GetType(typeName);
+                    return System.Reflection.Assembly.LoadFrom(indexFilePath).GetType(typeName);
                 }
             }
             catch
             {
                 // If there were any problems loading this index from disk,
                 // just delete it if we can. It will be regenerated later.
-                try { File.Delete(indexFileName); }
+                try { File.Delete(indexFilePath); }
                 catch { }
             }
 
