@@ -46,6 +46,14 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
+		/// Whatever this instance has json request factory available
+		/// </summary>
+		public override bool HasJsonRequestFactory
+		{
+			get { return false; }
+		}
+
+		/// <summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
 		/// </summary>
 		public override HttpJsonRequestFactory JsonRequestFactory

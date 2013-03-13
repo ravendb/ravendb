@@ -100,6 +100,7 @@ namespace Raven.Client.Document
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
+			ShouldSaveChangesForceAggresiveCacheCheck = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -458,6 +459,16 @@ namespace Raven.Client.Document
 		/// needed to receive the notification and forcing to check for cached data.
 		/// </summary>
 		public bool ShouldAggressiveCacheTrackChanges { get; set; }
+
+		/// <summary>
+		/// Whatever or not RavenDB should in the aggressive cache mode should force the aggresive cache
+		/// to check with the server after we called SaveChanges() on a non empty data set.
+		/// This will make any outdated data revalidated, and will work nicely as long as you have just a 
+		/// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
+		/// </summary>
+		public bool ShouldSaveChangesForceAggresiveCacheCheck { get; set; }
+
+
 #if !SILVERLIGHT
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.

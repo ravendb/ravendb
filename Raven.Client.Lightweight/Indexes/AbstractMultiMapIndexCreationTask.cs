@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Client.Document;
 #if !NETFX_CORE
 using Raven.Abstractions.MissingFromBCL;
 #else
@@ -62,6 +63,9 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public override IndexDefinition CreateIndexDefinition()
 		{
+			if (Conventions == null)
+				Conventions = new DocumentConvention();
+
 			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>
 			{
 				Indexes = Indexes,
