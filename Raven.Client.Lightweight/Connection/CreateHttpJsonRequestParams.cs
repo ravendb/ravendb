@@ -7,12 +7,25 @@ using System.Collections.Specialized;
 #endif
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	public static class HttpCacheSettings
+	{
+		[ThreadStatic]static internal bool avoidCachingRequest;
+
+		public static IDisposable AvoidUsingTheCacheForRequestsInThisScope()
+		{
+			var old = avoidCachingRequest;
+			avoidCachingRequest = true;
+			return new DisposableAction(() => avoidCachingRequest = old);
+		}
+	}
+
 	public class CreateHttpJsonRequestParams
 	{
 		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
@@ -24,6 +37,7 @@ namespace Raven.Client.Connection
 			Credentials = credentials;
 			Convention = convention;
 			operationsHeadersCollection = new NameValueCollection();
+			AvoidCachingRequest = HttpCacheSettings.avoidCachingRequest;
 		}
 
 		/// <summary>

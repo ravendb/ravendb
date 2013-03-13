@@ -157,7 +157,13 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-
+	   private string GetReplicationUrl(ReplicationDestination replicationDestination)
+        {
+	        var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
+	        return string.IsNullOrWhiteSpace(replicationDestination.Database)
+                ? replicationUrl
+                : replicationUrl + "/databases/" + replicationDestination.Database;
+        }
 
 #if !SILVERLIGHT
 
@@ -399,7 +405,7 @@ namespace Raven.Client.Indexes
 				{
 					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
-					tasks.Add(action(asyncServerClient, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url));
+					tasks.Add(action(asyncServerClient, GetReplicationUrl(replicationDestination));
 				}
 				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
 				{
@@ -435,7 +441,7 @@ namespace Raven.Client.Indexes
 				{
 					if(replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
-					action(serverClient, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url);
+					action(serverClient, GetReplicationUrl(replicationDestination));
 				}
 				catch (Exception e)
 				{
