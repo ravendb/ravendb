@@ -9,6 +9,7 @@ namespace Raven.Database.Linq
 	public abstract class AbstractTransformer
 	{
 		private TransformerDefinition transformerDefinition;
+		private byte[] cachedBytes;
 		public IndexingFunc TransformResultsDefinition { get; set; }
 		public string SourceCode { get; set; }
 
@@ -48,6 +49,31 @@ namespace Raven.Database.Linq
 		public void Init(TransformerDefinition def)
 		{
 			transformerDefinition = def;
+		}
+
+		public byte[] GetHashCodeBytes()
+		{
+			if (cachedBytes != null)
+				return cachedBytes;
+			return cachedBytes = BitConverter.GetBytes(GetHashCode());
+		}
+
+		protected bool Equals(AbstractTransformer other)
+		{
+			return Equals(transformerDefinition, other.transformerDefinition);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((AbstractTransformer) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			return (transformerDefinition != null ? transformerDefinition.GetHashCode() : 0);
 		}
 	}
 }
