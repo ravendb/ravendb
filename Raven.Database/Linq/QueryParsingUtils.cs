@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -22,6 +23,7 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Indexing;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
@@ -289,9 +291,9 @@ namespace Raven.Database.Linq
             //    previously created and deleted, affecting both production and test environments.
             //
             // For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
-            var indexCacheDir = Path.Combine(Path.GetTempPath(), "RavenDBIndexCache");
+            var indexCacheDir = Path.Combine(basePath, "RavenDBIndexCache");
             Directory.CreateDirectory(indexCacheDir);
-            var indexFilePath = Path.Combine(indexCacheDir, source.GetHashCode().ToString(CultureInfo.InvariantCulture) + ".dll");
+			var indexFilePath = Path.Combine(indexCacheDir, IndexingUtil.StableInvariantIgnoreCaseStringHash(source).ToString(CultureInfo.InvariantCulture) + "." + (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
             var diskCacheResult = TryGetIndexFromDisk(indexFilePath, name);
             if (diskCacheResult != null)
             {
@@ -319,7 +321,7 @@ namespace Raven.Database.Linq
 			{
 				GenerateExecutable = false,
 				GenerateInMemory = false,
-				IncludeDebugInformation = false,
+				IncludeDebugInformation = Debugger.IsAttached,
                 OutputAssembly = indexFilePath
 			};
 			if (basePath != null)
