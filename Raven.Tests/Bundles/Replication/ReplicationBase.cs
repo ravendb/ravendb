@@ -209,17 +209,20 @@ namespace Raven.Tests.Bundles.Replication
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			Assert.NotEmpty(urls);
-			source.Put(Constants.RavenReplicationDestinations,
-					   null, new RavenJObject
-			           {
-			           	{
-			           		"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
-			           		{
-			           			{"Url", url}
-			           		}))
-			           		}
-			           }, new RavenJObject());
+            SetupReplication(source, urls.Select(url => new RavenJObject { { "Url", url } }));
 		}
+
+        protected void SetupReplication(IDatabaseCommands source, IEnumerable<RavenJObject> destinations)
+        {
+            Assert.NotEmpty(destinations);
+            source.Put(Constants.RavenReplicationDestinations,
+                       null, new RavenJObject
+                       {
+                           {
+                               "Destinations", new RavenJArray(destinations)
+                           }
+                       }, new RavenJObject());
+        }
 
 		protected void RemoveReplication(IDatabaseCommands source)
 		{

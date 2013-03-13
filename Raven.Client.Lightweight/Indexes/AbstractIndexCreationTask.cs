@@ -298,7 +298,7 @@ namespace Raven.Client.Indexes
 					continue;
 				try
 				{
-					serverClient.DirectPutIndex(IndexName, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url, true, indexDefinition);
+                    serverClient.DirectPutIndex(IndexName, GetReplicationUrl(replicationDestination), true, indexDefinition);
 				}
 				catch (Exception e)
 				{
@@ -343,7 +343,7 @@ namespace Raven.Client.Indexes
 				{
 					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
-					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.ClientVisibleUrl ?? replicationDestination.Url));
+					 tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, GetReplicationUrl(replicationDestination)));
 				}
 				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
 				{
@@ -357,6 +357,14 @@ namespace Raven.Client.Indexes
 				});
 			}).Unwrap();
 		}
+
+        private string GetReplicationUrl(ReplicationDestination replicationDestination)
+        {
+	        var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
+	        return string.IsNullOrWhiteSpace(replicationDestination.Database)
+                ? replicationUrl
+                : replicationUrl + "/databases/" + replicationDestination.Database;
+        }
 	}
 
 	/// <summary>
