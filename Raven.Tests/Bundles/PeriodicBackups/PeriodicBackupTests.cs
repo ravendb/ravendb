@@ -31,7 +31,6 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			var backupPath = GetPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
-				Guid? etagForBackups;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -44,10 +43,9 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 
 					session.SaveChanges();
 
-					etagForBackups = session.Advanced.GetEtagFor(periodicBackupSetup);
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey) != null, 10000);
 
 			}
 
@@ -74,7 +72,6 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			var backupPath = GetPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
-				Guid? etagForBackups;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -87,19 +84,18 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 
 					session.SaveChanges();
 
-					etagForBackups = session.Advanced.GetEtagFor(periodicBackupSetup);
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey) != null, 10000);
 
-				etagForBackups= store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag;
+				var etagForBackups= store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "ayende" });
 					session.SaveChanges();
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag != etagForBackups);
 
 			}
 
