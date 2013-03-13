@@ -1,3 +1,4 @@
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -530,3 +531,4 @@ namespace Raven.Abstractions.Smuggler
 
 	}
 }
+#endif

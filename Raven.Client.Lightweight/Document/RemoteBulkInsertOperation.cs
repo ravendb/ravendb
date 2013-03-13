@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !SILVERLIGHT
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -193,3 +194,4 @@ namespace Raven.Client.Document
 		}
 	}
 }
+#endif

@@ -48,7 +48,7 @@ namespace Raven.Abstractions.Smuggler
 			{
 				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
 			}
-			return (ItemType)Enum.Parse(typeof(ItemType), items);
+			return (ItemType)Enum.Parse(typeof(ItemType), items, ignoreCase: true);
 		}
 
 		/// <summary>

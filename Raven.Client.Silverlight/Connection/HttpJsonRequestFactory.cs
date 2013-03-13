@@ -78,7 +78,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		public void CacheResponse(string s, RavenJToken result, NameValueCollection nameValueCollection)
 		{
-			
+
 		}
 	}
 }

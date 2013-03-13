@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -74,7 +75,7 @@ namespace Raven.Client.Shard
 {0}: \s* (?<shardId>[^""][^\s]*)", Regex.Escape(shardFieldForQuerying));
 
 			regexToCaptureShardIdFromQueriesByType[typeof(TEntity)] = new Regex(pattern,
-#if !NETFX_CORE
+#if !NETFX_CORE && !SILVERLIGHT
 				RegexOptions.Compiled |
 #endif			
 				RegexOptions.IgnorePatternWhitespace);
@@ -165,3 +166,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif

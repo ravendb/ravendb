@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !SILVERLIGHT
+using System;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
@@ -11,6 +12,7 @@ namespace Raven.Client.Document
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
 		private readonly IDatabaseCommands databaseCommands;
+
 		private readonly EntityToJson entityToJson;
 
 		public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
@@ -76,3 +78,4 @@ namespace Raven.Client.Document
 		}
 	}
 }
+#endif

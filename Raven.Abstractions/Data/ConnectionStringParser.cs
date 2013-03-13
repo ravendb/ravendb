@@ -54,7 +54,7 @@ namespace Raven.Abstractions.Data
 	{
 		public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
 		{
-#if !MONO
+#if !MONO && !SILVERLIGHT
 			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
 			if (connectionStringSettings == null)
 				throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
@@ -62,7 +62,7 @@ namespace Raven.Abstractions.Data
 		
 			return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
 #else
-			throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
+			throw new ArgumentException(string.Format("Connection string not supported"));
 #endif
 		}
 
@@ -115,7 +115,7 @@ namespace Raven.Abstractions.Data
 					bool result;
 					if (bool.TryParse(value, out result) == false)
 					{
-#if !MONO
+#if !MONO && !SILVERLIGHT
 						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 #else
 						throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));
