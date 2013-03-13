@@ -29,7 +29,7 @@ namespace Raven.Client.Extensions
 		}
 	}
 
-	public static class TaskExtensions
+	public static class TaskExtensions2
 	{
 		
 		public static Task<object> WithNullResult(this Task task)

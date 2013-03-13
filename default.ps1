@@ -195,6 +195,35 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 }
 
+task TestWinRT -depends Compile, CopyServer {
+	try
+	{
+		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
+	
+		$xUnit = Get-PackagePath xunit.runners
+		$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
+	
+		@("Raven.Tests.WinRT.dll") | ForEach-Object { 
+			Write-Host "Testing $build_dir\$_"
+			
+			if($global:full_storage_test) {
+				$env:raventest_storage_engine = 'esent';
+				Write-Host "Testing $build_dir\$_ (esent)"
+				&"$xUnit" "$build_dir\$_"
+			}
+			else {
+				$env:raventest_storage_engine = $null;
+				Write-Host "Testing $build_dir\$_ (default)"
+				&"$xUnit" "$build_dir\$_"
+			}
+		}
+	}
+	finally
+	{
+		Stop-Process -InputObject $process
+	}
+}
+
 task ReleaseNoTests -depends Stable,DoRelease {
 
 }

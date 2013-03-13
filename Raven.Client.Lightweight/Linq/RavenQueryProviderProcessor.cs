@@ -737,7 +737,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				VisitEnumerableMethodCall(expression, negated);
 				return;
 			}
-			if (declaringType.IsGenericType &&
+			if (declaringType.IsGenericType() &&
 			    declaringType.GetGenericTypeDefinition() == typeof (List<>))
 			{
 				VisitListMethodCall(expression);
