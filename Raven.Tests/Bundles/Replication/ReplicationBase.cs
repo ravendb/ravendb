@@ -315,16 +315,25 @@ namespace Raven.Tests.Bundles.Replication
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 
-		protected void WaitForReplication(IDocumentStore store, string id, string db = null)
+		protected void WaitForReplication(IDocumentStore store, string id, string db = null, Guid? changedSince = null)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
 				using (var session = store.OpenSession(db))
 				{
 					var e = session.Load<object>(id);
-					if (e != null)
-						break;
-					Thread.Sleep(100);
+					if (e == null)
+					{
+						if (changedSince != null)
+						{
+							if (session.Advanced.GetEtagFor(e) != changedSince)
+								break;
+						}
+						Thread.Sleep(100);
+						continue;
+					}
+					
+					break;
 				}
 			}
 		}
