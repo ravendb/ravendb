@@ -330,9 +330,8 @@ namespace Raven.Database.Linq
 			//    previously created and deleted, affecting both production and test environments.
 			//
 			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
-			var basePath = configuration.RunInMemory ? AppDomain.CurrentDomain.BaseDirectory : configuration.IndexStoragePath;
-			var indexCacheDir = Path.Combine(basePath, "Raven", "CompiledIndexCache");
-		
+			var indexCacheDir = GetIndexCacheDir(configuration);
+
 			string sourceHashed;
 			using (var md5 = MD5.Create())
 			{
@@ -340,7 +339,7 @@ namespace Raven.Database.Linq
 				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
 			}
 			indexFilePath = Path.Combine(indexCacheDir,
-			                             MonoHttpUtility.UrlEncode(name) + "." + sourceHashed + "." +
+			                             IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
 			                             (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
 
 			try
@@ -375,6 +374,33 @@ namespace Raven.Database.Linq
 				}
 			}
 			return false;
+		}
+
+		private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
+		{
+			var indexCacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Raven", "CompiledIndexCache");
+			if (configuration.RunInMemory == false)
+			{
+				// if we aren't running in memory, we might be running in a mode where we can't write to our base directory
+				// which is where we _want_ to write. In that case, our cache is going to be the db directory, instead, since 
+				// we know we can write there
+				try
+				{
+					if (Directory.Exists(indexCacheDir) == false)
+						Directory.CreateDirectory(indexCacheDir);
+					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() +  ".temp");
+					File.WriteAllText(touchFile, "test that we can write to this path");
+					File.Delete(touchFile);
+					return indexCacheDir;
+				}
+				catch (Exception)
+				{
+				}
+
+				return Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");		
+			}
+
+			return indexCacheDir;
 		}
 
 		private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
