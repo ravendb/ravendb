@@ -292,15 +292,47 @@ namespace Raven.Database.Linq
             //
             // For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
             var indexCacheDir = Path.Combine(basePath, "RavenDBIndexCache");
-            Directory.CreateDirectory(indexCacheDir);
+			if (Directory.Exists(indexCacheDir) == false)
+				Directory.CreateDirectory(indexCacheDir);
 			var indexFilePath = Path.Combine(indexCacheDir, IndexingUtil.StableInvariantIgnoreCaseStringHash(source).ToString(CultureInfo.InvariantCulture) + "." + (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
             var diskCacheResult = TryGetIndexFromDisk(indexFilePath, name);
             if (diskCacheResult != null)
             {
+				cacheEntries.TryAdd(source, new CacheEntry
+				{
+					Source = source,
+					Type = diskCacheResult,
+					Usages = 1
+				});
                 return diskCacheResult;
             }
 
-			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
+			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath);
+
+			cacheEntries.TryAdd(source, new CacheEntry
+			{
+				Source = source,
+				Type = result,
+				Usages = 1
+			});
+
+			if (cacheEntries.Count > 256)
+			{
+				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
+				if (kvp.Key != null)
+				{
+					CacheEntry _;
+					cacheEntries.TryRemove(kvp.Key, out _);
+				}
+			}
+
+			return result;
+		}
+
+		private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
+		                                        string basePath, string indexFilePath)
+		{
+			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
 			var assemblies = new HashSet<string>
 			{
 				typeof (SystemTime).Assembly.Location,
@@ -322,7 +354,7 @@ namespace Raven.Database.Linq
 				GenerateExecutable = false,
 				GenerateInMemory = false,
 				IncludeDebugInformation = Debugger.IsAttached,
-                OutputAssembly = indexFilePath
+				OutputAssembly = indexFilePath
 			};
 			if (basePath != null)
 				compilerParameters.TempFiles = new TempFileCollection(basePath, false);
@@ -353,27 +385,10 @@ namespace Raven.Database.Linq
 			if (result == null)
 				throw new InvalidOperationException(
 					"Could not get compiled index type. This probably means that there is something wrong with the assembly load context.");
-			cacheEntries.TryAdd(source, new CacheEntry
-			{
-				Source = source,
-				Type = result,
-				Usages = 1
-			});
-
-			if (cacheEntries.Count > 256)
-			{
-				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
-				if (kvp.Key != null)
-				{
-					CacheEntry _;
-					cacheEntries.TryRemove(kvp.Key, out _);
-				}
-			}
-
 			return result;
 		}
 
-        private static Type TryGetIndexFromDisk(string indexFilePath, string typeName)
+		private static Type TryGetIndexFromDisk(string indexFilePath, string typeName)
         {
             try
             {
