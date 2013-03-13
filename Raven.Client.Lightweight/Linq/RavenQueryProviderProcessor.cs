@@ -1077,6 +1077,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if (chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1088,6 +1090,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if(chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1099,6 +1103,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if (chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
