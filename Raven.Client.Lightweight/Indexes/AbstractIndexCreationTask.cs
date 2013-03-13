@@ -157,14 +157,6 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-	   private string GetReplicationUrl(ReplicationDestination replicationDestination)
-        {
-	        var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
-	        return string.IsNullOrWhiteSpace(replicationDestination.Database)
-                ? replicationUrl
-                : replicationUrl + "/databases/" + replicationDestination.Database;
-        }
-
 #if !SILVERLIGHT
 
 		/// <summary>
@@ -245,7 +237,7 @@ namespace Raven.Client.Indexes
 			if (Conventions == null)
 				Conventions = new DocumentConvention();
 
-			
+
 			return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
@@ -405,7 +397,7 @@ namespace Raven.Client.Indexes
 				{
 					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
-					tasks.Add(action(asyncServerClient, GetReplicationUrl(replicationDestination));
+					tasks.Add(action(asyncServerClient, GetReplicationUrl(replicationDestination)));
 				}
 				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
 				{
@@ -418,6 +410,14 @@ namespace Raven.Client.Indexes
 					}
 				});
 			}).Unwrap();
+		}
+
+		private string GetReplicationUrl(ReplicationDestination replicationDestination)
+		{
+			var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
+			return string.IsNullOrWhiteSpace(replicationDestination.Database)
+				? replicationUrl
+				: replicationUrl + "/databases/" + replicationDestination.Database;
 		}
 
 #if !SILVERLIGHT
@@ -439,7 +439,7 @@ namespace Raven.Client.Indexes
 			{
 				try
 				{
-					if(replicationDestination.Disabled || replicationDestination.IgnoredClient)
+					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
 					action(serverClient, GetReplicationUrl(replicationDestination));
 				}
