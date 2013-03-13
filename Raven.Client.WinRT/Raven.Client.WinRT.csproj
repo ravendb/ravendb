@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup> 
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
@@ -102,7 +102,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
-	<Compile Include="..\Raven.Client.Lightweight\*.cs" />
+    <Compile Include="..\Raven.Client.Lightweight\*.cs" />
     <Compile Include="..\Raven.Client.Lightweight\Bundles\MoreLikeThis\*.cs">
       <Link>Bundles\MoreLikeThis\%(FileName)</Link>
     </Compile>
@@ -204,7 +204,7 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\*.cs">
       <Link>Listeners\%(FileName)</Link>
-	  </Compile>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\*.cs">
       <Link>PublicExtentions\%(FileName)</Link>
     </Compile>
@@ -214,10 +214,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\*.cs">
       <Link>Util\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
-      <Link>Extentions\ThreadSleep.cs</Link>
-    </Compile>
-   
     <Compile Include="..\Raven.Abstractions\*.cs">
       <Link>Abstructions\%(FileName)</Link>
     </Compile>
@@ -280,9 +276,6 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\*.cs">
       <Link>Abstructions\Util\%(FileName)</Link>
-    </Compile>
-    <Compile Include="..\CommonAssemblyInfo.cs">
-      <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\*.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
@@ -356,6 +349,7 @@
       <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\win8\Microsoft.Threading.Tasks.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>
   </PropertyGroup>

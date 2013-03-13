@@ -1,4 +1,4 @@
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MONO
 using System;
 using System.Collections;
 using System.Collections.Generic;

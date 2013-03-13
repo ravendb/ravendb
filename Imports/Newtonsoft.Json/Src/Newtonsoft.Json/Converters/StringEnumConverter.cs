@@ -153,7 +153,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
             string n1 = f.Name;
             string n2;
             
-#if !NET20
+#if !NET20 && !MONO
             n2 = f.GetCustomAttributes(typeof (EnumMemberAttribute), true)
                           .Cast<EnumMemberAttribute>()
                           .Select(a => a.Value)

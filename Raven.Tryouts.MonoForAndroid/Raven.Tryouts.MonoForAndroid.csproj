@@ -75,10 +75,6 @@
     <AndroidResource Include="Resources\Drawable\Icon.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions.MonoForAndroid\Raven.Abstractions.MonoForAndroid.csproj">
-      <Project>{1793d7f5-40b4-43c1-90a6-9df0d2fb93d3}</Project>
-      <Name>Raven.Abstractions.MonoForAndroid</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.MonoForAndroid\Raven.Client.MonoForAndroid.csproj">
       <Project>{54732089-8681-4301-88f7-02ef7c15f987}</Project>
       <Name>Raven.Client.MonoForAndroid</Name>

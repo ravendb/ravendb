@@ -203,9 +203,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Listeners\*.cs">
       <Link>Listeners\%(FileName)</Link>
 	  </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions2.cs">
-      <Link>Imports\Extensions\TaskExtensions2.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\*.cs">
       <Link>PublicExtentions\%(FileName)</Link>
     </Compile>

@@ -115,7 +115,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     }
 #endif
 
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
     public static DataContractAttribute GetDataContractAttribute(Type type)
     {
       // DataContractAttribute does not have inheritance
@@ -171,7 +171,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       if (objectAttribute != null)
         return objectAttribute.MemberSerialization;
 
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
       DataContractAttribute dataContractAttribute = GetDataContractAttribute(objectType);
       if (dataContractAttribute != null)
         return MemberSerialization.OptIn;

@@ -111,13 +111,93 @@
     <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
       <Link>Extentions\ThreadSleep.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\Bson\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\*.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\Converters\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\Schema\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\*.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\Serialization\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\Utilities\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\*.cs">
+      <Link>Abstructions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Commands\*.cs">
+      <Link>Abstructions\Commands\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\*.cs">
+      <Link>Abstructions\Connection\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\*.cs">
+      <Link>Abstructions\Data\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Exceptions\*.cs">
+      <Link>Abstructions\Exeptions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\*.cs">
+      <Link>Abstructions\Extentions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Internal\*.cs">
+      <Link>Abstructions\Extentions\Internal\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\JsonTextReaderAsync.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\*.cs">
+      <Link>Abstructions\Indexing\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\*.cs">
+      <Link>Abstructions\Json\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\*.cs">
+      <Link>Abstructions\Json\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Utilities\*.cs">
+      <Link>Abstructions\Json\Utilities\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Linq\*.cs">
+      <Link>Abstructions\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\*.cs">
+      <Link>Abstructions\Logging\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\*.cs">
+      <Link>Abstructions\Logging\LogProviders\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\MEF\*.cs">
+      <Link>Abstructions\MEF\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>Abstructions\MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\*.cs">
+      <Link>Abstructions\OAuth\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Replication\*.cs">
+      <Link>Abstructions\Replication\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\*.cs">
+      <Link>Abstructions\Smuggler\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\*.cs">
+      <Link>Abstructions\Util\%(FileName)</Link>
+    </Compile>
+    <Compile Include="MissingFromMono\LazyOfTTMetadata.cs" />
+    <Compile Include="MissingFromMono\TraceLevel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions.MonoForAndroid\Raven.Abstractions.MonoForAndroid.csproj">
-      <Project>{1793d7f5-40b4-43c1-90a6-9df0d2fb93d3}</Project>
-      <Name>Raven.Abstractions.MonoForAndroid</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
