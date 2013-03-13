@@ -14,13 +14,12 @@ namespace Raven.Client.UniqueConstraints
 
 		public static PropertyInfo[] GetProperties(Type t)
 		{
-			PropertyInfo[] properties;
-			if (!PropertiesCache.TryGetValue(t, out properties))
-			{
-				properties = PropertiesCache.GetOrAdd(t, t.GetProperties().Where(p => Attribute.IsDefined(p, typeof(UniqueConstraintAttribute))).ToArray());
-			}
-
-			return properties;
+			return PropertiesCache.GetOrAdd(t,
+			                                type =>
+					                                type.GetProperties()
+														.Where(p => Attribute.IsDefined(p, typeof (UniqueConstraintAttribute)))
+														.ToArray()
+				                                );
 		}
 	}
 }
