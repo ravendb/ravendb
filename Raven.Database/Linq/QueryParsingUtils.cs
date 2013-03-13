@@ -394,7 +394,8 @@ namespace Raven.Database.Linq
             {
                 if (File.Exists(indexFilePath))
                 {
-                    return System.Reflection.Assembly.LoadFrom(indexFilePath).GetType(typeName);
+					// we don't use LoadFrom to avoid locking the file
+                    return System.Reflection.Assembly.Load(File.ReadAllBytes(indexFilePath)).GetType(typeName);
                 }
             }
             catch
