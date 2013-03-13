@@ -296,7 +296,7 @@ namespace Raven.Client.Indexes
 			{
 				try
 				{
-					serverClient.DirectPutIndex(IndexName, replicationDestination.Url, true, indexDefinition);
+                    serverClient.DirectPutIndex(IndexName, GetReplicationUrl(replicationDestination), true, indexDefinition);
 				}
 				catch (Exception e)
 				{
@@ -339,7 +339,7 @@ namespace Raven.Client.Indexes
 				var tasks = new List<Task>();
 				foreach (var replicationDestination in replicationDocument.Destinations)
 				{
-					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.Url));
+                    tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, GetReplicationUrl(replicationDestination)));
 				}
 				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
 				{
@@ -353,6 +353,13 @@ namespace Raven.Client.Indexes
 				});
 			}).Unwrap();
 		}
+
+        private string GetReplicationUrl(ReplicationDestination replicationDestination)
+        {
+            return string.IsNullOrWhiteSpace(replicationDestination.Database)
+                ? replicationDestination.Url
+                : replicationDestination.Url + "/databases/" + replicationDestination.Database;
+        }
 	}
 
 	/// <summary>
