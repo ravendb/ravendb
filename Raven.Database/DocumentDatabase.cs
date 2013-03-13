@@ -1203,7 +1203,7 @@ namespace Raven.Database
 					if (viewGenerator == null)
 						throw new IndexDoesNotExistsException("Could not find index named: " + index);
 
-					resultEtag = GetIndexEtag(index, null);
+					resultEtag = GetIndexEtag(index, null, query.ResultsTransformer);
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
 
@@ -2086,7 +2086,7 @@ namespace Raven.Database
 			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk();
 		}
 
-		public Etag GetIndexEtag(string indexName, Etag previousEtag)
+		public Etag GetIndexEtag(string indexName, Etag previousEtag, string resultTransformer = null)
 		{
 			Etag lastDocEtag = Etag.Empty;
 			Etag lastReducedEtag = null;
@@ -2113,6 +2113,7 @@ namespace Raven.Database
 				var list = new List<byte>();
 				list.AddRange(indexDefinition.GetIndexHash());
 				list.AddRange(Encoding.Unicode.GetBytes(indexName));
+				list.AddRange(Encoding.Unicode.GetBytes(resultTransformer));
 				list.AddRange(lastDocEtag.ToByteArray());
 				list.AddRange(BitConverter.GetBytes(touchCount));
 				list.AddRange(BitConverter.GetBytes(isStale));
