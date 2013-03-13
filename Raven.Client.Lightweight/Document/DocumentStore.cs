@@ -25,6 +25,8 @@ using Raven.Client.Document.Async;
 using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
 #elif NETFX_CORE
+using System.Collections.Concurrent;
+using Raven.Client.Util;
 using Raven.Client.WinRT.Connection;
 #else
 using Raven.Client.Listeners;

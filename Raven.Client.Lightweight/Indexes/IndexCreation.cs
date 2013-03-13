@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !MONO
+#if !MONO && !NETFX_CORE
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;

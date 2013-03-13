@@ -1,3 +1,4 @@
+#if !NETFX_CORE
 using System;
 using System.Configuration;
 using System.Net;
@@ -180,3 +181,4 @@ namespace Raven.Abstractions.Data
 		}
 	}
 }
+#endif

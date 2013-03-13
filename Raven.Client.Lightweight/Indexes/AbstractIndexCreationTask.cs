@@ -28,7 +28,7 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !MONO
+#if !MONO && !NETFX_CORE
 	[System.ComponentModel.Composition.InheritedExport]
 #endif
 	public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexesAndTransformers
@@ -159,7 +159,7 @@ namespace Raven.Client.Indexes
 
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -414,7 +414,7 @@ namespace Raven.Client.Indexes
 			}).Unwrap();
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
 			Action<ServerClient, string> action)
 		{

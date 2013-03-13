@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+#if !NETFX_CORE
 using System;
 using System.Linq;
 using Raven.Client.Connection;
@@ -20,3 +21,4 @@ namespace Raven.Client.Util
 		}
 	}
 }
+#endif

@@ -1,3 +1,4 @@
+#if !NETFX_CORE
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -134,3 +135,4 @@ namespace Raven.Client.Util
 		}
 	}
 }
+#endif

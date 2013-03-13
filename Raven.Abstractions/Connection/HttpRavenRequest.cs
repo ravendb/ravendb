@@ -1,4 +1,4 @@
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.IO;
 using System.IO.Compression;
