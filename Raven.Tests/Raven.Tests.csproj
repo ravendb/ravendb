@@ -517,6 +517,8 @@
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ConflictsInEmbeddableStore.cs" />
+    <Compile Include="Bundles\Replication\Bugs\ApiKeysWithMultiTenancy.cs" />
+    <Compile Include="Bundles\Replication\Bugs\HiLoHanging.cs" />
     <Compile Include="Bundles\Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693_Embeddable.cs" />
@@ -556,6 +558,7 @@
     <Compile Include="Issues\RavenDB955.cs" />
     <Compile Include="Issues\RavenDB957.cs" />
     <Compile Include="Issues\RavenDB_752.cs" />
+    <Compile Include="Issues\RavenDB987.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
     <Compile Include="Issues\RavenDB_790.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />
@@ -677,6 +680,7 @@
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RacielRod.cs" />
+    <Compile Include="MailingList\RavenCountTest.cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\RavenDbRecoveryTests.cs" />

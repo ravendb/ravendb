@@ -31,6 +31,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
 
+		private PeriodicBackupSetup backupConfigs;
+		private PeriodicBackupStatus backupStatus;
 		private volatile PeriodicBackupSetup backupConfigs;
 
 		public void Execute(DocumentDatabase database)
@@ -41,7 +43,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			{
 				if (notification.Id == null)
 					return;
-				if (PeriodicBackupSetup.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (PeriodicBackupSetup.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false &&
+					PeriodicBackupStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
 					return;
 
 				if (timer != null)
@@ -64,9 +67,13 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					if (document == null)
 					{
 						backupConfigs = null;
+						backupStatus = null;
 						return;
 					}
 
+					var status = Database.Get(PeriodicBackupStatus.RavenDocumentKey, null);
+
+					backupStatus = status == null ? new PeriodicBackupStatus() : status.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
 					backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
 					if (backupConfigs.IntervalMilliseconds <= 0)
 					{
@@ -113,6 +120,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						try
 						{
 							var localBackupConfigs = backupConfigs;
+							var localBackupStatus = backupStatus;
 							if (localBackupConfigs == null)
 								return;
 
@@ -121,15 +129,15 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var options = new SmugglerOptions
 							{
 								BackupPath = backupPath,
-								LastDocsEtag = localBackupConfigs.LastDocsEtag,
-								LastAttachmentEtag = localBackupConfigs.LastAttachmentsEtag
+								LastDocsEtag = localBackupStatus.LastDocsEtag,
+								LastAttachmentEtag = localBackupStatus.LastAttachmentsEtag
 							};
 							var dd = new DataDumper(Database, options);
 							var filePath = await dd.ExportData(null, null, true);
 
 							// No-op if nothing has changed
-							if (options.LastDocsEtag == backupConfigs.LastDocsEtag &&
-								options.LastAttachmentEtag == backupConfigs.LastAttachmentsEtag)
+							if (options.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+								options.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
 							{
 								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
@@ -137,22 +145,22 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							UploadToServer(filePath, localBackupConfigs);
 
-							localBackupConfigs.LastAttachmentsEtag = options.LastAttachmentEtag;
-							localBackupConfigs.LastDocsEtag = options.LastDocsEtag;
-							if (backupConfigs == null) // it was removed by the user?
-							{
-								localBackupConfigs.IntervalMilliseconds = -1; // this disable the periodic backup
-							}
-							var ravenJObject = RavenJObject.FromObject(localBackupConfigs);
+							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
+							localBackupStatus.LastDocsEtag = options.LastDocsEtag;
+
+							var ravenJObject = RavenJObject.FromObject(localBackupStatus);
 							ravenJObject.Remove("Id");
-							var putResult = Database.Put(PeriodicBackupSetup.RavenDocumentKey, null, ravenJObject,
+							var putResult = Database.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
 														 new RavenJObject(), null);
-							if (localBackupConfigs.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
+
+							// this result in backupStatus being refreshed
+								localBackupStatus = backupStatus;
+							if (localBackupStatus != null)
+							me
+								if (localBackupConfigs.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
 								localBackupConfigs.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
-						}
-						catch (ObjectDisposedException)
-						{
-							// shutting down, probably
+				{							// shutting down, probably
+											// shutting down, probably
 						}
 						catch (Exception e)
 						{

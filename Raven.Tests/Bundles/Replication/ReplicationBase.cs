@@ -203,9 +203,9 @@ namespace Raven.Tests.Bundles.Replication
 			TellInstanceToReplicateToAnotherInstance(0, 1, apiKey);
 		}
 
-		protected void TellSecondInstanceToReplicateToFirstInstance()
+		protected void TellSecondInstanceToReplicateToFirstInstance(string apiKey = null)
 		{
-			TellInstanceToReplicateToAnotherInstance(1, 0);
+			TellInstanceToReplicateToAnotherInstance(1, 0, apiKey);
 		}
 
 		protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null)
@@ -217,10 +217,11 @@ namespace Raven.Tests.Bundles.Replication
 			TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None,
 			bool disabled = false,
 			bool ignoredClient = false,
-			string apiKey = null)
+			string apiKey = null,
+			string db = null)
 		{
-			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
-			using (var session = source.OpenSession())
+			Console.WriteLine("Replicating from {0} to {1} with db = {2}.", source.Url, destination.Url, db ?? Constants.SystemDatabase);
+			using (var session = source.OpenSession(db))
 			{
 				var replicationDestination = new ReplicationDestination
 				{
@@ -231,6 +232,8 @@ namespace Raven.Tests.Bundles.Replication
 					Disabled = disabled,
 					IgnoredClient = ignoredClient
 				};
+				if (db != null)
+					replicationDestination.Database = db;
 				if (apiKey != null)
 					replicationDestination.ApiKey = apiKey;
 				SetupDestination(replicationDestination);
@@ -353,14 +356,14 @@ namespace Raven.Tests.Bundles.Replication
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 
-		protected void WaitForReplication(IDocumentStore store2, string id)
+		protected void WaitForReplication(IDocumentStore store, string id, string db = null)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
-				using (var session = store2.OpenSession())
+				using (var session = store.OpenSession(db))
 				{
-					var company = session.Load<object>(id);
-					if (company != null)
+					var e = session.Load<object>(id);
+					if (e != null)
 						break;
 					Thread.Sleep(100);
 				}

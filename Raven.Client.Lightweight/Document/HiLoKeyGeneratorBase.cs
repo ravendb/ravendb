@@ -55,8 +55,12 @@ namespace Raven.Client.Document
 			get { return RavenKeyGeneratorsHilo + tag; }
 		}
 
+		public bool DisableCapacityChanges { get; set; }
+
 		protected void ModifyCapacityIfRequired()
 		{
+			if (DisableCapacityChanges)
+				return;
 			var span = SystemTime.UtcNow - lastRequestedUtc1;
 			if (span.TotalSeconds < 5)
 			{
