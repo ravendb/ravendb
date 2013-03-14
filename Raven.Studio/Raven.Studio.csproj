@@ -270,6 +270,7 @@
     <Compile Include="Features\Documents\ConflictVersionsView.xaml.cs">
       <DependentUpon>ConflictVersionsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />

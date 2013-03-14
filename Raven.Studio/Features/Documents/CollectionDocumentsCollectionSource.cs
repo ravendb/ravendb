@@ -3,7 +3,10 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -74,6 +77,30 @@ namespace Raven.Studio.Features.Documents
                             new string[] {}, 
                             MetadataOnly)
                 .Catch();
+        }
+
+        public async override Task<IAsyncEnumerator<ViewableDocument>> StreamAsync(Reference<long> totalResults)
+        {
+            string collectionName;
+            lock (_lockObject)
+            {
+                collectionName = CollectionName;
+            }
+
+            var reference = new Reference<QueryHeaderInformation>();
+
+            var enumerator = await ApplicationModel.DatabaseCommands.StreamQueryAsync("Raven/DocumentsByEntityName",
+                                                                                      new IndexQuery
+                                                                                      {
+                                                                                          Query = "Tag:" + collectionName
+                                                                                      },
+                                                                                      reference);
+
+            totalResults.Value = reference.Value.TotalResults;
+
+            return new ConvertingEnumerator<ViewableDocument, RavenJObject>(enumerator,
+                                                                            doc =>
+                                                                            new ViewableDocument(doc.ToJsonDocument()));
         }
     }
 }
