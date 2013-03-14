@@ -3,7 +3,7 @@
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
                       xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
                       Width="400" Height="Auto" 
-                      Title="DeleteDatabase" Style="{StaticResource ChildWindowNoAnimationStyle}">
+                      Title="Delete Database" Style="{StaticResource ChildWindowNoAnimationStyle}">
     
 	<Grid x:Name="LayoutRoot" Margin="2">
 		<Grid.RowDefinitions>
@@ -26,7 +26,7 @@
 
 			<TextBlock Grid.Column="0"
 					   Grid.ColumnSpan="2"
-					   Text="Export Database before delete?"
+					   Text="Do you wish to export the database before you delete it?"
 					   Margin="5"/>
 			
 			<Button Content="Export"
@@ -44,14 +44,10 @@
 
 			<CheckBox x:Name="hardDelete"
 					  Grid.Row="4"
-					  Margin="5"/>
-			<TextBlock Grid.Column="1"
-					   Grid.Row="4"
-					   Text="Physically delete all database data"
-					   Margin="5"/>
+					  Margin="5" Content="Physically delete all database data" ToolTipService.ToolTip="Deletes all files from disk which relate to this database"/>
 		</Grid>
 
 		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="1" />
-		<Button x:Name="OKButton" Content="OK" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="1" />
+		<Button x:Name="OKButton" Content="Delete Database" Click="OKButton_Click" Width="100" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="1" />
 	</Grid>
 </controls:ChildWindow>
