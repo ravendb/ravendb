@@ -359,7 +359,7 @@ namespace Raven.Tests.Bundles.Replication
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 
-		protected void WaitForReplication(IDocumentStore store, string id, string db = null, Guid? changedSince = null)
+		protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{

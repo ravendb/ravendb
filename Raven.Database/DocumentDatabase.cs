@@ -586,6 +586,7 @@ namespace Raven.Database
 			var onDocumentChange = OnDocumentChange;
 			if (onDocumentChange != null)
 				onDocumentChange(this, obj, metadata);
+		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
 		{
