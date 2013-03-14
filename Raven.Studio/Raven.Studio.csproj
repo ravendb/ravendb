@@ -271,6 +271,7 @@
       <DependentUpon>ConflictVersionsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
