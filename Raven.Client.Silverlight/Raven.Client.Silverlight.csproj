@@ -103,120 +103,6 @@
     <Compile Include="..\Raven.Client.Lightweight\*.cs" />
     <Compile Include="..\Raven.Client.Lightweight\Bundles\MoreLikeThis\*.cs">
       <Link>Bundles\MoreLikeThis\%(FileName)</Link>
-	  </Compile>
-    <Compile Include="..\CommonAssemblyInfo.cs">
-      <Link>Properties\CommonAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\AccessTokenBody.cs">
-      <Link>Imports\Data\AccessTokenBody.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\Alert.cs">
-      <Link>Imports\Data\Alert.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\AlertsDocument.cs">
-      <Link>Imports\Data\AlertsDocument.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\ApiKeyDefinition.cs">
-      <Link>Imports\Data\ApiKeyDefinition.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\BackupStatus.cs">
-      <Link>Imports\Data\BackupStatus.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\BuildNumber.cs">
-      <Link>Imports\Data\BuildNumber.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\BulkInsertOptions.cs">
-      <Link>Imports\Data\BulkInsertOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\ChangeNotification.cs">
-      <Link>Imports\Data\ChangeNotification.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\Constants.cs">
-      <Link>Imports\Data\Constants.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\EnumerableExtension.cs">
-      <Link>Imports\Data\EnumerableExtension.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\Etag.cs">
-      <Link>Imports\Data\Etag.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\Facet.cs">
-      <Link>Imports\Data\Facet.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\FacetMode.cs">
-      <Link>Imports\Data\FacetMode.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\FacetResult.cs">
-      <Link>Imports\Data\FacetResult.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\FacetResults.cs">
-      <Link>Imports\Data\FacetResults.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\FacetSetup.cs">
-      <Link>Imports\Data\FacetSetup.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\FacetTermSortMode.cs">
-      <Link>Imports\Data\FacetTermSortMode.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\FacetValue.cs">
-      <Link>Imports\Data\FacetValue.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\GetRequest.cs">
-      <Link>Imports\Data\GetRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\GetResponse.cs">
-      <Link>Imports\Data\GetResponse.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\HighlightedField.cs">
-      <Link>Imports\Data\HighlightedField.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\IJsonDocumentMetadata.cs">
-      <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\JsonDocumentMetadata.cs">
-      <Link>Imports\Data\JsonDocumentMetadata.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\LicensingStatus.cs">
-      <Link>Imports\Data\LicensingStatus.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\LogItem.cs">
-      <Link>Imports\Data\LogItem.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\PeriodicBackupSetup.cs">
-      <Link>Imports\Data\PeriodicBackupSetup.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\QueryHeaderInformation.cs">
-      <Link>Imports\Data\QueryHeaderInformation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\ScriptedPatchRequest.cs">
-      <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\StreamResult.cs">
-      <Link>Imports\Data\StreamResult.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\UserInfo.cs">
-      <Link>Imports\Data\UserInfo.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\UuidType.cs">
-      <Link>Imports\Data\UuidType.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Default.cs">
-      <Link>Imports\Default.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
-      <Link>Imports\Extensions\Buffers.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
-      <Link>Imports\Extensions\CharExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\CryptoTransformExtensions.cs">
-      <Link>Imports\Extensions\CryptoTransformExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\ExceptionExtensions.cs">
-      <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\Internal\DictionaryExtensions.cs">
-      <Link>Imports\Extensions\Internal\DictionaryExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Bundles\Versioning\*.cs">
       <Link>Bundles\Versioning\%(FileName)</Link>
@@ -286,7 +172,7 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Async\*.cs">
       <Link>Document\Async\%(FileName)</Link>
-	  </Compile>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\*.cs">
       <Link>Document\Batches\%(FileName)</Link>
     </Compile>
@@ -316,7 +202,7 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\*.cs">
       <Link>Listeners\%(FileName)</Link>
-	  </Compile>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\*.cs">
       <Link>PublicExtentions\%(FileName)</Link>
     </Compile>
@@ -329,7 +215,6 @@
     <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
       <Link>Extentions\ThreadSleep.cs</Link>
     </Compile>
-   
     <Compile Include="..\Raven.Abstractions\*.cs">
       <Link>Abstructions\%(FileName)</Link>
     </Compile>
@@ -432,9 +317,9 @@
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
-    <Compile Include="Imports\Connection\WebRequestEventArgs.cs" />
     <Compile Include="MissingFromSilverlight\BlockingCollection.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
+    <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
     <Compile Include="DotNetZip\BlockState.cs" />
