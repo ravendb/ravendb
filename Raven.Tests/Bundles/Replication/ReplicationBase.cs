@@ -382,6 +382,19 @@ namespace Raven.Tests.Bundles.Replication
 			}
 		}
 
+		protected void WaitForReplication(IDocumentStore store, Func<IDocumentSession, bool>  predicate, string db = null)
+		{
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				using (var session = store.OpenSession(db))
+				{
+					if (predicate(session))
+						return;
+					Thread.Sleep(100);
+				}
+			}
+		}
+
 		protected class ClientSideConflictResolution : IDocumentConflictListener
 		{
 			public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
