@@ -208,11 +208,13 @@ namespace Raven.Database.Bundles.SqlReplication
 			var countOfItems = scriptResult.Data.Sum(x => x.Value.Count);
 			try
 			{
-				if (WriteToRelationalDatabase(cfg, providerFactory, scriptResult, replicationStats))
-					replicationStats.CompleteSuccess(countOfItems);
-				else
-					replicationStats.Success(countOfItems);
-
+				using (var writer = new RelationalDatabaseWriter(Database, cfg, providerFactory, scriptResult, replicationStats))
+				{
+					if (writer.Execute())
+						replicationStats.CompleteSuccess(countOfItems);
+					else
+						replicationStats.Success(countOfItems);
+				}
 				return true;
 			}
 			catch (Exception e)
@@ -266,7 +268,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					log.WarnException("Could parse SQL Replication script for " + cfg.Name, e);
 
-					return dictionary;
+					return result;
 				}
 				catch (Exception e)
 				{
@@ -274,7 +276,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping this document", e);
 				}
 			}
-			return dictionary;
+			return result;
 		}
 
 		private DbProviderFactory TryGetDbProviderFactory(SqlReplicationConfig cfg)

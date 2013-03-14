@@ -8,6 +8,7 @@ using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
@@ -78,7 +79,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue; // shouldn't happen, but anyway...
 
 				// first, delete all the rows that might already exist there
-				DeleteItems(tableName, dataForTable[0].PkName, dataForTable.Select(x => x.DocumentId));
+				DeleteItems(tableName, dataForTable[0].PkName, dataForTable.Select(x => x.DocumentId).ToList());
 
 				InsertItems(tableName, dataForTable);
 			}
@@ -87,7 +88,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			return hadErrors == false;
 		}
 
-		private void InsertItems(string tableName, IEnumerable<ItemToReplicate> dataForTable)
+		private void InsertItems(string tableName, List<ItemToReplicate> dataForTable)
 		{
 			foreach (var itemToReplicate in dataForTable)
 			{
@@ -146,22 +147,36 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		public void DeleteItems(string tableName, string pkName, IEnumerable<string> identifiers)
+		public void DeleteItems(string tableName, string pkName, List<string> identifiers)
 		{
-			foreach (var id in identifiers)
+			const int maxParams = 1000;
+			using (var cmd = connection.CreateCommand())
 			{
-				using (var cmd = connection.CreateCommand())
+				cmd.Transaction = tx;
+				for (int i = 0; i < identifiers.Count; i += maxParams)
 				{
-					cmd.Transaction = tx;
-					var dbParameter = cmd.CreateParameter();
-					dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, pkName);
-					cmd.Parameters.Add(dbParameter);
-					dbParameter.Value = id;
-					cmd.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}",
-					                                commandBuilder.QuoteIdentifier(tableName),
-													commandBuilder.QuoteIdentifier(pkName),
-					                                dbParameter.ParameterName
-						);
+					cmd.Parameters.Clear();
+					var sb = new StringBuilder("DELETE FROM ")
+						.Append(commandBuilder.QuoteIdentifier(tableName))
+						.Append(" WHERE ")
+						.Append(commandBuilder.QuoteIdentifier(pkName))
+						.Append(" IN (");
+
+					for (int j = i; j < maxParams; j++)
+					{
+						var dbParameter = cmd.CreateParameter();
+						dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, "p" + i);
+						dbParameter.Value = identifiers[j];
+
+						if (i != j)
+							sb.Append(", ");
+
+						sb.Append(dbParameter.ParameterName);
+					}
+					sb.Append(")");
+
+					cmd.CommandText = sb.ToString();
+
 					try
 					{
 						cmd.ExecuteNonQuery();
@@ -199,9 +214,9 @@ namespace Raven.Database.Bundles.SqlReplication
 		private static readonly Func<DbCommandBuilder, string, string> getParameterNameFromBuilder =
 			(Func<DbCommandBuilder, string, string>)
 			Delegate.CreateDelegate(typeof(Func<DbCommandBuilder, string, string>),
-			                        typeof(DbCommandBuilder).GetMethod("GetParameterName",
-			                                                           BindingFlags.Instance | BindingFlags.NonPublic, Type.DefaultBinder,
-			                                                           new[] { typeof(string) }, null));
+									typeof(DbCommandBuilder).GetMethod("GetParameterName",
+																	   BindingFlags.Instance | BindingFlags.NonPublic, Type.DefaultBinder,
+																	   new[] { typeof(string) }, null));
 
 
 		private static void SetParamValue(DbParameter colParam, RavenJToken val)
@@ -227,14 +242,14 @@ namespace Raven.Database.Bundles.SqlReplication
 							{
 								DateTime dateTime;
 								if (DateTime.TryParseExact(value, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture,
-								                           DateTimeStyles.RoundtripKind, out dateTime))
+														   DateTimeStyles.RoundtripKind, out dateTime))
 								{
 									colParam.Value = dateTime;
 									return;
 								}
 								DateTimeOffset dateTimeOffset;
 								if (DateTimeOffset.TryParseExact(value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-								                                 DateTimeStyles.RoundtripKind, out dateTimeOffset))
+																 DateTimeStyles.RoundtripKind, out dateTimeOffset))
 								{
 									colParam.Value = dateTimeOffset;
 									return;
