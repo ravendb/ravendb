@@ -386,7 +386,11 @@ namespace Raven.Tests.Bundles.Replication
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
-				using (var session = store.OpenSession(db))
+				using (var session = store.OpenSession(new OpenSessionOptions
+				{
+					Database = db,
+					ForceReadFromMaster = true
+				}))
 				{
 					if (predicate(session))
 						return;

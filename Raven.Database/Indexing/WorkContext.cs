@@ -123,6 +123,8 @@ namespace Raven.Database.Indexing
 
 		public void HandleWorkNotifications()
 		{
+			if (disposed)
+				return;
 			if (shouldNotifyOnWork.Value.Count == 0)
 				return;
 			NotifyAboutWork();
@@ -135,7 +137,8 @@ namespace Raven.Database.Indexing
 				if (doWork == false)
 				{
 					// need to clear this anyway
-					shouldNotifyOnWork.Value.Clear();
+					if(disposed == false)
+						shouldNotifyOnWork.Value.Clear();
 					return;
 				}
 				var increment = Interlocked.Increment(ref workCounter);
@@ -194,7 +197,10 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
+			disposed = true;
+
 			shouldNotifyOnWork.Dispose();
+
 			if (DocsPerSecCounter != null)
 				DocsPerSecCounter.Dispose();
 			if (ReducedPerSecCounter != null)
@@ -233,6 +239,7 @@ namespace Raven.Database.Indexing
 		private PerformanceCounter RequestsPerSecCounter { get; set; }
 		private PerformanceCounter ConcurrentRequestsCounter { get; set; }
 		private bool useCounters = true;
+		private bool disposed;
 
 		public float RequestsPerSecond
 		{

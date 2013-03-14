@@ -730,7 +730,7 @@ namespace Raven.Database
 									Type = DocumentChangeTypes.Put,
 									Etag = newEtag,
 								}, metadata);
-								});
+							});
 					}
 					else
 					{
@@ -955,7 +955,7 @@ namespace Raven.Database
 									Id = key,
 									Type = DocumentChangeTypes.Delete,
 								}, metadataVar);
-								});
+							});
 
 					}
 					else
