@@ -20,6 +20,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
 using System.Linq;
@@ -50,6 +51,11 @@ namespace Raven.Database.Bundles.SqlReplication
 				if (notification.Id == null)
 					return;
 
+				if (notification.Type == DocumentChangeTypes.Delete)
+				{
+					RecordDelete(notification.Id, metadata);
+				}
+
 				if (!notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase))
 					return;
 
@@ -76,6 +82,24 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 			}, TaskCreationOptions.LongRunning);
 			database.ExtensionsState.GetOrAdd(typeof(SqlReplicationTask).FullName, k => new DisposableAction(task.Wait));
+		}
+
+		private void RecordDelete(string id, RavenJObject metadata)
+		{
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				bool hasChanges = false;
+				foreach (var config in replicationConfigs)
+				{
+					if (string.Equals(config.RavenEntityName, metadata.Value<string>(Constants.RavenEntityName), StringComparison.InvariantCultureIgnoreCase) == false)
+						continue;
+
+					hasChanges = true;
+					accessor.Lists.Set("SqlReplication/Deletions/" + config.Name, id, metadata, UuidType.Documents);
+				}
+				if (hasChanges)
+					Database.WorkContext.ShouldNotifyAboutWork(() => "SQL REPL DELETE " + id);
+			});
 		}
 
 		private SqlReplicationStatus GetReplicationStatus()
@@ -116,10 +140,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				var latestEtag = documents.Last().Etag.Value;
 
-				var relevantConfigs =
-					config
-						.Where(x => ByteArrayComparer.Instance.Compare(GetLastEtagFor(localReplicationStatus, x), latestEtag) <= 0) // haven't replicate the etag yet
-						.Where(x =>
+				var relevantConfigs = config.Where(x =>
 						{
 							if (x.Disabled)
 								return false;
@@ -143,14 +164,49 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						try
 						{
-							if (ReplicateToDesintation(replicationConfig, documents))
+							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
+							var docsToReplicate = documents
+								// haven't replicate the etag yet
+								.Where(x => ByteArrayComparer.Instance.Compare(lastReplicatedEtag, x.Etag) <= 0)
+								.ToList();
+							List<ListItem> deletedDocs = null;
+							Database.TransactionalStorage.Batch(accessor =>
 							{
+								Guid? latestCurrentEtag = null;
+								if (docsToReplicate.Count != 0)
+								{
+									latestCurrentEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
+								}
+								deletedDocs = accessor.Lists.Read(GetSqlReplicationDeletionName(replicationConfig),
+																  lastReplicatedEtag, latestCurrentEtag, 1024)
+													  .ToList();
+							});
+
+							HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
+
+							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
+								ReplicateChangesToDesintation(replicationConfig, docsToReplicate))
+							{
+								if (deletedDocs.Count > 0)
+								{
+									Database.TransactionalStorage.Batch(accessor =>
+										accessor.Lists.RemoveAllBefore(GetSqlReplicationDeletionName(replicationConfig), deletedDocs[deletedDocs.Count - 1].Etag));
+								}
 								successes.Enqueue(replicationConfig);
 							}
 						}
 						catch (Exception e)
 						{
 							log.WarnException("Error while replication to SQL destination: " + replicationConfig.Name, e);
+							Database.AddAlert(new Alert
+							{
+								AlertLevel = AlertLevel.Error,
+								CreatedAt = SystemTime.UtcNow,
+								Exception = e.ToString(),
+								Title = "Sql Replication failure to replication",
+								Message = "Sql Replication could not replicate to " + replicationConfig.Name,
+								UniqueKey = "Sql Replication could not replicate to " + replicationConfig.Name
+							});
 						}
 					});
 					if (successes.Count == 0)
@@ -182,6 +238,54 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
+		private void HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<JsonDocument> docsToReplicate)
+		{
+			// This code is O(N^2), I don't like it, but we don't have a lot of deletes, and in order for it to be really bad
+			// we need a lot of deletes WITH a lot of changes at the same time
+			for (int index = 0; index < deletedDocs.Count; index++)
+			{
+				var deletedDoc = deletedDocs[index];
+				var change = docsToReplicate.FindIndex(
+					x => string.Equals(x.Key, deletedDoc.Key, StringComparison.InvariantCultureIgnoreCase));
+
+				if (change == -1)
+					continue;
+
+				// delete > doc
+				if (Etag.IsGreaterThan(deletedDoc.Etag, docsToReplicate[change].Etag.Value))
+				{
+					// the delete came AFTER the doc, so we can remove the doc and just replicate the delete
+					docsToReplicate.RemoveAt(change);
+				}
+				else
+				{	
+					// the delete came BEFORE the doc, so we can remove the delte and just replicate the change
+					deletedDocs.RemoveAt(index);
+					index--;
+				}
+			}
+		}
+
+		private bool ReplicateDeletionsToDestination(SqlReplicationConfig cfg, IEnumerable<ListItem> deletedDocs)
+		{
+			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
+			using (var writer = new RelationalDatabaseWriter(Database, cfg, replicationStats))
+			{
+				var identifiers = deletedDocs.Select(x => x.Key).ToList();
+				foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
+				{
+					writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, identifiers);
+				}
+			}
+
+			return true;
+		}
+
+		private static string GetSqlReplicationDeletionName(SqlReplicationConfig replicationConfig)
+		{
+			return "SqlReplication/Deleteions/" + replicationConfig.Name;
+		}
+
 		private Guid? GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
 			Guid? leastReplicatedEtag = null;
@@ -196,12 +300,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			return leastReplicatedEtag;
 		}
 
-		private bool ReplicateToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateChangesToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
 		{
-			var providerFactory = TryGetDbProviderFactory(cfg);
-			if (providerFactory == null)
-				return false;
-
 			var scriptResult = ApplyConversionScript(cfg, docs);
 			if (scriptResult.Data.Count == 0)
 				return true;
@@ -209,9 +309,9 @@ namespace Raven.Database.Bundles.SqlReplication
 			var countOfItems = scriptResult.Data.Sum(x => x.Value.Count);
 			try
 			{
-				using (var writer = new RelationalDatabaseWriter(Database, cfg, providerFactory, scriptResult, replicationStats))
+				using (var writer = new RelationalDatabaseWriter(Database, cfg, replicationStats))
 				{
-					if (writer.Execute())
+					if (writer.Execute(scriptResult))
 						replicationStats.CompleteSuccess(countOfItems);
 					else
 						replicationStats.Success(countOfItems);
@@ -250,7 +350,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					if (string.Equals(cfg.RavenEntityName, entityName, StringComparison.InvariantCultureIgnoreCase) == false)
 						continue;
 				}
-				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, jsonDocument.Key);
+				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, cfg, jsonDocument.Key);
 				try
 				{
 					DocumentRetriever.EnsureIdInMetadata(jsonDocument);
@@ -278,35 +378,6 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 			}
 			return result;
-		}
-
-		private DbProviderFactory TryGetDbProviderFactory(SqlReplicationConfig cfg)
-		{
-			DbProviderFactory providerFactory;
-			try
-			{
-				providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
-			}
-			catch (Exception e)
-			{
-				log.WarnException(
-					string.Format("Could not find provider factory {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
-								  cfg.Name), e);
-
-				Database.AddAlert(new Alert
-				{
-					AlertLevel = AlertLevel.Error,
-					CreatedAt = SystemTime.UtcNow,
-					Exception = e.ToString(),
-					Title = "Sql Replication Count not find factory provider",
-					Message = string.Format("Could not find factory provider {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
-								  cfg.Name),
-					UniqueKey = string.Format("Sql Replication Provider Not Found: {0}, {1}", cfg.Name, cfg.FactoryName)
-				});
-
-				return null;
-			}
-			return providerFactory;
 		}
 
 

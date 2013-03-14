@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Embedded;
 using Raven.Database.Bundles.SqlReplication;
 using Xunit;
 
@@ -60,7 +61,6 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-
 		[FactIfSqlServerIsAvailable]
 		public void SimpleTransformation()
 		{
@@ -84,36 +84,7 @@ CREATE TABLE [dbo].[Orders]
 					session.SaveChanges();
 				}
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new SqlReplicationConfig
-					{
-						Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
-						Name = "OrdersAndLines",
-						ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
-						FactoryName = FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
-						RavenEntityName = "Orders",
-						Script = @"
-var orderData = {
-	Id: documentId,
-	OrderLinesCount: this.OrderLines.length,
-	TotalCost: 0
-};
-sqlReplicate('Orders', 'Id', orderData);
-
-for (var i = 0; i < this.OrderLines.length; i++) {
-	var line = this.OrderLines[i];
-	orderData.TotalCost += line.Cost;
-	sqlReplicate('OrderLines','OrderId', {
-		OrderId: documentId,
-		Qty: line.Quantity,
-		Product: line.Product,
-		Cost: line.Cost
-	});
-}"
-					});
-					session.SaveChanges();
-				}
+				SetupSqlReplication(store);
 
 				eventSlim.Wait(TimeSpan.FromMinutes(5));
 
@@ -132,6 +103,45 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 					}
 				}
 
+			}
+		}
+
+		private static void SetupSqlReplication(EmbeddableDocumentStore store)
+		{
+			using (var session = store.OpenSession())
+			{
+				session.Store(new SqlReplicationConfig
+				{
+					Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
+					Name = "OrdersAndLines",
+					ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
+					FactoryName = FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
+					RavenEntityName = "Orders",
+					SqlReplicationTables =
+					{
+						new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id"},
+						new SqlReplicationTable {TableName = "OrderLiness", DocumentKeyColumn = "Id"},
+					},
+					Script = @"
+var orderData = {
+	Id: documentId,
+	OrderLinesCount: this.OrderLines.length,
+	TotalCost: 0
+};
+replicateToOrders(orderData);
+
+for (var i = 0; i < this.OrderLines.length; i++) {
+	var line = this.OrderLines[i];
+	orderData.TotalCost += line.Cost;
+	replicateToOrderLines({
+		OrderId: documentId,
+		Qty: line.Quantity,
+		Product: line.Product,
+		Cost: line.Cost
+	});
+}"
+				});
+				session.SaveChanges();
 			}
 		}
 

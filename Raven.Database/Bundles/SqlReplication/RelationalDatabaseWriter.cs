@@ -20,7 +20,6 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DocumentDatabase database;
 		private readonly SqlReplicationConfig cfg;
 		private readonly DbProviderFactory providerFactory;
-		private readonly ConversionScriptResult scriptResult;
 		private readonly SqlReplicationStatistics replicationStatistics;
 		private readonly DbCommandBuilder commandBuilder;
 		private readonly DbConnection connection;
@@ -30,15 +29,13 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		bool hadErrors;
 
-		public RelationalDatabaseWriter(
-			DocumentDatabase database,
-			SqlReplicationConfig cfg, DbProviderFactory providerFactory, ConversionScriptResult scriptResult, SqlReplicationStatistics replicationStatistics)
+		public RelationalDatabaseWriter( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
 		{
 			this.database = database;
 			this.cfg = cfg;
-			this.providerFactory = providerFactory;
-			this.scriptResult = scriptResult;
 			this.replicationStatistics = replicationStatistics;
+
+			providerFactory = GetDbProviderFactory(cfg);
 
 			commandBuilder = providerFactory.CreateCommandBuilder();
 			connection = providerFactory.CreateConnection();
@@ -69,26 +66,31 @@ namespace Raven.Database.Bundles.SqlReplication
 			tx = connection.BeginTransaction();
 		}
 
-		public bool Execute()
+		public bool Execute(ConversionScriptResult scriptResult)
 		{
-			foreach (var tableName in scriptResult.TablesInOrder)
+			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
 			{
-				var dataForTable = scriptResult.Data[tableName];
-
-				if (dataForTable.Count == 0)
-					continue; // shouldn't happen, but anyway...
-
 				// first, delete all the rows that might already exist there
-				DeleteItems(tableName, dataForTable[0].PkName, dataForTable.Select(x => x.DocumentId).ToList());
+				DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn,
+				            scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList());
 
-				InsertItems(tableName, dataForTable);
 			}
+
+			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
+			{
+				List<ItemToReplicate> dataForTable;
+				if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
+					continue;
+
+				InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable);
+			}
+
 			tx.Commit();
 
 			return hadErrors == false;
 		}
 
-		private void InsertItems(string tableName, List<ItemToReplicate> dataForTable)
+		private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable)
 		{
 			foreach (var itemToReplicate in dataForTable)
 			{
@@ -99,28 +101,28 @@ namespace Raven.Database.Bundles.SqlReplication
 					var sb = new StringBuilder("INSERT INTO ")
 						.Append(commandBuilder.QuoteIdentifier(tableName))
 						.Append(" (")
-						.Append(commandBuilder.QuoteIdentifier(itemToReplicate.PkName))
+						.Append(commandBuilder.QuoteIdentifier(pkName))
 						.Append(", ");
 					foreach (var column in itemToReplicate.Columns)
 					{
-						if (column.Key == itemToReplicate.PkName)
+						if (column.Key == pkName)
 							continue;
 						sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
 					}
 					sb.Length = sb.Length - 2;
 
 					var pkParam = cmd.CreateParameter();
-					pkParam.ParameterName = GetParameterName(providerFactory, commandBuilder, itemToReplicate.PkName);
+					pkParam.ParameterName = GetParameterName(providerFactory, commandBuilder, pkName);
 					pkParam.Value = itemToReplicate.DocumentId;
 					cmd.Parameters.Add(pkParam);
 
 					sb.Append(") \r\nVALUES (")
-					  .Append(GetParameterName(providerFactory, commandBuilder, itemToReplicate.PkName))
+					  .Append(GetParameterName(providerFactory, commandBuilder, pkName))
 					  .Append(", ");
 
 					foreach (var column in itemToReplicate.Columns)
 					{
-						if (column.Key == itemToReplicate.PkName)
+						if (column.Key == pkName)
 							continue;
 						var colParam = cmd.CreateParameter();
 						colParam.ParameterName = column.Key;
@@ -276,6 +278,36 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 			}
 		}
+
+		private DbProviderFactory GetDbProviderFactory(SqlReplicationConfig cfg)
+		{
+			DbProviderFactory providerFactory;
+			try
+			{
+				providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
+			}
+			catch (Exception e)
+			{
+				log.WarnException(
+					string.Format("Could not find provider factory {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
+								  cfg.Name), e);
+
+				database.AddAlert(new Alert
+				{
+					AlertLevel = AlertLevel.Error,
+					CreatedAt = SystemTime.UtcNow,
+					Exception = e.ToString(),
+					Title = "Sql Replication Count not find factory provider",
+					Message = string.Format("Could not find factory provider {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
+								  cfg.Name),
+					UniqueKey = string.Format("Sql Replication Provider Not Found: {0}, {1}", cfg.Name, cfg.FactoryName)
+				});
+
+				throw;
+			}
+			return providerFactory;
+		}
+
 
 
 		public void Dispose()

@@ -73,7 +73,7 @@ namespace Raven.Bundles.Replication.Responders
 			                                                                            {
 			                                                                            	Id = id,
 			                                                                            	Type = ReplicationConflict
-			                                                                            }));
+			                                                                            }, metadata));
 
 			var newDocumentConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 
@@ -164,7 +164,7 @@ namespace Raven.Bundles.Replication.Responders
 																						{
 																							Id = id,
 																							Type = DocumentChangeTypes.ReplicationConflict
-																						}));
+																						}, metadata));
 			var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 			log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 

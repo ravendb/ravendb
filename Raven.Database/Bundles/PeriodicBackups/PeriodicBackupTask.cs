@@ -38,7 +38,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		{
 			Database = database;
 
-			Database.OnDocumentChange += (sender, notification) =>
+			Database.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
