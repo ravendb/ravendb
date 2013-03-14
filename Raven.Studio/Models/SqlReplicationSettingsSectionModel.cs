@@ -123,7 +123,7 @@ namespace Raven.Studio.Models
 					   (addReplicationCommand =
                         new ActionCommand(() =>
                         {
-                            var model = new SqlReplicationConfigModel {Name = "Temp_Name"};
+                            var model = new SqlReplicationConfigModel {Name = ""};
                             SqlReplicationConfigs.Add(model);
                             SelectedReplication.Value = model;
                         }));
@@ -214,6 +214,10 @@ namespace Raven.Studio.Models
 					{
 						SqlReplicationConfigs.Add(SqlReplicationConfigModel.FromSqlReplicationConfig(doc));
 					}
+				    if (SqlReplicationConfigs.Any())
+                    {
+                        SelectedReplication.Value = SqlReplicationConfigs.FirstOrDefault();
+                    }
 				});
 		}
 

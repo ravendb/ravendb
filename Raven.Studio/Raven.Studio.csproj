@@ -212,6 +212,7 @@
     <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
+    <Compile Include="Behaviors\StudioDataTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
@@ -289,6 +290,7 @@
     <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
       <DependentUpon>TransformersListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Models\TransformerDefinitionModel.cs" />
     <Compile Include="Models\TransformersModel.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
