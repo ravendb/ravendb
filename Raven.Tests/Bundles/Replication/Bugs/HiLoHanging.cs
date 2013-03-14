@@ -16,7 +16,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 		{
 			const string key = "Raven/Hilo/managers";
 
-			var store1 = CreateStore();
+			var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers);
 			var store2 = CreateStore();
 
 			TellFirstInstanceToReplicateToSecondInstance();
@@ -33,13 +33,15 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 
 			WaitForReplication(store2, key);
 
+			var etag = store1.DatabaseCommands.Get(key).Etag;
+
 			var jsonDocument = store2.DatabaseCommands.Get(key);
 			store2.DatabaseCommands.Put(key, null, new RavenJObject
 			{
 				{"Max", 49}
 			}, jsonDocument.Metadata);
 
-			WaitForReplication(store1, key);
+			WaitForReplication(store1, key, changedSince: etag);
 
 			for (long i = 0; i < 4; i++)
 			{

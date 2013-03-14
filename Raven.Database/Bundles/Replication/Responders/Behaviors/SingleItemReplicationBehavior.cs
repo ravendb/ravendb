@@ -74,7 +74,12 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			CreatedConflict createdConflict;
+			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
+			                                                                            Database.RaiseNotifications(new DocumentChangeNotification
+			                                                                            {
+			                                                                            	Id = id,
+			                                                                            	Type = ReplicationConflict
+			                                                                            }, metadata));
 
 			var newDocumentConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 
@@ -86,11 +91,11 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			else
 			{
-				log.Debug("Existing item {0} is in conflict with replicated version from {1}, marking item as conflicted", id, Src);
+			log.Debug("Existing item {0} is in conflict with replicated version from {1}, marking item as conflicted", id, Src);
 
-				// we have a new conflict
-				// move the existing doc to a conflict and create a conflict document
-				var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
+			// we have a new conflict
+			// move the existing doc to a conflict and create a conflict document
+			var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
 
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
 				                                 existingMetadata);
@@ -175,12 +180,12 @@ namespace Raven.Bundles.Replication.Responders
 				createdConflict = AppendToCurrentItemConflicts(id, savedConflictedItemId, existingMetadata, existingItem);
 			}
 			else
-			{
-				var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
-				log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
+																						{
+			var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
+			log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 
-				// we have a new conflict  move the existing doc to a conflict and create a conflict document
-				var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
+			// we have a new conflict  move the existing doc to a conflict and create a conflict document
+			var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
 				createdConflict = CreateConflict(id, newConflictId, existingDocumentConflictId, existingItem, existingMetadata);
 			}
 

@@ -5,6 +5,7 @@ using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using System.Linq;
+using Raven.Tests.Bundles.Replication.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -12,32 +13,11 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-
-			var docStore = new DocumentStore
+			for (int i = 0; i < 100; i++)
 			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "Users",
-			};
-			docStore.Initialize();
-			while (true)
-			{
-				Console.ReadLine();
-				using (docStore.AggressivelyCache())
-				{
-					using (var s = docStore.OpenSession())
-					{
-						var load = s.Advanced.LuceneQuery<dynamic>("dynamic/Users")
-									.SelectFields<string>("Name")
-						            .ToList();
-						Console.WriteLine(string.Join(" ", load));
-					}
-
-					using (var s = docStore.OpenSession())
-					{
-						var load = s.Load<dynamic>("users/ayende");
-						Console.WriteLine(load.Name);
-					}
-				}
+				Console.WriteLine(i);
+				using (var x = new HiLoHanging())
+					x.HiLo_Modified_InReplicated_Scenario();
 			}
 		} 
 	}

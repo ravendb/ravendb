@@ -72,7 +72,7 @@ namespace Raven.Client.Document
 		{
 #if !NETFX_CORE
 			using (new TransactionScope(TransactionScopeOption.Suppress))
-			using (HttpCacheSettings.AvoidUsingTheCacheForRequestsInThisScope())
+			using (databaseCommands.ForceReadFromMaster())
 			{
 #endif
 				ModifyCapacityIfRequired();

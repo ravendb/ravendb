@@ -580,13 +580,12 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		public void RaiseNotifications(DocumentChangeNotification obj)
+		public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
 		{
 			TransportState.Send(obj);
 			var onDocumentChange = OnDocumentChange;
 			if (onDocumentChange != null)
-				onDocumentChange(this, obj);
-		}
+				onDocumentChange(this, obj, metadata);
 
 		public void RaiseNotifications(IndexChangeNotification obj)
 		{
@@ -598,7 +597,7 @@ namespace Raven.Database
 			TransportState.Send(obj);
 		}
 
-		public event EventHandler<DocumentChangeNotification> OnDocumentChange;
+		public event Action<DocumentDatabase,DocumentChangeNotification, RavenJObject> OnDocumentChange;
 
 		public void RunIdleOperations()
 		{
@@ -729,8 +728,8 @@ namespace Raven.Database
 									Id = key,
 									Type = DocumentChangeTypes.Put,
 									Etag = newEtag,
+								}, metadata);
 								});
-							});
 					}
 					else
 					{
@@ -954,8 +953,8 @@ namespace Raven.Database
 								{
 									Id = key,
 									Type = DocumentChangeTypes.Delete,
+								}, metadataVar);
 								});
-							});
 
 					}
 					else
@@ -1250,7 +1249,7 @@ namespace Raven.Database
 						foreach (var result in results)
 						{
 							onResult(result);
-						}
+					}
 
 					if (transformerErrors.Count > 0)
 					{
@@ -2178,7 +2177,7 @@ namespace Raven.Database
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertStarted
-				});
+				}, null);
 				foreach (var docs in docBatches)
 				{
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
@@ -2222,7 +2221,7 @@ namespace Raven.Database
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertEnded
-				});
+				}, null);
 				if (documents == 0)
 					return;
 				workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");

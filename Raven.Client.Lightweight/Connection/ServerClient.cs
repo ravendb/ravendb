@@ -1426,9 +1426,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
-		public void ForceReadFromMaster()
+		public IDisposable ForceReadFromMaster()
 		{
+			var old = readStripingBase;
 			readStripingBase = -1;// this means that will have to use the master url first
+			return new DisposableAction(() => readStripingBase = old);
 		}
 
 		/// <summary>
