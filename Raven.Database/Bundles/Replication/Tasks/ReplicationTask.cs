@@ -43,7 +43,7 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
-		public ConcurrentSet<Task> activeTasks = new ConcurrentSet<Task>();
+		public ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
 
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
 			new ConcurrentDictionary<string, DestinationStats>(StringComparer.InvariantCultureIgnoreCase);
@@ -145,8 +145,18 @@ namespace Raven.Bundles.Replication.Tasks
 											}
 										}
 									});
-									activeTasks.Add(replicationTask);
-									replicationTask.ContinueWith(_ => activeTasks.TryRemove(replicationTask));
+									activeTasks.Enqueue(replicationTask);
+									replicationTask.ContinueWith(_ =>
+									{
+										// here we purge all the completed tasks at the head of the queue
+										Task task;
+										while (activeTasks.TryPeek(out task))
+										{
+											if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted)
+												break;
+											activeTasks.TryDequeue(out task); // remove it from end
+										}
+									});
 								}
 							}
 						}
@@ -971,7 +981,11 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public void Dispose()
 		{
-			Task.WaitAll(activeTasks.ToArray());
+			Task task;
+			while (activeTasks.TryDequeue(out task))
+			{
+				task.Wait();
+			}
 		}
 	}
 }
