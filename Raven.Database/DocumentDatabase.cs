@@ -683,6 +683,7 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveMetadataReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
+
 			lock (putSerialLock)
 			{
 				TransactionalStorage.Batch(actions =>
