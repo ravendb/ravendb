@@ -45,10 +45,11 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void Execute(DocumentDatabase database)
 		{
 			Database = database;
-			Database.OnDocumentChange += (sender, notification) =>
+			Database.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
+
 				if (!notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase))
 					return;
 
@@ -236,7 +237,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		
+
 		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
 		{
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
@@ -307,8 +308,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 			return providerFactory;
 		}
-	
-	
+
+
 		private Guid GetLastEtagFor(SqlReplicationStatus replicationStatus, SqlReplicationConfig sqlReplicationConfig)
 		{
 			var lastEtag = Guid.Empty;
