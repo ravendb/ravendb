@@ -75,9 +75,6 @@ namespace Raven.Abstractions.Connection
 					return new SecuredAuthenticator(options.ApiKey);
 				});
 
-			if (useBasicAuthenticator == false)
-				oauthSource = options.Url + "/OAuth/API-Key";
-
 			var result = authenticator.DoOAuthRequest(oauthSource);
 			return result != null;
 		}

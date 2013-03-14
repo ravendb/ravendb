@@ -37,7 +37,7 @@ namespace Raven.Client.Silverlight.Connection
 	{
 		private readonly string url;
 		private readonly DocumentConvention conventions;
-		internal HttpWebRequest webRequest;
+		internal volatile HttpWebRequest webRequest;
 		private byte[] postedData;
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
@@ -48,6 +48,16 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
+		public string ContentType
+		{
+			get { return webRequest.ContentType; }
+			set { webRequest.ContentType = value; }
+		}
+
+		public WebHeaderCollection Headers
+		{
+			get { return webRequest.Headers; }
+		}
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
@@ -85,10 +95,10 @@ namespace Raven.Client.Silverlight.Connection
 		/// <value>The response headers.</value>
 		public NameValueCollection ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions, HttpJsonRequestFactory factory)
+		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
-			this.url = url;
-			this.conventions = conventions;
+			this.url = requestParams.Url;
+			this.conventions = requestParams.Convention;
 			this.factory = factory;
 			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
 			noopWaitForTask = new CompletedTask();
@@ -96,16 +106,17 @@ namespace Raven.Client.Silverlight.Connection
 
 			webRequest.Headers["Raven-Client-Version"] = ClientVersion;
 
-			WriteMetadata(metadata);
-			webRequest.Method = method;
-			if (method != "GET")
+			WriteMetadata(requestParams.Metadata);
+			webRequest.Method = requestParams.Method;
+			if (requestParams.Method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
 
-			if (factory.DisableRequestCompression)
-				return;
-
-			if (method == "POST" || method == "PUT" || method == "PATCH" || method == "EVAL")
-				webRequest.Headers["Content-Encoding"] = "gzip";
+			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
+			{
+				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
+					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+					webRequest.Headers["Content-Encoding"] = "gzip";
+			}
 		}
 
 		public Task<RavenJToken> ReadResponseJsonAsync()
@@ -516,6 +527,17 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			var uriBuilder = new UriBuilder(primaryUrl);
 			return uriBuilder.Uri.ToString();
+		}
+
+		public void PrepareForLongRequest()
+		{
+			Timeout = TimeSpan.FromHours(6);
+			webRequest.AllowWriteStreamBuffering = false;
+		}
+
+		public Task<Stream> GetRawRequestStream()
+		{
+			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
 		public Task<WebResponse> RawExecuteRequestAsync()

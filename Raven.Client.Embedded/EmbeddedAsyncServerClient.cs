@@ -232,6 +232,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<PutResult>(databaseCommands.Put(key, etag, document, metadata));
 		}
 
+		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false)
+		{
+			throw new NotImplementedException();
+		}
+
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
 			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
@@ -383,37 +388,15 @@ namespace Raven.Client.Embedded
 			QueryHeaderInformation info;
 			var result = databaseCommands.StreamQuery(index, query, out info);
 			queryHeaderInfo.Value = info;
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(result));
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(result));
 		}
 
 		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
 		                            int pageSize = 2147483647)
 		{
 			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(streamDocs));
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
 	
 		}
-	}
-
-	internal class AsyncEnumeratorBridge : IAsyncEnumerator<RavenJObject>
-	{
-		private readonly IEnumerator<RavenJObject> enumerator;
-
-		public AsyncEnumeratorBridge(IEnumerator<RavenJObject> enumerator)
-		{
-			this.enumerator = enumerator;
-		}
-
-		public void Dispose()
-		{
-			enumerator.Dispose();
-		}
-
-		public Task<bool> MoveNextAsync()
-		{
-			return new CompletedTask<bool>(enumerator.MoveNext());
-		}
-
-		public RavenJObject Current { get { return enumerator.Current; } }
 	}
 }

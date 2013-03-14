@@ -823,7 +823,7 @@ namespace Raven.Client.Document
 				maxNumberOfCachedRequests = value;
 				if (jsonRequestFactory != null)
 					jsonRequestFactory.Dispose();
-				jsonRequestFactory = null;
+				jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests);
 			}
 		}
 #endif

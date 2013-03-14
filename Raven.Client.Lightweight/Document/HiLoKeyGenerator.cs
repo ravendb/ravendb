@@ -72,6 +72,7 @@ namespace Raven.Client.Document
 		{
 #if !NETFX_CORE
 			using (new TransactionScope(TransactionScopeOption.Suppress))
+			using (HttpCacheSettings.AvoidUsingTheCacheForRequestsInThisScope())
 			{
 #endif
 				ModifyCapacityIfRequired();
@@ -140,7 +141,7 @@ namespace Raven.Client.Document
 #endif
 		}
 
-		private void PutDocument(IDatabaseCommands databaseCommands,JsonDocument document)
+		private void PutDocument(IDatabaseCommands databaseCommands, JsonDocument document)
 		{
 			databaseCommands.Put(HiLoDocumentKey, document.Etag,
 								 document.DataAsJson,

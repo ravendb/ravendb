@@ -4,35 +4,36 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Raven.Abstractions;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
+using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
 	public class SmugglerApi : SmugglerApiBase
 	{
-		const int retriesCount = 5;
+		const int RetriesCount = 5;
 
-		private int total;
-		private int count;
-		protected override RavenJArray GetIndexes(int totalCount)
+		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
-			var request = CreateRequest("/indexes?pageSize=" + smugglerOptions.BatchSize + "&start=" + totalCount);
+			var request = CreateRequest("/indexes?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
-			return indexes;
+			return new CompletedTask<RavenJArray>(indexes);
 		}
 
 		private static string StripQuotesIfNeeded(RavenJToken value)
@@ -42,13 +43,115 @@ namespace Raven.Smuggler
 				return str.Substring(1, str.Length - 2);
 			return str;
 		}
+
 		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
+
+		private BulkInsertOperation operation;
+
+		private DocumentStore store;
+		private IAsyncDatabaseCommands Commands
+		{
+			get
+			{
+				return store.AsyncDatabaseCommands;
+			}
+		}
 
 		public SmugglerApi(SmugglerOptions smugglerOptions, RavenConnectionStringOptions connectionStringOptions)
 			: base(smugglerOptions)
 		{
 			ConnectionStringOptions = connectionStringOptions;
+		}
+
+		public override async Task ImportData(SmugglerOptions options, bool incremental = false)
+		{
+			using (store = CreateStore())
+			{
+				using (operation = store.BulkInsert(options: new BulkInsertOptions
+				{
+					CheckForUpdates = true
+				}))
+				{
+					operation.Report += text => ShowProgress(text);
+
+					await base.ImportData(options, incremental);
+				}
+			}
+		}
+
+		public override async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
+		{
+			SmugglerJintHelper.Initialize(options ?? SmugglerOptions);
+
+			var batchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
+
+			using (store = CreateStore())
+			{
+				using (operation = store.BulkInsert(options: new BulkInsertOptions
+				{
+					BatchSize = batchSize,
+					CheckForUpdates = true
+				}))
+				{
+					operation.Report += text => ShowProgress(text);
+
+					await base.ImportData(stream, options, importIndexes);
+				}
+			}
+		}
+
+		public override async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental)
+		{
+			using (store = CreateStore())
+			{
+				return await base.ExportData(stream, options, incremental);
+			}
+		}
+
+		public override async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		{
+			using (store = CreateStore())
+			{
+				return await base.ExportData(stream, options, incremental, lastEtagsFromFile);
+			}
+		}
+
+		protected override Task PutDocument(RavenJObject document)
+		{
+			if (document != null)
+			{
+				var metadata = document.Value<RavenJObject>("@metadata");
+				var id = metadata.Value<string>("@id");
+				document.Remove("@metadata");
+
+				operation.Store(document, metadata, id);
+			}
+
+			return new CompletedTask();
+		}
+
+		protected override Task PutTransformer(string transformerName, RavenJToken transformer)
+		{
+			if (Mode == SmugglerMode.Legacy)
+				return new CompletedTask();
+
+			if (transformer != null)
+			{
+				var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
+
+				return Commands.PutTransfomerAsync(transformerName, transformerDefinition);
+			}
+
+			return FlushBatch();
+		}
+
+		protected override Task<string> GetVersion()
+		{
+			var request = CreateRequest("/build/version");
+			var version = request.ExecuteRequest<RavenJObject>();
+
+			return new CompletedTask<string>(version["ProductVersion"].ToString());
 		}
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
@@ -68,7 +171,7 @@ namespace Raven.Smuggler
 			}
 			builder.Append(url);
 			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
-			httpRavenRequest.WebRequest.Timeout = smugglerOptions.Timeout;
+			httpRavenRequest.WebRequest.Timeout = SmugglerOptions.Timeout;
 			if (LastRequestErrored)
 			{
 				httpRavenRequest.WebRequest.KeepAlive = false;
@@ -78,44 +181,65 @@ namespace Raven.Smuggler
 			return httpRavenRequest;
 		}
 
-		protected override RavenJArray GetDocuments(Etag lastEtag)
+		protected DocumentStore CreateStore()
 		{
-			int retries = retriesCount;
-			while (true)
+			var s = new DocumentStore
 			{
-				try
-				{
-					RavenJArray documents = null;
-					var request = CreateRequest("/docs?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
-					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
-					return documents;
-				}
-				catch (Exception e)
-				{
-					if (retries-- == 0)
-						throw;
-					LastRequestErrored = true;
-					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e, retriesCount);
-				}
-			}
+				Url = ConnectionStringOptions.Url,
+				ApiKey = ConnectionStringOptions.ApiKey,
+				Credentials = ConnectionStringOptions.Credentials,
+				DefaultDatabase = ConnectionStringOptions.DefaultDatabase
+			};
+
+			s.Initialize();
+
+			return s;
 		}
 
-		protected override Etag ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
+		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
+		{
+			if (Mode == SmugglerMode.Legacy)
+			{
+				int retries = RetriesCount;
+				while (true)
+				{
+					try
+					{
+						RavenJArray documents = null;
+						var request = CreateRequest("/docs?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag);
+						request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
+
+						return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(documents.Values<RavenJObject>().GetEnumerator()));
+					}
+					catch (Exception e)
+					{
+						if (retries-- == 0)
+							throw;
+						LastRequestErrored = true;
+						ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e, RetriesCount);
+					}
+				}
+			}
+
+			return Commands.StreamDocsAsync(lastEtag);
+		}
+
+		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			int totalCount = 0;
 			while (true)
 			{
 				RavenJArray attachmentInfo = null;
-				var request = CreateRequest("/static/?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
+				var request = CreateRequest("/static/?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag);
 				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (attachmentInfo.Length == 0)
 				{
-					var databaseStatistics = GetStats();
+					var databaseStatistics = await GetStats();
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = EtagUtil.Increment(lastEtag, smugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -146,41 +270,70 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override void PutAttachment(AttachmentExportInfo attachmentExportInfo)
+		protected override Task<RavenJArray> GetTransformers(int totalCount)
 		{
-			var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
-			if (attachmentExportInfo.Metadata != null)
+			if (Mode == SmugglerMode.Legacy)
+				return new CompletedTask<RavenJArray>(new RavenJArray());
+
+			RavenJArray transformers = null;
+			var request = CreateRequest("/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
+			request.ExecuteRequest(reader => transformers = RavenJArray.Load(new JsonTextReader(reader)));
+			return new CompletedTask<RavenJArray>(transformers);
+		}
+
+		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
+		{
+			if (attachmentExportInfo != null)
 			{
-				foreach (var header in attachmentExportInfo.Metadata)
+				var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
+				if (attachmentExportInfo.Metadata != null)
 				{
-					switch (header.Key)
+					foreach (var header in attachmentExportInfo.Metadata)
 					{
-						case "Content-Type":
-							request.WebRequest.ContentType = header.Value.Value<string>();
-							break;
-						default:
-							request.WebRequest.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
-							break;
+						switch (header.Key)
+						{
+							case "Content-Type":
+								request.WebRequest.ContentType = header.Value.Value<string>();
+								break;
+							default:
+								request.WebRequest.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
+								break;
+						}
 					}
 				}
+
+				request.Write(attachmentExportInfo.Data);
+				request.ExecuteRequest();
 			}
 
-			request.Write(attachmentExportInfo.Data);
-			request.ExecuteRequest();
-
+			return new CompletedTask();
 		}
 
-		protected override void PutIndex(string indexName, RavenJToken index)
+		protected override Task PutIndex(string indexName, RavenJToken index)
 		{
-			var request = CreateRequest("/indexes/" + indexName, "PUT");
-			request.Write(index.Value<RavenJObject>("definition"));
-			request.ExecuteRequest();
+			if (index != null)
+			{
+				var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(index.Value<RavenJObject>("definition").ToString());
+
+				return Commands.PutIndexAsync(indexName, indexDefinition, overwrite: true);
+			}
+
+			return FlushBatch();
 		}
 
-		protected override DatabaseStatistics GetStats()
+		protected override Task<DatabaseStatistics> GetStats()
 		{
-			var request = CreateRequest("/stats");
-			return request.ExecuteRequest<DatabaseStatistics>();
+			return Commands.GetStatisticsAsync();
+		}
+
+		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		{
+			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
+		}
+
+		private Task FlushBatch()
+		{
+			return new CompletedTask();
 		}
 
 		protected override void ShowProgress(string format, params object[] args)
@@ -188,73 +341,15 @@ namespace Raven.Smuggler
 			Console.WriteLine(format, args);
 		}
 
-		protected override Etag FlushBatch(List<RavenJObject> batch)
-		{
-			var sw = Stopwatch.StartNew();
-
-			var commands = new RavenJArray();
-			foreach (var doc in batch)
-			{
-				var metadata = doc.Value<RavenJObject>("@metadata");
-
-			    doc.Remove("@metadata");
-				commands.Add(new RavenJObject
-								{
-									{"Method", "PUT"},
-									{"Document", doc},
-									{"Metadata", metadata},
-									{"Key", metadata.Value<string>("@id")}
-								});
-			}
-
-			var retries = retriesCount;
-			HttpRavenRequest request = null;
-			BatchResult[] results;
-			while (true)
-			{
-				try
-				{
-					request = CreateRequest("/bulk_docs", "POST");
-					request.Write(commands);
-					results = request.ExecuteRequest<BatchResult[]>();
-					sw.Stop();
-					break;
-				}
-				catch (Exception e)
-				{
-					if (--retries == 0 || request == null)
-						throw;
-					sw.Stop();
-					LastRequestErrored = true;
-					ShowProgress("Error flushing to database, remaining attempts {0} - time {2:#,#} ms, will retry [{3:#,#.##;;0} kb compressed to {4:#,#.##;;0} kb]. Error: {1}",
-								 retriesCount - retries, e, sw.ElapsedMilliseconds,
-								 (double)request.NumberOfBytesWrittenUncompressed / 1024,
-								 (double)request.NumberOfBytesWrittenCompressed / 1024);
-				}
-			}
-			total += batch.Count;
-			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} in {1,6:#,#;;0} ms ({6:0.00} ms per doc) (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb]",
-				batch.Count, sw.ElapsedMilliseconds, ++count, total,
-				(double)request.NumberOfBytesWrittenUncompressed / 1024,
-				(double)request.NumberOfBytesWrittenCompressed / 1024,
-				Math.Round((double)sw.ElapsedMilliseconds / Math.Max(1, batch.Count), 2));
-
-			batch.Clear();
-
-			if (results.Length == 0)
-				return Etag.Empty;
-			return results.Last().Etag;
-		}
-
 		public bool LastRequestErrored { get; set; }
 
-		protected override void EnsureDatabaseExists()
+		protected override Task EnsureDatabaseExists()
 		{
-			if (ensuredDatabaseExists ||
+			if (EnsuredDatabaseExists ||
 				string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase))
-				return;
+				return new CompletedTask();
 
-			ensuredDatabaseExists = true;
+			EnsuredDatabaseExists = true;
 
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(ConnectionStringOptions.Url);
 			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + ConnectionStringOptions.DefaultDatabase;
@@ -262,7 +357,7 @@ namespace Raven.Smuggler
 			try
 			{
 				httpRavenRequestFactory.Create(docUrl, "GET", ConnectionStringOptions).ExecuteRequest();
-				return;
+				return new CompletedTask();
 			}
 			catch (WebException e)
 			{
@@ -275,6 +370,8 @@ namespace Raven.Smuggler
 			var document = MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase);
 			request.Write(document);
 			request.ExecuteRequest();
+
+			return new CompletedTask();
 		}
 	}
 }

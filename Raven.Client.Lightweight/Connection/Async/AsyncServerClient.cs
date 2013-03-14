@@ -1507,6 +1507,16 @@ namespace Raven.Client.Connection.Async
 			return new YieldStreamResults(webResponse);
 		}
 #endif
+#if SILVERLIGHT
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		{
+			return new RemoteBulkInsertOperation(options, this);
+		}
+#endif
+
 		/// <summary>
 		/// Do a direct HEAD request against the server for the specified document
 		/// </summary>
@@ -1549,11 +1559,12 @@ namespace Raven.Client.Connection.Async
 			}).Unwrap();
 		}
 
-		public HttpJsonRequest CreateRequest(string requestUrl, string method)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
@@ -1734,6 +1745,18 @@ namespace Raven.Client.Connection.Async
 			{
 				resolvingConflictRetries = false;
 			}
+		}
+
+		public Task<RavenJToken> GetOperationStatusAsync(long id)
+		{
+			var request = jsonRequestFactory
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
+				.AddOperationHeaders(OperationsHeaders));
+
+			return
+				request
+					.ReadResponseJsonAsync()
+					.ContinueWith(task => task.Result);
 		}
 	}
 }

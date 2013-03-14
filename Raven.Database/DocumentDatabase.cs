@@ -2113,8 +2113,11 @@ namespace Raven.Database
 				var list = new List<byte>();
 				list.AddRange(indexDefinition.GetIndexHash());
 				list.AddRange(Encoding.Unicode.GetBytes(indexName));
-				if(string.IsNullOrWhiteSpace(resultTransformer) == false)
-					list.AddRange(Encoding.Unicode.GetBytes(resultTransformer));
+				if (string.IsNullOrWhiteSpace(resultTransformer) == false)
+				{
+					var abstractTransformer = IndexDefinitionStorage.GetTransfomer(resultTransformer);
+					list.AddRange(abstractTransformer.GetHashCodeBytes());
+				}
 				list.AddRange(lastDocEtag.ToByteArray());
 				list.AddRange(BitConverter.GetBytes(touchCount));
 				list.AddRange(BitConverter.GetBytes(isStale));

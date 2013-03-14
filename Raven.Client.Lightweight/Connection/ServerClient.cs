@@ -1967,7 +1967,7 @@ namespace Raven.Client.Connection
 		public RavenJToken GetOperationStatus(long id)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, url + "/operation/status?id" + id, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 			try
 			{

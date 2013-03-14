@@ -47,27 +47,25 @@ namespace Raven.Client.UniqueConstraints
 		{
 			var properties = UniqueConstraintsTypeDictionary.GetProperties(typeof (T));
 			T[] loadedDocs = null;
+			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
 
-			if (properties != null)
+			var constraintsIds = from property in properties
+			                     let propertyValue = property.GetValue(entity, null)
+			                     where propertyValue != null
+			                     select
+				                     "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() +
+				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString());
+
+			var constraintDocs = session.Include<ConstraintDocument>(x => x.RelatedId).Load(constraintsIds.ToArray());
+
+			var existingDocsIds = constraintDocs.Where(constraintDoc => constraintDoc != null)
+			                                    .Select(constraintDoc => constraintDoc.RelatedId)
+			                                    .Where(id => string.IsNullOrEmpty(id) == false)
+			                                    .ToArray();
+
+			if (existingDocsIds.Any())
 			{
-				var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
-
-				var constraintsIds = from property in properties
-				                     let propertyValue = property.GetValue(entity, null)
-				                     where propertyValue != null
-				                     select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString());
-
-				var constraintDocs = session.Include<ConstraintDocument>(x => x.RelatedId).Load(constraintsIds.ToArray());
-
-				var existingDocsIds = constraintDocs.Where(constraintDoc => constraintDoc != null)
-				                                    .Select(constraintDoc => constraintDoc.RelatedId)
-				                                    .Where(id => string.IsNullOrEmpty(id) == false)
-				                                    .ToArray();
-
-				if (existingDocsIds.Any())
-				{
-					loadedDocs = session.Load<T>(existingDocsIds);
-				}
+				loadedDocs = session.Load<T>(existingDocsIds);
 			}
 
 			return new UniqueConstraintCheckResult<T>(entity, properties, loadedDocs);
@@ -146,18 +144,15 @@ namespace Raven.Client.UniqueConstraints
 
 		public UniqueConstraintCheckResult(T document, PropertyInfo[] properties, T[] loadedDocs)
 		{
-			propertyDocuments = new Dictionary<PropertyInfo, object>(properties.Count());
+			propertyDocuments = new Dictionary<PropertyInfo, object>(properties.Length);
 			checkedDocument = document;
 			this.loadedDocs = loadedDocs;
-
-			if (properties == null)
-			{
-				properties = new PropertyInfo[0];
-			}
 
 			foreach (var propertyInfo in properties)
 			{
 				var checkProperty = propertyInfo.GetValue(checkedDocument, null);
+				if (checkProperty == null)
+					continue;
 				var foundDocument = default(T);
 
 				if (loadedDocs != null)
@@ -165,6 +160,8 @@ namespace Raven.Client.UniqueConstraints
 					foundDocument = loadedDocs.FirstOrDefault(x =>
 					{
 						var docProperty = propertyInfo.GetValue(x, null);
+						if (docProperty == null)
+							return false;
 						return docProperty.ToString().Equals(checkProperty.ToString(), StringComparison.InvariantCultureIgnoreCase);
 						;
 					});
