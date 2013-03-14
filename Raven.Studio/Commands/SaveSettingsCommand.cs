@@ -94,7 +94,7 @@ namespace Raven.Studio.Commands
 				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)) == false)
 				{
 					var hasChanges = new List<string>();
-                    session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+                    session.Advanced.LoadStartingWithAsync<SqlReplicationConfigModel>("Raven/SqlReplication/Configuration/")
 					       .ContinueOnSuccessInTheUIThread(documents =>
 					       {
 						       sqlReplicationSettings.UpdateIds();
@@ -215,7 +215,7 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-        private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
+        private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfigModel remote)
 		{
 			if (remote == null)
 				return false;

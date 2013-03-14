@@ -203,7 +203,7 @@ namespace Raven.Studio.Models
 		public override void LoadFor(DatabaseDocument database)
 		{
 			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(database.Id)
-                .Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+				.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
 				.ContinueOnSuccessInTheUIThread(documents =>
 				{
 					if (documents == null)

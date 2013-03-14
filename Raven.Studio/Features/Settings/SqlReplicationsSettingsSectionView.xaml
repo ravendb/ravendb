@@ -10,68 +10,78 @@
              xmlns:sdk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
              xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
              xmlns:ContextMenu="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
-             mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400">
+             xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:models="clr-namespace:Raven.Studio.Models"
+             mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance models:SqlReplicationSettingsSectionModel}">
 
 	<UserControl.Resources>
+        <Style x:Key="ReplicationItemStyle" TargetType="ComboBoxItem" BasedOn="{StaticResource Style_ComboBoxItem_DefaultStyle}">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
 		<DataTemplate x:Key="ReplicationItemTemplate" DataType="Replication:SqlReplicationConfig">
 			<Grid x:Name="grid">
-				<TextBlock Text="{Binding Name, Mode=TwoWay}" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Name, Mode=TwoWay}" Margin="5" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Command="{Binding Path=DataContext.DeleteReplication, RelativeSource={RelativeSource AncestorType=ItemsPresenter}}"
+                        CommandParameter="{Binding}"
+                        ToolTipService.ToolTip="Delete Replication Configuration"
+                        Style="{StaticResource Style_Button_MouseOverChrome}">
+                    <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+                </Button>
 			</Grid>
 		</DataTemplate>
-	</UserControl.Resources>
+        <DataTemplate x:Key="ReplicationItemSelectionBoxTemplate" DataType="Replication:SqlReplicationConfig">
+            <Grid x:Name="grid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Name, Mode=TwoWay}" Margin="5" HorizontalAlignment="Left" VerticalAlignment="Center" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
 
 	<Border x:Name="LayoutRoot" Style="{StaticResource Style_Border_SettingsSection}">
 		<Grid>
 			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" MinHeight="50"/>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
 
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
-				<Button Command="{Binding AddReplication}"
-                            Style="{StaticResource Style_Button_MouseOverChrome}"
-                            ToolTipService.ToolTip="Add Sql Replication"
-							VerticalAlignment="Top" Margin="15">
-					<Button.Content>
-						<Image Source="{StaticResource Image_Add_Tiny}"
-									   Stretch="None"/>
-					</Button.Content>
-				</Button>
+			<StackPanel Orientation="Horizontal" Margin="10,10,10,20">
+                <TextBlock Text="Edit Replication:" Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Center"></TextBlock>
 
-				<ListBox Grid.Column="1" 
-						 Style="{StaticResource Databases_FluidList}"
+				<ComboBox Grid.Column="1" 
+                          Style="{StaticResource Style_ComboBox_AlternativeSelectionBoxTemplate}"
                          ItemsSource="{Binding SqlReplicationConfigs}"
                          SelectedItem="{Binding SelectedReplication.Value, Mode=TwoWay}"
-                         ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
                          ItemTemplate="{StaticResource ReplicationItemTemplate}"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                          ItemContainerStyle="{StaticResource ReplicationItemStyle}"
+                          HorizontalContentAlignment="Stretch"
+                          HorizontalAlignment="Left"
+                          Behaviors:ComboBoxExt.SelectionBoxItemTemplate="{StaticResource ReplicationItemSelectionBoxTemplate}"
+                          Width="350"
+                          Height="35"
+                          Margin="5,0,0,0">
 
-					<i:Interaction.Behaviors>
-						<Behaviors:SelectItemOnRightClick />
-					</i:Interaction.Behaviors>
+				</ComboBox>
 
-					<ContextMenu:ContextMenuService.ContextMenu>
-						<ContextMenu:ContextMenu>
-							<ContextMenu:MenuItem Header="Delete"
-                                                  Command="{Binding DeleteReplication}">
-								<ContextMenu:MenuItem.Icon>
-									<Image Source="{StaticResource Image_Delete_Tiny}"/>
-								</ContextMenu:MenuItem.Icon>
-							</ContextMenu:MenuItem>
-						</ContextMenu:ContextMenu>
-					</ContextMenu:ContextMenuService.ContextMenu>
-
-				</ListBox>
-			</Grid>
-
-			<sdk:GridSplitter Grid.Row="1" 
-								  VerticalAlignment="Center" 
-								  HorizontalAlignment="Stretch"/>
+                <Button Command="{Binding AddReplication}"
+                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                            ToolTipService.ToolTip="Add Sql Replication"
+							VerticalAlignment="Center" Margin="15,0"
+                        >
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource Image_Add_Tiny}"
+									   Stretch="None"/>
+                            <TextBlock Text="Add New" Margin="2,0,0,0"></TextBlock>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </StackPanel>
 
 			<TextBlock Grid.Row="2" 
 						   Text="Select a replication to edit it" 
@@ -83,69 +93,69 @@
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
-				<toolkit:WrapPanel Orientation="Horizontal" Margin="5">
-					<StackPanel Orientation="Horizontal">
-						<TextBlock Text="Name: " VerticalAlignment="Center"/>
-						<TextBox Text="{Binding SelectedReplication.Value.Name, Mode=TwoWay}" MinWidth="150" TextAlignment="Left" VerticalAlignment="Center"/>
+                <Grid Margin="10,5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+						<TextBlock Grid.Row="0" Grid.Column="0" Text="Name: " VerticalAlignment="Center"/>
+                        <TextBox  Grid.Row="0" Grid.Column="1" Text="{Binding SelectedReplication.Value.Name, Mode=TwoWay}" MinWidth="150" TextAlignment="Left" VerticalAlignment="Center"
+                                  Margin="5,5,0,5" />
 
-						<TextBlock Text="      "/>
-					</StackPanel>
 
-					<StackPanel Orientation="Horizontal">
-						<TextBlock Text="Factory Name: " VerticalAlignment="Center"/>
-						<ComboBox SelectedItem="{Binding SelectedReplication.Value.FactoryName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-							  ItemsSource="{Binding AvilableFactoryNames}"
-							  Margin="5" 
-							  Width="350"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Sql Provider: " VerticalAlignment="Center"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" SelectedItem="{Binding SelectedReplication.Value.FactoryName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+							  ItemsSource="{Binding AvailableFactoryNames}"
+							  Margin="5,5,0,5" 
+							  Width="350"
+                              Height="26"
+                              HorizontalAlignment="Left"/>
 
-						<TextBlock Text="      "/>
-					</StackPanel>
-					
-					<StackPanel Orientation="Horizontal">
-						<TextBlock Text="Collection: " VerticalAlignment="Center"/>
-						<ComboBox SelectedIndex="{Binding SelectedCollectionIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-							  ItemsSource="{Binding AvailableObjects}"
-							  Margin="5" 
-							  Width="350"/>
-					</StackPanel>		
-				</toolkit:WrapPanel>
-
-				<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
-					<ComboBox x:Name="ConnectionStringMode" VerticalAlignment="Center" SelectedIndex="{Binding SelectedConnectionStringIndex, Mode=TwoWay}">
-						<ComboBoxItem Content="Connection String: "/>
-						<ComboBoxItem Content="Connection String Name: "/>
-						<ComboBoxItem Content="Connection String Setting Name: "/>
+                    <ComboBox Grid.Row="2" Grid.Column="0" x:Name="ConnectionStringMode" VerticalAlignment="Center" SelectedIndex="{Binding SelectedConnectionStringIndex, Mode=TwoWay}"
+                              Width="215" Height="26">
+						<ComboBox.ItemsSource>
+                            <Behaviors:StringCollection>
+                                <sys:String>Connection String:</sys:String>
+                                <sys:String>Connection String Name:</sys:String>
+                                <sys:String>Connection String Setting Name:</sys:String>
+                            </Behaviors:StringCollection>
+                        </ComboBox.ItemsSource>
 					</ComboBox>
 
-					<TextBlock Text="  "/>
-					
-					<TextBox Text="{Binding SelectedReplication.Value.ConnectionString, Mode=TwoWay}" 
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SelectedReplication.Value.ConnectionString, Mode=TwoWay}" 
 							 Visibility="{Binding ElementName=ConnectionStringMode, Path=SelectedIndex, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=0}"
-							 MinWidth="250"/>
-					<TextBox Text="{Binding SelectedReplication.Value.ConnectionStringName, Mode=TwoWay}"
+							 MinWidth="250" Margin="5,5,0,5" />
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SelectedReplication.Value.ConnectionStringName, Mode=TwoWay}"
 							 Visibility="{Binding ElementName=ConnectionStringMode, Path=SelectedIndex, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=1}"
-							 MinWidth="250"/>
-					<TextBox Text="{Binding SelectedReplication.Value.ConnectionStringSettingName, Mode=TwoWay}"
+							 MinWidth="250" Margin="5,5,0,5" />
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SelectedReplication.Value.ConnectionStringSettingName, Mode=TwoWay}"
 							 Visibility="{Binding ElementName=ConnectionStringMode, Path=SelectedIndex, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=2}"
-							 MinWidth="250"/>
-				</StackPanel>
+							 MinWidth="250" Margin="5,5,0,5" />
 
-				<StackPanel Grid.Row="2" Orientation="Horizontal" Margin="5">
-					<TextBlock Text="Disabled: " VerticalAlignment="Center"/>
-					<CheckBox IsChecked="{Binding SelectedReplication.Value.Disabled, Mode=TwoWay}" VerticalAlignment="Center"/>
-				</StackPanel>
-
-				<Grid Grid.Row="3">
+                    <TextBlock Grid.Row="3" Grid.Column="0"  Text="Source Document Collection:" VerticalAlignment="Center"/>
+                    <ComboBox  Grid.Row="3" Grid.Column="1" SelectedIndex="{Binding SelectedCollectionIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+							  ItemsSource="{Binding AvailableObjects}"
+							  Margin="5" 
+                               Height="26"
+							  Width="350" HorizontalAlignment="Left"/>
+                </Grid>
+                <Grid Grid.Row="1" Margin="10,5">
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>
 						<RowDefinition Height="*"/>
 					</Grid.RowDefinitions>
-						<TextBlock Text="Script: "/>
-						<Editors:JsonEditor Grid.Row="1" BoundDocument="{Binding Script}" Margin="5,0,10,10" />
+						<TextBlock Text="Script: " Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
+						<Editors:JsonEditor Grid.Row="1" BoundDocument="{Binding Script}" Margin="0" />
 				</Grid>
 			</Grid>
 		</Grid>
