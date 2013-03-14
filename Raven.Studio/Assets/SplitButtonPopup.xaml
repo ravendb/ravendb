@@ -38,6 +38,7 @@
                                 <VisualState x:Name="Pressed">
                                     <Storyboard>
                                         <DoubleAnimation Duration="0:0:0.1" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="border"/>
+                                        <DoubleAnimation Duration="0:0:0.1" To="1" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="Separator" />
                                         <ObjectAnimationUsingKeyFrames Duration="0:0:0.01" Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="border" >
                                             <DiscreteObjectKeyFrame KeyTime="0:0:0.01" Value="{StaticResource PressedBrush}"/>
                                         </ObjectAnimationUsingKeyFrames>
@@ -45,7 +46,8 @@
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
                                     <Storyboard>
-                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" To=".55"/>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="contentPresenter" Storyboard.TargetProperty="Opacity" To=".35"/>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DropdownArrow" Storyboard.TargetProperty="Opacity" To=".35"/>
                                     </Storyboard>
                                 </VisualState>
                             </VisualStateGroup>
@@ -58,9 +60,7 @@
                                 <VisualState x:Name="Unfocused" />
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="border" CornerRadius="2" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" Opacity="0">
-
-                        </Border>
+                        <Border x:Name="border" CornerRadius="2" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" Opacity="0"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition/>
@@ -87,13 +87,12 @@
                                 </Path>
                             </StackPanel>
                             <Grid x:Name="SplitElement" Grid.Column="2" Background="Transparent" ToolTipService.ToolTip="{TemplateBinding DropDownToolTip}">
-                                <Path Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>
+                                <Path x:Name="DropdownArrow"  Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>
                             </Grid>
                             <Popup x:Name="PopupElement" b:Popup.StaysOpen="False">
                                 <ContentPresenter Content="{TemplateBinding PopupContent}"/>
                             </Popup>
                         </Grid>
-                        <Rectangle x:Name="DisabledVisualElement" RadiusX="0" RadiusY="0" Fill="#FFFFFFFF" Opacity="0" IsHitTestVisible="false" />
                         <Rectangle x:Name="FocusVisualElement" RadiusX="0" RadiusY="0" Margin="2" Stroke="#D5D5D5" StrokeThickness="1" Opacity="0" IsHitTestVisible="false" />
                     </Grid>
                 </ControlTemplate>

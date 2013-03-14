@@ -43,7 +43,8 @@
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
                                     <Storyboard>
-                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" To=".55"/>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="contentPresenter" Storyboard.TargetProperty="Opacity" To=".35"/>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DropdownArrow" Storyboard.TargetProperty="Opacity" To=".35"/>
                                     </Storyboard>
                                 </VisualState>
                             </VisualStateGroup>
@@ -69,9 +70,8 @@
                             <Popup x:Name="PopupElement" b:Popup.StaysOpen="False">
                                 <ContentPresenter Content="{TemplateBinding PopupContent}"/>
                             </Popup>
-                            <Path Grid.Column="1" Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>
+                            <Path x:Name="DropdownArrow" Grid.Column="1" Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>
                         </Grid>
-                        <Rectangle x:Name="DisabledVisualElement" RadiusX="0" RadiusY="0" Fill="#FFFFFFFF" Opacity="0" IsHitTestVisible="false" />
                         <Rectangle x:Name="FocusVisualElement" RadiusX="0" RadiusY="0" Margin="2" Stroke="#D5D5D5" StrokeThickness="1" Opacity="0" IsHitTestVisible="false" />
                     </Grid>
                 </ControlTemplate>
