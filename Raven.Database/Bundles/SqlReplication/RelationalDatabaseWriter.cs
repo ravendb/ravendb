@@ -68,12 +68,12 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public bool Execute(ConversionScriptResult scriptResult)
 		{
+			var identifiers = scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList();
 			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
 			{
 				// first, delete all the rows that might already exist there
 				DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn,
-				            scriptResult.Data.SelectMany(x => x.Value).Select(x => x.DocumentId).Distinct().ToList());
-
+				            identifiers);
 			}
 
 			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
@@ -85,9 +85,15 @@ namespace Raven.Database.Bundles.SqlReplication
 				InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable);
 			}
 
-			tx.Commit();
+			Commit();
 
 			return hadErrors == false;
+		}
+
+		public bool Commit()
+		{
+			tx.Commit();
+			return true;
 		}
 
 		private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable)
@@ -164,12 +170,12 @@ namespace Raven.Database.Bundles.SqlReplication
 						.Append(commandBuilder.QuoteIdentifier(pkName))
 						.Append(" IN (");
 
-					for (int j = i; j < maxParams; j++)
+					for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
 					{
 						var dbParameter = cmd.CreateParameter();
 						dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, "p" + i);
 						dbParameter.Value = identifiers[j];
-
+						cmd.Parameters.Add(dbParameter);
 						if (i != j)
 							sb.Append(", ");
 

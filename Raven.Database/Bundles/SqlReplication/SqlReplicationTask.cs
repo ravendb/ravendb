@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Configuration;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -34,7 +35,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
-		public event Action AfterReplicationCompleted = delegate { };
+		public event Action<int> AfterReplicationCompleted = delegate { };
 
 		public DocumentDatabase Database { get; set; }
 
@@ -95,10 +96,10 @@ namespace Raven.Database.Bundles.SqlReplication
 						continue;
 
 					hasChanges = true;
-					accessor.Lists.Set("SqlReplication/Deletions/" + config.Name, id, metadata, UuidType.Documents);
+					accessor.Lists.Set(GetSqlReplicationDeletionName(config), id, metadata, UuidType.Documents);
 				}
 				if (hasChanges)
-					Database.WorkContext.ShouldNotifyAboutWork(() => "SQL REPL DELETE " + id);
+					Database.WorkContext.NotifyAboutWork();
 			});
 		}
 
@@ -130,25 +131,15 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag.Value);
-				if (documents.Count == 0 ||
-					documents.All(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))) // ignore changes for system docs
-				{
-					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
-					continue;
-				}
-
-				var latestEtag = documents.Last().Etag.Value;
-
 				var relevantConfigs = config.Where(x =>
-						{
-							if (x.Disabled)
-								return false;
-							var sqlReplicationStatistics = statistics.GetOrDefault(x.Name);
-							if (sqlReplicationStatistics == null)
-								return true;
-							return SystemTime.UtcNow >= sqlReplicationStatistics.LastErrorTime;
-						}) // have error or the timeout expired
+				{
+					if (x.Disabled)
+						return false;
+					var sqlReplicationStatistics = statistics.GetOrDefault(x.Name);
+					if (sqlReplicationStatistics == null)
+						return true;
+					return SystemTime.UtcNow >= sqlReplicationStatistics.LastErrorTime;
+				}) // have error or the timeout expired
 						.ToList();
 
 				if (relevantConfigs.Count == 0)
@@ -157,32 +148,50 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag.Value);
+
+				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
+
+				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
+				Guid? latestEtag = null;
+				if (documents.Count != 0)
+					latestEtag = documents[documents.Count - 1].Etag;
+
+				foreach (var relevantConfig in relevantConfigs)
+				{
+					var cfg = relevantConfig;
+					Database.TransactionalStorage.Batch(accessor =>
+					{
+						deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
+														  GetLastEtagFor(localReplicationStatus, cfg), 
+														  latestEtag, 
+														  1024)
+											  .ToList();
+					});
+				}
+
+				// No documents AND there aren't any deletes to replicate
+				if (documents.Count == 0 && deletedDocsByConfig.Sum(x => x.Value.Count) == 0)  
+				{
+					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+					continue;
+				}
+
+				var successes = new ConcurrentQueue<SqlReplicationConfig>();
 				try
 				{
-					var successes = new ConcurrentQueue<SqlReplicationConfig>();
 					BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(Database.WorkContext, relevantConfigs, replicationConfig =>
 					{
 						try
 						{
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
-							var docsToReplicate = documents
-								// haven't replicate the etag yet
-								.Where(x => ByteArrayComparer.Instance.Compare(lastReplicatedEtag, x.Etag) <= 0)
-								.ToList();
-							List<ListItem> deletedDocs = null;
-							Database.TransactionalStorage.Batch(accessor =>
-							{
-								Guid? latestCurrentEtag = null;
-								if (docsToReplicate.Count != 0)
-								{
-									latestCurrentEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
-								}
-								deletedDocs = accessor.Lists.Read(GetSqlReplicationDeletionName(replicationConfig),
-																  lastReplicatedEtag, latestCurrentEtag, 1024)
-													  .ToList();
-							});
 
-							HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
+							var deletedDocs = deletedDocsByConfig[replicationConfig];
+							var docsToReplicate = documents
+								.Where(x => ByteArrayComparer.Instance.Compare(lastReplicatedEtag, x.Etag) <= 0) // haven't replicate the etag yet
+								.ToList();
+
+							latestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
 
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
 								ReplicateChangesToDesintation(replicationConfig, docsToReplicate))
@@ -219,12 +228,12 @@ namespace Raven.Database.Bundles.SqlReplication
 							localReplicationStatus.LastReplicatedEtags.Add(new LastReplicatedEtag
 							{
 								Name = cfg.Name,
-								LastDocEtag = latestEtag
+								LastDocEtag = latestEtag ?? Guid.Empty
 							});
 						}
 						else
 						{
-							destEtag.LastDocEtag = latestEtag;
+							destEtag.LastDocEtag = latestEtag ?? destEtag.LastDocEtag;
 						}
 					}
 
@@ -233,12 +242,12 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 				finally
 				{
-					AfterReplicationCompleted();
+					AfterReplicationCompleted(successes.Count);
 				}
 			}
 		}
 
-		private void HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<JsonDocument> docsToReplicate)
+		private Guid? HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<JsonDocument> docsToReplicate)
 		{
 			// This code is O(N^2), I don't like it, but we don't have a lot of deletes, and in order for it to be really bad
 			// we need a lot of deletes WITH a lot of changes at the same time
@@ -264,18 +273,38 @@ namespace Raven.Database.Bundles.SqlReplication
 					index--;
 				}
 			}
+
+			Guid? latest = null;
+			if (deletedDocs.Count != 0)
+				latest = deletedDocs[deletedDocs.Count - 1].Etag;
+
+			if (docsToReplicate.Count != 0)
+			{
+				var maybeLatest = docsToReplicate[docsToReplicate.Count - 1].Etag;
+				Debug.Assert(maybeLatest != null);
+				if (latest == null)
+					return maybeLatest;
+				if (Etag.IsGreaterThan(maybeLatest.Value, latest.Value))
+					return maybeLatest;
+			}
+
+			return latest;
 		}
 
 		private bool ReplicateDeletionsToDestination(SqlReplicationConfig cfg, IEnumerable<ListItem> deletedDocs)
 		{
+			var identifiers = deletedDocs.Select(x => x.Key).ToList();
+			if (identifiers.Count == 0)
+				return true;
+
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 			using (var writer = new RelationalDatabaseWriter(Database, cfg, replicationStats))
 			{
-				var identifiers = deletedDocs.Select(x => x.Key).ToList();
 				foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
 				{
 					writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, identifiers);
 				}
+				writer.Commit();
 			}
 
 			return true;
