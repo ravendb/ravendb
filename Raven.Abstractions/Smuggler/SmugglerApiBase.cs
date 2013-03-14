@@ -1,4 +1,4 @@
-#if !SILVERLIGHT && !NETFX_CORE
+#if !SILVERLIGHT && !NETFX_CORE && !MONO
 using System;
 using System.Diagnostics;
 using System.Globalization;
