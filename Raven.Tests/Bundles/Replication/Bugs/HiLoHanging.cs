@@ -16,7 +16,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 		{
 			const string key = "Raven/Hilo/managers";
 
-			var store1 = CreateStore();
+			var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers);
 			var store2 = CreateStore();
 
 			TellFirstInstanceToReplicateToSecondInstance();
