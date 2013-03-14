@@ -41,7 +41,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				{"Max", 49}
 			}, jsonDocument.Metadata);
 
-			WaitForReplication(store1, key, changedSince: etag);
+			WaitForReplication(store1, session => session.Load<dynamic>(key).Max == 49);
 
 			for (long i = 0; i < 4; i++)
 			{
