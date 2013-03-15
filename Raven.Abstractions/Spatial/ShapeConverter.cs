@@ -10,15 +10,13 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Spatial
 {
-	public abstract class AbstractShapeConverter
+	public class ShapeConverter
 	{
 		private static readonly GeoJsonWktConverter GeoJsonConverter = new GeoJsonWktConverter();
 		private static readonly Regex RegexX = new Regex("^(?:X|Longitude|Lng|Lon|Long)$", RegexOptions.IgnoreCase);
 		private static readonly Regex RegexY = new Regex("^(?:Y|Latitude|Lat)$", RegexOptions.IgnoreCase);
 
-		public abstract bool TryConvert(object value, out string result);
-
-		public bool TryConvertInner(object value, out string result)
+		public virtual bool TryConvert(object value, out string result)
 		{
 			var jValue = value as RavenJValue;
 			if (jValue != null && jValue.Type == JTokenType.String)

@@ -15,6 +15,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Raven.Abstractions.Spatial;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -444,7 +445,7 @@ namespace Raven.Client.Document
 		{
 			isSpatialQuery = true;
 			spatialFieldName = fieldName;
-			queryShape = shapeWKT;
+			queryShape = new WktSanitizer().Sanitize(shapeWKT);
 			spatialRelation = relation;
 			this.distanceErrorPct = distanceErrorPct;
 			return (TSelf) this;
@@ -452,12 +453,20 @@ namespace Raven.Client.Document
 
 		protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria, double distanceErrorPct = 0.025)
 		{
+
+
 			var wkt = criteria.Shape as string;
-			if (wkt == null)
+			if (wkt == null && criteria.Shape != null)
 			{
-				var converter = new ClientShapeConverter(DocumentConvention.CreateSerializer());
-				if (!converter.TryConvert(criteria.Shape, out wkt))
-					throw new ArgumentException("Shape");
+				var jsonSerializer = DocumentConvention.CreateSerializer();
+
+				using (var jsonWriter = new RavenJTokenWriter())
+				{
+					var converter = new ShapeConverter();
+					jsonSerializer.Serialize(jsonWriter, criteria.Shape);
+					if (!converter.TryConvert(jsonWriter.Token, out wkt))
+						throw new ArgumentException("Shape");
+				}
 			}
 
 			if (wkt == null)
@@ -465,7 +474,7 @@ namespace Raven.Client.Document
 
 			isSpatialQuery = true;
 			spatialFieldName = fieldName;
-			queryShape = wkt;
+			queryShape = new WktSanitizer().Sanitize(wkt);
 			spatialRelation = criteria.Relation;
 			this.distanceErrorPct = distanceErrorPct;
 			return (TSelf) this;

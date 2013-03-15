@@ -17,6 +17,7 @@ using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Spatial;
 using Raven.Database.Indexing.Spatial;
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Distance;
@@ -30,6 +31,7 @@ namespace Raven.Database.Indexing
 	{
 		private static readonly NtsSpatialContext GeoContext;
 		private static readonly NtsShapeReadWriter GeoShapeReadWriter;
+		private static readonly WktSanitizer WktSanitizer = new WktSanitizer();
 
 		private readonly SpatialOptions options;
 		private readonly NtsSpatialContext context;
@@ -151,6 +153,9 @@ namespace Raven.Database.Indexing
 		{
 			if (options.Type == SpatialFieldType.Geography)
 				shapeWKT = TranslateCircleFromKmToRadians(shapeWKT);
+
+			shapeWKT = WktSanitizer.Sanitize(shapeWKT);
+
 			return ntsShapeReadWriter.ReadShape(shapeWKT);
 		}
 

@@ -726,8 +726,9 @@
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
-    <Compile Include="Spatial\AbstractShapeConverter.cs" />
+    <Compile Include="Spatial\ShapeConverter.cs" />
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
+    <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />

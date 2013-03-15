@@ -856,11 +856,14 @@
     <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
       <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Spatial\AbstractShapeConverter.cs">
-      <Link>Imports\Spatial\AbstractShapeConverter.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Spatial\GeoJsonWktConverter.cs">
       <Link>Imports\Spatial\GeoJsonWktConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Spatial\ShapeConverter.cs">
+      <Link>Imports\Spatial\ShapeConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Spatial\WktSanitizer.cs">
+      <Link>Imports\Spatial\WktSanitizer.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
@@ -1122,9 +1125,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Spatial\SpatialCriteriaFactory.cs">
       <Link>Imports\Spatial\SpatialCriteriaFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Spatial\ClientShapeConverter.cs">
-      <Link>Imports\Spatial\ClientShapeConverter.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>

@@ -10,7 +10,7 @@ using Raven.Abstractions.Spatial;
 
 namespace Raven.Database.Indexing.Spatial
 {
-	public class RavenShapeConverter : AbstractShapeConverter
+	public class RavenShapeConverter : ShapeConverter
 	{
 		private readonly SpatialOptions options;
 
@@ -32,7 +32,7 @@ namespace Raven.Database.Indexing.Spatial
 				return false;
 			}
 
-			if (TryConvertInner(value, out result))
+			if (base.TryConvert(value, out result))
 				return true;
 
 			var str = value as string;
