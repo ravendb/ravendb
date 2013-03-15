@@ -51,5 +51,5 @@
 	<Converters:StringToSingleLineConverter x:Key="StringToSingleLine"/>
 	<Models:DocumentSize x:Key="DocumentSize" />
 	<Converters:MillisecondsToMinutesConverter x:Key="MillisecondsToMinutes" />
-
+	<Converters:StringEmptyToValueConverter x:Key="StringEmptyToUnnamed" ValueWhenEmpty="Unnamed"/>
 </ResourceDictionary>
