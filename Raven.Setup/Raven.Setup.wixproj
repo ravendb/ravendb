@@ -124,6 +124,9 @@
   <PropertyGroup>
     <PostBuildEvent>$(SolutionDir)Tools\WiX\3.7\setupbld.exe -out $(TargetDir)$(TargetName).exe -msu $(TargetDir)$(TargetName).msi -setup $(ProjectDir)setup.exe</PostBuildEvent>
   </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>del $(TargetDir)$(TargetName).exe</PreBuildEvent>
+  </PropertyGroup>
   <!--
 	To modify your build process, add your task inside one of the targets below and uncomment it.
 	Other similar extension points exist, see Wix.targets.
