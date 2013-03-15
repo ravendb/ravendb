@@ -5,6 +5,9 @@
 
       <UIRef Id="WixUI_InstallDir" />
       <UIRef Id="WixUI_ErrorProgressText" />
+
+      <ProgressText Action="SetupPerformanceCounters">Granting permissions to performance counters</ProgressText>
+      <ProgressText Action="InstallRavenService">Installing [SERVICE_NAME] service</ProgressText>
       
       <DialogRef Id="IisSetupDlg" />
 
