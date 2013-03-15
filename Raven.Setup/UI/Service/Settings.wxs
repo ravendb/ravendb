@@ -2,7 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
     <UI>
-      <Dialog Id="ServiceSettings" Width="370" Height="270">
+      <Dialog Id="ServiceSettings" Width="370" Height="270" Title="[ProductName] Setup">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton"  X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
           <Condition Action="disable">SERVICE_NAME = "" OR SERVICE_PORT = ""</Condition>

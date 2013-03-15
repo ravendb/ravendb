@@ -7,7 +7,7 @@
     <Property Id="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity" />
     
     <UI>
-      <Dialog Id="AppPoolSettingsDlg" Width="370" Height="270" Title="Application Pool Settings - [ProductName]" NoMinimize="yes">
+      <Dialog Id="AppPoolSettingsDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
           <!--<Condition Action="disable">SERVICE_NAME = "" OR SERVICE_PORT = ""</Condition>

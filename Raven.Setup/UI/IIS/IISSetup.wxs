@@ -5,7 +5,7 @@
     <Property Id="CUSTOM_APPLICATION_POOL" Value="1" />
     
     <UI>
-      <Dialog Id="IisSetupDlg" Width="370" Height="270" Title="IIS Settings - [ProductName]" NoMinimize="yes">
+      <Dialog Id="IisSetupDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton"  X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
           <Condition Action="disable">WEBSITE_DESCRIPTION = "" OR VIRTUAL_DIR_VAL = ""</Condition>
