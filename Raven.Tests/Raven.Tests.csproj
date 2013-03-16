@@ -726,6 +726,7 @@
     <Compile Include="Spatial\GeoJsonConverterTests.cs" />
     <Compile Include="Spatial\GeoJsonTests.cs" />
     <Compile Include="Spatial\GeoJsonWktConverterTests.cs" />
+    <Compile Include="Spatial\GeoUriTests.cs" />
     <Compile Include="Spatial\JsonConverters\GeoJson\AttributesTableConverter.cs" />
     <Compile Include="Spatial\JsonConverters\GeoJson\CoordinateConverters.cs" />
     <Compile Include="Spatial\JsonConverters\GeoJson\EnvelopeConverter.cs" />

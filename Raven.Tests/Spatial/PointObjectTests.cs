@@ -10,7 +10,6 @@ namespace Raven.Tests.Spatial
 		public class SpatialDoc
 		{
 			public string Id { get; set; }
-			public object Name { get; set; }
 			public object Point { get; set; }
 		}
 
@@ -34,6 +33,7 @@ namespace Raven.Tests.Spatial
 
 				using (var session = store.OpenSession())
 				{
+					session.Store(new SpatialDoc { Point = null });
 					session.Store(new SpatialDoc { Point = new [] { 45d, 45d } });
 					session.Store(new SpatialDoc { Point = new { X = 45d, Y = 45d } });
 					session.Store(new SpatialDoc { Point = new { Latitude = 45d, Longitude = 45d } });

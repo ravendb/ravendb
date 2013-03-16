@@ -10,6 +10,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Spatial
 {
+	/// <summary>
+	/// Converts shape objects to strings, if they are not already a string
+	/// </summary>
 	public class ShapeConverter
 	{
 		private static readonly GeoJsonWktConverter GeoJsonConverter = new GeoJsonWktConverter();
@@ -18,6 +21,13 @@ namespace Raven.Abstractions.Spatial
 
 		public virtual bool TryConvert(object value, out string result)
 		{
+			var s = value as string;
+			if (s != null)
+			{
+				result = s;
+				return true;
+			}
+
 			var jValue = value as RavenJValue;
 			if (jValue != null && jValue.Type == JTokenType.String)
 			{
