@@ -264,7 +264,8 @@ namespace Raven.Client.Indexes
 
 		private string GetPropertyName(string name, Type exprType)
 		{
-			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ??
+							   exprType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).First(x => x.Name == name);
 			if (propertyInfo != null)
 			{
 				foreach (var customAttribute in propertyInfo.GetCustomAttributes(true))
