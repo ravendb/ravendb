@@ -1,6 +1,4 @@
 ﻿using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -11,7 +9,6 @@ namespace Raven.Tests.Spatial
 		public class SpatialDoc
 		{
 			public string Id { get; set; }
-			public object Name { get; set; }
 			public object GeoJson { get; set; }
 		}
 
@@ -19,10 +16,7 @@ namespace Raven.Tests.Spatial
 		{
 			public GeoJsonIndex()
 			{
-				Map = docs => from doc in docs select new { doc.Name, doc.GeoJson };
-
-				Index(x => x.Name, FieldIndexing.Analyzed);
-				Store(x => x.Name, FieldStorage.Yes);
+				Map = docs => from doc in docs select new { doc.GeoJson };
 
 				Spatial(x => x.GeoJson, x => x.Geography());
 			}
@@ -31,7 +25,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void PointTest()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var store = NewDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new GeoJsonIndex());
@@ -40,7 +34,6 @@ namespace Raven.Tests.Spatial
 				{
 					// @"{""type"":""Point"",""coordinates"":[45.0,45.0]}"
 					session.Store(new SpatialDoc {
-						                             Name = "dog",
 						                             GeoJson = new {
 							                                           type = "Point",
 							                                           coordinates = new[] { 45d, 45d }
@@ -53,11 +46,8 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					var matches = session.Query<SpatialDoc, GeoJsonIndex>()
-					                     .Customize(x =>
-					                     {
-						                     x.WithinRadiusOf("GeoJson", 700, 40, 40);
-						                     x.WaitForNonStaleResults();
-					                     }).Any();
+					                     .Customize(x => x.WithinRadiusOf("GeoJson", 700, 40, 40))
+										 .Any();
 
 					Assert.True(matches);
 				}

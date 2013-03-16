@@ -59,7 +59,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void Integration()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var store = NewDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new SpatialIndex());
@@ -80,11 +80,8 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					var matches = session.Query<RavenJObject, SpatialIndex>()
-					                     .Customize(x =>
-					                     {
-											 x.WithinRadiusOf("WKT", 150, 50.8, 50.8);
-						                     x.WaitForNonStaleResults();
-					                     }).Count();
+					                     .Customize(x => x.WithinRadiusOf("WKT", 150, 50.8, 50.8))
+										 .Count();
 
 					Assert.True(matches == 6);
 				}

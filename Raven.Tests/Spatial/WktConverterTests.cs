@@ -14,10 +14,7 @@ namespace Raven.Tests.Spatial
 		public IDocumentStore NewDocumentStore()
 		{
 			var store = new EmbeddableDocumentStore {RunInMemory = true};
-			store.Conventions.CustomizeJsonSerializer = serializer =>
-			{
-				serializer.Converters.Add(new WktConverter());
-			};
+			store.Conventions.CustomizeJsonSerializer = x => x.Converters.Add(new WktConverter());
 			store.Initialize();
 			store.ExecuteIndex(new CartesianIndex());
 			return store;

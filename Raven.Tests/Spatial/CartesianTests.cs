@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Xunit;
@@ -32,7 +31,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void Points()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var store = NewDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new CartesianIndex());
@@ -51,11 +50,8 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					var matches = session.Query<RavenJObject, CartesianIndex>()
-						.Customize(x =>
-						{
-							x.WithinRadiusOf("WKT", 70, 1900, 1900);
-							x.WaitForNonStaleResults();
-						}).Any();
+						.Customize(x => x.WithinRadiusOf("WKT", 70, 1900, 1900))
+						.Any();
 
 					Assert.True(matches);
 				}

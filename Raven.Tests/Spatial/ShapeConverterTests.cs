@@ -1,9 +1,5 @@
 ﻿using System.Linq;
-using GeoAPI.Geometries;
-using NetTopologySuite.Geometries;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Spatial.JsonConverters.Wkt;
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -13,7 +9,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void Points()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var store = NewDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new CartesianIndex());
