@@ -968,16 +968,12 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-	
+
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,convention)
-						.AddOperationHeaders(OperationsHeaders)
-						)
+				new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
 				{
 					AvoidCachingRequest = query.DisableCaching
-				});
-					AvoidCachingRequest = query.DisableCaching
-				});
+				}.AddOperationHeaders(OperationsHeaders));
 
 			request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
