@@ -631,6 +631,7 @@
     <Compile Include="MailingList\Accounts.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
+    <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
@@ -688,6 +689,7 @@
     <Compile Include="MailingList\RavenDB_859.cs" />
     <Compile Include="MailingList\RavenCannotQueryAgainstFloatProperty.cs" />
     <Compile Include="MailingList\LateBoundValue.cs" />
+    <Compile Include="MailingList\RavenDeserializationBug.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />

@@ -750,27 +750,27 @@ namespace Raven.Client.Connection.Async
 					.AddOperationHeaders(OperationsHeaders));
 
 			return request.ReadResponseJsonAsync()
-			              .ContinueWith(task => new LicensingStatus
-			                                    {
-				                                    Error = task.Result.Value<bool>("Error"),
-				                                    Message = task.Result.Value<string>("Message"),
-				                                    Status = task.Result.Value<string>("Status"),
-			                                    });
+				.ContinueWith(task => new LicensingStatus
+				{
+					Error = task.Result.Value<bool>("Error"),
+					Message = task.Result.Value<string>("Message"),
+					Status = task.Result.Value<string>("Status"),
+				});
 		}
 
 		public Task<BuildNumber> GetBuildNumber()
 		{
 			var actualUrl = string.Format("{0}/build/version", url).NoCache();
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-			new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
-			.AddOperationHeaders(OperationsHeaders));
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
 			return request.ReadResponseJsonAsync()
-			.ContinueWith(task => new BuildNumber
-			{
-				BuildVersion = task.Result.Value<string>("BuildVersion"),
-				ProductVersion = task.Result.Value<string>("ProductVersion")
-			});
+				.ContinueWith(task => new BuildNumber
+				{
+					BuildVersion = task.Result.Value<string>("BuildVersion"),
+					ProductVersion = task.Result.Value<string>("ProductVersion")
+				});
 
 		}
 #else
@@ -968,10 +968,14 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
-				                                                                         convention)
+	
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,convention)
+						.AddOperationHeaders(OperationsHeaders)
+						)
 				{
+					AvoidCachingRequest = query.DisableCaching
+				});
 					AvoidCachingRequest = query.DisableCaching
 				});
 
@@ -1525,9 +1529,9 @@ namespace Raven.Client.Connection.Async
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
-																			   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
-																				   .AddOperationHeaders(OperationsHeaders))
-														.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			                                                                   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
+				                                                                   .AddOperationHeaders(OperationsHeaders))
+			                                            .AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync().ContinueWith(task =>
 			{
@@ -1549,7 +1553,7 @@ namespace Raven.Client.Connection.Async
 					if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 					{
 						throw new ConflictException("Conflict detected on " + key +
-													", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+						                            ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
 						{
 							Etag = httpWebResponse.GetEtagHeader()
 						};

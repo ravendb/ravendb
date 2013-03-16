@@ -247,6 +247,7 @@
     <Compile Include="Behaviors\ShowAutoCompleteDropDown.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
+    <Compile Include="Behaviors\StudioDataTrigger.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\CsvImportCommand.cs" />
@@ -325,6 +326,7 @@
     <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
     <Compile Include="Infrastructure\Converters\PriorityToFontColorConverter.cs" />
     <Compile Include="Infrastructure\Converters\PriorityToFontStyleConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibilityByParamInEqualityConverter.cs" />
     <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
