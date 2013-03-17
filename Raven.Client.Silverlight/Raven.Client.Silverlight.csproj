@@ -107,191 +107,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Bundles\Versioning\*.cs">
       <Link>Bundles\Versioning\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
-      <Link>Imports\Extensions\Absdtractions\TaskExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Indexing\FieldTermVector.cs">
-      <Link>Imports\Indexing\FieldTermVector.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptions.cs">
-      <Link>Imports\Indexing\SpatialOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Indexing\SpatialOptionsFactory.cs">
-      <Link>Imports\Indexing\SpatialOptionsFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Indexing\SuggestionOptions.cs">
-      <Link>Imports\Indexing\SuggestionOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeISO8601Converter.cs">
-      <Link>Imports\Json\JsonDateTimeISO8601Converter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeOffsetConverter.cs">
-      <Link>Imports\Json\JsonDateTimeOffsetConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonDictionaryDateTimeKeysConverter.cs">
-      <Link>Imports\Json\JsonDictionaryDateTimeKeysConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonNumericConverter.cs">
-      <Link>Imports\Json\JsonNumericConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonToJsonConverter.cs">
-      <Link>Imports\Json\JsonToJsonConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\DictionaryWithParentSnapshot.cs">
-      <Link>Imports\Json\Linq\DictionaryWithParentSnapshot.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\Extensions.cs">
-      <Link>Imports\Json\Linq\Extensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJArray.cs">
-      <Link>Imports\Json\Linq\RavenJArray.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJObject.cs">
-      <Link>Imports\Json\Linq\RavenJObject.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJPath.cs">
-      <Link>Imports\Json\Linq\RavenJPath.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJsonConvert.cs">
-      <Link>Imports\Json\Linq\RavenJsonConvert.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJToken.cs">
-      <Link>Imports\Json\Linq\RavenJToken.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJTokenEqualityComparer.cs">
-      <Link>Imports\Json\Linq\RavenJTokenEqualityComparer.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJTokenReader.cs">
-      <Link>Imports\Json\Linq\RavenJTokenReader.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJTokenWriter.cs">
-      <Link>Imports\Json\Linq\RavenJTokenWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJValue.cs">
-      <Link>Imports\Json\Linq\RavenJValue.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\RavenJsonConverter.cs">
-      <Link>Imports\Json\RavenJsonConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\RavenJsonTextReader.cs">
-      <Link>Imports\Json\RavenJsonTextReader.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Utilities\MathUtils.cs">
-      <Link>Imports\Json\Utilities\MathUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Utilities\MiscellaneousUtils.cs">
-      <Link>Imports\Json\Utilities\MiscellaneousUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Utilities\StringUtils.cs">
-      <Link>Imports\Json\Utilities\StringUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Linq\DynamicList.cs">
-      <Link>Imports\Linq\DynamicList.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Linq\DynamicNullObject.cs">
-      <Link>Imports\Linq\DynamicNullObject.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\ILog.cs">
-      <Link>Imports\Logging\ILog.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\ILogExtensions.cs">
-      <Link>Imports\Logging\ILogExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\ILogManager.cs">
-      <Link>Imports\Logging\ILogManager.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LoggerExecutionWrapper.cs">
-      <Link>Imports\Logging\LoggerExecutionWrapper.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogLevel.cs">
-      <Link>Imports\Logging\LogLevel.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogManager.cs">
-      <Link>Imports\Logging\LogManager.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogManager.cs">
-      <Link>Imports\Logging\LogProviders\Log4NetLogManager.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\LogManagerBase.cs">
-      <Link>Imports\Logging\LogProviders\LogManagerBase.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogManager.cs">
-      <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
       <Link>Imports\MissingFromBCL\WinRTCompetability.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
-      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\OAuth\BasicAuthenticator.cs">
-      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
-      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Spatial\GeoJsonWktConverter.cs">
-      <Link>Imports\Spatial\GeoJsonWktConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Spatial\ShapeConverter.cs">
-      <Link>Imports\Spatial\ShapeConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Spatial\WktSanitizer.cs">
-      <Link>Imports\Spatial\WktSanitizer.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\SystemTime.cs">
-      <Link>Imports\SystemTime.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\AtomicDictionary.cs">
-      <Link>Imports\Util\AtomicDictionary.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\Base62Util.cs">
-      <Link>Imports\Util\Base62Util.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\CompletedTask.cs">
-      <Link>Imports\Util\CompletedTask.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\ConcurrentSet.cs">
-      <Link>Imports\Util\ConcurrentSet.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\EasyReaderWriterLock.cs">
-      <Link>Imports\Util\EasyReaderWriterLock.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\IAsyncEnumerator.cs">
-      <Link>Imports\Util\IAsyncEnumerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
-      <Link>Imports\Util\IncludesUtil.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Util\RavenQuery.cs">
-      <Link>Imports\Util\RavenQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\IDatabaseChanges.cs">
-      <Link>Imports\Changes\IDatabaseChanges.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\LocalConnectionState.cs">
-      <Link>Imports\Changes\LocalConnectionState.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\RemoteDatabaseChanges.cs">
-      <Link>Imports\Changes\RemoteDatabaseChanges.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskedObservable.cs">
-      <Link>Imports\Changes\TaskedObservable.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskErrorExtensions.cs">
-      <Link>Imports\Changes\TaskErrorExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskObservable.cs">
-      <Link>Imports\Changes\TaskObservable.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
-      <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncServerClient.cs">
-      <Link>Connection\Async\AsyncServerClient.cs</Link>
     <Compile Include="..\Raven.Client.Lightweight\Changes\*.cs">
       <Link>Changes\%(FileName)</Link>
     </Compile>
@@ -394,6 +212,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Shard\*.cs">
       <Link>Shard\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Spatial\*.cs">
+      <Link>Imports\Spatial\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\*.cs">
       <Link>Util\%(FileName)</Link>
     </Compile>
@@ -448,25 +269,17 @@
     <Compile Include="..\Raven.Abstractions\MEF\*.cs">
       <Link>Abstructions\MEF\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
-      <Link>Abstructions\MissingFromBCL\WinRTCompetability.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\OAuth\*.cs">
       <Link>Abstructions\OAuth\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Replication\*.cs">
       <Link>Abstructions\Replication\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Spatial\SpatialCriteria.cs">
-      <Link>Imports\Spatial\SpatialCriteria.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Spatial\SpatialCriteriaFactory.cs">
-      <Link>Imports\Spatial\SpatialCriteriaFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
-      <Link>Imports\Util\ConcatObservable.cs</Link>
     <Compile Include="..\Raven.Abstractions\Smuggler\*.cs">
       <Link>Abstructions\Smuggler\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Spatial\*.cs">
+      <Link>Abstructions\Spatial\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\*.cs">
       <Link>Abstructions\Util\%(FileName)</Link>
