@@ -223,8 +223,10 @@ namespace Raven.Abstractions.Smuggler
 				var documents = await GetDocuments(lastEtag);
 				watch.Stop();
 
-				while (documents.MoveNextAsync().Result)
+				while (await documents.MoveNextAsync())
 				{
+					if (documents == null)
+						documents = null;
 					var document = documents.Current;
 
 					if (!options.MatchFilters(document))

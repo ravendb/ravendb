@@ -120,10 +120,14 @@ namespace Raven.Studio.Commands
 						}
 						catch (Exception e)
 						{
-							taskModel.ReportError(e);
-							taskModel.ReportError("Import not completed");
-							taskModel.TaskStatus = TaskStatus.Ended;
-							return new CompletedTask();
+							Infrastructure.Execute.OnTheUI(() =>
+							{
+								taskModel.ReportError(e);
+								taskModel.ReportError("Import not completed");
+								taskModel.TaskStatus = TaskStatus.Ended;
+								return new CompletedTask();
+							});
+
 						}
 					}
 
