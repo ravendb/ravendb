@@ -30,9 +30,7 @@ namespace Raven.Studio.Behaviors
         private void HandleUnloaded(object sender, RoutedEventArgs e)
         {
             if (ContextMenu != null)
-            {
                 ContextMenu.Owner = null;
-            }
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
@@ -40,14 +38,10 @@ namespace Raven.Studio.Behaviors
             var columnHeadersPresenter = AssociatedObject.GetVisualDescendants().OfType<DataGridColumnHeadersPresenter>().FirstOrDefault();
 
             if (columnHeadersPresenter != null && columnHeadersPresenter.Background == null)
-            {
                 columnHeadersPresenter.Background = new SolidColorBrush(Colors.Transparent);
-            }
 
             if (ContextMenu != null)
-            {
                 ContextMenu.Owner = columnHeadersPresenter;
-            }
         }
 
         protected override void OnDetaching()

@@ -52,7 +52,7 @@ namespace Raven.Tests.NotModified
 			using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				// Store an item
-				Guid? firstEtag;
+				Raven.Abstractions.Data.Etag firstEtag;
 				using (var session = docStore.OpenSession())
 				{
 					session.Store(firstItemToStore);
@@ -76,7 +76,7 @@ namespace Raven.Tests.NotModified
 				}
 
 				// Change the item or add a second item
-				Guid? secondEtag;
+				Raven.Abstractions.Data.Etag secondEtag;
 				using (var session = docStore.OpenSession())
 				{
 					session.Store(secondItemToStore);

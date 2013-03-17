@@ -47,7 +47,7 @@ namespace Raven.Abstractions.Commands
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		public Guid? Etag
+		public Etag Etag
 		{
 			get; set;
 		}

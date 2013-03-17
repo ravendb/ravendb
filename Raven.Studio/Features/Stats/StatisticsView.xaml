@@ -5,6 +5,7 @@
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          mc:Ignorable="d">
 
 	<UserControl.Resources>
@@ -33,6 +34,7 @@
 									<Grid.RowDefinitions>
 										<RowDefinition Height="Auto"/>
 										<RowDefinition Height="Auto"/>
+										<RowDefinition Height="Auto"/>
 									</Grid.RowDefinitions>
 
 									<TextBlock Text="{Binding Title}" Style="{StaticResource Style_TextBlock_PagePartHeader}"/>
@@ -52,7 +54,7 @@
 															   Text="{Binding Key}" 
 															   Style="{StaticResource Style_TextBlock_InlineSubHeader}"
 															   VerticalAlignment="Top"/>
-													
+
 													<TextBlock Grid.Row="1" 
 															   Grid.Column="1" 
 															   Text="{Binding Value}"/>
@@ -61,6 +63,45 @@
 											</DataTemplate>
 										</ListBox.ItemTemplate>
 									</ListBox>
+
+									<toolkit:Chart Grid.Row="2" 
+												   Visibility="{Binding ShowChart, Converter={StaticResource BooleanToVisibility}}"
+												   Width="500"
+												   Height="250"
+												   Title="Performance"
+												   Margin="5">
+										<toolkit:LineSeries ItemsSource="{Binding IndexData}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceDeepSkyBlue}"
+															Title="Index"/>
+										
+										<toolkit:LineSeries ItemsSource="{Binding MapData}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceGreen}"
+															Title="Map"/>
+
+										<toolkit:LineSeries ItemsSource="{Binding Level0Data}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceRed}"
+															Title="Reduce 0"/>
+
+										<toolkit:LineSeries ItemsSource="{Binding Level1Data}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformancePurple}"
+															Title="Reduce 1"/>
+										
+										<toolkit:LineSeries ItemsSource="{Binding Level2Data}" 
+															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
+															IndependentValueBinding="{Binding Path=Key}"
+															DataPointStyle="{StaticResource LineDataPointStylePerformanceOrange}"
+															Title="Reduce 2">
+										</toolkit:LineSeries>
+									</toolkit:Chart>
+
 								</Grid>
 							</Grid>
 						</DataTemplate>
@@ -83,11 +124,11 @@
 			<toolkit:DockPanel Margin="4" LastChildFill="False">
 				<StackPanel Orientation="Horizontal">
 					<HyperlinkButton Content="{Binding Breadcrumb}"
-									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									 Style="{StaticResource Style_Link_Breadcrumb_Header}"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="{Binding Breadcrumb, StringFormat='/\{0\}'}"/>
-					<TextBlock Text=">" VerticalAlignment="Center" Margin="4,0"/>
-					<TextBlock Text="Statistics" Style="{StaticResource Style_TextBlock_Breadcrumb}" VerticalAlignment="Center"/>
+					<controls:NavTriangle/>
+					<TextBlock Text="Statistics" Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center"/>
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
 
@@ -112,7 +153,7 @@
 					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 
-				<ComboBox x:Name="ViewSelect" ItemsSource="{Binding ViewOptions}" SelectedIndex="0" SelectedValue="{Binding SeletedViewOption.Value, Mode=TwoWay}"/>
+				<ComboBox x:Name="ViewSelect" ItemsSource="{Binding ViewOptions}" SelectedValue="{Binding SelectedViewOption.Value, Mode=TwoWay}"/>
 
 				<ListBox Grid.Row="1"
 						 Grid.ColumnSpan="2"

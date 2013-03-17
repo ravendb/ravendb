@@ -25,7 +25,7 @@ namespace Raven.Abstractions.Data
 
 		public GetRequest()
 		{
-			Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+			Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		}
 	}
 }

@@ -35,9 +35,9 @@ namespace Raven.Database.Config
 
 		public InMemoryRavenConfiguration()
 		{
-			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
+			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
-			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
+			CreateAutoIndexesForAdHocQueriesIfNeeded = true;
 
 			CreatePluginsDirectoryIfNotExisting = true;
 			CreateAnalyzersDirectoryIfNotExisting = true;
@@ -89,7 +89,7 @@ namespace Raven.Database.Config
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
-				                                                    MaxNumberOfItemsToIndexInSingleBatch);
+																	MaxNumberOfItemsToIndexInSingleBatch);
 			}
 			else
 			{
@@ -99,11 +99,11 @@ namespace Raven.Database.Config
 			}
 			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
 
-		
+
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
-			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default?
-				 defaultInitialNumberOfItemsToIndexInSingleBatch/2 :
+			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch / 2 :
 				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
@@ -117,15 +117,13 @@ namespace Raven.Database.Config
 
 			MaxNumberOfParallelIndexTasks = ravenSettings.MaxNumberOfParallelIndexTasks.Value;
 
-			TempIndexPromotionMinimumQueryCount = ravenSettings.TempIndexPromotionMinimumQueryCount.Value;
+			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
-			TempIndexPromotionThreshold = ravenSettings.TempIndexPromotionThreshold.Value;
+			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
 
-			TempIndexCleanupPeriod = ravenSettings.TempIndexCleanupPeriod.Value;
+			MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
 
-			TempIndexCleanupThreshold = ravenSettings.TempIndexCleanupThreshold.Value;
-
-			TempIndexInMemoryMaxBytes = ravenSettings.TempIndexInMemoryMaxMb.Value;
+			MaxNumberOfStoredCommitPoints = ravenSettings.MaxNumberOfStoredCommitPoints.Value;
 
 			// Data settings
 			RunInMemory = ravenSettings.RunInMemory.Value;
@@ -135,7 +133,13 @@ namespace Raven.Database.Config
 				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 			}
 
-			CreateTemporaryIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateTemporaryIndexesForAdHocQueriesIfNeeded.Value;
+			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
+
+			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
+			TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
+
+			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
+			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
 
@@ -153,7 +157,11 @@ namespace Raven.Database.Config
 			HostName = ravenSettings.HostName.Value;
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
+				UseSsl = ravenSettings.UseSsl.Value;
+			}
+
 			SetVirtualDirectory();
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
@@ -186,6 +194,14 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
+		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
+
 		private void FilterActiveBundles()
 		{
 			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
@@ -209,7 +225,7 @@ namespace Raven.Database.Config
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
-			if (catalogs.Count != 1) 
+			if (catalogs.Count != 1)
 				return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
 			return GetUnfilteredCatalog(catalogs.First());
 		}
@@ -305,7 +321,7 @@ namespace Raven.Database.Config
 						Query = ""
 					}.Uri.ToString();
 				}
-				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+				return new UriBuilder(UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
@@ -402,38 +418,11 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-		/// Time (in milliseconds) the index has to be queried at least once in order for it to
-		/// become permanent
-		/// Default: 60000 (once per minute)
-		/// </summary>
-		public int TempIndexPromotionThreshold { get; set; }
-
-		/// <summary>
-		/// How many times a temporary, auto-generated index has to be accessed before it can
-		/// be promoted to be a permanent one
-		/// Default: 100
-		/// </summary>
-		public int TempIndexPromotionMinimumQueryCount { get; set; }
-
-		/// <summary>
-		/// How often to run the temporary index cleanup process (in seconds)
-		/// Default: 600 (10 minutes)
-		/// </summary>
-		public TimeSpan TempIndexCleanupPeriod { get; set; }
-
-		/// <summary>
-		/// How much time in seconds to wait after a temporary index has been used before removing it if no further
-		/// calls were made to it during that time
-		/// Default: 1200 (20 minutes)
-		/// </summary>
-		public TimeSpan TempIndexCleanupThreshold { get; set; }
-
-		/// <summary>
-		/// Temp indexes are kept in memory until they reach this integer value in bytes
-		/// Default: 25 MB
+		/// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
+		/// Default: 64 MB
 		/// Minimum: 1 MB
 		/// </summary>
-		public int TempIndexInMemoryMaxBytes { get; set; }
+		public int NewIndexInMemoryMaxBytes { get; set; }
 
 		#endregion
 
@@ -444,6 +433,11 @@ namespace Raven.Database.Config
 		/// Default: none, binds to all host names
 		/// </summary>
 		public string HostName { get; set; }
+
+		/// <summary>
+		/// Whatever we should use SSL for this connection
+		/// </summary>
+		public bool UseSsl { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
@@ -667,7 +661,26 @@ namespace Raven.Database.Config
 		/// Controls whatever RavenDB will create temporary indexes 
 		/// for queries that cannot be directed to standard indexes
 		/// </summary>
-		public bool CreateTemporaryIndexesForAdHocQueriesIfNeeded { get; set; }
+		public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
+
+		/// <summary>
+		/// Maximum time interval for storing commit points for map indexes when new items were added.
+		/// The commit points are used to restore index if unclean shutdown was detected.
+		/// Default: 00:05:00 
+		/// </summary>
+		public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
+
+		/// <summary>
+		/// Minumum interval between between successive indexing that will allow to store a  commit point
+		/// Default: 00:01:00
+		/// </summary>
+		public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
+
+		/// <summary>
+		/// Maximum number of kept commit points to restore map index after unclean shutdown
+		/// Default: 5
+		/// </summary>
+		public int MaxNumberOfStoredCommitPoints { get; set; }
 
 		public string IndexStoragePath
 		{

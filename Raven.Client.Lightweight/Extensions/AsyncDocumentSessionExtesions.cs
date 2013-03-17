@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.Extensions
 {
@@ -14,7 +12,7 @@ namespace Raven.Client.Extensions
 		/// Stores the specified entity with the specified etag.
 		/// The entity will be saved when <see cref="IAsyncDocumentSession.SaveChangesAsync"/> is called.
 		/// </summary>
-		public static void Store(this IAsyncDocumentSession session, object entity, Guid etag)
+		public static void Store(this IAsyncDocumentSession session, object entity, Etag etag)
 		{
 			session.Advanced.Store(entity, etag);
 		}
@@ -41,7 +39,7 @@ namespace Raven.Client.Extensions
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		public static void Store(this IAsyncDocumentSession session, object entity, Guid etag, string id)
+		public static void Store(this IAsyncDocumentSession session, object entity, Etag etag, string id)
 		{
 			session.Advanced.Store(entity, etag, id);
 		}

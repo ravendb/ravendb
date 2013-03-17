@@ -11,12 +11,12 @@ namespace Raven.Database.Server.Connections
 	public class ConnectionState
 	{
 		private readonly ConcurrentSet<string> matchingIndexes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 		private readonly ConcurrentSet<string> matchingDocuments =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
 
@@ -24,6 +24,7 @@ namespace Raven.Database.Server.Connections
 
 		private int watchAllDocuments;
 		private int watchAllIndexes;
+		private int watchAllReplicationConflicts;
 
 		public ConnectionState(EventsTransport eventsTransport)
 		{
@@ -68,7 +69,7 @@ namespace Raven.Database.Server.Connections
 				}
 
 				var hasPrefix = matchingDocumentPrefixes.Any(
-						x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
+						x => documentChangeNotification.Id.StartsWith(x, StringComparison.OrdinalIgnoreCase));
 				if (hasPrefix == false)
 					return;
 			}
@@ -88,6 +89,18 @@ namespace Raven.Database.Server.Connections
 			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
 				return;
 
+			Enqueue(value);
+		}
+
+		public void Send(ReplicationConflictNotification replicationConflictNotification)
+		{
+			var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
+
+			if (watchAllReplicationConflicts <= 0)
+			{
+				return;
+			}
+			
 			Enqueue(value);
 		}
 
@@ -164,6 +177,16 @@ namespace Raven.Database.Server.Connections
 		{
 			if (eventsTransport != null)
 				eventsTransport.Disconnect();
+		}
+
+		public void WatchAllReplicationConflicts()
+		{
+			Interlocked.Increment(ref watchAllReplicationConflicts);
+		}
+
+		public void UnwatchAllReplicationConflicts()
+		{
+			Interlocked.Decrement(ref watchAllReplicationConflicts);
 		}
 	}
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !SILVERLIGHT
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Commands;
@@ -74,7 +75,7 @@ namespace Raven.Client.Shard
 			{
 				// Only load items which aren't already loaded
 				idsToLoad = ids.Where(id => IsLoaded(id) == false)
-					.Distinct(StringComparer.InvariantCultureIgnoreCase)
+					.Distinct(StringComparer.OrdinalIgnoreCase)
 					.ToArray();
 			}
 
@@ -164,7 +165,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected override void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			string modifyDocumentId = null;
 			if (id != null)
@@ -222,11 +223,13 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
+#if !NETFX_CORE && !SILVERLIGHT
 		protected override void TryEnlistInAmbientTransaction()
 		{
 			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
 			// turns out to be pretty much the same thing
 		}
+#endif
 
 		#endregion
 
@@ -242,8 +245,13 @@ namespace Raven.Client.Shard
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
+#if !SILVERLIGHT
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
 			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
+#else
+			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, isMapReduce);
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
+#endif
 		}
 
 		/// <summary>
@@ -328,3 +336,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif

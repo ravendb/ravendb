@@ -12,6 +12,8 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -33,27 +35,32 @@ namespace Raven.Client.Changes
 		private readonly DocumentConvention conventions;
 		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
-		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.OrdinalIgnoreCase);
+		private IDisposable connection;
 
 		private static int connectionCounter;
 		private readonly string id;
 
-		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose)
+		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory,
+		                             DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose,
+		                             Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
-				 Base62Util.Base62Random();
+			     Base62Util.Base62Random();
 			this.url = url;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
 			this.replicationInformer = replicationInformer;
 			this.onDispose = onDispose;
+			this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
 			Task = EstablishConnection()
 				.ObserveException()
 				.ContinueWith(task =>
 				{
 					task.AssertNotFailed();
-					return (IDatabaseChanges)this;
+					return (IDatabaseChanges) this;
 				});
 		}
 
@@ -82,8 +89,8 @@ namespace Raven.Client.Changes
 										if (disposed)
 											return task;
 
-
-										if (replicationInformer.IsServerDown(task.Exception) == false)
+										bool timeout;
+										if (replicationInformer.IsServerDown(task.Exception, out timeout) == false)
 											return task;
 
 										if(replicationInformer.IsHttpStatus(task.Exception, 
@@ -153,7 +160,7 @@ namespace Raven.Client.Changes
 			counter.Inc();
 			var taskedObservable = new TaskedObservable<IndexChangeNotification>(
 				counter,
-				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(notification.Name, indexName, StringComparison.OrdinalIgnoreCase));
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
@@ -186,7 +193,10 @@ namespace Raven.Client.Changes
 
 					sendUrl = sendUrl.NoCache();
 
-					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
+					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
+					{
+						AvoidCachingRequest = true
+					};
 					var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
 					return lastSendTask =
 						httpJsonRequest.ExecuteRequestAsync()
@@ -221,7 +231,7 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => string.Equals(notification.Id, docId, StringComparison.InvariantCultureIgnoreCase));
+				notification => string.Equals(notification.Id, docId, StringComparison.OrdinalIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
@@ -307,12 +317,49 @@ namespace Raven.Client.Changes
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
 				counter,
-				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
 			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;
+		}
+
+		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
+		{
+			var counter = counters.GetOrAdd("all-replication-conflicts", s =>
+			{
+				var indexSubscriptionTask = AfterConnection(() =>
+				{
+					watchAllIndexes = true;
+					return Send("watch-replication-conflicts", null);
+				});
+
+				return new LocalConnectionState(
+					() =>
+					{
+						watchAllIndexes = false;
+						Send("unwatch-replication-conflicts", null);
+						counters.Remove("all-replication-conflicts");
+					},
+					indexSubscriptionTask);
+			});
+			var taskedObservable = new TaskedObservable<ReplicationConflictNotification>(
+				counter,
+				notification => true);
+
+			counter.OnReplicationConflictNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
+
+		public void WaitForAllPendingSubscriptions()
+		{
+			foreach (var kvp in counters)
+			{
+				kvp.Value.Task.Wait();
+			}
 		}
 
 
@@ -325,7 +372,6 @@ namespace Raven.Client.Changes
 		}
 
 		private volatile bool disposed;
-		private IDisposable connection;
 
 		public Task DisposeAsync()
 		{
@@ -368,6 +414,31 @@ namespace Raven.Client.Changes
 					{
 						counter.Value.Send(indexChangeNotification);
 					} 
+					break;
+				case "ReplicationConflictNotification":
+					var replicationConflictNotification = value.JsonDeserialization<ReplicationConflictNotification>();
+					foreach (var counter in counters)
+					{
+						counter.Value.Send(replicationConflictNotification);
+					}
+
+					if (replicationConflictNotification.ItemType == ReplicationConflictTypes.DocumentReplicationConflict)
+					{
+						tryResolveConflictByUsingRegisteredConflictListenersAsync(replicationConflictNotification.Id,
+						                                                     replicationConflictNotification.Etag,
+						                                                     replicationConflictNotification.Conflicts, null)
+							.ContinueWith(t =>
+							{
+								t.AssertNotFailed();
+
+								if (t.Result)
+								{
+									logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+									             replicationConflictNotification.Id);
+								}
+							});
+					}
+
 					break;
 				case "Initialized":
 				case "Heartbeat":

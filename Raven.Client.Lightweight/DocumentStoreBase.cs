@@ -17,6 +17,8 @@ using Raven.Client.Listeners;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
@@ -54,8 +56,8 @@ namespace Raven.Client
 		public abstract IDatabaseChanges Changes(string database = null);
 
 		public abstract IDisposable DisableAggressiveCaching();
-		
-#if !SILVERLIGHT
+
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -65,6 +67,7 @@ namespace Raven.Client
 		public virtual IDictionary<string,string> SharedOperationsHeaders { get; protected set; }
 #endif
 
+		public abstract bool HasJsonRequestFactory { get; }
 		public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
 		public abstract string Identifier { get; set; }
 		public abstract IDocumentStore Initialize();
@@ -72,7 +75,7 @@ namespace Raven.Client
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
@@ -84,6 +87,14 @@ namespace Raven.Client
 		public virtual void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
 		{
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
+		}
+
+		/// <summary>
+		/// Executes the transformer creation
+		/// </summary>
+		public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
+		{
+			transformerCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 #endif
 
@@ -133,12 +144,12 @@ namespace Raven.Client
 		/// Gets the etag of the last document written by any session belonging to this 
 		/// document store
 		///</summary>
-		public virtual Guid? GetLastWrittenEtag()
+		public virtual Etag GetLastWrittenEtag()
 		{
 			return LastEtagHolder.GetLastWrittenEtag();
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 		protected void EnsureNotClosed()
@@ -244,7 +255,7 @@ namespace Raven.Client
 			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
-		protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+		protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
 		{
 			var onSessionCreatedInternal = SessionCreatedInternal;
 			if (onSessionCreatedInternal != null)
@@ -268,5 +279,12 @@ namespace Raven.Client
 			return profilingContext.TryGet(id);
 		}
 
+		/// <summary>
+		/// Setup the context for aggressive caching.
+		/// </summary>
+		public IDisposable AggressivelyCache()
+		{
+			return AggressivelyCacheFor(TimeSpan.FromDays(1));
+		}
 	}
 }

@@ -21,7 +21,7 @@ namespace Raven.Database.Plugins.Catalogs
 			{
 				var bundleName = bundle as string;
 				if (bundleName != null)
-					return Bundles.Contains(bundleName, StringComparer.InvariantCultureIgnoreCase);
+					return Bundles.Contains(bundleName, StringComparer.OrdinalIgnoreCase);
 			}
 			return base.IsMatch(exportDefinition);
 		}

@@ -7,11 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.IsolatedStorage;
 using System.Linq;
+using System.Net;
+#if !NETFX_CORE
+using System.Net.Sockets;
+#endif
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -20,22 +21,15 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
-using System.Net;
-using System.Net.Sockets;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Client.Extensions;
-
-#if SILVERLIGHT
-using Raven.Client.Silverlight.MissingFromSilverlight;
-using Raven.Json.Linq;
 #endif
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-
-
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
@@ -97,7 +91,7 @@ namespace Raven.Client.Connection
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
 #else
 		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
@@ -113,9 +107,9 @@ namespace Raven.Client.Connection
 			{
 				if (firstTime)
 				{
-					var serverHash = GetServerHash(serverClient);
+					var serverHash = ServerHash.GetServerHash(serverClient.Url);
 
-					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
+					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 					if (IsInvalidDestinationsDocument(document) == false)
 					{
 						UpdateReplicationInformationFromDocument(document);
@@ -305,68 +299,71 @@ namespace Raven.Client.Connection
 		/// Refreshes the replication information.
 		/// Expert use only.
 		/// </summary>
-		[MethodImpl(MethodImplOptions.Synchronized)]
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 		public Task RefreshReplicationInformation(AsyncServerClient commands)
 		{
-			var serverHash = GetServerHash(commands);
-			return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
+			lock (this)
 			{
-				JsonDocument document;
-				if (getTask.Status == TaskStatus.RanToCompletion)
+				var serverHash = ServerHash.GetServerHash(commands.Url);
+				return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
 				{
-					document = getTask.Result;
+					JsonDocument document;
+					if (getTask.Status == TaskStatus.RanToCompletion)
+					{
+						document = getTask.Result;
+						failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+					}
+					else
+					{
+						log.ErrorException("Could not contact master for new replication information", getTask.Exception);
+						document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+					}
+
+
+					if (IsInvalidDestinationsDocument(document))
+					{
+						lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+						return;
+					}
+
+					ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
+
+					UpdateReplicationInformationFromDocument(document);
+
+					lastReplicationUpdate = SystemTime.UtcNow;
+				});
+			}
+		}
+#else
+		public void RefreshReplicationInformation(ServerClient commands)
+		{
+			lock (this)
+			{
+				var serverHash = ServerHash.GetServerHash(commands.Url);
+
+				JsonDocument document;
+				try
+				{
+					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
 					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
-				else
+				catch (Exception e)
 				{
-					log.ErrorException("Could not contact master for new replication information", getTask.Exception);
-					document = TryLoadReplicationInformationFromLocalCache(serverHash);
+					log.ErrorException("Could not contact master for new replication information", e);
+					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
 				}
-
-
-				if (IsInvalidDestinationsDocument(document))
+				if (document == null)
 				{
 					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 					return;
 				}
 
-				TrySavingReplicationInformationToLocalCache(serverHash, document);
+				ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 				UpdateReplicationInformationFromDocument(document);
 
 				lastReplicationUpdate = SystemTime.UtcNow;
-			});
-		}
-
-		
-#else
-		public void RefreshReplicationInformation(ServerClient commands)
-		{
-			var serverHash = GetServerHash(commands);
-
-			JsonDocument document;
-			try
-			{
-				document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
-				failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 			}
-			catch (Exception e)
-			{
-				log.ErrorException("Could not contact master for new replication information", e);
-				document = TryLoadReplicationInformationFromLocalCache(serverHash);
-			}
-			if (document == null)
-			{
-				lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
-				return;
-			}
-
-			TrySavingReplicationInformationToLocalCache(serverHash, document);
-
-			UpdateReplicationInformationFromDocument(document);
-
-			lastReplicationUpdate = SystemTime.UtcNow;
 		}
 #endif
 
@@ -401,73 +398,6 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private IsolatedStorageFile GetIsolatedStorageFileForReplicationInformation()
-		{
-#if SILVERLIGHT
-			return IsolatedStorageFile.GetUserStoreForSite();
-#else
-			return IsolatedStorageFile.GetMachineStoreForDomain();
-#endif
-		}
-
-		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
-		{
-			try
-			{
-				using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
-				{
-					var path = "RavenDB Replication Information For - " + serverHash;
-
-					if (machineStoreForApplication.GetFileNames(path).Length == 0)
-						return null;
-
-					using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
-					{
-						return stream.ToJObject().ToJsonDocument();
-					}
-				}
-			}
-			catch (Exception e)
-			{
-				log.ErrorException("Could not understand the persisted replication information", e);
-				return null;
-			}
-		}
-
-		private void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
-		{
-			try
-			{
-				using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
-				{
-					var path = "RavenDB Replication Information For - " + serverHash;
-					using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
-					{
-						document.ToJson().WriteTo(stream);
-					}
-				}
-			}
-			catch (Exception e)
-			{
-				log.ErrorException("Could not persist the replication information", e);
-			}
-		}
-
-#if SILVERLIGHT
-		private static string GetServerHash(AsyncServerClient commands)
-		{
-			return BitConverter.ToString(MD5Core.GetHash(Encoding.UTF8.GetBytes(commands.Url)));
-		}
-#else
-		private static string GetServerHash(ServerClient commands)
-		{
-			using (var md5 = MD5.Create())
-			{
-				return BitConverter.ToString(md5.ComputeHash(Encoding.UTF8.GetBytes(commands.Url)));
-			}
-		}
-#endif
-
 		/// <summary>
 		/// Resets the failure count for the specified URL
 		/// </summary>
@@ -499,6 +429,8 @@ namespace Raven.Client.Connection
 		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, T> operation)
 		{
 			T result;
+			var timeoutThrown = false;
+
 			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
 
 			var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
@@ -512,7 +444,7 @@ namespace Raven.Client.Connection
 					// if it is failing, ignore that, and move to the master or any of the replicas
 					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], currentRequest, method, false))
 					{
-						if (TryOperation(operation, localReplicationDestinations[replicationIndex], true, out result))
+						if (TryOperation(operation, localReplicationDestinations[replicationIndex], true, out result, out timeoutThrown))
 							return result;
 					}
 				}
@@ -520,9 +452,10 @@ namespace Raven.Client.Connection
 
 			if (ShouldExecuteUsing(primaryUrl, currentRequest, method, true))
 			{
-				if (TryOperation(operation, primaryUrl, true, out result))
+				if (TryOperation(operation, primaryUrl, !timeoutThrown, out result, out timeoutThrown))
 					return result;
-				if (IsFirstFailure(primaryUrl) && TryOperation(operation, primaryUrl, localReplicationDestinations.Count > 0, out result))
+				if (!timeoutThrown && IsFirstFailure(primaryUrl) &&
+				    TryOperation(operation, primaryUrl, localReplicationDestinations.Count > 0, out result, out timeoutThrown))
 					return result;
 				IncrementFailureCount(primaryUrl);
 			}
@@ -532,9 +465,11 @@ namespace Raven.Client.Connection
 				var replicationDestination = localReplicationDestinations[i];
 				if (ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
 					continue;
-				if (TryOperation(operation, replicationDestination, true, out result))
+				if (TryOperation(operation, replicationDestination, !timeoutThrown, out result, out timeoutThrown))
 					return result;
-				if (IsFirstFailure(replicationDestination) && TryOperation(operation, replicationDestination, localReplicationDestinations.Count > i + 1, out result))
+				if (!timeoutThrown && IsFirstFailure(replicationDestination) &&
+				    TryOperation(operation, replicationDestination, localReplicationDestinations.Count > i + 1, out result,
+				                 out timeoutThrown))
 					return result;
 				IncrementFailureCount(replicationDestination);
 			}
@@ -544,12 +479,13 @@ There is a high probability of a network problem preventing access to all the re
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
 		}
 
-		protected virtual bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
+		protected virtual bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result, out bool wasTimeout)
 		{
 			try
 			{
 				result = operation(operationUrl);
 				ResetFailureCount(operationUrl);
+				wasTimeout = false;
 				return true;
 			}
 			catch (Exception e)
@@ -557,8 +493,11 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				if (avoidThrowing == false)
 					throw;
 				result = default(T);
-				if (IsServerDown(e))
+
+				if (IsServerDown(e, out wasTimeout))
+				{
 					return false;
+				}
 				throw;
 			}
 		}
@@ -604,10 +543,11 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 					return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
 																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl),
-																					state.ReplicationDestinations.Count > state.LastAttempt + 1);
+																					state.ReplicationDestinations.Count > 
+																					state.LastAttempt + 1 && !state.TimeoutThrown);
 
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
-					if (IsFirstFailure(state.PrimaryUrl))
+					if (!state.TimeoutThrown && IsFirstFailure(state.PrimaryUrl))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
 																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice),
 																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
@@ -635,10 +575,11 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 					return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
 																				  state.With(ExecuteWithReplicationStates.TryAllServersSecondAttempt),
-																				  state.ReplicationDestinations.Count > state.LastAttempt + 1);
+																				  state.ReplicationDestinations.Count > 
+																				  state.LastAttempt + 1 && !state.TimeoutThrown);
 				case ExecuteWithReplicationStates.TryAllServersSecondAttempt:
 					destination = state.ReplicationDestinations[state.LastAttempt];
-					if (IsFirstFailure(destination))
+					if (!state.TimeoutThrown && IsFirstFailure(destination))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
 																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice),
 																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
@@ -679,8 +620,12 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 					case TaskStatus.Faulted:
 						Debug.Assert(task.Exception != null);
-						if (IsServerDown(task.Exception) && avoidThrowing)
+						bool timeoutThrown;
+						if (IsServerDown(task.Exception, out timeoutThrown) && avoidThrowing)
+						{
+							state.TimeoutThrown = timeoutThrown;
 							return ExecuteWithReplicationAsync(state);
+						}
 
 						tcs = new TaskCompletionSource<T>();
 						tcs.SetException(task.Exception);
@@ -715,6 +660,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			public ExecuteWithReplicationStates State = ExecuteWithReplicationStates.Start;
 			public int LastAttempt = -1;
 			public List<string> ReplicationDestinations;
+			public bool TimeoutThrown;
 
 			public ExecuteWithReplicationState<T> With(ExecuteWithReplicationStates state)
 			{
@@ -756,8 +702,10 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			return false;
 		}
 
-		public virtual bool IsServerDown(Exception e)
+		public virtual bool IsServerDown(Exception e, out bool timeout)
 		{
+			timeout = false;
+
 			var aggregateException = e as AggregateException;
 			if (aggregateException != null)
 			{
@@ -769,12 +717,15 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			{
 				switch (webException.Status)
 				{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
+					case WebExceptionStatus.Timeout:
+						timeout = true;
+						return true;
 					case WebExceptionStatus.NameResolutionFailure:
 					case WebExceptionStatus.ReceiveFailure:
 					case WebExceptionStatus.PipelineFailure:
 					case WebExceptionStatus.ConnectionClosed:
-					case WebExceptionStatus.Timeout:
+					
 #endif
 					case WebExceptionStatus.ConnectFailure:
 					case WebExceptionStatus.SendFailure:
@@ -787,14 +738,19 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 					switch (httpWebResponse.StatusCode)
 					{
 						case HttpStatusCode.RequestTimeout:
-						case HttpStatusCode.BadGateway:
 						case HttpStatusCode.GatewayTimeout:
+							timeout = true;
+							return true;
+						case HttpStatusCode.BadGateway:
 						case HttpStatusCode.ServiceUnavailable:
 							return true;
 					}
 				}
 			}
-			return e.InnerException is SocketException ||
+			return
+#if !NETFX_CORE
+				e.InnerException is SocketException ||
+#endif
 				e.InnerException is IOException;
 		}
 

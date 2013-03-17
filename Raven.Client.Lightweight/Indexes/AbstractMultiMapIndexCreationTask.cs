@@ -6,6 +6,13 @@ using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Client.Document;
+#if !NETFX_CORE
+using Raven.Abstractions.MissingFromBCL;
+#else
+using Raven.Client.WinRT.MissingFromWinRT;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+#endif
+using Raven.Client.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -37,17 +44,16 @@ namespace Raven.Client.Indexes
 			AddMap(expr);
 
 			// Index child classes.
-			var children = typeof(TBase).Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
+			var children = typeof(TBase).Assembly().GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
 			var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
 			foreach (var child in children)
 			{
 				if (child.IsGenericTypeDefinition)
 					continue;
-
-				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
+				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child.AsType());
 				var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
 				var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
-				addMapGeneric.MakeGenericMethod(child).Invoke(this, new[] { lambdaExpression });
+				addMapGeneric.MakeGenericMethod(child.AsType()).Invoke(this, new[] { lambdaExpression });
 			}
 		}
 

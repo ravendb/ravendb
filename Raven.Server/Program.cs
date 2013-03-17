@@ -11,24 +11,21 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml;
-using System.Xml.Linq;
 using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Responders.Admin;
 using Raven.Database.Util;
-using Raven.Smuggler;
 
 namespace Raven.Server
 {
@@ -85,8 +82,8 @@ namespace Raven.Server
 
 			Console.Error.WriteLine(msg);
 
-			if(args.Contains("--msgbox", StringComparer.InvariantCultureIgnoreCase) || 
-				args.Contains("/msgbox", StringComparer.InvariantCultureIgnoreCase))
+			if(args.Contains("--msgbox", StringComparer.OrdinalIgnoreCase) || 
+				args.Contains("/msgbox", StringComparer.OrdinalIgnoreCase))
 		{
 				MessageBox.Show(msg, "RavenDB Startup failure");
 			}
@@ -185,6 +182,14 @@ namespace Raven.Server
 				{"decrypt-config=", "Decrypt the specified {0:configuration file}", file =>
 						{
 							actionToTake = () => UnprotectConfiguration(file);
+						}},
+				{"installSSL={==}", "Bind X509 certificate specified in {0:option} with optional password from {1:option} with 'Raven/Port'.", (sslCertificateFile, sslCertificatePassword) =>
+						{
+							actionToTake = () => InstallSsl(sslCertificateFile, sslCertificatePassword, ravenConfiguration);
+						}},
+				{"uninstallSSL={==}", "Unbind X509 certificate specified in {0:option} with optional password from {2:option} from 'Raven/Port'.", (sslCertificateFile, sslCertificatePassword) =>
+						{
+							actionToTake = () => UninstallSsl(sslCertificateFile, sslCertificatePassword, ravenConfiguration);
 						}}
 			};
 
@@ -218,6 +223,30 @@ namespace Raven.Server
 			}
 		}
 
+		private static void InstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+		{
+			if (string.IsNullOrEmpty(sslCertificateFile))
+				throw new InvalidOperationException("X509 certificate path cannot be empty.");
+
+			var certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
+
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port, true);
+			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
+			NonAdminHttp.BindCertificate(configuration.Port, certificate);
+		}
+
+		private static void UninstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+		{
+			X509Certificate2 certificate = null;
+
+			if (!string.IsNullOrEmpty(sslCertificateFile))
+			{
+				certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
+			}
+
+			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
+		}
+
 		private static void SetupPerfCounters(string user)
 		{
 			user = user ?? WindowsIdentity.GetCurrent().Name;
@@ -230,7 +259,7 @@ namespace Raven.Server
 
 		private static void ProtectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
@@ -247,7 +276,7 @@ namespace Raven.Server
 
 		private static void UnprotectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
@@ -336,7 +365,7 @@ Configuration options:
 		{
 			ConfigureDebugLogging();
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.UseSsl);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			while (RunServerInDebugMode(ravenConfiguration, launchBrowser))
@@ -368,7 +397,7 @@ Configuration options:
 				if (File.Exists(path))
 				{
 					Console.WriteLine("Loading data from: {0}", path);
-					new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerOptions {BackupPath = path});
+					//new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerOptions {BackupPath = path});
 				}
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);

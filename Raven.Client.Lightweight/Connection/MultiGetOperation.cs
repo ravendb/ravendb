@@ -1,9 +1,13 @@
 using System;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
-using Raven.Client.Silverlight.Connection;
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
+#endif
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using System.Linq;
 using System.Net;
@@ -75,11 +79,11 @@ namespace Raven.Client.Connection
 				jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, () => new RequestResultArgs
 				{
 					DurationMilliseconds = httpJsonRequest.CalculateDuration(),
-					Method = httpJsonRequest.webRequest.Method,
+					Method = httpJsonRequest.Method,
 					HttpResult = 0,
 					Status = RequestStatus.AggressivelyCached,
 					Result = "",
-					Url = httpJsonRequest.webRequest.RequestUri.AbsolutePath + "?" + httpJsonRequest.webRequest.RequestUri.Query,
+					Url = httpJsonRequest.Url.ToString(),
 					//TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});

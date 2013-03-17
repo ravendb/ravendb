@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Responders
 			// Need to create this here to preserve any current TLS data that we have to copy
 			var contexts = requests.Select(request => new MultiGetHttpContext(ravenHttpConfiguration, context, request, TenantId))
 				.ToArray();
-			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.InvariantCultureIgnoreCase))
+			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.OrdinalIgnoreCase))
 			{
 				Parallel.For(0, requests.Length, position =>
 					HandleRequest(requests, results, position, context, ravenHttpConfiguration, contexts)
@@ -303,6 +303,7 @@ namespace Raven.Database.Server.Responders
 				get;
 				set;
 			}
+			public bool BufferOutput { get; set; }
 
 			public void Redirect(string url)
 			{

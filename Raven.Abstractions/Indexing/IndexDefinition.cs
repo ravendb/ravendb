@@ -84,14 +84,6 @@ namespace Raven.Abstractions.Indexing
 		public bool IsCompiled { get; set; }
 
 		/// <summary>
-		/// Returns a boolean value indicating whether this IndexDefinition is of a temporary index
-		/// </summary>
-		public bool IsTemp
-		{
-			get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase); }
-		}
-
-		/// <summary>
 		/// Gets or sets the stores options
 		/// </summary>
 		/// <value>The stores.</value>
@@ -244,9 +236,7 @@ namespace Raven.Abstractions.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Temp"))
-					return "Temp";
-				if (name.StartsWith("Auto"))
+				if (name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
 					return "Auto";
 				if (IsCompiled)
 					return "Compiled";
@@ -256,7 +246,7 @@ namespace Raven.Abstractions.Indexing
 			}
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Remove the default values that we don't actually need
 		/// </summary>
 		public void RemoveDefaultValues()
@@ -317,4 +307,38 @@ namespace Raven.Abstractions.Indexing
 			return indexDefinition;
 		}
 	}
+
+
+	public class TransformerDefinition
+	{
+		/// <summary>
+		/// Gets or sets the translator function
+		/// </summary>
+		public string TransformResults { get; set; }
+		public string Name { get; set; }
+
+		public bool Equals(TransformerDefinition other)
+		{
+			return string.Equals(TransformResults, other.TransformResults);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((TransformerDefinition) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			return (TransformResults != null ? TransformResults.GetHashCode() : 0);
+		}
+
+		public TransformerDefinition Clone()
+		{
+			return (TransformerDefinition) base.MemberwiseClone();
+		}
+	}
+
 }

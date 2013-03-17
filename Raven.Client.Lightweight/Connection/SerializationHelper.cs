@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
 #endif
 using System.Globalization;
 using System.Linq;
@@ -40,26 +40,33 @@ namespace Raven.Client.Connection
 					list.Add(null);
 					continue;
 				}
-				var metadata = (RavenJObject)doc["@metadata"];
-				doc.Remove("@metadata");
-				var key = Extract(metadata, "@id", string.Empty);
-
-				var lastModified = GetLastModified(metadata);
-
-				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => HttpExtensions.EtagHeaderToGuid(g));
-				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
-				list.Add(new JsonDocument
-				{
-					Key = key,
-					LastModified = lastModified,
-					Etag = etag,
-					TempIndexScore = metadata == null ? null : metadata.Value<float?>(Constants.TemporaryScoreValue),
-					NonAuthoritativeInformation = nai,
-					Metadata = metadata.FilterHeaders(),
-					DataAsJson = doc,
-				});
+				var jsonDocument = RavenJObjectToJsonDocument(doc);
+				list.Add(jsonDocument);
 			}
 			return list;
+		}
+
+		public static JsonDocument RavenJObjectToJsonDocument(RavenJObject doc)
+		{
+			var metadata = (RavenJObject) doc["@metadata"];
+			doc.Remove("@metadata");
+			var key = Extract(metadata, "@id", string.Empty);
+
+			var lastModified = GetLastModified(metadata);
+
+			var etag = Extract(metadata, "@etag", Etag.Empty, (string g) => HttpExtensions.EtagHeaderToEtag(g));
+			var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
+			var jsonDocument = new JsonDocument
+			{
+				Key = key,
+				LastModified = lastModified,
+				Etag = etag,
+				TempIndexScore = metadata == null ? null : metadata.Value<float?>(Constants.TemporaryScoreValue),
+				NonAuthoritativeInformation = nai,
+				Metadata = metadata.FilterHeaders(),
+				DataAsJson = doc,
+			};
+			return jsonDocument;
 		}
 
 		private static DateTime GetLastModified(RavenJObject metadata)
@@ -114,7 +121,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Translate a result for a query
 		/// </summary>
-		public static QueryResult ToQueryResult(RavenJObject json, Guid etag)
+		public static QueryResult ToQueryResult(RavenJObject json, Etag etag)
 		{
 			var result = new QueryResult
 			{
@@ -153,7 +160,7 @@ namespace Raven.Client.Connection
 				DataAsJson = jsonData,
 				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
-				Etag = HttpExtensions.EtagHeaderToGuid(etag),
+				Etag = HttpExtensions.EtagHeaderToEtag(etag),
 				LastModified = GetLastModifiedDate(headers),
 				Metadata = meta
 			};
@@ -195,7 +202,7 @@ namespace Raven.Client.Connection
 			{
 				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
-				Etag = HttpExtensions.EtagHeaderToGuid(etag),
+				Etag = HttpExtensions.EtagHeaderToEtag(etag),
 				LastModified = lastModifiedDate,
 				Metadata = meta
 			};

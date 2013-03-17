@@ -10,13 +10,13 @@ namespace Raven.Studio.Features.Query
     {
         public static IndexQuery FromQueryString(string queryString)
         {
-            var fields = queryString.Split(new[] {'&'}, StringSplitOptions.RemoveEmptyEntries)
+			var fields = queryString.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(segment =>
                             {
-                                var parts = segment.Split(new[] {'='}, StringSplitOptions.RemoveEmptyEntries);
+								var parts = segment.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
                                 if (parts.Length == 1)
                                 {
-                                    return new {Key = parts[0], Value = string.Empty};
+									return new { Key = parts[0], Value = string.Empty };
                                 }
                                 else
                                 {
@@ -60,7 +60,7 @@ namespace Raven.Studio.Features.Query
             return query;
         }
 
-        public static int GetStart(this ILookup<string,string> fields)
+		public static int GetStart(this ILookup<string, string> fields)
         {
             int start;
             int.TryParse(fields["start"].FirstOrDefault(), out start);
@@ -108,18 +108,22 @@ namespace Raven.Studio.Features.Query
             return null;
         }
 
-        public static Guid? GetCutOffEtag(this ILookup<string, string> fields)
+		public static Etag GetCutOffEtag(this ILookup<string, string> fields)
         {
             var etagAsString = fields["cutOffEtag"].FirstOrDefault();
             if (etagAsString != null)
             {
                 etagAsString = Uri.UnescapeDataString(etagAsString);
 
-                Guid result;
-                if (Guid.TryParse(etagAsString, out result))
-                    return result;
+				try
+				{
+					return Etag.Parse(etagAsString);
+				}
+				catch (Exception)
+				{
                 return null;
             }
+			}
 
             return null;
         }

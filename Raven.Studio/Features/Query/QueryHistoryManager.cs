@@ -29,67 +29,58 @@ namespace Raven.Studio.Features.Query
             LoadPreviousQueriesFromDiskInBackground();
         }
 
-        private void LoadPreviousQueriesFromDiskInBackground()
-        {
-            loadHistoryTask = Task.Factory.StartNew(
-                () =>
-                    {
-                        using (
-                            var storage =
-                                IsolatedStorageFile.GetUserStoreForSite())
-                        {
-                            var path = GetFolderPath();
-                            if (!storage.DirectoryExists(path))
-                            {
-                                storage.CreateDirectory(path);
-                            }
+	    private void LoadPreviousQueriesFromDiskInBackground()
+	    {
+		    loadHistoryTask = Task.Factory.StartNew(() =>
+		    {
+			    using (var storage = IsolatedStorageFile.GetUserStoreForSite())
+			    {
+				    var path = GetFolderPath();
+				    if (!storage.DirectoryExists(path))
+				    {
+					    storage.CreateDirectory(path);
+				    }
 
-                            var files = storage.GetFileNames(path + "/*.query");
+				    var files = storage.GetFileNames(path + "/*.query");
 
-                            var queries = (from fileName in files
-                                           let content =
-                                               storage.ReadEntireFile(path + "/" +
-                                                                      fileName)
-                                           let lastWriteTime =
-                                               storage.GetLastWriteTime(path +
-                                                                        "/" +
-                                                                        fileName)
-                                           let query =
-                                               JsonConvert.DeserializeObject
-                                               <SavedQuery>(content)
-                                           orderby lastWriteTime descending
-                                           select query)
-                                .ToList();
+				    var queries = (from fileName in files
+				                   let content = storage.ReadEntireFile(path + "/" + fileName)
+				                   let lastWriteTime = storage.GetLastWriteTime(path + "/" + fileName)
+				                   let query = JsonConvert.DeserializeObject<SavedQuery>(content)
+				                   orderby lastWriteTime descending
+				                   select query)
+					    .ToList();
 
-                            return queries;
-                        }
-                    })
-                .ContinueWith(
-                    t =>
-                        {
-                            foreach (var query in t.Result)
-                            {
-                                LinkedListNode<SavedQuery> node;
+				    return queries;
+			    }
+		    })
+		                          .ContinueWith(t =>
+		                          {
+			                          foreach (var query in t.Result)
+			                          {
+				                          LinkedListNode<SavedQuery> node;
+										  if(query == null)
+											  continue;
 
-                                if (!queriesByHash.TryGetValue(query.Hashcode, out node))
-                                {
-                                    node = new LinkedListNode<SavedQuery>(query);
-                                    queriesByHash.Add(query.Hashcode, node);
-                                    recentQueries.AddLast(node);
-                                }
-                                else
-                                {
-                                    // if the query was found, that must mean
-                                    // the user has just updated it, so don't overwrite anything
-                                }
-                            }
+				                          if (!queriesByHash.TryGetValue(query.Hashcode, out node))
+				                          {
+					                          node = new LinkedListNode<SavedQuery>(query);
+					                          queriesByHash.Add(query.Hashcode, node);
+					                          recentQueries.AddLast(node);
+				                          }
+				                          else
+				                          {
+					                          // if the query was found, that must mean
+					                          // the user has just updated it, so don't overwrite anything
+				                          }
+			                          }
 
-                            OnQueriesChanged(EventArgs.Empty);
-                        }, Schedulers.UIScheduler)
-                .Catch();
-        }
+			                          OnQueriesChanged(EventArgs.Empty);
+		                          }, Schedulers.UIScheduler)
+		                          .Catch();
+	    }
 
-        public void StoreQuery(QueryState state)
+	    public void StoreQuery(QueryState state)
         {
             var hash = state.GetHash();
 
@@ -97,7 +88,7 @@ namespace Raven.Studio.Features.Query
 
             if (!queriesByHash.TryGetValue(hash, out node))
             {
-                node = new LinkedListNode<SavedQuery>(new SavedQuery(state.IndexName, state.Query));
+                node = new LinkedListNode<SavedQuery>(new SavedQuery(state));
                 queriesByHash.Add(hash, node);
             }
             else
@@ -195,7 +186,7 @@ namespace Raven.Studio.Features.Query
 
         private static QueryState ToQueryState(SavedQuery savedQuery)
         {
-            return new QueryState(savedQuery.IndexName, savedQuery.Query, savedQuery.SortOptions, savedQuery.IsSpatialQuery, savedQuery.Latitude, savedQuery.Longitude, savedQuery.Radius);
+            return new QueryState(savedQuery);
         }
 
         public IEnumerable<SavedQuery> RecentQueries

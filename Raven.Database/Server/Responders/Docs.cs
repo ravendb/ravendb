@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Security.Cryptography;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
@@ -31,20 +32,14 @@ namespace Raven.Database.Server.Responders
 			{
 				case "GET":
 					long documentsCount = 0;
-					Guid lastDocEtag = Guid.Empty;
+					Etag lastDocEtag = Etag.Empty;
 					Database.TransactionalStorage.Batch(accessor =>
 					{
 						lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 						documentsCount = accessor.Documents.GetDocumentsCount();
 					});
 
-					var array = lastDocEtag.ToByteArray().Concat(BitConverter.GetBytes(documentsCount)).ToArray();
-					using (var md5 = MD5.Create())
-					{
-						var hashed = md5.ComputeHash(array);
-						lastDocEtag = new Guid(hashed);
-					}
-
+					lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
 					if (context.MatchEtag(lastDocEtag))
 					{
 						context.SetStatusToNotModified();
@@ -66,7 +61,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "POST":
 					var json = context.ReadJson();
-					var id = Database.Put(null, Guid.Empty, json,
+					var id = Database.Put(null, Etag.Empty, json,
 					                      context.Request.Headers.FilterHeaders(),
 					                      GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + Uri.EscapeUriString(id.Key));

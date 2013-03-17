@@ -72,7 +72,7 @@ namespace Raven.Database.Indexing
 			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
 			var start = SystemTime.UtcNow;
-			var deleted = new HashSet<ReduceKeyAndBucket>();
+			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
 				sourceCount++;
@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			var changed = allState.SelectMany(x => x.Item1).Concat(deleted)
+			var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
 			        .Distinct()
 			        .ToList();
 
@@ -256,11 +256,16 @@ namespace Raven.Database.Indexing
 			return base.RetrieveDocument(document, fieldsToFetch, score);
 		}
 
+		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+		{
+			// MapReduce index does not store and use any commit points
+		}
+
 		public override void Remove(string[] keys, WorkContext context)
 		{
 			context.TransactionalStorage.Batch(actions =>
 			{
-				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
+				var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
 				foreach (var key in keys)
 				{
 					actions.MapReduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
@@ -269,7 +274,7 @@ namespace Raven.Database.Indexing
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, reduceKeyAndBuckets);
 				foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
 				{
-					actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBucket);
+					actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBucket.Key);
 				}
 			});
 			Write((writer, analyzer, stats) =>
@@ -277,7 +282,10 @@ namespace Raven.Database.Indexing
 				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
 				writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
-				return keys.Length;
+				return new IndexedItemsInfo
+				{
+					ChangedDocs = keys.Length
+				};
 			});
 		}
 
@@ -466,7 +474,10 @@ namespace Raven.Database.Indexing
 								x => x.Dispose());
 						}
 					}
-					return count + ReduceKeys.Count;
+					return new IndexedItemsInfo
+					{
+						ChangedDocs = count + ReduceKeys.Count
+					};
 				});
 				parent.AddindexingPerformanceStat(new IndexingPerformanceStats
 				{

@@ -7,13 +7,13 @@ namespace Raven.Studio.Features.Documents
 {
     public class ColumnSuggester
     {
-        private static PriorityColumn[] DefaultPriorityColumns = new[]
-                                                        {
-                                                            new PriorityColumn { PropertyNamePattern = "Name"},
-                                                            new PriorityColumn { PropertyNamePattern = "Title"},
-                                                            new PriorityColumn{ PropertyNamePattern = "Description"},
-                                                            new PriorityColumn { PropertyNamePattern = "Status"},
-                                                        };
+	    private static PriorityColumn[] DefaultPriorityColumns = new[]
+	    {
+		    new PriorityColumn {PropertyNamePattern = "Name"},
+		    new PriorityColumn {PropertyNamePattern = "Title"},
+		    new PriorityColumn {PropertyNamePattern = "Description"},
+		    new PriorityColumn {PropertyNamePattern = "Status"},
+	    };
 
         public ColumnSuggester()
         {
@@ -49,20 +49,20 @@ namespace Raven.Studio.Features.Documents
             // only consider nested properties if any of the priority columns refers to a nested property
             var includeNestedProperties = priorityColumns.Any(c => c.PropertyNamePattern.Contains("\\."));
 
-            var columns = DocumentHelpers.GetPropertiesFromDocuments(sampleDocuments, includeNestedProperties)
-                .GroupBy(p => p)
-                .Select(g => new {Property = g.Key, Occurence = g.Count()/(double) sampleDocuments.Length})
-                .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context, priorityColumns) })
-                .OrderByDescending(p => p.Importance)
-                .ThenBy(p => p.Property)
-                .Select(p => new ColumnDefinition
-                                 {
-                                     Binding = p.Property, 
-                                     Header = p.Property, 
-                                     DefaultWidth = GetDefaultColumnWidth(p.Property, priorityColumns)
-                                 })
-                .Take(6)
-                .ToList();
+			var columns = DocumentHelpers.GetPropertiesFromDocuments(sampleDocuments, includeNestedProperties)
+				.GroupBy(p => p)
+				.Select(g => new { Property = g.Key, Occurence = g.Count() / (double)sampleDocuments.Length })
+				.Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context, priorityColumns) })
+				.OrderByDescending(p => p.Importance)
+				.ThenBy(p => p.Property)
+				.Select(p => new ColumnDefinition
+								 {
+									 Binding = p.Property,
+									 Header = p.Property,
+									 DefaultWidth = GetDefaultColumnWidth(p.Property, priorityColumns)
+								 })
+				.Take(6)
+				.ToList();
 
             return columns;
         }

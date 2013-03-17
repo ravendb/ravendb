@@ -4,10 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
-using Raven.Studio.Commands;
+using Raven.Studio.Extensions;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 using Raven.Studio.Models;
@@ -30,20 +33,44 @@ namespace Raven.Studio.Features.Logs
 			DisplayedLogs.CollectionChanged += (sender, args) => OnPropertyChanged(() => PendingLogs);
 		}
 
+		public string SearchValue
+		{
+			get { return searchValue; }
+			set
+			{
+				searchValue = value;
+				OnPropertyChanged(() => SearchValue);
+			}
+		}
+
+		public ICommand Search
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					DisplayedLogs.Clear();
+
+					if (string.IsNullOrWhiteSpace(SearchValue))
+					{
+						DisplayedLogs.Match(Logs);
+						return;
+					}
+
+					var results = Logs.Where(item => item.Message.Contains(SearchValue, StringComparison.InvariantCultureIgnoreCase) 
+						|| item.Exception.Contains(SearchValue, StringComparison.InvariantCultureIgnoreCase)).ToList();
+					DisplayedLogs.Match(results);
+				});
+			}
+		}
+
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (Database.Value == null)
-				return null;
-
-			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
-				.ContinueOnSuccess(logs => Logs.Match(logs.OrderByDescending(x => x.TimeStamp).ToList(), () =>
-				{
-					if (DisplayedLogs.Count == 0)
-						DisplayedLogs.Match(Logs);
-				}));
+			return Database.Value == null ? null : ReloadLogs();
 		}
 
 		private bool showErrorsOnly;
+		private string searchValue;
 		public bool ShowErrorsOnly
 		{
 			get { return showErrorsOnly; }
@@ -66,7 +93,38 @@ namespace Raven.Studio.Features.Logs
 
 		public ICommand Refresh
 		{
-			get { return new ChangeFieldValueCommand<LogsModel>(this, x => DisplayedLogs.Match(Logs)); }
+			get
+			{
+				return new ActionCommand(_ =>
+				{
+					SearchValue = "";
+					DisplayLatestLogs();
+				});
+			}
 		}
+
+		private Task ReloadLogs()
+        {
+            return DatabaseCommands.GetLogsAsync(showErrorsOnly)
+                .ContinueOnSuccess(logs => Logs.Match(logs.OrderByDescending(x => x.TimeStamp).ToList(), () =>
+                {
+                    if (DisplayedLogs.Count == 0)
+                        DisplayLatestLogs();
+                }));
+        }
+
+        private void DisplayLatestLogs()
+        {
+			if(string.IsNullOrWhiteSpace(SearchValue))
+				DisplayedLogs.Match(Logs);
+        }
+
+	    protected override void OnViewLoaded()
+	    {
+	        ApplicationModel.Database
+	                        .ObservePropertyChanged()
+	                        .TakeUntil(Unloaded)
+	                        .Subscribe(_ => ReloadLogs().ContinueOnSuccessInTheUIThread(DisplayLatestLogs).Catch());
+	    }
 	}
 }

@@ -15,6 +15,7 @@
 	<Converters:TaskStatusConverter x:Key="TaskStatusConverter" />
 	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
 	<Converters:HiddenWhenStringEmptyOrNull x:Key="HiddenWhenStringEmptyOrNull" />
+	<Converters:VisibleWhenStringEmptyOrNull x:Key="VisibleWhenStringEmptyOrNull" />
 	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:HiddenWhenLessOrEqualToConverter x:Name="HiddenWhenLessOrEqualTo" />
@@ -34,6 +35,8 @@
 	<Converters:BooleanToGridLengthConverter x:Key="HiddenWhenFalseStarSizedWhenTrue"
 																					 ValueWhenFalse="0"
 																					 ValueWhenTrue="*"/>
+	<Converters:PriorityToFontStyleConverter x:Key="PriorityToFontStyle"/>
+	<Converters:PriorityToFontColorConverter x:Key="PriorityToFontColor"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
 	<Converters:BundleNameToActiveConverter x:Key="BundleNameToActive"/>
 	<Converters:BundleNameToToolTipCoverter x:Key="BundleNameToToolTip"/>

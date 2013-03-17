@@ -46,7 +46,6 @@ namespace Raven.Tests.Silverlight
 				yield return task;
 
 				Assert.IsTrue(task.Result.Any(x => x == "test"));
-
 			}
 		}
 

@@ -7,17 +7,37 @@
                          xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         xmlns:sdk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
+                         mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:CollectionsModel}">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="100"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
-		<TextBlock Text="Collections"
-				   Grid.Row="0"
-				   Style="{StaticResource Style_Text_Header}" />
+		<Border Background="{StaticResource Brush_HeaderBackground}"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,1,1,0"
+                CornerRadius="4,4,0,0">
+		</Border>
+		<StackPanel Orientation="Horizontal">
+			<HyperlinkButton Content="Documents"
+                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="/documents"
+                                VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                Margin="6"/>
+			<controls:NavTriangle/>
+			<TextBlock Text="Collections"
+					   Grid.Row="0"
+					   Style="{StaticResource Style_Text_Header}" />
+		</StackPanel>
+
 
 		<ListBox x:Name="CollectionsList" 
 				 Grid.Row="1"
@@ -46,7 +66,7 @@
                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 				</ContextMenu:ContextMenu>
 			</ContextMenu:ContextMenuService.ContextMenu>
-			
+
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
 					<Grid Margin="0,2,2,2">
@@ -74,7 +94,7 @@
                                    RadiusX="1"
                                    RadiusY="1"
                                    Grid.RowSpan="3">
-                        </Rectangle>
+						</Rectangle>
 
 						<StackPanel Margin="12,10,10,10">
 							<TextBlock Text="{Binding Name}"
@@ -98,5 +118,7 @@
 			<LineBreak/>
 			<Run Foreground="Gray" FontStyle="Italic" Text="Add &quot;Raven-Entity-Name&quot;: &quot;[Desired Collection Name]&quot; to a document's metadata to include it in a collection"/>
 		</TextBlock>
+
+		<sdk:GridSplitter Grid.Row="2" HorizontalAlignment="Stretch"/>
 	</Grid>
 </Infrastructure:PageView>

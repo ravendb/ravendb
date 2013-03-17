@@ -1,0 +1,28 @@
+﻿<controls:ChildWindow x:Class="Raven.Studio.Controls.ResetReplication"
+           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+           xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+           Width="400" Height="300" 
+           Title="ResetReplication">
+	<Grid x:Name="LayoutRoot" Margin="2">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+
+		<TextBlock Margin="5" Text="These sql replication where changed, select those you would like to reset the replication for, this could take a long time for large databases." TextWrapping="Wrap"/>
+
+		<ItemsControl Grid.Row="1" ItemsSource="{Binding HasChanges}">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Grid>
+						<CheckBox Margin="5" Checked="Checked" Unchecked="UnChecked" Content="{Binding}"/>
+					</Grid>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+
+		<Button x:Name="OKButton" Content="OK" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="2" />
+	</Grid>
+</controls:ChildWindow>

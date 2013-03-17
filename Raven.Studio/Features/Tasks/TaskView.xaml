@@ -5,29 +5,45 @@
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-                         xmlns:models="clr-namespace:Raven.Studio.Models"
-                         xmlns:system="clr-namespace:System;assembly=mscorlib"
                          xmlns:local="clr-namespace:Raven.Studio.Infrastructure.TemplateSelectors"
-                         Title="TaskView Page"
-                         DataContext="{Binding Path=SelectedTask.Value}">
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
+                         Title="TaskView Page">
 
-	<Grid x:Name="LayoutRoot">
+	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
+		<Border Background="{StaticResource Brush_HeaderBackground}"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,1,1,0"
+                CornerRadius="4,4,0,0">
+		</Border>
+		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Tasks_Small}"/>
+
+			<TextBlock Text="Tasks"
+					   Style="{StaticResource Style_Text_Header}"
+					   VerticalAlignment="Center" 
+					   Margin="6"/>
+			<controls:NavTriangle/>
+			<TextBlock Text="{Binding Name}"
+					   Style="{StaticResource Style_Text_Header}" />
+		</StackPanel>
 
 		<TextBlock FontSize="13"
 				   TextWrapping="Wrap"
-				   Text="{Binding Path=Description}"
+				   Grid.Row="1"
+				   Text="{Binding Description}"
 				   Margin="0,10" />
 
-		<StackPanel Grid.Row="1">
+		<StackPanel Grid.Row="2">
 			<ItemsControl ItemsSource="{Binding TaskInputs}">
 				<ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <local:TaskUITemplateSelector Content="{Binding}">
+						<local:TaskUITemplateSelector Content="{Binding}">
                             <local:TaskUITemplateSelector.Input>
                                 <DataTemplate>
                                     <Grid>
@@ -81,7 +97,7 @@
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
 			<StackPanel Orientation="Horizontal">
-			<Button Content="{Binding Name}"
+				<Button Content="{Binding Name}"
 					Width="Auto"
 					HorizontalAlignment="Left"
 					Command="{Binding Action}"
@@ -103,7 +119,7 @@
 			</StackPanel>
 		</StackPanel>
 
-		<ItemsControl Grid.Row="2"
+		<ItemsControl Grid.Row="3"
 					  ItemsSource="{Binding Output}"
 					  BorderBrush="#FFEAE7E4"
 					  Background="{StaticResource Brush_SubtleBackground2}"

@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -134,6 +135,24 @@ namespace Raven.Client
 		/// <param name="path">The path.</param>
 		ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
 
+	    /// <summary>
+	    /// Performs a load that will use the specified results transformer against the specified id
+	    /// </summary>
+	    /// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+	    /// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+	    /// <returns></returns>
+	    TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new();
+
+        /// <summary>
+        /// Performs a load that will use the specified results transformer against the specified id
+        /// </summary>
+        /// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+        /// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+        /// <param name="id"></param>
+        /// <param name="configure"></param>
+        /// <returns></returns>
+        TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
@@ -142,12 +161,12 @@ namespace Raven.Client
 		/// <summary>
 		/// Stores the specified entity with the specified etag
 		/// </summary>
-		void Store(object entity, Guid etag);
+		void Store(object entity, Etag etag);
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag, under the specified id
 		/// </summary>
-		void Store(object entity, Guid etag, string id);
+		void Store(object entity, Etag etag, string id);
 
 		/// <summary>
 		/// Stores the specified dynamic entity.
@@ -161,6 +180,8 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
 		void Store(dynamic entity, string id);
+
+
 	}
 }
 

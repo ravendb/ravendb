@@ -24,13 +24,13 @@ namespace Raven.Abstractions.Data
 	public class PeriodicBackupStatus
 	{
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Status";
-		public Guid LastDocsEtag { get; set; }
-		public Guid LastAttachmentsEtag { get; set; }
+		public Etag LastDocsEtag { get; set; }
+		public Etag LastAttachmentsEtag { get; set; }
 
 		public PeriodicBackupStatus()
 		{
-			LastAttachmentsEtag = Guid.Empty;
-			LastDocsEtag = Guid.Empty;
+			LastDocsEtag = Etag.Empty;
+			LastAttachmentsEtag = Etag.Empty;
 		}
 	}
 }

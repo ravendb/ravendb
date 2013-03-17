@@ -43,11 +43,6 @@ namespace Raven.Tests.MailingList
 			}
 		};
 
-		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-		{
-			configuration.TempIndexPromotionMinimumQueryCount = 1;
-		}
-
 		[Fact]
 		public void Physical_store_test()
 		{

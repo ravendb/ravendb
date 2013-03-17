@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -262,6 +263,33 @@ namespace Raven.Client.Shard
 			return AsyncLuceneQuery<T>(GetDynamicIndexName<T>());
 		}
 
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query)
+		{
+			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query)
+		{
+			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                           int pageSize = Int32.MaxValue)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
 		#endregion
 
 		/// <summary>
@@ -351,3 +379,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif

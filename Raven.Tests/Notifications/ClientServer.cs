@@ -53,6 +53,7 @@ namespace Raven.Tests.Notifications
 
 				Assert.Equal("items/1", documentChangeNotification.Id);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
+				Assert.NotNull(documentChangeNotification.Etag);
 			}
 				Thread.Sleep(1000);
 			}

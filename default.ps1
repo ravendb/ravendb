@@ -7,7 +7,7 @@ properties {
 	$packages_dir = "$base_dir\packages"
 	$buildartifacts_dir = "$build_dir\"
 	$sln_file = "$base_dir\zzz_RavenDB_Release.sln"
-	$version = "2.0"
+	$version = "2.5"
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
@@ -33,19 +33,13 @@ properties {
 		}
 		
 	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
-					"Raven.Abstractions.???", "Raven.Client.Lightweight.???") |
-		ForEach-Object { 
-			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
-			return "$build_dir\$_"
-		}
-  
-	$silverlight4_dlls = @("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???", "DH.Scrypt.???") |
+					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???", "DH.Scrypt.???") |
+	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???", "DH.Scrypt.???", "Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -53,7 +47,7 @@ properties {
  
 	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "Jint.Raven.???","ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
-						"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",(Get-DependencyPackageFiles 'NLog.2'), "AsyncCtpLibrary.???", "AWS.Extensions.???", "AWSSDK.???") |
+						"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",(Get-DependencyPackageFiles 'NLog.2'), "AsyncCtpLibrary.???", "AWS.Extensions.???", "AWSSDK.???", "Microsoft.CompilerServices.AsyncTargetingPack.Net4.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -116,6 +110,14 @@ task Compile -depends Init {
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
+	
+	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles 'Rx-Interfaces') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles 'Rx-Core') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles 'Rx-Linq') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles 'Rx-PlatformServices') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles 'Rx-Xaml') $build_dir -force
+	
 }
 
 task FullStorageTest {
@@ -126,7 +128,6 @@ task Test -depends Compile {
 	Clear-Host
 	
 	Write-Host $test_prjs
-	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
 	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
@@ -147,7 +148,6 @@ task Test -depends Compile {
 }
 
 task StressTest -depends Compile {
-	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
 	
 	$xUnit = Get-PackagePath xunit.runners
 	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
@@ -184,7 +184,39 @@ task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-		& ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
+	
+		$statLight = Get-PackagePath StatLight
+		$statLight = "$statLight\tools\StatLight.exe"
+		&$statLight "--XapPath=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\Raven.Tests.Silverlight.Results.xml" 
+	}
+	finally
+	{
+		Stop-Process -InputObject $process
+	}
+}
+
+task TestWinRT -depends Compile, CopyServer {
+	try
+	{
+		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
+	
+		$xUnit = Get-PackagePath xunit.runners
+		$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
+	
+		@("Raven.Tests.WinRT.dll") | ForEach-Object { 
+			Write-Host "Testing $build_dir\$_"
+			
+			if($global:full_storage_test) {
+				$env:raventest_storage_engine = 'esent';
+				Write-Host "Testing $build_dir\$_ (esent)"
+				&"$xUnit" "$build_dir\$_"
+			}
+			else {
+				$env:raventest_storage_engine = $null;
+				Write-Host "Testing $build_dir\$_ (default)"
+				&"$xUnit" "$build_dir\$_"
+			}
+		}
 	}
 	finally
 	{
@@ -255,7 +287,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
-	New-Item $build_dir\Output\Silverlight-4 -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
 	New-Item $build_dir\Output\Samples -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
@@ -273,11 +304,6 @@ task CopyEmbeddedClient {
 task CopySilverlight { 
 	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
 		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
-}
-
-task CopySilverlight-4 { 
-	$silverlight4_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
-		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
 }
 
 task CopySmuggler {
@@ -375,7 +401,6 @@ task DoRelease -depends Compile, `
 	CopyBackup, `
 	CopyClient, `
 	CopySilverlight, `
-	CopySilverlight-4, `
 	CopyWeb, `
 	CopyBundles, `
 	CopyServer, `
@@ -439,12 +464,10 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir -Type directory | Out-Null
 	
 	New-Item $nuget_dir\RavenDB.Client\lib\net40 -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Client\lib\sl40 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\sl50 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
 	
 	@("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net40 }
-	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl40 }
 	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl50	}
 		
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 -Type directory | Out-Null

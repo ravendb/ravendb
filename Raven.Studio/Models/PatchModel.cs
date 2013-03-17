@@ -394,7 +394,7 @@ namespace Raven.Studio.Models
 
 				case PatchOnOptions.Index:
 					return ApplicationModel.Database.Value.AsyncDatabaseCommands.GetIndexNamesAsync(0, 500)
-						.ContinueWith(t => (IList<object>) t.Result.Where(s => s.StartsWith(enteredText, StringComparison.InvariantCultureIgnoreCase)).Cast<object>().ToList());
+						.ContinueWith(t => (IList<object>) t.Result.Where(s => s.StartsWith(enteredText, StringComparison.OrdinalIgnoreCase)).Cast<object>().ToList());
 
 				default:
 					return null;

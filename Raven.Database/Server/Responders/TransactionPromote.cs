@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
@@ -25,7 +26,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var fromTxId = new Guid(context.Request.QueryString["fromTxId"]);
-			context.WriteData(Database.PromoteTransaction(fromTxId), new RavenJObject(), Guid.NewGuid());
+            context.WriteData(Database.PromoteTransaction(fromTxId), new RavenJObject(), Etag.InvalidEtag);
 		}
 	}
 }

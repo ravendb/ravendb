@@ -32,7 +32,7 @@ using System.Reflection;
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #endif
 
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
 using System.Data.SqlTypes;
 #endif
 #if NETFX_CORE
@@ -222,6 +222,15 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 #endif
     }
 
+    public static TimeSpan ParseTimeSpan(string input)
+    {
+#if !(NET35 || NET20 || PORTABLE || WINDOWS_PHONE)
+      return TimeSpan.Parse((string) input, CultureInfo.InvariantCulture);
+#else
+      return TimeSpan.Parse((string)input);
+#endif
+    }
+
     internal struct TypeConvertKey : IEquatable<TypeConvertKey>
     {
       private readonly Type _initialType;
@@ -331,12 +340,8 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
           return new Guid((string) initialValue);
         if (targetType == typeof (Uri))
           return new Uri((string) initialValue, UriKind.RelativeOrAbsolute);
-        if (targetType == typeof (TimeSpan))
-#if !(NET35 || NET20 || SILVERLIGHT || PORTABLE)
-          return TimeSpan.Parse((string) initialValue, CultureInfo.InvariantCulture);
-#else
-          return TimeSpan.Parse((string)initialValue);
-#endif
+        if (targetType == typeof(TimeSpan))
+          return ParseTimeSpan((string) initialValue);
       }
 
 #if !(NETFX_CORE || PORTABLE)
@@ -373,7 +378,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         throw new Exception("Can not convert null {0} into non-nullable {1}.".FormatWith(CultureInfo.InvariantCulture, initialType, targetType));
       }
 #endif
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
       if (initialValue is INullable)
         return EnsureTypeAssignable(ToValue((INullable)initialValue), initialType, targetType);
 #endif
@@ -395,7 +400,16 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     /// </returns>
     public static bool TryConvert(object initialValue, CultureInfo culture, Type targetType, out object convertedValue)
     {
-      return MiscellaneousUtils.TryAction<object>(delegate { return Convert(initialValue, culture, targetType); }, out convertedValue);
+      try
+      {
+        convertedValue = Convert(initialValue, culture, targetType);
+        return true;
+      }
+      catch
+      {
+        convertedValue = null;
+        return false;
+      }
     }
     #endregion
 
@@ -450,7 +464,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
       throw new ArgumentException("Could not cast or convert from {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, (initialType != null) ? initialType.ToString() : "{null}", targetType));
     }
 
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
     public static object ToValue(INullable nullableValue)
     {
       if (nullableValue == null)

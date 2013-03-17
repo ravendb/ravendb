@@ -5,7 +5,11 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using System.Windows.Browser;
+#endif
+#if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Connection
@@ -20,6 +24,11 @@ namespace Raven.Client.Connection
 		public static string IndexDefinition(this string url, string index)
 		{
 			return url + "/indexes/" + index + "?definition=yes";
+		}
+
+		public static string Transformer(this string url, string transformer)
+		{
+			return url + "/transformers/" + transformer;
 		}
 
 		public static string IndexNames(this string url, int start, int pageSize)

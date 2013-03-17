@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Abstractions
 			if (localPath.StartsWith("//"))
 				localPath = localPath.Substring(1);
 			if (configuration.VirtualDirectory != "/" &&
-			    localPath.StartsWith(configuration.VirtualDirectory, StringComparison.InvariantCultureIgnoreCase))
+			    localPath.StartsWith(configuration.VirtualDirectory, StringComparison.OrdinalIgnoreCase))
 			{
 				localPath = localPath.Substring(configuration.VirtualDirectory.Length);
 				if (localPath.Length == 0)

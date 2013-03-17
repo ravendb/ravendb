@@ -3,12 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Listeners;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {
@@ -612,7 +614,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <returns></returns>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag);
 			return this;
@@ -623,7 +625,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;
@@ -689,7 +691,7 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			return SelectFields<TProjection>(typeof (TProjection).GetProperties().Select(x => x.Name).ToArray());
+			return SelectFields<TProjection>(typeof (TProjection).GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Select(x => x.Name).ToArray());
 		}
 
 		/// <summary>
@@ -733,7 +735,9 @@ namespace Raven.Client.Document
 											rootTypes = {typeof(T)},
 											highlightedFields = new List<HighlightedField>(highlightedFields),
 											highlighterPreTags = highlighterPreTags,
-											highlighterPostTags = highlighterPostTags
+											highlighterPostTags = highlighterPostTags,
+											disableEntitiesTracking = disableEntitiesTracking,
+											disableCaching = disableCaching
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
@@ -884,6 +888,18 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
 		{
 			UsingDefaultOperator(queryOperator);
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NoTracking()
+		{
+			NoTracking();
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NoCaching()
+		{
+			NoCaching();
 			return this;
 		}
 	}

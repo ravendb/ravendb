@@ -33,8 +33,6 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				WaitForUserToContinueTheTest(store);
-
 				// wait for index
 				using (var s = store.OpenSession())
 				{

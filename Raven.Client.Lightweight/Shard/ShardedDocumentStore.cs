@@ -3,11 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 #if !SILVERLIGHT
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-#endif
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -18,6 +17,10 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
+#endif
+
 namespace Raven.Client.Shard
 {
 	/// <summary>
@@ -27,7 +30,7 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentStore : DocumentStoreBase
 	{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -40,6 +43,14 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }
 			protected set { throw new NotSupportedException("Sharded document store doesn't have a SharedOperationsHeaders. you need to explicitly use the shard instances to get access to the SharedOperationsHeaders"); }
+		}
+
+		/// <summary>
+		/// Whatever this instance has json request factory available
+		/// </summary>
+		public override bool HasJsonRequestFactory
+		{
+			get { return false; }
 		}
 
 		/// <summary>
@@ -137,7 +148,7 @@ namespace Raven.Client.Shard
 		}
 
 		private readonly AtomicDictionary<IDatabaseChanges> changes =
-			new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+			new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 		public override IDatabaseChanges Changes(string database = null)
 		{
 			return changes.GetOrAdd(database, 
@@ -155,7 +166,8 @@ namespace Raven.Client.Shard
 		/// </remarks>
 		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
-			var disposables = ShardStrategy.Shards.Select(shard => shard.Value.AggressivelyCacheFor(cacheDuration)).ToList();
+			var disposables =
+				ShardStrategy.Shards.Select(shard => shard.Value.AggressivelyCacheFor(cacheDuration)).ToList();
 
 			return new DisposableAction(() =>
 			{
@@ -187,7 +199,7 @@ namespace Raven.Client.Shard
 			});
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Opens the session.
@@ -253,12 +265,12 @@ namespace Raven.Client.Shard
 		/// Gets the etag of the last document written by any session belonging to this 
 		/// document store
 		///</summary>
-		public override Guid? GetLastWrittenEtag()
+		public override Etag GetLastWrittenEtag()
 		{
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
 			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
@@ -305,6 +317,7 @@ namespace Raven.Client.Shard
 			return this;
 		}
 
+#if !NETFX_CORE
 		public IDatabaseCommands DatabaseCommandsFor(string shardId)
 		{
 			IDocumentStore store;
@@ -313,6 +326,7 @@ namespace Raven.Client.Shard
 
 			return store.DatabaseCommands;
 		}
+#endif
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommandsFor(string shardId)
 		{
@@ -321,6 +335,22 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Could not find a shard named: " + shardId);
 
 			return store.AsyncDatabaseCommands;
+		}
+
+#if !NETFX_CORE
+		/// <summary>
+		/// Executes the transformer creation
+		/// </summary>
+		public override void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
+		{
+			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
+			ShardStrategy.ShardAccessStrategy.Apply(list,
+															new ShardRequestData()
+															, (commands, i) =>
+															{
+																transformerCreationTask.Execute(commands, Conventions);
+																return (object)null;
+															});
 		}
 
 		/// <summary>
@@ -337,5 +367,7 @@ namespace Raven.Client.Shard
 																return (object)null;
 															});
 		}
+#endif
 	}
 }
+#endif

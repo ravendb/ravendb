@@ -10,11 +10,13 @@
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" 
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          mc:Ignorable="d" d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
@@ -23,71 +25,112 @@
                 BorderBrush="{StaticResource Brush_HeaderBorder}"
                 BorderThickness="1"
 				CornerRadius="4,4,0,0"/>
-			<toolkit:DockPanel LastChildFill="False">
-				<StackPanel Orientation="Horizontal">
+			<Grid>
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <Image Style="{StaticResource Style_Image_PageHeader}"
                            Source="{StaticResource Image_Logs_Small}"/>
-					<TextBlock Text="Logs"
+				<HyperlinkButton Content="Statistics"
+                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="/statistics"
+                                VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                Margin="6"/>
+				<controls:NavTriangle/>
+				<TextBlock Text="Logs"
 							   Style="{StaticResource Style_Text_Header}" />
 					<TextBlock Text="{Binding Path=DisplayedLogs.Count, StringFormat='(\{0\} Entries)'}"
-							   Margin="10,2,0,0"
-							   Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
-					<TextBlock Text="{Binding Path=PendingLogs, StringFormat='Click refresh in order to load \{0\} more log entires'}"
-							   Visibility="{Binding PendingLogs, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}"
-							   Margin="10,5,0,0" />
+							   Margin="10,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+			<Border HorizontalAlignment="Center" Background="#DC8D8D" Margin="0,4" Visibility="{Binding PendingLogs, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}" CornerRadius="2">
+				<StackPanel Orientation="Horizontal"  Margin="4,0">
+					<TextBlock Text="{Binding Path=PendingLogs, StringFormat='\{0\} new log entries'}"
+							    VerticalAlignment="Center" FontWeight="Bold"
+							   Visibility="{Binding SearchValue, Converter={StaticResource VisibleWhenStringEmptyOrNull}}"/>
+					<HyperlinkButton Content="Refresh" Margin="10,0,0,0" Command="{Binding Refresh}" VerticalAlignment="Center" Foreground="White"
+									 Visibility="{Binding SearchValue, Converter={StaticResource VisibleWhenStringEmptyOrNull}}"/>
+					<TextBlock Text="{Binding Path=SearchValue, StringFormat='Showing search results for &quot;\{0\}&quot;'}"
+							    VerticalAlignment="Center" FontWeight="Bold"
+							   Visibility="{Binding SearchValue, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
+					<HyperlinkButton Content="Clear Search" Margin="10,0,0,0" Command="{Binding Refresh}" VerticalAlignment="Center" Foreground="White"
+									 Visibility="{Binding SearchValue, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
 				</StackPanel>
-				<StackPanel toolkit:DockPanel.Dock="Right"
-							Orientation="Horizontal">
-					<Button Command="{Binding Refresh}"
+			</Border>
+		</Grid>
+				
+
+        <Border Grid.Row="1" Background="{StaticResource Brush_ToolbarBackground}">
+			<Grid Margin="0,4">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<Button Command="{Binding Refresh}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Refresh">
-						<Image Source="{StaticResource Image_Refresh_Small}"
+					<Image Source="{StaticResource Image_Refresh_Small}"
 							   Stretch="None" />
-					</Button>
-					<HyperlinkButton x:Name="AllErrorsHyperlink"
+				</Button>
+				
+				<HyperlinkButton x:Name="AllErrorsHyperlink"
+								 Grid.Column="1"
 									 Content="All Logs"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="/logs"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
                                      VerticalAlignment="Center">
-						<i:Interaction.Triggers>
-							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+					<i:Interaction.Triggers>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="False">
-								<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+							<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
 														   StateName="ActiveLink" />
-							</ei:DataTrigger>
-							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+						</ei:DataTrigger>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="True">
-								<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+							<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
 														   StateName="InactiveLink" />
-							</ei:DataTrigger>
-						</i:Interaction.Triggers>
-					</HyperlinkButton>
-					<HyperlinkButton x:Name="ErrorsOnlyHyperlink"
+						</ei:DataTrigger>
+					</i:Interaction.Triggers>
+				</HyperlinkButton>
+				<HyperlinkButton x:Name="ErrorsOnlyHyperlink"
+								 Grid.Column="2"
 									 Content="Errors Only"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="/logs/error"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
 									 Margin="4,0,0,0"
                                      VerticalAlignment="Center">
-						<i:Interaction.Triggers>
-							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+					<i:Interaction.Triggers>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="True">
-								<Behaviors:GoToStateAction StateName="ActiveLink"
+							<Behaviors:GoToStateAction StateName="ActiveLink"
 														   TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}" />
-							</ei:DataTrigger>
-							<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+						</ei:DataTrigger>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="False">
-								<Behaviors:GoToStateAction StateName="InactiveLink"
+							<Behaviors:GoToStateAction StateName="InactiveLink"
 														   TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}" />
-							</ei:DataTrigger>
+						</ei:DataTrigger>
+					</i:Interaction.Triggers>
+				</HyperlinkButton>
+				
+				<StackPanel Grid.Column="4" Orientation="Horizontal">
+					<TextBlock Text="Search: " VerticalAlignment="Center"/>
+					<TextBox Text="{Binding SearchValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="150">
+						<i:Interaction.Triggers>
+							<Behaviors:StudioKeyTrigger Key="Enter">
+								<i:InvokeCommandAction Command="{Binding Search}"/>
+							</Behaviors:StudioKeyTrigger>
 						</i:Interaction.Triggers>
-					</HyperlinkButton>
+					</TextBox>
 				</StackPanel>
-			</toolkit:DockPanel>
-
-		<Grid Grid.Row="1">
+			</Grid>
+        </Border>
+		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="2*" />
 				<RowDefinition Height="Auto" />
@@ -108,7 +151,12 @@
 									   Height="14"
 									   Margin="3,2">
 									<i:Interaction.Triggers>
-										<ei:DataTrigger Binding="{Binding Level}"
+                                        <ei:DataTrigger Binding="{Binding Level}"
+														Value="Error">
+                                            <ei:ChangePropertyAction PropertyName="Source"
+																	 Value="{StaticResource Image_Error_Tiny}" />
+                                        </ei:DataTrigger>
+                                        <ei:DataTrigger Binding="{Binding Level}"
 														Value="Debug">
 											<ei:ChangePropertyAction PropertyName="Source"
 																	 Value="{StaticResource Image_Debug_Tiny}" />
@@ -129,15 +177,18 @@
 						</sdk:DataGridTemplateColumn.CellTemplate>
 					</sdk:DataGridTemplateColumn>
 					<sdk:DataGridTextColumn Header="Level"
-                                            Binding="{Binding Level}" />
+                                            Binding="{Binding Level}" Width="50"/>
 					<sdk:DataGridTextColumn Header="Logged"
-                                            Binding="{Binding TimeStamp}" />
+                                            Binding="{Binding TimeStamp}" Width="150"/>
 					<sdk:DataGridTextColumn Header="Message"
-                                            Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" />
+                                            Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" 
+                                            Width="2*"/>
 					<sdk:DataGridTextColumn Header="Exception"
-                                            Binding="{Binding Exception, Converter={StaticResource FirstLineOnly}}" />
+                                            Binding="{Binding Exception, Converter={StaticResource FirstLineOnly}}" 
+                                            Width="1*"/>
 					<sdk:DataGridTextColumn Header="Log Name"
-                                            Binding="{Binding LoggerName}" />
+                                            Binding="{Binding LoggerName}"
+                                            Width="1*"/>
 				</sdk:DataGrid.Columns>
 			</sdk:DataGrid>
 

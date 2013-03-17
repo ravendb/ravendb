@@ -41,18 +41,17 @@ namespace Raven.Studio.Features.Documents
 
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
-            return GetQueryResults(start, pageSize)
-                .ContinueWith(task =>
-                                  {
-                                      var documents =
-                                          SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
-                                              .Select(x => new ViewableDocument(x))
-                                              .ToArray();
+	        return GetQueryResults(start, pageSize)
+		        .ContinueWith(task =>
+		        {
+			        var documents = SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
+			                                           .Select(x => new ViewableDocument(x))
+			                                           .ToArray();
 
-                                      SetCount(task.Result.TotalResults - task.Result.SkippedResults);
+			        SetCount(task.Result.TotalResults - task.Result.SkippedResults);
 
-                                      return (IList<ViewableDocument>) documents;
-                                  });
+			        return (IList<ViewableDocument>) documents;
+		        });
         }
 
         private Task<QueryResult> GetQueryResults(int start, int pageSize)
@@ -64,16 +63,19 @@ namespace Raven.Studio.Features.Documents
             }
 
             if (string.IsNullOrEmpty(collectionName))
-            {
                 return TaskEx.FromResult(new QueryResult());
-            }
 
-            return ApplicationModel.DatabaseCommands
-                .QueryAsync("Raven/DocumentsByEntityName",
-                            new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + collectionName},
-                            new string[] {}, 
-                            MetadataOnly)
-                .Catch();
+	        return ApplicationModel.DatabaseCommands
+	                               .QueryAsync("Raven/DocumentsByEntityName",
+	                                           new IndexQuery
+	                                           {
+		                                           Start = start,
+		                                           PageSize = pageSize,
+		                                           Query = "Tag:" + collectionName
+	                                           },
+	                                           new string[] {},
+	                                           MetadataOnly)
+	                               .Catch();
         }
     }
 }

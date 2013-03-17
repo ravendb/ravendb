@@ -8,14 +8,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Configuration;
-using System.Data.Common;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
@@ -148,12 +146,12 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag.Value);
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
 
 				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
 
 				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
-				Guid? latestEtag = null;
+				Etag latestEtag = null;
 				if (documents.Count != 0)
 					latestEtag = documents[documents.Count - 1].Etag;
 
@@ -188,7 +186,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
 							var docsToReplicate = documents
-								.Where(x => ByteArrayComparer.Instance.Compare(lastReplicatedEtag, x.Etag) <= 0) // haven't replicate the etag yet
+								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
 								.ToList();
 
 							latestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
@@ -228,7 +226,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							localReplicationStatus.LastReplicatedEtags.Add(new LastReplicatedEtag
 							{
 								Name = cfg.Name,
-								LastDocEtag = latestEtag ?? Guid.Empty
+								LastDocEtag = latestEtag ?? Etag.Empty
 							});
 						}
 						else
@@ -247,7 +245,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private Guid? HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<JsonDocument> docsToReplicate)
+		private Etag HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<JsonDocument> docsToReplicate)
 		{
 			// This code is O(N^2), I don't like it, but we don't have a lot of deletes, and in order for it to be really bad
 			// we need a lot of deletes WITH a lot of changes at the same time
@@ -261,7 +259,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 
 				// delete > doc
-				if (Etag.IsGreaterThan(deletedDoc.Etag, docsToReplicate[change].Etag.Value))
+				if (deletedDoc.Etag.CompareTo(docsToReplicate[change].Etag) > 0)
 				{
 					// the delete came AFTER the doc, so we can remove the doc and just replicate the delete
 					docsToReplicate.RemoveAt(change);
@@ -274,7 +272,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 			}
 
-			Guid? latest = null;
+			Etag latest = null;
 			if (deletedDocs.Count != 0)
 				latest = deletedDocs[deletedDocs.Count - 1].Etag;
 
@@ -284,7 +282,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				Debug.Assert(maybeLatest != null);
 				if (latest == null)
 					return maybeLatest;
-				if (Etag.IsGreaterThan(maybeLatest.Value, latest.Value))
+				if (maybeLatest.CompareTo(latest) > 0)
 					return maybeLatest;
 			}
 
@@ -315,15 +313,15 @@ namespace Raven.Database.Bundles.SqlReplication
 			return "SqlReplication/Deleteions/" + replicationConfig.Name;
 		}
 
-		private Guid? GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
+		private Etag GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
-			Guid? leastReplicatedEtag = null;
+			Etag leastReplicatedEtag = null;
 			foreach (var sqlReplicationConfig in config)
 			{
 				var lastEtag = GetLastEtagFor(localReplicationStatus, sqlReplicationConfig);
 				if (leastReplicatedEtag == null)
 					leastReplicatedEtag = lastEtag;
-				else if (ByteArrayComparer.Instance.Compare(lastEtag, leastReplicatedEtag.Value) < 0)
+				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
 			return leastReplicatedEtag;
@@ -410,9 +408,9 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 
 
-		private Guid GetLastEtagFor(SqlReplicationStatus replicationStatus, SqlReplicationConfig sqlReplicationConfig)
+		private Etag GetLastEtagFor(SqlReplicationStatus replicationStatus, SqlReplicationConfig sqlReplicationConfig)
 		{
-			var lastEtag = Guid.Empty;
+			var lastEtag = Etag.Empty;
 			var lastEtagHolder = replicationStatus.LastReplicatedEtags.FirstOrDefault(
 				x => string.Equals(sqlReplicationConfig.Name, x.Name, StringComparison.InvariantCultureIgnoreCase));
 			if (lastEtagHolder != null)

@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
-		public override List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context = null)
+		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
 			var oAuthUser = user as OAuthPrincipal;
 			if (oAuthUser == null)
@@ -151,12 +151,12 @@ namespace Raven.Database.Server.Security.OAuth
 
 		public bool IsInRole(string role)
 		{
-			if ("Administrators".Equals(role, StringComparison.InvariantCultureIgnoreCase) == false)
+			if ("Administrators".Equals(role, StringComparison.OrdinalIgnoreCase) == false)
 				return false;
 
 			var databaseAccess = tokenBody.AuthorizedDatabases
 				.Where(x=>
-					string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) ||
+					string.Equals(x.TenantId, tenantId, StringComparison.OrdinalIgnoreCase) ||
 					x.TenantId == "*");
 
 			return databaseAccess.Any(access => access.Admin);

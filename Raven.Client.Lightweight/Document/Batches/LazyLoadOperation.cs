@@ -1,10 +1,14 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
+#if SILVERLIGHT || NETFX_CORE
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
+#endif
 using Raven.Json.Linq;
 using System.Linq;
 
@@ -32,12 +36,13 @@ namespace Raven.Client.Document.Batches
 		public object Result { get; set; }
 
 		public bool RequiresRetry { get; set; }
-
+#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
 			HandleResponse(response);
 		}
+#endif
 
 		public void HandleResponse(GetResponse response)
 		{
@@ -70,10 +75,12 @@ namespace Raven.Client.Document.Batches
 			return loadOperation.EnterLoadContext();
 		}
 
+#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.Get(key);
 		}
+#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{

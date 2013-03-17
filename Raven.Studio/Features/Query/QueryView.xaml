@@ -48,11 +48,9 @@
                                  Command="{StaticResource NavigateToCommand}"
                                  CommandParameter="/Indexes"
                                  VerticalAlignment="Center" />
-				<TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0" />
+			<Controls1:NavTriangle/>
 
-				<StackPanel Orientation="Horizontal"
+			<StackPanel Orientation="Horizontal"
                             Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToVisibility}}">
 					<TextBlock Text="Dynamic/"
                                Margin="0,0,0,0"
@@ -73,10 +71,8 @@
                                      VerticalAlignment="Center" />
 				</StackPanel>
 
-				<TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0" />
-				<TextBlock Text="Query"
+			<Controls1:NavTriangle/>
+			<TextBlock Text="Query"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
                            VerticalAlignment="Center" />
 			</StackPanel>
@@ -285,18 +281,19 @@
 						<StackPanel Orientation="Horizontal"
 									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
 									Margin="0,3">
-							<TextBlock Text="Longitude:"
-									   VerticalAlignment="Center" />
-							<TextBox Margin="5,0,5,0"
-									 Width="100"
-									 Text="{Binding Longitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 VerticalAlignment="Center" />
-
+							
 							<TextBlock Text="Latitude:"
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
 									 Text="{Binding Latitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 VerticalAlignment="Center" />
+
+							<TextBlock Text="Longitude:"
+									   VerticalAlignment="Center" />
+							<TextBox Margin="5,0,5,0"
+									 Width="100"
+									 Text="{Binding Longitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 VerticalAlignment="Center" />
 
 							<TextBlock Text="Radius:"
@@ -305,14 +302,25 @@
 									 Width="100"
 									 Text="{Binding Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 VerticalAlignment="Center" />
+							<ComboBox ItemsSource="{Binding RangeUnits, Converter={StaticResource enumerationFromValue}}"
+									  SelectedValue="{Binding RangeUnits, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"/>
 
 							<TextBlock Margin="50,0,0,0"
 									   Text="Address:"
 									   VerticalAlignment="Center" />
-							<TextBox Margin="5,0,5,0"
+							<sdk:AutoCompleteBox Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 MinimumPrefixLength="1"
+									 IsTextCompletionEnabled="True"
+									 Margin="5" 
+									 Width="350">
+								<i:Interaction.Behaviors>
+									<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
+								</i:Interaction.Behaviors>
+							</sdk:AutoCompleteBox>
+							<!--<TextBox Margin="5,0,5,0"
 									 Width="200"
 									 Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 VerticalAlignment="Center" />
+									 VerticalAlignment="Center" />-->
 
 							<HyperlinkButton Content="Calculate from address"
 											 Command="{Binding CalculateFromAddress}" VerticalAlignment="Center"/>

@@ -1,9 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Client.Exceptions;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
+using Raven.Studio.Framework;
+using System.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -17,6 +22,10 @@ namespace Raven.Studio.Features.Documents
         public string UrlForPrevious { get; set; }
         public string UrlForNext { get; set; }
         public string UrlForLast { get; set; }
+        public bool IsConflicted { get { return ConflictingVersionIds != null && ConflictingVersionIds.Count > 0; } }
+        public IList<string> ConflictingVersionIds { get; set; }
+        public Etag ConflictEtag { get; set; }
+        public string ConflictDocumentId { get; set; }
     }
 
     public class PathSegment
@@ -52,6 +61,9 @@ namespace Raven.Studio.Features.Documents
             if (mode == "index")
                 return IndexDocumentsNavigator.IndexNavigatorFromUrl(parser);
 
+            if (mode == "conflicts")
+                return ConflictDocumentsNavigator.ConflictsNavigatorFromUrl(parser);
+
             return new SingleDocumentNavigator(parser.GetQueryParam("id"));
         }
 
@@ -82,6 +94,54 @@ namespace Raven.Studio.Features.Documents
         protected IAsyncDatabaseCommands DatabaseCommands
         {
             get { return ApplicationModel.DatabaseCommands; }
+        }
+
+        protected DocumentAndNavigationInfo PopulateDocumentOrConflictsFromTask(Task<JsonDocument> task, string documentId)
+        {
+            if (task.IsFaulted && task.Exception.GetBaseException() is ConflictException)
+            {
+                var conflictException = task.Exception.GetBaseException() as ConflictException;
+                return new DocumentAndNavigationInfo
+                {
+                    ConflictingVersionIds = conflictException.ConflictedVersionIds,
+                    ConflictEtag = conflictException.Etag,
+                    ConflictDocumentId = documentId,
+                };
+            }
+
+	        return new DocumentAndNavigationInfo()
+	        {
+		        Document = task.Result
+	        };
+        }
+
+        protected DocumentAndNavigationInfo PopulateDocumentOrConflictsFromDocuments(IEnumerable<JsonDocument> documents)
+        {
+            var document = documents.FirstOrDefault();
+
+            if (document == null)
+            {
+                return new DocumentAndNavigationInfo()
+                {
+                    Document = null
+                };
+            }
+            
+            if (document.Metadata.IfPresent<bool>(Constants.RavenReplicationConflict) && (document.Key.Length < 47 || !document.Key.Substring(document.Key.Length - 47).StartsWith("/conflicts/", StringComparison.OrdinalIgnoreCase)))
+            {
+                var idsArray = document.DataAsJson["Conflicts"] as RavenJArray;
+                return new DocumentAndNavigationInfo()
+                {
+                    ConflictingVersionIds = idsArray.Values<string>().ToArray(),
+                    ConflictEtag = document.Etag ?? Etag.Empty,
+                    ConflictDocumentId = document.Key,
+                };
+            }
+
+            return new DocumentAndNavigationInfo()
+            {
+                Document = document
+            };
         }
     }
 }

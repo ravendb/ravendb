@@ -1,4 +1,4 @@
-Requirements:
+﻿Requirements:
  
   - .NET 4.0
   - silverlight 4.0

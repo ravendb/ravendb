@@ -31,8 +31,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
 
-		private PeriodicBackupSetup backupConfigs;
-		private PeriodicBackupStatus backupStatus;
+		private volatile PeriodicBackupStatus backupStatus;
+		private volatile PeriodicBackupSetup backupConfigs;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -112,9 +112,12 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			{
 				if (currentTask != null)
 					return;
-				currentTask = Task.Factory.StartNew(() =>
+				currentTask = Task.Factory.StartNew(async () =>
 				{
-					using (LogContext.WithDatabase(Database.Name))
+					var documentDatabase = Database;
+					if (documentDatabase == null)
+						return;
+					using (LogContext.WithDatabase(documentDatabase.Name))
 					{
 						try
 						{
@@ -123,20 +126,28 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							if (localBackupConfigs == null)
 								return;
 
+							var databaseStatistics = documentDatabase.Statistics;
+							// No-op if nothing has changed
+							if (databaseStatistics.LastDocEtag == localBackupStatus.LastDocsEtag &&
+								databaseStatistics.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+							{
+								return;
+							}
+
 							var backupPath = localBackupConfigs.LocalFolderName ??
-											 Path.Combine(Database.Configuration.DataDirectory, "PeriodicBackup-Temp");
+											 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
 							var options = new SmugglerOptions
 							{
 								BackupPath = backupPath,
 								LastDocsEtag = localBackupStatus.LastDocsEtag,
 								LastAttachmentEtag = localBackupStatus.LastAttachmentsEtag
 							};
-							var dd = new DataDumper(Database, options);
-							var filePath = dd.ExportData(null, true);
+							var dd = new DataDumper(documentDatabase, options);
+							var filePath = await dd.ExportData(null, null, true);
 
 							// No-op if nothing has changed
 							if (options.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-								options.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+							    options.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
 							{
 								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
@@ -149,14 +160,14 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							var ravenJObject = RavenJObject.FromObject(localBackupStatus);
 							ravenJObject.Remove("Id");
-							var putResult = Database.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
-														 new RavenJObject(), null);
+							var putResult = documentDatabase.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
+							                             new RavenJObject(), null);
 
 							// this result in backupStatus being refreshed
 							localBackupStatus = backupStatus;
 							if (localBackupStatus != null)
 							{
-								if (Etag.Increment(localBackupStatus.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
+								if (localBackupStatus.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
 									localBackupStatus.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
 							}
 						}
@@ -166,17 +177,16 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						}
 						catch (Exception e)
 						{
-								Database.AddAlert(new Alert
-								{
-									AlertLevel = AlertLevel.Error,
-									CreatedAt = SystemTime.UtcNow,
-									Message = e.Message,
-									Title = "Error in Periodic Backup",
-									Exception = e.ToString(),
-									UniqueKey = "Periodic Backup Error"
-								});
-
 							logger.ErrorException("Error when performing periodic backup", e);
+							Database.AddAlert(new Alert
+							{
+								AlertLevel = AlertLevel.Error,
+								CreatedAt = SystemTime.UtcNow,
+								Message = e.Message,
+								Title = "Error in Periodic Backup",
+								Exception = e.ToString(),
+								UniqueKey = "Periodic Backup Error",
+							});
 						}
 					}
 				})

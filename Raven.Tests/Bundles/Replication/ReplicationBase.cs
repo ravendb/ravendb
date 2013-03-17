@@ -12,6 +12,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Listeners;
 using Raven.Database;
 using Raven.Database.Extensions;
@@ -28,13 +29,19 @@ namespace Raven.Tests.Bundles.Replication
 		private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 
-		private const int PortRangeStart = 8079;
+		protected int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
 		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
 		{
-			var port = PortRangeStart - servers.Count;
+			var port = PortRangeStart - stores.Count;
 			return CreateStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
+		}
+
+		public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
+		{
+			var port = PortRangeStart - stores.Count;
+			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
 		}
 
 		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
@@ -44,7 +51,7 @@ namespace Raven.Tests.Bundles.Replication
 									  {
 										  Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
 										  AnonymousUserAccessMode = anonymousUserAccessMode,
-										  DataDirectory = "Data #" + servers.Count,
+										  DataDirectory = "Data #" + stores.Count,
 										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 										  RunInMemory = true,
 										  Port = port,
@@ -70,6 +77,40 @@ namespace Raven.Tests.Bundles.Replication
 
 			ConfigureDatbase(ravenDbServer.Database);
 			return documentStore;
+		}
+
+		private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
+		{
+			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+
+			var embeddedStore = new EmbeddableDocumentStore
+			{
+				UseEmbeddedHttpServer = true,
+				Configuration =
+				{
+					Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
+					AnonymousUserAccessMode = anonymousUserAccessMode,
+					DataDirectory = "Data #" + stores.Count,
+					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+					RunInMemory = true,
+					Port = port,
+					DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+				},
+			};
+
+			if (removeDataDirectory)
+			{
+				IOExtensions.DeleteDirectory(embeddedStore.Configuration.DataDirectory);
+			}
+
+			ConfigureStore(embeddedStore);
+			if (configureStore != null)
+				configureStore(embeddedStore);
+			embeddedStore.Initialize();
+
+			stores.Add(embeddedStore);
+
+			return embeddedStore;
 		}
 
 		protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration serverConfiguration)
@@ -184,7 +225,9 @@ namespace Raven.Tests.Bundles.Replication
 			{
 				var replicationDestination = new ReplicationDestination
 				{
-					Url = destination.Url.Replace("localhost", "ipv4.fiddler"),
+					Url = destination is EmbeddableDocumentStore ? 
+							"http://localhost:" + (destination as EmbeddableDocumentStore).Configuration.Port :
+							destination.Url.Replace("localhost", "ipv4.fiddler"),
 					TransitiveReplicationBehavior = transitiveReplicationBehavior,
 					Disabled = disabled,
 					IgnoredClient = ignoredClient
@@ -316,7 +359,7 @@ namespace Raven.Tests.Bundles.Replication
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 
-		protected void WaitForReplication(IDocumentStore store, string id, string db = null, Guid? changedSince = null)
+		protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
@@ -339,22 +382,6 @@ namespace Raven.Tests.Bundles.Replication
 			}
 		}
 
-		protected class ClientSideConflictResolution : IDocumentConflictListener
-		{
-			public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
-			{
-				resolvedDocument = new JsonDocument
-				{
-					DataAsJson = new RavenJObject
-					 {
-						 {"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x=>x))}
-					 },
-					Metadata = new RavenJObject()
-				};
-				return true;
-			}
-		}
-
 		protected void WaitForReplication(IDocumentStore store, Func<IDocumentSession, bool>  predicate, string db = null)
 		{
 			for (int i = 0; i < RetriesCount; i++)
@@ -369,6 +396,22 @@ namespace Raven.Tests.Bundles.Replication
 						return;
 					Thread.Sleep(100);
 				}
+			}
+		}
+
+		protected class ClientSideConflictResolution : IDocumentConflictListener
+		{
+			public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
+			{
+				resolvedDocument = new JsonDocument
+				{
+					DataAsJson = new RavenJObject
+					 {
+						 {"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x=>x))}
+					 },
+					Metadata = new RavenJObject()
+				};
+				return true;
 			}
 		}
 	}

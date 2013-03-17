@@ -5,6 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -42,52 +43,57 @@ namespace Raven.Studio.Features.Documents
             return templateQuery.GetQueryString().TrimStart('?');
         }
 
-        public override Task<DocumentAndNavigationInfo> GetDocument()
-        {
-            if (string.IsNullOrEmpty(id))
-            {
-                var query = templateQuery.Clone();
-                query.Start = itemIndex;
-                query.PageSize = 1;
+	    public override Task<DocumentAndNavigationInfo> GetDocument()
+	    {
+		    if (string.IsNullOrEmpty(id))
+		    {
+			    var query = templateQuery.Clone();
+			    query.Start = itemIndex;
+			    query.PageSize = 1;
 
-                return
-                    DatabaseCommands.QueryAsync(indexName, query, null)
-                        .ContinueWith(
-                            t => new DocumentAndNavigationInfo
-                                     {
-                                         Document = t.Result.Results.Count > 0 ? t.Result.Results[0].ToJsonDocument() : null,
-                                         TotalDocuments = t.Result.TotalResults,
-                                         Index = itemIndex,
-                                         ParentPath = GetParentPath(),
-                                         UrlForFirst = GetUrlForIndex(0),
-                                         UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
-                                         UrlForNext = itemIndex < t.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
-                                         UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1),
-                                     });
-            }
-            else
-            {
-                var getDocumentTask = DatabaseCommands.GetAsync(id);
-                var getStatisticsTask = QueryIndexForDocument();
+			    return DatabaseCommands.QueryAsync(indexName, query, null)
+			                           .ContinueWith(
+				                           t =>
+				                           {
+					                           var info = PopulateDocumentOrConflictsFromDocuments(
+						                           t.Result.Results.Select(r => r.ToJsonDocument()));
 
-                return TaskEx.WhenAll(getDocumentTask, getStatisticsTask)
-                    .ContinueWith(_ =>
-                                  new DocumentAndNavigationInfo
-                                      {
-                                          Document = getDocumentTask.Result,
-                                          Index = itemIndex,
-                                          TotalDocuments = getStatisticsTask.Result.TotalResults,
-                                          ParentPath = GetParentPath(),
-                                          UrlForFirst = GetUrlForIndex(0),
-                                          UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
-                                          UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
-                                          UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1),
-                                      }
-                    );
-            }
-        }
+					                           info.TotalDocuments = t.Result.TotalResults;
+					                           info.Index = itemIndex;
+					                           info.ParentPath = GetParentPath();
+					                           info.UrlForFirst = GetUrlForIndex(0);
+					                           info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+					                           info.UrlForNext = itemIndex < t.Result.TotalResults - 1
+						                                             ? GetUrlForIndex(itemIndex + 1)
+						                                             : null;
+					                           info.UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1);
+					                           return info;
+				                           });
+		    }
 
-        private Task<QueryResult> QueryIndexForDocument()
+		    var getDocumentTask = DatabaseCommands.GetAsync(id);
+		    var getStatisticsTask = QueryIndexForDocument();
+
+		    return TaskEx.WhenAll(getDocumentTask, getStatisticsTask)
+		                 .ContinueWith(_ =>
+		                 {
+			                 var info = PopulateDocumentOrConflictsFromTask(getDocumentTask, id);
+			                 info.Index = itemIndex;
+			                 info.TotalDocuments = getStatisticsTask.Result.TotalResults;
+			                 info.ParentPath = GetParentPath();
+			                 info.UrlForFirst = GetUrlForIndex(0);
+			                 info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+			                 info.UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1
+				                                   ? GetUrlForIndex(itemIndex + 1)
+				                                   : null;
+			                 info.UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1);
+
+			                 return info;
+		                 }
+			    );
+	    }
+
+	    private Task<QueryResult> QueryIndexForDocument()
         {
             var query = templateQuery.Clone();
             query.Start = itemIndex;
@@ -137,20 +143,20 @@ namespace Raven.Studio.Features.Documents
                 var collectionName = GetCollectionName(templateQuery);
                 if (collectionName != null)
                 {
-                    return new[]
-                               {
-                                   new PathSegment {Name = "Documents", Url = "/documents"},
-                                   new PathSegment {Name = collectionName, Url = "/collections?name=" + collectionName}
-                               };
+	                return new[]
+	                {
+		                new PathSegment {Name = "Documents", Url = "/documents"},
+		                new PathSegment {Name = collectionName, Url = "/collections?name=" + collectionName}
+	                };
                 }
             }
 
-            return new[]
-                       {
-                           new PathSegment { Name = "Indexes", Url = "/Indexes"},
-                           new PathSegment { Name = indexName, Url = "/indexes/" + indexName},
-                           new PathSegment { Name = "Query", Url = "/query/" + indexName},
-                       };
+	        return new[]
+	        {
+		        new PathSegment {Name = "Indexes", Url = "/Indexes"},
+		        new PathSegment {Name = indexName, Url = "/indexes/" + indexName},
+		        new PathSegment {Name = "Query", Url = "/query/" + indexName},
+	        };
         }
 
         private string GetCollectionName(IndexQuery indexQuery)

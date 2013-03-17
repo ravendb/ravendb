@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -176,6 +177,7 @@ namespace Raven.Database.Indexing
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
+
 						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
 
 						var batchDuration = batchTimeWatcher.Elapsed;
@@ -305,8 +307,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
+			onlyFoundIdleWork.Value = false;
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
 
@@ -325,7 +328,7 @@ namespace Raven.Database.Indexing
 			return new IndexToWorkOn
 			{
 				IndexName = indexesStat.Name,
-				LastIndexedEtag = Guid.Empty
+				LastIndexedEtag = Etag.Empty
 			};
 		}
 

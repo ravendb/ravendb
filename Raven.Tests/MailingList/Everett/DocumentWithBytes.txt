@@ -1,4 +1,4 @@
-{
+﻿{
 	"$type": "Raven.Tests.MailingList.Everett.CanReadBytes+DesignResources, Raven.Tests",
 	"DesignId": "designs/1205",
 	"Entries": {

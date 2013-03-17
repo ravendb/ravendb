@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Client.Indexes;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
 {
@@ -24,5 +26,18 @@ namespace Raven.Client.Linq
 		/// <param name="action">The action.</param>
 		/// <returns></returns>
 		IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action);
+
+        /// <summary>
+        /// Specifies a result transformer to use on the results
+        /// </summary>
+        /// <typeparam name="TTransformer"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <returns></returns>
+	    IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new();
+
+        /// <summary>
+        /// Inputs a key and value to the query (accessible by the transformer)
+        /// </summary>
+	    IRavenQueryable<T> AddQueryInput(string name, RavenJToken value);
 	}
 }

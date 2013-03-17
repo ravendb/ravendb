@@ -12,7 +12,7 @@ namespace Raven.Abstractions.Data
 	{
 		public DocumentChangeTypes Type { get; set; }
 		public string Id { get; set; }
-		public Guid? Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		public override string ToString()
 		{
@@ -27,10 +27,8 @@ namespace Raven.Abstractions.Data
 
 		Put = 1,
 		Delete = 2,
-		ReplicationConflict = 4,
-		AttachmentReplicationConflict = 8,
-		BulkInsertStarted = 16,
-		BulkInsertEnded = 32,
+		BulkInsertStarted = 4,
+		BulkInsertEnded = 8,
 
 		Common = Put | Delete
 	}
@@ -45,18 +43,55 @@ namespace Raven.Abstractions.Data
 		RemoveFromIndex = 4,
 
 		IndexAdded = 8,
-		IndexRemoved = 16
+		IndexRemoved = 16,
+
+        IndexDemotedToIdle = 32,
+        IndexPromotedFromIdle = 64,
+
+		IndexDemotedToAbandoned = 128,
 	}
 
 	public class IndexChangeNotification : EventArgs
 	{
 		public IndexChangeTypes Type { get; set; }
 		public string Name { get; set; }
-		public Guid? Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		public override string ToString()
 		{
 			return string.Format("{0} on {1}", Type, Name);
 		}
+	}
+
+	public class ReplicationConflictNotification : EventArgs
+	{
+		public ReplicationConflictTypes ItemType { get; set; }
+		public string Id { get; set; }
+		public Etag Etag { get; set; }
+		public ReplicationOperationTypes OperationType { get; set; }
+		public string[] Conflicts { get; set; }
+
+		public override string ToString()
+		{
+			return string.Format("{0} on {1} because of {2} operation", ItemType, Id, OperationType);
+		}
+	}
+
+	[Flags]
+	public enum ReplicationConflictTypes
+	{
+		None = 0,
+
+		DocumentReplicationConflict = 1,
+		AttachmentReplicationConflict = 2,
+	}
+
+	[Flags]
+	public enum ReplicationOperationTypes
+	{
+		None = 0,
+
+		Put = 1,
+		Delete = 2,
 	}
 }

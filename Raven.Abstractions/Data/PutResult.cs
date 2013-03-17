@@ -21,6 +21,6 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the generated Etag for the PUT operation
 		/// </summary>
 		/// <value>The Etag.</value>
-		public Guid ETag { get; set; }
+		public Etag ETag { get; set; }
 	}
 }

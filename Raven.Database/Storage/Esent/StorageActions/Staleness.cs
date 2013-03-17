@@ -6,6 +6,7 @@
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Exceptions;
 using Raven.Database.Json;
@@ -17,7 +18,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IStalenessStorageActions
 	{
-		public bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag)
+		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -47,12 +48,12 @@ namespace Raven.Storage.Esent.StorageActions
 							return true;
 					}
 				}
-				else if(cutoffEtag != null)
+				else if (cutoffEtag != null)
 				{
 					var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
 												  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
 
-					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.Value.ToByteArray()) < 0)
+					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.ToByteArray()) < 0)
 						return true;
 				}
 				else
@@ -81,29 +82,29 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
 				return false;
 			var view = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
-			                           Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
-			return string.Equals(view, name, StringComparison.InvariantCultureIgnoreCase);
+									   Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+			return string.Equals(view, name, StringComparison.OrdinalIgnoreCase);
 		}
 
 		public bool IsMapStale(string name)
 		{
-			 Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				return false;
 
 			var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
-			                                         tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
+													 tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]);
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			if (!Api.TryMoveLast(session, Documents))
 			{
 				return false;
 			}
 			var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-			return Buffers.Compare(lastEtag, lastIndexedEtag) > 0;
+			return (Buffers.Compare(lastEtag, lastIndexedEtag) > 0);
 		}
 
-		public Tuple<DateTime, Guid> IndexLastUpdatedAt(string name)
+		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -114,45 +115,44 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
 			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if(Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ)) 
+			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ))
 			{// for map-reduce indexes, we use the reduce stats
 
 				var binary = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
 				var lastReducedIndex = binary == null ? DateTime.MinValue : DateTime.FromBinary(binary.Value);
-				var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
-																		  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting();
+				var lastReducedEtag = Etag.Parse(Api.RetrieveColumn(session, IndexesStatsReduce,
+																		  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]));
 				return Tuple.Create(lastReducedIndex, lastReducedEtag);
-	
+
 			}
 
 
 			var indexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
 			var lastIndexedTimestamp = DateTime.FromBinary(indexedTimestamp);
-			var lastIndexedEtag = Api.RetrieveColumn(session, IndexesStats,
-																	  tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]).TransfromToGuidWithProperSorting();
+			var lastIndexedEtag = Etag.Parse(Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"]));
 			return Tuple.Create(lastIndexedTimestamp, lastIndexedEtag);
 		}
 
-		public Guid GetMostRecentDocumentEtag()
+		public Etag GetMostRecentDocumentEtag()
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			if (!Api.TryMoveLast(session, Documents))
 			{
-				return Guid.Empty;
+				return Etag.Empty;
 			}
 			var lastEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]);
-			return new Guid(lastEtag);
+			return Etag.Parse(lastEtag);
 		}
 
-		public Guid GetMostRecentAttachmentEtag()
+		public Etag GetMostRecentAttachmentEtag()
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			if (!Api.TryMoveLast(session, Files))
 			{
-				return Guid.Empty;
+				return Etag.Empty;
 			}
 			var lastEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.DocumentsColumns["etag"]);
-			return new Guid(lastEtag);
+			return Etag.Parse(lastEtag);
 		}
 
 		public int GetIndexTouchCount(string name)

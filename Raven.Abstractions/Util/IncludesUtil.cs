@@ -10,7 +10,7 @@ namespace Raven.Abstractions.Util
 	public class IncludesUtil
 	{
 		private readonly static Regex includePrefixRegex = new Regex(@"(\([^\)]+\))$",
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled | 
 #endif
 			RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);

@@ -8,6 +8,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -138,7 +139,7 @@ namespace Raven.Client.Embedded
 
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false)
 		{
-			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, metadataOnly));
+			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, metadataOnly: metadataOnly));
 		}
 
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
@@ -171,6 +172,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IndexDefinition[]>(databaseCommands.GetIndexes(start, pageSize));
 		}
 
+		public Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize)
+		{
+			return new CompletedTask<TransformerDefinition[]>(databaseCommands.GetTransformers(start, pageSize));
+		}
+
 		public Task ResetIndexAsync(string name)
 		{
 			databaseCommands.ResetIndex(name);
@@ -182,9 +188,19 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IndexDefinition>(databaseCommands.GetIndex(name));
 		}
 
+		public Task<TransformerDefinition> GetTransformerAsync(string name)
+		{
+			return new CompletedTask<TransformerDefinition>(databaseCommands.GetTransformer(name));
+		}
+
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
 			return new CompletedTask<string>(databaseCommands.PutIndex(name, indexDef, overwrite));
+		}
+
+		public Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition)
+		{
+			return new CompletedTask<string>(databaseCommands.PutTransformer(name, transformerDefinition));
 		}
 
 		public Task DeleteIndexAsync(string name)
@@ -199,15 +215,26 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
+		public Task DeleteTransformerAsync(string name)
+		{
+			databaseCommands.DeleteTransformer(name);
+			return new CompletedTask();
+		}
+
 		public Task DeleteDocumentAsync(string id)
 		{
 			databaseCommands.Delete(id, null);
 			return new CompletedTask();
 		}
 
-		public Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
+		public Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			return new CompletedTask<PutResult>(databaseCommands.Put(key, etag, document, metadata));
+		}
+
+		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false)
+		{
+			throw new NotImplementedException();
 		}
 
 		public IAsyncDatabaseCommands ForDatabase(string database)
@@ -235,7 +262,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<string[]>(databaseCommands.GetDatabaseNames(pageSize, start));
 		}
 
-		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata)
+		public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
 		{
 			// Should the data paramater be changed to a Stream type so it matches IDatabaseCommands.PutAttachment?
 			var stream = new MemoryStream();
@@ -249,7 +276,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<Attachment>(databaseCommands.GetAttachment(key));
 		}
 
-		public Task DeleteAttachmentAsync(string key, Guid? etag)
+		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			databaseCommands.DeleteAttachment(key, etag);
 			return new CompletedTask();
@@ -310,6 +337,12 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
+		{
+			// No sync equivalent on IDatabaseCommands.
+			throw new NotSupportedException();
+		}
+
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
 		{
 			// No sync equivalent on IDatabaseCommands.
@@ -348,6 +381,22 @@ namespace Raven.Client.Embedded
 		public Task<JsonDocumentMetadata> HeadAsync(string key)
 		{
 			return new CompletedTask<JsonDocumentMetadata>(databaseCommands.Head(key));
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		{
+			QueryHeaderInformation info;
+			var result = databaseCommands.StreamQuery(index, query, out info);
+			queryHeaderInfo.Value = info;
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(result));
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                            int pageSize = 2147483647)
+		{
+			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
+	
 		}
 	}
 }

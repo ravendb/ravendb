@@ -33,7 +33,6 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Linq;
-using System.Xml.Serialization;
 using Newtonsoft.Json.Utilities;
 using NUnit.Framework;
 using System.Runtime.Serialization.Json;
@@ -65,8 +64,8 @@ namespace Newtonsoft.Json.Tests
   [TestFixture]
   public class PerformanceTests : TestFixtureBase
   {
-    private const int Iterations = 100;
-    //private const int Iterations = 5000;
+    //private const int Iterations = 100;
+    private const int Iterations = 5000;
 
 #region Data
 
@@ -94,6 +93,7 @@ namespace Newtonsoft.Json.Tests
       JsonNetWithIsoConverter,
       JsonNetBinary,
       JsonNetLinq,
+      JsonNetManual,
       BinaryFormatter,
       JavaScriptSerializer,
       DataContractSerializer,
@@ -132,6 +132,7 @@ namespace Newtonsoft.Json.Tests
       BenchmarkSerializeMethod(SerializeMethod.DataContractJsonSerializer, value);
       BenchmarkSerializeMethod(SerializeMethod.JsonNet, value);
       BenchmarkSerializeMethod(SerializeMethod.JsonNetLinq, value);
+      BenchmarkSerializeMethod(SerializeMethod.JsonNetManual, value);
       BenchmarkSerializeMethod(SerializeMethod.JsonNetWithIsoConverter, value);
       BenchmarkSerializeMethod(SerializeMethod.JsonNetBinary, value);
     }
@@ -151,6 +152,7 @@ namespace Newtonsoft.Json.Tests
       BenchmarkDeserializeMethod<T>(SerializeMethod.JavaScriptSerializer, json);
       BenchmarkDeserializeMethod<T>(SerializeMethod.DataContractJsonSerializer, json);
       BenchmarkDeserializeMethod<T>(SerializeMethod.JsonNet, json);
+      BenchmarkDeserializeMethod<T>(SerializeMethod.JsonNetManual, json);
     }
 
     [Test]
@@ -287,6 +289,85 @@ namespace Newtonsoft.Json.Tests
       watch.Stop();
       var performance2 = (totalIterations/watch.ElapsedMilliseconds)*1000;
       Console.WriteLine("XML: " + watch.Elapsed.TotalSeconds);
+    }
+
+    [Test]
+    public void SerializeString()
+    {
+      string text = @"The general form of an HTML element is therefore: <tag attribute1=""value1"" attribute2=""value2"">content</tag>.
+Some HTML elements are defined as empty elements and take the form <tag attribute1=""value1"" attribute2=""value2"" >.
+Empty elements may enclose no content, for instance, the BR tag or the inline IMG tag.
+The name of an HTML element is the name used in the tags.
+Note that the end tag's name is preceded by a slash character, ""/"", and that in empty elements the end tag is neither required nor allowed.
+If attributes are not mentioned, default values are used in each case.
+
+The general form of an HTML element is therefore: <tag attribute1=""value1"" attribute2=""value2"">content</tag>.
+Some HTML elements are defined as empty elements and take the form <tag attribute1=""value1"" attribute2=""value2"" >.
+Empty elements may enclose no content, for instance, the BR tag or the inline IMG tag.
+The name of an HTML element is the name used in the tags.
+Note that the end tag's name is preceded by a slash character, ""/"", and that in empty elements the end tag is neither required nor allowed.
+If attributes are not mentioned, default values are used in each case.
+
+The general form of an HTML element is therefore: <tag attribute1=""value1"" attribute2=""value2"">content</tag>.
+Some HTML elements are defined as empty elements and take the form <tag attribute1=""value1"" attribute2=""value2"" >.
+Empty elements may enclose no content, for instance, the BR tag or the inline IMG tag.
+The name of an HTML element is the name used in the tags.
+Note that the end tag's name is preceded by a slash character, ""/"", and that in empty elements the end tag is neither required nor allowed.
+If attributes are not mentioned, default values are used in each case.
+";
+
+      int interations = 1000;
+
+      TimeOperation(() =>
+      {
+        for (int i = 0; i < interations; i++)
+        {
+          using (StringWriter w = StringUtils.CreateStringWriter(StringUtils.GetLength(text) ?? 16))
+          {
+            JavaScriptUtils.WriteEscapedJavaScriptString(w, text, '"', true, JavaScriptUtils.DoubleQuoteCharEscapeFlags, StringEscapeHandling.Default);
+          }
+        }
+
+        return "";
+      }, "New");
+    }
+
+    [Test]
+    public void JTokenToObject()
+    {
+      JValue s = new JValue("String!");
+
+      int interations = 1000000;
+
+      TimeOperation(() =>
+      {
+        for (int i = 0; i < interations; i++)
+        {
+          s.ToObject(typeof (string));
+        }
+
+        return "";
+      }, "New");
+
+      TimeOperation(() =>
+      {
+        for (int i = 0; i < interations; i++)
+        {
+          s.ToObject(typeof(string), new JsonSerializer());
+        }
+
+        return "";
+      }, "Old");
+
+      TimeOperation(() =>
+      {
+        for (int i = 0; i < interations; i++)
+        {
+          s.Value<string>();
+        }
+
+        return "";
+      }, "Value");
     }
 
     private void SerializeSize(object value)
@@ -513,6 +594,69 @@ namespace Newtonsoft.Json.Tests
             }
             break;
           }
+        case SerializeMethod.JsonNetManual:
+          {
+            TestClass c = value as TestClass;
+            if (c != null)
+            {
+              StringWriter sw = new StringWriter();
+              JsonTextWriter writer = new JsonTextWriter(sw);
+              writer.WriteStartObject();
+              writer.WritePropertyName("strings");
+              writer.WriteStartArray();
+              foreach (string s in c.strings)
+              {
+                writer.WriteValue(s);
+              }
+              writer.WriteEndArray();
+              writer.WritePropertyName("dictionary");
+              writer.WriteStartObject();
+              foreach (KeyValuePair<string, int> keyValuePair in c.dictionary)
+              {
+                writer.WritePropertyName(keyValuePair.Key);
+                writer.WriteValue(keyValuePair.Value);
+              }
+              writer.WriteEndObject();
+              writer.WritePropertyName("Name");
+              writer.WriteValue(c.Name);
+              writer.WritePropertyName("Now");
+              writer.WriteValue(c.Now);
+              writer.WritePropertyName("BigNumber");
+              writer.WriteValue(c.BigNumber);
+              writer.WritePropertyName("Address1");
+              writer.WriteStartObject();
+              writer.WritePropertyName("Street");
+              writer.WriteValue(c.BigNumber);
+              writer.WritePropertyName("Street");
+              writer.WriteValue(c.BigNumber);
+              writer.WritePropertyName("Street");
+              writer.WriteValue(c.BigNumber);
+              writer.WriteEndObject();
+              writer.WritePropertyName("Addresses");
+              writer.WriteStartArray();
+              foreach (Address address in c.Addresses)
+              {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Street");
+                writer.WriteValue(address.Street);
+                writer.WritePropertyName("Phone");
+                writer.WriteValue(address.Phone);
+                writer.WritePropertyName("Entered");
+                writer.WriteValue(address.Entered);
+                writer.WriteEndObject();
+              }
+              writer.WriteEndArray();
+              writer.WriteEndObject();
+
+              writer.Flush();
+              json = sw.ToString();
+            }
+            else
+            {
+              json = string.Empty;
+            }
+            break;
+          }
         case SerializeMethod.JsonNetBinary:
           {
             MemoryStream ms = new MemoryStream(Buffer);
@@ -593,12 +737,94 @@ namespace Newtonsoft.Json.Tests
 
       var value = (T) serializer.Deserialize(new StringReader(json), type);
       return value;
-      //JsonTextReader reader = new JsonTextReader(new StringReader(JsonText));
-      //while (reader.Read())
-      //{
+    }
 
-      //}
-      //return default(T);
+    public TestClass DeserializeJsonNetManual(string json)
+    {
+      TestClass c = new TestClass();
+
+      JsonTextReader reader = new JsonTextReader(new StringReader(json));
+      reader.Read();
+      while (reader.Read())
+      {
+        if (reader.TokenType == JsonToken.PropertyName)
+        {
+          string propertyName = (string) reader.Value;
+          switch (propertyName)
+          {
+            case "strings":
+              reader.Read();
+              while (reader.Read() && reader.TokenType != JsonToken.EndArray)
+              {
+                c.strings.Add((string) reader.Value);
+              }
+              break;
+            case "dictionary":
+              reader.Read();
+              while (reader.Read() && reader.TokenType != JsonToken.EndObject)
+              {
+                string key = (string) reader.Value;
+                c.dictionary.Add(key, reader.ReadAsInt32().GetValueOrDefault());
+              }
+              break;
+            case "Name":
+              c.Name = reader.ReadAsString();
+              break;
+            case "Now":
+              c.Now = reader.ReadAsDateTime().GetValueOrDefault();
+              break;
+            case "BigNumber":
+              c.BigNumber = reader.ReadAsDecimal().GetValueOrDefault();
+              break;
+            case "Address1":
+              reader.Read();
+              c.Address1 = CreateAddress(reader);
+              break;
+            case "Addresses":
+              reader.Read();
+              while (reader.Read() && reader.TokenType != JsonToken.EndArray)
+              {
+                var address = CreateAddress(reader);
+                c.Addresses.Add(address);
+              }
+              break;
+          }
+        }
+        else
+        {
+          break;
+        }
+      }
+
+      return c;
+    }
+
+    private static Address CreateAddress(JsonTextReader reader)
+    {
+      Address a = new Address();
+      while (reader.Read())
+      {
+        if (reader.TokenType == JsonToken.PropertyName)
+        {
+          switch ((string) reader.Value)
+          {
+            case "Street":
+              a.Street = reader.ReadAsString();
+              break;
+            case "Phone":
+              a.Phone = reader.ReadAsString();
+              break;
+            case "Entered":
+              a.Entered = reader.ReadAsDateTime().GetValueOrDefault();
+              break;
+          }
+        }
+        else
+        {
+          break;
+        }
+      }
+      return a;
     }
 
     public T DeserializeJsonNetBinary<T>(byte[] bson)
@@ -638,6 +864,11 @@ namespace Newtonsoft.Json.Tests
           return DeserializeJsonNet<T>((string)json, false);
         case SerializeMethod.JsonNetWithIsoConverter:
           return DeserializeJsonNet<T>((string)json, true);
+        case SerializeMethod.JsonNetManual:
+          if (typeof(T) == typeof(TestClass))
+            return (T)(object)DeserializeJsonNetManual((string)json);
+
+          return default(T);
         case SerializeMethod.JsonNetBinary:
           return DeserializeJsonNetBinary<T>((byte[]) json);
         case SerializeMethod.BinaryFormatter:
@@ -696,17 +927,45 @@ namespace Newtonsoft.Json.Tests
     }
 
     [Test]
+    public void SerializeUnicodeChars()
+    {
+      string s = (new string('\0', 30));
+
+      BenchmarkSerializeMethod(SerializeMethod.JsonNet, s);
+    }
+
+    [Test]
+    public void ParseJObject()
+    {
+      Stopwatch timer = new Stopwatch();
+      timer.Start();
+      for (int i = 0; i < 100000; i++)
+      {
+        JObject o = JObject.Parse(@"{
+  ""CPU"": ""Intel"",
+  ""Drives"": [
+    ""DVD read/writer"",
+    ""500 gigabyte hard drive""
+  ]
+}");
+      }
+      timer.Stop();
+
+      string linq = timer.Elapsed.TotalSeconds.ToString();
+      Console.WriteLine(linq);
+    }
+
+    [Test]
     public void JObjectToString()
     {
       JObject test = JObject.Parse(JsonText);
-      IsoDateTimeConverter isoDateTimeConverter = null; // = new IsoDateTimeConverter();
 
       TimeOperation<object>(() =>
         {
           for (int i = 0; i < Iterations; i++)
           {
             test["dummy"] = new JValue(i);
-            Encoding.UTF8.GetBytes(test.ToString(Formatting.None));
+            test.ToString(Formatting.None);
           }
           return null;
         }, "JObject.ToString");
@@ -716,7 +975,6 @@ namespace Newtonsoft.Json.Tests
     public void JObjectToString2()
     {
       JObject test = JObject.Parse(JsonText);
-      IsoDateTimeConverter isoDateTimeConverter = null; // = new IsoDateTimeConverter();
       MemoryStream ms = new MemoryStream();
 
       TimeOperation<object>(() =>

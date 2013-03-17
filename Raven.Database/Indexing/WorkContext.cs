@@ -26,7 +26,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
 
-		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.InvariantCultureIgnoreCase);
+		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
 		private readonly SizeLimitedConcurrentSet<ActualIndexingBatchSize> lastActualIndexingBatchSize = new SizeLimitedConcurrentSet<ActualIndexingBatchSize>(25);
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
@@ -221,7 +221,7 @@ namespace Raven.Database.Indexing
 			ServerError error;
 			while (serverErrors.TryDequeue(out error))
 			{
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(error.Index, name) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(error.Index, name) == false)
 					list.Add(error);
 			}
 

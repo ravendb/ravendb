@@ -88,7 +88,7 @@ namespace Raven.Client.Document.SessionOperations
 				return results;
 
 			var finalResult = ids.Select(id => results.Where(r => r != null)
-			                                   	.FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase)));
+			                                   	.FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase)));
 			return finalResult;
 		}
 	}

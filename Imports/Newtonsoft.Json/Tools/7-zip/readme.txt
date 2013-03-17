@@ -1,4 +1,4 @@
-7-Zip Command line version 4.65
+﻿7-Zip Command line version 4.65
 -------------------------------
 
 7-Zip is a file archiver with high compression ratio.

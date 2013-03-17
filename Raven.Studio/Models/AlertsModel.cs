@@ -2,7 +2,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
-using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Alerts;
@@ -32,7 +31,6 @@ namespace Raven.Studio.Models
 			AlertsToSee = Alerts;
 			RegisterToChanges();
 			GetAlertsFromServer();
-
 		}
 
 		private void RegisterToChanges()
