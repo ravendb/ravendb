@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using System.Linq;
 using Raven.Tests.Bundles.Replication.Bugs;
+using Raven.Tests.Bundles.Versioning;
 
 namespace Raven.Tryouts
 {
@@ -16,8 +17,8 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 100; i++)
 			{
 				Console.WriteLine(i);
-				using (var x = new HiLoHanging())
-					x.HiLo_Modified_InReplicated_Scenario();
+				using (var x = new Versioning())
+					x.Previously_deleted_docs_will_survive_export_import_cycle_if_purge_is_false();
 			}
 		} 
 	}
