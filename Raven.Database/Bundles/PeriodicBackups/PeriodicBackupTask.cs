@@ -135,7 +135,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							}
 
 							var backupPath = localBackupConfigs.LocalFolderName ??
-							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
+											 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
 							var options = new SmugglerOptions
 							{
 								BackupPath = backupPath,
@@ -178,15 +178,14 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						catch (Exception e)
 						{
 							logger.ErrorException("Error when performing periodic backup", e);
-							
-							documentDatabase.AddAlert(new Alert
+							Database.AddAlert(new Alert
 							{
 								AlertLevel = AlertLevel.Error,
 								CreatedAt = SystemTime.UtcNow,
 								Message = e.Message,
 								Title = "Error in Periodic Backup",
 								Exception = e.ToString(),
-								UniqueKey = "Periodic Backup Error"
+								UniqueKey = "Periodic Backup Error",
 							});
 						}
 					}
