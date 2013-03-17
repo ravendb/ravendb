@@ -189,11 +189,22 @@
 							     MinWidth="250" Margin="5,5,0,5" />
 
 						<TextBlock Grid.Row="4" Grid.Column="0"  Text="Source Document Collection:" VerticalAlignment="Center"/>
-						<ComboBox  Grid.Row="4" Grid.Column="1" SelectedIndex="{Binding SelectedCollectionIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-							      ItemsSource="{Binding AvailableObjects}"
-							      Margin="5" 
-                                   Height="26"
-							      Width="350" HorizontalAlignment="Left"/>
+						<controls3:AutoCompleteBox Grid.Row="4" 
+												   Grid.Column="1" 
+												   Text="{Binding SelectedReplication.Value.RavenEntityName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                         MinimumPrefixLength="0"
+                                                         IsTextCompletionEnabled="True"
+                                                         VerticalAlignment="Center"
+                                                         Margin="5,5,5,0">
+							<i:Interaction.Behaviors>
+								<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
+							</i:Interaction.Behaviors>
+							<i:Interaction.Triggers>
+								<i:EventTrigger EventName="GotFocus">
+									<Behaviors:ShowAutoCompleteDropDown/>
+								</i:EventTrigger>
+							</i:Interaction.Triggers>
+						</controls3:AutoCompleteBox>
 
 							<TextBlock Grid.Row="5" Text="Sql Replication Tables: " VerticalAlignment="Top"/>
 						<StackPanel Orientation="Horizontal" Grid.Row="5" Grid.Column="1">

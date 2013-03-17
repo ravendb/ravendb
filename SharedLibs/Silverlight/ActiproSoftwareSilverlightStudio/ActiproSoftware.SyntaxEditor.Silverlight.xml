@@ -1103,7 +1103,6 @@
             </summary></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.ParseErrorTagger.OnClosed"><summary>
             Occurs when the manager is closed and detached from the view.
             </summary><remarks>
-            The default implementation of this method does nothing.
             Overrides should release any event handlers set up in the manager's constructor.
             </remarks></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.ParseErrorTagger.#ctor(ActiproSoftware.Text.ICodeDocument)"><summary>
             Initializes a new instance of the <c>ParseErrorTagger</c> class.
@@ -3967,7 +3966,6 @@
             </summary><typeparam name="TView">The type of <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.ITextView" /> to support.  Use <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.ITextView" /> to support all text view types.</typeparam><typeparam name="TTag">The type of <see cref="T:ActiproSoftware.Text.Tagging.IIntraTextSpacerTag" /> to aggregate.</typeparam></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Adornments.Implementation.IntraTextAdornmentManagerBase`2.OnClosed"><summary>
             Occurs when the manager is closed and detached from the view.
             </summary><remarks>
-            The default implementation of this method does nothing.
             Overrides should release any event handlers set up in the manager's constructor.
             </remarks></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Adornments.Implementation.IntraTextAdornmentManagerBase`2.#ctor(`0,ActiproSoftware.Windows.Controls.SyntaxEditor.Adornments.AdornmentLayerDefinition)"><summary>
             Initializes a new instance of the <c>IntraTextAdornmentManagerBase</c> class.
@@ -5853,7 +5851,6 @@
             </summary><typeparam name="TView">The type of <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.ITextView" /> to support.  Use <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.ITextView" /> to support all text view types.</typeparam><typeparam name="TTag">The type of <see cref="T:ActiproSoftware.Text.Tagging.ITag" /> to aggregate.</typeparam></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Adornments.Implementation.DecorationAdornmentManagerBase`2.OnClosed"><summary>
             Occurs when the manager is closed and detached from the view.
             </summary><remarks>
-            The default implementation of this method does nothing.
             Overrides should release any event handlers set up in the manager's constructor.
             </remarks></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.Adornments.Implementation.DecorationAdornmentManagerBase`2.#ctor(`0,ActiproSoftware.Windows.Controls.SyntaxEditor.Adornments.AdornmentLayerDefinition)"><summary>
             Initializes a new instance of the <c>DecorationAdornmentManagerBase</c> class.
@@ -6285,7 +6282,6 @@
             </summary></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.DelimiterHighlightTagger.OnClosed"><summary>
             Occurs when the manager is closed and detached from the view.
             </summary><remarks>
-            The default implementation of this method does nothing.
             Overrides should release any event handlers set up in the manager's constructor.
             </remarks></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.DelimiterHighlightTagger.#ctor(ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView)"><summary>
             Initializes a new instance of the <c>DelimiterHighlightTagger</c> class.
