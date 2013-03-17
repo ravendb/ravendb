@@ -162,7 +162,7 @@ namespace Raven.Client.Linq
 					return value;
 
 				var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
-				if (value is Enum || nonNullableType.IsEnum)
+				if (value is Enum || nonNullableType.IsEnum())
 				{
 					if (value == null)
 						return null;

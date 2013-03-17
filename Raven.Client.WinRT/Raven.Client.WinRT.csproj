@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup> 
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
@@ -102,1370 +102,168 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
+    <Compile Include="..\Raven.Client.Lightweight\*.cs" />
+    <Compile Include="..\Raven.Client.Lightweight\Bundles\MoreLikeThis\*.cs">
+      <Link>Bundles\MoreLikeThis\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Bundles\Versioning\*.cs">
+      <Link>Bundles\Versioning\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\*.cs">
+      <Link>Changes\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\*.cs">
+      <Link>Connection\Async\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\*.cs">
+      <Link>Connection\Profiling\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Converters\*.cs">
+      <Link>Converters\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\*.cs">
+      <Link>Document\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Async\*.cs">
+      <Link>Document\Async\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\*.cs">
+      <Link>Document\Batches\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DTC\*.cs">
+      <Link>Document\DTC\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\OAuth\*.cs">
+      <Link>Document\OAuth\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\*.cs">
+      <Link>Document\SessionOperations\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Exceptions\*.cs">
+      <Link>Exeptions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\*.cs">
+      <Link>Extentions\%(FileName)</Link>
+	   </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\*.cs">
+      <Link>Indexes\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\*.cs">
+      <Link>Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\Indexing\*.cs">
+      <Link>Linq\Indexing\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\*.cs">
+      <Link>Listeners\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\*.cs">
+      <Link>PublicExtentions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\*.cs">
+      <Link>Shard\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\*.cs">
+      <Link>Util\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\*.cs">
+      <Link>Abstructions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Commands\*.cs">
+      <Link>Abstructions\Commands\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\*.cs">
+      <Link>Abstructions\Connection\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\*.cs">
+      <Link>Abstructions\Data\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Exceptions\*.cs">
+      <Link>Abstructions\Exeptions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\*.cs">
+      <Link>Abstructions\Extentions\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Internal\*.cs">
+      <Link>Abstructions\Extentions\Internal\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Imports\Newtonsoft.Json\JsonTextReaderAsync.cs">
+      <Link>Abstructions\Imports\Nowtonsoft.Json\JsonTextReaderAsync.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Indexing\*.cs">
+      <Link>Abstructions\Indexing\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\*.cs">
+      <Link>Abstructions\Json\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\*.cs">
+      <Link>Abstructions\Json\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Utilities\*.cs">
+      <Link>Abstructions\Json\Utilities\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Linq\*.cs">
+      <Link>Abstructions\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\*.cs">
+      <Link>Abstructions\Logging\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\*.cs">
+      <Link>Abstructions\Logging\LogProviders\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\MEF\*.cs">
+      <Link>Abstructions\MEF\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
+      <Link>Abstructions\MissingFromBCL\WinRTCompetability.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\*.cs">
+      <Link>Abstructions\OAuth\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Replication\*.cs">
+      <Link>Abstructions\Replication\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\*.cs">
+      <Link>Abstructions\Smuggler\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\*.cs">
+      <Link>Abstructions\Util\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\*.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\*.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\*.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Converters\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\*.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\*.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\*.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\*.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\LastReplicatedEtag.cs">
+      <Link>Imports\SqlReplication\LastReplicatedEtag.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationConfig.cs">
+      <Link>Imports\SqlReplication\SqlReplicationConfig.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Bundles\SqlReplication\SqlReplicationStatus.cs">
+      <Link>Imports\SqlReplication\SqlReplicationStatus.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Database\Plugins\PluginsStatus.cs">
+      <Link>Imports\Plugins\PluginsStatus.cs</Link>
+    </Compile>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\BsonBinaryType.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\BsonBinaryType.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\BsonBinaryWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\BsonBinaryWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\BsonObjectId.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\BsonObjectId.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\BsonReader.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\BsonReader.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\BsonToken.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\BsonToken.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\BsonType.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\BsonType.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\bson\BsonWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\BsonWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\ConstructorHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\ConstructorHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\BinaryConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\BinaryConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\BsonObjectIdConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\BsonObjectIdConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\CustomCreationConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\CustomCreationConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\DataSetConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\DataSetConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\DataTableConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\DataTableConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\DateTimeConverterBase.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\DateTimeConverterBase.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\EntityKeyMemberConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\EntityKeyMemberConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\ExpandoObjectConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\ExpandoObjectConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\IsoDateTimeConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\IsoDateTimeConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\JavaScriptDateTimeConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\JavaScriptDateTimeConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\JsonValueConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\JsonValueConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\KeyValuePairConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\KeyValuePairConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\RegexConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\RegexConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\StringEnumConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\StringEnumConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\VersionConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\VersionConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\converters\XmlNodeConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\XmlNodeConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\DateFormatHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\DateFormatHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\DateParseHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\DateParseHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\DateTimeZoneHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\DateTimeZoneHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\DefaultValueHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\DefaultValueHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\FormatterAssemblyStyle.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\FormatterAssemblyStyle.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\Formatting.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Formatting.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\IJsonLineInfo.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\IJsonLineInfo.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonArrayAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonArrayAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonConstructorAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonConstructorAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonContainerAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonContainerAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonConvert.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonConvert.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonConverterAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonConverterAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonConverterCollection.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonConverterCollection.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonDictionaryAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonDictionaryAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonException.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonException.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonIgnoreAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonIgnoreAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonObjectAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonObjectAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonPosition.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonPosition.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonPropertyAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonPropertyAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonReader.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonReader.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonReaderException.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonReaderException.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonSerializationException.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonSerializationException.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonSerializer.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonSerializer.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonSerializerSettings.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonSerializerSettings.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonTextReader.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonTextReader.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonTextWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonTextWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonToken.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonToken.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonValidatingReader.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonValidatingReader.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonWriterException.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\JsonWriterException.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\Extensions.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\Extensions.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\IJEnumerable.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\IJEnumerable.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JArray.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JArray.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JConstructor.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JConstructor.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JContainer.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JContainer.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JEnumerable.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JEnumerable.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JObject.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JObject.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JPath.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JPath.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JProperty.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JProperty.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JPropertyDescriptor.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JPropertyDescriptor.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JPropertyKeyedCollection.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JPropertyKeyedCollection.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JRaw.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JRaw.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JToken.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JToken.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JTokenEqualityComparer.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JTokenEqualityComparer.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JTokenReader.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JTokenReader.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JTokenType.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JTokenType.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JTokenWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JTokenWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\linq\JValue.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\JValue.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\MemberSerialization.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\MemberSerialization.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\MissingMemberHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\MissingMemberHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\NullValueHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\NullValueHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\ObjectCreationHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\ObjectCreationHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\PreserveReferencesHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\PreserveReferencesHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\ReferenceLoopHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\ReferenceLoopHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\Required.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Required.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\Extensions.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\Extensions.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchema.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchema.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaBuilder.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaBuilder.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaConstants.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaConstants.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaException.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaException.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaGenerator.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaModel.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaModel.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaModelBuilder.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaModelBuilder.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaNode.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaNode.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaNodeCollection.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaNodeCollection.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaResolver.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaResolver.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaType.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaType.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\JsonSchemaWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\JsonSchemaWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\UndefinedSchemaIdHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\UndefinedSchemaIdHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\ValidationEventArgs.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\ValidationEventArgs.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\schema\ValidationEventHandler.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\ValidationEventHandler.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\SerializationBinder.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\SerializationBinder.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\CachedAttributeGetter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\CachedAttributeGetter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\CamelCasePropertyNamesContractResolver.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\CamelCasePropertyNamesContractResolver.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DefaultContractResolver.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\DefaultContractResolver.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DefaultReferenceResolver.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\DefaultReferenceResolver.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DefaultSerializationBinder.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\DefaultSerializationBinder.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\DynamicValueProvider.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\DynamicValueProvider.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\ErrorContext.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ErrorContext.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\ErrorEventArgs.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ErrorEventArgs.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IContractResolver.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\IContractResolver.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IReferenceResolver.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\IReferenceResolver.cs</Link>
-    </Compile>
-    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\IValueProvider.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\IValueProvider.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonArrayContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonArrayContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonContainerContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonContainerContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonDictionaryContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonDictionaryContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonDynamicContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonDynamicContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonFormatterConverter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonFormatterConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonISerializableContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonISerializableContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonLinqContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonLinqContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonObjectContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonObjectContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonPrimitiveContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonPrimitiveContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonProperty.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonProperty.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonPropertyCollection.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonPropertyCollection.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonSerializerInternalBase.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonSerializerInternalBase.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonSerializerInternalReader.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonSerializerInternalReader.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonSerializerInternalWriter.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonSerializerInternalWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonSerializerProxy.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonSerializerProxy.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonStringContract.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonStringContract.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonTypeReflector.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonTypeReflector.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\LateBoundMetadataTypeAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\LateBoundMetadataTypeAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\ObjectConstructor.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ObjectConstructor.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\OnErrorAttribute.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\OnErrorAttribute.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\ReflectionValueProvider.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ReflectionValueProvider.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\StreamingContext.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\StreamingContext.cs</Link>
-    </Compile>
-    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\StringEscapeHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\StringEscapeHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\TraceLevel.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\TypeNameHandling.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\TypeNameHandling.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\Base64Encoder.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\Base64Encoder.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\BidirectionalDictionary.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\BidirectionalDictionary.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\CollectionUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\CollectionUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\CollectionWrapper.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\CollectionWrapper.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\ConvertUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ConvertUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\DateTimeUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DateTimeUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\DictionaryWrapper.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DictionaryWrapper.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\DynamicProxy.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DynamicProxy.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\DynamicProxyMetaObject.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DynamicProxyMetaObject.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\DynamicReflectionDelegateFactory.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DynamicReflectionDelegateFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\DynamicUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DynamicUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\DynamicWrapper.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DynamicWrapper.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\EnumUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\EnumUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\EnumValue.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\EnumValue.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\EnumValues.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\EnumValues.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\ILGeneratorExtensions.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ILGeneratorExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\JavaScriptUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\JavaScriptUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\LateBoundReflectionDelegateFactory.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\LateBoundReflectionDelegateFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\LinqBridge.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\LinqBridge.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\ListWrapper.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ListWrapper.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\MathUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\MathUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\MethodCall.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\MethodCall.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\MiscellaneousUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\MiscellaneousUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\ReflectionDelegateFactory.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ReflectionDelegateFactory.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\ReflectionUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ReflectionUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\StringBuffer.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\StringBuffer.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\StringReference.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\StringReference.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\StringUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\StringUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\ThreadSafeStore.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ThreadSafeStore.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\TypeExtensions.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\TypeExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\utilities\ValidationUtils.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ValidationUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\WriteState.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\WriteState.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\commands\DeleteCommandData.cs">
-      <Link>Imports\Commands\DeleteCommandData.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\commands\ICommandData.cs">
-      <Link>Imports\Commands\ICommandData.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\commands\PatchCommandData.cs">
-      <Link>Imports\Commands\PatchCommandData.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\commands\PutCommandData.cs">
-      <Link>Imports\Commands\PutCommandData.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\commands\ScriptedPatchCommandData.cs">
-      <Link>Imports\Data\ScriptedPatchCommandData.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\CountingStream.cs">
-      <Link>Imports\Connection\CountingStream.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
-      <Link>Imports\Connection\OAuthHelper.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
-      <Link>Imports\Connection\WebResponseExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\AggregationOperation.cs">
-      <Link>Imports\Data\AggregationOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\AggregationOperationExtensions.cs">
-      <Link>Imports\Data\AggregationOperationExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\Alert.cs">
-      <Link>Imports\Data\Alert.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\AlertsDocument.cs">
-      <Link>Imports\Data\AlertsDocument.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\ApiKeyDefinition.cs">
-      <Link>Imports\Data\ApiKeyDefinition.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\Attachment.cs">
-      <Link>Imports\Data\Attachment.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\BackupStatus.cs">
-      <Link>Imports\Data\BackupStatus.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\BatchResult.cs">
-      <Link>Imports\Data\BatchResult.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\BoostedValue.cs">
-      <Link>Imports\Data\BoostedValue.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\BuildNumber.cs">
-      <Link>Imports\Data\BuildNumber.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\BulkInsertOptions.cs">
-      <Link>Imports\Data\BulkInsertOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\ChangeNotification.cs">
-      <Link>Imports\Data\ChangeNotification.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\Constants.cs">
-      <Link>Imports\Data\Constants.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\DatabaseDocument.cs">
-      <Link>Imports\Data\DatabaseDocument.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\DatabaseStatistics.cs">
-      <Link>Imports\Data\DatabaseStatistics.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\EnumerableExtension.cs">
-      <Link>Imports\Data\EnumerableExtension.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\Facet.cs">
-      <Link>Imports\Data\Facet.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\FacetMode.cs">
-      <Link>Imports\Data\FacetMode.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\FacetResult.cs">
-      <Link>Imports\Data\FacetResult.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\FacetResults.cs">
-      <Link>Imports\Data\FacetResults.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\FacetSetup.cs">
-      <Link>Imports\Data\FacetSetup.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\FacetTermSortMode.cs">
-      <Link>Imports\Data\FacetTermSortMode.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\FacetValue.cs">
-      <Link>Imports\Data\FacetValue.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\GetRequest.cs">
-      <Link>Imports\Data\GetRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\GetResponse.cs">
-      <Link>Imports\Data\GetResponse.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\IJsonDocumentMetadata.cs">
-      <Link>Imports\Data\IJsonDocumentMetadata.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\IndexQuery.cs">
-      <Link>Imports\Data\IndexQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\IndexStats.cs">
-      <Link>Imports\Data\IndexStats.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\JsonDocument.cs">
-      <Link>Imports\Data\JsonDocument.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\JsonDocumentMetadata.cs">
-      <Link>Imports\Data\JsonDocumentMetadata.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\LicensingStatus.cs">
-      <Link>Imports\Data\LicensingStatus.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\LogItem.cs">
-      <Link>Imports\Data\LogItem.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Data\MoreLikeThisQuery.cs">
-      <Link>Imports\Data\MoreLikeThisQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\MultiLoadResult.cs">
-      <Link>Imports\Data\MultiLoadResult.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\PatchCommandType.cs">
-      <Link>Imports\Data\PatchCommandType.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\PatchRequest.cs">
-      <Link>Imports\Data\PatchRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\PatchResult.cs">
-      <Link>Imports\Data\PatchResult.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\PeriodicBackupSetup.cs">
-      <Link>Imports\Data\PeriodicBackupSetup.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\PutResult.cs">
-      <Link>Imports\Data\PutResult.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\QueryResult.cs">
-      <Link>Imports\Data\QueryResult.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\ScriptedPatchRequest.cs">
-      <Link>Imports\Data\ScriptedPatchRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\ServerError.cs">
-      <Link>Imports\Data\ServerError.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\SortedField.cs">
-      <Link>Imports\Data\SortedField.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\SpatialIndexQuery.cs">
-      <Link>Imports\Data\SpatialIndexQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\StringDistanceTypes.cs">
-      <Link>Imports\Data\StringDistanceTypes.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\SuggestionQuery.cs">
-      <Link>Imports\Data\SuggestionQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\SuggestionQueryResult.cs">
-      <Link>Imports\Data\SuggestionQueryResult.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\TransactionInformation.cs">
-      <Link>Imports\Data\TransactionInformation.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\data\TransactionMode.cs">
-      <Link>Imports\Data\TransactionMode.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Default.cs">
-      <Link>Imports\Default.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\exceptions\ConcurrencyException.cs">
-      <Link>Imports\Exceptions\ConcurrencyException.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\Buffers.cs">
-      <Link>Imports\Extensions\Buffers.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
-      <Link>Imports\Extensions\CharExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\DisposableAction.cs">
-      <Link>Imports\Extensions\DisposableAction.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\ExceptionExtensions.cs">
-      <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\ExpressionExtensions.cs">
-      <Link>Imports\Extensions\ExpressionExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\internal\DictionaryExtensions.cs">
-      <Link>Imports\Extensions\Internal\DictionaryExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\JsonExtensions.cs">
-      <Link>Imports\Extensions\JsonExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\ListExtensions.cs">
-      <Link>Imports\Extensions\ListExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\MetadataExtensions.cs">
-      <Link>Imports\Extensions\MetadataExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\Reference.cs">
-      <Link>Imports\Extensions\Reference.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\extensions\StreamExtensions.cs">
-      <Link>Imports\Extensions\StreamExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\indexing\FieldIndexing.cs">
-      <Link>Imports\Indexing\FieldIndexing.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\indexing\FieldStorage.cs">
-      <Link>Imports\Indexing\FieldStorage.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\indexing\IndexDefinition.cs">
-      <Link>Imports\Indexing\IndexDefinition.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\indexing\NumberUtil.cs">
-      <Link>Imports\Indexing\NumberUtil.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\indexing\SortOptions.cs">
-      <Link>Imports\Indexing\SortOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\indexing\SpatialOptions.cs">
-      <Link>Imports\Indexing\SpatialOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\DynamicUtil.cs">
-      <Link>Imports\Json\DynamicUtil.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonDateTimeISO8601Converter.cs">
-      <Link>Imports\Json\JsonDateTimeISO8601Converter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonDateTimeOffsetConverter.cs">
-      <Link>Imports\Json\JsonDateTimeOffsetConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonDictionaryDateTimeKeysConverter.cs">
-      <Link>Imports\Json\JsonDictionaryDateTimeKeysConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonDynamicConverter.cs">
-      <Link>Imports\Json\JsonDynamicConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonEnumConverter.cs">
-      <Link>Imports\Json\JsonEnumConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonFloatConverter.cs">
-      <Link>Imports\Json\JsonFloatConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonMultiDimensionalArrayConverter.cs">
-      <Link>Imports\Json\JsonMultiDimensionalArrayConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonNumericConverter.cs">
-      <Link>Imports\Json\JsonNumericConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JsonToJsonConverter.cs">
-      <Link>Imports\Json\JsonToJsonConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\JTokenExtensions.cs">
-      <Link>Imports\Json\JTokenExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\DictionaryWithParentSnapshot.cs">
-      <Link>Imports\Json\Linq\DictionaryWithParentSnapshot.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\Extensions.cs">
-      <Link>Imports\Json\Linq\Extensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJArray.cs">
-      <Link>Imports\Json\Linq\RavenJArray.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJObject.cs">
-      <Link>Imports\Json\Linq\RavenJObject.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJPath.cs">
-      <Link>Imports\Json\Linq\RavenJPath.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJsonConvert.cs">
-      <Link>Imports\Json\Linq\RavenJsonConvert.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJToken.cs">
-      <Link>Imports\Json\Linq\RavenJToken.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJTokenEqualityComparer.cs">
-      <Link>Imports\Json\Linq\RavenJTokenEqualityComparer.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJTokenReader.cs">
-      <Link>Imports\Json\Linq\RavenJTokenReader.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJTokenWriter.cs">
-      <Link>Imports\Json\Linq\RavenJTokenWriter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\linq\RavenJValue.cs">
-      <Link>Imports\Json\Linq\RavenJValue.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\RavenJsonConverter.cs">
-      <Link>Imports\Json\RavenJsonConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\RavenJsonTextReader.cs">
-      <Link>Imports\Json\RavenJsonTextReader.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\utilities\MathUtils.cs">
-      <Link>Imports\Json\Utilities\MathUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\utilities\MiscellaneousUtils.cs">
-      <Link>Imports\Json\Utilities\MiscellaneousUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\json\utilities\StringUtils.cs">
-      <Link>Imports\Json\Utilities\StringUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\linq\DateTools.cs">
-      <Link>Imports\Linq\DateTools.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\linq\DynamicJsonObject.cs">
-      <Link>Imports\Linq\DynamicJsonObject.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\linq\DynamicList.cs">
-      <Link>Imports\Linq\DynamicList.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\linq\DynamicNullObject.cs">
-      <Link>Imports\Linq\DynamicNullObject.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\ILog.cs">
-      <Link>Imports\Logging\ILog.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\ILogExtensions.cs">
-      <Link>Imports\Logging\ILogExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\ILogManager.cs">
-      <Link>Imports\Logging\ILogManager.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\LoggerExecutionWrapper.cs">
-      <Link>Imports\Logging\LoggerExecutionWrapper.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\LogLevel.cs">
-      <Link>Imports\Logging\LogLevel.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\LogManager.cs">
-      <Link>Imports\Logging\LogManager.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\logproviders\Log4NetLogManager.cs">
-      <Link>Imports\Logging\LogProviders\Log4NetLogManager.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\logproviders\LogManagerBase.cs">
-      <Link>Imports\Logging\LogProviders\LogManagerBase.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\logging\logproviders\NLogLogManager.cs">
-      <Link>Imports\Logging\LogProviders\NLogLogManager.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\replication\ReplicationDestination.cs">
-      <Link>Imports\Replication\ReplicationDestination.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\replication\ReplicationDocument.cs">
-      <Link>Imports\Replication\ReplicationDocument.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\replication\ReplicationStatistics.cs">
-      <Link>Imports\Replication\ReplicationStatistics.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Abstractions\SystemTime.cs">
-      <Link>Imports\SystemTime.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\util\AtomicDictionary.cs">
-      <Link>Imports\Util\AtomicDictionary.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\util\Base62Util.cs">
-      <Link>Imports\Util\Base62Util.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\util\CompletedTask.cs">
-      <Link>Imports\Util\CompletedTask.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\util\ConcurrentSet.cs">
-      <Link>Imports\Util\ConcurrentSet.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\util\EasyReaderWriterLock.cs">
-      <Link>Imports\Util\EasyReaderWriterLock.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\util\IncludesUtil.cs">
-      <Link>Imports\Util\IncludesUtil.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.abstractions\util\RavenQuery.cs">
-      <Link>Imports\Util\RavenQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\changes\IDatabaseChanges.cs">
-      <Link>Imports\Changes\IDatabaseChanges.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\changes\LocalConnectionState.cs">
-      <Link>Imports\Changes\LocalConnectionState.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\changes\RemoteDatabaseChanges.cs">
-      <Link>Imports\Changes\RemoteDatabaseChanges.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\changes\TaskedObservable.cs">
-      <Link>Imports\Changes\TaskedObservable.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\changes\TaskErrorExtensions.cs">
-      <Link>Imports\Changes\TaskErrorExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\changes\TaskObservable.cs">
-      <Link>Imports\Changes\TaskObservable.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
-      <Link>Imports\Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncServerClient.cs">
-      <Link>Imports\Connection\Async\AsyncServerClient.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\IAsyncDatabaseCommands.cs">
-      <Link>Imports\Connection\Async\IAsyncDatabaseCommands.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\CachedRequest.cs">
-      <Link>Imports\Connection\CachedRequest.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\CreateHttpJsonRequestParams.cs">
-      <Link>Imports\Connection\CreateHttpJsonRequestParams.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
-      <Link>Imports\Connection\DocumentConventionJsonExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
-      <Link>Imports\Connection\HttpExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\IDatabaseCommands.cs">
-      <Link>Imports\Connection\IDatabaseCommands.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\IRavenQueryInspector.cs">
-      <Link>Imports\Connection\IRavenQueryInspector.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\JsonLuceneDateTimeConverter.cs">
-      <Link>Imports\Connection\JsonLuceneDateTimeConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\MultiGetOperation.cs">
-      <Link>Imports\Connection\MultiGetOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ObservableLineStream.cs">
-      <Link>Imports\Connection\ObservableLineStream.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\connection\profiling\ConcurrentBoundedList.cs">
-      <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\connection\profiling\IHoldProfilingInformation.cs">
-      <Link>Imports\Connection\Profiling\IHoldProfilingInformation.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\connection\profiling\ProfilingContext.cs">
-      <Link>Imports\Connection\Profiling\ProfilingContext.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\connection\profiling\ProfilingInformation.cs">
-      <Link>Imports\Connection\Profiling\ProfilingInformation.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\connection\profiling\RequestResultArgs.cs">
-      <Link>Imports\Connection\Profiling\RequestResultArgs.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\connection\profiling\RequestStatus.cs">
-      <Link>Imports\Connection\Profiling\RequestStatus.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenTransactionAccessor.cs">
-      <Link>Imports\Connection\RavenTransactionAccessor.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
-      <Link>Imports\Connection\RavenUrlExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformer.cs">
-      <Link>Imports\Connection\ReplicationInformer.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\SerializationHelper.cs">
-      <Link>Imports\Connection\SerializationHelper.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerClient.cs">
-      <Link>Imports\Connection\ServerClient.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerHash.cs">
-      <Link>Imports\Connection\ServerHash.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
-      <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\converters\GuidConverter.cs">
-      <Link>Imports\Converters\GuidConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\converters\Int32Converter.cs">
-      <Link>Imports\Converters\Int32Converter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\converters\Int64Converter.cs">
-      <Link>Imports\Converters\Int64Converter.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\converters\ITypeConverter.cs">
-      <Link>Imports\Converters\ITypeConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
-      <Link>Imports\DocumentStoreBase.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
-      <Link>Imports\Document\AbstractDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncDocumentQuery.cs">
-      <Link>Imports\Document\AsyncDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncHiLoKeyGenerator.cs">
-      <Link>Imports\Document\AsyncHiLoKeyGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiDatabaseHiLoKeyGenerator.cs">
-      <Link>Imports\Document\AsyncMultiDatabaseHiLoKeyGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiLoaderWithInclude.cs">
-      <Link>Imports\Document\AsyncMultiLoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiTypeHiLoKeyGenerator.cs">
-      <Link>Imports\Document\AsyncMultiTypeHiLoKeyGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncShardedDocumentQuery.cs">
-      <Link>Imports\Document\AsyncShardedDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\async\AsyncDocumentKeyGeneration.cs">
-      <Link>Imports\Document\Async\AsyncDocumentKeyGeneration.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
-      <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyOperation.cs">
-      <Link>Imports\Document\Batches\ILazyOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazySessionOperations.cs">
-      <Link>Imports\Document\Batches\ILazySessionOperations.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyFacetsOperation.cs">
-      <Link>Imports\Document\Batches\LazyFacetsOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyLoadOperation.cs">
-      <Link>Imports\Document\Batches\LazyLoadOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyMultiLoaderWithInclude.cs">
-      <Link>Imports\Document\Batches\LazyMultiLoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyMultiLoadOperation.cs">
-      <Link>Imports\Document\Batches\LazyMultiLoadOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyQueryOperation.cs">
-      <Link>Imports\Document\Batches\LazyQueryOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyStartsWithOperation.cs">
-      <Link>Imports\Document\Batches\LazyStartsWithOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazySuggestOperation.cs">
-      <Link>Imports\Document\Batches\LazySuggestOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\DefaultRavenContractResolver.cs">
-      <Link>Imports\Document\DefaultRavenContractResolver.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentConvention.cs">
-      <Link>Imports\Document\DocumentConvention.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentQuery.cs">
-      <Link>Imports\Document\DocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSession.cs">
-      <Link>Imports\Document\DocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
-      <Link>Imports\Document\DocumentSessionListeners.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\EntityToJson.cs">
-      <Link>Imports\Document\EntityToJson.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
-      <Link>Imports\Document\FailoverBehavior.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\GenerateEntityIdOnTheClient.cs">
-      <Link>Imports\Document\GenerateEntityIdOnTheClient.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGenerator.cs">
-      <Link>Imports\Document\HiLoKeyGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGeneratorBase.cs">
-      <Link>Imports\Document\HiLoKeyGeneratorBase.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\IAbstractDocumentQuery.cs">
-      <Link>Imports\Document\IAbstractDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
-      <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\ILoaderWithInclude.cs">
-      <Link>Imports\Document\ILoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\InMemoryDocumentSessionOperations.cs">
-      <Link>Imports\Document\InMemoryDocumentSessionOperations.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\MultiDatabaseHiLoGenerator.cs">
-      <Link>Imports\Document\MultiDatabaseHiLoGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\MultiLoaderWithInclude.cs">
-      <Link>Imports\Document\MultiLoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\MultiTypeHiLoKeyGenerator.cs">
-      <Link>Imports\Document\MultiTypeHiLoKeyGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\oauth\AbstractAuthenticator.cs">
-      <Link>Imports\Document\OAuth\AbstractAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\oauth\BasicAuthenticator.cs">
-      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\oauth\SecuredAuthenticator.cs">
-      <Link>Imports\Document\OAuth\SecuredAuthenticator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
-      <Link>Imports\Document\OpenSessionOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\PromotableRavenClientEnlistment.cs">
-      <Link>Imports\Document\PromotableRavenClientEnlistment.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\RavenClientEnlistment.cs">
-      <Link>Imports\Document\RavenClientEnlistment.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\ReflectionUtil.cs">
-      <Link>Imports\Document\ReflectionUtil.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\sessionoperations\LoadOperation.cs">
-      <Link>Imports\Document\SessionOperations\LoadOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\sessionoperations\MultiLoadOperation.cs">
-      <Link>Imports\Document\SessionOperations\MultiLoadOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\document\sessionoperations\QueryOperation.cs">
-      <Link>Imports\Document\SessionOperations\QueryOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\exceptions\ConflictException.cs">
-      <Link>Imports\Exceptions\ConflictException.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\exceptions\NonAuthoritiveInformationException.cs">
-      <Link>Imports\Exceptions\NonAuthoritiveInformationException.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\exceptions\NonUniqueObjectException.cs">
-      <Link>Imports\Exceptions\NonUniqueObjectException.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\exceptions\ReadVetoException.cs">
-      <Link>Imports\Exceptions\ReadVetoException.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\exceptions\ServerRequestError.cs">
-      <Link>Imports\Data\ServerRequestError.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\DatabaseCommandsExtensions.cs">
-      <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\MultiDatabase.cs">
-      <Link>Imports\Extensions\MultiDatabase.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\MultiTenancyExtensions.cs">
-      <Link>Imports\Extensions\MultiTenancyExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\ParallelExtensions.cs">
-      <Link>Imports\Extensions\ParallelExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\StringExtensions.cs">
-      <Link>Imports\Extensions\StringExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\extensions\TaskExtensions.cs">
-      <Link>Imports\Extensions\TaskExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IAdvancedDocumentSessionOperations.cs">
-      <Link>Imports\IAdvancedDocumentSessionOperations.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IAsyncAdvancedSessionOperations.cs">
-      <Link>Imports\IAsyncAdvancedSessionOperations.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
-      <Link>Imports\IAsyncDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentSession.cs">
-      <Link>Imports\IAsyncDocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentSessionImpl.cs">
-      <Link>Imports\IAsyncDocumentSessionImpl.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDisposalNotification.cs">
-      <Link>Imports\IDisposalNotification.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentQuery.cs">
-      <Link>Imports\IDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryBase.cs">
-      <Link>Imports\IDocumentQueryBase.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryCustomization.cs">
-      <Link>Imports\IDocumentQueryCustomization.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentSession.cs">
-      <Link>Imports\IDocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentSessionImpl.cs">
-      <Link>Imports\IDocumentSessionImpl.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\IDocumentStore.cs">
-      <Link>Imports\IDocumentStore.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\AbstractGenericIndexCreationTask.cs">
-      <Link>Imports\Indexes\AbstractGenericIndexCreationTask.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\AbstractIndexCreationTask.cs">
-      <Link>Imports\Indexes\AbstractIndexCreationTask.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\AbstractMultiMapIndexCreationTask.cs">
-      <Link>Imports\Indexes\AbstractMultiMapIndexCreationTask.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\ExpressionOperatorPrecedence.cs">
-      <Link>Imports\Indexes\ExpressionOperatorPrecedence.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\ExpressionOperatorPrecedenceExtension.cs">
-      <Link>Imports\Indexes\ExpressionOperatorPrecedenceExtension.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\ExpressionStringBuilder.cs">
-      <Link>Imports\Indexes\ExpressionStringBuilder.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\IClientSideDatabase.cs">
-      <Link>Imports\Indexes\IClientSideDatabase.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\IndexDefinitionBuilder.cs">
-      <Link>Imports\Indexes\IndexDefinitionBuilder.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\IndexDefinitionHelper.cs">
-      <Link>Imports\Indexes\IndexDefinitionHelper.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\indexes\RavenDocumentsByEntityName.cs">
-      <Link>Imports\Indexes\RavenDocumentsByEntityName.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\ISyncAdvancedSessionOperation.cs">
-      <Link>Imports\ISyncAdvancedSessionOperation.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\ITransactionalDocumentSession.cs">
-      <Link>Imports\ITransactionalDocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\ExpressionInfo.cs">
-      <Link>Imports\Linq\ExpressionInfo.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\IDocumentQueryGenerator.cs">
-      <Link>Imports\Linq\IDocumentQueryGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\IRavenQueryable.cs">
-      <Link>Imports\Linq\IRavenQueryable.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\IRavenQueryProvider.cs">
-      <Link>Imports\Linq\IRavenQueryProvider.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\LinqPathProvider.cs">
-      <Link>Imports\Linq\LinqPathProvider.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\RavenQueryableExtensions.cs">
-      <Link>Imports\Linq\RavenQueryableExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\RavenQueryInspector.cs">
-      <Link>Imports\Linq\RavenQueryInspector.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\RavenQueryProvider.cs">
-      <Link>Imports\Linq\RavenQueryProvider.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\RavenQueryProviderProcessor.cs">
-      <Link>Imports\Linq\RavenQueryProviderProcessor.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\ReflectionExtensions.cs">
-      <Link>Imports\Linq\ReflectionExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\linq\TypeSystem.cs">
-      <Link>Imports\Linq\TypeSystem.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\listeners\IDocumentConflictListener.cs">
-      <Link>Imports\Listeners\IDocumentConflictListener.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\listeners\IDocumentConversionListener.cs">
-      <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\listeners\IDocumentDeleteListener.cs">
-      <Link>Imports\Listeners\IDocumentDeleteListener.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\listeners\IDocumentQueryListener.cs">
-      <Link>Imports\Listeners\IDocumentQueryListener.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\listeners\IDocumentStoreListener.cs">
-      <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\publicextensions\LinqExtensions.cs">
-      <Link>Imports\PublicExtensions\LinqExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\publicextensions\LinqExtensions_Obsolete.cs">
-      <Link>Imports\PublicExtensions\LinqExtensions_Obsolete.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\publicextensions\SearchOptions.cs">
-      <Link>Imports\PublicExtensions\SearchOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\RavenQueryStatistics.cs">
-      <Link>Imports\RavenQueryStatistics.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\AsyncShardedDocumentSession.cs">
-      <Link>Imports\Shard\AsyncShardedDocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\AsyncShardedHiloKeyGenerator.cs">
-      <Link>Imports\Shard\AsyncShardedHiloKeyGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\BaseShardedDocumentSession.cs">
-      <Link>Imports\Shard\BaseShardedDocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\DefaultShardResolutionStrategy.cs">
-      <Link>Imports\Shard\DefaultShardResolutionStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\IShardAccessStrategy.cs">
-      <Link>Imports\Shard\IShardAccessStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\IShardResolutionStrategy.cs">
-      <Link>Imports\Shard\IShardResolutionStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ParallelShardAccessStrategy.cs">
-      <Link>Imports\Shard\ParallelShardAccessStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\SequentialShardAccessStrategy.cs">
-      <Link>Imports\Shard\SequentialShardAccessStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDatabaseChanges.cs">
-      <Link>Imports\Shard\ShardedDatabaseChanges.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentSession.cs">
-      <Link>Imports\Shard\ShardedDocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentStore.cs">
-      <Link>Imports\Shard\ShardedDocumentStore.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedHiloKeyGenerator.cs">
-      <Link>Imports\Shard\ShardedHiloKeyGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedObservableWithTask.cs">
-      <Link>Imports\Shard\ShardedObservableWithTask.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardRequestData.cs">
-      <Link>Imports\Shard\ShardRequestData.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\StoredEntityEventArgs.cs">
-      <Link>Imports\StoredEntityEventArgs.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\util\ConcatObservable.cs">
-      <Link>Imports\Util\ConcatObservable.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\util\GlobalLastEtagHolder.cs">
-      <Link>Imports\Util\GlobalLastEtagHolder.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\util\Inflector.cs">
-      <Link>Imports\Util\Inflector.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\util\JSBeautify.cs">
-      <Link>Imports\Util\JSBeautify.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\util\LastEtagHolder.cs">
-      <Link>Imports\Util\LastEtagHolder.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\util\ObjectReferenceEqualityComparer.cs">
-      <Link>Imports\Util\ObjectReferenceEqualityComparer.cs</Link>
-    </Compile>
-    <Compile Include="..\raven.client.lightweight\util\Types.cs">
-      <Link>Imports\Util\Types.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\WhereEqualsParams.cs">
-      <Link>Imports\WhereEqualsParams.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\CD.cs">
       <Link>Imports\MissingFromSilverlight\CD.cs</Link>
@@ -1489,8 +287,10 @@
     <Compile Include="MissingFromWinRT\AssemblyExtentionsMissingsFromWinRT.cs" />
     <Compile Include="MissingFromWinRT\DescriptionAttribute.cs" />
     <Compile Include="MissingFromWinRT\ListExtenMissingFromWinRT.cs" />
+    <Compile Include="MissingFromWinRT\MD5.cs" />
     <Compile Include="MissingFromWinRT\StringExtensions.cs" />
     <Compile Include="MissingFromWinRT\ThreadSleep.cs" />
+    <Compile Include="MissingFromWinRT\TypeExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -1501,6 +301,7 @@
       <HintPath>..\packages\Microsoft.Bcl.Async.1.0.14-rc\lib\win8\Microsoft.Threading.Tasks.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>
   </PropertyGroup>

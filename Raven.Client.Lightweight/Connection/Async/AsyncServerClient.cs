@@ -741,6 +741,40 @@ namespace Raven.Client.Connection.Async
 				.ContinueWith(task => convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(task.Result)));
 		}
 
+#if MONO
+		public Task<LicensingStatus> GetLicenseStatus()
+		{
+			var actualUrl = string.Format("{0}/license/status", url).NoCache();
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => new LicensingStatus
+				{
+					Error = task.Result.Value<bool>("Error"),
+					Message = task.Result.Value<string>("Message"),
+					Status = task.Result.Value<string>("Status"),
+				});
+		}
+
+		public Task<BuildNumber> GetBuildNumber()
+		{
+			var actualUrl = string.Format("{0}/build/version", url).NoCache();
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => new BuildNumber
+				{
+					BuildVersion = task.Result.Value<string>("BuildVersion"),
+					ProductVersion = task.Result.Value<string>("ProductVersion")
+				});
+
+		}
+#else
+
 		public async Task<LicensingStatus> GetLicenseStatus()
 		{
 			var actualUrl = string.Format("{0}/license/status", url).NoCache();
@@ -771,7 +805,7 @@ namespace Raven.Client.Connection.Async
 				ProductVersion = result.Value<string>("ProductVersion")
 			};
 		}
-
+#endif
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention));
@@ -934,12 +968,12 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
-				                                                                         convention)
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
 				{
 					AvoidCachingRequest = query.DisableCaching
-				});
+				}.AddOperationHeaders(OperationsHeaders));
 
 			request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1334,6 +1368,20 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("HEAD", u => DirectHeadAsync(u, key));
 		}
 
+#if MONO || NETFX_CORE
+		//TODO: Mono implement 
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                            int pageSize = Int32.MaxValue)
+		{
+			throw new NotImplementedException();
+		}
+
+#else
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
@@ -1359,6 +1407,7 @@ namespace Raven.Client.Connection.Async
 
 			return new YieldStreamResults(webResponse);
 		}
+
 		public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
 		{
 			private readonly WebResponse webResponse;
@@ -1457,6 +1506,16 @@ namespace Raven.Client.Connection.Async
 			var webResponse = await request.RawExecuteRequestAsync();
 			return new YieldStreamResults(webResponse);
 		}
+#endif
+#if SILVERLIGHT
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		{
+			return new RemoteBulkInsertOperation(options, this);
+		}
+#endif
 
 		/// <summary>
 		/// Do a direct HEAD request against the server for the specified document
@@ -1466,9 +1525,9 @@ namespace Raven.Client.Connection.Async
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
-																			   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
-																				   .AddOperationHeaders(OperationsHeaders))
-														.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			                                                                   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
+				                                                                   .AddOperationHeaders(OperationsHeaders))
+			                                            .AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync().ContinueWith(task =>
 			{
@@ -1490,7 +1549,7 @@ namespace Raven.Client.Connection.Async
 					if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 					{
 						throw new ConflictException("Conflict detected on " + key +
-													", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+						                            ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
 						{
 							Etag = httpWebResponse.GetEtagHeader()
 						};
@@ -1500,11 +1559,12 @@ namespace Raven.Client.Connection.Async
 			}).Unwrap();
 		}
 
-		public HttpJsonRequest CreateRequest(string requestUrl, string method)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
@@ -1685,6 +1745,18 @@ namespace Raven.Client.Connection.Async
 			{
 				resolvingConflictRetries = false;
 			}
+		}
+
+		public Task<RavenJToken> GetOperationStatusAsync(long id)
+		{
+			var request = jsonRequestFactory
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
+				.AddOperationHeaders(OperationsHeaders));
+
+			return
+				request
+					.ReadResponseJsonAsync()
+					.ContinueWith(task => task.Result);
 		}
 	}
 }

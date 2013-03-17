@@ -79,11 +79,11 @@ namespace Raven.Client.Connection
 				jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, () => new RequestResultArgs
 				{
 					DurationMilliseconds = httpJsonRequest.CalculateDuration(),
-					Method = httpJsonRequest.webRequest.Method,
+					Method = httpJsonRequest.Method,
 					HttpResult = 0,
 					Status = RequestStatus.AggressivelyCached,
 					Result = "",
-					Url = httpJsonRequest.webRequest.RequestUri.AbsolutePath + "?" + httpJsonRequest.webRequest.RequestUri.Query,
+					Url = httpJsonRequest.Url.ToString(),
 					//TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});

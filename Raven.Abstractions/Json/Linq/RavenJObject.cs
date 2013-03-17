@@ -355,7 +355,8 @@ namespace Raven.Json.Linq
 		{
 			return Properties.Values.Convert<T>();
 		}
-
+#if !MONO
+		//TODO:mono check
 		public static async Task<RavenJToken> LoadAsync(JsonTextReaderAsync reader)
 		{
 			if (reader.TokenType == JsonToken.None)
@@ -432,5 +433,6 @@ namespace Raven.Json.Linq
 
 			throw new Exception("Error reading RavenJObject from JsonReader.");
 		}
+#endif
 	}
 }

@@ -734,7 +734,7 @@ more responsive application.
 		/// </summary>
 		protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
 		{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MONO && !NETFX_CORE
 			if (documentStore.HasJsonRequestFactory && Conventions.ShouldAggressiveCacheTrackChanges &&  batchResults.Count != 0)
 			{
 				documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName ?? Constants.SystemDatabase);

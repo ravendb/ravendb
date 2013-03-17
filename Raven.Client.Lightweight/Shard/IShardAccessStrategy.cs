@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -41,3 +42,4 @@ namespace Raven.Client.Shard
 
 	public delegate bool ShardingErrorHandle<TDatabaseCommands>(TDatabaseCommands failingCommands, ShardRequestData request, Exception exception);
 }
+#endif

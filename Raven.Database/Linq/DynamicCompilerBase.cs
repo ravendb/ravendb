@@ -14,8 +14,8 @@ namespace Raven.Database.Linq
 		
 		protected OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 		protected string basePath;
+		protected readonly InMemoryRavenConfiguration configuration;
 		protected string name;
-		protected static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		public string CompiledQueryText { get; set; }
 		public Type GeneratedType { get; set; }
 		public string Name
@@ -26,41 +26,16 @@ namespace Raven.Database.Linq
 
 		public DynamicCompilerBase(InMemoryRavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath)
 		{
+			this.configuration = configuration;
 			this.name = name;
 			this.extensions = extensions;
 			if (configuration.RunInMemory == false)
 			{
-				this.basePath = Path.Combine(basePath, "TemporaryIndexDefinitionsAsSource");
+				this.basePath = Path.Combine(basePath, "temp");
 				if (Directory.Exists(this.basePath) == false)
-				{
 					Directory.CreateDirectory(this.basePath);
-				}
-				else
-				{
-					MaybeCleanupDirectory(this.basePath);
-				}
 			}
 			this.name = MonoHttpUtility.UrlEncode(name);
 		}
-
-		private static void MaybeCleanupDirectory(string path)
-		{
-			if (paths.TryAdd(path) == false)
-				return;
-
-			foreach (var file in Directory.GetFiles(path, "*.dll"))
-			{
-				try
-				{
-					File.Delete(file);
-				}
-				catch (Exception)
-				{
-					// failure here is expected, this is probably another index that is currently
-					// live that is locking the file, we will get it next restart
-				}
-			}
-		}
-
 	}
 }

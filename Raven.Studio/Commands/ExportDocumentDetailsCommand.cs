@@ -1,20 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Kent.Boogaart.KBCsv;
-using Raven.Abstractions.Data;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
@@ -43,9 +34,7 @@ namespace Raven.Studio.Commands
             var collectionSource = model.Documents.Source;
 
             if (model.DocumentsHaveId)
-            {
                 columns.Insert(0, new ColumnDefinition() { Binding = "$JsonDocument:Key", Header = "Id" });
-            }
 
             var cts = new CancellationTokenSource();
 
@@ -54,24 +43,24 @@ namespace Raven.Studio.Commands
 
             var exporter = new Exporter(stream, collectionSource, columns);
 
-            var exportTask = exporter.ExportAsync(cts.Token, progress => progressWindow.Progress = progress)
-                                     .ContinueOnUIThread(t =>
-                                     {
-                                         // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
-                                         // disabled; so delay closing the window by a few milliseconds
-                                         TaskEx.Delay(TimeSpan.FromMilliseconds(350))
-                                               .ContinueOnSuccessInTheUIThread(progressWindow.Close);
+	        exporter.ExportAsync(cts.Token, progress => progressWindow.Progress = progress)
+	                .ContinueOnUIThread(t =>
+	                {
+		                // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
+		                // disabled; so delay closing the window by a few milliseconds
+		                TaskEx.Delay(TimeSpan.FromMilliseconds(350))
+		                      .ContinueOnSuccessInTheUIThread(progressWindow.Close);
 
-                                         if (t.IsFaulted)
-                                         {
-                                             ApplicationModel.Current.AddErrorNotification(t.Exception,
-                                                                                           "Exporting Report Failed");
-                                         }
-                                         else if (!t.IsCanceled)
-                                         {
-                                             ApplicationModel.Current.AddInfoNotification("Report Exported Successfully");
-                                         }
-                                     });
+		                if (t.IsFaulted)
+		                {
+			                ApplicationModel.Current.AddErrorNotification(t.Exception,
+			                                                              "Exporting Report Failed");
+		                }
+		                else if (!t.IsCanceled)
+		                {
+			                ApplicationModel.Current.AddInfoNotification("Report Exported Successfully");
+		                }
+	                });
 
             progressWindow.Show();
         }
@@ -124,7 +113,7 @@ namespace Raven.Studio.Commands
             public Task ExportAsync(CancellationToken cancellationToken, Action<int> reportProgress)
             {
                 this.cancellationToken = cancellationToken;
-                this.ReportProgress = reportProgress ?? delegate { };
+                ReportProgress = reportProgress ?? delegate { };
 
                 tcs = new TaskCompletionSource<bool>();
                 writer = new CsvWriter(stream);

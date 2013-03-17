@@ -50,7 +50,6 @@ namespace Raven.Client.Connection
 		private string postedData;
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
-		public object Headers;
 		private Stream postedStream;
 		private bool writeCalled;
 		public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
@@ -494,6 +493,15 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
+		/// <summary>
+		/// Adds the operation header.
+		/// </summary>
+		public HttpJsonRequest AddOperationHeader(string key, string value)
+		{
+			webRequest.Headers[key] = value;
+			return this;
+		}
+
 		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
 			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
@@ -844,7 +852,7 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
 		}
-
+#if !MONO
 		public async Task<WebResponse> RawExecuteRequestAsync()
 		{
 			try
@@ -873,7 +881,7 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
 		}
-
+#endif
 
 		public void PrepareForLongRequest()
 		{

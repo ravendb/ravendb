@@ -776,6 +776,8 @@ namespace Raven.Json.Linq
 		}
 		#endregion
 
+#if !MONO
+		//TODO: mono check
 		public static async Task<RavenJToken> ReadFromAsync(JsonTextReaderAsync reader)
 		{
 			if (reader.TokenType == JsonToken.None)
@@ -804,5 +806,6 @@ namespace Raven.Json.Linq
 			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 
 		}
+#endif
 	}
 }

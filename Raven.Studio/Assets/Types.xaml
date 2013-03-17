@@ -15,6 +15,7 @@
 	<Converters:TaskStatusConverter x:Key="TaskStatusConverter" />
 	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
 	<Converters:HiddenWhenStringEmptyOrNull x:Key="HiddenWhenStringEmptyOrNull" />
+	<Converters:VisibleWhenStringEmptyOrNull x:Key="VisibleWhenStringEmptyOrNull" />
 	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:HiddenWhenLessOrEqualToConverter x:Name="HiddenWhenLessOrEqualTo" />
@@ -55,5 +56,5 @@
 	<Converters:StringToSingleLineConverter x:Key="StringToSingleLine"/>
 	<Models:DocumentSize x:Key="DocumentSize" />
 	<Converters:MillisecondsToMinutesConverter x:Key="MillisecondsToMinutes" />
-
+	<Converters:StringEmptyToValueConverter x:Key="StringEmptyToUnnamed" ValueWhenEmpty="Unnamed"/>
 </ResourceDictionary>

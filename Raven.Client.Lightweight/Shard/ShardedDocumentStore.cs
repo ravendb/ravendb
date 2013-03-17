@@ -3,11 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 #if !SILVERLIGHT
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-#endif
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -371,3 +370,4 @@ namespace Raven.Client.Shard
 #endif
 	}
 }
+#endif

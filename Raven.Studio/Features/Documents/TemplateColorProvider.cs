@@ -36,7 +36,7 @@ namespace Raven.Studio.Features.Documents
 			else
 				stepSize = 1/((double)numberOfSections - 1);
 
-			for (int i = 0; i < numberOfSections; i++)
+			for (var i = 0; i < numberOfSections; i++)
 			{
 				var stop = new GradientStop {Color = NextFreeColor(i), Offset = (stepSize * i)};
 				stops.Add(stop);
@@ -55,7 +55,8 @@ namespace Raven.Studio.Features.Documents
 
 			return AllColors[index];
 		}
-		private static List<Color> AllColors = new List<Color>
+
+		private static readonly List<Color> AllColors = new List<Color>
 		{
 			Color.FromArgb(255, 0,200,0),
 			Color.FromArgb(255, 200,0,255),

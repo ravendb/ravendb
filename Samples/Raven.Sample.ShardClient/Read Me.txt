@@ -1,4 +1,4 @@
-This sample contains a simple example of Raven's sharding and master/master replication.
+﻿This sample contains a simple example of Raven's sharding and master/master replication.
 
 Start the servers using "Start Raven.ps1", this will start two instance of Raven, one on port 8080 and one on port 8081
 

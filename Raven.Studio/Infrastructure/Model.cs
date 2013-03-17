@@ -46,8 +46,6 @@ namespace Raven.Studio.Infrastructure
 					});
 			}
 
-			ApplicationModel.Current.UpdateAlerts();
-
 			if (currentTask != null)
 				return;
 

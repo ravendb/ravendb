@@ -29,7 +29,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		public void Replicate(string id, RavenJObject metadata, TExternal incoming)
 		{
-			if(metadata.Value<bool>(Constants.RavenDeleteMarker))
+			if (metadata.Value<bool>(Constants.RavenDeleteMarker))
 			{
 				ReplicateDelete(id, metadata, incoming);
 				return;
@@ -56,7 +56,7 @@ namespace Raven.Bundles.Replication.Responders
 
 			var existingDocumentIsInConflict = existingMetadata[Constants.RavenReplicationConflict] != null;
 			var existingDocumentIsDeleted = existingMetadata[Constants.RavenDeleteMarker] != null
-			                                && existingMetadata[Constants.RavenDeleteMarker].Value<bool>();
+											&& existingMetadata[Constants.RavenDeleteMarker].Value<bool>();
 
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
 				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
@@ -93,7 +93,7 @@ namespace Raven.Bundles.Replication.Responders
 				var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
 
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
-				                                 existingMetadata);
+												  existingMetadata);
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
@@ -193,7 +193,7 @@ namespace Raven.Bundles.Replication.Responders
 															ItemType = ReplicationConflictTypes.DocumentReplicationConflict,
 															OperationType = ReplicationOperationTypes.Delete
 														}));
-			
+
 		}
 
 		protected abstract void DeleteItem(string id, Etag etag);
@@ -209,7 +209,7 @@ namespace Raven.Bundles.Replication.Responders
 		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag);
 
 		protected abstract bool TryResolveConflict(string id, RavenJObject metadata, TExternal document,
-		                                          TInternal existing);
+												  TInternal existing);
 
 
 		private static string HashReplicationIdentifier(RavenJObject metadata)

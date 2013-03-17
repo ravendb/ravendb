@@ -380,10 +380,13 @@ namespace Raven.Database
 					result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
 				});
 
-				foreach (var index in result.Indexes)
+				if (result.Indexes != null)
 				{
-					index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
-					index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+					foreach (var index in result.Indexes)
+					{
+						index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
+						index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+					}
 				}
 
 				return result;
@@ -580,12 +583,12 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		public void RaiseNotifications(DocumentChangeNotification obj)
+		public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
 		{
 			TransportState.Send(obj);
 			var onDocumentChange = OnDocumentChange;
 			if (onDocumentChange != null)
-				onDocumentChange(this, obj);
+				onDocumentChange(this, obj, metadata);
 		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
@@ -598,7 +601,7 @@ namespace Raven.Database
 			TransportState.Send(obj);
 		}
 
-		public event EventHandler<DocumentChangeNotification> OnDocumentChange;
+		public event Action<DocumentDatabase,DocumentChangeNotification, RavenJObject> OnDocumentChange;
 
 		public void RunIdleOperations()
 		{
@@ -729,7 +732,7 @@ namespace Raven.Database
 									Id = key,
 									Type = DocumentChangeTypes.Put,
 									Etag = newEtag,
-								});
+								}, metadata);
 							});
 					}
 					else
@@ -954,7 +957,7 @@ namespace Raven.Database
 								{
 									Id = key,
 									Type = DocumentChangeTypes.Delete,
-								});
+								}, metadataVar);
 							});
 
 					}
@@ -1203,7 +1206,7 @@ namespace Raven.Database
 					if (viewGenerator == null)
 						throw new IndexDoesNotExistsException("Could not find index named: " + index);
 
-					resultEtag = GetIndexEtag(index, null);
+					resultEtag = GetIndexEtag(index, null, query.ResultsTransformer);
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
 
@@ -1250,7 +1253,7 @@ namespace Raven.Database
 						foreach (var result in results)
 						{
 							onResult(result);
-						}
+					}
 
 					if (transformerErrors.Count > 0)
 					{
@@ -2086,7 +2089,7 @@ namespace Raven.Database
 			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk();
 		}
 
-		public Etag GetIndexEtag(string indexName, Etag previousEtag)
+		public Etag GetIndexEtag(string indexName, Etag previousEtag, string resultTransformer = null)
 		{
 			Etag lastDocEtag = Etag.Empty;
 			Etag lastReducedEtag = null;
@@ -2113,6 +2116,11 @@ namespace Raven.Database
 				var list = new List<byte>();
 				list.AddRange(indexDefinition.GetIndexHash());
 				list.AddRange(Encoding.Unicode.GetBytes(indexName));
+				if (string.IsNullOrWhiteSpace(resultTransformer) == false)
+				{
+					var abstractTransformer = IndexDefinitionStorage.GetTransfomer(resultTransformer);
+					list.AddRange(abstractTransformer.GetHashCodeBytes());
+				}
 				list.AddRange(lastDocEtag.ToByteArray());
 				list.AddRange(BitConverter.GetBytes(touchCount));
 				list.AddRange(BitConverter.GetBytes(isStale));
@@ -2173,7 +2181,7 @@ namespace Raven.Database
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertStarted
-				});
+				}, null);
 				foreach (var docs in docBatches)
 				{
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
@@ -2217,7 +2225,7 @@ namespace Raven.Database
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertEnded
-				});
+				}, null);
 				if (documents == 0)
 					return;
 				workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");

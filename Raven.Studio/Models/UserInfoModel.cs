@@ -4,6 +4,7 @@ using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Client.Connection;
 
 namespace Raven.Studio.Models
 {
@@ -18,7 +19,7 @@ namespace Raven.Studio.Models
 			UserData = new Dictionary<string, string>();
 			ApplicationModel.Current.Server.Value.SelectedDatabase.Value
 			                .AsyncDatabaseCommands
-			                .CreateRequest(string.Format("/debug/user-info"), "GET")
+			                .CreateRequest(string.Format("/debug/user-info").NoCache(), "GET")
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(doc =>
 			                {

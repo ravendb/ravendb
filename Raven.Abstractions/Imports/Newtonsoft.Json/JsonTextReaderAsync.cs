@@ -22,7 +22,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
-
+#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -2359,3 +2359,4 @@ namespace Raven.Imports.Newtonsoft.Json
 
 	}
 }
+#endif

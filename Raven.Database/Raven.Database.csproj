@@ -108,6 +108,7 @@
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
@@ -177,6 +178,11 @@
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
+    <Compile Include="Bundles\SqlReplication\ConversionScriptResult.cs" />
+    <Compile Include="Bundles\SqlReplication\ItemToReplicate.cs" />
+    <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />

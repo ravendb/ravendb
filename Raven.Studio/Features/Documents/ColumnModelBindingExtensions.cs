@@ -1,16 +1,7 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
 using System.Text;
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Studio.Infrastructure.Converters;
 
 namespace Raven.Studio.Features.Documents
@@ -20,18 +11,15 @@ namespace Raven.Studio.Features.Documents
         private static string ExpandBinding(this string binding)
         {
             if (binding.StartsWith("$JsonDocument:"))
-            {
                 return binding.Substring("$JsonDocument:".Length);
-            }
-            if (binding.StartsWith("$Meta:"))
-            {
+            
+			if (binding.StartsWith("$Meta:"))
                 return "Metadata" + ExpandPropertyPathToXamlBinding(binding.Substring("$Meta:".Length));
-            }
-            if (binding == "$Temp:Score")
-            {
+            
+			if (binding == "$Temp:Score")
                 return "TempIndexScore";
-            }
-	        return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
+	        
+			return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
         }
 
         private static string ExpandPropertyPathToXamlBinding(string binding)

@@ -1296,6 +1296,8 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
+			bool createdSnaphost = false;
+			bool throwTerminationException = true;
 			try
 			{
 				if (directory is RAMDirectory)
@@ -1334,7 +1336,7 @@ namespace Raven.Database.Indexing
 					});
 
 					var commit = snapshotter.Snapshot();
-
+					createdSnaphost = true;
 					foreach (var fileName in commit.FileNames)
 					{
 						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
@@ -1357,10 +1359,26 @@ namespace Raven.Database.Indexing
 					neededFilesWriter.Flush();
 				}
 			}
+			catch
+			{
+				throwTerminationException = false;
+				throw;
+			}
 			finally
 			{
-				if (snapshotter != null)
-					snapshotter.Release();
+				if (snapshotter != null && createdSnaphost)
+				{
+					try
+					{
+						snapshotter.Release();
+					}
+					catch
+					{
+						if (throwTerminationException)
+							throw;
+						throw;
+					}
+				}
 			}
 		}
 

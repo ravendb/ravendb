@@ -33,7 +33,7 @@ namespace Raven.Database.Linq
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
 
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
-			: this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new InMemoryRavenConfiguration())
+			: this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new RavenConfiguration())
 		{ }
 
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
@@ -506,7 +506,7 @@ Reduce only fields: {2}
 		{
 			TransformQueryToClass();
 
-			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath);
+			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath, configuration);
 
 			var abstractViewGenerator = (AbstractViewGenerator)Activator.CreateInstance(GeneratedType);
 			abstractViewGenerator.SourceCode = CompiledQueryText;

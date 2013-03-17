@@ -11,10 +11,10 @@ namespace Raven.Studio.Commands
 		{
 			this.pager = pager;
 			this.pager.PropertyChanged += (sender, args) =>
-			                              	{
-			                              		if (args.PropertyName == "HasNextPage")
-			                              			RaiseCanExecuteChanged();
-			                              	};
+			{
+				if (args.PropertyName == "HasNextPage")
+					RaiseCanExecuteChanged();
+			};
 		}
 
 		public override void Execute(object parameter)

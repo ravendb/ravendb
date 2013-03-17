@@ -187,8 +187,29 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\CountingStream.cs">
+      <Link>Imports\Connection\CountingStream.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\ConflictsResolver.cs">
       <Link>Infrastructure\ConflictsResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\ISmugglerApi.cs">
+      <Link>Imports\Smuggler\ISmugglerApi.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerAction.cs">
+      <Link>Imports\Smuggler\SmugglerAction.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerApiBase.cs">
+      <Link>Imports\Smuggler\SmugglerApiBase.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerOptions.cs">
+      <Link>Imports\Smuggler\SmugglerOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\ComparableByteArray.cs">
+      <Link>Imports\Util\ComparableByteArray.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\EtagUtil.cs">
+      <Link>Imports\Util\EtagUtil.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Database\Bundles\Replication\Data\SourceReplicationInformation.cs">
       <Link>Features\Bundles\SourceReplicationInformation.cs</Link>
@@ -226,6 +247,7 @@
     <Compile Include="Behaviors\ShowAutoCompleteDropDown.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
+    <Compile Include="Behaviors\StudioDataTrigger.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\CsvImportCommand.cs" />
@@ -279,6 +301,7 @@
     <Compile Include="Features\Settings\SqlReplicationsSettingsSectionView.xaml.cs">
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Smuggler\SmugglerApi.cs" />
     <Compile Include="Features\Stats\UserInfoView.xaml.cs">
       <DependentUpon>UserInfoView.xaml</DependentUpon>
     </Compile>
@@ -289,6 +312,7 @@
     <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
       <DependentUpon>TransformersListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Models\TransformerDefinitionModel.cs" />
     <Compile Include="Models\TransformersModel.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
@@ -304,10 +328,12 @@
     <Compile Include="Infrastructure\Converters\TrueWhenGeographyConverter.cs" />
     <Compile Include="Infrastructure\Converters\PriorityToFontColorConverter.cs" />
     <Compile Include="Infrastructure\Converters\PriorityToFontStyleConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibilityByParamInEqualityConverter.cs" />
     <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\TaskUITemplateSelector.cs" />
+    <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />
     <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
@@ -1434,6 +1460,7 @@
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

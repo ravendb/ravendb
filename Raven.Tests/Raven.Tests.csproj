@@ -525,6 +525,8 @@
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ConflictsInEmbeddableStore.cs" />
+    <Compile Include="Bundles\Replication\Bugs\ApiKeysWithMultiTenancy.cs" />
+    <Compile Include="Bundles\Replication\Bugs\HiLoHanging.cs" />
     <Compile Include="Bundles\Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693_Embeddable.cs" />
@@ -550,6 +552,7 @@
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\RavenDB937.cs" />
+    <Compile Include="Issues\DatabaseReloadingTests.cs" />
     <Compile Include="Issues\RavenDB815.cs" />
     <Compile Include="Issues\RavenDB820.cs" />
     <Compile Include="Issues\RavenDb827.cs" />
@@ -564,6 +567,7 @@
     <Compile Include="Issues\RavenDB955.cs" />
     <Compile Include="Issues\RavenDB957.cs" />
     <Compile Include="Issues\RavenDB_752.cs" />
+    <Compile Include="Issues\RavenDB987.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
     <Compile Include="Issues\RavenDB_790.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />
@@ -571,6 +575,8 @@
     <Compile Include="Issues\RavenDB_863.cs" />
     <Compile Include="Issues\RavenDB_863_2.cs" />
     <Compile Include="Issues\RavenDB_868.cs" />
+    <Compile Include="Issues\RavenDB_895.cs" />
+    <Compile Include="Issues\RavenDB_967.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
     <Compile Include="LicenseProviderPluginTest.cs" />
@@ -633,6 +639,7 @@
     <Compile Include="MailingList\Accounts.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
+    <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
@@ -683,12 +690,14 @@
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RacielRod.cs" />
+    <Compile Include="MailingList\RavenCountTest.cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\RavenDbRecoveryTests.cs" />
     <Compile Include="MailingList\RavenDB_859.cs" />
     <Compile Include="MailingList\RavenCannotQueryAgainstFloatProperty.cs" />
     <Compile Include="MailingList\LateBoundValue.cs" />
+    <Compile Include="MailingList\RavenDeserializationBug.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
@@ -1329,6 +1338,10 @@
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
       <Project>{3b90eb20-aea3-4972-8219-936f1a62768c}</Project>
       <Name>Raven.Server</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
+      <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>

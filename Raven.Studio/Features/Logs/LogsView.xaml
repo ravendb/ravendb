@@ -41,65 +41,94 @@
 					<TextBlock Text="{Binding Path=DisplayedLogs.Count, StringFormat='(\{0\} Entries)'}"
 							   Margin="10,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
-            <Border HorizontalAlignment="Center" Background="#DC8D8D" Margin="0,4" Visibility="{Binding PendingLogs, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}" CornerRadius="2">
-                    <StackPanel Orientation="Horizontal"  Margin="4,0">
+			<Border HorizontalAlignment="Center" Background="#DC8D8D" Margin="0,4" Visibility="{Binding PendingLogs, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}" CornerRadius="2">
+				<StackPanel Orientation="Horizontal"  Margin="4,0">
 					<TextBlock Text="{Binding Path=PendingLogs, StringFormat='\{0\} new log entries'}"
-							    VerticalAlignment="Center" FontWeight="Bold"/>
-                    <HyperlinkButton Content="Refresh" Margin="10,0,0,0" Command="{Binding Refresh}" VerticalAlignment="Center" Foreground="White"/>
-                </StackPanel>
-            </Border>
-        </Grid>
+							    VerticalAlignment="Center" FontWeight="Bold"
+							   Visibility="{Binding SearchValue, Converter={StaticResource VisibleWhenStringEmptyOrNull}}"/>
+					<HyperlinkButton Content="Refresh" Margin="10,0,0,0" Command="{Binding Refresh}" VerticalAlignment="Center" Foreground="White"
+									 Visibility="{Binding SearchValue, Converter={StaticResource VisibleWhenStringEmptyOrNull}}"/>
+					<TextBlock Text="{Binding Path=SearchValue, StringFormat='Showing search results for &quot;\{0\}&quot;'}"
+							    VerticalAlignment="Center" FontWeight="Bold"
+							   Visibility="{Binding SearchValue, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
+					<HyperlinkButton Content="Clear Search" Margin="10,0,0,0" Command="{Binding Refresh}" VerticalAlignment="Center" Foreground="White"
+									 Visibility="{Binding SearchValue, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
+				</StackPanel>
+			</Border>
+		</Grid>
 				
 
         <Border Grid.Row="1" Background="{StaticResource Brush_ToolbarBackground}">
-            <StackPanel Orientation="Horizontal" Margin="0,4">
-                <Button Command="{Binding Refresh}"
+			<Grid Margin="0,4">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<Button Command="{Binding Refresh}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Refresh">
-                    <Image Source="{StaticResource Image_Refresh_Small}"
+					<Image Source="{StaticResource Image_Refresh_Small}"
 							   Stretch="None" />
-                </Button>
-                <HyperlinkButton x:Name="AllErrorsHyperlink"
+				</Button>
+				
+				<HyperlinkButton x:Name="AllErrorsHyperlink"
+								 Grid.Column="1"
 									 Content="All Logs"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="/logs"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
                                      VerticalAlignment="Center">
-                    <i:Interaction.Triggers>
-                        <ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+					<i:Interaction.Triggers>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="False">
-                            <Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+							<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
 														   StateName="ActiveLink" />
-                        </ei:DataTrigger>
-                        <ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+						</ei:DataTrigger>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="True">
-                            <Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
+							<Behaviors:GoToStateAction TargetObject="{Binding ElementName=AllErrorsHyperlink}"
 														   StateName="InactiveLink" />
-                        </ei:DataTrigger>
-                    </i:Interaction.Triggers>
-                </HyperlinkButton>
-                <HyperlinkButton x:Name="ErrorsOnlyHyperlink"
+						</ei:DataTrigger>
+					</i:Interaction.Triggers>
+				</HyperlinkButton>
+				<HyperlinkButton x:Name="ErrorsOnlyHyperlink"
+								 Grid.Column="2"
 									 Content="Errors Only"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="/logs/error"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
 									 Margin="4,0,0,0"
                                      VerticalAlignment="Center">
-                    <i:Interaction.Triggers>
-                        <ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+					<i:Interaction.Triggers>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="True">
-                            <Behaviors:GoToStateAction StateName="ActiveLink"
+							<Behaviors:GoToStateAction StateName="ActiveLink"
 														   TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}" />
-                        </ei:DataTrigger>
-                        <ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
+						</ei:DataTrigger>
+						<ei:DataTrigger Binding="{Binding ShowErrorsOnly}"
 											Value="False">
-                            <Behaviors:GoToStateAction StateName="InactiveLink"
+							<Behaviors:GoToStateAction StateName="InactiveLink"
 														   TargetObject="{Binding ElementName=ErrorsOnlyHyperlink}" />
-                        </ei:DataTrigger>
-                    </i:Interaction.Triggers>
-                </HyperlinkButton>
-            </StackPanel>
+						</ei:DataTrigger>
+					</i:Interaction.Triggers>
+				</HyperlinkButton>
+				
+				<StackPanel Grid.Column="4" Orientation="Horizontal">
+					<TextBlock Text="Search: " VerticalAlignment="Center"/>
+					<TextBox Text="{Binding SearchValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="150">
+						<i:Interaction.Triggers>
+							<Behaviors:StudioKeyTrigger Key="Enter">
+								<i:InvokeCommandAction Command="{Binding Search}"/>
+							</Behaviors:StudioKeyTrigger>
+						</i:Interaction.Triggers>
+					</TextBox>
+				</StackPanel>
+			</Grid>
         </Border>
 		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>

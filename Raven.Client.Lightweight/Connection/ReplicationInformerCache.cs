@@ -1,3 +1,4 @@
+#if!NETFX_CORE
 using System;
 using System.IO;
 using System.IO.IsolatedStorage;
@@ -15,6 +16,8 @@ namespace Raven.Client.Connection
 		{
 #if SILVERLIGHT
 			return IsolatedStorageFile.GetUserStoreForSite();
+#elif MONO
+			return IsolatedStorageFile.GetUserStoreForApplication();
 #else
 			return IsolatedStorageFile.GetMachineStoreForDomain();
 #endif
@@ -64,3 +67,4 @@ namespace Raven.Client.Connection
 		}
 	}
 }
+#endif

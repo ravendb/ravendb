@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
@@ -22,3 +23,4 @@ namespace Raven.Client
 		Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval);
 	}
 }
+#endif

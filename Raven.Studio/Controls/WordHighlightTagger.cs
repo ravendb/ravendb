@@ -46,8 +46,9 @@ namespace Raven.Studio.Controls {
 		/// <summary>
 		/// Initializes the <c>WordHighlightTagger</c> class.
 		/// </summary>
-		static WordHighlightTagger() {
-			SolidColorBrush brush = new SolidColorBrush(Colors.Yellow);
+		static WordHighlightTagger() 
+		{
+			var brush = new SolidColorBrush(Colors.Yellow);
 			AmbientHighlightingStyleRegistry.Instance.Register(wordHighlightClassificationType, new HighlightingStyle(null, brush));
 		}
 
@@ -61,9 +62,10 @@ namespace Raven.Studio.Controls {
 		/// Initializes a new instance of the <c>WordHighlightTagger</c> class.
 		/// </summary>
 		/// <param name="view">The view to which this manager is attached.</param>
-		public WordHighlightTagger(IEditorView view) : base("Custom",
-			new Ordering[] { new Ordering(TaggerKeys.Token, OrderPlacement.Before) }, view.SyntaxEditor.Document) {
-			
+		public WordHighlightTagger(IEditorView view)
+			: base("Custom", new Ordering[] {new Ordering(TaggerKeys.Token, OrderPlacement.Before)}, view.SyntaxEditor.Document)
+		{
+
 			// Initialize
 			this.view = view;
 			this.view.SelectionChanged += OnViewSelectionChanged;
@@ -71,9 +73,9 @@ namespace Raven.Studio.Controls {
 			HighlightedStringChanged += UpdateHighlights;
 
 			// Update current word
-			this.UpdateHighlights();
+			UpdateHighlights();
 		}
-		
+
 		/////////////////////////////////////////////////////////////////////////////////////////////////////
 		// PUBLIC PROCEDURES
 		/////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,7 +90,7 @@ namespace Raven.Studio.Controls {
 				return;
 			
 			// Update the current word
-			this.UpdateHighlights();
+			UpdateHighlights();
 		}
 
 		/// <summary>
@@ -99,9 +101,8 @@ namespace Raven.Studio.Controls {
 			if ((view == null) || (view.Selection == null))
 				return;
 
-			this.OnTagsChanged(
-				new TagsChangedEventArgs(new TextSnapshotRange(view.SyntaxEditor.Document.CurrentSnapshot,
-				                                               view.SyntaxEditor.Document.CurrentSnapshot.TextRange)));
+			OnTagsChanged(new TagsChangedEventArgs(new TextSnapshotRange(view.SyntaxEditor.Document.CurrentSnapshot,
+																		 view.SyntaxEditor.Document.CurrentSnapshot.TextRange)));
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,10 +126,11 @@ namespace Raven.Studio.Controls {
 					// Look for current word matches
 					foreach (Match match in search.Matches(snapshotRange.Text)) {
 						// Add a highlighted range
-						yield return new TagSnapshotRange<IClassificationTag>(
-							new TextSnapshotRange(snapshotRange.Snapshot, TextRange.FromSpan(snapshotRange.StartOffset + match.Index, match.Length)),
-							new ClassificationTag(wordHighlightClassificationType)
-							);
+						yield return new TagSnapshotRange<IClassificationTag>(new TextSnapshotRange(snapshotRange.Snapshot,
+						                                                                            TextRange.FromSpan(
+							                                                                            snapshotRange.StartOffset +
+							                                                                            match.Index, match.Length)),
+						                                                      new ClassificationTag(wordHighlightClassificationType));
 					}
 				}
 			}
@@ -151,6 +153,5 @@ namespace Raven.Studio.Controls {
 			// Call the base method
 			base.OnClosed();
 		}
-		
 	}
 }

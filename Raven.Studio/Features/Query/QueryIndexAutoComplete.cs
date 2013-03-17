@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using ActiproSoftware.Text;
@@ -49,10 +48,10 @@ namespace Raven.Studio.Features.Query
             {
                 this.indexName = indexName;
                 this.queryDocument = queryDocument;
-                queryDocument.ObserveTextChanged()
-                    .Throttle(TimeSpan.FromSeconds(0.2))
-                    .ObserveOnDispatcher()
-                    .SubscribeWeakly(this, (target, _) => target.GetTermsForUsedFields());
+	            queryDocument.ObserveTextChanged()
+	                         .Throttle(TimeSpan.FromSeconds(0.2))
+	                         .ObserveOnDispatcher()
+	                         .SubscribeWeakly(this, (target, _) => target.GetTermsForUsedFields());
 
                 CompletionProvider = new QueryIntelliPromptProvider(fields, indexName, fieldsTermsDictionary);
             }
@@ -66,10 +65,10 @@ namespace Raven.Studio.Features.Query
 
 		private void GetTermsForUsedFields()
 		{
-		    var fields = queryDocument.GetTextOfAllTokensMatchingType("Field")
-		        .Select(t => t.TrimEnd(':').Trim())
-                .Except(fieldsTermsDictionary.Keys)
-		        .ToList();
+			var fields = queryDocument.GetTextOfAllTokensMatchingType("Field")
+			                          .Select(t => t.TrimEnd(':').Trim())
+			                          .Except(fieldsTermsDictionary.Keys)
+			                          .ToList();
 
             foreach (var field in fields)
 			{
@@ -82,13 +81,13 @@ namespace Raven.Studio.Features.Query
 
 		public static Task GetTermsForFieldAsync(string indexName, string field, List<string> terms, string termPrefix = "")
 		{
-		    return ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
-		        .ContinueOnSuccessInTheUIThread(
-		            results =>
-		                {
-		                    terms.Clear();
-		                    terms.AddRange(results);
-		                });
+			return ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
+			                       .ContinueOnSuccessInTheUIThread(
+				                       results =>
+				                       {
+					                       terms.Clear();
+					                       terms.AddRange(results);
+				                       });
 		}
 	}
 }

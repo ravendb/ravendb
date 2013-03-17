@@ -730,6 +730,7 @@
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
     <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
+    <Compile Include="Util\AsyncEnumeratorBridge.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />

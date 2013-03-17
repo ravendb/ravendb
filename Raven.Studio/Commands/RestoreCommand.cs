@@ -21,7 +21,7 @@ namespace Raven.Studio.Commands
 			var backupLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Backup Location");
 			var databaseLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Location");
 			var name = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Name");
-			TaskCheckBox attachmentUI = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Defrag") as TaskCheckBox;
+			var attachmentUI = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Defrag") as TaskCheckBox;
 			var defrag = attachmentUI != null && (bool)attachmentUI.Value;
 			if (backupLocation == null || name == null || databaseLocation == null)
 				return;
