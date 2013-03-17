@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
-		public override List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context = null)
+		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
 			var oAuthUser = user as OAuthPrincipal;
 			if (oAuthUser == null)
