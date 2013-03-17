@@ -114,7 +114,10 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					return;
 				currentTask = Task.Factory.StartNew(async () =>
 				{
-					using (LogContext.WithDatabase(Database.Name))
+					var documentDatabase = Database;
+					if (documentDatabase == null)
+						return;
+					using (LogContext.WithDatabase(documentDatabase.Name))
 					{
 						try
 						{
@@ -123,15 +126,23 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							if (localBackupConfigs == null)
 								return;
 
+							var databaseStatistics = documentDatabase.Statistics;
+							// No-op if nothing has changed
+							if (databaseStatistics.LastDocEtag == localBackupStatus.LastDocsEtag &&
+								databaseStatistics.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+							{
+								return;
+							}
+
 							var backupPath = localBackupConfigs.LocalFolderName ??
-							                 Path.Combine(Database.Configuration.DataDirectory, "PeriodicBackup-Temp");
+							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
 							var options = new SmugglerOptions
 							{
 								BackupPath = backupPath,
 								LastDocsEtag = localBackupStatus.LastDocsEtag,
 								LastAttachmentEtag = localBackupStatus.LastAttachmentsEtag
 							};
-							var dd = new DataDumper(Database, options);
+							var dd = new DataDumper(documentDatabase, options);
 							var filePath = await dd.ExportData(null, null, true);
 
 							// No-op if nothing has changed
@@ -149,7 +160,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							var ravenJObject = RavenJObject.FromObject(localBackupStatus);
 							ravenJObject.Remove("Id");
-							var putResult = Database.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
+							var putResult = documentDatabase.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
 							                             new RavenJObject(), null);
 
 							// this result in backupStatus being refreshed
@@ -166,7 +177,9 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						}
 						catch (Exception e)
 						{
-							Database.AddAlert(new Alert
+							logger.ErrorException("Error when performing periodic backup", e);
+							
+							documentDatabase.AddAlert(new Alert
 							{
 								AlertLevel = AlertLevel.Error,
 								CreatedAt = SystemTime.UtcNow,
@@ -175,8 +188,6 @@ namespace Raven.Database.Bundles.PeriodicBackups
 								Exception = e.ToString(),
 								UniqueKey = "Periodic Backup Error"
 							});
-
-							logger.ErrorException("Error when performing periodic backup", e);
 						}
 					}
 				})
