@@ -39,7 +39,7 @@ namespace Raven.Studio.Models
 			SelectedTable = new Observable<SqlReplicationTable>();
 			FirstItemOfCollection = new Observable<RavenJObject>();
 			script = new EditorDocument { Language = JScriptLanguage };
-			Script.Language.RegisterService(new SqlReplicationScriptIntelliPromptProvider(FirstItemOfCollection));
+			Script.Language.RegisterService(new SqlReplicationScriptIntelliPromptProvider(FirstItemOfCollection, this));
 
 			script.TextChanged += (sender, args) => UpdateScript();
 			SelectedReplication.PropertyChanged += (sender, args) => UpdateParameters();
