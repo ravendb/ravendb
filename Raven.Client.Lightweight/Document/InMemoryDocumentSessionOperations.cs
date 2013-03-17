@@ -452,6 +452,11 @@ more responsive application.
 			if (typeof(T) == typeof(RavenJObject))
 				return (T)(object)documentFound.CloneToken();
 
+			foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+			{
+				extendedDocumentConversionListener.BeforeConversionToEntity(id, documentFound, metadata);
+			}
+
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
@@ -475,6 +480,11 @@ more responsive application.
 			foreach (var documentConversionListener in listeners.ConversionListeners)
 			{
 				documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
+			}
+
+			foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+			{
+				extendedDocumentConversionListener.AfterConversionToEntity(id, documentFound, metadata, entity);
 			}
 
 			return entity;
