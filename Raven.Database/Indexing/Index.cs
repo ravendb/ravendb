@@ -1300,8 +1300,6 @@ namespace Raven.Database.Indexing
 			bool throwOnFinallyException = true;
 			try
 			{
-				if (indexDefinition.IsTemp)
-					return; // we don't backup temp indexes
 				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
@@ -1335,7 +1333,7 @@ namespace Raven.Database.Indexing
 								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 								allFilesWriter.WriteLine(fileName);
 							}
-							return 0;
+							return new IndexedItemsInfo();
 						});
 					}
 					catch (CorruptIndexException e)
