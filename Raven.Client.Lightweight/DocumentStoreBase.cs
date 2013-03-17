@@ -165,6 +165,15 @@ namespace Raven.Client
 		}
 
 		/// <summary>
+		/// Registers the extended conversion listener.
+		/// </summary>
+		public DocumentStoreBase RegisterListener(IExtendedDocumentConversionListener conversionListener)
+		{
+			listeners.ExtendedConversionListeners = listeners.ExtendedConversionListeners.Concat(new[] { conversionListener, }).ToArray();
+			return this;
+		}
+
+		/// <summary>
 		/// Registers the query listener.
 		/// </summary>
 		/// <param name="queryListener">The query listener.</param>

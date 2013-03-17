@@ -63,6 +63,7 @@
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
     <Compile Include="Changes\TaskErrorExtensions.cs" />
+    <Compile Include="Listeners\IExtendedDocumentConversionListener.cs" />
     <Compile Include="Util\CSharpClassName.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
