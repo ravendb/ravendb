@@ -92,7 +92,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					if (jsonDocument == null)
 						return false;
 					var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
-					return periodicBackupStatus.LastDocsEtag != Etag.Empty && periodicBackupStatus.LastDocsEtag != null;
+					return periodicBackupStatus.LastDocsEtag != Guid.Empty;
 				});
 
 				var etagForBackups= store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag;
@@ -113,8 +113,6 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					BackupPath = backupPath
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
-				dataDumper.ImportData(smugglerOptions, true).Wait(TimeSpan.FromSeconds(15));
-				dataDumper.ImportData(smugglerOptions, true).Wait();
 				dataDumper.ImportData(smugglerOptions, true);
 
 				using (var session = store.OpenSession())
