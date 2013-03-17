@@ -28,6 +28,7 @@ using Raven.Abstractions.Linq;
 using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
@@ -132,14 +133,14 @@ namespace Raven.Database.Indexing
 			}
 
 			var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
-			        .Distinct()
-			        .ToList();
+					.Distinct()
+					.ToList();
 
 			var stats = new IndexingWorkStats(allState.Select(x => x.Item2));
 			var reduceKeyStats = allState.SelectMany(x => x.Item3)
-			                             .GroupBy(x => x.Key)
-			                             .Select(g => new {g.Key, Count = g.Sum(x => x.Value)})
-			                             .ToList();
+										 .GroupBy(x => x.Key)
+										 .Select(g => new { g.Key, Count = g.Sum(x => x.Value) })
+										 .ToList();
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
@@ -157,7 +158,7 @@ namespace Raven.Database.Indexing
 					accessor.MapReduce.ScheduleReductions(name, 0, enumerator.Current);
 				}
 			}));
-			
+
 
 			UpdateIndexingStats(context, stats);
 			AddindexingPerformanceStat(new IndexingPerformanceStats
@@ -255,7 +256,7 @@ namespace Raven.Database.Indexing
 				return base.RetrieveDocument(document, fieldsToFetch, score);
 			}
 			var field = document.GetField(Constants.ReduceValueFieldName);
-			if(field == null)
+			if (field == null)
 			{
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
 				return base.RetrieveDocument(document, fieldsToFetch, score);
@@ -308,7 +309,7 @@ namespace Raven.Database.Indexing
 			private readonly Document luceneDoc = new Document();
 			private readonly Field reduceValueField = new Field(Constants.ReduceValueFieldName, "dummy",
 													 Field.Store.YES, Field.Index.NO);
-			
+
 			private readonly Field reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
 													 Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
 			private PropertyDescriptorCollection properties = null;
@@ -412,7 +413,40 @@ namespace Raven.Database.Indexing
 				var ravenJObject = doc as RavenJObject;
 				if (ravenJObject != null)
 					return ravenJObject;
-				return RavenJObject.FromObject(doc);
+				var jsonDocument = RavenJObject.FromObject(doc);
+				MergeArrays(jsonDocument);
+				return jsonDocument;
+			}
+
+			private static void MergeArrays(RavenJToken token)
+			{
+				if (token == null)
+					return;
+				switch (token.Type)
+				{
+					case JTokenType.Array:
+						var arr = (RavenJArray)token;
+						for (int i = 0; i < arr.Length; i++)
+						{
+							var current = arr[i];
+							if (current == null || current.Type != JTokenType.Array)
+								continue;
+							arr.RemoveAt(i);
+							i--;
+							var j = Math.Max(0, i);
+							foreach (var item in (RavenJArray)current)
+							{
+								arr.Insert(j++, item);
+							}
+						}
+						break;
+					case JTokenType.Object:
+						foreach (var kvp in ((RavenJObject)token))
+						{
+							MergeArrays(kvp.Value);
+						}
+						break;
+				}
 			}
 
 			public void ExecuteReduction()
@@ -519,13 +553,13 @@ namespace Raven.Database.Indexing
 				{
 					luceneDoc.Add(field);
 				}
-				
+
 				batchers.ApplyAndIgnoreAllErrors(
 					exception =>
 					{
 						logIndexing.WarnException(
 							string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-							              name, reduceKeyAsString),
+										  name, reduceKeyAsString),
 							exception);
 						Context.AddError(name, reduceKeyAsString, exception.Message);
 					},
