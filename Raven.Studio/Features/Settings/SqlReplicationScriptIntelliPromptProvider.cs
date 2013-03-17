@@ -7,16 +7,19 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Settings
 {
 	public class SqlReplicationScriptIntelliPromptProvider : ICompletionProvider
 	{
 		private readonly Observable<RavenJObject> documentToSample;
+		private readonly SqlReplicationSettingsSectionModel sqlReplicationSettingsSectionModel;
 
-		public SqlReplicationScriptIntelliPromptProvider(Observable<RavenJObject> documentToSample)
+		public SqlReplicationScriptIntelliPromptProvider(Observable<RavenJObject> documentToSample, SqlReplicationSettingsSectionModel sqlReplicationSettingsSectionModel)
 		{
 			this.documentToSample = documentToSample;
+			this.sqlReplicationSettingsSectionModel = sqlReplicationSettingsSectionModel;
 		}
 
 		public string Key { get; private set; }
@@ -46,13 +49,27 @@ namespace Raven.Studio.Features.Settings
 			}
 			else if (!completionContext.IsObjectMember)
 			{
+
+				foreach (var sqlReplicationTable in sqlReplicationSettingsSectionModel.SelectedReplication.Value.SqlReplicationTables)
+				{
+					session.Items.Add(new CompletionItem
+					{
+						ImageSourceProvider = new CommonImageSourceProvider(CommonImage.MethodPublic),
+						Text = "replicateTo" + sqlReplicationTable.TableName,
+						AutoCompletePreText = "replicateTo" + sqlReplicationTable.TableName,
+						DescriptionProvider =
+							new HtmlContentProvider("Will update/insert the specified object to the table " + sqlReplicationTable.TableName +
+							                        ", using the specified pkName<br/>replicateTo" + sqlReplicationTable.TableName +
+							                        "(columnsObj)")
+					});
+				}
 				session.Items.Add(new CompletionItem
 				{
 					ImageSourceProvider = new CommonImageSourceProvider(CommonImage.MethodPublic),
-					Text = "sqlReplicate",
-					AutoCompletePreText = "sqlReplicate",
+					Text = "replicateTo",
+					AutoCompletePreText = "replicateTo",
 					DescriptionProvider =
-						 new HtmlContentProvider("Will update/insert the specified object (with the object properties matching the table columns) to the specified table, using the specified pkName<br/>sqlReplicate(table, pkName, columnsObj)")
+						 new HtmlContentProvider("Will update/insert the specified object (with the object properties matching the table columns) to the specified table, using the specified pkName<br/>replicateTo(table, columnsObj)")
 				});
 
 				session.Items.Add(new CompletionItem

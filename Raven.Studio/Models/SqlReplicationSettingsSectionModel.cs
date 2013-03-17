@@ -1,5 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
@@ -9,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Bundles;
 using Raven.Studio.Features.Settings;
@@ -16,7 +19,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class SqlReplicationSettingsSectionModel : SettingsSectionModel
+	public class SqlReplicationSettingsSectionModel : SettingsSectionModel, IAutoCompleteSuggestionProvider
 	{
 		private ICommand addReplicationCommand;
 		private ICommand deleteReplicationCommand;
@@ -39,7 +42,7 @@ namespace Raven.Studio.Models
 			SelectedTable = new Observable<SqlReplicationTable>();
 			FirstItemOfCollection = new Observable<RavenJObject>();
 			script = new EditorDocument { Language = JScriptLanguage };
-			Script.Language.RegisterService(new SqlReplicationScriptIntelliPromptProvider(FirstItemOfCollection));
+			Script.Language.RegisterService(new SqlReplicationScriptIntelliPromptProvider(FirstItemOfCollection, this));
 
 			script.TextChanged += (sender, args) => UpdateScript();
 			SelectedReplication.PropertyChanged += (sender, args) => UpdateParameters();
@@ -85,21 +88,23 @@ namespace Raven.Studio.Models
 				});
 		}
 
-		public ICommand DeleteTable{get{return new ActionCommand(() =>
-		{
-			SelectedReplication.Value.SqlReplicationTables.Remove(SelectedTable.Value);
-			SelectedTable.Value = null;
-		});}}
-
-		public ICommand AddTable
+		public ICommand DeleteTable
 		{
 			get
 			{
 				return new ActionCommand(() =>
 				{
-					SelectedReplication.Value.SqlReplicationTables.Add(new SqlReplicationTable());
-					
+					SelectedReplication.Value.SqlReplicationTables.Remove(SelectedTable.Value);
+					SelectedTable.Value = null;
 				});
+			}
+		}
+
+		public ICommand AddTable
+		{
+			get
+			{
+				return new ActionCommand(() => SelectedReplication.Value.SqlReplicationTables.Add(new SqlReplicationTable()));
 			}
 		}
 
@@ -120,13 +125,6 @@ namespace Raven.Studio.Models
 				SelectedConnectionStringIndex = 0;
 
 			ScriptData = SelectedReplication.Value.Script;
-
-			if (!string.IsNullOrWhiteSpace(SelectedReplication.Value.RavenEntityName))
-			{
-				SelectedCollectionIndex = AvailableObjects.IndexOf(SelectedReplication.Value.RavenEntityName);
-			}
-			else
-				SelectedCollectionIndex = -1;
 		}
 
 		public ICommand DeleteReplication
@@ -152,7 +150,6 @@ namespace Raven.Studio.Models
 		public Observable<SqlReplicationConfigModel> SelectedReplication { get; set; }
 		public Observable<SqlReplicationTable> SelectedTable { get; set; }
 		IEditorDocument script;
-		private int selectedCollectionIndex;
 		private int selectedConnectionStringIndex;
 		public IEditorDocument Script
 		{
@@ -171,30 +168,7 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => SelectedConnectionStringIndex);
 			}
 		}
-		public int SelectedCollectionIndex
-		{
-			get { return selectedCollectionIndex; }
-			set
-			{
-				selectedCollectionIndex = value;
-				if (value >= 0)
-				{
-					SelectedReplication.Value.RavenEntityName = AvailableObjects[selectedCollectionIndex];
-					ApplicationModel.DatabaseCommands.QueryAsync(CollectionsIndex, new IndexQuery
-					{
-						Query =
-							"Tag:" +
-							AvailableObjects[selectedCollectionIndex],
-						PageSize = 1
-					}, null).ContinueOnSuccessInTheUIThread(result =>
-					{
-						FirstItemOfCollection.Value = result.Results.FirstOrDefault();
-					});
-				}
 
-				OnPropertyChanged(() => SelectedCollectionIndex);
-			}
-		}
 		protected Observable<RavenJObject> FirstItemOfCollection { get; set; }
 
 		protected string ScriptData
@@ -247,6 +221,11 @@ namespace Raven.Studio.Models
 			{
 				sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
 			}
+		}
+
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			return TaskEx.FromResult<IList<object>>(AvailableObjects.Cast<object>().ToList());
 		}
 	}
 }
