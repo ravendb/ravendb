@@ -380,10 +380,13 @@ namespace Raven.Database
 					result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
 				});
 
-				foreach (var index in result.Indexes)
+				if (result.Indexes != null)
 				{
-					index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
-					index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+					foreach (var index in result.Indexes)
+					{
+						index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
+						index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+					}
 				}
 
 				return result;
