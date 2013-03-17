@@ -1027,6 +1027,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentStoreListener.cs">
       <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Listeners\IExtendedDocumentConversionListener.cs">
+      <Link>Imports\Listeners\IExtendedDocumentConversionListener.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\LinqExtensions.cs">
       <Link>Imports\PublicExtensions\LinqExtensions.cs</Link>
     </Compile>
