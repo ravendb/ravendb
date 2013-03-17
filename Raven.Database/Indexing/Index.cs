@@ -1261,7 +1261,7 @@ namespace Raven.Database.Indexing
 			{
 				if (indexDefinition.IsTemp)
 					return; // we don't backup temp indexes
-				var existingFiles = new List<string>();
+				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
 
@@ -1270,26 +1270,42 @@ namespace Raven.Database.Indexing
 				System.IO.Directory.CreateDirectory(saveToFolder);
 				if (File.Exists(allFilesPath))
 				{
-					existingFiles.AddRange(File.ReadLines(allFilesPath));
+					foreach (var file in File.ReadLines(allFilesPath))
+					{
+						existingFiles.Add(file);
+					}
 				}
 
+				var neededFilePath = Path.Combine(saveToFolder, "index-files.required-for-index-restore");
 				using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
-				using (var neededFilesWriter = File.CreateText(Path.Combine(saveToFolder, "index-files.required-for-index-restore")))
+				using (var neededFilesWriter = File.CreateText(neededFilePath))
 				{
-					// this is called for the side effect of creating the snapshotter and the writer
-					// we explicitly handle the backup outside of the write, to allow concurrent indexing
-					Write((writer, analyzer, stats) =>
+					try
 					{
-						// however, we copy the current segments.gen & index.version to make 
-						// sure that we get the _at the time_ of the write. 
-						foreach (var fileName in new[] { "segments.gen", "index.version" })
+						// this is called for the side effect of creating the snapshotter and the writer
+						// we explicitly handle the backup outside of the write, to allow concurrent indexing
+						Write((writer, analyzer, stats) =>
 						{
-							var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
-							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
-							allFilesWriter.WriteLine(fileName);
-						}
-						return 0;
-					});
+							// however, we copy the current segments.gen & index.version to make 
+							// sure that we get the _at the time_ of the write. 
+							foreach (var fileName in new[] {"segments.gen", "index.version"})
+							{
+								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+								allFilesWriter.WriteLine(fileName);
+							}
+							return 0;
+						});
+					}
+					catch (CorruptIndexException e)
+					{
+						logIndexing.WarnException(
+							"Could not backup index " + name +
+							" because it is corrupted. Skipping the index, will force index reset on restore", e);
+						neededFilesWriter.Dispose();
+						TryDelete(neededFilePath);
+						return;
+					}
 
 					var commit = snapshotter.Snapshot();
 					hasSnapshot = true;
@@ -1334,6 +1350,17 @@ namespace Raven.Database.Indexing
 							throw;
 					}
 				}
+			}
+		}
+
+		private static void TryDelete(string neededFilePath)
+		{
+			try
+			{
+				File.Delete(neededFilePath);
+			}
+			catch (Exception)
+			{
 			}
 		}
 
