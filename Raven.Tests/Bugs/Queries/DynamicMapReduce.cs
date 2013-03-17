@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs.Queries
 						.ToArray();
 
 					Assert.Equal(1, objects.Length);
-					Assert.Equal("10", objects[0].Count);
+					Assert.Equal(10, objects[0].Count);
 				}
 			}
 		}
@@ -119,8 +119,8 @@ namespace Raven.Tests.Bugs.Queries
 
 					Assert.Equal(2, objects.Length);
 
-					Assert.Equal("5", objects[0].Count);
-					Assert.Equal("5", objects[1].Count);
+					Assert.Equal(5, objects[0].Count);
+					Assert.Equal(5, objects[1].Count);
 					Assert.Equal("Ayende", objects[0].NameFirst);
 					Assert.Equal("Oren", objects[1].NameFirst);
 				}
@@ -150,10 +150,10 @@ namespace Raven.Tests.Bugs.Queries
 
 					Assert.Equal(2, objects.Length);
 
-					Assert.Equal("5", objects[0].Count);
-					Assert.Equal("5", objects[1].Count);
-					Assert.Equal("0", objects[0].TagsId);
-					Assert.Equal("1", objects[1].TagsId);
+					Assert.Equal(5, objects[0].Count);
+					Assert.Equal(5, objects[1].Count);
+					Assert.Equal(0, objects[0].TagsId);
+					Assert.Equal(1, objects[1].TagsId);
 				}
 			}
 		}
@@ -181,9 +181,9 @@ namespace Raven.Tests.Bugs.Queries
 
 
 					Assert.Equal(2, objects.Length);
-					Assert.Equal("5", objects[0].Count);
+					Assert.Equal(5, objects[0].Count);
 					Assert.Equal("Ayende", objects[0].Name);
-					Assert.Equal("5", objects[1].Count);
+					Assert.Equal(5, objects[1].Count);
 					Assert.Equal("Rahien", objects[1].Name);
 				}
 			}

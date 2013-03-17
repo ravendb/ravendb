@@ -71,8 +71,8 @@ namespace Raven.Tests.Bugs
 
 					Assert.Equal(1, results.Length);
 					Assert.Equal("9000", results[0].ClassificationId);
-					Assert.Equal("30", results[0].Count);
-					Assert.Equal("20", results[0].ClickCount);
+					Assert.Equal(30, results[0].Count);
+					Assert.Equal(20, results[0].ClickCount);
 				}
 			}
 		}
