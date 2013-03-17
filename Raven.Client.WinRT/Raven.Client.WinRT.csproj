@@ -145,9 +145,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\*.cs">
       <Link>Extentions\%(FileName)</Link>
 	   </Compile>
-    <Compile Include="..\Raven.Abstractions\OAuth\BasicAuthenticator.cs">
-      <Link>Imports\Document\OAuth\BasicAuthenticator.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\*.cs">
       <Link>Indexes\%(FileName)</Link>
     </Compile>
