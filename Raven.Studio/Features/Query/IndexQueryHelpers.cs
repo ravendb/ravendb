@@ -47,11 +47,12 @@ namespace Raven.Studio.Features.Query
             };
 
             double lat = fields.GetLat(), lng = fields.GetLng(), radius = fields.GetRadius();
+            SpatialUnits units = fields.GetRadiusUnits();
             if (lat != 0 || lng != 0 || radius != 0)
             {
                 return new SpatialIndexQuery(query)
                 {
-					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius, units),
                     SpatialRelation = SpatialRelation.Within, /* TODO */
 					SpatialFieldName = Constants.DefaultSpatialFieldName, /* TODO */
                 };
@@ -142,6 +143,18 @@ namespace Raven.Studio.Features.Query
             double radius;
             double.TryParse(fields["radius"].FirstOrDefault(), NumberStyles.Any, CultureInfo.InvariantCulture, out radius);
             return radius;
+        }
+
+        public static SpatialUnits GetRadiusUnits(this ILookup<string, string> fields)
+        {
+            var units = fields["units"].FirstOrDefault();
+            SpatialUnits parsedUnit;
+            if (Enum.TryParse<SpatialUnits>(units, out parsedUnit))
+            {
+                return parsedUnit;
+            }
+
+            return SpatialUnits.Kilometers;
         }
 
         public static Guid? GetEtagFromQueryString(this ILookup<string, string> fields)
