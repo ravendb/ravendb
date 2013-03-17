@@ -262,11 +262,6 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\MEF\*.cs">
       <Link>Abstructions\MEF\%(FileName)</Link>
-    <Compile Include="..\Raven.Client.Lightweight\Listeners\IExtendedDocumentConversionListener.cs">
-      <Link>Imports\Listeners\IExtendedDocumentConversionListener.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\LinqExtensions.cs">
-      <Link>Imports\PublicExtensions\LinqExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\MissingFromBCL\WinRTCompetability.cs">
       <Link>Abstructions\MissingFromBCL\WinRTCompetability.cs</Link>
