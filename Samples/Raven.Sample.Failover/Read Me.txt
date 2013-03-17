@@ -1,4 +1,4 @@
-This sample contains a simple example of Raven's automatic failover facilities.
+﻿This sample contains a simple example of Raven's automatic failover facilities.
 
 Start the servers using "Start Raven.ps1", this will start two instance of Raven, one on port 8080 (the master instance) and one on port 8081 (the slaved instance).
 Run the "Setup Master To Slave Replication.ps1" script to setup replication from the master to the slave.
