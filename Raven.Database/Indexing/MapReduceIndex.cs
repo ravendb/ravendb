@@ -29,7 +29,6 @@ using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -250,10 +249,22 @@ namespace Raven.Database.Indexing
 
 		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
-			if (fieldsToFetch.IsProjection == false)
-				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
 			fieldsToFetch.EnsureHasField(Constants.ReduceKeyFieldName);
-			return base.RetrieveDocument(document, fieldsToFetch, score);
+			if (fieldsToFetch.IsProjection)
+			{
+				return base.RetrieveDocument(document, fieldsToFetch, score);
+			}
+			var field = document.GetField(Constants.ReduceValueFieldName);
+			if(field == null)
+			{
+				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
+				return base.RetrieveDocument(document, fieldsToFetch, score);
+			}
+			return new IndexQueryResult
+			{
+				Projection = RavenJObject.Parse(field.StringValue),
+				Score = score.Score
+			};
 		}
 
 		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
@@ -295,6 +306,9 @@ namespace Raven.Database.Indexing
 			private readonly string name;
 			readonly AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter;
 			private readonly Document luceneDoc = new Document();
+			private readonly Field reduceValueField = new Field(Constants.ReduceValueFieldName, "dummy",
+													 Field.Store.YES, Field.Index.NO);
+			
 			private readonly Field reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
 													 Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
 			private PropertyDescriptorCollection properties = null;
@@ -364,13 +378,12 @@ namespace Raven.Database.Indexing
 				IEnumerable<AbstractField> fields;
 				if (doc is IDynamicJsonObject)
 				{
-
-					fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.YES);
+					fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.NO);
 				}
 				else
 				{
 					properties = properties ?? TypeDescriptor.GetProperties(doc);
-					fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.YES);
+					fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO);
 				}
 				if (Math.Abs(boost - 1) > float.Epsilon)
 				{
@@ -497,28 +510,26 @@ namespace Raven.Database.Indexing
 
 				string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
 				reduceKeyField.SetValue(reduceKeyAsString);
-
+				reduceValueField.SetValue(ToJsonDocument(doc).ToString(Formatting.None));
 				luceneDoc.GetFields().Clear();
 				luceneDoc.Boost = boost;
 				luceneDoc.Add(reduceKeyField);
+				luceneDoc.Add(reduceValueField);
 				foreach (var field in fields)
 				{
 					luceneDoc.Add(field);
 				}
-
-				if (Level == 2)
-				{
-					batchers.ApplyAndIgnoreAllErrors(
-						exception =>
-						{
-							logIndexing.WarnException(
-								string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-											  name, reduceKeyAsString),
-								exception);
-							Context.AddError(name, reduceKeyAsString, exception.Message);
-						},
-						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
-				}
+				
+				batchers.ApplyAndIgnoreAllErrors(
+					exception =>
+					{
+						logIndexing.WarnException(
+							string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+							              name, reduceKeyAsString),
+							exception);
+						Context.AddError(name, reduceKeyAsString, exception.Message);
+					},
+					trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 
 				parent.LogIndexedDocument(reduceKeyAsString, luceneDoc);
 
