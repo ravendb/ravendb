@@ -24,8 +24,9 @@ namespace Raven.Database.Server.Security.Windows
 		{
 			var authHeader = request.Headers["Authorization"];
 			var hasApiKey = "True".Equals(request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
+			var hasSingleUseToken = string.IsNullOrEmpty(request.Headers["Single-Use-Auth-Token"]) == false;
 			var hasOAuthTokenInCookie = request.Cookies["OAuth-Token"] != null;
-			if (hasApiKey || hasOAuthTokenInCookie || 
+			if (hasApiKey || hasOAuthTokenInCookie || hasSingleUseToken  ||
 					string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				// this is an OAuth request that has a token

@@ -72,7 +72,6 @@ namespace Raven.Client.Document
 			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
 			HttpJsonRequest req = client.CreateRequest("POST", requestUrl + "&op=generate-single-use-auth-token",
 														disableRequestCompression: true);
-			req.PrepareForLongRequest();
 			var token = req.ReadResponseJson();
 
 			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
