@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
 
 		public TimeSpan LastIndexingDuration { get; set; }
 		public long TimePerDoc { get; set; }
-		public Task CurrentMapIndexingTask { get; set; } 
+		public Task CurrentMapIndexingTask { get; set; }
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -845,7 +845,7 @@ namespace Raven.Database.Indexing
 								highlighter = new FastVectorHighlighter(
 									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
 									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
-									new SimpleFragListBuilder(), 
+									new SimpleFragListBuilder(),
 									new SimpleFragmentsBuilder(
 										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
 											? indexQuery.HighlighterPreTags
@@ -885,10 +885,10 @@ namespace Raven.Database.Indexing
 												highlightedField.FragmentLength,
 												highlightedField.FragmentCount)
 										}
-										into fieldHighlitings
-										where fieldHighlitings.Fragments != null &&
-											  fieldHighlitings.Fragments.Length > 0
-										select fieldHighlitings;
+											into fieldHighlitings
+											where fieldHighlitings.Fragments != null &&
+												  fieldHighlitings.Fragments.Length > 0
+											select fieldHighlitings;
 
 									if (fieldsToFetch.IsProjection || parent.IsMapReduce)
 									{
@@ -896,7 +896,8 @@ namespace Raven.Database.Indexing
 											if (!string.IsNullOrEmpty(highlighting.FragmentsField))
 												indexQueryResult.Projection[highlighting.FragmentsField]
 													= new RavenJArray(highlighting.Fragments);
-									} else
+									}
+									else
 										indexQueryResult.Highligtings = highlightings
 											.ToDictionary(x => x.Field, x => x.Fragments);
 								}
@@ -1254,6 +1255,8 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
+			bool hasSnapshot = false;
+			bool throwOnFinallyException = true;
 			try
 			{
 				if (indexDefinition.IsTemp)
@@ -1261,7 +1264,7 @@ namespace Raven.Database.Indexing
 				var existingFiles = new List<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
-				
+
 				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
 				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
 				System.IO.Directory.CreateDirectory(saveToFolder);
@@ -1289,7 +1292,7 @@ namespace Raven.Database.Indexing
 					});
 
 					var commit = snapshotter.Snapshot();
-
+					hasSnapshot = true;
 					foreach (var fileName in commit.FileNames)
 					{
 						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
@@ -1312,10 +1315,25 @@ namespace Raven.Database.Indexing
 					neededFilesWriter.Flush();
 				}
 			}
+			catch
+			{
+				throwOnFinallyException = false;
+				throw;
+			}
 			finally
 			{
-				if (snapshotter != null)
-					snapshotter.Release();
+				if (snapshotter != null && hasSnapshot)
+				{
+					try
+					{
+						snapshotter.Release();
+					}
+					catch 
+					{
+						if (throwOnFinallyException)
+							throw;
+					}
+				}
 			}
 		}
 
