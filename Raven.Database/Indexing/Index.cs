@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
 
 		public TimeSpan LastIndexingDuration { get; set; }
 		public long TimePerDoc { get; set; }
-		public Task CurrentMapIndexingTask { get; set; } 
+		public Task CurrentMapIndexingTask { get; set; }
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -845,7 +845,7 @@ namespace Raven.Database.Indexing
 								highlighter = new FastVectorHighlighter(
 									FastVectorHighlighter.DEFAULT_PHRASE_HIGHLIGHT,
 									FastVectorHighlighter.DEFAULT_FIELD_MATCH,
-									new SimpleFragListBuilder(), 
+									new SimpleFragListBuilder(),
 									new SimpleFragmentsBuilder(
 										indexQuery.HighlighterPreTags != null && indexQuery.HighlighterPreTags.Any()
 											? indexQuery.HighlighterPreTags
@@ -885,10 +885,10 @@ namespace Raven.Database.Indexing
 												highlightedField.FragmentLength,
 												highlightedField.FragmentCount)
 										}
-										into fieldHighlitings
-										where fieldHighlitings.Fragments != null &&
-											  fieldHighlitings.Fragments.Length > 0
-										select fieldHighlitings;
+											into fieldHighlitings
+											where fieldHighlitings.Fragments != null &&
+												  fieldHighlitings.Fragments.Length > 0
+											select fieldHighlitings;
 
 									if (fieldsToFetch.IsProjection || parent.IsMapReduce)
 									{
@@ -896,7 +896,8 @@ namespace Raven.Database.Indexing
 											if (!string.IsNullOrEmpty(highlighting.FragmentsField))
 												indexQueryResult.Projection[highlighting.FragmentsField]
 													= new RavenJArray(highlighting.Fragments);
-									} else
+									}
+									else
 										indexQueryResult.Highligtings = highlightings
 											.ToDictionary(x => x.Field, x => x.Fragments);
 								}
@@ -1254,42 +1255,60 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
+			bool hasSnapshot = false;
+			bool throwOnFinallyException = true;
 			try
 			{
 				if (indexDefinition.IsTemp)
 					return; // we don't backup temp indexes
-				var existingFiles = new List<string>();
+				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
-				
+
 				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
 				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
 				System.IO.Directory.CreateDirectory(saveToFolder);
 				if (File.Exists(allFilesPath))
 				{
-					existingFiles.AddRange(File.ReadLines(allFilesPath));
+					foreach (var file in File.ReadLines(allFilesPath))
+					{
+						existingFiles.Add(file);
+					}
 				}
 
+				var neededFilePath = Path.Combine(saveToFolder, "index-files.required-for-index-restore");
 				using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
-				using (var neededFilesWriter = File.CreateText(Path.Combine(saveToFolder, "index-files.required-for-index-restore")))
+				using (var neededFilesWriter = File.CreateText(neededFilePath))
 				{
-					// this is called for the side effect of creating the snapshotter and the writer
-					// we explicitly handle the backup outside of the write, to allow concurrent indexing
-					Write((writer, analyzer, stats) =>
+					try
 					{
-						// however, we copy the current segments.gen & index.version to make 
-						// sure that we get the _at the time_ of the write. 
-						foreach (var fileName in new[] { "segments.gen", "index.version" })
+						// this is called for the side effect of creating the snapshotter and the writer
+						// we explicitly handle the backup outside of the write, to allow concurrent indexing
+						Write((writer, analyzer, stats) =>
 						{
-							var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
-							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
-							allFilesWriter.WriteLine(fileName);
-						}
-						return 0;
-					});
+							// however, we copy the current segments.gen & index.version to make 
+							// sure that we get the _at the time_ of the write. 
+							foreach (var fileName in new[] {"segments.gen", "index.version"})
+							{
+								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+								allFilesWriter.WriteLine(fileName);
+							}
+							return 0;
+						});
+					}
+					catch (CorruptIndexException e)
+					{
+						logIndexing.WarnException(
+							"Could not backup index " + name +
+							" because it is corrupted. Skipping the index, will force index reset on restore", e);
+						neededFilesWriter.Dispose();
+						TryDelete(neededFilePath);
+						return;
+					}
 
 					var commit = snapshotter.Snapshot();
-
+					hasSnapshot = true;
 					foreach (var fileName in commit.FileNames)
 					{
 						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
@@ -1312,10 +1331,36 @@ namespace Raven.Database.Indexing
 					neededFilesWriter.Flush();
 				}
 			}
+			catch
+			{
+				throwOnFinallyException = false;
+				throw;
+			}
 			finally
 			{
-				if (snapshotter != null)
-					snapshotter.Release();
+				if (snapshotter != null && hasSnapshot)
+				{
+					try
+					{
+						snapshotter.Release();
+					}
+					catch 
+					{
+						if (throwOnFinallyException)
+							throw;
+					}
+				}
+			}
+		}
+
+		private static void TryDelete(string neededFilePath)
+		{
+			try
+			{
+				File.Delete(neededFilePath);
+			}
+			catch (Exception)
+			{
 			}
 		}
 

@@ -187,7 +187,7 @@ namespace Raven.Database.Server.Security.Windows
 		}
 
 
-		public override List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context = null)
+		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
 			var winUser = user as PrincipalWithDatabaseAccess;
 			if (winUser == null)

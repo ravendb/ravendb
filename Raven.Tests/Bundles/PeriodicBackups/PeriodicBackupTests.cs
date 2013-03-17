@@ -11,6 +11,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Xunit;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Bundles.PeriodicBackups
 {
@@ -86,7 +87,13 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey) != null, 10000);
+				{
+					var jsonDocument = store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey);
+					if (jsonDocument == null)
+						return false;
+					var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
+					return periodicBackupStatus.LastDocsEtag != Guid.Empty;
+				});
 
 				var etagForBackups= store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag;
 				using (var session = store.OpenSession())

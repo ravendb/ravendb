@@ -49,15 +49,15 @@ namespace Raven.Client.Document
 			var expect100Continue = client.Expect100Continue();
 
 			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
-			HttpJsonRequest req = client.CreateRequest("POST", requestUrl + "&no-op=for-auth-only",
-			                                           disableRequestCompression: true);
-			req.PrepareForLongRequest();
-			req.ExecuteRequest();
+			HttpJsonRequest req = client.CreateRequest("POST", requestUrl + "&op=generate-single-use-auth-token",
+														disableRequestCompression: true);
+			var token = req.ReadResponseJson();
 
 
 			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
 			// the request may take a long time to process, so we need to set a large timeout value
 			httpJsonRequest.PrepareForLongRequest();
+			httpJsonRequest.AddOperationHeader("Single-Use-Auth-Token", token.Value<string>("Token"));
 			nextTask = httpJsonRequest.GetRawRequestStream()
 			                          .ContinueWith(task =>
 			                          {
