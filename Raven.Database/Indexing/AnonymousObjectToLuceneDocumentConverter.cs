@@ -89,6 +89,17 @@ namespace Raven.Database.Indexing
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
 			var termVector = indexDefinition.GetTermVector(name, defaultTermVector);
 
+			if (fieldIndexingOptions == Field.Index.NO && storage == Field.Store.NO && termVector == Field.TermVector.NO)
+			{
+				yield break;
+			}
+
+			if (fieldIndexingOptions == Field.Index.NO && storage == Field.Store.NO)
+			{
+				fieldIndexingOptions = Field.Index.ANALYZED; // we have some sort of term vector, forcing index to be analyzed, then.
+			}
+
+
 			if (value == null)
 			{
 				yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
