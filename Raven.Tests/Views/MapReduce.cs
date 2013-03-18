@@ -10,8 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Views
@@ -73,7 +71,7 @@ select new {
 		    }
 
 		    var q = GetUnstableQueryResult("blog_id:3");
-		    Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
+		    Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
 		}
 
 		[Fact]
@@ -86,7 +84,7 @@ select new {
 
 			var q = GetUnstableQueryResult("blog_id:3");
 			Assert.False(q.IsStale);
-			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""3""}", q.Results[0].ToString(Formatting.None));
+			Assert.Equal(@"{""blog_id"":3,""comments_length"":3}", q.Results[0].ToString(Formatting.None));
 
 			var index = db.Statistics.Indexes[0];
 			Assert.True(1024 >= index.ReduceIndexingAttempts,
@@ -139,13 +137,13 @@ select new {
 
 			var q = GetUnstableQueryResult("blog_id:3");
 
-			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""14""}", q.Results[0].ToString(Formatting.None));
+			Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
 			
 			db.Put("docs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject(), null);
 
 			q = GetUnstableQueryResult("blog_id:3");
 		    
-			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""12""}", q.Results[0].ToString(Formatting.None));
+			Assert.Equal(@"{""blog_id"":3,""comments_length"":12}", q.Results[0].ToString(Formatting.None));
 		}
 
 
@@ -178,7 +176,7 @@ select new {
 
 			var q = GetUnstableQueryResult("blog_id:3");
 		    
-			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""11""}", q.Results[0].ToString(Formatting.None));
+			Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString(Formatting.None));
 		}
 
 		[Fact]
@@ -208,7 +206,7 @@ select new {
 			db.Put("docs/0", null, RavenJObject.Parse("{blog_id: 7, comments: [{}]}"), new RavenJObject(), null);
 
 			var q = GetUnstableQueryResult("blog_id:3");
-			Assert.Equal(@"{""blog_id"":""3"",""comments_length"":""11""}", q.Results[0].ToString(Formatting.None));
+			Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString(Formatting.None));
 		}
 	}
 }

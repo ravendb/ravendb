@@ -562,6 +562,7 @@
     <Compile Include="Issues\RavenDB903.cs" />
     <Compile Include="Issues\RavenDB921.cs" />
     <Compile Include="Issues\RavenDB934.cs" />
+    <Compile Include="Issues\RavenDB982.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -641,6 +642,7 @@
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\bikkies.cs" />
+    <Compile Include="MailingList\BulkInsertTest.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
     <Compile Include="MailingList\Chirea.cs" />

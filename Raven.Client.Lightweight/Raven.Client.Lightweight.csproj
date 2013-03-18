@@ -76,6 +76,7 @@
     <Compile Include="Document\RavenLoadConfiguration.cs" />
     <Compile Include="ILoadConfiguration.cs" />
     <Compile Include="Indexes\AbstractResultsTransformer.cs" />
+    <Compile Include="Listeners\IExtendedDocumentConversionListener.cs" />
     <Compile Include="Util\CSharpClassName.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />

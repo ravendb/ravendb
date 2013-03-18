@@ -260,7 +260,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public void RemoveDefaultValues()
 		{
-			var defaultStorage = IsMapReduce ? FieldStorage.Yes : FieldStorage.No;
+			const FieldStorage defaultStorage = FieldStorage.No;
 			foreach (var toRemove in Stores.Where(x => x.Value == defaultStorage).ToArray())
 			{
 				Stores.Remove(toRemove);
