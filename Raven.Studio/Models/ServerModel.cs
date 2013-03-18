@@ -136,13 +136,17 @@ namespace Raven.Studio.Models
 				                   		                {
 					                   		                if (task.IsFaulted == false)
 					                   		                {
-						                   		                if (task.Result != null &&
-						                   		                    task.Result.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+						                   		                Execute.OnTheUI(() =>
 						                   		                {
-							                   		                if (task.Result.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") ==
-							                   		                    false)
-								                   		                UrlUtil.Navigate("/documents");
-						                   		                }
+							                   		                if (task.Result != null &&
+							                   		                    task.Result.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+							                   		                {
+								                   		                if (task.Result.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") ==
+								                   		                    false)
+									                   		                UrlUtil.Navigate("/documents");
+							                   		                }
+						                   		                });
+
 					                   		                }
 					                   		                else
 					                   		                {
