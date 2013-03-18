@@ -76,46 +76,36 @@ namespace Raven.ClusterManager.Tasks
 
 		private static async Task FetchServerDatabasesAsync(ServerRecord server, IDocumentSession session)
 		{
-			var handler = new WebRequestHandler
-			{
-				AllowAutoRedirect = false,
-			};
-
-			if (server.Credentials != null)
-			{
-				switch (server.Credentials.AuthenticationMode)
-				{
-					case AuthenticationMode.User:
-						if (string.IsNullOrEmpty(server.Credentials.Domain))
-						{
-							handler.Credentials = new NetworkCredential(server.Credentials.Username, server.Credentials.Password);
-						}
-						else
-						{
-							handler.Credentials = new NetworkCredential(server.Credentials.Username, server.Credentials.Password, server.Credentials.Domain);
-						}
-						break;
-				}
-			}
-
-			var httpClient = new HttpClient(handler);
-			
 			var documentStore = (DocumentStore)session.Advanced.DocumentStore;
 			var replicationInformer = new ReplicationInformer(new DocumentConvention
 			{
 				FailoverBehavior = FailoverBehavior.FailImmediately
 			});
 
-			var client = new AsyncServerClient(server.Url, documentStore.Conventions, documentStore.Credentials,
+			ICredentials credentials = null;
+			if (server.CredentialsId != null)
+			{
+				var serverCredentials = session.Load<ServerCredentials>(server.CredentialsId);
+				if (serverCredentials == null)
+				{
+					server.CredentialsId = null;
+				}
+				else
+				{
+					credentials = serverCredentials.GetCredentials();
+				}
+			}
+
+			var client = new AsyncServerClient(server.Url, documentStore.Conventions, credentials,
 				documentStore.JsonRequestFactory, null, s => replicationInformer, null, new IDocumentConflictListener[0]);
 			
 			try
 			{
-				await StoreDatabaseNames(server, httpClient, session);
+				await StoreDatabaseNames(server, client, session);
 				// Mark server as online now, so if one of the later steps throw we'll have this value.
 				server.NotifyServerIsOnline();
 
-				await StoreActiveDatabaseNames(server, httpClient, session);
+				await StoreActiveDatabaseNames(server, client, session);
 				await CheckReplicationStatusOfEachActiveDatabase(server, client, session);
 
 				// Mark server as online at the LastOnlineTime.
@@ -149,13 +139,10 @@ namespace Raven.ClusterManager.Tasks
 			}
 		}
 
-		private static async Task StoreDatabaseNames(ServerRecord server, HttpClient httpClient, IDocumentSession session)
+		private static async Task StoreDatabaseNames(ServerRecord server, AsyncServerClient client, IDocumentSession session)
 		{
-			var result = await httpClient.GetAsync(server.Url + "databases");
-			EnsureSuccessStatusCode(result, server);
-			var resultStream = await result.Content.ReadAsStreamAsync();
-			server.Databases = resultStream.JsonDeserialization<string[]>();
-
+			server.Databases = await client.GetDatabaseNamesAsync(1024);
+			
 			foreach (var databaseName in server.Databases.Concat(new[] {Constants.SystemDatabase}))
 			{
 				var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + databaseName);
@@ -167,12 +154,9 @@ namespace Raven.ClusterManager.Tasks
 			}
 		}
 
-		private static async Task StoreActiveDatabaseNames(ServerRecord server, HttpClient httpClient, IDocumentSession session)
+		private static async Task StoreActiveDatabaseNames(ServerRecord server, AsyncServerClient client, IDocumentSession session)
 		{
-			var result = await httpClient.GetAsync(server.Url + "admin/stats");
-			EnsureSuccessStatusCode(result, server);
-			var resultStream = await result.Content.ReadAsStreamAsync();
-			var adminStatistics = resultStream.JsonDeserialization<AdminStatistics>();
+			AdminStatistics adminStatistics = await client.Admin.GetStatisticsAsync();
 
 			server.IsUnauthorized = false;
 

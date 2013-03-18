@@ -332,6 +332,14 @@ namespace Raven.Client.Connection.Async
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
 		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue);
+	}
 
+	public interface IAsyncAdminDatabaseCommands
+	{
+		/// <summary>
+		/// Get admin statistics
+		/// </summary>
+		/// <returns></returns>
+		Task<AdminStatistics> GetStatisticsAsync();
 	}
 }

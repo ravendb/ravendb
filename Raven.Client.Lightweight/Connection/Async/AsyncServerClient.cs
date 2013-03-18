@@ -46,7 +46,7 @@ namespace Raven.Client.Connection.Async
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
-	public class AsyncServerClient : IAsyncDatabaseCommands
+	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands
 	{
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
@@ -264,7 +264,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="operationUrl">The server's url</param>
 		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string operationUrl)
 		{
-			var requestUri = operationUrl + "/indexes/" + Uri.EscapeUriString(name) +"?definition=yes";
+			var requestUri = operationUrl + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -398,7 +398,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("PUT", opUrl => DirectPutAsync(opUrl, key, etag, document, metadata));
 		}
 
-        private Task<PutResult> DirectPutAsync(string opUrl, string key, Etag etag, RavenJObject document, RavenJObject metadata)
+		private Task<PutResult> DirectPutAsync(string opUrl, string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			if (metadata == null)
 				metadata = new RavenJObject();
@@ -936,7 +936,7 @@ namespace Raven.Client.Connection.Async
 			}
 			var request =
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
-				                                                                         convention)
+																						 convention)
 				{
 					AvoidCachingRequest = query.DisableCaching
 				});
@@ -1155,7 +1155,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-        public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
+		public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", operationUrl =>
 			{
@@ -1251,7 +1251,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-        public Task DeleteAttachmentAsync(string key, Etag etag)
+		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			return ExecuteWithReplication("DELETE", operationUrl =>
 			{
@@ -1411,7 +1411,7 @@ namespace Raven.Client.Connection.Async
 				if (reader.TokenType == JsonToken.EndArray)
 					return false;
 
-				Current = (RavenJObject) await RavenJToken.ReadFromAsync(reader);
+				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader);
 				return true;
 			}
 
@@ -1420,7 +1420,7 @@ namespace Raven.Client.Connection.Async
 
 
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-		                            int pageSize = Int32.MaxValue)
+									int pageSize = Int32.MaxValue)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -1594,12 +1594,12 @@ namespace Raven.Client.Connection.Async
 				{
 					if (t.Result)
 					{
-						return (ConflictException) null;
+						return (ConflictException)null;
 					}
 
 					return new ConflictException("Conflict detected on " + key +
-					                             ", conflict must be resolved before the document will be accessible",
-					                             true)
+												 ", conflict must be resolved before the document will be accessible",
+												 true)
 					{
 						ConflictedVersionIds = conflictIds,
 						Etag = etag
@@ -1686,5 +1686,27 @@ namespace Raven.Client.Connection.Async
 				resolvingConflictRetries = false;
 			}
 		}
+
+		#region IAsyncAdminDatabaseCommands
+		
+		public IAsyncAdminDatabaseCommands Admin
+		{
+			get { return this; }
+		}
+
+		Task<AdminStatistics> IAsyncAdminDatabaseCommands.GetStatisticsAsync()
+		{
+			return url.AdminStats()
+					.NoCache()
+					.ToJsonRequest(this, credentials, convention)
+					.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var jo = ((RavenJObject)task.Result);
+						return jo.Deserialize<AdminStatistics>(convention);
+					});	
+		}
+
+		#endregion
 	}
 }
