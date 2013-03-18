@@ -34,11 +34,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Nancy">
-      <HintPath>..\packages\Nancy.0.16.1\lib\net40\Nancy.dll</HintPath>
+    <Reference Include="Nancy, Version=0.20.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Nancy.0.20.0-beta1\lib\net40\Nancy.dll</HintPath>
     </Reference>
-    <Reference Include="Nancy.Hosting.Self">
-      <HintPath>..\packages\Nancy.Hosting.Self.0.16.1\lib\net40\Nancy.Hosting.Self.dll</HintPath>
+    <Reference Include="Nancy.Hosting.Self, Version=0.20.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Nancy.Hosting.Self.0.20.0-beta1\lib\net40\Nancy.Hosting.Self.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -60,6 +62,7 @@
     <Compile Include="Models\DatabaseRecord.cs" />
     <Compile Include="Models\ServerCredentials.cs" />
     <Compile Include="Models\ServerRecord.cs" />
+    <Compile Include="Modules\CredentialsModule.cs" />
     <Compile Include="Modules\DiscoveryModule.cs" />
     <Compile Include="Modules\ReplicationModule.cs" />
     <Compile Include="Modules\ServersModule.cs" />
@@ -143,6 +146,7 @@
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.js" />
     <Content Include="Assets\scripts\vendor\bootstrap\bootstrap.min.js" />
     <Content Include="Assets\views\authenticationDialog.html" />
+    <Content Include="Assets\views\linkServerWithCredentials.html" />
     <Content Include="Assets\views\replication.html" />
     <Content Include="Assets\views\serverExplorer.html" />
     <Content Include="Assets\views\servers.html" />

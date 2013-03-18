@@ -62,17 +62,6 @@ namespace Raven.ClusterManager
 			});
 		}
 
-		protected override NancyInternalConfiguration InternalConfiguration
-		{
-			get
-			{
-				// Ignore any assembly that is not this one.
-				return NancyInternalConfiguration.Default
-												 .WithIgnoredAssembly(assembly => assembly.FullName.StartsWith("Raven.ClusterManager") == false &&
-																				  assembly.FullName.StartsWith("Nancy") == false);
-			}
-		}
-
 		protected override void ConfigureConventions(NancyConventions conventions)
 		{
 			base.ConfigureConventions(conventions);
