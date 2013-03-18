@@ -1857,7 +1857,6 @@ namespace Raven.Database
 			while (currentTask.Completed() == false && pendingBatches.Peek() != pending)
 			{
 				batchCompletedEvent.Wait();
-				batchCompletedEvent.Reset();
 			}
 			if (currentTask.Completed())
 				return pending.Result;
@@ -1866,12 +1865,15 @@ namespace Raven.Database
 			{
 				try
 				{
+					batchCompletedEvent.Reset();
+
+					var sp = Stopwatch.StartNew();
+					int totalCommands = 0;
 					TransactionalStorage.Batch(actions =>
 					{
 						int batches = 0;
-						int joined = 0;
 						PendingBatch currentBatch;
-						while (joined < 1024 &&  // let us no overload the transaction buffer size too much
+						while (totalCommands < 1024 &&  // let us no overload the transaction buffer size too much
 								pendingBatches.TryDequeue(out currentBatch))
 						{
 							batches++;
@@ -1880,15 +1882,16 @@ namespace Raven.Database
 								// we abort and do the rest in another cycle
 								break;
 							actions.General.PulseTransaction();
-							joined += currentBatch.Commands.Count;
+							totalCommands += currentBatch.Commands.Count;
 						}
 						if(batches > 1)
 						{
 							log.Debug(
 								"Merged {0} concurrent transactions with {1} operations into a single transaction to improve performance",
-								batches, joined);
+								batches, totalCommands);
 						}
 					});
+					log.Debug("Successfully executed {0} commands in {1}", commands.Count, sp.Elapsed);
 				}
 				finally
 				{
