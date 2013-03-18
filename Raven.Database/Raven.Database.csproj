@@ -183,6 +183,8 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
+    <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
+    <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
