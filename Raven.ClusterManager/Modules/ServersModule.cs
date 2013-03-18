@@ -1,8 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Net.Http;
+﻿using System.Linq;
 using Nancy;
-using Nancy.ModelBinding;
 using Raven.Client;
 using Raven.ClusterManager.Models;
 
@@ -15,60 +12,19 @@ namespace Raven.ClusterManager.Modules
 		{
 			Get[""] = parameters =>
 			{
-				var servers = session.Query<ServerRecord>()
-					.OrderByDescending(record => record.IsOnline)
-					.ThenByDescending(record => record.LastOnlineTime)
+				var statistics = new ClusterStatistics();
+				statistics.Servers = session.Query<ServerRecord>()
+					.OrderBy(record => record.Id)
 					.Take(1024)
 					.ToList();
 
-				return new ClusterStatistics
-				{
-					Servers = servers,
-				};
-			};
+				statistics.Credentials = session.Query<ServerCredentials>()
+					.OrderByDescending(credentials => credentials.Id)
+					.Take(1024)
+					.ToList();
 
-			Post["/test-credentials"] = parameters =>
-			{
-				var input = this.Bind<ServerRecord>();
 
-				var serverRecord = session.Load<ServerRecord>(input.Id);
-				if (serverRecord == null)
-					return new NotFoundResponse();
-
-				var handler = new WebRequestHandler();
-				var httpClient = new HttpClient(handler);
-				try
-				{
-					// var result = await httpClient.GetAsync(serverRecord.Url + "admin/stats");
-					throw new NotSupportedException("Waiting for the nancyfx async support");
-					return true;
-				}
-				catch (HttpRequestException ex)
-				{
-					// Handle authentication.
-				}
-
-				return false;
-			};
-
-			Post["/save-credentials"] = parameters =>
-			{
-				var input = this.Bind<ServerRecord>();
-
-				var serverRecord = session.Load<ServerRecord>(input.Id);
-				if (serverRecord == null)
-					return new NotFoundResponse();
-
-				serverRecord.Credentials = new ServerCredentials
-				{
-					AuthenticationMode = input.Credentials.AuthenticationMode,
-					ApiKey = input.Credentials.ApiKey,
-					Username = input.Credentials.Username,
-					Password = input.Credentials.Password,
-					Domain = input.Credentials.Domain,
-				};
-
-				return null;
+				return statistics;
 			};
 
 			Delete["/{id}"] = parameters =>

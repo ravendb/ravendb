@@ -19,7 +19,7 @@ namespace Raven.ClusterManager.Models
 		public AdminMemoryStatistics MemoryStatistics { get; set; }
 		public bool IsUnauthorized { get; set; }
 
-		public ServerCredentials Credentials { get; set; }
+		public string CredentialsId { get; set; }
 		
 		public ServerRecord()
 		{
