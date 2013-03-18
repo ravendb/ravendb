@@ -74,30 +74,9 @@ namespace Raven.ClusterManager.Tasks
 			lastRun = DateTimeOffset.UtcNow;
 		}
 
-		private static async Task FetchServerDatabasesAsync(ServerRecord server, IDocumentSession session)
+		public static async Task FetchServerDatabasesAsync(ServerRecord server, IDocumentSession session)
 		{
-			var documentStore = (DocumentStore)session.Advanced.DocumentStore;
-			var replicationInformer = new ReplicationInformer(new DocumentConvention
-			{
-				FailoverBehavior = FailoverBehavior.FailImmediately
-			});
-
-			ICredentials credentials = null;
-			if (server.CredentialsId != null)
-			{
-				var serverCredentials = session.Load<ServerCredentials>(server.CredentialsId);
-				if (serverCredentials == null)
-				{
-					server.CredentialsId = null;
-				}
-				else
-				{
-					credentials = serverCredentials.GetCredentials();
-				}
-			}
-
-			var client = new AsyncServerClient(server.Url, documentStore.Conventions, credentials,
-				documentStore.JsonRequestFactory, null, s => replicationInformer, null, new IDocumentConflictListener[0]);
+			var client = ServerHelpers.CreateAsyncServerClient(session, server);
 			
 			try
 			{

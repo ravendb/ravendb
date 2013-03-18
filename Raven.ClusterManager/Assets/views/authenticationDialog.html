@@ -2,44 +2,48 @@
     <h1>Enter server credentials</h1>
 </div>
 <div class="modal-body">
+    <div ng-show="alert">
+        <alert type="alert.type" close="closeAlert()">{{alert.message}}</alert>
+    </div>
+
     <div class="modal-form">
         <p>Connect to <a href="{{server.url}}">{{server.url}}</a> with:</p>
 
         <div class="radio">
             <label>
-                <input type="radio" ng-model="server.authenticationMode" name="server.authenticationMode" value="apiKey">
+                <input type="radio" ng-model="credentials.authenticationMode" name="credentials.authenticationMode" value="apiKey">
                 Connect using an Api Key
             </label>
         </div>
         <div class="control-group">
             <label class="control-label" for="inputEmail">Api Key</label>
             <div class="controls">
-                <input type="text" name="apiKey" ng-model="server.apiKey" ng-disabled="server.authenticationMode == 'user'" placeholder="Api Key">
+                <input type="text" name="apiKey" ng-model="credentials.apiKey" ng-disabled="credentials.authenticationMode == 'user'" placeholder="Api Key">
             </div>
         </div>
 
         <div class="radio">
             <label>
-                <input type="radio" ng-model="server.authenticationMode" name="server.authenticationMode" value="user">
+                <input type="radio" ng-model="credentials.authenticationMode" name="credentials.authenticationMode" value="user">
                 Connect using a local user on the machine
             </label>
         </div>
         <div class="control-group">
             <label class="control-label" for="inputEmail">User Name</label>
             <div class="controls">
-                <input type="text" name="username" ng-model="server.username" ng-disabled="server.authenticationMode == 'apiKey'" placeholder="User Name">
+                <input type="text" name="username" ng-model="credentials.username" ng-disabled="credentials.authenticationMode == 'apiKey'" placeholder="User Name">
             </div>
         </div>
         <div class="control-group">
             <label class="control-label" for="inputEmail">Password</label>
             <div class="controls">
-                <input type="password" name="password" ng-model="server.password" ng-disabled="server.authenticationMode == 'apiKey'" placeholder="Password">
+                <input type="password" name="password" ng-model="credentials.password" ng-disabled="credentials.authenticationMode == 'apiKey'" placeholder="Password">
             </div>
         </div>
         <div class="control-group">
             <label class="control-label" for="inputEmail">Domain (optional)</label>
             <div class="controls">
-                <input type="text" name="domain" ng-model="server.domain" ng-disabled="server.authenticationMode == 'apiKey'" placeholder="Domain (optional)">
+                <input type="text" name="domain" ng-model="credentials.domain" ng-disabled="credentials.authenticationMode == 'apiKey'" placeholder="Domain (optional)">
             </div>
         </div>
     </div>
