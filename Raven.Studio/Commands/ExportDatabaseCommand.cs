@@ -99,11 +99,11 @@ namespace Raven.Studio.Commands
 				BatchSize = BatchSize,
 				OperateOnTypes = operateOnTypes
 			}, false)
-					.Catch(exception =>
+					.Catch(exception => Infrastructure.Execute.OnTheUI(() =>
 					{
 						taskModel.ReportError(exception);
-						Infrastructure.Execute.OnTheUI(() => Finish(exception));
-					})
+						Finish(exception);
+					}))
 					.Finally(() =>
 					{
 						taskModel.TaskStatus = TaskStatus.Ended;

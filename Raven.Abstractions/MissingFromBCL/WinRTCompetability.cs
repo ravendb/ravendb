@@ -20,11 +20,12 @@ namespace Raven.Abstractions.MissingFromBCL
 		{
 			return type;
 		}
-
+#if !MONO
 		public static Type GetTypeInfo(this Type type)
 		{
 			return type;
 		}
+#endif
 	}
 }
 #endif

@@ -137,24 +137,21 @@ namespace Raven.Client
         /// <summary>
         /// Lazily Query the facets results for this query using the specified list of facets with the given start and pageSize
         /// </summary>
-        /// <param name="facets">List of facets</param>
-        /// <param name="start">Start index for paging</param>
-        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-        //public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
-        //{
-        //    var facetsList = facets.ToList();
+        public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            var facetsList = facets.ToList();
 
-        //    if (!facetsList.Any())
-        //        throw new ArgumentException("Facets must contain at least one entry", "facets");
+            if (!facetsList.Any())
+                throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-        //    var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-        //    var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
+            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
-        //    var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetsList, query, start, pageSize);
+            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetsList, query, start, pageSize);
 
-        //    var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-        //    return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
-        //}
+            var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+        }
 
 		/// <summary>
 		/// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
@@ -179,21 +176,21 @@ namespace Raven.Client
         /// <param name="facets">List of facets</param>
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-        //public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
-        //{
-        //    var facetsList = facets.ToList();
+        public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            var facetsList = facets.ToList();
 
-        //    if (!facetsList.Any())
-        //        throw new ArgumentException("Facets must contain at least one entry", "facets");
+            if (!facetsList.Any())
+                throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-        //    var indexQuery = query.GetIndexQuery(isAsync: false);
-        //    var documentQuery = ((DocumentQuery<T>)query);
+            var indexQuery = query.GetIndexQuery(isAsync: false);
+            var documentQuery = ((DocumentQuery<T>)query);
 
-        //    var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetsList, indexQuery, start, pageSize);
+            var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetsList, indexQuery, start, pageSize);
 
-        //    var documentSession = ((DocumentSession)documentQuery.Session);
-        //    return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
-        //}
+            var documentSession = ((DocumentSession)documentQuery.Session);
+            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+        }
 #endif
 
 		/// <summary>

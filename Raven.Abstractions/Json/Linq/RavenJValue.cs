@@ -673,8 +673,6 @@ namespace Raven.Json.Linq
 			get { return new RavenJValue(null, JTokenType.Null); }
 		}
 
-#if !MONO
-		//TODO: mono check
 		public static RavenJToken Load(JsonTextReaderAsync reader)
 		{
 			RavenJValue v;
@@ -701,6 +699,5 @@ namespace Raven.Json.Linq
 			}
 			return v;
 		}
-#endif
 	}
 }

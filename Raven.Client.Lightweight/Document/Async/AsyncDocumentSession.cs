@@ -59,34 +59,6 @@ namespace Raven.Client.Document.Async
 			                            .ContinueWith(task => (IEnumerable<T>) task.Result.Select(TrackEntity<T>).ToList());
 		}
 
-#if MONO	
-		//TODO: Mono Implement
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query)
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query)
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-								   int pageSize = Int32.MaxValue)
-		{
-			throw new NotImplementedException();
-		}
-#else
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query)
 		{
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());
@@ -156,7 +128,6 @@ namespace Raven.Client.Document.Async
 
 			public StreamResult<T> Current { get; private set; }
 		}
-		#endif
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>

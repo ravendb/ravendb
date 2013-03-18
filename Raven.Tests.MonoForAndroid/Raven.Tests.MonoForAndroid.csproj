@@ -59,6 +59,7 @@
     <Compile Include="Resources\TestListAdapter.cs" />
     <Compile Include="TestsActivity.cs" />
     <Compile Include="TestsSelectionActivity.cs" />
+    <Compile Include="Tests\AsyncTests.cs" />
     <Compile Include="Tests\BasicTests.cs" />
     <Compile Include="Tests\Info.cs" />
     <Compile Include="Tests\MonoForAndroidTestBase.cs" />
