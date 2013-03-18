@@ -15,6 +15,8 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -331,7 +333,6 @@ namespace Raven.Client.Connection.Async
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
 		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue);
-	}
 
 #if SILVERLIGHT
 		/// <summary>
@@ -339,6 +340,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
 #endif
+	
+	}
+
 	public interface IAsyncAdminDatabaseCommands
 	{
 		/// <summary>
