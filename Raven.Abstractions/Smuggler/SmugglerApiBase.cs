@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -606,4 +605,3 @@ namespace Raven.Abstractions.Smuggler
 		}
 	}
 }
-#endif

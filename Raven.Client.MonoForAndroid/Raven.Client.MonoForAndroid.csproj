@@ -108,6 +108,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\*.cs">
       <Link>Util\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\InvalidDataException.cs">
+      <Link>MissingFromSilverlight\InvalidDataException.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.WinRT\MissingFromWinRT\ThreadSleep.cs">
       <Link>Extentions\ThreadSleep.cs</Link>
     </Compile>

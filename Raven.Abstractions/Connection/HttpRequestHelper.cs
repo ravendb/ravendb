@@ -60,9 +60,7 @@ namespace Raven.Abstractions.Connection
 							// explicitly ignoring this
 							break;
 						case "Host":
-#if !MONO
 							dest.Host = src.Host;
-#endif
 							break;
 						case "If-Modified-Since":
 							dest.IfModifiedSince = src.IfModifiedSince;
@@ -74,7 +72,6 @@ namespace Raven.Abstractions.Connection
 							break;
 						case "Transfer-Encoding":
 							dest.SendChunked = src.SendChunked;
-
 							break;
 						case "User-Agent":
 							dest.UserAgent = src.UserAgent;

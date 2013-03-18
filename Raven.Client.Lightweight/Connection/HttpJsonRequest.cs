@@ -675,8 +675,9 @@ namespace Raven.Client.Connection
 			{
 				writer.Write(postedData);
 				writer.Flush();
-
+#if !MONO
 				compressed.Flush();
+#endif
 				dataStream.Flush();
 			}
 		}
@@ -852,7 +853,7 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
 		}
-#if !MONO
+
 		public async Task<WebResponse> RawExecuteRequestAsync()
 		{
 			try
@@ -881,7 +882,6 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
 		}
-#endif
 
 		public void PrepareForLongRequest()
 		{

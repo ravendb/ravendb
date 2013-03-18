@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 using Android.App;
 using Android.Graphics;
 using Android.OS;
@@ -19,7 +20,6 @@ namespace Raven.Tests.MonoForAndroid
 	{
 		protected override void OnCreate(Bundle bundle)
 		{
-			LoadTests();
 			base.OnCreate(bundle);
 			
 			SetContentView(Resource.Layout.Main);
@@ -71,7 +71,7 @@ namespace Raven.Tests.MonoForAndroid
 								   var instance = Activator.CreateInstance(testMethod.DeclaringType);
 								   try
 								   {
-									   testMethod.Invoke(instance, null);
+									   return testMethod.Invoke(instance, null);  
 								   }
 								   finally
 								   {
@@ -84,11 +84,8 @@ namespace Raven.Tests.MonoForAndroid
 			               .ToList();
 		}
 
-		private void LoadTests()
-		{
-			//Not Sure how to handle this 
-		}
-
+		private int passed = 0;
+		private int failed = 0;
 		public void RunTests(List<TestItem> testsToRun)
 		{
 
@@ -97,39 +94,92 @@ namespace Raven.Tests.MonoForAndroid
 
 			var passedTitle = FindViewById<TextView>(Resource.Id.PassedTests);
 			passedTitle.SetTextColor(Color.Green);
-
+			
 			var failedTestsList = FindViewById<TextView>(Resource.Id.FailedTestsList);
 			var passedTestsList = FindViewById<TextView>(Resource.Id.PassedTestsList);
 			var testsStatus = FindViewById<TextView>(Resource.Id.TestsStatus);
-			var passed = 0;
-			var failed = 0;
+
 
 			failedTestsList.Text = "";
 			passedTestsList.Text = "";
-			
-			foreach (var testItem in testsToRun)
+
+			RunTest(testsToRun);
+		}
+		int index = -1;
+		private void RunTest(List<TestItem> testsToRun)
+		{
+			var failedTestsList = FindViewById<TextView>(Resource.Id.FailedTestsList);
+			var passedTestsList = FindViewById<TextView>(Resource.Id.PassedTestsList);
+			var testsStatus = FindViewById<TextView>(Resource.Id.TestsStatus);
+			index++;
+			if (testsToRun.Count > index)
 			{
 				UpdateStatus(testsStatus, passed, failed, testsToRun.Count());
+
 				try
 				{
-					testItem.Action.Invoke();
-					passedTestsList.Text += testItem.Name + "\n";
-					passed++;
+					var result = testsToRun[index].Action.Invoke();
+					var task = result as Task;
+					if (task != null)
+					{
+						var item = testsToRun[index];
+						task.ContinueWith(task1 =>
+						{
+							if (task.IsFaulted)
+							{
+								RunOnUiThread(() =>
+								{
+									failedTestsList.Text += item.Name + "\nError: " + task.Exception + "\n\n";
+									failed++;
+								});
+							}
+							else
+							{
+								RunOnUiThread(() =>
+								{
+									passedTestsList.Text += item.Name + "\n";
+									passed++;
+								});
+							}
+
+							RunTest(testsToRun);
+						});
+					}
+					else
+					{
+						RunOnUiThread(() =>
+						{
+							passedTestsList.Text += testsToRun[index].Name + "\n";
+							passed++;
+							UpdateStatus(testsStatus, passed, failed, testsToRun.Count());				
+							RunTest(testsToRun);
+						});
+					}
+
 				}
 				catch (Exception e)
 				{
-					failedTestsList.Text += testItem.Name + "\nError: " + e.Message +"\n\n";
-					failed++;
+					RunOnUiThread(() =>
+					{
+						failedTestsList.Text += testsToRun[index].Name + "\nError: " + e + "\n\n";
+						failed++;
+						UpdateStatus(testsStatus, passed, failed, testsToRun.Count());				
+						RunTest(testsToRun);
+					});
 				}
 			}
-
-			UpdateStatus(testsStatus, passed, failed, testsToRun.Count());
+			else
+			{
+				UpdateStatus(testsStatus, passed, failed, testsToRun.Count());				
+			}
 		}
 
 		private void UpdateStatus(TextView testsStatus, int passed, int failed, int count)
 		{
-
-			testsStatus.Text = string.Format("Passed: {0}, Failed: {1}, of {2}", passed, failed, count);
+			RunOnUiThread(() =>
+			{
+				testsStatus.Text = string.Format("Passed: {0}, Failed: {1}, of {2}", passed, failed, count);				
+			});
 		}
 
 		private static void MarkAllAs(IEnumerable<TestItem> tests, bool value)
