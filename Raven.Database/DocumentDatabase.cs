@@ -2192,6 +2192,9 @@ namespace Raven.Database
 						var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 						foreach (var doc in docs)
 						{
+							RemoveReservedProperties(doc.DataAsJson);
+							RemoveMetadataReservedProperties(doc.Metadata);
+		
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
@@ -2204,6 +2207,10 @@ namespace Raven.Database
 							var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
 							if (result.Updated == false)
 								inserts++;
+
+							doc.Metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							doc.DataAsJson.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+
 							foreach (var trigger in PutTriggers)
 							{
 								trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);

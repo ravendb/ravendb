@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using System.Linq;
-using Raven.Tests.Bundles.PeriodicBackups;
-using Raven.Tests.Bundles.Replication.Bugs;
-using Raven.Tests.Bundles.Versioning;
+using System.Threading.Tasks;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Tryouts
 {
@@ -15,12 +10,7 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			for (int i = 0; i < 100; i++)
-			{
-				Console.WriteLine(i);
-				using (var x = new PeriodicBackupTests())
-					x.CanBackupToDirectory_MultipleBackups();
-			}
-		} 
+		}
+
 	}
 }

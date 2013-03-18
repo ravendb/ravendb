@@ -48,7 +48,7 @@ namespace Raven.Tests.Bugs.Indexing
 				}
 
 				new Accounts_Search().Execute(store);
-
+				WaitForIndexing(store);
 				using (var session = store.OpenSession())
 				{
 					var objects = session.Query<object, Accounts_Search>()

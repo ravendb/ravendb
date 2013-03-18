@@ -40,13 +40,13 @@ namespace Raven.Tests.Indexes
 					{
 						try
 						{
-							Assert.Equal("200", x.Count);
+							Assert.Equal(200, x.Count);
 						}
 						catch (Exception)
 						{
 							PrintServerErrors(store.DocumentDatabase.Statistics.Errors);
 
-							var missed = ret.Where(item => item.Count != "200")
+							var missed = ret.Where(item => item.Count != 200)
 							                .Select(item => "Name: " + item.Name + ". Count: " + item.Count)
 							                .Cast<string>()
 							                .ToList();

@@ -30,6 +30,11 @@ namespace Raven.Client.Document
 
 		public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
 		{
+			foreach (var extendedDocumentConversionListener in Listeners.ExtendedConversionListeners)
+			{
+				extendedDocumentConversionListener.BeforeConversionToDocument(key, entity, metadata);
+			}
+
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 
@@ -44,6 +49,11 @@ namespace Raven.Client.Document
 			foreach (var documentConversionListener in Listeners.ConversionListeners)
 			{
 				documentConversionListener.EntityToDocument(key, entity, objectAsJson, metadata);
+			}
+
+			foreach (var extendedDocumentConversionListener in Listeners.ExtendedConversionListeners)
+			{
+				extendedDocumentConversionListener.AfterConversionToDocument(key, entity, objectAsJson, metadata);
 			}
 
 			return objectAsJson;
