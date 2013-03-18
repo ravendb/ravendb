@@ -108,6 +108,7 @@ namespace Raven.Database.Storage
 					Indexes = generator.Indexes,
 					Stores = generator.Stores,
 					TermVectors = generator.TermVectors,
+					SpatialIndexes = generator.SpatialIndexes,
 					IsCompiled = true
 				};
 				indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);

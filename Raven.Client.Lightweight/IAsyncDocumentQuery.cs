@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Spatial;
 
 namespace Raven.Client
 {
@@ -42,5 +44,9 @@ namespace Raven.Client
 		/// Create the index query object for this query
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
+
+		IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+		IAsyncDocumentQuery<T> Spatial(string name, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 	}
 }

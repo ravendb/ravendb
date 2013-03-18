@@ -660,6 +660,7 @@
     <Compile Include="Imports\Newtonsoft.Json\JsonTextReaderAsync.cs" />
     <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
+    <Compile Include="Indexing\SpatialOptionsFactory.cs" />
     <Compile Include="Indexing\SuggestionOptions.cs" />
     <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
@@ -725,6 +726,9 @@
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
+    <Compile Include="Spatial\ShapeConverter.cs" />
+    <Compile Include="Spatial\GeoJsonWktConverter.cs" />
+    <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />

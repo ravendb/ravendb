@@ -181,7 +181,7 @@
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="0,5,0,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="0,5,0,0" d:IsLocked="True">
 				<TextBlock Text="Query"
 						   Margin="0,0,5,0"
 						   Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Center"/>
@@ -264,7 +264,7 @@
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
 
-					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Converter={StaticResource BooleanToVisibility}}"
+					<StackPanel Visibility="{Binding IsLegacySpatialQuerySupported, Converter={StaticResource BooleanToVisibility}}"
 								Margin="0,5">
 
 						<i:Interaction.Triggers>
@@ -272,60 +272,91 @@
 									   Modifiers="Control">
 								<i:InvokeCommandAction Command="{Binding Execute}" />
 							</Behaviors:StudioKeyTrigger>
-						</i:Interaction.Triggers>
+                        </i:Interaction.Triggers>
 
-						<CheckBox Content="Make spatial queries"
+                        <CheckBox Content="Spatial query"
 								  Foreground="{StaticResource Brush_ContrastColor}"
 								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
-						<StackPanel Orientation="Horizontal"
+                        <StackPanel Orientation="Horizontal"
 									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
 									Margin="0,3">
-							
-							<TextBlock Text="Latitude:"
+
+                            <TextBlock Text="Field:"
 									   VerticalAlignment="Center" />
-							<TextBox Margin="5,0,5,0"
+                            <ComboBox Margin="5,0,5,0"
+                                      MinWidth="100"
+                                      ItemsSource="{Binding SpatialQuery.Fields}" SelectedValue="{Binding SpatialQuery.FieldName, Mode=TwoWay}"
+                                      VerticalAlignment="Center"/>
+
+                            <TextBlock Text="X:"
+									   Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToOppositeVisibility}}"
+									   VerticalAlignment="Center" />
+                            <TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Latitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Text="{Binding SpatialQuery.X, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToOppositeVisibility}}"
 									 VerticalAlignment="Center" />
 
-							<TextBlock Text="Longitude:"
+                            <TextBlock Text="Y:"
+									   Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToOppositeVisibility}}"
 									   VerticalAlignment="Center" />
-							<TextBox Margin="5,0,5,0"
+                            <TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Longitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Text="{Binding SpatialQuery.Y, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToOppositeVisibility}}"
 									 VerticalAlignment="Center" />
 
-							<TextBlock Text="Radius:"
+                            <TextBlock Text="Latitude:"
+									   Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
 									   VerticalAlignment="Center" />
-							<TextBox Margin="5,0,5,0"
+                            <TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Text="{Binding SpatialQuery.Y, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
 									 VerticalAlignment="Center" />
-							<ComboBox ItemsSource="{Binding RangeUnits, Converter={StaticResource enumerationFromValue}}"
-									  SelectedValue="{Binding RangeUnits, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"/>
 
-							<TextBlock Margin="50,0,0,0"
+                            <TextBlock Text="Longitude:"
+									   Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
+									   VerticalAlignment="Center" />
+                            <TextBox Margin="5,0,5,0"
+									 Width="100"
+									 Text="{Binding SpatialQuery.X, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
+									 VerticalAlignment="Center" />
+
+                            <TextBlock Text="Radius:"
+									   VerticalAlignment="Center" />
+                            <TextBox Margin="5,0,5,0"
+									 Width="100"
+									 Text="{Binding SpatialQuery.Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 VerticalAlignment="Center" />
+                            
+                            <ComboBox ItemsSource="{Binding SpatialQuery.RadiusUnits, Converter={StaticResource enumerationFromValue}}"
+									  SelectedValue="{Binding SpatialQuery.RadiusUnits, Mode=TwoWay, Converter={StaticResource enumeratedValue}}"
+                                      Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
+									  />
+
+                            <TextBlock Margin="50,0,0,0"
+									   Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
 									   Text="Address:"
 									   VerticalAlignment="Center" />
-							<sdk:AutoCompleteBox Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            <sdk:AutoCompleteBox Text="{Binding SpatialQuery.Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
 									 MinimumPrefixLength="1"
 									 IsTextCompletionEnabled="True"
 									 Margin="5" 
 									 Width="350">
-								<i:Interaction.Behaviors>
-									<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
-								</i:Interaction.Behaviors>
-							</sdk:AutoCompleteBox>
-							<!--<TextBox Margin="5,0,5,0"
-									 Width="200"
-									 Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 VerticalAlignment="Center" />-->
+                                <i:Interaction.Behaviors>
+                                    <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
+                                </i:Interaction.Behaviors>
+                            </sdk:AutoCompleteBox>
 
-							<HyperlinkButton Content="Calculate from address"
-											 Command="{Binding CalculateFromAddress}" VerticalAlignment="Center"/>
-						</StackPanel>
-					</StackPanel>
+                            <HyperlinkButton Content="Calculate from address"
+											 Visibility="{Binding SpatialQuery.IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
+									         Command="{Binding SpatialQuery.CalculateFromAddress}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
 				</Grid>
 
 				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"

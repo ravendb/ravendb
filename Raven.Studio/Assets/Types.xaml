@@ -43,6 +43,8 @@
 	<Converters:StringListToStringConverter x:Key="StringListToString"/>
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>
+    <Converters:TrueWhenGeographyConverter x:Key="TrueWhenGeography"/>
+    <Converters:FalseWhenGeographyConverter x:Key="FalseWhenGeography"/>
 	<Converters:VisibleWhenDifferent x:Key="VisibleWhenDifferent" />
 	<Converters:VisibleWhenEqual x:Key="VisibleWhenEqual" />
 	<Converters:DisableIfDefaultVersioning x:Key="DisableIfDefaultVersioning"/>

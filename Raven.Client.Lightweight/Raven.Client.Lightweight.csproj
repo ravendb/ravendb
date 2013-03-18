@@ -65,6 +65,8 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Spatial\SpatialCriteria.cs" />
+    <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
     <Compile Include="Util\EvictItemsFromCacheBasedOnChanges.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
     <Compile Include="Changes\LocalConnectionState.cs" />

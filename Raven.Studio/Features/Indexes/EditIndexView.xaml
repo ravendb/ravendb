@@ -160,6 +160,164 @@
 				</Grid>
 			</Border>
 		</DataTemplate>
+        <DataTemplate x:Key="IndexSpatialFieldTemplate">
+            <Border BorderBrush="#FFE9E9E9"
+                    BorderThickness="1,1,1,1"
+                    CornerRadius="4"
+                    Margin="10"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
+                <Border.Resources>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource Style_ComboBox_DefaultStyle}">
+                        <Setter Property="MinHeight" Value="26"/>
+                    </Style>
+                </Border.Resources>
+                <Grid Margin="4,4,4,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Field"
+                               VerticalAlignment="Center" />
+                    <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Grid.Column="1"
+                             Grid.ColumnSpan="7"
+                             VerticalAlignment="Center" />
+
+                    <Button x:Name="RemoveField"
+                            Grid.Column="8"
+                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Padding="2"
+                            Margin="4 -2 -2 0"
+                            ToolTipService.ToolTip="Remove this field from the index"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Command="{Binding Path=DataContext.RemoveSpatialField, ElementName=this}"
+                            CommandParameter="{Binding}">
+                        <Button.Content>
+                            <Image Source="{StaticResource Image_Remove_Tiny}"
+                                   Width="12"
+                                   Height="12" />
+                        </Button.Content>
+                    </Button>
+
+                    <TextBlock Text="Type"
+                               Grid.Row="2"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0" />
+                    <ComboBox ItemsSource="{Binding Type, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+                              SelectedItem="{Binding Type, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+                              Grid.Row="2"
+                              Grid.Column="1"
+                              Grid.ColumnSpan="3"
+                              MinWidth="90"
+                              VerticalAlignment="Center"
+                              Margin="0,0,4,0" />
+
+                    <TextBlock Text="Strategy"
+                               Grid.Row="4"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0" />
+                    <ComboBox ItemsSource="{Binding Strategy, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+                              SelectedItem="{Binding Strategy, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+							  IsEnabled="{Binding Type, Converter={StaticResource TrueWhenGeography}}"
+                              Grid.Row="4"
+                              Grid.Column="1"
+                              Grid.ColumnSpan="3"
+                              VerticalAlignment="Center"
+                              Margin="0,0,4,0" />
+
+                    <TextBlock Text="Max Tree Level"
+                               Grid.Row="4"
+                               Grid.Column="5"
+                               Grid.ColumnSpan="2"
+                               Margin="8,0,4,0"
+                               VerticalAlignment="Center" />
+                    <TextBox Text="{Binding MaxTreeLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 Grid.Row="4"
+										 Grid.Column="7"
+										 MinWidth="40"
+										 Margin="0,5,5,0"
+                             VerticalAlignment="Center" />
+
+                    <TextBlock Text="Min X"
+                               Grid.Row="6"
+                               Margin="0,0,4,0"
+                               VerticalAlignment="Center" />
+                    <TextBox Text="{Binding MinX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 IsEnabled="{Binding Type, Converter={StaticResource FalseWhenGeography}}"
+										 Grid.Row="6"
+										 Grid.Column="1"
+										 MinWidth="40"
+										 Margin="0,5,5,0"
+                             VerticalAlignment="Center" />
+
+                    <TextBlock Text="Max X"
+                               Grid.Row="6"
+                               Grid.Column="2"
+                               Margin="8,0,4,0"
+                               VerticalAlignment="Center" />
+                    <TextBox Text="{Binding MaxX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 IsEnabled="{Binding Type, Converter={StaticResource FalseWhenGeography}}"
+										 Grid.Row="6"
+										 Grid.Column="3"
+										 MinWidth="40"
+										 Margin="0,5,5,0"
+                             VerticalAlignment="Center" />
+
+                    <TextBlock Text="Min Y"
+                               Grid.Row="6"
+                               Grid.Column="4"
+                               Margin="8,0,4,0"
+                               VerticalAlignment="Center" />
+                    <TextBox Text="{Binding MinY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 IsEnabled="{Binding Type, Converter={StaticResource FalseWhenGeography}}"
+										 Grid.Row="6"
+										 Grid.Column="5"
+										 MinWidth="40"
+										 Margin="0,5,5,0"
+                             VerticalAlignment="Center" />
+
+                    <TextBlock Text="Max Y"
+                               Grid.Row="6"
+                               Grid.Column="6"
+                               Margin="8,0,4,0"
+                               VerticalAlignment="Center" />
+                    <TextBox Text="{Binding MaxY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 IsEnabled="{Binding Type, Converter={StaticResource FalseWhenGeography}}"
+										 Grid.Row="6"
+										 Grid.Column="7"
+										 MinWidth="40"
+										 Margin="0,5,5,0"
+                             VerticalAlignment="Center" />
+
+                    <TextBlock Text="{Binding Precision, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                               Grid.Row="8"
+                               Grid.ColumnSpan="8"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0" />
+                </Grid>
+            </Border>
+        </DataTemplate>
 		<Style TargetType="TextBox" BasedOn="{StaticResource Style_TextBox_Default}">
 			<Setter Property="Background"
                     Value="{StaticResource Brush_TextBox_Background}" />
@@ -297,6 +455,25 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
+
+                        <Button x:Name="AddSpatialField"
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{Binding AddSpatialField}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Left"
+                                Margin="0">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <Image Source="{StaticResource Image_Add_Tiny}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+                                    <TextBlock Text="Add Spatial Field"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
 
 					<ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
 
@@ -679,6 +856,27 @@
                                   Grid.Column="1"
                                   Margin="0,10,24,10"
                                   ItemTemplate="{StaticResource IndexFieldTemplate}">
+                    </ItemsControl>
+
+                    <sdk:GridSplitter Grid.Row="8"
+                                      Grid.Column="1"
+                                      Visibility="{Binding Fields.Count, Converter={StaticResource BooleanToVisibility}}"
+                                      Background="Transparent"
+                                      HorizontalAlignment="Stretch" />
+
+                    <TextBlock Text="Spatial Fields"
+                               Visibility="{Binding SpatialFields.Count, Converter={StaticResource HiddenWhenEmpty}}"
+                               Grid.Row="9"
+                               Margin="5,10,5,0"
+                               Style="{StaticResource Style_TextBlock_PagePartHeader}"
+                               VerticalAlignment="Top" />
+                    <ItemsControl ItemsSource="{Binding SpatialFields}"
+                                  Visibility="{Binding SpatialFields.Count, Converter={StaticResource HiddenWhenEmpty}}"
+                                  Style="{StaticResource Style_ItemsControl_IndexFields}"
+                                  Grid.Row="9"
+                                  Grid.Column="1"
+                                  Margin="0,10,24,10"
+                                  ItemTemplate="{StaticResource IndexSpatialFieldTemplate}">
 					</ItemsControl>
 				</Grid>
 			</ScrollViewer>
