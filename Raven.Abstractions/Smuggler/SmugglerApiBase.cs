@@ -225,8 +225,6 @@ namespace Raven.Abstractions.Smuggler
 
 				while (await documents.MoveNextAsync())
 				{
-					if (documents == null)
-						documents = null;
 					var document = documents.Current;
 
 					if (!options.MatchFilters(document))
