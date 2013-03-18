@@ -29,7 +29,7 @@ namespace Raven.Database.Linq
 		public AbstractTransformer GenerateInstance()
 		{
 			TransformToClass();
-			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath);
+			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath, configuration);
 
 			var abstractTransformer = (AbstractTransformer)Activator.CreateInstance(GeneratedType);
 			abstractTransformer.SourceCode = CompiledQueryText;

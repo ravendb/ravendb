@@ -22,7 +22,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
-
+#if !MONO
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -718,7 +718,7 @@ namespace Raven.Imports.Newtonsoft.Json
 			return writeChar;
 		}
 
-		private async void ReadNumberIntoBuffer()
+		private async Task ReadNumberIntoBuffer()
 		{
 			int charPos = _charPos;
 
@@ -1038,7 +1038,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						if (await EnsureChars(1, true) && _chars[_charPos + 1] == 'I')
 							await ParseNumberNegativeInfinity();
 						else
-							ParseNumber();
+							await ParseNumber();
 						return true;
 					case '/':
 						await ParseComment();
@@ -1087,7 +1087,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						}
 						else if (char.IsNumber(currentChar) || currentChar == '-' || currentChar == '.')
 						{
-							ParseNumber();
+							await ParseNumber();
 							return true;
 						}
 						else
@@ -1233,14 +1233,14 @@ namespace Raven.Imports.Newtonsoft.Json
 			}
 		}
 
-		private void ParseNumber()
+		private async Task ParseNumber()
 		{
 			ShiftBufferIfNeeded();
 
 			char firstChar = _chars[_charPos];
 			int initialPosition = _charPos;
 
-			ReadNumberIntoBuffer();
+			await ReadNumberIntoBuffer();
 
 			_stringReference = new StringReference(_chars, initialPosition, _charPos - initialPosition);
 
@@ -2359,3 +2359,4 @@ namespace Raven.Imports.Newtonsoft.Json
 
 	}
 }
+#endif

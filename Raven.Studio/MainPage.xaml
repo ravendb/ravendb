@@ -272,7 +272,7 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/logs"
 								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="Alerts"
+                                <HyperlinkButton Content="{Binding AlertsTitle}"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/alerts"
 								 Style="{StaticResource Style_Hyperlink_InDropdown}" />

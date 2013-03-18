@@ -50,9 +50,9 @@ namespace Raven.Tests.Issues.Ravendb718
 					Assert.Equal(dto.AddDays(-1), results.MinDateTimeOffset);
 					Assert.Equal(dto.AddDays(1), results.MaxDateTimeOffset);
 
-					// When analyzed, the returned offset should be zero (UTC)
-					Assert.Equal(TimeSpan.Zero, results.MinDateTimeOffset.Offset);
-					Assert.Equal(TimeSpan.Zero, results.MaxDateTimeOffset.Offset);
+					// now preserve the offset, unless we would want to do project
+					Assert.Equal(dto.Offset, results.MinDateTimeOffset.Offset);
+					Assert.Equal(dto.Offset, results.MaxDateTimeOffset.Offset);
 				}
 			}
 		}

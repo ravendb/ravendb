@@ -29,18 +29,21 @@ using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Tasks
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof(IStartupTask))]
-	public class ReplicationTask : IStartupTask
+	public class ReplicationTask : IStartupTask, IDisposable
 	{
 		public class IntHolder
 		{
 			public int Value;
 		}
+
+		public ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
 
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
 			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
@@ -127,7 +130,7 @@ namespace Raven.Bundles.Replication.Tasks
 									if (Thread.VolatileRead(ref holder.Value) == 1)
 										continue;
 									Thread.VolatileWrite(ref holder.Value, 1);
-									Task.Factory.StartNew(() =>
+									var replicationTask = Task.Factory.StartNew(() =>
 									{
 										using (LogContext.WithDatabase(docDb.Name))
 										{
@@ -141,10 +144,22 @@ namespace Raven.Bundles.Replication.Tasks
 												log.ErrorException("Could not replicate to " + destination, e);
 											}
 										}
-									}, TaskCreationOptions.LongRunning);
+									});
+									activeTasks.Enqueue(replicationTask);
+									replicationTask.ContinueWith(_ =>
+									{
+										// here we purge all the completed tasks at the head of the queue
+										Task task;
+										while (activeTasks.TryPeek(out task))
+										{
+											if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted)
+												break;
+											activeTasks.TryDequeue(out task); // remove it from end
 								}
+									});
 							}
 						}
+					}
 					}
 					catch (Exception e)
 					{
@@ -961,6 +976,14 @@ namespace Raven.Bundles.Replication.Tasks
 			docDb.WorkContext.NotifyAboutWork();
 		}
 
+		public void Dispose()
+		{
+			Task task;
+			while (activeTasks.TryDequeue(out task))
+			{
+				task.Wait();
+			}
+		}
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 	}
 }

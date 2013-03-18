@@ -37,20 +37,15 @@ namespace Raven.Studio.Features.Documents
             });
         }
 
-        public override string GetUrlForCurrentIndex()
-        {
-            return base.GetUrlForCurrentIndex();
-        }
-
         protected IList<PathSegment> GetParentPath(DocumentAndNavigationInfo info)
         {
             if (info.IsConflicted)
             {
-                return new[]
-                           {
-                               new PathSegment {Name = "Documents", Url = "/documents"},
-                               new PathSegment {Name = "Conflicts", Url = "/conflicts"}
-                           };
+	            return new[]
+	            {
+		            new PathSegment {Name = "Documents", Url = "/documents"},
+		            new PathSegment {Name = "Conflicts", Url = "/conflicts"}
+	            };
             }
 
             if (info.Document == null)
@@ -62,17 +57,17 @@ namespace Raven.Studio.Features.Documents
 
             if (entityType != null)
             {
-                return new[]
-                           {
-                               new PathSegment {Name = "Documents", Url = "/documents"},
-                               new PathSegment {Name = entityType, Url = "/collections?name=" + entityType}
-                           };
+	            return new[]
+	            {
+		            new PathSegment {Name = "Documents", Url = "/documents"},
+		            new PathSegment {Name = entityType, Url = "/collections?name=" + entityType}
+	            };
             }
 
-            return new[]
-                       {
-                           new PathSegment { Name = "Documents", Url = "/documents"}
-                       };
+	        return new[]
+	        {
+		        new PathSegment {Name = "Documents", Url = "/documents"}
+	        };
         }
     }
 }

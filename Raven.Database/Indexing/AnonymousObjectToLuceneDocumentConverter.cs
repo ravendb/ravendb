@@ -89,6 +89,17 @@ namespace Raven.Database.Indexing
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
 			var termVector = indexDefinition.GetTermVector(name, defaultTermVector);
 
+			if (fieldIndexingOptions == Field.Index.NO && storage == Field.Store.NO && termVector == Field.TermVector.NO)
+			{
+				yield break;
+			}
+
+			if (fieldIndexingOptions == Field.Index.NO && storage == Field.Store.NO)
+			{
+				fieldIndexingOptions = Field.Index.ANALYZED; // we have some sort of term vector, forcing index to be analyzed, then.
+			}
+
+
 			if (value == null)
 			{
 				yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
@@ -256,8 +267,12 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(Formatting.None), storage,
+				var jsonVal = RavenJToken.FromObject(value).ToString(Formatting.None);
+				if(jsonVal.StartsWith("{") || jsonVal.StartsWith("[")) 
+					yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+				else if (jsonVal.StartsWith("\"") && jsonVal.EndsWith("\"") && jsonVal.Length > 1)
+					jsonVal = jsonVal.Substring(1, jsonVal.Length - 2);
+				yield return CreateFieldWithCaching(name, jsonVal, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 

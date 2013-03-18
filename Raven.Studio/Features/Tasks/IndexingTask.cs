@@ -31,13 +31,13 @@ namespace Raven.Studio.Features.Tasks
 		public override System.Threading.Tasks.Task TimerTickedAsync()
 		{
 			return ApplicationModel.DatabaseCommands.GetIndexingStatusAsync()
-				.ContinueOnSuccessInTheUIThread(item =>
-													{
-														IndexingStatus = item;
-														TaskDatas.Clear();
-														TaskDatas.Add(new TaskData("Current Status:", IndexingStatus));
+			                       .ContinueOnSuccessInTheUIThread(item =>
+			                       {
+				                       IndexingStatus = item;
+				                       TaskDatas.Clear();
+				                       TaskDatas.Add(new TaskData("Current Status:", IndexingStatus));
 
-													});
+			                       });
 		}
 
 		public override ICommand Action

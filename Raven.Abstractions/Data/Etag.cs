@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Security.Cryptography;
 using System.Text;
 using System.Linq;
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Security.Cryptography;
 #endif
-
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
@@ -242,13 +242,13 @@ namespace Raven.Abstractions.Data
 		public Etag HashWith(IEnumerable<byte> bytes)
 		{
 			var etagBytes = ToBytes().Concat(bytes).ToArray();
-#if !SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
+			return Parse(MD5Core.GetHash(etagBytes));
+#else
 			using (var md5 = MD5.Create())
 			{
 				return Parse(md5.ComputeHash(etagBytes));
 			}
-#else
-			return Parse(MD5Core.GetHash(etagBytes));
 #endif
 		}
 	}

@@ -4,11 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Raven.Abstractions.Commands;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -21,19 +19,21 @@ namespace Raven.Database.Smuggler
 {
 	public class DataDumper : SmugglerApiBase
 	{
-		public DataDumper(DocumentDatabase database, SmugglerOptions options) : base(options)
+		public DataDumper(DocumentDatabase database, SmugglerOptions options)
+			: base(options)
 		{
 			_database = database;
 		}
 
 		private readonly DocumentDatabase _database;
 
-		protected override void EnsureDatabaseExists()
+		protected override Task EnsureDatabaseExists()
 		{
-			ensuredDatabaseExists = true;
+			EnsuredDatabaseExists = true;
+			return new CompletedTask();
 		}
 
-		protected override Etag ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
+		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
 			while (true)
@@ -41,11 +41,11 @@ namespace Raven.Database.Smuggler
 				var array = GetAttachments(totalCount, lastEtag);
 				if (array.Length == 0)
 				{
-					var databaseStatistics = GetStats();
+					var databaseStatistics = await GetStats();
 					if (lastEtag == null) lastEtag = Etag.Empty;
 					if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = EtagUtil.Increment(lastEtag, smugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}
@@ -62,63 +62,93 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		protected override Etag FlushBatch(List<RavenJObject> batch)
+		protected override Task<RavenJArray> GetTransformers(int totalCount)
 		{
-			var sw = Stopwatch.StartNew();
-
-			var results = _database.Batch(batch.Select(x =>
-			{
-				var metadata = x.Value<RavenJObject>("@metadata");
-				var key = metadata.Value<string>("@id");
-				x.Remove("@metadata");
-				return new PutCommandData
-				{
-					Document = x,
-					Etag = null,
-					Key = key,
-					Metadata = metadata
-				};
-			}).ToArray());
-
-			ShowProgress("Wrote {0:#,#} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds);
-			batch.Clear();
-
-
-			if(results.Length == 0)
-				return Etag.Empty;
-
-			return results.Last().Etag;
+			return new CompletedTask<RavenJArray>(_database.GetTransformers(totalCount, SmugglerOptions.BatchSize));
 		}
 
-		protected override RavenJArray GetDocuments(Etag lastEtag)
+		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
 			const int dummy = 0;
-			return _database.GetDocuments(dummy, smugglerOptions.BatchSize, lastEtag);
+
+			var enumerator = _database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag)
+				.ToList()
+				.Cast<RavenJObject>()
+				.GetEnumerator();
+
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
 		}
 
-		protected override RavenJArray GetIndexes(int totalCount)
+		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
-			return _database.GetIndexes(totalCount, 128);
+			return new CompletedTask<RavenJArray>(_database.GetIndexes(totalCount, 128));
 		}
 
-		protected override void PutAttachment(AttachmentExportInfo attachmentExportInfo)
+		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
 		{
-			// we filter out content length, because getting it wrong will cause errors 
-			// in the server side when serving the wrong value for this header.
-			// worse, if we are using http compression, this value is known to be wrong
-			// instead, we rely on the actual size of the data provided for us
-			attachmentExportInfo.Metadata.Remove("Content-Length");
-			_database.PutStatic(attachmentExportInfo.Key, null, new MemoryStream(attachmentExportInfo.Data), attachmentExportInfo.Metadata);
+			if (attachmentExportInfo != null)
+			{
+				// we filter out content length, because getting it wrong will cause errors 
+				// in the server side when serving the wrong value for this header.
+				// worse, if we are using http compression, this value is known to be wrong
+				// instead, we rely on the actual size of the data provided for us
+				attachmentExportInfo.Metadata.Remove("Content-Length");
+				_database.PutStatic(attachmentExportInfo.Key, null, new MemoryStream(attachmentExportInfo.Data),
+									attachmentExportInfo.Metadata);
+			}
+
+			return new CompletedTask();
 		}
 
-		protected override void PutIndex(string indexName, RavenJToken index)
+		protected override Task PutDocument(RavenJObject document)
 		{
-			_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+			if (document != null)
+			{
+				var metadata = document.Value<RavenJObject>("@metadata");
+				var key = metadata.Value<string>("@id");
+				document.Remove("@metadata");
+
+				_database.Put(key, null, document, metadata, null);
+			}
+
+			return new CompletedTask();
 		}
 
-		protected override DatabaseStatistics GetStats()
+		protected override Task PutTransformer(string transformerName, RavenJToken transformer)
 		{
-			return _database.Statistics;
+			if (transformer != null)
+			{
+				var transformerDefinition =
+					JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
+				_database.PutTransform(transformerName, transformerDefinition);
+			}
+
+			return new CompletedTask();
+		}
+
+		protected override Task<string> GetVersion()
+		{
+			return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+		}
+
+		protected override Task PutIndex(string indexName, RavenJToken index)
+		{
+			if (index != null)
+			{
+				_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+			}
+
+			return new CompletedTask();
+		}
+
+		protected override Task<DatabaseStatistics> GetStats()
+		{
+			return new CompletedTask<DatabaseStatistics>(_database.Statistics);
+		}
+
+		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		{
+			return new CompletedTask<RavenJObject>(document);
 		}
 
 		protected override void ShowProgress(string format, params object[] args)
@@ -132,7 +162,7 @@ namespace Raven.Database.Smuggler
 		private RavenJArray GetAttachments(int start, Etag etag)
 		{
 			var array = new RavenJArray();
-			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024*1024*10);
+			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024 * 1024 * 10);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{

@@ -205,7 +205,7 @@ namespace Raven.Studio.Behaviors
                         _textBlock.ClearValue(ToolTipService.ToolTipProperty);
                     }
 
-                    _textBlock.Foreground = new SolidColorBrush() { Color = _foregroundColor };
+                    _textBlock.Foreground = new SolidColorBrush { Color = _foregroundColor };
                     _brush = null;
                     _isClipped = false;
                 }
@@ -269,9 +269,8 @@ namespace Raven.Studio.Behaviors
                                EndPoint = new Point(visibleWidth, 0),
                                GradientStops =
                                    {
-                                       new GradientStop()
-                                           {Color = _foregroundColor, Offset = 0},
-                                       new GradientStop()
+                                       new GradientStop {Color = _foregroundColor, Offset = 0},
+                                       new GradientStop
                                            {
                                                Color = _foregroundColor,
                                                // Even though the mapping mode is absolute,
@@ -279,7 +278,7 @@ namespace Raven.Studio.Behaviors
                                                // 0 being the start of the brush, and 1 the end of the brush
                                                Offset = (visibleWidth - FadeWidth)/visibleWidth
                                            },
-                                       new GradientStop()
+                                       new GradientStop
                                            {
                                                Color = Color.FromArgb(0, _foregroundColor.R, _foregroundColor.G, _foregroundColor.B),
                                                Offset = 1
@@ -300,9 +299,8 @@ namespace Raven.Studio.Behaviors
                     EndPoint = new Point(0, visibleHeight),
                     GradientStops =
                                    {
-                                       new GradientStop()
-                                           {Color = _foregroundColor, Offset = 0},
-                                       new GradientStop()
+                                       new GradientStop {Color = _foregroundColor, Offset = 0},
+                                       new GradientStop
                                            {
                                                Color = _foregroundColor,
                                                // Even though the mapping mode is absolute,
@@ -310,7 +308,7 @@ namespace Raven.Studio.Behaviors
                                                // 0 being the start of the brush, and 1 the end of the brush
                                                Offset = (visibleHeight - FadeHeight)/visibleHeight
                                            },
-                                       new GradientStop()
+                                       new GradientStop
                                            {
                                                Color = Color.FromArgb(0, _foregroundColor.R, _foregroundColor.G, _foregroundColor.B),
                                                Offset = 1

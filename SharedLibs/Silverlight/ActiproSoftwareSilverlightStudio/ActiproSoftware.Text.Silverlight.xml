@@ -2010,7 +2010,11 @@
             The event handler receives an argument of type <c>TagsChangedEventArgs</c> containing data related to this event.
             </eventdata></member><member name="T:ActiproSoftware.Text.Tagging.Implementation.TaggerBase`1"><summary>
             Provides an abstract base class for an <see cref="T:ActiproSoftware.Text.Tagging.ITagger`1" /> implementation.
-            </summary><typeparam name="T">The type of tag associated with this tagger.</typeparam></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.TaggerBase`1.Close"><summary>
+            </summary><typeparam name="T">The type of tag associated with this tagger.</typeparam></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.TaggerBase`1.ChangeDocument(ActiproSoftware.Text.ICodeDocument)"><summary>
+            Changes the document associated with the tagger.
+            </summary><param name="newDocument">The new <see cref="T:ActiproSoftware.Text.ICodeDocument" />.</param><remarks>
+            This method is used when a view-based tagger needs to update the associated document.
+            </remarks></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.TaggerBase`1.Close"><summary>
             Closes the manager and detaches it from the view.
             </summary></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.TaggerBase`1.GetTags(ActiproSoftware.Text.NormalizedTextSnapshotRangeCollection,System.Object)"><summary>
             Returns the tag ranges that intersect with the specified normalized snapshot ranges.
@@ -3337,7 +3341,6 @@
             </remarks></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.TokenTagger.OnClosed"><summary>
             Occurs when the manager is closed and detached from the view.
             </summary><remarks>
-            The default implementation of this method does nothing.
             Overrides should release any event handlers set up in the manager's constructor.
             </remarks></member><member name="M:ActiproSoftware.Text.Tagging.Implementation.TokenTagger.GetTags(ActiproSoftware.Text.NormalizedTextSnapshotRangeCollection,System.Object)"><summary>
             Returns the tag ranges that intersect with the specified normalized snapshot ranges.

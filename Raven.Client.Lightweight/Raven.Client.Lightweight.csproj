@@ -74,6 +74,7 @@
     <Compile Include="Document\RavenLoadConfiguration.cs" />
     <Compile Include="ILoadConfiguration.cs" />
     <Compile Include="Indexes\AbstractResultsTransformer.cs" />
+    <Compile Include="Listeners\IExtendedDocumentConversionListener.cs" />
     <Compile Include="Util\CSharpClassName.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
@@ -169,7 +170,7 @@
     <Compile Include="Extensions\MultiDatabase.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
-    <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Extensions\TaskExtensions2.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />
     <Compile Include="IAsyncAdvancedSessionOperations.cs" />
     <Compile Include="IAsyncDocumentQuery.cs" />

@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
+using Windows.Storage;
 
 namespace Raven.Client.WinRT.MissingFromWinRT
 {
@@ -19,21 +21,30 @@ namespace Raven.Client.WinRT.MissingFromWinRT
 			CurrentDomain = new AppDomain();
 		}
 
-		public Assembly[] GetAssemblies()
+		public IEnumerable<Assembly> GetAssemblies()
 		{
-			return GetAssemblyListAsync().Result.ToArray();
+			return GetAssemblyListAsync().Result;
 		}
 
-		private async System.Threading.Tasks.Task<IEnumerable<Assembly>> GetAssemblyListAsync()
+		private async Task<IEnumerable<Assembly>> GetAssemblyListAsync()
 		{
 			var folder = Windows.ApplicationModel.Package.Current.InstalledLocation;
 
 			var files = await folder.GetFilesAsync();
+			return IterateOverFiles(files);
+		}
 
-			return files.Where(file => file.FileType == ".dll" || file.FileType == ".exe")
-				.Select(file => new AssemblyName {Name = file.Name})
-				.Select(Assembly.Load)
-				.ToList();
+		private IEnumerable<Assembly> IterateOverFiles(IEnumerable<StorageFile> files)
+		{
+			foreach (var file in files)
+			{
+				if (file.FileType == ".dll" || file.FileType == ".exe")
+				{
+					var name = new AssemblyName { Name = file.Name };
+					Assembly asm = Assembly.Load(name);
+					yield return asm;
+				}
+			}
 		}
 	}
 }

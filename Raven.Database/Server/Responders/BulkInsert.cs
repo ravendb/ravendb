@@ -30,10 +30,24 @@ namespace Raven.Database.Server.Responders
 		{
 			if (string.IsNullOrEmpty(context.Request.QueryString["no-op"]) == false)
 			{
-				// this is a no-op request which is there just to force the client HTTP layer
-				// to handle the authentication
+				// this is a no-op request which is there just to force the client HTTP layer to handle the authentication
+				// only used for legacy clients
 				return; 
 			}
+			if("generate-single-use-auth-token".Equals(context.Request.QueryString["op"],StringComparison.InvariantCultureIgnoreCase))
+			{
+				// using windows auth with anonymous access = none sometimes generate a 401 even though we made two requests
+				// instead of relying on windows auth, which require request buffering, we generate a one time token and return it.
+				// we KNOW that the user have access to this db for writing, since they got here, so there is no issue in generating 
+				// a single use token for them.
+				var token = server.RequestAuthorizer.GenerateSingleUseAuthToken(Database, context.User);
+				context.WriteJson(new
+				{
+					Token = token
+				});
+				return;
+			}
+
 			if (HttpContext.Current != null)
 			{
 				HttpContext.Current.Server.ScriptTimeout = 60*60*6; // six hours should do it, I think.

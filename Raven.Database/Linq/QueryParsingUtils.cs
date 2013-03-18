@@ -9,9 +9,12 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -22,6 +25,9 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Indexing;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
@@ -268,10 +274,11 @@ namespace Raven.Database.Linq
 
 		private static readonly ConcurrentDictionary<string, CacheEntry> cacheEntries = new ConcurrentDictionary<string, CacheEntry>();
 
-		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
+		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
 		{
 			source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
 
+            // Look up the index in the in-memory cache.
 			CacheEntry entry;
 			if (cacheEntries.TryGetValue(source, out entry))
 			{
@@ -279,7 +286,127 @@ namespace Raven.Database.Linq
 				return entry.Type;
 			}
 
-			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
+			Type type;
+			string indexFilePath;
+			if (TryGetDiskCacheResult(source, name, configuration, out indexFilePath, out type)) 
+				return type;
+
+			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath);
+
+			AddResultToCache(source, result);
+
+			return result;
+		}
+
+		private static void AddResultToCache(string source, Type result)
+		{
+			cacheEntries.TryAdd(source, new CacheEntry
+			{
+				Source = source,
+				Type = result,
+				Usages = 1
+			});
+
+			if (cacheEntries.Count > 256)
+			{
+				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
+				if (kvp.Key != null)
+				{
+					CacheEntry _;
+					cacheEntries.TryRemove(kvp.Key, out _);
+				}
+			}
+		}
+
+		private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, out string indexFilePath,
+		                                          out Type type)
+		{
+			// It's not in the in-memory cache. See if it's been cached on disk.
+			//
+			// Q. Why do we cache on disk?
+			// A. It decreases the duration of individual test runs. Instead of  
+			//    recompiling the index each test run, we can just load them from disk.
+			//    It also decreases creation time for indexes that were 
+			//    previously created and deleted, affecting both production and test environments.
+			//
+			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
+			var indexCacheDir = GetIndexCacheDir(configuration);
+
+			string sourceHashed;
+			using (var md5 = MD5.Create())
+			{
+				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
+				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+			}
+			indexFilePath = Path.Combine(indexCacheDir,
+			                             IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
+			                             (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
+
+			try
+			{
+				if (Directory.Exists(indexCacheDir) == false)
+					Directory.CreateDirectory(indexCacheDir);
+				type = TryGetIndexFromDisk(indexFilePath, name);
+			}
+			catch (UnauthorizedAccessException)
+			{
+				// permission issues
+				type = null;
+				return false;
+			}
+			catch (IOException)
+			{
+				// permission issues, probably
+				type = null;
+				return false;
+			}
+
+			if (type != null)
+			{
+				cacheEntries.TryAdd(source, new CacheEntry
+				{
+					Source = source,
+					Type = type,
+					Usages = 1
+				});
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
+		{
+			var indexCacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Raven", "CompiledIndexCache");
+			if (configuration.RunInMemory == false)
+			{
+				// if we aren't running in memory, we might be running in a mode where we can't write to our base directory
+				// which is where we _want_ to write. In that case, our cache is going to be the db directory, instead, since 
+				// we know we can write there
+				try
+				{
+					if (Directory.Exists(indexCacheDir) == false)
+						Directory.CreateDirectory(indexCacheDir);
+					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() +  ".temp");
+					File.WriteAllText(touchFile, "test that we can write to this path");
+					File.Delete(touchFile);
+					return indexCacheDir;
+				}
+				catch (Exception)
+				{
+				}
+
+				return Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");		
+			}
+
+			return indexCacheDir;
+		}
+
+		private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
+		                                        string basePath, string indexFilePath)
+		{
+			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
 			var assemblies = new HashSet<string>
 			{
 				typeof (SystemTime).Assembly.Location,
@@ -299,8 +426,9 @@ namespace Raven.Database.Linq
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
-				GenerateInMemory = true,
-				IncludeDebugInformation = false
+				GenerateInMemory = false,
+				IncludeDebugInformation = Debugger.IsAttached,
+				OutputAssembly = indexFilePath
 			};
 			if (basePath != null)
 				compilerParameters.TempFiles = new TempFileCollection(basePath, false);
@@ -325,30 +453,36 @@ namespace Raven.Database.Linq
 				throw new InvalidOperationException(sb.ToString());
 			}
 
-			CodeVerifier.AssertNoSecurityCriticalCalls(results.CompiledAssembly);
+			var asm = Assembly.Load(File.ReadAllBytes(indexFilePath)); // avoid locking the file
 
-			Type result = results.CompiledAssembly.GetType(name);
+			CodeVerifier.AssertNoSecurityCriticalCalls(asm);
+
+			Type result = asm.GetType(name);
 			if (result == null)
 				throw new InvalidOperationException(
 					"Could not get compiled index type. This probably means that there is something wrong with the assembly load context.");
-			cacheEntries.TryAdd(source, new CacheEntry
-			{
-				Source = source,
-				Type = result,
-				Usages = 1
-			});
-
-			if (cacheEntries.Count > 256)
-			{
-				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
-				if (kvp.Key != null)
-				{
-					CacheEntry _;
-					cacheEntries.TryRemove(kvp.Key, out _);
-				}
-			}
-
 			return result;
 		}
+
+		private static Type TryGetIndexFromDisk(string indexFilePath, string typeName)
+        {
+            try
+            {
+                if (File.Exists(indexFilePath))
+                {
+					// we don't use LoadFrom to avoid locking the file
+                    return System.Reflection.Assembly.Load(File.ReadAllBytes(indexFilePath)).GetType(typeName);
+                }
+            }
+            catch
+            {
+                // If there were any problems loading this index from disk,
+                // just delete it if we can. It will be regenerated later.
+                try { File.Delete(indexFilePath); }
+                catch { }
+            }
+
+            return null;
+        }
 	}
 }

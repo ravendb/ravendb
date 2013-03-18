@@ -269,7 +269,8 @@ namespace Raven.Client.Indexes
 
 		private string GetPropertyName(string name, Type exprType)
 		{
-			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ??
+							   exprType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(x => x.Name == name);
 			if (propertyInfo != null)
 			{
 				foreach (var customAttribute in propertyInfo.GetCustomAttributes(true))
@@ -847,7 +848,7 @@ namespace Raven.Client.Indexes
 			if (value.Length == 0)
 				return;
 
-			_out.Append(string.Concat(value.SelectMany(EscapeChar)));
+			_out.Append(string.Concat(value.ToCharArray().Select(EscapeChar)));
 		}
 
 		private void OutLiteral(char c) 
@@ -864,7 +865,11 @@ namespace Raven.Client.Indexes
 			if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
 				return @"\u" + ((int) c).ToString("x4");
 
+#if NETFX_CORE
+			return c.ToString();
+#else
 			return c.ToString(CultureInfo.InvariantCulture);
+#endif
 		}
 
 		private bool IsLastOperatorIs(char s)

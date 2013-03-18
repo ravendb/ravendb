@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !MONO && !NETFX_CORE
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
@@ -50,7 +51,11 @@ namespace Raven.Client.Indexes
 		/// <param name="documentStore">The document store.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
-			CreateIndexes(catalogToGetnIndexingTasksFrom, documentStore.DatabaseCommands, documentStore.Conventions);
+			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
+			foreach (var task in tasks)
+			{
+				task.Execute(documentStore);
+			}
 		}
 #endif
 
@@ -90,3 +95,4 @@ namespace Raven.Client.Indexes
 		}
 	}
 }
+#endif
