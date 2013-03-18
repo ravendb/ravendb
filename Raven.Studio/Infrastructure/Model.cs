@@ -28,22 +28,23 @@ namespace Raven.Studio.Infrastructure
 
 		internal void TimerTicked()
 		{
-			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
+			if (ApplicationModel.Current.Server.Value.CreateNewDatabase && ApplicationModel.Current.Server.Value.UserInfo != null &&
+			    ApplicationModel.Current.Server.Value.UserInfo.IsAdminGlobal)
 			{
 				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
 				ApplicationModel.Current.Server.Value.DocumentStore
-					.AsyncDatabaseCommands
-					.ForSystemDatabase()
-					.GetAsync("Raven/StudioConfig")
-					.ContinueOnSuccessInTheUIThread(doc =>
-					{
-						if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
-						{
-							if(doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
-								return;
-						}
-						Command.ExecuteCommand(new CreateDatabaseCommand());
-					});
+				                .AsyncDatabaseCommands
+				                .ForSystemDatabase()
+				                .GetAsync("Raven/StudioConfig")
+				                .ContinueOnSuccessInTheUIThread(doc =>
+				                {
+					                if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+					                {
+						                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+							                return;
+					                }
+					                Command.ExecuteCommand(new CreateDatabaseCommand());
+				                });
 			}
 
 			if (currentTask != null)
