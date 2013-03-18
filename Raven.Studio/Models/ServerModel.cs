@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using System.Windows.Browser;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Impl;
 using Raven.Studio.Infrastructure;
@@ -25,6 +27,7 @@ namespace Raven.Studio.Models
 
 		private string buildNumber;
 		private Observable<bool> isConnected;
+		public UserInfo UserInfo { get; set; }
 
 		private string rawUrl;
 		public string RawUrl
@@ -97,6 +100,8 @@ namespace Raven.Studio.Models
 				=
 				true;
 
+			UpdateUserInfo();
+
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
 			{
 				if (onWebRequest != null)
@@ -113,6 +118,19 @@ namespace Raven.Studio.Models
 			TimerTickedAsync();
 		}
 
+		private void UpdateUserInfo()
+		{
+			ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+			                .AsyncDatabaseCommands
+			                .CreateRequest(string.Format("/debug/user-info").NoCache(), "GET")
+			                .ReadResponseJsonAsync()
+			                .ContinueOnSuccessInTheUIThread(doc =>
+			                {
+				                UserInfo = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
+				                                           .Deserialize<UserInfo>(new RavenJTokenReader(doc));
+			                });
+		}
+
 		public bool CreateNewDatabase { get; set; }
 		private static bool firstTick = true;
 
@@ -126,19 +144,24 @@ namespace Raven.Studio.Models
 											return;
 
 										firstTick = false;
+										if (UserInfo == null)
+											UpdateUserInfo();
 
-										ApplicationModel.Current.Server.Value.DocumentStore
-											.AsyncDatabaseCommands
-											.ForSystemDatabase()
-											.GetAsync("Raven/StudioConfig")
-											.ContinueOnSuccessInTheUIThread(doc =>
-											{
-												if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
-												{
-													if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
-														UrlUtil.Navigate("/documents");
-												}
-											});
+										if (UserInfo != null && UserInfo.IsAdminGlobal)
+										{
+											ApplicationModel.Current.Server.Value.DocumentStore
+											                .AsyncDatabaseCommands
+											                .ForSystemDatabase()
+											                .GetAsync("Raven/StudioConfig")
+											                .ContinueOnSuccessInTheUIThread(doc =>
+											                {
+												                if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+												                {
+													                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+														                UrlUtil.Navigate("/documents");
+												                }
+											                });
+										}
 
 										var url = new UrlParser(UrlUtil.Url);
 
