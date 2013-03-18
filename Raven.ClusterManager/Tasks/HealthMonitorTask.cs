@@ -68,9 +68,29 @@ namespace Raven.ClusterManager.Tasks
 
 		public static void FetchServerDatabases(ServerRecord server, IDocumentSession session)
 		{
-			var task = FetchServerDatabasesAsync(server, session);
-			task.Wait();
-			
+			FetchServerDatabasesAsync(server, session).Wait();
+
+			if (server.IsOnline && server.IsUnauthorized && server.CredentialsId == null)
+			{
+				var credentialses = session.Query<ServerCredentials>()
+				                           .Take(16)
+				                           .ToList();
+
+				foreach (var credentials in credentialses)
+				{
+					server.CredentialsId = credentials.Id;
+					FetchServerDatabasesAsync(server, session).Wait();
+					if (server.IsUnauthorized)
+					{
+						server.CredentialsId = null;
+					}
+					if (server.IsOnline == false)
+					{
+						break;
+					}
+				}
+			}
+
 			lastRun = DateTimeOffset.UtcNow;
 		}
 
