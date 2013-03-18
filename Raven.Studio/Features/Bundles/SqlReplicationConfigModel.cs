@@ -18,6 +18,11 @@ namespace Raven.Studio.Features.Bundles
 		private bool disabled;
 		private ObservableCollection<SqlReplicationTable> sqlReplicationTables;
 
+		public SqlReplicationConfigModel()
+		{
+			sqlReplicationTables = new ObservableCollection<SqlReplicationTable>();
+		}
+
 		public string Id
 		{
 			get { return id; }
