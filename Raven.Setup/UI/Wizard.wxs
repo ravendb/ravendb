@@ -30,8 +30,9 @@
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="AppPoolSettingsDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="IisSetupDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
 
-      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg"><![CDATA[WEBSITE_DESCRIPTION <> "" AND VIRTUAL_DIR_VAL <> "" AND CUSTOM_APPLICATION_POOL]]></Publish>
-      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"><![CDATA[WEBSITE_DESCRIPTION <> "" AND VIRTUAL_DIR_VAL <> "" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedWebSite" Order="1">1</Publish>
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg" Order="2"><![CDATA[WEBSITE_VD <> "" AND CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2"><![CDATA[WEBSITE_VD <> "" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="IisSetupDlg" Control="Back" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
       <Publish Dialog="IisSetupDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 

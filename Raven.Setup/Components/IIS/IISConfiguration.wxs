@@ -7,21 +7,19 @@
     <?include IISSettings.wxi ?>
 
     <!-- Install to default web site -->
-    <iis:WebSite Id="SelectedWebSite" Description='[WEBSITE_DESCRIPTION]'>
+    <iis:WebSite Id="SelectedWebSite" Description='[WEBSITE_DESCRIPTION]' SiteId='[WEBSITE_ID]'>
       <iis:WebAddress Id="AllUnassigned" Port="80" />
     </iis:WebSite>
 
     <DirectoryRef Id="INSTALLFOLDER">
 
-      
-      
       <Component Id="DefaultWebSiteApplicationPool" Guid="{5358DD73-9D8D-43BF-9248-2040CFC41F63}" KeyPath="yes">
         <Condition>NOT CUSTOM_APPLICATION_POOL</Condition>
         <iis:WebVirtualDir Id="VirtualDir0"
-                  Alias="[VIRTUAL_DIR_VAL]"
+                  Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
-          <iis:WebApplication Id="Application0" Name="[VIRTUAL_DIR_VAL]" />
+          <iis:WebApplication Id="Application0" Name="[WEBSITE_VD]" />
         </iis:WebVirtualDir>
       </Component>
 
@@ -30,10 +28,10 @@
         <iis:WebAppPool Id="AppPool1"
                         Name="[WEB_APP_POOL_NAME]" />
         <iis:WebVirtualDir Id="VirtualDir1"
-                  Alias="[VIRTUAL_DIR_VAL]"
+                  Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
-          <iis:WebApplication Id="Application1" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool1" />
+          <iis:WebApplication Id="Application1" Name="[WEBSITE_VD]" WebAppPool="AppPool1" />
         </iis:WebVirtualDir>
       </Component>
 
@@ -44,10 +42,10 @@
                         ManagedPipelineMode="Integrated"
                         ManagedRuntimeVersion="v4.0"/> <!-- no identity specified will make that default ApplicationPoolIdentity will be used -->
         <iis:WebVirtualDir Id="VirtualDir2"
-                  Alias="[VIRTUAL_DIR_VAL]"
+                  Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
-          <iis:WebApplication Id="Application2" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool2" />
+          <iis:WebApplication Id="Application2" Name="[WEBSITE_VD]" WebAppPool="AppPool2" />
         </iis:WebVirtualDir>
       </Component>
 
@@ -60,10 +58,10 @@
                         ManagedPipelineMode="Integrated"
                         ManagedRuntimeVersion="v4.0"/>
         <iis:WebVirtualDir Id="VirtualDir3"
-                  Alias="[VIRTUAL_DIR_VAL]"
+                  Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
-          <iis:WebApplication Id="Application3" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool3" />
+          <iis:WebApplication Id="Application3" Name="[WEBSITE_VD]" WebAppPool="AppPool3" />
         </iis:WebVirtualDir>
       </Component>
 
@@ -77,10 +75,10 @@
                         ManagedPipelineMode="Integrated"
                         ManagedRuntimeVersion="v4.0"/>
         <iis:WebVirtualDir Id="VirtualDir4"
-                  Alias="[VIRTUAL_DIR_VAL]"
+                  Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
-          <iis:WebApplication Id="Application4" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool4" />
+          <iis:WebApplication Id="Application4" Name="[WEBSITE_VD]" WebAppPool="AppPool4" />
         </iis:WebVirtualDir>
       </Component>
 
@@ -94,10 +92,10 @@
                         ManagedPipelineMode="Integrated"
                         ManagedRuntimeVersion="v4.0"/>
         <iis:WebVirtualDir Id="VirtualDir5"
-                  Alias="[VIRTUAL_DIR_VAL]"
+                  Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
-          <iis:WebApplication Id="Application5" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool5" />
+          <iis:WebApplication Id="Application5" Name="[WEBSITE_VD]" WebAppPool="AppPool5" />
         </iis:WebVirtualDir>
       </Component>
 
@@ -117,10 +115,10 @@
                         ManagedPipelineMode="Integrated"
                         ManagedRuntimeVersion="v4.0"/>
         <iis:WebVirtualDir Id="VirtualDir6"
-                  Alias="[VIRTUAL_DIR_VAL]"
+                  Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
-          <iis:WebApplication Id="Application6" Name="[VIRTUAL_DIR_VAL]" WebAppPool="AppPool6" />
+          <iis:WebApplication Id="Application6" Name="[WEBSITE_VD]" WebAppPool="AppPool6" />
         </iis:WebVirtualDir>
       </Component>
 
@@ -151,7 +149,7 @@
              KeyPath="yes" >
         --><!--<Condition>0</Condition>--><!--
         <iis:WebVirtualDir Id="MyWebVirtualDir"
-                  Alias="[VIRTUAL_DIR_VAL]" 
+                  Alias="[WEBSITE_VD]" 
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
           <iis:WebDirProperties Id="MyWebVirtDirProperties"
@@ -159,7 +157,7 @@
                                 BasicAuthentication="no"
              WindowsAuthentication="no"  />
           <iis:WebApplication Id="MyWebWebApplication"
-             Name="[VIRTUAL_DIR_VAL]" WebAppPool="RavenAppPool" />
+             Name="[WEBSITE_VD]" WebAppPool="RavenAppPool" />
         </iis:WebVirtualDir>
       </Component>-->
     </DirectoryRef>
