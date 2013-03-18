@@ -128,18 +128,28 @@ namespace Raven.Studio.Models
 
 				                   		firstTick = false;
 
-				                   	    ApplicationModel.Current.Server.Value.DocumentStore
-				                   	        .AsyncDatabaseCommands
-											.ForSystemDatabase()
-				                   	        .GetAsync("Raven/StudioConfig")
-				                   	        .ContinueOnSuccessInTheUIThread(doc =>
-				                   	        {
-				                   	            if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
-				                   	            {
-				                   	                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
-				                   	                    UrlUtil.Navigate("/documents");
-				                   	            }
-				                   	        });
+				                   		ApplicationModel.Current.Server.Value.DocumentStore
+				                   		                .AsyncDatabaseCommands
+				                   		                .ForSystemDatabase()
+				                   		                .GetAsync("Raven/StudioConfig")
+				                   		                .ContinueWith(task =>
+				                   		                {
+					                   		                if (task.IsFaulted == false)
+					                   		                {
+						                   		                if (task.Result != null &&
+						                   		                    task.Result.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+						                   		                {
+							                   		                if (task.Result.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") ==
+							                   		                    false)
+								                   		                UrlUtil.Navigate("/documents");
+						                   		                }
+					                   		                }
+					                   		                else
+					                   		                {
+						                   		                GC.KeepAlive(task.Exception); // ignoring the exeption
+					                   		                }
+				                   		                });
+				                  
 
 				                   		var url = new UrlParser(UrlUtil.Url);
 
