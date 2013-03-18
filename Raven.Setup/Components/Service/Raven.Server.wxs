@@ -49,20 +49,6 @@
                  Value="[RAVEN_LICENSE_FILE_PATH]"
                  SelectionLanguage="XSLPattern"
                  Sequence="4" />
-        
-        <!--<ServiceInstall
-              Id="ServiceInstaller"
-              Type="ownProcess"
-              Vital="yes"
-              Name="[SERVICE_NAME]"
-              DisplayName="RavenDB service"
-              Description="RavenDB service"
-              Start="auto"
-              Account="[SERVICE_USER_NAME]"
-              ErrorControl="ignore"
-              Interactive="no">
-        </ServiceInstall>
-        <ServiceControl Id="StartService" Start="install" Stop="uninstall" Remove="uninstall" Name="[SERVICE_NAME]" Wait="yes" />-->
       </Component>
       <Component Id="Raven.Server.ProvidedServiceName" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
         <RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]" >

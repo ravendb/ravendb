@@ -3,6 +3,4 @@
   <Property Id="SERVICE_NAME" Value="RavenDB" />
 
   <Property Id="SERVICE_PORT" Value="*" />
-
-  <SetProperty Id="SERVICE_USER_NAME" Value="[%USERDOMAIN]\[%USERNAME]" Before="CostFinalize" Sequence="ui"/>
 </Include>

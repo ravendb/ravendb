@@ -24,12 +24,8 @@
         <Control Type="Text" Id="portLabel" Width="60" Height="17" X="45" Y="112">
           <Text>Port:</Text>
         </Control>
-        <Control Type="Text" Id="userLabel" Width="60" Height="17" X="45" Y="135">
-          <Text>User name:</Text>
-        </Control>
         <Control Type="Edit" Id="ServiceName" Width="172" Height="15" X="109" Y="88" Property="SERVICE_NAME" Text="{60}" />
-        <Control Type="Edit" Id="Port" Width="50" Height="15" X="109" Y="109" Property="SERVICE_PORT" Text="{6}" />
-        <Control Type="Edit" Id="UserName" Width="172" Height="15" X="109" Y="131" Property="SERVICE_USER_NAME" Text="{60}" />
+        <Control Type="Edit" Id="Port" Width="50" Height="15" X="109" Y="109" Property="SERVICE_PORT" Text="{6}" ToolTip="Asterisk means auto" />
       </Dialog>
     </UI>
 	</Fragment>
