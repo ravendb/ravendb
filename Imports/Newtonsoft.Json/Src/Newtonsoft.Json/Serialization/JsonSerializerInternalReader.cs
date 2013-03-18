@@ -1594,10 +1594,11 @@ To fix this error either change the environment to be fully trusted, change the 
               }
               catch (Exception ex)
               {
-                if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, ex))
-                  HandleError(reader, true, initialDepth);
-                else
-                  throw;
+	              var newEx = new JsonSerializationException("Could not read value for property: " + memberName, ex);
+				  if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, newEx))
+		              HandleError(reader, true, initialDepth);
+	              else
+		              throw newEx;
               }
             }
             break;
