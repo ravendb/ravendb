@@ -6,6 +6,6 @@ namespace Raven.Tests.MonoForAndroid.Models
 	{
 		public bool Selected { get; set; }
 		public string Name { get; set; }
-		public Action Action { get; set; }
+		public Func<object> Action { get; set; }
 	}
 }

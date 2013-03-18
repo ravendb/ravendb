@@ -8,7 +8,7 @@ namespace Raven.Tests.MonoForAndroid
 {
 	public class MonoForAndroidTestBase
 	{
-		private const string Url = "http://192.168.1.12:8080";
+		private const string Url = "http://10.0.0.2:8080";
 
 		public IDocumentStore CreateDocumentStore()
 		{

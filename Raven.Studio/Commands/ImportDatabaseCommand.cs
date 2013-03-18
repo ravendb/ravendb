@@ -62,7 +62,7 @@ namespace Raven.Studio.Commands
 			var stream = openFile.File.OpenRead();
 
 			smuggler.ImportData(stream, null, incremental: false)
-			        .Catch(exception => taskModel.ReportError(exception))
+			        .Catch(exception => Infrastructure.Execute.OnTheUI(() => taskModel.ReportError(exception)))
 			        .Finally(() =>
 			        {
 				        taskModel.TaskStatus = TaskStatus.Ended;

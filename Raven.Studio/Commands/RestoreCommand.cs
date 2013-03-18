@@ -74,12 +74,12 @@ namespace Raven.Studio.Commands
 					startRestoreTask.TaskStatus = TaskStatus.Ended;
 				}
 			})
-			.Catch(exception =>
+			.Catch(exception => Infrastructure.Execute.OnTheUI(() =>
 			{
 				startRestoreTask.ReportError(exception);
 				startRestoreTask.CanExecute.Value = true;
 				startRestoreTask.TaskStatus = TaskStatus.Ended;
-			});
+			}));
 		}
 	}
 }

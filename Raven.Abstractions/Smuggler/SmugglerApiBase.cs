@@ -1,4 +1,3 @@
-#if !MONO
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -223,7 +222,7 @@ namespace Raven.Abstractions.Smuggler
 				var documents = await GetDocuments(lastEtag);
 				watch.Stop();
 
-				while (documents.MoveNextAsync().Result)
+				while (await documents.MoveNextAsync())
 				{
 					var document = documents.Current;
 
@@ -606,4 +605,3 @@ namespace Raven.Abstractions.Smuggler
 		}
 	}
 }
-#endif
