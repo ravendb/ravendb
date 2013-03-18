@@ -1810,6 +1810,29 @@ namespace Raven.Database
 		{
 			public IList<ICommandData> Commands;
 			public readonly TaskCompletionSource<BatchResult[]> CompletionSource = new TaskCompletionSource<BatchResult[]>();
+			public BatchResult[] Result
+			{
+				get
+				{
+					try
+					{
+						return CompletionSource.Task.Result;
+					}
+					catch (AggregateException ae)
+					{
+						var e = ae.ExtractSingleInnerException();
+						if (e is AggregateException)
+							throw;
+
+						var internalPreserveStackTrace = typeof(Exception).GetMethod("InternalPreserveStackTrace", 
+								System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+						internalPreserveStackTrace.Invoke(e, null);
+
+						throw e;
+
+					}
+				}
+			}
 		}
 
 		public BatchResult[] Batch(IList<ICommandData> commands)
@@ -1826,7 +1849,7 @@ namespace Raven.Database
 				var sp = Stopwatch.StartNew();
 				BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(pending);
 				log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
-				return currentTask.Result;
+				return pending.Result;
 			}
 
 			pendingBatches.Enqueue(pending);
@@ -1837,7 +1860,7 @@ namespace Raven.Database
 				batchCompletedEvent.Reset();
 			}
 			if (currentTask.Completed())
-				return currentTask.Result;
+				return pending.Result;
 
 			lock (putSerialLock)
 			{
@@ -1873,7 +1896,7 @@ namespace Raven.Database
 				}
 			}
 
-			return currentTask.Result;
+			return pending.Result;
 		}
 
 		private void BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(PendingBatch pending)
