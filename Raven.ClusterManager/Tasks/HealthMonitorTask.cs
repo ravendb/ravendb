@@ -68,9 +68,9 @@ namespace Raven.ClusterManager.Tasks
 
 		public static void FetchServerDatabases(ServerRecord server, IDocumentSession session)
 		{
-			FetchServerDatabasesAsync(server, session)
-				.Wait();
-
+			var task = FetchServerDatabasesAsync(server, session);
+			task.Wait();
+			
 			lastRun = DateTimeOffset.UtcNow;
 		}
 
@@ -125,9 +125,25 @@ namespace Raven.ClusterManager.Tasks
 					}
 				}
 			}
-			catch (StopServerDiscoveringException)
+			catch (AggregateException ex)
 			{
-				// do nothing. Wait the user to fix the error (like adding credentials in order to avoid 401) for the next time. 
+				Log.ErrorException("Error", ex);
+
+				var exception = ex.ExtractSingleInnerException();
+
+				var webException = exception as WebException;
+				if (webException != null)
+				{
+					var response = webException.Response as HttpWebResponse;
+					if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
+					{
+						server.IsUnauthorized = true;
+					}
+					else
+					{
+						server.IsOnline = false;
+					}
+				}
 			}
 			catch (Exception ex)
 			{
@@ -176,22 +192,6 @@ namespace Raven.ClusterManager.Tasks
 				databaseRecord.LoadedDatabaseStatistics = loadedDatabase;
 			}
 			server.LoadedDatabases = adminStatistics.LoadedDatabases.Select(database => database.Name).ToArray();
-		}
-
-		private static void EnsureSuccessStatusCode(HttpResponseMessage result, ServerRecord server)
-		{
-			Log.Debug("EnsureSuccessStatusCode: " + result.StatusCode);
-
-			switch (result.StatusCode)
-			{
-				case HttpStatusCode.Unauthorized:
-					server.IsUnauthorized = true;
-					throw new StopServerDiscoveringException(string.Format("Stop discovering server '0{0}'. Reason: {1}", server.Url, result.StatusCode)); 
-					break;
-				default:
-					result.EnsureSuccessStatusCode();
-					break;
-			}
 		}
 
 		private static async Task CheckReplicationStatusOfEachActiveDatabase(ServerRecord server, AsyncServerClient client, IDocumentSession session)
