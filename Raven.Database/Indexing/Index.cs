@@ -1296,6 +1296,9 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
+			if (directory is RAMDirectory)
+				return; // nothing to backup in memory based index, will be reset on restore, anyway
+
 			bool hasSnapshot = false;
 			bool throwOnFinallyException = true;
 			try
