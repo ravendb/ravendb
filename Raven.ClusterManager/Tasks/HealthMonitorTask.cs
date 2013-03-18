@@ -31,6 +31,7 @@ namespace Raven.ClusterManager.Tasks
 		private readonly IDocumentStore store;
 		private Timer timer;
 		private static DateTimeOffset lastRun;
+		private volatile bool running;
 
 		static HealthMonitorTask()
 		{
@@ -47,56 +48,65 @@ namespace Raven.ClusterManager.Tasks
 
 		private void TimerTick(object _)
 		{
+			if (running)
+				return;
+			running = true;
+			CheckHealthAsync()
+				.ContinueWith(task =>
+				{
+					running = false;
+					lastRun = DateTimeOffset.Now;
+				});
+		}
+
+		private async Task CheckHealthAsync()
+		{
 			using (var session = store.OpenSession())
 			{
 				var servers = session.Query<ServerRecord>()
 				                     .OrderByDescending(record => record.LastOnlineTime)
-									 .Take(1024)
+				                     .Take(1024)
 				                     .ToList();
 
 				foreach (var server in servers)
 				{
-					FetchServerDatabases(server, session);
-					session.SaveChanges();
+					await FetchServerDatabases(server, store);
 				}
-
-				session.SaveChanges();
 			}
-
-			lastRun = DateTimeOffset.UtcNow;
 		}
 
-		public static void FetchServerDatabases(ServerRecord server, IDocumentSession session)
+		public static async Task FetchServerDatabases(ServerRecord server, IDocumentStore documentStore)
 		{
-			FetchServerDatabasesAsync(server, session).Wait();
-
-			if (server.IsOnline && server.IsUnauthorized && server.CredentialsId == null)
+			using (var session = documentStore.OpenAsyncSession())
 			{
-				var credentialses = session.Query<ServerCredentials>()
-				                           .Take(16)
-				                           .ToList();
+				await FetchServerDatabasesAsync(server, session);
 
-				foreach (var credentials in credentialses)
+				if (server.IsOnline && server.IsUnauthorized && server.CredentialsId == null)
 				{
-					server.CredentialsId = credentials.Id;
-					FetchServerDatabasesAsync(server, session).Wait();
-					if (server.IsUnauthorized)
+					var credentialses = await session.Query<ServerCredentials>()
+											   .Take(16)
+											   .ToListAsync();
+
+					foreach (var credentials in credentialses)
 					{
-						server.CredentialsId = null;
-					}
-					if (server.IsOnline == false)
-					{
-						break;
+						server.CredentialsId = credentials.Id;
+						await FetchServerDatabasesAsync(server, session);
+						if (server.IsUnauthorized)
+						{
+							server.CredentialsId = null;
+						}
+						if (server.IsOnline == false)
+						{
+							break;
+						}
 					}
 				}
 			}
-
-			lastRun = DateTimeOffset.UtcNow;
 		}
 
-		public static async Task FetchServerDatabasesAsync(ServerRecord server, IDocumentSession session)
+		public static async Task FetchServerDatabasesAsync(ServerRecord server, IAsyncDocumentSession session)
 		{
-			var client = ServerHelpers.CreateAsyncServerClient(session, server);
+			var client = await ServerHelpers.CreateAsyncServerClient(session, server);
 			
 			try
 			{
@@ -154,22 +164,22 @@ namespace Raven.ClusterManager.Tasks
 			}
 		}
 
-		private static async Task StoreDatabaseNames(ServerRecord server, AsyncServerClient client, IDocumentSession session)
+		private static async Task StoreDatabaseNames(ServerRecord server, AsyncServerClient client, IAsyncDocumentSession session)
 		{
 			server.Databases = await client.GetDatabaseNamesAsync(1024);
 			
 			foreach (var databaseName in server.Databases.Concat(new[] {Constants.SystemDatabase}))
 			{
-				var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + databaseName);
+				var databaseRecord = await session.LoadAsync<DatabaseRecord>(server.Id + "/" + databaseName);
 				if (databaseRecord == null)
 				{
 					databaseRecord = new DatabaseRecord {Name = databaseName, ServerId = server.Id, ServerUrl = server.Url};
-					session.Store(databaseRecord);
+					await session.StoreAsync(databaseRecord);
 				}
 			}
 		}
 
-		private static async Task StoreActiveDatabaseNames(ServerRecord server, AsyncServerClient client, IDocumentSession session)
+		private static async Task StoreActiveDatabaseNames(ServerRecord server, AsyncServerClient client, IAsyncDocumentSession session)
 		{
 			AdminStatistics adminStatistics = await client.Admin.GetStatisticsAsync();
 
@@ -181,11 +191,11 @@ namespace Raven.ClusterManager.Tasks
 
 			foreach (var loadedDatabase in adminStatistics.LoadedDatabases)
 			{
-				var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + loadedDatabase.Name);
+				var databaseRecord = await session.LoadAsync<DatabaseRecord>(server.Id + "/" + loadedDatabase.Name);
 				if (databaseRecord == null)
 				{
 					databaseRecord = new DatabaseRecord { Name = loadedDatabase.Name, ServerId = server.Id, ServerUrl = server.Url };
-					session.Store(databaseRecord);
+					await session.StoreAsync(databaseRecord);
 				}
 
 				databaseRecord.LoadedDatabaseStatistics = loadedDatabase;
@@ -193,18 +203,18 @@ namespace Raven.ClusterManager.Tasks
 			server.LoadedDatabases = adminStatistics.LoadedDatabases.Select(database => database.Name).ToArray();
 		}
 
-		private static async Task CheckReplicationStatusOfEachActiveDatabase(ServerRecord server, AsyncServerClient client, IDocumentSession session)
+		private static async Task CheckReplicationStatusOfEachActiveDatabase(ServerRecord server, AsyncServerClient client, IAsyncDocumentSession session)
 		{
-			await HandleDatabaseInServerAsync(server, Constants.SystemDatabase.Trim('<', '>'), client, session);
+			await HandleDatabaseInServerAsync(server, Constants.SystemDatabase, client, session);
 			foreach (var databaseName in server.LoadedDatabases)
 			{
 				await HandleDatabaseInServerAsync(server, databaseName, client.ForDatabase(databaseName), session);
 			}
 		}
 
-		private static async Task HandleDatabaseInServerAsync(ServerRecord server, string databaseName, IAsyncDatabaseCommands dbCmds, IDocumentSession session)
+		private static async Task HandleDatabaseInServerAsync(ServerRecord server, string databaseName, IAsyncDatabaseCommands dbCmds, IAsyncDocumentSession session)
 		{
-			var databaseRecord = session.Load<DatabaseRecord>("databaseRecords/" + databaseName);
+			var databaseRecord = await session.LoadAsync<DatabaseRecord>(server.Id + "/" + databaseName);
 			if (databaseRecord == null)
 				return;
 
@@ -221,7 +231,7 @@ namespace Raven.ClusterManager.Tasks
 				if (replicationDestination.Disabled)
 					continue;
 
-				var replicationDestinationServer = session.Load<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url)) ?? new ServerRecord();
+				var replicationDestinationServer = await session.LoadAsync<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url)) ?? new ServerRecord();
 				if (DateTimeOffset.UtcNow - server.LastTriedToConnectAt <= MonitorInterval)
 					continue;
 

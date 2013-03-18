@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -9,7 +10,7 @@ namespace Raven.ClusterManager.Models
 {
 	public static class ServerHelpers
 	{
-		public static AsyncServerClient CreateAsyncServerClient(IDocumentSession session, ServerRecord server, ServerCredentials serverCredentials = null)
+		public static async Task<AsyncServerClient> CreateAsyncServerClient(IAsyncDocumentSession session, ServerRecord server, ServerCredentials serverCredentials = null)
 		{
 			var documentStore = (DocumentStore)session.Advanced.DocumentStore;
 			var replicationInformer = new ReplicationInformer(new DocumentConvention
@@ -24,7 +25,7 @@ namespace Raven.ClusterManager.Models
 			}
 			else if (server.CredentialsId != null)
 			{
-				serverCredentials = session.Load<ServerCredentials>(server.CredentialsId);
+				serverCredentials = await session.LoadAsync<ServerCredentials>(server.CredentialsId);
 				if (serverCredentials == null)
 				{
 					server.CredentialsId = null;

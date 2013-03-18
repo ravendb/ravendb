@@ -15,9 +15,9 @@ namespace Raven.ClusterManager.Modules
 {
 	public class CredentialsModule : NancyModule
 	{
-		private readonly IDocumentSession session;
+		private readonly IAsyncDocumentSession session;
 
-		public CredentialsModule(IDocumentSession session)
+		public CredentialsModule(IAsyncDocumentSession session)
 			: base("/api/servers/credentials")
 		{
 			this.session = session;
@@ -29,12 +29,12 @@ namespace Raven.ClusterManager.Modules
 
 		private async Task<object> SaveCredentials(string serverId)
 		{
-			var serverRecord = session.Load<ServerRecord>(serverId);
+			var serverRecord = await session.LoadAsync<ServerRecord>(serverId);
 			if (serverRecord == null)
 				return new NotFoundResponse();
 
 			var credentials = this.Bind<ServerCredentials>();
-			session.Store(credentials);
+			await session.StoreAsync(credentials);
 			serverRecord.CredentialsId = credentials.Id;
 
 			await HealthMonitorTask.FetchServerDatabasesAsync(serverRecord, session);
@@ -43,13 +43,13 @@ namespace Raven.ClusterManager.Modules
 
 		private async Task<object> TestCredentials(string serverId)
 		{
-			var serverRecord = session.Load<ServerRecord>(serverId);
+			var serverRecord = await session.LoadAsync<ServerRecord>(serverId);
 			if (serverRecord == null)
 				return new NotFoundResponse();
 
 			var credentials = this.Bind<ServerCredentials>();
 
-			var client = ServerHelpers.CreateAsyncServerClient(session, serverRecord, credentials);
+			var client = await ServerHelpers.CreateAsyncServerClient(session, serverRecord, credentials);
 
 
 			try

@@ -15,6 +15,7 @@ namespace Raven.ClusterManager.Modules
 				var replicationDatabases = session.Query<DatabaseRecord>()
 				                       .Where(record => record.IsReplicationEnabled)
 				                       .OrderBy(record => record.Id)
+									   .Take(1024)
 				                       .ToList();
 
 				return replicationDatabases;

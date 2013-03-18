@@ -23,10 +23,10 @@ namespace Raven.ClusterManager.Modules
 {
 	public class DiscoveryModule : NancyModule
 	{
-		private readonly IDocumentSession session;
+		private readonly IAsyncDocumentSession session;
 		private readonly static Guid SenderId = Guid.NewGuid();
 
-		public DiscoveryModule(IDocumentSession session)
+		public DiscoveryModule(IAsyncDocumentSession session)
 			: base("/api/discovery")
 		{
 			this.session = session;
@@ -38,18 +38,20 @@ namespace Raven.ClusterManager.Modules
 				return "started";
 			};
 
-			Post["/notify"] = parameters =>
-			{
-				var input = this.Bind<ServerRecord>("Id");
+			Post["/notify"] = parameters => Notify();
+		}
 
-				var server = session.Query<ServerRecord>().FirstOrDefault(s => s.Url == input.Url) ?? new ServerRecord();
-				this.BindTo(server, "Id");
-				session.Store(server);
+		private async Task<object> Notify()
+		{
+			var input = this.Bind<ServerRecord>("Id");
 
-				HealthMonitorTask.FetchServerDatabases(server, session);
+			var server = session.Query<ServerRecord>().FirstOrDefault(s => s.Url == input.Url) ?? new ServerRecord();
+			this.BindTo(server, "Id");
+			await session.StoreAsync(server);
 
-				return "notified";
-			};
+			await HealthMonitorTask.FetchServerDatabases(server, session.Advanced.DocumentStore);
+
+			return "notified";
 		}
 	}
 }
