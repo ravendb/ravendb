@@ -36,10 +36,13 @@
       <Publish Dialog="IisSetupDlg" Control="Back" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
       <Publish Dialog="IisSetupDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 
-      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg">
-        <![CDATA[WEB_APP_POOL_NAME <> "" or WEB_APP_POOL_IDENTITY_DOMAIN <> 
+      
+      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedAppPool" Order="1">1</Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">
+        <!--<![CDATA[WEB_APP_POOL_NAME <> "" or WEB_APP_POOL_IDENTITY_DOMAIN <> 
                           "" or WEB_APP_POOL_IDENTITY_NAME <> "" 
-                          or WEB_APP_POOL_IDENTITY_PWD <> ""]]>
+                          or WEB_APP_POOL_IDENTITY_PWD <> ""]]>-->
+        1
       </Publish>
       <Publish Dialog="AppPoolSettingsDlg" Control="Back" Event="NewDialog" Value="IisSetupDlg">1</Publish>
       <Publish Dialog="AppPoolSettingsDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>

@@ -47,4 +47,13 @@
       <Data Column="WebSitePath"></Data>
     </Row>
   </CustomTable>
+
+  <CustomTable Id="AvailableApplicationPools">
+    <Column Id="PoolID" Category="Identifier" PrimaryKey="yes" Type="int" Width="4" />
+    <Column Id="PoolName" Category="Text" Type="string" PrimaryKey="no"/>
+    <Row>
+      <Data Column="PoolID">-1</Data>
+      <Data Column="PoolName">Dummy</Data>
+    </Row>
+  </CustomTable>
 </Include>

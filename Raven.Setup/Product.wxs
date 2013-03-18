@@ -92,6 +92,9 @@
     <CustomAction Id="GetIISWebSites" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="GetWebSites"
                   Execute="immediate" Return="check" />
 
+    <CustomAction Id="GetAppPools" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="GetAppPools"
+                  Execute="immediate" Return="check" />
+
     <CustomAction Id="SetIISInstallFolder" Directory="INSTALLFOLDER" Value="[WEBSITE_PATH]\[WEBSITE_VD]" />
     
     
@@ -113,6 +116,7 @@
 
     <InstallUISequence>
       <Custom Action="GetIISWebSites" After="CostFinalize" Overridable="yes">NOT Installed</Custom>
+      <Custom Action="GetAppPools" After="CostFinalize" Overridable="yes">NOT Installed</Custom>
     </InstallUISequence>
     
   </Product>

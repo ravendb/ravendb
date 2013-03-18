@@ -2,9 +2,15 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
 
+    <CustomAction Id="UpdateIISPropsWithSelectedAppPool" BinaryKey="Raven.Setup.CustomActions.CA.dll"
+                  DllEntry="UpdateIISPropsWithSelectedAppPool" Execute="immediate"
+                  Return="check" />
    
     <Property Id="APPLICATION_POOL_TYPE" Value="EXISTING" />
     <Property Id="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity" />
+
+    <Property Id="APPPOOL" Value="0"/>
+    <EnsureTable Id="ComboBox"/>
     
     <UI>
       <Dialog Id="AppPoolSettingsDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
@@ -32,7 +38,15 @@
           <Publish Property="WEB_APP_POOL_NAME" Value="DefaultAppPool"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Publish>-->
         </Control>
         <Control Id="PoolNameLabel" Type="Text" X="40" Y="94" Width="52" Height="15" TabSkip="no" Text="&amp;Pool name:" />
-        <Control Id="PoolNameEdit" Type="Edit" X="98" Y="92" Width="224" Height="15" Property="WEB_APP_POOL_NAME" Text="{80}" />
+        <Control Id="PoolNameEdit" Type="Edit" X="98" Y="92" Width="224" Height="15" Property="WEB_APP_POOL_NAME" Text="{80}">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+        </Control>
+        <Control Id="SelectAppPoolComboBox" Type="ComboBox" X="98" Y="92" Width="224" Height="16"
+                Property="APPPOOL" Sorted="yes" ComboList="yes">
+          <Condition Action="show"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
+          <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Condition>
+        </Control>
         <Control Id="IdentityLabel" Type="Text" X="40" Y="114" Width="52" Height="15" TabSkip="no" Text="&amp;Identity:">
           <Condition Action="show"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Condition>
           <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>

@@ -4,8 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.DirectoryServices;
 using System.Globalization;
+using System.Linq;
 using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Web.Administration;
 using Microsoft.Win32;
@@ -15,14 +18,17 @@ namespace Raven.Setup.CustomActions
 	public class IISActions
 	{
 		private const string IISEntry = "IIS://localhost/W3SVC";
-		private const string SessionEntry = "WEBSITE";
+		private const string WebSiteProperty = "WEBSITE";
 		private const string ServerComment = "ServerComment";
 		private const string IISRegKey = @"Software\Microsoft\InetStp";
 		private const string MajorVersion = "MajorVersion";
 		private const string IISWebServer = "iiswebserver";
 		private const string GetComboContent = "select * from ComboBox";
 		private const string AvailableSites = "select * from AvailableWebSites";
-		private const string SpecificSite = "Select * from AvailableWebSites where WebSiteID=";
+		private const string SpecificSite = "select * from AvailableWebSites where WebSiteID=";
+		private const string AppPoolProperty = "APPPOOL";
+		private const string AvailableAppPools = "select * from AvailableApplicationPools";
+		private const string SpecificAppPool = "select * from AvailableApplicationPools where PoolID=";
  
 		[CustomAction]
         public static ActionResult GetWebSites(Session session)
@@ -55,7 +61,7 @@ namespace Raven.Setup.CustomActions
         {
             try
             {
-                string selectedWebSiteId = session[SessionEntry];
+                string selectedWebSiteId = session[WebSiteProperty];
                 session.Log("CA: Found web site id: " + selectedWebSiteId);
 
                 using (var availableWebSitesView = session.Database.OpenView(SpecificSite + selectedWebSiteId))
@@ -126,7 +132,7 @@ namespace Raven.Setup.CustomActions
         private static void StoreSiteDataInComboBoxTable(string id, string name, string physicalPath, int order, View comboView)
         {
             var newComboRecord = new Record(5);
-            newComboRecord[1] = SessionEntry;
+            newComboRecord[1] = WebSiteProperty;
             newComboRecord[2] = order;
             newComboRecord[3] = id;
             newComboRecord[4] = name;
@@ -142,12 +148,118 @@ namespace Raven.Setup.CustomActions
             newWebSiteRecord[3] = physicalPath;
             availableView.Modify(ViewModifyMode.InsertTemporary, newWebSiteRecord);
         }
+
+		[CustomAction]
+		public static ActionResult GetAppPools(Session session)
+		{
+			try
+			{
+				var comboBoxView = session.Database.OpenView(GetComboContent);
+				var availableApplicationPoolsView = session.Database.OpenView(AvailableAppPools);
+
+				IList<string> appPools;
+
+				if (IsIIS7Upwards)
+				{
+					appPools = GetIis7UpwardsAppPools();
+				}
+				else
+				{
+					appPools = GetIis6AppPools();
+				}
+
+				for (var i = 0; i < appPools.Count; i++)
+				{
+					var newComboRecord = new Record(4);
+					newComboRecord[1] = AppPoolProperty;
+					newComboRecord[2] = i;
+					newComboRecord[3] = i;
+					newComboRecord[4] = appPools[i];
+
+					comboBoxView.Modify(ViewModifyMode.InsertTemporary, newComboRecord);
+
+					var newAppPoolRecord = new Record(2);
+					newAppPoolRecord[1] = i;
+					newAppPoolRecord[2] = appPools[i];
+					availableApplicationPoolsView.Modify(ViewModifyMode.InsertTemporary, newAppPoolRecord);
+				}
+
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				session.Log("Exception was thrown during GetAppPools custom action execution: " + ex);
+				return ActionResult.Failure;
+			}
+		}
+
+		[CustomAction]
+		public static ActionResult UpdateIISPropsWithSelectedAppPool(Session session)
+		{
+			try
+			{
+				if (session["APPLICATION_POOL_TYPE"] == "NEW")
+				{
+					return ActionResult.Success;
+				}
+
+				var selectedAppPoolId = session[AppPoolProperty];
+
+				using (var availableAppPoolsView = session.Database.OpenView(SpecificAppPool + selectedAppPoolId))
+				{
+					availableAppPoolsView.Execute();
+
+					using (var record = availableAppPoolsView.Fetch())
+					{
+						if ((record[1].ToString()) == selectedAppPoolId)
+						{
+							session["WEB_APP_POOL_NAME"] = (string)record[2];
+						}
+					}
+				}
+
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				session.Log("Exception was thrown during UpdateIISPropsWithSelectedWebSite custom action execution" + ex.ToString());
+				return ActionResult.Failure;
+			}
+		}
+
+		public static IList<string> GetIis7UpwardsAppPools()
+		{
+			var pools = new List<string>();
+
+			using (var iisManager = new ServerManager())
+			{
+				pools.AddRange(iisManager.ApplicationPools.Select(p => p.Name));
+			}
+
+			return pools;
+		}
+
+		private static IList<string> GetIis6AppPools()
+		{
+			var pools = new List<string>();
+			using (var poolRoot = new DirectoryEntry("IIS://localhost/W3SVC/AppPools"))
+			{
+				poolRoot.RefreshCache();
+
+				pools.AddRange(poolRoot.Children.Cast<DirectoryEntry>().Select(p => p.Name));
+			}
+
+			return pools;
+		}
         private static bool IsIIS7Upwards
         {
             get
             {
                 using (var iisKey = Registry.LocalMachine.OpenSubKey(IISRegKey))
                 {
+					if (iisKey == null)
+						throw new Exception("IIS is not installed.");
+
 	                return (int)iisKey.GetValue(MajorVersion) >= 7;
                 }
             }
