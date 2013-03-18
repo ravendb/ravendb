@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -49,6 +50,9 @@ namespace Raven.Studio.Models
 			Fields = new BindableCollection<FieldProperties>(field => field.Name);
 			Fields.CollectionChanged += HandleChildCollectionChanged;
 
+			SpatialFields = new BindableCollection<SpatialFieldProperties>(field => field.Name);
+			SpatialFields.CollectionChanged += HandleChildCollectionChanged;
+
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => ErrorsCount);
 		}
@@ -93,6 +97,24 @@ namespace Raven.Studio.Models
 				f.SuggestionAccuracy = i.Accuracy;
 				f.SuggestionDistance = i.Distance;
 			});
+
+			foreach (var pair in index.SpatialIndexes)
+			{
+				var field = SpatialFields.FirstOrDefault(f => f.Name == pair.Key);
+				if (field == null)
+					SpatialFields.Add(new SpatialFieldProperties(pair));
+				else
+				{
+					field.Type = pair.Value.Type;
+					field.Strategy = pair.Value.Strategy;
+					field.MaxTreeLevel = pair.Value.MaxTreeLevel;
+					field.MinX = pair.Value.MinX;
+					field.MaxX = pair.Value.MaxX;
+					field.MinY = pair.Value.MinY;
+					field.MaxY = pair.Value.MaxY;
+				}
+			}
+
 
 			RestoreDefaults(index);
 
@@ -209,6 +231,7 @@ namespace Raven.Studio.Models
 			index.Analyzers.Clear();
 			index.Suggestions.Clear();
 			index.TermVectors.Clear();
+			index.SpatialIndexes.Clear();
 			foreach (var item in Fields.Where(item => item.Name != null))
 			{
 				index.Indexes[item.Name] = item.Indexing;
@@ -217,6 +240,19 @@ namespace Raven.Studio.Models
 				index.Analyzers[item.Name] = item.Analyzer;
 				index.TermVectors[item.Name] = item.TermVector;
 				index.Suggestions[item.Name] = new SuggestionOptions { Accuracy = item.SuggestionAccuracy, Distance = item.SuggestionDistance };
+			}
+			foreach (var item in SpatialFields.Where(item => item.Name != null))
+			{
+				index.SpatialIndexes[item.Name] = new SpatialOptions
+				                                  {
+					                                  Type = item.Type,
+													  Strategy = item.Strategy,
+													  MaxTreeLevel = item.MaxTreeLevel,
+													  MinX = item.MinX,
+													  MaxX = item.MaxX,
+													  MinY = item.MinY,
+													  MaxY = item.MaxY
+				                                  };
 			}
 			index.RemoveDefaultValues();
 		}
@@ -364,6 +400,7 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<MapItem> Maps { get; private set; }
 		public BindableCollection<FieldProperties> Fields { get; private set; }
+		public BindableCollection<SpatialFieldProperties> SpatialFields { get; private set; }
 
 		public int ErrorsCount
 		{
@@ -411,9 +448,19 @@ namespace Raven.Studio.Models
 			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.Fields.Add(FieldProperties.Default)); }
 		}
 
+		public ICommand AddSpatialField
+		{
+			get { return new ChangeFieldValueCommand<IndexDefinitionModel>(this, x => x.SpatialFields.Add(SpatialFieldProperties.Default)); }
+		}
+
 		public ICommand RemoveField
 		{
 			get { return new RemoveFieldCommand(this); }
+		}
+
+		public ICommand RemoveSpatialField
+		{
+			get { return new RemoveSpatialFieldCommand(this); }
 		}
 
 		public ICommand SaveIndex
@@ -469,6 +516,28 @@ namespace Raven.Studio.Models
 			public override void Execute(object parameter)
 			{
 				index.Fields.Remove(field);
+			}
+		}
+
+		private class RemoveSpatialFieldCommand : Command
+		{
+			private SpatialFieldProperties field;
+			private readonly IndexDefinitionModel index;
+
+			public RemoveSpatialFieldCommand(IndexDefinitionModel index)
+			{
+				this.index = index;
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				field = parameter as SpatialFieldProperties;
+				return field != null && index.SpatialFields.Contains(field);
+			}
+
+			public override void Execute(object parameter)
+			{
+				index.SpatialFields.Remove(field);
 			}
 		}
 
@@ -758,7 +827,7 @@ namespace Raven.Studio.Models
 					{
 						Storage = FieldStorage.No,
 						Indexing = FieldIndexing.Default,
-						TermVector =  FieldTermVector.No,
+						TermVector = FieldTermVector.No,
 						Sort = SortOptions.None,
 						Analyzer = string.Empty,
 						SuggestionAccuracy = 0,
@@ -792,6 +861,231 @@ namespace Raven.Studio.Models
 						suggestionDistance = value;
 						OnPropertyChanged(() => suggestionDistance);
 					}
+				}
+			}
+		}
+
+		public class SpatialFieldProperties : NotifyPropertyChangedBase
+		{
+			private string name;
+			public string Name
+			{
+				get { return name; }
+				set
+				{
+					if (name != value)
+					{
+						name = value;
+						OnPropertyChanged(() => Name);
+					}
+				}
+			}
+
+			private SpatialFieldType type;
+			public SpatialFieldType Type
+			{
+				get { return type; }
+				set
+				{
+					if (type != value)
+					{
+						type = value;
+						OnPropertyChanged(() => Type);
+						ResetToDefaults(type);
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private SpatialSearchStrategy strategy;
+			public SpatialSearchStrategy Strategy
+			{
+				get { return strategy; }
+				set
+				{
+					if (strategy != value)
+					{
+						strategy = value;
+						OnPropertyChanged(() => Strategy);
+						if (type == SpatialFieldType.Geography)
+						{
+							if (strategy == SpatialSearchStrategy.GeohashPrefixTree)
+								MaxTreeLevel = SpatialOptions.DefaultGeohashLevel;
+							if (strategy == SpatialSearchStrategy.QuadPrefixTree)
+								MaxTreeLevel = SpatialOptions.DefaultQuadTreeLevel;
+						}
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private int maxTreeLevel;
+			public int MaxTreeLevel
+			{
+				get { return maxTreeLevel; }
+				set
+				{
+					if (maxTreeLevel != value)
+					{
+						maxTreeLevel = value;
+						OnPropertyChanged(() => MaxTreeLevel);
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private double minX;
+			public double MinX
+			{
+				get { return minX; }
+				set
+				{
+					if (minX != value)
+					{
+						minX = value;
+						OnPropertyChanged(() => MinX);
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private double maxX;
+			public double MaxX
+			{
+				get { return maxX; }
+				set
+				{
+					if (maxX != value)
+					{
+						maxX = value;
+						OnPropertyChanged(() => MaxX);
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private double minY;
+			public double MinY
+			{
+				get { return minY; }
+				set
+				{
+					if (minY != value)
+					{
+						minY = value;
+						OnPropertyChanged(() => MinY);
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private double maxY;
+			public double MaxY
+			{
+				get { return maxY; }
+				set
+				{
+					if (maxY != value)
+					{
+						maxY = value;
+						OnPropertyChanged(() => MaxY);
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private string precision;
+			public string Precision
+			{
+				get { return precision; }
+				set
+				{
+					if (precision != value)
+					{
+						precision = value;
+						OnPropertyChanged(() => Precision);
+					}
+				}
+			}
+
+			private void ResetToDefaults(SpatialFieldType type)
+			{
+				if (type == SpatialFieldType.Geography)
+				{
+					Strategy = SpatialSearchStrategy.GeohashPrefixTree;
+					MaxTreeLevel = SpatialOptions.DefaultGeohashLevel;
+					MinX = -180;
+					MinY = -90;
+					MaxX = 180;
+					MaxY = 90;
+				}
+
+				if (type == SpatialFieldType.Cartesian)
+				{
+					Strategy = SpatialSearchStrategy.QuadPrefixTree;
+					MaxTreeLevel = SpatialOptions.DefaultQuadTreeLevel;
+				}
+			}
+
+			public SpatialFieldProperties() : base()
+			{
+				Type = SpatialFieldType.Geography;
+				ResetToDefaults(SpatialFieldType.Geography);
+			}
+
+			public SpatialFieldProperties(KeyValuePair<string, SpatialOptions> spatialOptions) : base()
+			{
+				Name = spatialOptions.Key;
+				Type = spatialOptions.Value.Type;
+				Strategy = spatialOptions.Value.Strategy;
+				MaxTreeLevel = spatialOptions.Value.MaxTreeLevel;
+				MinX = spatialOptions.Value.MinX;
+				MaxX = spatialOptions.Value.MaxX;
+				MinY = spatialOptions.Value.MinY;
+				MaxY = spatialOptions.Value.MaxY;
+			}
+
+			public static SpatialFieldProperties Default
+			{
+				get { return new SpatialFieldProperties(); }
+			}
+
+			public void UpdatePrecision()
+			{
+				var x = maxX - minX;
+				var y = maxY - minY;
+				for (var i = 0; i < maxTreeLevel; i++)
+				{
+					if (strategy == SpatialSearchStrategy.GeohashPrefixTree)
+					{
+						if (i%2 == 0)
+						{
+							x = x / 8;
+							y = y / 4;
+						}
+						else
+						{
+							x = x / 4;
+							y = y / 8;
+						}
+					}
+					else if (strategy == SpatialSearchStrategy.QuadPrefixTree)
+					{
+						x = x / 2;
+						y = y / 2;
+					}
+				}
+
+				if (type == SpatialFieldType.Geography)
+				{
+					const double factor = (6371.0087714*Math.PI*2)/360;
+					x = x * factor;
+					y = y * factor;
+					Precision = string.Format(CultureInfo.InvariantCulture, "Precision at equator; X: {0:F6} km, Y: {1:F6} km", x, y);
+				}
+				else
+				{
+					Precision = string.Format(CultureInfo.InvariantCulture, "Precision; X: {0:F6}, Y: {1:F6}", x, y);
 				}
 			}
 		}

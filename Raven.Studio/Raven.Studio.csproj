@@ -313,17 +313,20 @@
       <DependentUpon>TransformersListView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
+    <Compile Include="Models\SpatialQueryModel.cs" />
     <Compile Include="Models\TransformerDefinitionModel.cs" />
     <Compile Include="Models\TransformersModel.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
     <Compile Include="Impl\SplitButton\SplitHyperlinkButtonPopup.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToActiveConverter.cs" />
     <Compile Include="Infrastructure\Converters\BundleNameToToolTipCoverter.cs" />
+    <Compile Include="Infrastructure\Converters\FalseWhenGeographyConverter.cs" />
     <Compile Include="Infrastructure\Converters\FromEnumWithDescription.cs" />
     <Compile Include="Infrastructure\Converters\GetApiKeyDirectLink.cs" />
     <Compile Include="Infrastructure\Converters\GetFullApiKeyConverter.cs" />
     <Compile Include="Infrastructure\Converters\GetFullConnectionStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\MillisecondsToMinutesConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TrueWhenGeographyConverter.cs" />
     <Compile Include="Infrastructure\Converters\PriorityToFontColorConverter.cs" />
     <Compile Include="Infrastructure\Converters\PriorityToFontStyleConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />

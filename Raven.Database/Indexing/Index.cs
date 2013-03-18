@@ -1122,8 +1122,8 @@ namespace Raven.Database.Indexing
 				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
 				if (spatialIndexQuery != null)
 				{
-					var spatialStrategy = parent.viewGenerator.GetStrategyForField(spatialIndexQuery.SpatialFieldName);
-					var dq = SpatialIndex.MakeQuery(q, spatialStrategy, spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
+					var spatialField = parent.viewGenerator.GetSpatialField(spatialIndexQuery.SpatialFieldName);
+					var dq = spatialField.MakeQuery(q, spatialField.GetStrategy(), spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery { { q, Occur.MUST }, { dq, Occur.MUST } };
@@ -1181,7 +1181,7 @@ namespace Raven.Database.Indexing
 			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
 										IndexQuery indexQuery)
 			{
-				var sort = indexQuery.GetSort(parent.indexDefinition);
+				var sort = indexQuery.GetSort(parent.indexDefinition, parent.viewGenerator);
 
 				if (pageSize == Int32.MaxValue) // we want all docs
 				{

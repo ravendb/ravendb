@@ -15,7 +15,7 @@ namespace Raven.Database.Plugins.Builtins
 		{
 			return new[]
 			{
-				typeof (SpatialIndex).Namespace
+				typeof (SpatialField).Namespace
 			};
 		}
 
