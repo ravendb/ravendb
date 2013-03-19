@@ -811,7 +811,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override event EventHandler AfterDispose;
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Max number of cached requests (default: 2048)
 		/// </summary>

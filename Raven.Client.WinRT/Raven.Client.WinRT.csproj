@@ -112,6 +112,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Changes\*.cs">
       <Link>Changes\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\*.cs">
+      <Link>Connection\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\*.cs">
       <Link>Connection\Async\%(FileName)</Link>
     </Compile>
@@ -265,20 +268,8 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\CD.cs">
-      <Link>Imports\MissingFromSilverlight\CD.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\MD5.cs">
-      <Link>Imports\MissingFromSilverlight\MD5.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\NameValueCollection.cs">
-      <Link>Imports\MissingFromSilverlight\NameValueCollection.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\SplitOrderedList.cs">
-      <Link>Imports\MissingFromSilverlight\SplitOrderedList.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\Stopwatch.cs">
-      <Link>Imports\MissingFromSilverlight\Stopwatch.cs</Link>
+    <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\*.cs">
+      <Link>Imports\MissingFromSilverlight\(%(FileName)))</Link>
     </Compile>
     <Compile Include="Connection\ReplicationInformerLocalCache.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
