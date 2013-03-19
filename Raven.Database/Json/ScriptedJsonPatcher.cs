@@ -297,6 +297,7 @@ function ExecutePatchScript(docInner){{
 
 
 			AddScript(jintEngine, "Raven.Database.Json.Map.js");
+			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
 			AddScript(jintEngine, "Raven.Database.Json.lodash.js");
 			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
 
