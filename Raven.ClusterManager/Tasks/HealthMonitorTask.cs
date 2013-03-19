@@ -16,10 +16,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
-using Raven.Client.Listeners;
 using Raven.ClusterManager.Models;
 
 namespace Raven.ClusterManager.Tasks
@@ -30,7 +27,6 @@ namespace Raven.ClusterManager.Tasks
 
 		private readonly IDocumentStore store;
 		private Timer timer;
-		private static DateTimeOffset lastRun;
 		private volatile bool running;
 
 		static HealthMonitorTask()
@@ -55,23 +51,20 @@ namespace Raven.ClusterManager.Tasks
 				.ContinueWith(task =>
 				{
 					running = false;
-					lastRun = DateTimeOffset.Now;
 				});
 		}
 
 		private async Task CheckHealthAsync()
 		{
-			using (var session = store.OpenSession())
+			using (var session = store.OpenAsyncSession())
 			{
-				var servers = session.Query<ServerRecord>()
-				                     .OrderByDescending(record => record.LastOnlineTime)
-				                     .Take(1024)
-				                     .ToList();
+				var servers = await session.Query<ServerRecord>()
+				                           .OrderByDescending(record => record.LastOnlineTime)
+				                           .Take(1024)
+				                           .ToListAsync();
 
-				foreach (var server in servers)
-				{
-					await FetchServerDatabases(server, store);
-				}
+				var tasks = servers.Select(server => FetchServerDatabases(server, store)).ToArray();
+				Task.WaitAll(tasks);
 			}
 		}
 
@@ -80,12 +73,16 @@ namespace Raven.ClusterManager.Tasks
 			using (var session = documentStore.OpenAsyncSession())
 			{
 				await FetchServerDatabasesAsync(server, session);
+				await session.SaveChangesAsync();
+			}
 
-				if (server.IsOnline && server.IsUnauthorized && server.CredentialsId == null)
+			if (server.IsOnline && server.IsUnauthorized && server.CredentialsId == null)
+			{
+				using (var session = documentStore.OpenAsyncSession())
 				{
 					var credentialses = await session.Query<ServerCredentials>()
-											   .Take(16)
-											   .ToListAsync();
+					                                 .Take(16)
+					                                 .ToListAsync();
 
 					foreach (var credentials in credentialses)
 					{
@@ -100,9 +97,9 @@ namespace Raven.ClusterManager.Tasks
 							break;
 						}
 					}
-				}
 
-				await session.SaveChangesAsync();
+					await session.SaveChangesAsync();
+				}
 			}
 		}
 
