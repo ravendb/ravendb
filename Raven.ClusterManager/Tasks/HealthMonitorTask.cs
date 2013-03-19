@@ -72,6 +72,7 @@ namespace Raven.ClusterManager.Tasks
 		{
 			using (var session = documentStore.OpenAsyncSession())
 			{
+				await session.StoreAsync(server);
 				await FetchServerDatabasesAsync(server, session);
 				await session.SaveChangesAsync();
 			}
@@ -80,6 +81,8 @@ namespace Raven.ClusterManager.Tasks
 			{
 				using (var session = documentStore.OpenAsyncSession())
 				{
+					await session.StoreAsync(server);
+
 					var credentialses = await session.Query<ServerCredentials>()
 					                                 .Take(16)
 					                                 .ToListAsync();
