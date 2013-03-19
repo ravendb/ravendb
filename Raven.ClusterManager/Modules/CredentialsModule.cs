@@ -50,7 +50,7 @@ namespace Raven.ClusterManager.Modules
 
 				try
 				{
-					var adminStatistics = await client.Admin.GetStatisticsAsync();
+					var adminStatistics = await client.GlobalAdmin.GetStatisticsAsync();
 				}
 				catch (AggregateException ex)
 				{

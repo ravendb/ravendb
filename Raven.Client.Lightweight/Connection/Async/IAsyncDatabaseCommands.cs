@@ -11,6 +11,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 #if SILVERLIGHT
@@ -33,6 +34,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }
+		IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get; }
+		IAsyncAdminDatabaseCommands Admin { get; }
+		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
 		/// Begins an async get operation
@@ -343,12 +347,26 @@ namespace Raven.Client.Connection.Async
 	
 	}
 
-	public interface IAsyncAdminDatabaseCommands
+	public interface IAsyncGlobalAdminDatabaseCommands
 	{
 		/// <summary>
 		/// Get admin statistics
 		/// </summary>
 		/// <returns></returns>
 		Task<AdminStatistics> GetStatisticsAsync();
+	}
+	
+	public interface IAsyncAdminDatabaseCommands
+	{
+		
+	}
+
+	public interface IAsyncInfoDatabaseCommands
+	{
+		/// <summary>
+		/// Get replication info
+		/// </summary>
+		/// <returns></returns>
+		Task<ReplicationStatistics> GetReplicationInfoAsync();
 	}
 }

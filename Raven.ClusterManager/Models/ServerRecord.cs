@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 
 namespace Raven.ClusterManager.Models
 {
@@ -20,7 +21,8 @@ namespace Raven.ClusterManager.Models
 		public bool IsUnauthorized { get; set; }
 
 		public string CredentialsId { get; set; }
-		
+		public ReplicationStatistics ReplicationStatistics { get; set; }
+
 		public ServerRecord()
 		{
 			Databases = new string[0];

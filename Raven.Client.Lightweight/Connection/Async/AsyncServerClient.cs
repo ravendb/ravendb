@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 #if SILVERLIGHT || NETFX_CORE
+using Raven.Abstractions.Replication;
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
 using System.Transactions;
@@ -30,6 +31,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -46,11 +48,12 @@ namespace Raven.Client.Connection.Async
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
-	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands
+	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly string url;
+		private readonly string rootUrl;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
@@ -78,6 +81,12 @@ namespace Raven.Client.Connection.Async
 			this.url = url;
 			if (this.url.EndsWith("/"))
 				this.url = this.url.Substring(0, this.url.Length - 1);
+			rootUrl = this.url;
+			var databasesIndex = rootUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+			if (databasesIndex > 0)
+			{
+				rootUrl = rootUrl.Substring(0, databasesIndex);
+			}
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
@@ -1725,16 +1734,16 @@ namespace Raven.Client.Connection.Async
 					.ContinueWith(task => task.Result);
 		}
 
-		#region IAsyncAdminDatabaseCommands
-		
-		public IAsyncAdminDatabaseCommands Admin
+		#region IAsyncGlobalAdminDatabaseCommands
+
+		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{
 			get { return this; }
 		}
 
-		Task<AdminStatistics> IAsyncAdminDatabaseCommands.GetStatisticsAsync()
+		Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
 		{
-			return url.AdminStats()
+			return rootUrl.AdminStats()
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
 					.ReadResponseJsonAsync()
@@ -1742,7 +1751,38 @@ namespace Raven.Client.Connection.Async
 					{
 						var jo = ((RavenJObject)task.Result);
 						return jo.Deserialize<AdminStatistics>(convention);
-					});	
+					});
+		}
+
+		#endregion
+
+		#region IAsyncAdminDatabaseCommands
+		
+		public IAsyncAdminDatabaseCommands Admin
+		{
+			get { return this; }
+		}
+
+		#endregion
+
+		#region IAsyncInfoDatabaseCommands
+
+		public IAsyncInfoDatabaseCommands Info
+		{
+			get { return this; }
+		}
+
+		Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
+		{
+			return url.ReplicationInfo()
+					.NoCache()
+					.ToJsonRequest(this, credentials, convention)
+					.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var jo = ((RavenJObject)task.Result);
+						return jo.Deserialize<ReplicationStatistics>(convention);
+					});
 		}
 
 		#endregion

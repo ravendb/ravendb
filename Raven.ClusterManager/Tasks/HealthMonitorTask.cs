@@ -183,7 +183,7 @@ namespace Raven.ClusterManager.Tasks
 
 		private static async Task StoreActiveDatabaseNames(ServerRecord server, AsyncServerClient client, IAsyncDocumentSession session)
 		{
-			AdminStatistics adminStatistics = await client.Admin.GetStatisticsAsync();
+			AdminStatistics adminStatistics = await client.GlobalAdmin.GetStatisticsAsync();
 
 			server.IsUnauthorized = false;
 
@@ -227,6 +227,12 @@ namespace Raven.ClusterManager.Tasks
 			databaseRecord.IsReplicationEnabled = true;
 			var document = replicationDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			databaseRecord.ReplicationDestinations = document.Destinations;
+
+			var replicationStatistics = await dbCmds.Info.GetReplicationInfoAsync();
+			if (replicationStatistics != null)
+			{
+				server.ReplicationStatistics = replicationStatistics;
+			}
 
 			// Monitor the replicated destinations
 			foreach (var replicationDestination in databaseRecord.ReplicationDestinations)
