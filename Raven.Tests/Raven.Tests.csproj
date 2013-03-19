@@ -70,6 +70,10 @@
     <Reference Include="FizzWare.NBuilder">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
@@ -114,6 +118,10 @@
     </Reference>
     <Reference Include="Mono.Cecil.Rocks">
       <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTopologySuite, Version=1.13.4693.18484, Culture=neutral, PublicKeyToken=f580a05016ebada1, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
@@ -725,10 +733,26 @@
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Spatial\CartesianTests.cs" />
+    <Compile Include="Spatial\GeoJsonConverterTests.cs" />
+    <Compile Include="Spatial\GeoJsonTests.cs" />
+    <Compile Include="Spatial\GeoJsonWktConverterTests.cs" />
+    <Compile Include="Spatial\GeoUriTests.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\AttributesTableConverter.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\CoordinateConverters.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\EnvelopeConverter.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\FeatureCollectionConverter.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\FeatureConverter.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\GeoJsonObjectType.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\GeometryConverter.cs" />
+    <Compile Include="Spatial\JsonConverters\GeoJson\ICRSObjectConverter.cs" />
     <Compile Include="Spatial\Nick.cs" />
+    <Compile Include="Spatial\JsonConverters\Wkt\WktConverter.cs" />
+    <Compile Include="Spatial\PointObjectTests.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
     <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
+    <Compile Include="Spatial\ShapeConverterTests.cs" />
     <Compile Include="Spatial\SpatialTest2.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />
@@ -1044,6 +1068,8 @@
     <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
     <Compile Include="Security\OAuth\ApiKey.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
+    <Compile Include="Spatial\WktConverterTests.cs" />
+    <Compile Include="Spatial\WktSanitizerTests.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />

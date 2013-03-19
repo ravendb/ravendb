@@ -9,10 +9,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
+using Raven.Client.Spatial;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
@@ -142,7 +145,12 @@ namespace Raven.Client.Linq
 	        return this;
 	    }
 
-	    /// <summary>
+		public IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+		{
+			return Customize(x => x.Spatial(path.ToPropertyPath(), clause));
+		}
+
+		/// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>
 		/// <returns>

@@ -995,7 +995,7 @@ namespace Raven.Tests.Document
 
 				var expected =
 					SpatialIndexTestHelper.GetEvents()
-						.Count(e => Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+						.Count(e => SpatialIndexTest.GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
 
 				Assert.Equal(expected, events.Length);
 
@@ -1004,7 +1004,7 @@ namespace Raven.Tests.Document
 				double previous = 0;
 				foreach (var e in events)
 				{
-					double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+					double distance = SpatialIndexTest.GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude);
 					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 					Assert.True(distance < radiusInKm);
 					Assert.True(distance >= previous);

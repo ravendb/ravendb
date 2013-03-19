@@ -9,13 +9,9 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
-using Lucene.Net.Spatial;
-using Lucene.Net.Spatial.Prefix;
-using Lucene.Net.Spatial.Prefix.Tree;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
-using Raven.Abstractions.Linq;
 using Raven.Database.Indexing;
 using Spatial4n.Core.Shapes;
 
@@ -72,6 +68,8 @@ namespace Raven.Database.Linq
 
 		public IDictionary<string, FieldTermVector> TermVectors { get; set; } 
 
+		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+
 		public HashSet<string> ForEntityNames { get; set; }
 
 		public string[] Fields
@@ -97,8 +95,9 @@ namespace Raven.Database.Linq
 			ForEntityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
-			SpatialStrategies = new ConcurrentDictionary<string, SpatialStrategy>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<string, SpatialOptions>();
+			SpatialFields = new ConcurrentDictionary<string, SpatialField>();
 		}
 
 		public void Init(IndexDefinition definition)
@@ -108,7 +107,7 @@ namespace Raven.Database.Linq
 
 		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool analyzed = true)
 		{
-			return new AnonymousObjectToLuceneDocumentConverter(indexDefinition)
+			return new AnonymousObjectToLuceneDocumentConverter(indexDefinition, this)
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
 		}
 
@@ -166,7 +165,7 @@ namespace Raven.Database.Linq
 
 		#region Spatial index
 
-		private ConcurrentDictionary<string, SpatialStrategy> SpatialStrategies { get; set; }
+		private ConcurrentDictionary<string, SpatialField> SpatialFields { get; set; }
 
 		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
 		{
@@ -175,29 +174,16 @@ namespace Raven.Database.Linq
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, double? lat, double? lng)
 		{
-			var strategy = GetStrategyForField(fieldName);
+			var spatialField = GetSpatialField(fieldName);
 
 			if (lng == null || double.IsNaN(lng.Value))
 				return Enumerable.Empty<IFieldable>();
 			if(lat == null || double.IsNaN(lat.Value))
 				return Enumerable.Empty<IFieldable>();
 
-			Shape shape = SpatialIndex.Context.MakePoint(lng.Value, lat.Value);
-			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
-		}
-
-		[CLSCompliant(false)]
-		public SpatialStrategy GetStrategyForField(string fieldName)
-		{
-			return SpatialStrategies.GetOrAdd(fieldName, s =>
-			{
-				if (SpatialStrategies.Count > 1024)
-				{
-					throw new InvalidOperationException("The number of spatial fields in an index is limited ot 1,024");
-				}
-				return SpatialIndex.CreateStrategy(fieldName, SpatialSearchStrategy.GeohashPrefixTree, GeohashPrefixTree.GetMaxLevelsPossible());
-			});
+			Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
+			return spatialField.GetStrategy().CreateIndexableFields(shape)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, string shapeWKT,
@@ -207,25 +193,55 @@ namespace Raven.Database.Linq
 			if (string.IsNullOrEmpty(shapeWKT))
 				return Enumerable.Empty<IFieldable>();
 
-			if (maxTreeLevel == 0)
-			{
-				switch (spatialSearchStrategy)
-				{
-					case SpatialSearchStrategy.GeohashPrefixTree:
-						maxTreeLevel = 9; // about 2 meters, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
-						break;
-					case SpatialSearchStrategy.QuadPrefixTree:
-						maxTreeLevel = 25; // about 1 meter, should be good enough
-						break;
-					default:
-						throw new ArgumentOutOfRangeException("spatialSearchStrategy");
-				}
-			}
-			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, spatialSearchStrategy, maxTreeLevel));
+			var options = new SpatialOptionsFactory().Geography(maxTreeLevel, spatialSearchStrategy);
 
-			var shape = SpatialIndex.ReadShape(shapeWKT);
+			var spatialField = GetSpatialField(fieldName, options);
+			var strategy = spatialField.GetStrategy();
+
+			var shape = spatialField.ReadShape(shapeWKT);
 			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+		}
+
+		[CLSCompliant(false)]
+		public SpatialField GetSpatialField(string fieldName)
+		{
+			return GetSpatialField(fieldName, new SpatialOptionsFactory().Geography());
+		}
+
+		[CLSCompliant(false)]
+		public SpatialField GetSpatialField(string fieldName, SpatialOptions options)
+		{
+			SpatialOptions opt;
+			indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
+			if (opt == null)
+				opt = options ?? new SpatialOptionsFactory().Geography();
+
+			return SpatialFields.GetOrAdd(fieldName, s =>
+			{
+				if (SpatialFields.Count > 1024)
+					throw new InvalidOperationException("The number of spatial fields in an index is limited to 1,024");
+
+				return new SpatialField(fieldName, opt);
+			});
+		}
+
+		public bool IsSpatialField(string fieldName)
+		{
+			SpatialOptions opt;
+			indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
+			if (opt == null)
+				return false;
+
+			SpatialFields.GetOrAdd(fieldName, s =>
+			{
+				if (SpatialFields.Count > 1024)
+					throw new InvalidOperationException("The number of spatial fields in an index is limited to 1,024");
+
+				return new SpatialField(fieldName, opt);
+			});
+
+			return true;
 		}
 
 		#endregion

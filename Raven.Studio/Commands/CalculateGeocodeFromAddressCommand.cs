@@ -11,24 +11,27 @@ namespace Raven.Studio.Commands
 {
 	public class CalculateGeocodeFromAddressCommand : Command
 	{
-		private readonly QueryModel queryModel;
+		private readonly SpatialQueryModel queryModel;
 
-		public CalculateGeocodeFromAddressCommand(QueryModel queryModel)
+		public CalculateGeocodeFromAddressCommand(SpatialQueryModel queryModel)
 		{
 			this.queryModel = queryModel;
 		}
 
 		public override void Execute(object parameter)
 		{
+			if (string.IsNullOrWhiteSpace(queryModel.Address))
+				return;
+
 			var url = "http://where.yahooapis.com/geocode?flags=JC&q=" + queryModel.Address;
 			var webRequest = WebRequest.Create(new Uri(url, UriKind.Absolute));
 			webRequest.GetResponseAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
 				RavenJObject jsonData;
 				using (var stream = doc.GetResponseStream())
-				{
-					jsonData = RavenJObject.Load(new JsonTextReader(new StreamReader(stream)));
-				}
+				using (var reader = new StreamReader(stream))
+				using (var jsonReader = new JsonTextReader(reader))
+					jsonData = RavenJObject.Load(jsonReader);
 
 				var result = jsonData["ResultSet"].SelectToken("Results").Values().FirstOrDefault();
 

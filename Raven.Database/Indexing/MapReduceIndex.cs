@@ -333,7 +333,7 @@ namespace Raven.Database.Indexing
 				Actions = actions;
 				ReduceKeys = reduceKeys;
 
-				anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.indexDefinition);
+				anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.indexDefinition, ViewGenerator);
 
 				if (Level == 2)
 				{
