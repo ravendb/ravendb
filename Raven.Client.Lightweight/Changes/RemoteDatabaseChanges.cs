@@ -22,7 +22,7 @@ namespace Raven.Client.Changes
 {
 	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
 	{
-		private readonly ILog logger = LogManager.GetCurrentClassLogger();
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
@@ -46,6 +46,7 @@ namespace Raven.Client.Changes
 		                             DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose,
 		                             Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
 		{
+			ConnectionStatusChanged = LogOnConnectionStatusChanged;
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
 			     Base62Util.Base62Random();
 			this.url = url;
@@ -74,6 +75,8 @@ namespace Raven.Client.Changes
 										AvoidCachingRequest = true
 									};
 
+			logger.Info("Trying to connect to {1}", requestParams.Url);
+
 			return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
 				.ServerPullAsync()
 				.ContinueWith(task =>
@@ -82,12 +85,13 @@ namespace Raven.Client.Changes
 										throw new ObjectDisposedException("RemoteDatabaseChanges");
 									if (task.IsFaulted)
 									{
-										logger.WarnException("Could not connect to server, will retry", task.Exception);
+										logger.WarnException("Could not connect to server: " + url, task.Exception);
 										Connected = false;
 										ConnectionStatusChanged(this, EventArgs.Empty);
 										
 										if (disposed)
 											return task;
+
 
 										bool timeout;
 										if (replicationInformer.IsServerDown(task.Exception, out timeout) == false)
@@ -98,6 +102,7 @@ namespace Raven.Client.Changes
 												HttpStatusCode.Forbidden))
 											return task;
 
+										logger.Warn("Failed to connect to {0}, will try again in 15 seconds", url);
 										return Time.Delay(TimeSpan.FromSeconds(15))
 											.ContinueWith(_ => EstablishConnection())
 											.Unwrap();
@@ -125,7 +130,13 @@ namespace Raven.Client.Changes
 		}
 
 		public bool Connected { get; private set; }
-		public event EventHandler ConnectionStatusChanged = delegate { }; 
+		public event EventHandler ConnectionStatusChanged;
+
+		private void LogOnConnectionStatusChanged(object sender, EventArgs eventArgs)
+		{
+			logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
+		}
+
 		public Task<IDatabaseChanges> Task { get; private set; }
 
 		private Task AfterConnection(Func<Task> action)
@@ -176,6 +187,7 @@ namespace Raven.Client.Changes
 		{
 			lock (this)
 			{
+				logger.Info("Sending command {0} - {1}", command, value);
 				var sendTask = lastSendTask;
 				if (sendTask != null)
 				{
@@ -398,7 +410,11 @@ namespace Raven.Client.Changes
 		{
 			var ravenJObject = RavenJObject.Parse(dataFromConnection);
 			var value = ravenJObject.Value<RavenJObject>("Value");
-			switch (ravenJObject.Value<string>("Type"))
+			var type = ravenJObject.Value<string>("Type");
+
+			logger.Debug("Got notification from {0} of type {1}", url, dataFromConnection);
+
+			switch (type)
 			{
 				case "DocumentChangeNotification":
 					var documentChangeNotification = value.JsonDeserialization<DocumentChangeNotification>();
