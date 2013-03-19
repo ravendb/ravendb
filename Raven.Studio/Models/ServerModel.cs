@@ -120,13 +120,15 @@ namespace Raven.Studio.Models
 
 		private void UpdateUserInfo()
 		{
-			ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+			if (SelectedDatabase.Value == null)
+				return;
+			SelectedDatabase.Value
 			                .AsyncDatabaseCommands
 			                .CreateRequest(string.Format("/debug/user-info").NoCache(), "GET")
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(doc =>
 			                {
-				                UserInfo = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
+				                UserInfo = DocumentStore.Conventions.CreateSerializer()
 				                                           .Deserialize<UserInfo>(new RavenJTokenReader(doc));
 			                });
 		}

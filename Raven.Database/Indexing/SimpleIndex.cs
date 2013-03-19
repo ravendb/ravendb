@@ -88,7 +88,7 @@ namespace Raven.Database.Indexing
 					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
-						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
+						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition, viewGenerator);
 						var luceneDoc = new Document();
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
 						                                Field.Index.NOT_ANALYZED_NO_NORMS);

@@ -663,7 +663,7 @@ namespace Raven.Client.Embedded
 			{
 				cmd.TransactionInformation = TransactionInformation;
 				return cmd;
-			}));
+			}).ToList());
 			if (batchResults != null)
 			{
 				foreach (var batchResult in batchResults.Where(batchResult => batchResult != null && batchResult.Metadata != null && batchResult.Metadata.IsSnapshot))

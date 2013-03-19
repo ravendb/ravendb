@@ -82,15 +82,15 @@ namespace Raven.Server
 
 			Console.Error.WriteLine(msg);
 
-			if(args.Contains("--msgbox", StringComparer.OrdinalIgnoreCase) || 
+			if (args.Contains("--msgbox", StringComparer.OrdinalIgnoreCase) ||
 				args.Contains("/msgbox", StringComparer.OrdinalIgnoreCase))
-		{
+			{
 				MessageBox.Show(msg, "RavenDB Startup failure");
 			}
 			Console.WriteLine("Press any key to continue...");
 			try
 			{
-			Console.ReadKey(true);
+				Console.ReadKey(true);
 			}
 			catch
 			{
@@ -115,6 +115,7 @@ namespace Raven.Server
 			string theUser = null;
 			Action actionToTake = null;
 			bool launchBrowser = false;
+			bool noLog = false;
 			var ravenConfiguration = new RavenConfiguration();
 
 			OptionSet optionSet = null;
@@ -125,7 +126,8 @@ namespace Raven.Server
 					ravenConfiguration.Settings[key] = value;
 					ravenConfiguration.Initialize();
 				}},
-				{"config=", "The config {0:file} to use", path => ravenConfiguration.LoadFrom(path)},
+				{"nolog", "Don't use the default log", s => noLog=true},
+				{"config=", "The config {0:file} to use", ravenConfiguration.LoadFrom},
 				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart)},
 				{"user=", "Which user will be used", user=> theUser = user},
 				{"setup-perf-counters", "Setup the performance counters and the related permissions", key => actionToTake = ()=> AdminRequired(()=>SetupPerfCounters(theUser))},
@@ -138,9 +140,9 @@ namespace Raven.Server
 				{
 					ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
 					ravenConfiguration.RunInMemory = true;
-					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, ravenConfiguration, launchBrowser);		
+					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, ravenConfiguration, launchBrowser, noLog);		
 				}},
-				{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser)},
+				{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog)},
 				{"browser|launchbrowser", "After the server starts, launches the browser", key => launchBrowser = true},
 				{"help", "Help about the command line interface", key =>
 				{
@@ -209,7 +211,7 @@ namespace Raven.Server
 			}
 
 			if (actionToTake == null)
-				actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser);
+				actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog);
 
 			actionToTake();
 
@@ -263,7 +265,7 @@ namespace Raven.Server
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
-			var names = new[] {"appSettings", "connectionStrings"};
+			var names = new[] { "appSettings", "connectionStrings" };
 
 			foreach (var section in names.Select(configuration.GetSection))
 			{
@@ -361,9 +363,14 @@ Configuration options:
 			}
 		}
 
-		private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration, bool launchBrowser)
+		private static void RunInDebugMode(
+			AnonymousUserAccessMode? anonymousUserAccessMode,
+			RavenConfiguration ravenConfiguration,
+			bool launchBrowser,
+			bool noLog)
 		{
-			ConfigureDebugLogging();
+			if (noLog == false)
+				ConfigureDebugLogging();
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.UseSsl);
 			if (anonymousUserAccessMode.HasValue)
@@ -426,7 +433,7 @@ Configuration options:
 		private static bool InteractiveRun(RavenDbServer server)
 		{
 			bool? done = null;
-			var actions = new Dictionary<string,Action>
+			var actions = new Dictionary<string, Action>
 			{
 				{"cls", TryClearingConsole},
 				{
@@ -458,7 +465,7 @@ Configuration options:
 				var readLine = Console.ReadLine() ?? "";
 
 				Action value;
-				if(actions.TryGetValue(readLine, out value) == false)
+				if (actions.TryGetValue(readLine, out value) == false)
 				{
 					Console.WriteLine("Could not understand: {0}", readLine);
 					WriteInteractiveOptions(actions);
@@ -607,7 +614,7 @@ Enjoy...
 
 			if (exitCode != 0)
 				throw new InvalidOperationException(
-					"Failed to set the service recovery policy. Command: " + Environment.NewLine+ "sc " + arguments + Environment.NewLine + "Exit code: " + exitCode);
-		} 
+					"Failed to set the service recovery policy. Command: " + Environment.NewLine + "sc " + arguments + Environment.NewLine + "Exit code: " + exitCode);
+		}
 	}
 }

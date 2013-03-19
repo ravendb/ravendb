@@ -13,10 +13,20 @@ properties {
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Release"
 	
+	$core_db_dlls = @(
+        "Raven.Abstractions.???", 
+        (Get-DependencyPackageFiles 'NLog.2'), 
+        (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
+        "Jint.Raven.???",
+				"Lucene.Net.???",
+				"Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", 
+				"ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", 
+				"Esent.Interop.???", 
+				"Raven.Database.???", 
+				"AWS.Extensions.???", "AWSSDK.???" ,
+				"Microsoft.CompilerServices.AsyncTargetingPack.Net4.???" ) 
 	
-	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), "Jint.Raven.???",
-				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???","Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", 
-				"ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "AWS.Extensions.???", "AWSSDK.???"  ) |
+	$web_dlls = ( @( "Raven.Web.???" ) + $core_db_dlls) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -24,16 +34,14 @@ properties {
 	
 	$web_files = @("..\DefaultConfigs\web.config" )
 	
-	$server_files = @( "Raven.Server.???", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
-					 "Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",  "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Rhino.Licensing.???", 
-					"Esent.Interop.???", "Jint.Raven.???","Raven.Abstractions.???", "Raven.Database.???", "AWS.Extensions.???", "AWSSDK.???" ) |
+	$server_files = ( @( "Raven.Server.???") + $core_db_dlls ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
 	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
-					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll") |
+					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Microsoft.CompilerServices.AsyncTargetingPack.Net4.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -45,9 +53,7 @@ properties {
 			return "$build_dir\$_"
 		}
  
-	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
-						  "Esent.Interop.???", "Jint.Raven.???","ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
-						"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",(Get-DependencyPackageFiles 'NLog.2'), "AsyncCtpLibrary.???", "AWS.Extensions.???", "AWSSDK.???", "Microsoft.CompilerServices.AsyncTargetingPack.Net4.???") |
+	$all_client_dlls = ( @( "Raven.Client.Embedded.???") + $client_dlls + $core_db_dlls ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"

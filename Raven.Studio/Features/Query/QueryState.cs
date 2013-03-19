@@ -24,10 +24,16 @@ namespace Raven.Studio.Features.Query
 			IndexName = model.IndexName;
 			Query = model.Query;
 			SortOptions = model.SortBy.Select(r => r.Value).ToList();
-			IsSpatialQuery = model.IsSpatialQuery;
-			Latitude = model.Latitude;
-			Longitude = model.Longitude;
-			Radius = model.Radius;
+			
+			if (model.IsSpatialQuery)
+			{
+				IsSpatialQuery = model.IsSpatialQuery;
+				SpatialFieldName = model.SpatialQuery.FieldName;
+				Latitude = model.SpatialQuery.Y;
+				Longitude = model.SpatialQuery.X;
+				Radius = model.SpatialQuery.Radius;
+			}
+
 			DefaultOperator = model.DefaultOperator;
 			ShowFields = model.ShowFields;
 			ShowEntries = model.ShowEntries;
@@ -43,10 +49,13 @@ namespace Raven.Studio.Features.Query
 			IndexName = savedQuery.IndexName;
 			Query = savedQuery.Query;
 			SortOptions = savedQuery.SortOptions;
+
 			IsSpatialQuery = savedQuery.IsSpatialQuery;
+			SpatialFieldName = savedQuery.SpatialFieldName ?? Constants.DefaultSpatialFieldName;
 			Latitude = savedQuery.Latitude;
 			Longitude = savedQuery.Longitude;
 			Radius = savedQuery.Radius;
+
 			DefaultOperator = savedQuery.DefaultOperator;
 			ShowFields = savedQuery.ShowFields;
 			ShowEntries = savedQuery.ShowEntries;
@@ -59,6 +68,7 @@ namespace Raven.Studio.Features.Query
 
         public string Query { get; private set; }
         public bool IsSpatialQuery { get; private set; }
+        public string SpatialFieldName { get; private set; }
         public double? Latitude { get; private set; }
         public double? Longitude { get; private set; }
         public double? Radius { get; private set; }
@@ -78,7 +88,7 @@ namespace Raven.Studio.Features.Query
 
 	    public static string CreateQueryStateHash(QueryState state)
 	    {
-			var spatialString = state.IsSpatialQuery ? string.Format("{0}{1}{2}", state.Latitude, state.Longitude, state.Radius) : "";
+			var spatialString = state.IsSpatialQuery ? string.Format("{0}{1}{2}{3}", state.SpatialFieldName, state.Latitude, state.Longitude, state.Radius) : "";
 		    var optionString = string.Format("{0}{1}{2}{3}{4}{5}", state.DefaultOperator, state.ShowFields, state.ShowEntries,
 		                                     state.UseTransformer, state.SkipTransform, state.Transformer);
 			return MD5Core.GetHashString(state.IndexName + state.Query + spatialString + optionString);

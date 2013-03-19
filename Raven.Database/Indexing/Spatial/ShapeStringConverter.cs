@@ -1,0 +1,93 @@
+﻿using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using Raven.Abstractions.Indexing;
+
+namespace Raven.Database.Indexing.Spatial
+{
+	/// <summary>
+	/// Converts spatial strings to WKT, if they aren't already
+	/// </summary>
+	public class ShapeStringConverter
+	{
+		private readonly SpatialOptions options;
+
+		private static readonly Regex RegexGeoUriCoord = new Regex(@"^ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* , \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ,? \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+))? $",
+		                                                           RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private static readonly Regex RegexGeoUriUncert = new Regex(@"^ u \s* = \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) $",
+																	RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+		public ShapeStringConverter(SpatialOptions options)
+		{
+			this.options = options;
+		}
+
+		public string ConvertToWKT(string shape)
+		{
+			if (!string.IsNullOrWhiteSpace(shape))
+			{
+				shape = shape.Trim();
+				string result;
+				if (TryParseGeoUri(shape, out result))
+					return result;
+
+				return shape;
+			}
+
+			return default(string);
+		}
+
+		private bool TryParseGeoUri(string uriString, out string shape)
+		{
+			shape = default(string);
+
+			if (!uriString.StartsWith("geo:"))
+				return false;
+
+			var components = uriString.Substring(4, uriString.Length - 4).Split(';').Select(x => x.Trim());
+
+			double[] coordinate = null;
+			var uncertainty = double.NaN;
+
+			foreach (var component in components)
+			{
+				var coord = RegexGeoUriCoord.Match(component);
+				if (coord.Success)
+				{
+					if (coord.Groups.Count > 1)
+						coordinate = new[] { double.Parse(coord.Groups[1].Value), double.Parse(coord.Groups[2].Value) };
+					continue;
+				}
+				var u = RegexGeoUriUncert.Match(component);
+				if (u.Success)
+				{
+					uncertainty = double.Parse(u.Groups[1].Value);
+
+					// Uncertainty is in meters when in a geographic context
+					if (uncertainty > 0 && options.Type != SpatialFieldType.Geography)
+						uncertainty = uncertainty / 1000;
+				}
+			}
+
+			if (coordinate == null)
+				return false;
+
+			if (!double.IsNaN(uncertainty) && uncertainty > 0)
+				shape = MakeCircle(coordinate[0], coordinate[1], uncertainty);
+			else
+				shape = MakePoint(coordinate[0], coordinate[1]);
+
+			return true;
+		}
+
+		protected string MakePoint(double x, double y)
+		{
+			return string.Format(CultureInfo.InvariantCulture, "POINT ({0} {1})", x, y);
+		}
+
+		protected string MakeCircle(double x, double y, double radius)
+		{
+			return string.Format(CultureInfo.InvariantCulture, "Circle({0} {1} d={2})", x, y, radius);
+		}
+	}
+}
