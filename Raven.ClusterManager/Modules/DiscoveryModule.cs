@@ -38,20 +38,18 @@ namespace Raven.ClusterManager.Modules
 				return "started";
 			};
 
-			Post["/notify"] = parameters => Notify();
-		}
+			Post["/notify", true] = async (parameters, ct) =>
+			{
+				var input = this.Bind<ServerRecord>("Id");
 
-		private async Task<object> Notify()
-		{
-			var input = this.Bind<ServerRecord>("Id");
+				var server = session.Query<ServerRecord>().FirstOrDefault(s => s.Url == input.Url) ?? new ServerRecord();
+				this.BindTo(server, "Id");
+				await session.StoreAsync(server);
 
-			var server = session.Query<ServerRecord>().FirstOrDefault(s => s.Url == input.Url) ?? new ServerRecord();
-			this.BindTo(server, "Id");
-			await session.StoreAsync(server);
+				await HealthMonitorTask.FetchServerDatabases(server, session.Advanced.DocumentStore);
 
-			await HealthMonitorTask.FetchServerDatabases(server, session.Advanced.DocumentStore);
-
-			return "notified";
+				return "notified";
+			};
 		}
 	}
 }

@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Nancy;
 using Nancy.ModelBinding;
 using Raven.Client;
-using Raven.Client.Connection.Async;
 using Raven.ClusterManager.Models;
 using Raven.ClusterManager.Tasks;
 using HttpStatusCode = System.Net.HttpStatusCode;
@@ -22,101 +19,102 @@ namespace Raven.ClusterManager.Modules
 		{
 			this.session = session;
 
-			Post["/test"] = parameters => TestCredentials(Request.Query.ServerId);
-
-			Post["/save"] = parameters => SaveCredentials(Request.Query.ServerId);
-		}
-
-		private async Task<object> SaveCredentials(string serverId)
-		{
-			var serverRecord = await session.LoadAsync<ServerRecord>(serverId);
-			if (serverRecord == null)
-				return new NotFoundResponse();
-
-			var credentials = this.Bind<ServerCredentials>();
-			await session.StoreAsync(credentials);
-			serverRecord.CredentialsId = credentials.Id;
-
-			await HealthMonitorTask.FetchServerDatabasesAsync(serverRecord, session);
-			return null;
-		}
-
-		private async Task<object> TestCredentials(string serverId)
-		{
-			var serverRecord = await session.LoadAsync<ServerRecord>(serverId);
-			if (serverRecord == null)
-				return new NotFoundResponse();
-
-			var credentials = this.Bind<ServerCredentials>();
-
-			var client = await ServerHelpers.CreateAsyncServerClient(session, serverRecord, credentials);
-
-
-			try
+			Post["/test", true] = async (parameters, ct) =>
 			{
-				var adminStatistics = await client.Admin.GetStatisticsAsync();
-			}
-			catch (AggregateException ex)
-			{
-				var exception = ex.ExtractSingleInnerException();
+				string serverId = Request.Query.ServerId;
 
-				var webException = exception as WebException;
-				if (webException != null)
+				var serverRecord = await session.LoadAsync<ServerRecord>(serverId);
+				if (serverRecord == null)
+					return new NotFoundResponse();
+
+				var credentials = this.Bind<ServerCredentials>();
+				await session.StoreAsync(credentials);
+				serverRecord.CredentialsId = credentials.Id;
+
+				await HealthMonitorTask.FetchServerDatabasesAsync(serverRecord, session);
+				return null;
+			};
+
+			Post["/save", true] = async (parameters, ct) =>
+			{
+				string serverId = Request.Query.ServerId;
+
+				var serverRecord = await session.LoadAsync<ServerRecord>(serverId);
+				if (serverRecord == null)
+					return new NotFoundResponse();
+
+				var credentials = this.Bind<ServerCredentials>();
+
+				var client = await ServerHelpers.CreateAsyncServerClient(session, serverRecord, credentials);
+
+
+				try
 				{
-					var response = webException.Response as HttpWebResponse;
-					if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
+					var adminStatistics = await client.Admin.GetStatisticsAsync();
+				}
+				catch (AggregateException ex)
+				{
+					var exception = ex.ExtractSingleInnerException();
+
+					var webException = exception as WebException;
+					if (webException != null)
 					{
-						var failMessage = "Unauthorized. ";
-						if (credentials.AuthenticationMode == AuthenticationMode.ApiKey)
+						var response = webException.Response as HttpWebResponse;
+						if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
 						{
-							failMessage += " Check that the Api Kay exists and enabled on the server.";
+							var failMessage = "Unauthorized. ";
+							if (credentials.AuthenticationMode == AuthenticationMode.ApiKey)
+							{
+								failMessage += " Check that the Api Kay exists and enabled on the server.";
+							}
+							else
+							{
+								failMessage += " Check that the username exists in the server (or domain) and the password is correct and was not expired.";
+							}
+							return new CredentialsTest
+							{
+								Success = false,
+								Message = failMessage,
+								Type = "Unauthorized",
+								Exception = response.ToString(),
+							};
 						}
 						else
 						{
-							failMessage += " Check that the username exists in the server (or domain) and the password is correct and was not expired.";
+							return new CredentialsTest
+							{
+								Success = false,
+								Message = "Not found. Check that the server is online and that you have access to it.",
+								Type = "NotFound",
+								Exception = exception.ToString(),
+							};
 						}
-						return new CredentialsTest
-						{
-							Success = false,
-							Message = failMessage,
-							Type = "Unauthorized",
-							Exception = response.ToString(),
-						};
 					}
-					else
+
+					return new CredentialsTest
 					{
-						return new CredentialsTest
-						{
-							Success = false,
-							Message = "Not found. Check that the server is online and that you have access to it.",
-							Type = "NotFound",
-							Exception = exception.ToString(),
-						};
-					}
+						Success = false,
+						Message = "An error occurred. See exception for more details.",
+						Exception = exception.ToString(),
+					};
+				}
+				catch (Exception ex)
+				{
+					return new CredentialsTest
+					{
+						Success = false,
+						Message = "An error occurred.",
+						Exception = ex.ToString(),
+					};
 				}
 
 				return new CredentialsTest
 				{
-					Success = false,
-					Message = "An error occurred. See exception for more details.",
-					Exception = exception.ToString(),
+					Success = true,
 				};
-			}
-			catch (Exception ex)
-			{
-				return new CredentialsTest
-				{
-					Success = false,
-					Message = "An error occurred.",
-					Exception = ex.ToString(),
-				};
-			}
-
-			return new CredentialsTest
-			{
-				Success = true,
 			};
 		}
+
 	}
 
 	public class CredentialsTest
