@@ -42,7 +42,7 @@ namespace Raven.ClusterManager.Modules
 			{
 				var input = this.Bind<ServerRecord>("Id");
 
-				var server = session.Query<ServerRecord>().FirstOrDefault(s => s.Url == input.Url) ?? new ServerRecord();
+				var server = await session.Query<ServerRecord>().Where(s => s.Url == input.Url).FirstOrDefaultAsync() ?? new ServerRecord();
 				this.BindTo(server, "Id");
 				await session.StoreAsync(server);
 
