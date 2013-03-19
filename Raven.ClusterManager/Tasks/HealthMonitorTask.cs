@@ -228,15 +228,27 @@ namespace Raven.ClusterManager.Tasks
 			var document = replicationDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			databaseRecord.ReplicationDestinations = document.Destinations;
 
+			// Monitor the replicated destinations
 			foreach (var replicationDestination in databaseRecord.ReplicationDestinations)
 			{
 				if (replicationDestination.Disabled)
 					continue;
 
-				var replicationDestinationServer = await session.LoadAsync<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url)) ?? new ServerRecord();
-				if (DateTimeOffset.UtcNow - server.LastTriedToConnectAt <= MonitorInterval)
-					continue;
-
+				var replicationDestinationServer = await session.LoadAsync<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url));
+				if (replicationDestinationServer == null)
+				{
+					replicationDestinationServer = new ServerRecord
+					{
+						Url = replicationDestination.Url,
+					};
+					await session.StoreAsync(replicationDestinationServer);
+				}
+				else
+				{
+					if (DateTimeOffset.UtcNow - server.LastTriedToConnectAt <= TimeSpan.FromHours(1))
+						continue;
+				}
+				
 				await FetchServerDatabasesAsync(replicationDestinationServer, session);
 			}
 		}
