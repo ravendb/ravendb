@@ -41,9 +41,9 @@ namespace Raven.ClusterManager
 			base.ConfigureRequestContainer(container, context);
 
 			var store = container.Resolve<IDocumentStore>();
-			var documentSession = store.OpenSession();
 
-			container.Register(documentSession);
+			container.Register(store.OpenSession());
+			container.Register(store.OpenAsyncSession());
 		}
 
 		protected override void RequestStartup(TinyIoCContainer container, IPipelines pipelines, NancyContext context)
@@ -57,6 +57,14 @@ namespace Raven.ClusterManager
 					if (ctx.Response.StatusCode != HttpStatusCode.InternalServerError)
 					{
 						documentSession.SaveChanges();
+					}
+				}
+
+				using (var documentSession = container.Resolve<IAsyncDocumentSession>())
+				{
+					if (ctx.Response.StatusCode != HttpStatusCode.InternalServerError)
+					{
+						documentSession.SaveChangesAsync().Wait();
 					}
 				}
 			});

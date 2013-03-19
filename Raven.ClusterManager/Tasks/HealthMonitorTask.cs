@@ -101,6 +101,8 @@ namespace Raven.ClusterManager.Tasks
 						}
 					}
 				}
+
+				await session.SaveChangesAsync();
 			}
 		}
 
