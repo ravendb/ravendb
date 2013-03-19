@@ -181,7 +181,7 @@
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="0,5,0,0" d:IsLocked="True">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="0,5,0,0">
 				<TextBlock Text="Query"
 						   Margin="0,0,5,0"
 						   Style="{StaticResource Style_TextBlock_PagePartHeader}" VerticalAlignment="Center"/>
@@ -264,7 +264,7 @@
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
 
-					<StackPanel Visibility="{Binding IsLegacySpatialQuerySupported, Converter={StaticResource BooleanToVisibility}}"
+					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Converter={StaticResource BooleanToVisibility}}"
 								Margin="0,5">
 
 						<i:Interaction.Triggers>
