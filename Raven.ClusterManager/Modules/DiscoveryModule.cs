@@ -4,15 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Net.Sockets;
-using System.Threading.Tasks;
 using Nancy;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
-using Raven.Client.Document;
-using Raven.Client.Listeners;
 using Raven.ClusterManager.Discovery;
 using Raven.ClusterManager.Models;
 using Nancy.ModelBinding;
