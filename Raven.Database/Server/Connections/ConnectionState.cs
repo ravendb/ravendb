@@ -20,7 +20,6 @@ namespace Raven.Database.Server.Connections
 
         private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
 
-        private readonly string id;
         private EventsTransport eventsTransport;
 
         private int watchAllDocuments;
