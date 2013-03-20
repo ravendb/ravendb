@@ -296,7 +296,7 @@ namespace Raven.Client.Document
 
 			if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
-				throw new InvalidOperationException("Id covention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
+				throw new InvalidOperationException("Id convention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
 			}
 
 			return DocumentKeyGenerator(dbName, databaseCommands, entity);
@@ -315,7 +315,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
-				throw new InvalidOperationException("Id covention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
+				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
 			}
 #endif
 

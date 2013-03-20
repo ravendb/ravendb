@@ -1,4 +1,3 @@
-#if !NETFX_CORE
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -41,7 +40,7 @@ namespace Raven.Client.Util
 		{
 			get
 			{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 				if (failedToGetAvailablePhysicalMemory)
 					return -1;
 
@@ -156,4 +155,3 @@ namespace Raven.Client.Util
 		}
 	}
 }
-#endif

@@ -375,12 +375,29 @@ namespace Raven.Client
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
+
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
 			return documentQuery.ToListAsync()
 				.ContinueWith(task => task.Result.Item2);
 		}
 
+		/// <summary>
+		/// Returns a first or default asynchronously. 
+		/// </summary>
+		public static Task<T> FirstOrDefaultAsync<T>(this IQueryable<T> source)
+		{
+			var provider = source.Provider as IRavenQueryProvider;
+			if (provider == null)
+				throw new ArgumentException("You can only use Raven Queryable with FirstOrDefaultAsync");
+
+			var documentQuery = provider
+				.ToAsyncLuceneQuery<T>(source.Expression)
+				.Take(1);
+			provider.MoveAfterQueryExecuted(documentQuery);
+			return documentQuery.ToListAsync()
+				.ContinueWith(task => task.Result.Item2.FirstOrDefault());
+		}
 
 		/// <summary>
 		/// Returns whatever the query has any results asynchronously

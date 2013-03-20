@@ -11,10 +11,13 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -31,6 +34,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }
+		IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get; }
+		IAsyncAdminDatabaseCommands Admin { get; }
+		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
 		/// Begins an async get operation
@@ -332,12 +338,35 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue);
 
-
 #if SILVERLIGHT
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
 #endif
+	
+	}
+
+	public interface IAsyncGlobalAdminDatabaseCommands
+	{
+		/// <summary>
+		/// Get admin statistics
+		/// </summary>
+		/// <returns></returns>
+		Task<AdminStatistics> GetStatisticsAsync();
+	}
+	
+	public interface IAsyncAdminDatabaseCommands
+	{
+		
+	}
+
+	public interface IAsyncInfoDatabaseCommands
+	{
+		/// <summary>
+		/// Get replication info
+		/// </summary>
+		/// <returns></returns>
+		Task<ReplicationStatistics> GetReplicationInfoAsync();
 	}
 }

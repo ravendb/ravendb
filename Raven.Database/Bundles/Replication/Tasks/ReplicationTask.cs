@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -23,13 +22,11 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
-using Raven.Database.Bundles.Replication;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Tasks
@@ -43,13 +40,13 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
-		public ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
+		public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
 
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
 			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
 
 		private DocumentDatabase docDb;
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
@@ -84,8 +81,6 @@ namespace Raven.Bundles.Replication.Tasks
 			// make sure that the doc db waits for the replication thread shutdown
 			docDb.ExtensionsState.GetOrAdd(Guid.NewGuid().ToString(), s => disposableAction);
 			thread.Start();
-
-
 		}
 
 		private void Execute()
@@ -285,7 +280,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private static string EscapeDestinationName(string url)
+		public static string EscapeDestinationName(string url)
 		{
 			return Uri.EscapeDataString(url.Replace("http://", "").Replace("/", "").Replace(":", ""));
 		}
@@ -295,8 +290,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if (firstTimeFoundNoReplicationDocument)
 			{
 				firstTimeFoundNoReplicationDocument = false;
-				log.Warn(
-					"Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nReplication results in NO-OP");
+				log.Warn("Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nReplication results in NO-OP");
 			}
 		}
 
@@ -501,11 +495,10 @@ namespace Raven.Bundles.Replication.Tasks
 			if (lastHeartbeatReceived.HasValue)
 				stats.LastHeartbeatReceived = lastHeartbeatReceived;
 
-			if (!String.IsNullOrWhiteSpace(lastError))
+			if (!string.IsNullOrWhiteSpace(lastError))
 				stats.LastError = lastError;
 			
-			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
-						 null);
+			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null, null);
 		}
 
 		private bool IsFirstFailure(string url)

@@ -37,13 +37,15 @@ namespace Raven.VisualHost
 			for (int i = 0; i < NumberOfServers.Value; i++)
 			{
 				var port = 8079 - i;
+				NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 				var ravenDbServer = new RavenDbServer(new RavenConfiguration
 				{
 					Port = port,
 					//DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Server-" + port, "Data"),
 					RunInMemory = true,
 					AnonymousUserAccessMode = AnonymousUserAccessMode.All,
-
+					ServerName = "DB-" + (i + 1).ToString("X2"),
+					ClusterName = "Visual Host Servers",
 				});
 
 				var serverLog = new ServerLog

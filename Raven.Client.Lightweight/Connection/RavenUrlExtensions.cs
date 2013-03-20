@@ -41,6 +41,16 @@ namespace Raven.Client.Connection
 			return url + "/stats";
 		}
 
+		public static string AdminStats(this string url)
+		{
+			return url + "/admin/stats";
+		}
+
+		public static string ReplicationInfo(this string url)
+		{
+			return url + "/replication/info";
+		}
+
 		//public static string Static(this string url, string key)
 		//{
 		//    return url + "/static/" + HttpUtility.UrlEncode(key);
