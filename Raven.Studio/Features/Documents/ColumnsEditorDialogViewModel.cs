@@ -148,7 +148,7 @@ namespace Raven.Studio.Features.Documents
         {
             SyncChangesWithColumnsModel();
 
-            var columnSet = new ColumnSet() {Columns = GetCurrentColumnDefinitions()};
+            var columnSet = new ColumnSet {Columns = GetCurrentColumnDefinitions()};
             var document = RavenJObject.FromObject(columnSet);
 
             ApplicationModel.DatabaseCommands.PutAsync("Raven/Studio/Columns/" + context, null, document, new RavenJObject());
@@ -199,9 +199,7 @@ namespace Raven.Studio.Features.Documents
         private void HandleDeleteSelectedColumn()
         {
             if (SelectedColumn == null || SelectedColumn.IsNewRow) 
-            {
                 return;
-            }
 
             Columns.Remove(SelectedColumn);
         }

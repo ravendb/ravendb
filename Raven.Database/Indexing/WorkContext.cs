@@ -123,6 +123,8 @@ namespace Raven.Database.Indexing
 
 		public void HandleWorkNotifications()
 		{
+			if (disposed)
+				return;
 			if (shouldNotifyOnWork.Value.Count == 0)
 				return;
 			NotifyAboutWork();
@@ -135,7 +137,8 @@ namespace Raven.Database.Indexing
 				if (doWork == false)
 				{
 					// need to clear this anyway
-					shouldNotifyOnWork.Value.Clear();
+					if(disposed == false)
+						shouldNotifyOnWork.Value.Clear();
 					return;
 				}
 				var increment = Interlocked.Increment(ref workCounter);
@@ -194,7 +197,10 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
+			disposed = true;
+
 			shouldNotifyOnWork.Dispose();
+
 			if (DocsPerSecCounter != null)
 				DocsPerSecCounter.Dispose();
 			if (ReducedPerSecCounter != null)
@@ -233,6 +239,7 @@ namespace Raven.Database.Indexing
 		private PerformanceCounter RequestsPerSecCounter { get; set; }
 		private PerformanceCounter ConcurrentRequestsCounter { get; set; }
 		private bool useCounters = true;
+		private bool disposed;
 
 		public float RequestsPerSecond
 		{
@@ -313,7 +320,7 @@ namespace Raven.Database.Indexing
 				{"# of concurrent requests", PerformanceCounterType.NumberOfItems32}
 			};
 
-			if (IsValidCategory(categoryName, instances) == false)
+			if (IsValidCategory(categoryName, instances, name) == false)
 			{
 				var counterCreationDataCollection = new CounterCreationDataCollection();
 				foreach (var instance in instances)
@@ -336,13 +343,17 @@ namespace Raven.Database.Indexing
 			ConcurrentRequestsCounter = new PerformanceCounter(categoryName, "# of concurrent requests", name, false);
 		}
 
-		private bool IsValidCategory(string categoryName, Dictionary<string, PerformanceCounterType> instances)
+		private bool IsValidCategory(string categoryName, Dictionary<string, PerformanceCounterType> instances, string instanceName)
 		{
 			if (PerformanceCounterCategory.Exists(categoryName) == false)
 				return false;
 			foreach (var performanceCounterType in instances)
 			{
-				if (PerformanceCounterCategory.CounterExists(performanceCounterType.Key, categoryName) == false)
+				try
+				{
+					new PerformanceCounter(categoryName, performanceCounterType.Key, instanceName, readOnly: true).Dispose();
+				}
+				catch (Exception)
 				{
 					PerformanceCounterCategory.Delete(categoryName);
 					return false;

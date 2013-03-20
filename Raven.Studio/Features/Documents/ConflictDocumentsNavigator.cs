@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 
@@ -31,57 +29,53 @@ namespace Raven.Studio.Features.Documents
             return builder.BuildUrl();
         }
 
-        public override Task<DocumentAndNavigationInfo> GetDocument()
+	    public override Task<DocumentAndNavigationInfo> GetDocument()
+	    {
+		    if (string.IsNullOrEmpty(id))
+		    {
+			    return
+				    QueryIndexForDocument()
+					    .ContinueWith(
+						    t =>
+						    {
+							    var info = PopulateDocumentOrConflictsFromDocuments(t.Result.Results.Select(r => r.ToJsonDocument()));
+							    info.TotalDocuments = t.Result.TotalResults;
+							    info.Index = itemIndex;
+							    info.ParentPath = GetParentPath();
+							    info.UrlForFirst = GetUrlForIndex(0);
+							    info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+							    info.UrlForNext = itemIndex < t.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null;
+							    info.UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1);
+							    return info;
+						    });
+		    }
+
+		    var getDocumentTask = DatabaseCommands.GetAsync(id);
+		    var getStatisticsTask = QueryIndexForDocument();
+
+		    return TaskEx.WhenAll(getDocumentTask, getStatisticsTask)
+		                 .ContinueWith(_ =>
+		                 {
+			                 var info = PopulateDocumentOrConflictsFromTask(getDocumentTask, id);
+			                 info.Index = itemIndex;
+			                 info.TotalDocuments = getStatisticsTask.Result.TotalResults;
+			                 info.ParentPath = GetParentPath();
+			                 info.UrlForFirst = GetUrlForIndex(0);
+			                 info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+			                 info.UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1
+				                                   ? GetUrlForIndex(itemIndex + 1)
+				                                   : null;
+			                 info.UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1);
+			                 return info;
+		                 }
+			    );
+	    }
+
+	    private Task<QueryResult> QueryIndexForDocument()
         {
-            if (string.IsNullOrEmpty(id))
-            {
-                return
-                    QueryIndexForDocument()
-                        .ContinueWith(
-                            t =>
-                            {
-                                var info = PopulateDocumentOrConflictsFromDocuments(t.Result.Results.Select(r => r.ToJsonDocument()));
-                                info.TotalDocuments = t.Result.TotalResults;
-                                info.Index = itemIndex;
-                                info.ParentPath = GetParentPath();
-                                info.UrlForFirst = GetUrlForIndex(0);
-                                info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
-                                info.UrlForNext = itemIndex < t.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null;
-                                info.UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1);
-                                return info;
-                            });
-            }
-            else
-            {
-                var getDocumentTask = DatabaseCommands.GetAsync(id);
-                var getStatisticsTask = QueryIndexForDocument();
+            var query = new IndexQuery {Start = itemIndex, PageSize = 1, SkipTransformResults = true};
 
-                return TaskEx.WhenAll(getDocumentTask, getStatisticsTask)
-                    .ContinueWith(_ =>
-                    {
-                        var info = PopulateDocumentOrConflictsFromTask(getDocumentTask, id);
-                        info.Index = itemIndex;
-                        info.TotalDocuments = getStatisticsTask.Result.TotalResults;
-                        info.ParentPath = GetParentPath();
-                        info.UrlForFirst = GetUrlForIndex(0);
-                        info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
-                        info.UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null;
-                        info.UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1);
-                        return
-                            info;
-                    }
-                    );
-            }
-        }
-
-        private Task<QueryResult> QueryIndexForDocument()
-        {
-            var query = new IndexQuery();
-            query.Start = itemIndex;
-            query.PageSize = 1;
-            query.SkipTransformResults = true;
-
-            return DatabaseCommands.QueryAsync(ConflictsIndexName, query, null);
+		    return DatabaseCommands.QueryAsync(ConflictsIndexName, query, null);
         }
 
         public override string GetUrlForNext()
@@ -118,11 +112,11 @@ namespace Raven.Studio.Features.Documents
 
         protected IList<PathSegment> GetParentPath()
         {
-            return new[]
-                       {
-                           new PathSegment { Name = "Documents", Url = "/Documents"},
-                           new PathSegment { Name = "Conflicts", Url = "/conflicts"},
-                       };
+	        return new[]
+	        {
+		        new PathSegment {Name = "Documents", Url = "/Documents"},
+		        new PathSegment {Name = "Conflicts", Url = "/conflicts"}
+	        };
         }
         
         public static DocumentNavigator ConflictsNavigatorFromUrl(UrlParser parser)

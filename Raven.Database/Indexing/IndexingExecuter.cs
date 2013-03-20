@@ -196,7 +196,7 @@ namespace Raven.Database.Indexing
 						}
 
 						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
-						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds/Math.Max(1, indexToWorkOn.Batch.Docs.Count);
+						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
 						indexToWorkOn.Index.CurrentMapIndexingTask = null;
 
 						return done;
@@ -488,8 +488,10 @@ namespace Raven.Database.Indexing
 				exceptionAggregator.Execute(pendingTask.Wait);
 			}
 			pendingTasks.Clear();
-			exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
-			exceptionAggregator.Execute(indexingSemaphore.Dispose);
+			if (indexingCompletedEvent != null)
+				exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
+			if (indexingSemaphore != null)
+				exceptionAggregator.Execute(indexingSemaphore.Dispose);
 			exceptionAggregator.ThrowIfNeeded();
 
 			indexingCompletedEvent = null;

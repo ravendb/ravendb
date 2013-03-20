@@ -1,3 +1,4 @@
+#if !NETFX_CORE
 using System;
 using System.Configuration;
 using System.Net;
@@ -9,10 +10,14 @@ namespace Raven.Abstractions.Data
 	{
 		public RavenConnectionStringOptions()
 		{
+#if MONO
+			EnlistInDistributedTransactions = false;
+#else
 			EnlistInDistributedTransactions = true;
+#endif
 		}
 
-		public NetworkCredential Credentials { get; set; }
+		public ICredentials Credentials { get; set; }
 		public bool EnlistInDistributedTransactions { get; set; }
 		public string DefaultDatabase { get; set; }
 		public Guid ResourceManagerId { get; set; }
@@ -32,7 +37,7 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			var user = Credentials == null ? "<none>" : Credentials.UserName;
+			var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
 			return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
 		}
 	}
@@ -50,12 +55,16 @@ namespace Raven.Abstractions.Data
 	{
 		public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
 		{
+#if !MONODROID && !SILVERLIGHT
 			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
 			if (connectionStringSettings == null)
 				throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
 
 		
 			return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
+#else
+			throw new ArgumentException(string.Format("Connection string not supported"));
+#endif
 		}
 
 		public static ConnectionStringParser<TConnectionString> FromConnectionString(string connectionString)
@@ -106,7 +115,13 @@ namespace Raven.Abstractions.Data
 						goto default;
 					bool result;
 					if (bool.TryParse(value, out result) == false)
+					{
+#if !MONODROID && !SILVERLIGHT
 						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
+#else
+						throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));
+#endif
+					}
 					embeddedRavenConnectionStringOptions.RunInMemory = result;
 					break;
 				case "datadir":
@@ -166,3 +181,4 @@ namespace Raven.Abstractions.Data
 		}
 	}
 }
+#endif

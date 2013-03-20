@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -23,7 +22,6 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Database;
-using Raven.Database.Bundles.Replication;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
@@ -35,18 +33,20 @@ namespace Raven.Bundles.Replication.Tasks
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof(IStartupTask))]
-	public class ReplicationTask : IStartupTask
+	public class ReplicationTask : IStartupTask, IDisposable
 	{
 		public class IntHolder
 		{
 			public int Value;
 		}
 
+		public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
+
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
 			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
 
 		private DocumentDatabase docDb;
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
@@ -81,8 +81,6 @@ namespace Raven.Bundles.Replication.Tasks
 			// make sure that the doc db waits for the replication thread shutdown
 			docDb.ExtensionsState.GetOrAdd(Guid.NewGuid().ToString(), s => disposableAction);
 			thread.Start();
-
-
 		}
 
 		private void Execute()
@@ -127,7 +125,7 @@ namespace Raven.Bundles.Replication.Tasks
 									if (Thread.VolatileRead(ref holder.Value) == 1)
 										continue;
 									Thread.VolatileWrite(ref holder.Value, 1);
-									Task.Factory.StartNew(() =>
+									var replicationTask = Task.Factory.StartNew(() =>
 									{
 										using (LogContext.WithDatabase(docDb.Name))
 										{
@@ -141,10 +139,22 @@ namespace Raven.Bundles.Replication.Tasks
 												log.ErrorException("Could not replicate to " + destination, e);
 											}
 										}
-									}, TaskCreationOptions.LongRunning);
+									});
+									activeTasks.Enqueue(replicationTask);
+									replicationTask.ContinueWith(_ =>
+									{
+										// here we purge all the completed tasks at the head of the queue
+										Task task;
+										while (activeTasks.TryPeek(out task))
+										{
+											if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted)
+												break;
+											activeTasks.TryDequeue(out task); // remove it from end
 								}
+									});
 							}
 						}
+					}
 					}
 					catch (Exception e)
 					{
@@ -270,7 +280,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private static string EscapeDestinationName(string url)
+		public static string EscapeDestinationName(string url)
 		{
 			return Uri.EscapeDataString(url.Replace("http://", "").Replace("/", "").Replace(":", ""));
 		}
@@ -280,8 +290,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if (firstTimeFoundNoReplicationDocument)
 			{
 				firstTimeFoundNoReplicationDocument = false;
-				log.Warn(
-					"Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nReplication results in NO-OP");
+				log.Warn("Replication bundle is installed, but there is no destination in 'Raven/Replication/Destinations'.\r\nReplication results in NO-OP");
 			}
 		}
 
@@ -486,11 +495,10 @@ namespace Raven.Bundles.Replication.Tasks
 			if (lastHeartbeatReceived.HasValue)
 				stats.LastHeartbeatReceived = lastHeartbeatReceived;
 
-			if (!String.IsNullOrWhiteSpace(lastError))
+			if (!string.IsNullOrWhiteSpace(lastError))
 				stats.LastError = lastError;
 			
-			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
-						 null);
+			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null, null);
 		}
 
 		private bool IsFirstFailure(string url)
@@ -961,6 +969,14 @@ namespace Raven.Bundles.Replication.Tasks
 			docDb.WorkContext.NotifyAboutWork();
 		}
 
+		public void Dispose()
+		{
+			Task task;
+			while (activeTasks.TryDequeue(out task))
+			{
+				task.Wait();
+			}
+		}
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 	}
 }

@@ -8,7 +8,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-	internal class CachedRequest
+	public class CachedRequest
 	{
 		public RavenJToken Data { get; set; }
 		public DateTimeOffset Time;
@@ -17,7 +17,7 @@ namespace Raven.Client.Connection
 		public bool ForceServerCheck;
 	}
 
-	internal class CachedRequestOp
+	public class CachedRequestOp
 	{
 		public CachedRequest CachedRequest;
 		public bool SkipServerCheck;

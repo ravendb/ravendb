@@ -1,4 +1,4 @@
-Contributing to Raven
+﻿Contributing to Raven
 =====================
 
 Where should I contribute?

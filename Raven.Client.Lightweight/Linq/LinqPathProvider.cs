@@ -97,17 +97,31 @@ namespace Raven.Client.Linq
 				MemberType = memberExpression.Member.GetMemberType()
 			};
 
-			var props = memberExpression.Member.GetCustomAttributes(false)
+			var jsonPropAttributes = memberExpression.Member.GetCustomAttributes(false)
 				.Where(x => x.GetType().Name == "JsonPropertyAttribute")
 				.ToArray();
 
-			if (props.Length != 0)
+			if (jsonPropAttributes.Length != 0)
 			{
-				string propertyName = ((dynamic)props[0]).PropertyName;
+				string propertyName = ((dynamic)jsonPropAttributes[0]).PropertyName;
 				if (String.IsNullOrEmpty(propertyName) == false)
 				{
 					result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
 					              propertyName;
+				}
+			}
+
+			var dataMemberAttributes = memberExpression.Member.GetCustomAttributes(false)
+				.Where(x => x.GetType().Name == "DataMemberAttribute")
+				.ToArray();
+
+			if (dataMemberAttributes.Length != 0)
+			{
+				string propertyName = ((dynamic)dataMemberAttributes[0]).Name;
+				if (String.IsNullOrEmpty(propertyName) == false)
+				{
+					result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
+								  propertyName;
 				}
 			}
 			
@@ -148,7 +162,7 @@ namespace Raven.Client.Linq
 					return value;
 
 				var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
-				if (value is Enum || nonNullableType.IsEnum)
+				if (value is Enum || nonNullableType.IsEnum())
 				{
 					if (value == null)
 						return null;

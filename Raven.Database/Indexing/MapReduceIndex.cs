@@ -28,8 +28,8 @@ using Raven.Abstractions.Linq;
 using Raven.Database.Data;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -133,14 +133,14 @@ namespace Raven.Database.Indexing
 			}
 
 			var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
-			        .Distinct()
-			        .ToList();
+					.Distinct()
+					.ToList();
 
 			var stats = new IndexingWorkStats(allState.Select(x => x.Item2));
 			var reduceKeyStats = allState.SelectMany(x => x.Item3)
-			                             .GroupBy(x => x.Key)
-			                             .Select(g => new {g.Key, Count = g.Sum(x => x.Value)})
-			                             .ToList();
+										 .GroupBy(x => x.Key)
+										 .Select(g => new { g.Key, Count = g.Sum(x => x.Value) })
+										 .ToList();
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
@@ -158,7 +158,7 @@ namespace Raven.Database.Indexing
 					accessor.MapReduce.ScheduleReductions(name, 0, enumerator.Current);
 				}
 			}));
-			
+
 
 			UpdateIndexingStats(context, stats);
 			AddindexingPerformanceStat(new IndexingPerformanceStats
@@ -250,10 +250,22 @@ namespace Raven.Database.Indexing
 
 		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
-			if (fieldsToFetch.IsProjection == false)
-				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
 			fieldsToFetch.EnsureHasField(Constants.ReduceKeyFieldName);
-			return base.RetrieveDocument(document, fieldsToFetch, score);
+			if (fieldsToFetch.IsProjection)
+			{
+				return base.RetrieveDocument(document, fieldsToFetch, score);
+			}
+			var field = document.GetField(Constants.ReduceValueFieldName);
+			if (field == null)
+			{
+				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
+				return base.RetrieveDocument(document, fieldsToFetch, score);
+			}
+			return new IndexQueryResult
+			{
+				Projection = RavenJObject.Parse(field.StringValue),
+				Score = score.Score
+			};
 		}
 
 		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
@@ -295,6 +307,9 @@ namespace Raven.Database.Indexing
 			private readonly string name;
 			readonly AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter;
 			private readonly Document luceneDoc = new Document();
+			private readonly Field reduceValueField = new Field(Constants.ReduceValueFieldName, "dummy",
+													 Field.Store.YES, Field.Index.NO);
+
 			private readonly Field reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
 													 Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
 			private PropertyDescriptorCollection properties = null;
@@ -318,7 +333,7 @@ namespace Raven.Database.Indexing
 				Actions = actions;
 				ReduceKeys = reduceKeys;
 
-				anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.indexDefinition);
+				anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.indexDefinition, ViewGenerator);
 
 				if (Level == 2)
 				{
@@ -364,13 +379,12 @@ namespace Raven.Database.Indexing
 				IEnumerable<AbstractField> fields;
 				if (doc is IDynamicJsonObject)
 				{
-
-					fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.YES);
+					fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.NO);
 				}
 				else
 				{
 					properties = properties ?? TypeDescriptor.GetProperties(doc);
-					fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.YES);
+					fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO);
 				}
 				if (Math.Abs(boost - 1) > float.Epsilon)
 				{
@@ -399,7 +413,40 @@ namespace Raven.Database.Indexing
 				var ravenJObject = doc as RavenJObject;
 				if (ravenJObject != null)
 					return ravenJObject;
-				return RavenJObject.FromObject(doc);
+				var jsonDocument = RavenJObject.FromObject(doc);
+				MergeArrays(jsonDocument);
+				return jsonDocument;
+			}
+
+			private static void MergeArrays(RavenJToken token)
+			{
+				if (token == null)
+					return;
+				switch (token.Type)
+				{
+					case JTokenType.Array:
+						var arr = (RavenJArray)token;
+						for (int i = 0; i < arr.Length; i++)
+						{
+							var current = arr[i];
+							if (current == null || current.Type != JTokenType.Array)
+								continue;
+							arr.RemoveAt(i);
+							i--;
+							var j = Math.Max(0, i);
+							foreach (var item in (RavenJArray)current)
+							{
+								arr.Insert(j++, item);
+							}
+						}
+						break;
+					case JTokenType.Object:
+						foreach (var kvp in ((RavenJObject)token))
+						{
+							MergeArrays(kvp.Value);
+						}
+						break;
+				}
 			}
 
 			public void ExecuteReduction()
@@ -497,28 +544,26 @@ namespace Raven.Database.Indexing
 
 				string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
 				reduceKeyField.SetValue(reduceKeyAsString);
-
+				reduceValueField.SetValue(ToJsonDocument(doc).ToString(Formatting.None));
 				luceneDoc.GetFields().Clear();
 				luceneDoc.Boost = boost;
 				luceneDoc.Add(reduceKeyField);
+				luceneDoc.Add(reduceValueField);
 				foreach (var field in fields)
 				{
 					luceneDoc.Add(field);
 				}
 
-				if (Level == 2)
-				{
-					batchers.ApplyAndIgnoreAllErrors(
-						exception =>
-						{
-							logIndexing.WarnException(
-								string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-											  name, reduceKeyAsString),
-								exception);
-							Context.AddError(name, reduceKeyAsString, exception.Message);
-						},
-						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
-				}
+				batchers.ApplyAndIgnoreAllErrors(
+					exception =>
+					{
+						logIndexing.WarnException(
+							string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+										  name, reduceKeyAsString),
+							exception);
+						Context.AddError(name, reduceKeyAsString, exception.Message);
+					},
+					trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 
 				parent.LogIndexedDocument(reduceKeyAsString, luceneDoc);
 

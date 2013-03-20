@@ -11,10 +11,13 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Client.Document;
-#if NETFX_CORE
+#if NETFX_CORE || SILVERLIGHT
 using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Client.WinRT.MissingFromWinRT;
 #else
 using System.Security.Cryptography;
+
+
 #endif
 
 namespace Raven.Client.Shard
@@ -62,15 +65,17 @@ namespace Raven.Client.Shard
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
 			Etag indexEtag;
-#if !SILVERLIGHT && !NETFX_CORE
+#if SILVERLIGHT
+			indexEtag = new Etag(Convert.ToBase64String(MD5Core.GetHash(buffer)));
+#elif  NETFX_CORE
+			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));			
+#else
 			using (var md5 = MD5.Create())
 			{
-                indexEtag = Etag.Parse(md5.ComputeHash(buffer));
+				indexEtag = Etag.Parse(md5.ComputeHash(buffer));
 			}
-#else
-			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));
 #endif
-            var results = queryResults.SelectMany(x => x.Results);
+			var results = queryResults.SelectMany(x => x.Results);
 
 			// apply sorting
 			if (query.SortedFields != null)
@@ -78,6 +83,8 @@ namespace Raven.Client.Shard
 				foreach (var sortedField in query.SortedFields)
 				{
 					var copy = sortedField;
+				    if (copy.Field.EndsWith("_Range"))
+				        copy.Field = copy.Field.Substring(0, copy.Field.Length - "_Range".Length);
 					results = sortedField.Descending ?
 						results.OrderByDescending(x => x.SelectTokenWithRavenSyntaxReturningSingleValue(copy.Field)) :
 						results.OrderBy(x => x.SelectTokenWithRavenSyntaxReturningSingleValue(copy.Field));
@@ -195,5 +202,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-
 #endif

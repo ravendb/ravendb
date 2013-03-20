@@ -663,7 +663,7 @@ namespace Raven.Client.Embedded
 			{
 				cmd.TransactionInformation = TransactionInformation;
 				return cmd;
-			}));
+			}).ToList());
 			if (batchResults != null)
 			{
 				foreach (var batchResult in batchResults.Where(batchResult => batchResult != null && batchResult.Metadata != null && batchResult.Metadata.IsSnapshot))
@@ -718,9 +718,10 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
-		public void ForceReadFromMaster()
+		public IDisposable ForceReadFromMaster()
 		{
 			// nothing to do, there is no replication for embedded 
+			return null;
 		}
 
 		/// <summary>

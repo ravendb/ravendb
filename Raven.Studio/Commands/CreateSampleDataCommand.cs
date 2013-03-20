@@ -60,15 +60,15 @@ namespace Raven.Studio.Commands
 		{
 			return database.Value != null
 				&& database.Value.Statistics.Value != null
-				   && database.Value.Statistics.Value.CountOfDocuments == 0;
+				&& database.Value.Statistics.Value.CountOfDocuments == 0;
 		}
 
 		public override void Execute(object parameter)
 		{
 			sampleDataTask.TaskStatus = TaskStatus.Started;
 			CreateSampleData().ProcessTasks()
-			                  .ContinueOnSuccessInTheUIThread(() => output("Sample Data Created"))
-							  .Finally(() => sampleDataTask.TaskStatus = TaskStatus.Ended);
+				.ContinueOnSuccessInTheUIThread(() => output("Sample Data Created"))
+				.Finally(() => sampleDataTask.TaskStatus = TaskStatus.Ended);
 		}
 
 		private IEnumerable<Task> CreateSampleData()
@@ -91,9 +91,7 @@ namespace Raven.Studio.Commands
 					var ravenJObject = index.Value<RavenJObject>("definition");
 					output("Adding index " + indexName);
 					var putDoc = commands
-						.PutIndexAsync(indexName,
-									   ravenJObject.JsonDeserialization<IndexDefinition>(),
-									   true);
+						.PutIndexAsync(indexName, ravenJObject.JsonDeserialization<IndexDefinition>(), true);
 					yield return putDoc;
 				}
 

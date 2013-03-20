@@ -17,7 +17,7 @@ namespace Raven.Database.Server.Responders.Debugging
 	{
 		public override string UrlPattern
 		{
-			get { return @"^/debug/user-info"; }
+			get { return @"^/debug/user-info$"; }
 		}
 
 		public override string[] SupportedVerbs
@@ -33,8 +33,7 @@ namespace Raven.Database.Server.Responders.Debugging
 				var anonymous = new UserInfo
 				                {
 					                Remark = "Using anonymous user",
-					                IsAdminGlobal =
-						                server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+					                IsAdminGlobal = server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
 				                };
 				context.WriteJson(RavenJObject.FromObject(anonymous));
 				return;

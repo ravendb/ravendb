@@ -34,7 +34,11 @@ namespace Raven.Abstractions.OAuth
 			}
 			if (apiKey != null)
 			{
+#if NETFX_CORE
+				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
+#else
 				e.Request.Headers["Has-Api-Key"] = "true";
+#endif
 			}
 		}
 

@@ -1,4 +1,4 @@
-This sample contains a simple example of Raven's replication and conflict resolution.
+﻿This sample contains a simple example of Raven's replication and conflict resolution.
 
 Start the servers using "Start Raven.ps1", this will start two instance of Raven, one on port 8080 (Master) and one on port 8081 (Slave)
 

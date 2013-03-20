@@ -1,3 +1,4 @@
+#if !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="HttpJsonRequest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -14,6 +15,9 @@ using System.Diagnostics;
 using System.IO;
 #if !SILVERLIGHT
 using System.IO.Compression;
+#endif
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using System.Net;
 using System.Text;
@@ -50,7 +54,6 @@ namespace Raven.Client.Connection
 		private string postedData;
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
-		public object Headers;
 		private Stream postedStream;
 		private bool writeCalled;
 		public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
@@ -494,6 +497,15 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
+		/// <summary>
+		/// Adds the operation header.
+		/// </summary>
+		public HttpJsonRequest AddOperationHeader(string key, string value)
+		{
+			webRequest.Headers[key] = value;
+			return this;
+		}
+
 		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
 			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
@@ -667,8 +679,9 @@ namespace Raven.Client.Connection
 			{
 				writer.Write(postedData);
 				writer.Flush();
-
+#if !MONO
 				compressed.Flush();
+#endif
 				dataStream.Flush();
 			}
 		}
@@ -874,7 +887,6 @@ namespace Raven.Client.Connection
 			}
 		}
 
-
 		public void PrepareForLongRequest()
 		{
 			Timeout = TimeSpan.FromHours(6);
@@ -882,3 +894,4 @@ namespace Raven.Client.Connection
 		}
 	}
 }
+#endif

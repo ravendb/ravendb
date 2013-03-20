@@ -140,8 +140,21 @@ namespace Raven.Storage.Esent.Backup
 
 			if (directories.Count == 0)
 			{
-				CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "Indexes")),
-						new DirectoryInfo(indexLocation));
+				foreach (var backupIndex in Directory.GetDirectories(Path.Combine(backupLocation, "Indexes")))
+				{
+					var indexName = Path.GetFileName(backupIndex);
+					var indexPath = Path.Combine(indexLocation, indexName);
+
+					try
+					{
+						CopyAll(new DirectoryInfo(backupIndex), new DirectoryInfo(indexPath));
+					}
+					catch (Exception ex)
+					{
+						ForceIndexReset(indexPath, indexName, ex);
+					}
+				}
+
 				return;
 			}
 
@@ -154,34 +167,55 @@ namespace Raven.Storage.Esent.Backup
 			foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, "Indexes")))
 			{
 				var indexName = Path.GetFileName(index);
-				var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
-					.Where(x=>string.IsNullOrEmpty(x) == false)
-					.Reverse();
 				var indexPath = Path.Combine(indexLocation, indexName);
-				output("Copying Index: " + indexName);
 
-				if (Directory.Exists(indexPath) == false)
-					Directory.CreateDirectory(indexPath);
-
-				foreach (var neededFile in filesList)
+				try
 				{
-					var found = false;
+					var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
+						.Where(x=>string.IsNullOrEmpty(x) == false)
+						.Reverse();
+					
+					output("Copying Index: " + indexName);
 
-					foreach (var directory in directories)
+					if (Directory.Exists(indexPath) == false)
+						Directory.CreateDirectory(indexPath);
+
+					foreach (var neededFile in filesList)
 					{
-						var possiblePathToFile = Path.Combine(directory, indexName, neededFile);
-						if (File.Exists(possiblePathToFile) == false) 
-							continue;
+						var found = false;
 
-						found = true;
-						File.Copy(possiblePathToFile, Path.Combine(indexPath, neededFile));
-						break;
+						foreach (var directory in directories)
+						{
+							var possiblePathToFile = Path.Combine(directory, indexName, neededFile);
+							if (File.Exists(possiblePathToFile) == false) 
+								continue;
+
+							found = true;
+							File.Copy(possiblePathToFile, Path.Combine(indexPath, neededFile));
+							break;
+						}
+
+						if(found == false)
+							output(string.Format("Error: File \"{0}\" is missing from index {1}", neededFile, indexName));
 					}
-
-					if(found == false)
-						output(string.Format("Error: File \"{0}\" is missing from index {1}", neededFile, indexName));
+				}
+				catch (Exception ex)
+				{
+					ForceIndexReset(indexPath, indexName, ex);
 				}
 			}
+		}
+
+		private void ForceIndexReset(string indexPath, string indexName, Exception ex)
+		{
+			if (Directory.Exists(indexPath))
+				IOExtensions.DeleteDirectory(indexPath); // this will force index reset
+
+			output(
+				string.Format(
+					"Error: Index {0} could not be restored. All already copied index files was deleted. " +
+					"Index will be recreated after launching Raven instance. Thrown exception:{1}{2}",
+					indexName, Environment.NewLine, ex));
 		}
 
 		private void CombineIncrementalBackups()

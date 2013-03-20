@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void LowLevelRemoteStreamAsync()
 		{
-			using (var store = NewRemoteDocumentStore(true))
+			using (var store = NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{

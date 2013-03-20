@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 
@@ -19,10 +20,12 @@ namespace Raven.Abstractions.MissingFromBCL
 		{
 			return type;
 		}
-
+#if !MONO
 		public static Type GetTypeInfo(this Type type)
 		{
 			return type;
 		}
+#endif
 	}
 }
+#endif

@@ -67,6 +67,7 @@ namespace Raven.Client
 		public virtual IDictionary<string,string> SharedOperationsHeaders { get; protected set; }
 #endif
 
+		public abstract bool HasJsonRequestFactory { get; }
 		public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
 		public abstract string Identifier { get; set; }
 		public abstract IDocumentStore Initialize();
@@ -175,6 +176,15 @@ namespace Raven.Client
 		}
 
 		/// <summary>
+		/// Registers the extended conversion listener.
+		/// </summary>
+		public DocumentStoreBase RegisterListener(IExtendedDocumentConversionListener conversionListener)
+		{
+			listeners.ExtendedConversionListeners = listeners.ExtendedConversionListeners.Concat(new[] { conversionListener, }).ToArray();
+			return this;
+		}
+
+		/// <summary>
 		/// Registers the query listener.
 		/// </summary>
 		/// <param name="queryListener">The query listener.</param>
@@ -278,5 +288,12 @@ namespace Raven.Client
 			return profilingContext.TryGet(id);
 		}
 
+		/// <summary>
+		/// Setup the context for aggressive caching.
+		/// </summary>
+		public IDisposable AggressivelyCache()
+		{
+			return AggressivelyCacheFor(TimeSpan.FromDays(1));
+		}
 	}
 }

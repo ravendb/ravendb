@@ -21,7 +21,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void LowLevelRemoteStream()
 		{
-			using (var store = NewRemoteDocumentStore(true))
+			using (var store = NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{

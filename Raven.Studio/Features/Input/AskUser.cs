@@ -33,6 +33,7 @@ namespace Raven.Studio.Features.Input
 				Title = title,
 				Question = question
 			};
+
 			var inputWindow = new InputWindow
 			{
 				DataContext = dataContext
@@ -60,6 +61,7 @@ namespace Raven.Studio.Features.Input
 				Title = title,
 				Question = question
 			};
+
 			var inputWindow = new InputWindowWithSuggestion
 			{
 				DataContext = dataContext
@@ -115,6 +117,7 @@ namespace Raven.Studio.Features.Input
 				Title = title,
 				Question = question
 			};
+
 			var inputWindow = new ConfirmWindow
 			{
 				DataContext = dataContext
@@ -142,6 +145,7 @@ namespace Raven.Studio.Features.Input
 				Title = title,
 				Question = question
 			};
+
 			var inputWindow = new ConfirmWindow
 			{
 				DataContext = dataContext

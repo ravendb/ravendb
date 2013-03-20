@@ -47,9 +47,9 @@ namespace Raven.Studio.Commands
 				};
 			}
 			catch (Exception e)
-			{
-				startBackupTask.ReportError(e);
-				throw;
+			{	
+					Infrastructure.Execute.OnTheUI(() => startBackupTask.ReportError(e));			
+					throw;
 			}
 		}
 	}

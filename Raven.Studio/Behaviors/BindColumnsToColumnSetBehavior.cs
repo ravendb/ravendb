@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -12,7 +10,6 @@ using System.Windows.Markup;
 using Raven.Studio.Extensions;
 using Raven.Studio.Features.Documents;
 using System.Linq;
-using Raven.Studio.Infrastructure.Converters;
 using ColumnDefinition = Raven.Studio.Features.Documents.ColumnDefinition;
 
 namespace Raven.Studio.Behaviors
@@ -219,7 +216,7 @@ namespace Raven.Studio.Behaviors
             
             if (cellTemplate != null)
             {
-                column = new DataGridTemplateColumn()
+                column = new DataGridTemplateColumn
                              {
                                  ClipboardContentBinding = columnDefinition.CreateBinding("Item.Document."),
                                  Header = columnDefinition.Header,
@@ -228,7 +225,7 @@ namespace Raven.Studio.Behaviors
             }
             else
             {
-                column = new DataGridTextColumn()
+                column = new DataGridTextColumn
                                  {
                                      Binding = new Binding( "NonExistantProperty"),
                                      Header = columnDefinition,
@@ -256,15 +253,10 @@ namespace Raven.Studio.Behaviors
         private DataGridLength ParseWidth(string defaultWidth)
         {
             if (string.IsNullOrEmpty(defaultWidth))
-            {
                 return new DataGridLength(100);
-            }
-            else
-            {
-                var converter = new DataGridLengthConverter();
-
-                return (DataGridLength)converter.ConvertFromString(defaultWidth);
-            }
+             
+			var converter = new DataGridLengthConverter();
+			return (DataGridLength)converter.ConvertFromString(defaultWidth);
         }
 
         private void RemoveColumn(ColumnDefinition columnDefinition)

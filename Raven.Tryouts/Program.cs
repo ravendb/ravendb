@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using System.Linq;
+using System.Threading.Tasks;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Tryouts
 {
@@ -12,8 +10,7 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var x = Path.GetDirectoryName(@"F:\");
-			Console.WriteLine(x);
-		} 
+		}
+
 	}
 }

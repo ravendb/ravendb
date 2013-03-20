@@ -15,13 +15,15 @@ namespace Raven.Abstractions.Smuggler
 {
 	public class SmugglerOptions
 	{
+		public string TransformScript { get; set; }
+
 		public SmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
-			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
+			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
-		    ShouldExcludeExpired = false;
+			ShouldExcludeExpired = false;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		}
 
@@ -48,7 +50,7 @@ namespace Raven.Abstractions.Smuggler
 			{
 				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
 			}
-			return (ItemType)Enum.Parse(typeof(ItemType), items);
+			return (ItemType)Enum.Parse(typeof(ItemType), items, ignoreCase: true);
 		}
 
 		/// <summary>
@@ -74,7 +76,7 @@ namespace Raven.Abstractions.Smuggler
 								? tuple.Item1.Value<string>()
 								: tuple.Item1.ToString(Formatting.None);
 					matchedFilter |= String.Equals(val, filter.Value, StringComparison.OrdinalIgnoreCase) ==
-					                 filter.ShouldMatch;
+									 filter.ShouldMatch;
 				}
 				if (matchedFilter == false)
 					return false;
@@ -82,48 +84,47 @@ namespace Raven.Abstractions.Smuggler
 			return true;
 		}
 
-        /// <summary>
-        /// Should we exclude any documents which have already expired by checking the expiration meta property created by the expiration bundle
-        /// </summary>
-        public bool ShouldExcludeExpired { get; set; }
+		/// <summary>
+		/// Should we exclude any documents which have already expired by checking the expiration meta property created by the expiration bundle
+		/// </summary>
+		public bool ShouldExcludeExpired { get; set; }
 
-        public virtual bool ExcludeExpired(RavenJToken item)
-        {
-            var metadata= item.Value<RavenJObject>("@metadata");
+		public virtual bool ExcludeExpired(RavenJToken item)
+		{
+			var metadata = item.Value<RavenJObject>("@metadata");
 
-            const string RavenExpirationDate = "Raven-Expiration-Date";
+			const string RavenExpirationDate = "Raven-Expiration-Date";
 
-            // check for expired documents and exclude them if expired
-	        if (metadata == null)
-	        {
-		        return false;
-	        }
-	        var property = metadata[RavenExpirationDate];
-	        if (property == null)
-		        return false;
+			// check for expired documents and exclude them if expired
+			if (metadata == null)
+			{
+				return false;
+			}
+			var property = metadata[RavenExpirationDate];
+			if (property == null)
+				return false;
 
-	        DateTime dateTime;
-	        try
-	        {
-		        dateTime = property.Value<DateTime>();
-	        }
-	        catch (FormatException)
-	        {
-		        return false;
-	        }
+			DateTime dateTime;
+			try
+			{
+				dateTime = property.Value<DateTime>();
+			}
+			catch (FormatException)
+			{
+				return false;
+			}
 
-	        return dateTime >= SystemTime.UtcNow;
-        }
+			return dateTime >= SystemTime.UtcNow;
+		}
 	}
-
-
 
 	[Flags]
 	public enum ItemType
 	{
 		Documents = 0x1,
 		Indexes = 0x2,
-		Attachments = 0x4
+		Attachments = 0x4,
+		Transformers = 0x8
 	}
 
 	public class FilterSetting

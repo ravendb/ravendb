@@ -58,7 +58,7 @@ namespace Raven.Client.Document.Async
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize)
 			                            .ContinueWith(task => (IEnumerable<T>) task.Result.Select(TrackEntity<T>).ToList());
 		}
-		
+
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query)
 		{
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());
@@ -68,6 +68,7 @@ namespace Raven.Client.Document.Async
 		{
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());
 		}
+
 
 		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
@@ -127,7 +128,6 @@ namespace Raven.Client.Document.Async
 
 			public StreamResult<T> Current { get; private set; }
 		}
-
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
