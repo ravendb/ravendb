@@ -286,6 +286,7 @@
     <Compile Include="Server\Responders\BulkInsert.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
     <Compile Include="Server\Responders\DatabaseStorageSizes.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugChanges.cs" />
     <Compile Include="Server\Responders\Debugging\DebugConfig.cs" />
     <Compile Include="Server\Responders\Debugging\DebugDocReferences.cs" />
     <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
