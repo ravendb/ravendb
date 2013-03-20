@@ -13,7 +13,6 @@ namespace Raven.ClusterManager.Modules
 			Get["/"] = parameters =>
 			{
 				var replicationDatabases = session.Query<DatabaseRecord>()
-				                       .Where(record => record.IsReplicationEnabled)
 				                       .OrderBy(record => record.Id)
 									   .Take(1024)
 				                       .ToList();

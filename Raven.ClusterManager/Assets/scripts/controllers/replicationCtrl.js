@@ -20,12 +20,16 @@ clusterManagerApp.controller('ReplicationCtrl', function replicationCtrl($scope,
                 nodes.push(graph.newNode({
                     label: replicationDatabase.serverId.replace('serverRecords/', '') + "/" + replicationDatabase.name,
                     url: replicationDatabase.serverUrl,
+                    databaseUrl: replicationDatabase.databaseUrl,
                     database: replicationDatabase.name
                 }));
             }
 
             for (var i = 0; i < replicationDatabases.length; i++) {
                 var replicationDatabase = replicationDatabases[i];
+                if (!replicationDatabase.isReplicationEnabled) {
+                    continue;
+                }
 
                 for (var j = 0; j < replicationDatabase.replicationDestinations.length; j++) {
                     var replicationDestination = replicationDatabase.replicationDestinations[j];
@@ -33,9 +37,12 @@ clusterManagerApp.controller('ReplicationCtrl', function replicationCtrl($scope,
                         return item.data.url.replace(/\/+$/, '') == replicationDatabase.serverUrl.replace(/\/+$/, '') &&
                                item.data.database == replicationDatabase.name;
                     })[0];
-                    var node2 = nodes.filter(function(item) {
-                        return item.data.url.replace(/\/+$/, '') == replicationDestination.url.replace(/\/+$/, '');
+                    var node2 = nodes.filter(function (item) {
+                        return item.data.databaseUrl == replicationDestination.url.replace(/\/+$/, '');
                     })[0];
+                    if (!node1 || !node2) {
+                        debugger
+                    }
                     graph.newEdge(node1, node2, { color: '#EB6841' });
                 }
             }

@@ -231,7 +231,7 @@ namespace Raven.ClusterManager.Tasks
 			var replicationStatistics = await dbCmds.Info.GetReplicationInfoAsync();
 			if (replicationStatistics != null)
 			{
-				server.ReplicationStatistics = replicationStatistics;
+				databaseRecord.ReplicationStatistics = replicationStatistics;
 			}
 
 			// Monitor the replicated destinations
@@ -240,12 +240,18 @@ namespace Raven.ClusterManager.Tasks
 				if (replicationDestination.Disabled)
 					continue;
 
-				var replicationDestinationServer = await session.LoadAsync<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(replicationDestination.Url));
+				var url = replicationDestination.Url;
+				var databasesIndex = url.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+				if (databasesIndex > 0)
+				{
+					url = url.Substring(0, databasesIndex);
+				}
+				var replicationDestinationServer = await session.LoadAsync<ServerRecord>("serverRecords/" + ReplicationTask.EscapeDestinationName(url));
 				if (replicationDestinationServer == null)
 				{
 					replicationDestinationServer = new ServerRecord
 					{
-						Url = replicationDestination.Url,
+						Url = url,
 					};
 					await session.StoreAsync(replicationDestinationServer);
 				}

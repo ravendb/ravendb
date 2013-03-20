@@ -21,7 +21,6 @@ namespace Raven.ClusterManager.Models
 		public bool IsUnauthorized { get; set; }
 
 		public string CredentialsId { get; set; }
-		public ReplicationStatistics ReplicationStatistics { get; set; }
 
 		public ServerRecord()
 		{
