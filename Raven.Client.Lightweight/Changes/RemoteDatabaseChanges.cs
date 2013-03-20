@@ -10,35 +10,41 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Database.Util;
+using Raven.Json.Linq;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #endif
-using Raven.Database.Util;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
 {
     public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+        private static int connectionCounter;
+        private readonly DocumentConvention conventions;
+        private readonly AtomicDictionary<LocalConnectionState> counters =
+            new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ICredentials credentials;
+        private readonly string id;
+        private readonly HttpJsonRequestFactory jsonRequestFactory;
+        private readonly Action onDispose;
+        private readonly Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+        private readonly ReplicationInformer replicationInformer;
+        private readonly string url;
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
-        private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
+        private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
+        private IDisposable connection;
+        private volatile bool disposed;
+        private Task lastSendTask;
         private bool watchAllDocs;
         private bool watchAllIndexes;
 
-        private readonly string url;
-        private readonly ICredentials credentials;
-        private readonly HttpJsonRequestFactory jsonRequestFactory;
-        private readonly DocumentConvention conventions;
-        private readonly ReplicationInformer replicationInformer;
-        private readonly Action onDispose;
-        private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
-
-        private static int connectionCounter;
-        private readonly string id;
-
-        public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose)
+        public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory,
+                                     DocumentConvention conventions, ReplicationInformer replicationInformer,
+                                     Action onDispose,
+                                     Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
         {
             ConnectionStatusChanged = LogOnConnectionStatusChanged;
             id = Interlocked.Increment(ref connectionCounter) + "/" +
@@ -49,103 +55,26 @@ namespace Raven.Client.Changes
             this.conventions = conventions;
             this.replicationInformer = replicationInformer;
             this.onDispose = onDispose;
+            this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
             Task = EstablishConnection()
                 .ObserveException()
                 .ContinueWith(task =>
                 {
                     task.AssertNotFailed();
-                    return (IDatabaseChanges)this;
+                    return (IDatabaseChanges) this;
                 });
-        }
-
-        private Task EstablishConnection()
-        {
-            if (disposed)
-                return new CompletedTask();
-
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
-            {
-                AvoidCachingRequest = true
-            };
-
-            logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);
-
-            return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
-                .ServerPullAsync()
-                .ContinueWith(task =>
-                {
-                    if (disposed)
-                        throw new ObjectDisposedException("RemoteDatabaseChanges");
-                    if (task.IsFaulted)
-                    {
-                        logger.WarnException("Could not connect to server: " + url + " and id " + id, task.Exception);
-                        Connected = false;
-                        ConnectionStatusChanged(this, EventArgs.Empty);
-
-                        if (disposed)
-                            return task;
-
-                        bool timeout;
-                        if (replicationInformer.IsServerDown(task.Exception, out timeout) == false)
-                            return task;
-
-                        if (replicationInformer.IsHttpStatus(task.Exception,
-                                HttpStatusCode.NotFound,
-                                HttpStatusCode.Forbidden))
-                            return task;
-
-                        logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
-                        return Time.Delay(TimeSpan.FromSeconds(15))
-                            .ContinueWith(_ => EstablishConnection())
-                            .Unwrap();
-                    }
-
-                    Connected = true;
-                    ConnectionStatusChanged(this, EventArgs.Empty);
-                    connection = (IDisposable)task.Result;
-                    task.Result.Subscribe(this);
-
-                    Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
-
-                    if (watchAllIndexes)
-                        prev = prev.ContinueWith(_ => Send("watch-indexes", null));
-
-                    prev = watchedDocs.Aggregate(prev, (cur, docId) => cur.ContinueWith(task1 => Send("watch-doc", docId)));
-
-                    prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
-
-                    prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
-
-                    return prev;
-                })
-                .Unwrap();
         }
 
         public bool Connected { get; private set; }
         public event EventHandler ConnectionStatusChanged;
 
-        private void LogOnConnectionStatusChanged(object sender, EventArgs eventArgs)
-        {
-            logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
-        }
-
         public Task<IDatabaseChanges> Task { get; private set; }
-
-        private Task AfterConnection(Func<Task> action)
-        {
-            return Task.ContinueWith(task =>
-            {
-                task.AssertNotFailed();
-                return action();
-            })
-            .Unwrap();
-        }
 
         public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
         {
-            var counter = counters.GetOrAdd("indexes/" + indexName, s =>
+            LocalConnectionState counter = counters.GetOrAdd("indexes/" + indexName, s =>
             {
-                var indexSubscriptionTask = AfterConnection(() =>
+                Task indexSubscriptionTask = AfterConnection(() =>
                 {
                     watchedIndexes.TryAdd(indexName);
                     return Send("watch-index", indexName);
@@ -170,52 +99,13 @@ namespace Raven.Client.Changes
 
 
             return taskedObservable;
-
-        }
-
-        private Task lastSendTask;
-
-        private Task Send(string command, string value)
-        {
-            lock (this)
-            {
-                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
-                var sendTask = lastSendTask;
-                if (sendTask != null)
-                {
-                    sendTask.ContinueWith(_ =>
-                    {
-                        Send(command, value);
-                    });
-                }
-
-                try
-                {
-                    var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
-                    if (string.IsNullOrEmpty(value) == false)
-                        sendUrl += "&value=" + Uri.EscapeUriString(value);
-
-                    sendUrl = sendUrl.NoCache();
-
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
-                    var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                    return lastSendTask =
-                        httpJsonRequest.ExecuteRequestAsync()
-                            .ObserveException()
-                            .ContinueWith(task => lastSendTask = null);
-                }
-                catch (Exception e)
-                {
-                    return new CompletedTask(e).Task.ObserveException();
-                }
-            }
         }
 
         public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
         {
-            var counter = counters.GetOrAdd("docs/" + docId, s =>
+            LocalConnectionState counter = counters.GetOrAdd("docs/" + docId, s =>
             {
-                var documentSubscriptionTask = AfterConnection(() =>
+                Task documentSubscriptionTask = AfterConnection(() =>
                 {
                     watchedDocs.TryAdd(docId);
                     return Send("watch-doc", docId);
@@ -242,9 +132,9 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForAllDocuments()
         {
-            var counter = counters.GetOrAdd("all-docs", s =>
+            LocalConnectionState counter = counters.GetOrAdd("all-docs", s =>
             {
-                var documentSubscriptionTask = AfterConnection(() =>
+                Task documentSubscriptionTask = AfterConnection(() =>
                 {
                     watchAllDocs = true;
                     return Send("watch-docs", null);
@@ -270,9 +160,9 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
         {
-            var counter = counters.GetOrAdd("all-indexes", s =>
+            LocalConnectionState counter = counters.GetOrAdd("all-indexes", s =>
             {
-                var indexSubscriptionTask = AfterConnection(() =>
+                Task indexSubscriptionTask = AfterConnection(() =>
                 {
                     watchAllIndexes = true;
                     return Send("watch-indexes", null);
@@ -299,9 +189,9 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
         {
-            var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
+            LocalConnectionState counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
             {
-                var documentSubscriptionTask = AfterConnection(() =>
+                Task documentSubscriptionTask = AfterConnection(() =>
                 {
                     watchedPrefixes.TryAdd(docIdPrefix);
                     return Send("watch-prefix", docIdPrefix);
@@ -328,9 +218,9 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
         {
-            var counter = counters.GetOrAdd("all-replication-conflicts", s =>
+            LocalConnectionState counter = counters.GetOrAdd("all-replication-conflicts", s =>
             {
-                var indexSubscriptionTask = AfterConnection(() =>
+                Task indexSubscriptionTask = AfterConnection(() =>
                 {
                     watchAllIndexes = true;
                     return Send("watch-replication-conflicts", null);
@@ -371,33 +261,9 @@ namespace Raven.Client.Changes
             DisposeAsync();
         }
 
-        private volatile bool disposed;
-        private IDisposable connection;
-
-        public Task DisposeAsync()
-        {
-            if (disposed)
-                return new CompletedTask();
-            disposed = true;
-            onDispose();
-
-            return Send("disconnect", null).
-                ContinueWith(_ =>
-                {
-                    try
-                    {
-                        connection.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        logger.WarnException("Error when disposing of connection", e);
-                    }
-                });
-        }
-
         public void OnNext(string dataFromConnection)
         {
-            var ravenJObject = RavenJObject.Parse(dataFromConnection);
+            RavenJObject ravenJObject = RavenJObject.Parse(dataFromConnection);
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
 
@@ -419,6 +285,31 @@ namespace Raven.Client.Changes
                     {
                         counter.Value.Send(indexChangeNotification);
                     }
+                    break;
+                case "ReplicationConflictNotification":
+                    var replicationConflictNotification = value.JsonDeserialization<ReplicationConflictNotification>();
+                    foreach (var counter in counters)
+                    {
+                        counter.Value.Send(replicationConflictNotification);
+                    }
+
+                    if (replicationConflictNotification.ItemType == ReplicationConflictTypes.DocumentReplicationConflict)
+                    {
+                        tryResolveConflictByUsingRegisteredConflictListenersAsync(replicationConflictNotification.Id,
+                                                                             replicationConflictNotification.Etag,
+                                                                             replicationConflictNotification.Conflicts, null)
+                            .ContinueWith(t =>
+                            {
+                                t.AssertNotFailed();
+
+                                if (t.Result)
+                                {
+                                    logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+                                                 replicationConflictNotification.Id);
+                                }
+                            });
+                    }
+
                     break;
                 case "Initialized":
                 case "Heartbeat":
@@ -449,6 +340,150 @@ namespace Raven.Client.Changes
 
         public void OnCompleted()
         {
+        }
+
+        private Task EstablishConnection()
+        {
+            if (disposed)
+                return new CompletedTask();
+
+            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET",
+                                                                credentials, conventions)
+            {
+                AvoidCachingRequest = true
+            };
+
+            logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);
+
+            return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
+                                     .ServerPullAsync()
+                                     .ContinueWith(task =>
+                                     {
+                                         if (disposed)
+                                             throw new ObjectDisposedException("RemoteDatabaseChanges");
+                                         if (task.IsFaulted)
+                                         {
+                                             logger.WarnException(
+                                                 "Could not connect to server: " + url + " and id " + id, task.Exception);
+                                             Connected = false;
+                                             ConnectionStatusChanged(this, EventArgs.Empty);
+
+                                             if (disposed)
+                                                 return task;
+
+                                             bool timeout;
+                                             if (replicationInformer.IsServerDown(task.Exception, out timeout) == false)
+                                                 return task;
+
+                                             if (replicationInformer.IsHttpStatus(task.Exception,
+                                                                                  HttpStatusCode.NotFound,
+                                                                                  HttpStatusCode.Forbidden))
+                                                 return task;
+
+                                             logger.Warn(
+                                                 "Failed to connect to {0} with id {1}, will try again in 15 seconds",
+                                                 url, id);
+                                             return Time.Delay(TimeSpan.FromSeconds(15))
+                                                        .ContinueWith(_ => EstablishConnection())
+                                                        .Unwrap();
+                                         }
+
+                                         Connected = true;
+                                         ConnectionStatusChanged(this, EventArgs.Empty);
+                                         connection = (IDisposable) task.Result;
+                                         task.Result.Subscribe(this);
+
+                                         Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
+
+                                         if (watchAllIndexes)
+                                             prev = prev.ContinueWith(_ => Send("watch-indexes", null));
+
+                                         prev = watchedDocs.Aggregate(prev,
+                                                                      (cur, docId) =>
+                                                                      cur.ContinueWith(task1 => Send("watch-doc", docId)));
+
+                                         prev = watchedPrefixes.Aggregate(prev,
+                                                                          (cur, prefix) =>
+                                                                          cur.ContinueWith(
+                                                                              task1 => Send("watch-prefix", prefix)));
+
+                                         prev = watchedIndexes.Aggregate(prev,
+                                                                         (cur, index) =>
+                                                                         cur.ContinueWith(
+                                                                             task1 => Send("watch-indexes", index)));
+
+                                         return prev;
+                                     })
+                                     .Unwrap();
+        }
+
+        private void LogOnConnectionStatusChanged(object sender, EventArgs eventArgs)
+        {
+            logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
+        }
+
+        private Task AfterConnection(Func<Task> action)
+        {
+            return Task.ContinueWith(task =>
+            {
+                task.AssertNotFailed();
+                return action();
+            })
+                       .Unwrap();
+        }
+
+        private Task Send(string command, string value)
+        {
+            lock (this)
+            {
+                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
+                Task sendTask = lastSendTask;
+                if (sendTask != null)
+                {
+                    sendTask.ContinueWith(_ => { Send(command, value); });
+                }
+
+                try
+                {
+                    string sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
+                    if (string.IsNullOrEmpty(value) == false)
+                        sendUrl += "&value=" + Uri.EscapeUriString(value);
+
+                    sendUrl = sendUrl.NoCache();
+
+                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
+                    HttpJsonRequest httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+                    return lastSendTask =
+                           httpJsonRequest.ExecuteRequestAsync()
+                                          .ObserveException()
+                                          .ContinueWith(task => lastSendTask = null);
+                }
+                catch (Exception e)
+                {
+                    return new CompletedTask(e).Task.ObserveException();
+                }
+            }
+        }
+
+        public Task DisposeAsync()
+        {
+            if (disposed)
+                return new CompletedTask();
+            disposed = true;
+            onDispose();
+
+            return Send("disconnect", null).
+                ContinueWith(_ =>
+                {
+                    try
+                    {
+                        connection.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        logger.WarnException("Error when disposing of connection", e);
+                    }
+                });
         }
     }
 }
