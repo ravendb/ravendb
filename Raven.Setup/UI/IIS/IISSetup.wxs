@@ -36,8 +36,6 @@
 
         <Control Id="CustomAppPoolCheckBox" Type="CheckBox" X="45" Y="134" Width="250" Height="15" Property="CUSTOM_APPLICATION_POOL" CheckBoxValue="1" >
           <Text>Use a custom application pool instead of the web site default</Text>
-          <!--<Publish Property="APPLICATION_POOL_TYPE" Value="EXISTING">NOT CUSTOM_APPLICATION_POOL</Publish>
-          <Publish Property="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity">NOT CUSTOM_APPLICATION_POOL</Publish>-->
         </Control>
       </Dialog>
     </UI>

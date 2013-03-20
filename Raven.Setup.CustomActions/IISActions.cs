@@ -76,7 +76,7 @@ namespace Raven.Setup.CustomActions
                             session["WEBSITE_DESCRIPTION"] = (string)record[2];
                             session["WEBSITE_PATH"] = (string)record[3];
 
-							session.DoAction("SetIISInstallFolder");
+							//session.DoAction("SetIISInstallFolder");
                         }
                     }
                 }
@@ -222,7 +222,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				session.Log("Exception was thrown during UpdateIISPropsWithSelectedWebSite custom action execution" + ex.ToString());
+				session.Log("Exception was thrown during UpdateIISPropsWithSelectedWebSite custom action execution" + ex);
 				return ActionResult.Failure;
 			}
 		}
@@ -233,7 +233,7 @@ namespace Raven.Setup.CustomActions
 
 			using (var iisManager = new ServerManager())
 			{
-				pools.AddRange(iisManager.ApplicationPools.Select(p => p.Name));
+				pools.AddRange(iisManager.ApplicationPools.Where(p => p.ManagedPipelineMode == ManagedPipelineMode.Integrated && p.ManagedRuntimeVersion == "v4.0").Select(p => p.Name));
 			}
 
 			return pools;

@@ -31,7 +31,7 @@
                      Type="raw" />
   </Property>
 
-  <Property Id="WEB_APP_POOL_NAME" />
+  <Property Id="WEB_APP_POOL_NAME" Value="RavenApplicationPool" />
   <Property Id="WEB_APP_POOL_IDENTITY_PWD" Hidden="yes" />
 
   <SetProperty Id="WEB_APP_POOL_IDENTITY_DOMAIN" Value="[%USERDOMAIN]" Before="CostFinalize" Sequence="ui"/>

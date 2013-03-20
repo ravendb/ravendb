@@ -6,7 +6,7 @@
                   DllEntry="UpdateIISPropsWithSelectedAppPool" Execute="immediate"
                   Return="check" />
    
-    <Property Id="APPLICATION_POOL_TYPE" Value="EXISTING" />
+    <Property Id="APPLICATION_POOL_TYPE" Value="NEW" />
     <Property Id="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity" />
 
     <Property Id="APPPOOL" Value="0"/>
@@ -16,8 +16,8 @@
       <Dialog Id="AppPoolSettingsDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
-          <!--<Condition Action="disable">SERVICE_NAME = "" OR SERVICE_PORT = ""</Condition>
-          <Condition Action="enable"><![CDATA[SERVICE_NAME <> "" AND SERVICE_PORT <> ""]]></Condition>-->
+          <Condition Action="disable"><![CDATA[APPLICATION_POOL_TYPE = "NEW" AND WEB_APP_POOL_NAME = ""]]></Condition>
+          <Condition Action="enable"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING" OR (WEB_APP_POOL_NAME <> "")]]></Condition>
         </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
@@ -29,13 +29,11 @@
           <Text>{\WixUI_Font_Title}Application Pool Settings</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
-        <Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="170" Height="31" X="15" Y="56">
+        <Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="240" Height="31" X="15" Y="56">
           <RadioButtonGroup Property="APPLICATION_POOL_TYPE">
-            <RadioButton Text="Use an existing one" Value="EXISTING" Height="17" Width="170" X="0" Y="0" />
-            <RadioButton Text="Create a new one" Value="NEW" Height="17" Width="170" X="0" Y="15" />
+            <RadioButton Text="Create a new one" Value="NEW" Height="17" Width="170" X="0" Y="0" />
+            <RadioButton Text="Use an existing one (Integrated mode, .NET Framework v4.0)" Value="EXISTING" Height="17" Width="240" X="0" Y="15" />
           </RadioButtonGroup>
-          <!--<Publish Property="WEB_APP_POOL_NAME" Value="RavenApplicationPool"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Publish>
-          <Publish Property="WEB_APP_POOL_NAME" Value="DefaultAppPool"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Publish>-->
         </Control>
         <Control Id="PoolNameLabel" Type="Text" X="40" Y="94" Width="52" Height="15" TabSkip="no" Text="&amp;Pool name:" />
         <Control Id="PoolNameEdit" Type="Edit" X="98" Y="92" Width="224" Height="15" Property="WEB_APP_POOL_NAME" Text="{80}">
