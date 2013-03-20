@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 	<Fragment>
     <DirectoryRef Id='Bin'>
         <Component Id="Raven.Web" Guid="135622C2-2005-4316-90E8-B54887128834">
@@ -10,6 +11,32 @@
       <Component Id="Raven.Web.Config" Guid="{B2E0822E-B80A-4BA2-851B-CA025BC61333}">
         <File Id='web.config' Name='web.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\Web.config'>
         </File>
+        <util:XmlFile Id="AddEmptySettingIIS"
+                 Action="createElement"
+                 Permanent="yes"
+                 ElementPath="/configuration/appSettings"
+                 Name="add"
+                 File="[#web.config]"
+                 SelectionLanguage="XSLPattern"
+                 Sequence="2" />
+        <util:XmlFile Id="AddRavenLicensePathKeyIIS"
+                 Action="setValue"
+                 Permanent="yes"
+                 ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
+                 Name="key"
+                 Value="Raven/LicensePath"
+                 File="[#web.config]"
+                 SelectionLanguage="XSLPattern"
+                 Sequence="3" />
+        <util:XmlFile Id="SetLicenseFilePathIIS"
+                 Action="setValue"
+                 Permanent="yes"
+                 ElementPath="/configuration/appSettings/add[\[]@key='Raven/LicensePath'[\]]"
+                 Name="value"
+                 File="[#web.config]"
+                 Value="[RAVEN_LICENSE_FILE_PATH]"
+                 SelectionLanguage="XSLPattern"
+                 Sequence="4" />
       </Component>
       <Component Id="PersistWebSiteValues" Guid="{BA5C1D27-7DD0-4521-BE13-4BC0A57D9D1D}">
         <RegistryKey Action="create" Root="HKLM"
