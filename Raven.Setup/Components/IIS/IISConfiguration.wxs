@@ -19,6 +19,8 @@
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
+          <iis:WebDirProperties Id="VirtualDirProperties0" AnonymousAccess="yes" BasicAuthentication="no"
+             WindowsAuthentication="yes" />
           <iis:WebApplication Id="Application0" Name="[WEBSITE_VD]" />
         </iis:WebVirtualDir>
       </Component>
@@ -33,6 +35,8 @@
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
+          <iis:WebDirProperties Id="VirtualDirProperties1" AnonymousAccess="yes" BasicAuthentication="no"
+             WindowsAuthentication="yes" />
           <iis:WebApplication Id="Application1" Name="[WEBSITE_VD]" WebAppPool="AppPool1" />
         </iis:WebVirtualDir>
       </Component>
@@ -47,6 +51,8 @@
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
+          <iis:WebDirProperties Id="VirtualDirProperties2" AnonymousAccess="yes" BasicAuthentication="no"
+             WindowsAuthentication="yes" />
           <iis:WebApplication Id="Application2" Name="[WEBSITE_VD]" WebAppPool="AppPool2" />
         </iis:WebVirtualDir>
       </Component>
@@ -63,6 +69,8 @@
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
+          <iis:WebDirProperties Id="VirtualDirProperties3" AnonymousAccess="yes" BasicAuthentication="no"
+             WindowsAuthentication="yes" />
           <iis:WebApplication Id="Application3" Name="[WEBSITE_VD]" WebAppPool="AppPool3" />
         </iis:WebVirtualDir>
       </Component>
@@ -80,6 +88,8 @@
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
+          <iis:WebDirProperties Id="VirtualDirProperties4" AnonymousAccess="yes" BasicAuthentication="no"
+             WindowsAuthentication="yes" />
           <iis:WebApplication Id="Application4" Name="[WEBSITE_VD]" WebAppPool="AppPool4" />
         </iis:WebVirtualDir>
       </Component>
@@ -97,6 +107,8 @@
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
+          <iis:WebDirProperties Id="VirtualDirProperties5" AnonymousAccess="yes" BasicAuthentication="no"
+             WindowsAuthentication="yes" />
           <iis:WebApplication Id="Application5" Name="[WEBSITE_VD]" WebAppPool="AppPool5" />
         </iis:WebVirtualDir>
       </Component>
@@ -120,53 +132,15 @@
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
                   WebSite="SelectedWebSite">
+          <iis:WebDirProperties Id="VirtualDirProperties6" AnonymousAccess="yes" BasicAuthentication="no"
+             WindowsAuthentication="yes" />
           <iis:WebApplication Id="Application6" Name="[WEBSITE_VD]" WebAppPool="AppPool6" />
         </iis:WebVirtualDir>
       </Component>
 
-      <!--<Component Id="DefaultApplicationPoolComponent" Guid="{50D5E86E-4ED9-4E9A-8904-09A2B94CEE2D}" KeyPath="yes">
-        --><!--<Condition>TODO arek</Condition>--><!--
-        --><!--<util:User Id="ApplicationPoolUser"
-                   CreateUser="no"
-                   Name="[WEB_APP_POOL_IDENTITY_NAME]"
-                   Password="[WEB_APP_POOL_IDENTITY_PWD]"
-                   Domain="[WEB_APP_POOL_IDENTITY_DOMAIN]"/>--><!--
-        <iis:WebAppPool Id="RavenAppPool"
-                        Name="[WEB_APP_POOL_NAME]"
-                        ManagedPipelineMode="Integrated"
-                        ManagedRuntimeVersion="v4.0"
-                       />
-      
-      --><!--<iis:WebAppPool Id="RavenAppPool"
-                        Name="[WEB_APP_POOL_NAME]"
-                        Identity="other"
-                        User="ApplicationPoolUser"
-                        ManagedPipelineMode="Integrated"
-                        ManagedRuntimeVersion="v4.0" />--><!--
-      </Component>-->
-
-      <!-- Configure virtual dir -->
-      <!--<Component Id="VirtualDirectoryComponent"
-             Guid="{751DEB01-ECC1-48ff-869A-65BCEE9E0528}"
-             KeyPath="yes" >
-        --><!--<Condition>0</Condition>--><!--
-        <iis:WebVirtualDir Id="MyWebVirtualDir"
-                  Alias="[WEBSITE_VD]" 
-                  Directory="INSTALLFOLDER"
-                  WebSite="SelectedWebSite">
-          <iis:WebDirProperties Id="MyWebVirtDirProperties"
-             AnonymousAccess="yes" 
-                                BasicAuthentication="no"
-             WindowsAuthentication="no"  />
-          <iis:WebApplication Id="MyWebWebApplication"
-             Name="[WEBSITE_VD]" WebAppPool="RavenAppPool" />
-        </iis:WebVirtualDir>
-      </Component>-->
     </DirectoryRef>
 
     <ComponentGroup Id="IssConfiguration">
-      <!--<ComponentRef Id="VirtualDirectoryComponent" />
-      <ComponentRef Id="DefaultApplicationPoolComponent" />-->
       <ComponentRef Id="DefaultWebSiteApplicationPool" />
       <ComponentRef Id="UseExistingApplicationPool" />
       <ComponentRef Id="NewApplicationPoolWithApplicationPoolIdentity" />
