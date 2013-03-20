@@ -228,6 +228,8 @@ namespace Raven.Database.Linq
 
 		public bool IsSpatialField(string fieldName)
 		{
+			if (indexDefinition == null || indexDefinition.SpatialIndexes == null)
+				return false;
 			SpatialOptions opt;
 			indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
 			if (opt == null)

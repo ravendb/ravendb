@@ -498,9 +498,6 @@ namespace Raven.Studio.Models
                     var fields = task.Result.Fields;
                     QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
 
-					const string spatialindexGenerateLegacy = "SpatialIndex.Generate";
-					const string spatialindexGenerate = "SpatialGenerate";
-
 	                var regex1 = new Regex(@"(?:SpatialIndex\.Generate|SpatialGenerate)");
 	                var regex2 = new Regex(@"(?:SpatialIndex\.Generate|SpatialGenerate)\(@?\""([^\""]+)\""");
 
