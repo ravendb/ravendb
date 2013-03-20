@@ -2,10 +2,10 @@
 {
 	public class SpatialOptions
 	{
-		// about 2 meters, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
+		// about 4.78 meters at equator, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
 		public const int DefaultGeohashLevel = 9;
-		// about 1 meter, should be good enough
-		public const int DefaultQuadTreeLevel = 25;
+		// about 4.78 meters at equator, should be good enough
+		public const int DefaultQuadTreeLevel = 23;
 
 		public SpatialOptions()
 		{
@@ -22,7 +22,6 @@
 		public double MinY { get; set; }
 		public double MaxY { get; set; }
 
-<<<<<<< HEAD
 		protected bool Equals(SpatialOptions other)
 		{
 			return Type == other.Type && Strategy == other.Strategy && MaxTreeLevel == other.MaxTreeLevel && MinX.Equals(other.MinX) && MaxX.Equals(other.MaxX) && MinY.Equals(other.MinY) && MaxY.Equals(other.MaxY);
@@ -50,12 +49,6 @@
 				return hashCode;
 			}
 		}
-=======
-		// about 4.78 meters at equator, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
-		public const int DefaultGeohashLevel = 9;
-		// about 4.78 meters at equator, should be good enough
-		public const int DefaultQuadTreeLevel = 23;
->>>>>>> 1be03feb2cad540428630e6396712f9c9fd97a2a
 	}
 
 	public enum SpatialFieldType

@@ -553,6 +553,7 @@
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\RavenDB937.cs" />
     <Compile Include="Issues\DatabaseReloadingTests.cs" />
+    <Compile Include="Issues\RavenDB1009.cs" />
     <Compile Include="Issues\RavenDB815.cs" />
     <Compile Include="Issues\RavenDB820.cs" />
     <Compile Include="Issues\RavenDb827.cs" />
@@ -569,6 +570,8 @@
     <Compile Include="Issues\RavenDB957.cs" />
     <Compile Include="Issues\RavenDB_752.cs" />
     <Compile Include="Issues\RavenDB987.cs" />
+    <Compile Include="Issues\RavenDB_1007.cs" />
+    <Compile Include="Issues\RavenDB_1010.cs" />
     <Compile Include="Issues\RavenDB_757.cs" />
     <Compile Include="Issues\RavenDB_790.cs" />
     <Compile Include="Issues\RavenDB_806.cs" />

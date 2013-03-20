@@ -13,7 +13,7 @@ namespace Raven.Database.Server.Responders.Debugging
 	{
 		public override string UrlPattern
 		{
-			get { return @"^/debug/config"; }
+			get { return @"^/debug/config$"; }
 		}
 
 		public override string[] SupportedVerbs
