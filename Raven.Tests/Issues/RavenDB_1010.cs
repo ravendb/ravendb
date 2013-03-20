@@ -11,6 +11,7 @@ namespace Raven.Tests.Issues
         {
             public TimeSpan Start { get; set; }
             public TimeSpan Until { get; set; }
+            public int Age { get; set; }
         }
 
         [Fact]
@@ -68,6 +69,8 @@ namespace Raven.Tests.Issues
                     Assert.NotNull(result);
                     Assert.Equal(3, result.Count);
 
+                    WaitForUserToContinueTheTest(documentStore);
+
                     Assert.Equal(TimeSpan.FromHours(15), result[0].Start);
                     Assert.Equal(TimeSpan.FromHours(11), result[1].Start);
                     Assert.Equal(TimeSpan.FromHours(10), result[2].Start);
@@ -124,7 +127,7 @@ namespace Raven.Tests.Issues
                 {
                     var result = session.Query<Foo>()
                                         .Customize(x => x.WaitForNonStaleResults())
-                                        .OrderBy(foo => foo.Start).ThenBy(foo => foo.Until)
+                                        .OrderBy(foo => foo.Start).ThenByDescending(foo => foo.Until)
                                         .ToList();
 
                     Assert.NotNull(result);
