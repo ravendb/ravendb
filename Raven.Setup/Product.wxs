@@ -97,7 +97,9 @@
 
     <CustomAction Id="SetIISInstallFolder" Directory="INSTALLFOLDER" Value="[WEBSITE_PATH]\[WEBSITE_VD]" />
     
-    
+    <CustomAction Id="SetupPerformanceCountersForIISUser" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetupPerformanceCountersForIISUser"
+                  Execute="immediate" Return="check" />
+
     <InstallExecuteSequence>
       <Custom Action="InstallRavenService_Cmd" After="CostFinalize">
         <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
@@ -111,6 +113,10 @@
       </Custom>
       <Custom Action='UninstallRavenService' Before="RemoveFiles">
         <![CDATA[(&Service=2) AND (!Service=3)]]>
+      </Custom>
+
+      <Custom Action='SetupPerformanceCountersForIISUser' Before='InstallFinalize'>
+        <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
       </Custom>
     </InstallExecuteSequence>
 

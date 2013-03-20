@@ -5,6 +5,10 @@
     <CustomAction Id="UpdateIISPropsWithSelectedAppPool" BinaryKey="Raven.Setup.CustomActions.CA.dll"
                   DllEntry="UpdateIISPropsWithSelectedAppPool" Execute="immediate"
                   Return="check" />
+
+    <CustomAction Id="UpdateIISAppPoolUser" BinaryKey="Raven.Setup.CustomActions.CA.dll"
+                  DllEntry="UpdateIISAppPoolUser" Execute="immediate"
+                  Return="check" />
    
     <Property Id="APPLICATION_POOL_TYPE" Value="NEW" />
     <Property Id="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity" />

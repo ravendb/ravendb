@@ -41,10 +41,12 @@
     <Column Id="WebSiteID" Category="Identifier" PrimaryKey="yes" Type="int" Width="4" />
     <Column Id="WebSiteDescription" Category="Text" Type="string" PrimaryKey="no"/>
     <Column Id="WebSitePath" Category="Text" Type="string" PrimaryKey="no" Nullable="yes" />
+    <Column Id="WebDefaultAppPool" Category="Text" Type="string" PrimaryKey="no" Nullable="yes" />
     <Row>
       <Data Column="WebSiteID">0</Data>
       <Data Column="WebSiteDescription">Dummy</Data>
       <Data Column="WebSitePath"></Data>
+      <Data Column="WebDefaultAppPool"></Data>
     </Row>
   </CustomTable>
 

@@ -5,6 +5,7 @@
     <DirectoryRef Id='Bin'>
         <Component Id="Raven.Web" Guid="135622C2-2005-4316-90E8-B54887128834">
           <File Id="Raven.Web" Name='$(var.Raven.Web.ProjectName).dll' DiskId='1' Source='$(var.Raven.Web.TargetPath)' KeyPath='yes' />
+          <File Id='Nlog.dll_IIS' Name='Nlog.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\Nlog.dll' />
         </Component>
     </DirectoryRef>
     <DirectoryRef Id='INSTALLFOLDER'>

@@ -12,6 +12,7 @@ using System.Linq;
 using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Web.Administration;
 using Microsoft.Win32;
+using Raven.Database.Util;
 
 namespace Raven.Setup.CustomActions
 {
@@ -75,8 +76,9 @@ namespace Raven.Setup.CustomActions
                             session["WEBSITE_ID"] = selectedWebSiteId;
                             session["WEBSITE_DESCRIPTION"] = (string)record[2];
                             session["WEBSITE_PATH"] = (string)record[3];
+	                        session["WEBSITE_DEFAULT_APPPOOL"] = (string) record[4];
 
-							//session.DoAction("SetIISInstallFolder");
+	                        //session.DoAction("SetIISInstallFolder");
                         }
                     }
                 }
@@ -101,9 +103,10 @@ namespace Raven.Setup.CustomActions
                     var id = webSite.Id.ToString(CultureInfo.InvariantCulture);
                     var name = webSite.Name;
                     var path = webSite.PhysicalPath();
+	                var defaultAppPool = webSite.ApplicationDefaults.ApplicationPoolName;
 
                     StoreSiteDataInComboBoxTable(id, name, path, order++, comboView);
-                    StoreSiteDataInAvailableSitesTable(id, name, path, availableView);
+                    StoreSiteDataInAvailableSitesTable(id, name, path, defaultAppPool, availableView);
                 }
             }
         }
@@ -121,9 +124,10 @@ namespace Raven.Setup.CustomActions
                         var id = webSite.Name;
                         var name = webSite.Properties[ServerComment].Value.ToString();
                         var path = webSite.PhysicalPath();
+	                    var defaultAppPool = "";// TODO
 
                         StoreSiteDataInComboBoxTable(id, name, path, order++, comboView);
-                        StoreSiteDataInAvailableSitesTable(id, name, path, availableView);
+                        StoreSiteDataInAvailableSitesTable(id, name, path, defaultAppPool, availableView);
                     }
                 }
             }
@@ -140,12 +144,13 @@ namespace Raven.Setup.CustomActions
             comboView.Modify(ViewModifyMode.InsertTemporary, newComboRecord);
         }
 
-        private static void StoreSiteDataInAvailableSitesTable(string id, string name, string physicalPath, View availableView)
+        private static void StoreSiteDataInAvailableSitesTable(string id, string name, string physicalPath, string defaultAppPool, View availableView)
         {
-            var newWebSiteRecord = new Record(3);
+            var newWebSiteRecord = new Record(4);
             newWebSiteRecord[1] = id;
             newWebSiteRecord[2] = name;
             newWebSiteRecord[3] = physicalPath;
+			newWebSiteRecord[4] = defaultAppPool;
             availableView.Modify(ViewModifyMode.InsertTemporary, newWebSiteRecord);
         }
 
@@ -251,7 +256,75 @@ namespace Raven.Setup.CustomActions
 
 			return pools;
 		}
-        private static bool IsIIS7Upwards
+
+		[CustomAction]
+		public static ActionResult UpdateIISAppPoolUser(Session session)
+		{
+			if (session["CUSTOM_APPLICATION_POOL"] != "1")
+			{
+				session["WEB_APP_POOL_IDENTITY_DOMAIN"] = "IIS AppPool";
+				session["WEB_APP_POOL_IDENTITY_NAME"] = session["WEBSITE_DEFAULT_APPPOOL"];
+				session["WEB_APP_POOL_NAME"] = session["WEBSITE_DEFAULT_APPPOOL"];
+			}
+			else
+			{
+				if (session["APPLICATION_POOL_TYPE"] == "NEW")
+				{
+					var identityType = session["APPLICATION_POOL_IDENTITY_TYPE"];
+
+					if (identityType == "other")
+					{
+						return ActionResult.Success;
+					}
+					
+					if (identityType == "ApplicationPoolIdentity")
+					{
+						session["WEB_APP_POOL_IDENTITY_DOMAIN"] = "IIS AppPool";
+						session["WEB_APP_POOL_IDENTITY_NAME"] = session["WEB_APP_POOL_NAME"];
+					}
+					else if (identityType == "LocalService")
+					{
+						session["WEB_APP_POOL_IDENTITY_DOMAIN"] = "NT AUTHORITY";
+						session["WEB_APP_POOL_IDENTITY_NAME"] = "LOCAL SERVICE";
+					}
+					else if (identityType == "LocalSystem")
+					{
+						session["WEB_APP_POOL_IDENTITY_DOMAIN"] = "NT AUTHORITY";
+						session["WEB_APP_POOL_IDENTITY_NAME"] = "SYSTEM";
+					}
+					else if (identityType == "NetworkService")
+					{
+						session["WEB_APP_POOL_IDENTITY_DOMAIN"] = "NT AUTHORITY";
+						session["WEB_APP_POOL_IDENTITY_NAME"] = "NETWORK SERVICE";
+					}
+				}
+				else // existing app pool
+				{
+					session["WEB_APP_POOL_IDENTITY_DOMAIN"] = "IIS AppPool";
+					session["WEB_APP_POOL_IDENTITY_NAME"] = session["WEB_APP_POOL_NAME"];
+				}
+			}
+
+			return ActionResult.Success;
+		}
+
+		[CustomAction]
+		public static ActionResult SetupPerformanceCountersForIISUser(Session session)
+		{
+			try
+			{
+				PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(string.Format("{0}\\{1}", session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"]));
+			}
+			catch (Exception ex)
+			{
+				session.Log("Exception was thrown during SetupPerformanceCountersForIISUser custom action:" + ex);
+				return ActionResult.Failure;
+			}
+
+			return ActionResult.Success;
+		}
+
+		private static bool IsIIS7Upwards
         {
             get
             {

@@ -43,6 +43,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Security" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
@@ -50,6 +51,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Database\Util\PerformanceCountersUtils.cs">
+      <Link>PerformanceCountersUtils.cs</Link>
+    </Compile>
     <Compile Include="IISActions.cs" />
     <Compile Include="IISExtensions.cs" />
     <Compile Include="LicenseActions.cs" />
