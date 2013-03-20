@@ -68,7 +68,7 @@ namespace Raven.Client.Changes
 										AvoidCachingRequest = true
 									};
 
-			logger.Info("Trying to connect to {1}", requestParams.Url);
+			logger.Info("Trying to connect to {0}", requestParams.Url);
 
 			return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
 				.ServerPullAsync()
