@@ -36,22 +36,21 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			Etag mostRecentDocumentEtag = Etag.Empty;
 			Etag mostRecentAttachmentEtag = Etag.Empty;
-			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				mostRecentDocumentEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 				mostRecentAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag();
 			});
 
-			context.WriteJson(RavenJObject.FromObject(new ReplicationStatistics
+			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+			var replicationStatistics = new ReplicationStatistics
 			{
 				Self = Database.ServerUrl,
 				MostRecentDocumentEtag = mostRecentDocumentEtag,
 				MostRecentAttachmentEtag = mostRecentAttachmentEtag,
-				Stats = replicationTask == null
-					        ? new List<DestinationStats>()
-					        : replicationTask.DestinationStats.Values.ToList()
-			}));
+				Stats = replicationTask == null ? new List<DestinationStats>() : replicationTask.DestinationStats.Values.ToList()
+			};
+			context.WriteJson(RavenJObject.FromObject(replicationStatistics));
 		}
 	}
 }
