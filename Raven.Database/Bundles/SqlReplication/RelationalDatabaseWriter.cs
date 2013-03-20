@@ -173,7 +173,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
 					{
 						var dbParameter = cmd.CreateParameter();
-						dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, "p" + i);
+						dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, "p" + j);
 						dbParameter.Value = identifiers[j];
 						cmd.Parameters.Add(dbParameter);
 						if (i != j)
