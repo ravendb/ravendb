@@ -523,6 +523,7 @@
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\DatabaseReloadingTests.cs" />
+    <Compile Include="Issues\RavenDB1009.cs" />
     <Compile Include="Issues\RavenDB815.cs" />
     <Compile Include="Issues\RavenDB820.cs" />
     <Compile Include="Issues\RavenDb827.cs" />
