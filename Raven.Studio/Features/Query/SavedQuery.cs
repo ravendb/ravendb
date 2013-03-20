@@ -10,10 +10,12 @@ namespace Raven.Studio.Features.Query
 		{
 			if (state == null)
 				return;
+
 			IndexName = state.IndexName;
 			Query = state.Query;
 		    SortOptions = state.SortOptions;
 			IsSpatialQuery = state.IsSpatialQuery;
+			SpatialFieldName = state.SpatialFieldName;
 			Latitude = state.Latitude;
 			Longitude = state.Longitude;
 			Radius = state.Radius;
@@ -32,6 +34,7 @@ namespace Raven.Studio.Features.Query
         public IList<string> SortOptions { get; private set; }
 
         public bool IsSpatialQuery { get; set; }
+		public string SpatialFieldName { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
         public double? Radius { get; set; }

@@ -6,10 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
@@ -96,6 +93,18 @@ namespace Raven.Client.Indexes
 		/// <value>The term vectors.</value>
 		public IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
 
+		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<Expression<Func<TReduceResult, object>>, SpatialOptions> SpatialIndexes { get; set; }
+
+		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
+
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
@@ -112,6 +121,8 @@ namespace Raven.Client.Indexes
 			AnalyzersStrings = new Dictionary<string, string>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
 			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
+			SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
 		}
 
 		/// <summary>
@@ -136,7 +147,8 @@ namespace Raven.Client.Indexes
 				SortOptions = ConvertToStringDictionary(SortOptions),
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
-                TermVectors =  ConvertToStringDictionary(TermVectors)
+				TermVectors =  ConvertToStringDictionary(TermVectors),
+				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes)
 			};
 
 			foreach (var indexesString in IndexesStrings)
@@ -165,6 +177,13 @@ namespace Raven.Client.Indexes
 				if (indexDefinition.TermVectors.ContainsKey(termVectorString.Key))
 					throw new InvalidOperationException("There is a duplicate key in term vectors: " + termVectorString.Key);
 				indexDefinition.TermVectors.Add(termVectorString);
+			}
+
+			foreach (var spatialString in SpatialIndexesStrings)
+			{
+				if (indexDefinition.SpatialIndexes.ContainsKey(spatialString.Key))
+					throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
+				indexDefinition.SpatialIndexes.Add(spatialString);
 			}
 
 			if (Map != null)

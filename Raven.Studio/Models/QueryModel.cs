@@ -59,13 +59,19 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuerySupported = value;
-                if (!isSpatialQuerySupported)
-                {
-                    IsSpatialQuery = false;
-                }
+				if (!isSpatialQuerySupported)
+				{
+					IsSpatialQuery = false;
+				}
 
 				OnPropertyChanged(() => IsSpatialQuerySupported);
 			}
+		}
+
+		public void UpdateSpatialFields(List<SpatialQueryField> spatialFields)
+		{
+			IsSpatialQuerySupported = spatialFields.Count > 0;
+			SpatialQuery.UpdateFields(spatialFields);
 		}
 
 		private bool isSpatialQuery;
@@ -75,108 +81,16 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuery = value;
-                if (!isSpatialQuery)
-                {
-                    Latitude = null;
-                    Longitude = null;
-                    Radius = null;
-                }
+				if (!isSpatialQuery)
+				{
+					SpatialQuery.Clear();
+				}
 
 				OnPropertyChanged(() => IsSpatialQuery);
 			}
 		}
 
-		public RangeUnits RangeUnits { get; set; }
-
-		private double? latitude;
-		public double? Latitude
-		{
-			get { return latitude; }
-			set
-			{
-				latitude = value;
-				address = null;
-				OnPropertyChanged(() => Address);
-				OnPropertyChanged(() => Latitude);
-			}
-		}
-
-		private double? longitude;
-		public double? Longitude
-		{
-			get { return longitude; }
-			set
-			{
-				longitude = value;
-				address = null;
-				OnPropertyChanged(() => Address);
-				OnPropertyChanged(() => Longitude);
-			}
-		}
-
-		private double? radius;
-		public double? Radius
-		{
-			get { return radius; }
-			set
-			{
-				radius = value;
-				OnPropertyChanged(() => Radius);
-			}
-		}
-
-		private string address;
-		public string Address
-		{
-			get { return address; }
-			set
-			{
-				UpdateAddress(value);
-				OnPropertyChanged(() => Latitude);
-				OnPropertyChanged(() => Longitude);
-				OnPropertyChanged(() => Address);
-			}
-		}
-
-		private void UpdateAddress(string value)
-		{
-			var set = false;
-			if (PerDatabaseState.RecentAddresses.ContainsKey(IndexName) && PerDatabaseState.RecentAddresses[IndexName].ContainsKey(value))
-			{
-				var data = PerDatabaseState.RecentAddresses[IndexName][value];
-				if (data != null)
-				{
-					address = data.Address;
-					latitude = data.Latitude;
-					longitude = data.Longitude;
-					set = true;
-				}
-			}
-			
-			if(set == false)
-			{
-				address = value;
-				latitude = null;
-				longitude = null;
-			}
-		}
-
-		public void UpdateResultsFromCalculate(AddressData addressData)
-		{
-			latitude = addressData.Latitude;
-			longitude = addressData.Longitude;
-
-			var addresses = PerDatabaseState.RecentAddresses.ContainsKey(IndexName) ? PerDatabaseState.RecentAddresses[IndexName] : new Dictionary<string, AddressData>();
-
-			addresses[addressData.Address] = addressData;
-
-			PerDatabaseState.RecentAddresses[IndexName] = addresses;
-
-			OnPropertyChanged(() => Latitude);
-			OnPropertyChanged(() => Longitude);
-		}
-
-		public ICommand CalculateFromAddress { get { return new CalculateGeocodeFromAddressCommand(this); } }
+		public SpatialQueryModel SpatialQuery { get; set; }
 
 		#endregion
 
@@ -210,6 +124,9 @@ namespace Raven.Studio.Models
 				ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 																	   "/indexes/" + indexName;
+
+				SpatialQuery.IndexName = indexName;
+				
 				OnPropertyChanged(() => IndexName);
 			}
 		}
@@ -476,6 +393,7 @@ namespace Raven.Studio.Models
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
 
+		    SpatialQuery = new SpatialQueryModel {IndexName = indexName};
 		}
 
 		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
@@ -580,12 +498,40 @@ namespace Raven.Studio.Models
                     var fields = task.Result.Fields;
                     QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
 
-                    const string spatialindexGenerateLegacy = "SpatialIndex.Generate";
-					const string spatialindexGenerate = "SpatialGenerate";
+	                var regex1 = new Regex(@"(?:SpatialIndex\.Generate|SpatialGenerate)");
+	                var regex2 = new Regex(@"(?:SpatialIndex\.Generate|SpatialGenerate)\(@?\""([^\""]+)\""");
 
-                    IsSpatialQuerySupported =
-						task.Result.Maps.Any(x => x.Contains(spatialindexGenerate) || x.Contains(spatialindexGenerateLegacy)) ||
-						(task.Result.Reduce != null && (task.Result.Reduce.Contains(spatialindexGenerate) || task.Result.Reduce.Contains(spatialindexGenerateLegacy)));
+	                var strs = task.Result.Maps.ToList();
+					if (task.Result.Reduce != null)
+						strs.Add(task.Result.Reduce);
+					
+					var legacyFields = new HashSet<string>();
+					foreach (var map in task.Result.Maps)
+					{
+						var count = regex1.Matches(map).Count;
+						var matches = regex2.Matches(map).Cast<Match>().Select(x => x.Groups[1].Value).ToList();
+						if (matches.Count < count)
+							legacyFields.Add(Constants.DefaultSpatialFieldName);
+
+						matches.ForEach(x => legacyFields.Add(x));
+					}
+
+					var spatialFields = task.Result.SpatialIndexes
+						.Select(x => new SpatialQueryField
+						{
+							Name = x.Key,
+							Geographical = x.Value.Type == SpatialFieldType.Geography
+						})
+						.ToList();
+
+					legacyFields.ForEach(x => spatialFields.Add(new SpatialQueryField
+					{
+						Name = x,
+						Geographical = true
+					}));
+
+					UpdateSpatialFields(spatialFields);
+
                     HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
                     DocumentsResult.SetChangesObservable(
@@ -602,10 +548,7 @@ namespace Raven.Studio.Models
 	    {
 	        Query = string.Empty;
             SortBy.Clear();
-	        IsSpatialQuery = false;
-	        Latitude = null;
-	        Longitude = null;
-	        Radius = null;
+			SpatialQuery.Clear();
 	    }
 
 	    public bool HasTransform
@@ -663,10 +606,13 @@ namespace Raven.Studio.Models
 		private void UpdateFromState(QueryState state)
 		{
 			Query = state.Query;
-	        IsSpatialQuery = state.IsSpatialQuery;
-	        Latitude = state.Latitude;
-	        Longitude = state.Longitude;
-	        Radius = state.Radius;
+
+			IsSpatialQuery = state.IsSpatialQuery;
+			SpatialQuery.FieldName = state.SpatialFieldName ?? Constants.DefaultSpatialFieldName;
+			SpatialQuery.Y = state.Latitude;
+			SpatialQuery.X = state.Longitude;
+			SpatialQuery.Radius = state.Radius;
+
 	        UseTransformer = state.UseTransformer;
 			DefaultOperator = state.DefaultOperator;
 			SelectedTransformer.Value = state.Transformer;
@@ -815,20 +761,23 @@ namespace Raven.Studio.Models
             q.DebugOptionGetIndexEntries = ShowEntries;
 
             q.SkipTransformResults = SkipTransformResults;
-            if (IsSpatialQuerySupported && Latitude.HasValue && Longitude.HasValue)
-            {
-	            var radiusValue = Radius.HasValue ? Radius.Value : 1;
-	            if (RangeUnits == RangeUnits.Mile)
-		            radiusValue *= 1.60934;
 
-                q = new SpatialIndexQuery(q)
-                {
-                    QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(Latitude.Value, Longitude.Value, radiusValue),
-                    SpatialRelation = SpatialRelation.Within,
-                    SpatialFieldName = Constants.DefaultSpatialFieldName,
-                    DefaultOperator = DefaultOperator
-                };
-            }
+
+
+			if (IsSpatialQuerySupported && SpatialQuery.Y.HasValue && SpatialQuery.X.HasValue)
+			{
+				var radiusValue = SpatialQuery.Radius.HasValue ? SpatialQuery.Radius.Value : 1;
+				if (SpatialQuery.RadiusUnits == SpatialUnits.Miles)
+					radiusValue *= 1.60934;
+
+				q = new SpatialIndexQuery(q)
+				{
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(SpatialQuery.Y.Value, SpatialQuery.X.Value, radiusValue),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = SpatialQuery.FieldName,
+					DefaultOperator = DefaultOperator
+				};
+			}
 
             return q;
         }
@@ -888,12 +837,6 @@ namespace Raven.Studio.Models
 		}
 
 	
-	}
-
-	public enum RangeUnits
-	{
-		KM,
-		Mile
 	}
 
 	public class AddressData

@@ -166,6 +166,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Shard\*.cs">
       <Link>Shard\%(FileName)</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Spatial\*.cs">
+      <Link>Imports\Spatial\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\*.cs">
       <Link>Util\%(FileName)</Link>
     </Compile>
@@ -228,6 +231,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Smuggler\*.cs">
       <Link>Abstructions\Smuggler\%(FileName)</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Spatial\*.cs">
+      <Link>Abstructions\Spatial\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Util\*.cs">
       <Link>Abstructions\Util\%(FileName)</Link>

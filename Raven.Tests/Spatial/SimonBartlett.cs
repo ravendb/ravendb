@@ -28,7 +28,8 @@ namespace Raven.Tests.Spatial
 					var doc = new Lucene.Net.Documents.Document();
 
 					var writeShape = NtsSpatialContext.GEO.ReadShape("LINESTRING (0 0, 1 1, 2 1)");
-					var writeStrategy = SpatialIndex.CreateStrategy("WKT", SpatialSearchStrategy.GeohashPrefixTree, GeohashPrefixTree.GetMaxLevelsPossible());
+					var spatialField = new SpatialField("WKT", new SpatialOptionsFactory().Geography());
+					var writeStrategy = spatialField.GetStrategy();
 					foreach (var f in writeStrategy.CreateIndexableFields(writeShape))
 					{
 						doc.Add(f);
@@ -37,11 +38,11 @@ namespace Raven.Tests.Spatial
 					writer.Commit();
 				}
 
-
 				var shape = NtsSpatialContext.GEO.ReadShape("LINESTRING (1 0, 1 1, 1 2)");
 				SpatialArgs args = new SpatialArgs(SpatialOperation.Intersects, shape);
-				var strategy = SpatialIndex.CreateStrategy("WKT", SpatialSearchStrategy.GeohashPrefixTree, GeohashPrefixTree.GetMaxLevelsPossible());
-				var makeQuery = strategy.MakeQuery(args);
+				var spatialField2 = new SpatialField("WKT", new SpatialOptionsFactory().Geography());
+				var writeStrategy2 = spatialField2.GetStrategy();
+				var makeQuery = writeStrategy2.MakeQuery(args);
 				using(var search = new IndexSearcher(dir))
 				{
 					var topDocs = search.Search(makeQuery, 5);
@@ -191,7 +192,7 @@ namespace Raven.Tests.Spatial
             public GeohashIndexLevel7()
             {
                 Map = docs => from doc in docs
-                              select new { _ = SpatialGenerate("WKT", doc.WKT, SpatialSearchStrategy.GeohashPrefixTree, 7) };
+                              select new { _ = SpatialGenerate("WKT", doc.WKT ) };
             }
         }
 	}
