@@ -9,6 +9,7 @@ using Nancy.Bootstrapper;
 using Nancy.Conventions;
 using Nancy.Responses;
 using Nancy.TinyIoc;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
@@ -32,6 +33,9 @@ namespace Raven.ClusterManager
 
 			store.Conventions.RegisterIdConvention<ServerRecord>((s, commands, serverRecord) => "serverRecords/" + ReplicationTask.EscapeDestinationName(serverRecord.Url));
 			store.Conventions.RegisterIdConvention<DatabaseRecord>((s, commands, databaseRecord) => databaseRecord.ServerId + "/" + databaseRecord.Name);
+
+			store.Conventions.RegisterAsyncIdConvention<ServerRecord>((s, commands, serverRecord) => new CompletedTask<string>("serverRecords/" + ReplicationTask.EscapeDestinationName(serverRecord.Url)));
+			store.Conventions.RegisterAsyncIdConvention<DatabaseRecord>((s, commands, databaseRecord) => new CompletedTask<string>(databaseRecord.ServerId + "/" + databaseRecord.Name));
 
 			container.Register<IDocumentStore>(store);
 		}
