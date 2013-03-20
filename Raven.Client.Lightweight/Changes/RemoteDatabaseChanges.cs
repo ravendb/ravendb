@@ -355,6 +355,14 @@ namespace Raven.Client.Changes
             return taskedObservable;
         }
 
+        public void WaitForAllPendingSubscriptions()
+        {
+            foreach (var kvp in counters)
+            {
+                kvp.Value.Task.Wait();
+            }
+        }
+
         public void Dispose()
         {
             if (disposed)
