@@ -353,7 +353,8 @@ namespace Raven.Client.Changes
                                     }
                                     catch (Exception e)
                                     {
-                                        logger.WarnException("Error when disposing of connection", e);
+                                        logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
+
                                     }
                                 });
         }
