@@ -1491,19 +1491,19 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			ExecuteWithReplication<object>("DELETE", operationUrl =>
+			return ExecuteWithReplication<Operation>("DELETE", operationUrl =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
+				RavenJToken jsonResponse;
 				try
 				{
-					request.ReadResponseJson();
+					jsonResponse = request.ReadResponseJson();
 				}
 				catch (WebException e)
 				{
@@ -1512,7 +1512,8 @@ namespace Raven.Client.Connection
 						throw new InvalidOperationException("There is no index named: " + indexName);
 					throw;
 				}
-				return null;
+
+				return new Operation(this, jsonResponse.Value<long>("OperationId"));
 			});
 		}
 
@@ -1523,9 +1524,9 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
 		{
-			UpdateByIndex(indexName, queryToUpdate, patchRequests, false);
+			return UpdateByIndex(indexName, queryToUpdate, patchRequests, false);
 		}
 
 		/// <summary>
@@ -1535,9 +1536,9 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
-			UpdateByIndex(indexName, queryToUpdate, patch, false);
+			return UpdateByIndex(indexName, queryToUpdate, patch, false);
 		}
 
 		/// <summary>
@@ -1547,10 +1548,10 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
-			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
+			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
 		}
 
 		/// <summary>
@@ -1560,15 +1561,15 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
-			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
+			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
 		}
 
-		private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+		private Operation UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
 		{
-			ExecuteWithReplication<object>(method, operationUrl =>
+			return ExecuteWithReplication<Operation>(method, operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1576,11 +1577,11 @@ namespace Raven.Client.Connection
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-
 				request.Write(requestData);
+				RavenJToken jsonResponse;
 				try
 				{
-					request.ReadResponseJson();
+					jsonResponse = request.ReadResponseJson();
 				}
 				catch (WebException e)
 				{
@@ -1589,7 +1590,8 @@ namespace Raven.Client.Connection
 						throw new InvalidOperationException("There is no index named: " + indexName);
 					throw;
 				}
-				return null;
+
+				return new Operation(this, jsonResponse.Value<long>("OperationId"));
 			});
 		}
 
@@ -1599,9 +1601,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete)
 		{
-			DeleteByIndex(indexName, queryToDelete, false);
+			return DeleteByIndex(indexName, queryToDelete, false);
 		}
 
 		/// <summary>

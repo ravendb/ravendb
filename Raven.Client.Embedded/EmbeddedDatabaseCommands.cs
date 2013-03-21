@@ -747,9 +747,9 @@ namespace Raven.Client.Embedded
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
 		{
-			UpdateByIndex(indexName, queryToUpdate, patchRequests, false);
+			return UpdateByIndex(indexName, queryToUpdate, patchRequests, false);
 		}
 
 		/// <summary>
@@ -759,9 +759,9 @@ namespace Raven.Client.Embedded
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
-			UpdateByIndex(indexName, queryToUpdate, patch, false);
+			return UpdateByIndex(indexName, queryToUpdate, patch, false);
 		}
 
 		/// <summary>
@@ -771,11 +771,12 @@ namespace Raven.Client.Embedded
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
+			return new Operation(null, 0);
 		}
 
 		/// <summary>
@@ -785,11 +786,12 @@ namespace Raven.Client.Embedded
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
 			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
+			return new Operation(null, 0);
 		}
 
 		/// <summary>
@@ -798,9 +800,9 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete)
 		{
-			DeleteByIndex(indexName, queryToDelete, false);
+			return DeleteByIndex(indexName, queryToDelete, false);
 		}
 
 		/// <summary>
@@ -809,11 +811,12 @@ namespace Raven.Client.Embedded
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
+			return new Operation(null, 0);
 		}
 
 		/// <summary>
