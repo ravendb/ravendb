@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -26,7 +25,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(),
-				                                             (AsyncServerClient) store.AsyncDatabaseCommands))
+				                                              (ServerClient) store.DatabaseCommands))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}
@@ -72,7 +71,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(),
-															  (AsyncServerClient)store.AsyncDatabaseCommands))
+															  (ServerClient)store.DatabaseCommands))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}

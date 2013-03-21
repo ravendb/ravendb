@@ -1,48 +1,36 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
+﻿using System.Threading;
 
 namespace Raven.Client.Connection
 {
 	public class Operation
 	{
-		private readonly AsyncServerClient asyncServerClient;
+		private readonly ServerClient client;
+		private long id;
 
-		private readonly long id;
-
-		public Operation(long id, AsyncServerClient asyncServerClient)
+		public Operation(ServerClient serverClient, long id)
 		{
-			this.asyncServerClient = asyncServerClient;
+			client = serverClient;
 			this.id = id;
 		}
 
-#if !SILVERLIGHT
 		public void WaitForCompletion()
 		{
-			WaitForCompletionAsync().Wait();
-		}
-
-
-#endif
-
-		public async Task WaitForCompletionAsync()
-		{
-			if (asyncServerClient == null)
-			{
+			if(client == null)
 				return;
-			}
 
 			while (true)
 			{
-				var status = await asyncServerClient.GetOperationStatusAsync(id);
+#if !SILVERLIGHT
+				var status = client.GetOperationStatus(id);
+#else
+					var status = client.GetOperationStatusAsync(id).Result;
+#endif
 				if (status == null)
 					break;
 				if (status.Value<bool>("Completed"))
 					break;
-				await TaskEx.Delay(500);
+				Thread.Sleep(500);
 			}
 		}
-
 	}
 }
