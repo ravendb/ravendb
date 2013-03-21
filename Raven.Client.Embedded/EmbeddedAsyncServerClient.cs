@@ -10,6 +10,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -19,7 +20,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
-	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands
+	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
 		private readonly IDatabaseCommands databaseCommands;
 
@@ -398,5 +399,43 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
 	
 		}
+
+
+		#region IAsyncGlobalAdminDatabaseCommands
+
+		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
+		{
+			get { return this; }
+		}
+
+		Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
+		{
+			throw new NotSupportedException();
+		}
+
+		#endregion
+
+		#region IAsyncAdminDatabaseCommands
+
+		public IAsyncAdminDatabaseCommands Admin
+		{
+			get { return this; }
+		}
+
+		#endregion
+
+		#region IAsyncInfoDatabaseCommands
+
+		public IAsyncInfoDatabaseCommands Info
+		{
+			get { return this; }
+		}
+
+		Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
+		{
+			throw new NotSupportedException();
+		}
+
+		#endregion
 	}
 }

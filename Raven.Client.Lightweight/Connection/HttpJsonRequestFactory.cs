@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !NETFX_CORE
+using System;
 #if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
@@ -274,3 +275,4 @@ namespace Raven.Client.Connection
 		}
 	}
 }
+#endif
