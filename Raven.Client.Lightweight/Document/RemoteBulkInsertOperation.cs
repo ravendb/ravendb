@@ -11,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.WinRT.Connection;
 #else
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 #endif
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -39,82 +40,51 @@ namespace Raven.Client.Document
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
 		private readonly BulkInsertOptions options;
-#if !SILVERLIGHT
-		private readonly ServerClient client;
-#else
-		private readonly AsyncServerClient client;
-#endif
+		private readonly AsyncServerClient asyncClient;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private HttpJsonRequest httpJsonRequest;
 		private readonly BlockingCollection<RavenJObject> items;
 
-		private Task nextTask;
+		private bool disposed;
+		private readonly Task nextTask;
 		private int total;
+		private readonly string requestUrl;
 
-#if !SILVERLIGHT
-		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client)
-#else
-		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client)
-#endif
+		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient asyncClient)
 		{
 			this.options = options;
-			this.client = client;
-			items = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
-			string requestUrl = "/bulkInsert?";
+			this.asyncClient = asyncClient;
+			items = new BlockingCollection<RavenJObject>(options.BatchSize*8);
+			requestUrl = "/bulkInsert?";
 			if (options.CheckForUpdates)
 				requestUrl += "checkForUpdates=true";
 			if (options.CheckReferencesInIndexes)
 				requestUrl += "&checkReferencesInIndexes=true";
 
-#if !SILVERLIGHT
-			var expect100Continue = client.Expect100Continue();
-
-			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
-			HttpJsonRequest req = client.CreateRequest("POST", requestUrl + "&op=generate-single-use-auth-token",
-														disableRequestCompression: true);
-			var token = req.ReadResponseJson();
-
-			httpJsonRequest = client.CreateRequest("POST", requestUrl, disableRequestCompression: true);
-
-			// the request may take a long time to process, so we need to set a large timeout value
-			httpJsonRequest.PrepareForLongRequest();
-			httpJsonRequest.AddOperationHeader("Single-Use-Auth-Token", token.Value<string>("Token"));
-			nextTask = httpJsonRequest.GetRawRequestStream()
-									  .ContinueWith(task =>
-									  {
-										  try
-										  {
-											  expect100Continue.Dispose();
-										  }
-										  catch (Exception)
-										  {
-										  }
-										  WriteQueueToServer(task);
-									  });
-#else
-			var request = client
-				.CreateRequest(requestUrl + "&no-op=for-auth-only", "POST", disableRequestCompression: true);
-			request.PrepareForLongRequest();
-
-			request
-				.ExecuteRequestAsync()
-				.ContinueWith(task =>
-				{
-					httpJsonRequest = client.CreateRequest(requestUrl, "POST", disableRequestCompression: true);
-					httpJsonRequest.PrepareForLongRequest();
-					httpJsonRequest.webRequest.ContentLength = 0;
-
-					nextTask = httpJsonRequest
-						.GetRawRequestStream()
-						.ContinueWith(WriteQueueToServer);
-				})
-				.Wait();
-#endif
+			nextTask = StartAsync();
 		}
 
-		private void WriteQueueToServer(Task<Stream> task)
+		private async Task StartAsync()
 		{
-			Stream requestStream = task.Result;
+			using (ConnectionOptions.Expect100Continue(asyncClient.Url))
+			{
+				// this will force the HTTP layer to authenticate, meaning that our next request won't have to
+				HttpJsonRequest req = asyncClient.CreateRequest("POST", requestUrl + "&op=generate-single-use-auth-token",
+				                                                disableRequestCompression: true);
+				var token = await req.ReadResponseJsonAsync();
+
+				httpJsonRequest = asyncClient.CreateRequest("POST", requestUrl, disableRequestCompression: true);
+
+				// the request may take a long time to process, so we need to set a large timeout value
+				httpJsonRequest.PrepareForLongRequest();
+				httpJsonRequest.AddOperationHeader("Single-Use-Auth-Token", token.Value<string>("Token"));
+				WriteQueueToServer(httpJsonRequest.GetRawRequestStream());
+			}
+		}
+
+		private async void WriteQueueToServer(Task<Stream> task)
+		{
+			Stream requestStream = await task;
 			while (true)
 			{
 				var batch = new List<RavenJObject>();
@@ -150,63 +120,56 @@ namespace Raven.Client.Document
 			items.Add(data);
 		}
 
-		public void Dispose()
+		public async Task DisposeAsync()
 		{
 			items.Add(null);
-			nextTask.ContinueWith(task =>
+			await nextTask;
+			var report = Report;
+			if (report != null)
 			{
-				task.AssertNotFailed();
-				Action<string> report = Report;
-				if (report != null)
-				{
-					report("Finished writing all results to server");
-				}
+				report("Finished writing all results to server");
+			}
 
-				long id = -1;
+			long id;
 
-#if !SILVERLIGHT
-				using (var response = httpJsonRequest.RawExecuteRequest())
-				using (var stream = response.GetResponseStream())
+			var response = await httpJsonRequest.RawExecuteRequestAsync();
+			using (var stream = response.GetResponseStream())
+			{
 				using (var streamReader = new StreamReader(stream))
 				{
-					var result = RavenJObject.Load(new JsonTextReader(streamReader));
+					var result = await RavenJObject.LoadAsync(new JsonTextReaderAsync(streamReader));
 					id = result.Value<long>("OperationId");
 				}
-#else
-				httpJsonRequest.RawExecuteRequestAsync()
-				               .ContinueWith(t =>
-				               {
-					               var response = t.Result;
-					               using (var stream = response.GetResponseStream())
-					               {
-						               using (var streamReader = new StreamReader(stream))
-						               {
-							               var result = RavenJObject.Load(new JsonTextReader(streamReader));
-							               id = result.Value<long>("OperationId");
-						               }
-					               }
-				               })
-				               .Wait();
-#endif
-				while (true)
-				{
-#if !SILVERLIGHT
-					var status = client.GetOperationStatus(id);
-#else
-					var status = client.GetOperationStatusAsync(id).Result;
-#endif
-					if (status == null)
-						break;
-					if (status.Value<bool>("Completed"))
-						break;
-					Thread.Sleep(500);
-				}
+			}
 
-				if (report != null)
-				{
-					report("Done writing to server");
-				}
-			}).Wait();
+			while (true)
+			{
+				var status = await asyncClient.GetOperationStatusAsync(id);
+				if (status == null)
+					break;
+				if (status.Value<bool>("Completed"))
+					break;
+				await TaskEx.Delay(500);
+			}
+
+			if (report != null)
+			{
+				report("Done writing to server");
+			}
+
+			disposed = true;
+		}
+
+		public void Dispose()
+		{
+			if (disposed)
+				return;
+#if !SILVERLIGHT
+			DisposeAsync().Wait();
+#else
+			throw new InvalidOperationException("Dispose can only be called after DisposeAsync has completed");
+#endif
+
 		}
 
 		private void FlushBatch(Stream requestStream, List<RavenJObject> localBatch)

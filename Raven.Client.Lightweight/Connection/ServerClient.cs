@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Json;
+using Raven.Client.Connection.Async;
 using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -1420,7 +1421,13 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
 		{
-			return new RemoteBulkInsertOperation(options, this);
+			return new RemoteBulkInsertOperation(options, ToAsyncClient());
+		}
+
+		public AsyncServerClient ToAsyncClient()
+		{
+			return new AsyncServerClient(url, convention, credentials, jsonRequestFactory, currentSessionId,
+			                             replicationInformerGetter, databaseName, conflictListeners);
 		}
 
 		/// <summary>
@@ -1513,7 +1520,7 @@ namespace Raven.Client.Connection
 					throw;
 				}
 
-				return new Operation(this, jsonResponse.Value<long>("OperationId"));
+				return new Operation(jsonResponse.Value<long>("OperationId"), ToAsyncClient());
 			});
 		}
 
@@ -1591,7 +1598,7 @@ namespace Raven.Client.Connection
 					throw;
 				}
 
-				return new Operation(this, jsonResponse.Value<long>("OperationId"));
+				return new Operation(jsonResponse.Value<long>("OperationId"), ToAsyncClient());
 			});
 		}
 
@@ -1984,13 +1991,6 @@ namespace Raven.Client.Connection
 					throw;
 				return null;
 			}
-		}
-
-		public IDisposable Expect100Continue()
-		{
-			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
-			servicePoint.Expect100Continue = true;
-			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
 	}
 }
