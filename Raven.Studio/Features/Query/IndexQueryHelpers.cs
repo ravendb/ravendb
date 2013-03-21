@@ -159,19 +159,19 @@ namespace Raven.Studio.Features.Query
             }
 
             return SpatialUnits.Kilometers;
-        }
+		}
 
-        public static Guid? GetEtagFromQueryString(this ILookup<string, string> fields)
-        {
-            var etagAsString = fields["etag"].FirstOrDefault();
-            if (etagAsString != null)
-            {
-                Guid result;
-                if (Guid.TryParse(etagAsString, out result))
-                    return result;
-                return null;
-            }
-            return null;
-        }
-    }
+		public static Guid? GetEtagFromQueryString(this ILookup<string, string> fields)
+		{
+			var etagAsString = fields["etag"].FirstOrDefault();
+			if (etagAsString != null)
+			{
+				Guid result;
+				if (Guid.TryParse(etagAsString, out result))
+					return result;
+				return null;
+			}
+			return null;
+		}
+	}
 }

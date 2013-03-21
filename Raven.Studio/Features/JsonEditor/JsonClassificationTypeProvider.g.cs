@@ -4,7 +4,6 @@ namespace Raven.Studio.Features.JsonEditor
     using ActiproSoftware.Text.Implementation;
     using ActiproSoftware.Windows.Controls.SyntaxEditor.Highlighting;
     using ActiproSoftware.Windows.Controls.SyntaxEditor.Highlighting.Implementation;
-    using System;
     using System.Collections.Generic;
     using System.Windows.Media;
 
@@ -18,7 +17,6 @@ namespace Raven.Studio.Features.JsonEditor
     [System.CodeDom.Compiler.GeneratedCodeAttribute("LanguageDesigner", "12.1.561.0")]
     public partial class JsonClassificationTypeProvider : IJsonClassificationTypeProvider
     {
-
         private IHighlightingStyleRegistry registryValue;
 
         private IClassificationType delimiterValue;

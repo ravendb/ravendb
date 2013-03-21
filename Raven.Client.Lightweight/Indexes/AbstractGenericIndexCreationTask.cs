@@ -28,6 +28,8 @@ namespace Raven.Client.Indexes
 			IndexSuggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
 			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>(); 
+			SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
 		}
 
 		public override bool IsMapReduce
@@ -94,6 +96,16 @@ namespace Raven.Client.Indexes
 		/// </summary>		
 		protected IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
 
+		/// <summary>
+		/// Spatial index options
+		/// </summary>
+		protected IDictionary<Expression<Func<TReduceResult, object>>, SpatialOptions> SpatialIndexes { get; set; }
+
+		/// <summary>
+		/// Spatial index options
+		/// </summary>
+		protected IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
+
 
 		/// <summary>
 		/// Indexing options
@@ -119,6 +131,22 @@ namespace Raven.Client.Indexes
 		protected void Index(string field, FieldIndexing indexing)
 		{
 			IndexesStrings.Add(field, indexing);
+		}
+
+		/// <summary>
+		/// Register a field to be spatially indexed
+		/// </summary>
+		protected void Spatial(Expression<Func<TReduceResult, object>> field, Func<SpatialOptionsFactory, SpatialOptions> indexing)
+		{
+			SpatialIndexes.Add(field, indexing(new SpatialOptionsFactory()));
+		}
+
+		/// <summary>
+		/// Register a field to be spatially indexed
+		/// </summary>
+		protected void Spatial(string field, Func<SpatialOptionsFactory, SpatialOptions> indexing)
+		{
+			SpatialIndexesStrings.Add(field, indexing(new SpatialOptionsFactory()));
 		}
 
 		/// <summary>

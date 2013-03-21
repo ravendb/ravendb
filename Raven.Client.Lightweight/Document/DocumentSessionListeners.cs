@@ -13,6 +13,7 @@ namespace Raven.Client.Document
 		public DocumentSessionListeners()
 		{
 			ConversionListeners = new IDocumentConversionListener[0];
+			ExtendedConversionListeners = new IExtendedDocumentConversionListener[0];
 			QueryListeners = new IDocumentQueryListener[0];
 			StoreListeners = new IDocumentStoreListener[0];
 			DeleteListeners = new IDocumentDeleteListener[0];
@@ -23,6 +24,10 @@ namespace Raven.Client.Document
 		/// The conversion listeners
 		/// </summary>
 		public IDocumentConversionListener[] ConversionListeners { get; set; }
+		/// <summary>
+		/// The extended conversion listeners
+		/// </summary>
+		public IExtendedDocumentConversionListener[] ExtendedConversionListeners { get; set; }
 		/// <summary>
 		/// The query listeners allow to modify queries before it is executed
 		/// </summary>

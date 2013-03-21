@@ -80,6 +80,14 @@ namespace Raven.Database.Config
 
 			MemoryCacheLimitCheckInterval = ravenSettings.MemoryCacheLimitCheckInterval.Value;
 
+			// Discovery
+			DisableClusterDiscovery = ravenSettings.DisableClusterDiscovery.Value;
+
+			// TODO: Validate the cluster name. Valid names are only valid chars in documents IDs.
+			ClusterName = ravenSettings.ClusterName.Value;
+
+			ServerName = ravenSettings.ServerName.Value;
+
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
 
@@ -698,6 +706,21 @@ namespace Raven.Database.Config
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
+		
+		/// <summary>
+		/// If True, cluster discovery will be disabled. Default is False
+		/// </summary>
+		public bool DisableClusterDiscovery { get; set; }
+
+		/// <summary>
+		/// The cluster name
+		/// </summary>
+		public string ClusterName { get; set; }
+
+		/// <summary>
+		/// The server name
+		/// </summary>
+		public string ServerName { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

@@ -22,9 +22,9 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 			store = NewDocumentStore();
 			using (var session = store.OpenSession())
 			{
-				var javascriptBook = new Book {Title = "Javascript: The Good Parts"};
-				var phpBook = new Book {Title = "PHP: The Good Parts"};
-				var eclipseBook = new Book {Title = "Zend Studio for Eclipse Developer's Guide"};
+				var javascriptBook = new Book { Title = "Javascript: The Good Parts" };
+				var phpBook = new Book { Title = "PHP: The Good Parts" };
+				var eclipseBook = new Book { Title = "Zend Studio for Eclipse Developer's Guide" };
 
 				session.Store(javascriptBook);
 				session.Store(phpBook);
@@ -34,10 +34,10 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				phpBookId = phpBook.Id;
 				eclipseBookId = eclipseBook.Id;
 
-				session.Store(new Author {BookId = javascriptBook.Id, Name = "Douglas Crockford"});
-				session.Store(new Author {BookId = phpBook.Id, Name = "Peter MacIntyre"});
-				session.Store(new Author {BookId = eclipseBook.Id, Name = "Peter MacIntyre"});
-				session.Store(new Book {Title = "Unrelated"});
+				session.Store(new Author { BookId = javascriptBook.Id, Name = "Douglas Crockford" });
+				session.Store(new Author { BookId = phpBook.Id, Name = "Peter MacIntyre" });
+				session.Store(new Author { BookId = eclipseBook.Id, Name = "Peter MacIntyre" });
+				session.Store(new Book { Title = "Unrelated" });
 				session.SaveChanges();
 
 				new MapReduceIndex().Execute(store);
@@ -121,32 +121,34 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 			public MapReduceIndex()
 			{
 				AddMap<Book>(things => from thing in things
-				                       select new IndexDocument()
-				                       {
-					                       BookId = thing.Id,
-					                       Text = thing.Title
-				                       });
+									   select new IndexDocument()
+									   {
+										   BookId = thing.Id,
+										   Text = thing.Title
+									   });
 
 				AddMap<Author>(opinions => from opinion in opinions
-				                           select new IndexDocument()
-				                           {
-					                           BookId = opinion.BookId,
-					                           Text = opinion.Name
-				                           });
+										   select new IndexDocument()
+										   {
+											   BookId = opinion.BookId,
+											   Text = opinion.Name
+										   });
 
 				Reduce = documents => from doc in documents
-				                      group doc by doc.BookId
-				                      into g
-				                      select new IndexDocument()
-				                      {
-					                      BookId = g.Key,
-					                      Text = string.Join(" ", g.Select(d => d.Text))
-				                      };
+									  group doc by doc.BookId
+										  into g
+										  select new IndexDocument()
+										  {
+											  BookId = g.Key,
+											  Text = string.Join(" ", g.Select(d => d.Text))
+										  };
 
 
 				Index(x => x.Text, FieldIndexing.Analyzed);
 				Index(x => x.BookId, FieldIndexing.NotAnalyzed);
-				TermVector(x=>x.Text, FieldTermVector.Yes);
+				Store(x => x.BookId, FieldStorage.Yes);
+				Store(x => x.Text, FieldStorage.Yes);
+				TermVector(x => x.Text, FieldTermVector.Yes);
 			}
 		}
 	}

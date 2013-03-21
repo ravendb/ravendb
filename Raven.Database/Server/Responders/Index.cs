@@ -243,7 +243,7 @@ namespace Raven.Database.Server.Responders
 					isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
 					indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
 				});
-			var indexEtag = Database.GetIndexEtag(index, null);
+			var indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
 			context.WriteETag(indexEtag);
 			context.WriteJson(
 				new
@@ -488,7 +488,7 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Etag indexEtag)
 		{
-			indexEtag = Database.GetIndexEtag(index, null);
+			indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
 			if (context.MatchEtag(indexEtag))
 			{
 				Database.IndexStorage.MarkCachedQuery(index);
@@ -497,7 +497,7 @@ namespace Raven.Database.Server.Responders
 			}
 
 			var queryResult = Database.Query(index, indexQuery);
-			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag);
+			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
 			return queryResult;
 		}
 
@@ -508,7 +508,7 @@ namespace Raven.Database.Server.Responders
 
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-				indexEtag = Database.GetIndexEtag(dynamicIndexName, null);
+				indexEtag = Database.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);
 				if (context.MatchEtag(indexEtag))
 				{
 					Database.IndexStorage.MarkCachedQuery(dynamicIndexName);
@@ -539,7 +539,7 @@ namespace Raven.Database.Server.Responders
 			// if that is the case. This can also happen when the optimizer
 			// decided to switch indexes for a query.
 		    indexEtag = (dynamicIndexName == null || queryResult.IndexName == dynamicIndexName)
-		                    ? Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag)
+		                    ? Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag, indexQuery.ResultsTransformer)
 		                    : Etag.InvalidEtag;
 
 			return queryResult;

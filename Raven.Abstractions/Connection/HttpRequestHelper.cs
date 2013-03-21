@@ -1,3 +1,4 @@
+#if !SILVERLIGHT &&  !NETFX_CORE
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -23,9 +24,10 @@ namespace Raven.Abstractions.Connection
 				writer.Write(data);
 
 				writer.Flush();
-
+#if !MONO
 				if (disableCompression == false)
 					dataStream.Flush();
+#endif
 				requestStream.Flush();
 			}
 		}
@@ -70,7 +72,6 @@ namespace Raven.Abstractions.Connection
 							break;
 						case "Transfer-Encoding":
 							dest.SendChunked = src.SendChunked;
-
 							break;
 						case "User-Agent":
 							dest.UserAgent = src.UserAgent;
@@ -86,10 +87,11 @@ namespace Raven.Abstractions.Connection
 				{
 					foreach (var value in values)
 					{
-						dest.Headers.Add(header, value);
+						dest.Headers[header] = value;
 					}
 				}
 			}
 		}
 	}
 }
+#endif

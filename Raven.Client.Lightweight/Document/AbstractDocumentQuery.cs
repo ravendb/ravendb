@@ -15,6 +15,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Raven.Abstractions.Spatial;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -27,6 +28,7 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Spatial;
 using Raven.Client.WinRT.MissingFromWinRT;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -39,6 +41,7 @@ namespace Raven.Client.Document
 	///   A query against a Raven index
 	/// </summary>
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
+															where TSelf : AbstractDocumentQuery<T, TSelf>
 	{
 		protected bool isSpatialQuery;
 		protected string spatialFieldName, queryShape;
@@ -423,12 +426,59 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQueryCustomization IDocumentQueryCustomization.Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+		{
+			var criteria = clause(new SpatialCriteriaFactory());
+			GenerateSpatialQueryData(fieldName, criteria);
+			return this;
+		}
+
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-        protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+        protected TSelf GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
+		{
+			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius, radiusUnits), SpatialRelation.Within, distanceErrorPct);
+		}
 
-		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025);
+		protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025)
+		{
+			isSpatialQuery = true;
+			spatialFieldName = fieldName;
+			queryShape = new WktSanitizer().Sanitize(shapeWKT);
+			spatialRelation = relation;
+			this.distanceErrorPct = distanceErrorPct;
+			return (TSelf) this;
+		}
+
+		protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria, double distanceErrorPct = 0.025)
+		{
+
+
+			var wkt = criteria.Shape as string;
+			if (wkt == null && criteria.Shape != null)
+			{
+				var jsonSerializer = DocumentConvention.CreateSerializer();
+
+				using (var jsonWriter = new RavenJTokenWriter())
+				{
+					var converter = new ShapeConverter();
+					jsonSerializer.Serialize(jsonWriter, criteria.Shape);
+					if (!converter.TryConvert(jsonWriter.Token, out wkt))
+						throw new ArgumentException("Shape");
+				}
+			}
+
+			if (wkt == null)
+				throw new ArgumentException("Shape");
+
+			isSpatialQuery = true;
+			spatialFieldName = fieldName;
+			queryShape = new WktSanitizer().Sanitize(wkt);
+			spatialRelation = criteria.Relation;
+			this.distanceErrorPct = distanceErrorPct;
+			return (TSelf) this;
+		}
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.

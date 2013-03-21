@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
@@ -20,19 +21,22 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing
 {
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
+		private readonly AbstractViewGenerator viewGenerator;
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
 		private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
 
-		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition)
+		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
 			this.indexDefinition = indexDefinition;
+			this.viewGenerator = viewGenerator;
 		}
 
 		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
@@ -79,15 +83,49 @@ namespace Raven.Database.Indexing
 			if (string.IsNullOrWhiteSpace(name))
 				throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
 
-			if (char.IsLetter(name[0]) == false &&
-				name[0] != '_')
+			if (char.IsLetter(name[0]) == false && name[0] != '_')
 			{
 				name = "_" + name;
 			}
 
+			if (viewGenerator.IsSpatialField(name))
+				return CreateSpatialFields(name, value);
+
+			return CreateRegularFields(name, value, defaultStorage, nestedArray, defaultTermVector);
+		}
+
+		protected IEnumerable<AbstractField> CreateSpatialFields(string name, object value)
+		{
+			var spatialField = viewGenerator.GetSpatialField(name);
+			var strategy = spatialField.GetStrategy();
+
+			Shape shape;
+			if (spatialField.TryReadShape(value, out shape))
+			{
+				return strategy.CreateIndexableFields(shape)
+					.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+			}
+
+			return Enumerable.Empty<AbstractField>();
+		}
+
+		private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO)
+		{
+
 			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
 			var termVector = indexDefinition.GetTermVector(name, defaultTermVector);
+
+			if (fieldIndexingOptions == Field.Index.NO && storage == Field.Store.NO && termVector == Field.TermVector.NO)
+			{
+				yield break;
+			}
+
+			if (fieldIndexingOptions == Field.Index.NO && storage == Field.Store.NO)
+			{
+				fieldIndexingOptions = Field.Index.ANALYZED; // we have some sort of term vector, forcing index to be analyzed, then.
+			}
+
 
 			if (value == null)
 			{
@@ -256,8 +294,12 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(Formatting.None), storage,
+				var jsonVal = RavenJToken.FromObject(value).ToString(Formatting.None);
+				if(jsonVal.StartsWith("{") || jsonVal.StartsWith("[")) 
+					yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+				else if (jsonVal.StartsWith("\"") && jsonVal.EndsWith("\"") && jsonVal.Length > 1)
+					jsonVal = jsonVal.Substring(1, jsonVal.Length - 2);
+				yield return CreateFieldWithCaching(name, jsonVal, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 

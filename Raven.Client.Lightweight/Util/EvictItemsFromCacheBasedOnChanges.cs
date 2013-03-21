@@ -29,7 +29,7 @@ namespace Raven.Client.Util
 			var indexSub = changes.ForAllIndexes();
 			indexesSubscription = indexSub.Subscribe(this);
 
-			connectionTask = TaskEx.WhenAll(docSub.Task, indexSub.Task);
+			connectionTask = Task.Factory.ContinueWhenAll(new Task[] {docSub.Task, indexSub.Task}, tasks => { });
 		}
 
 		public Task ConnectionTask

@@ -21,11 +21,8 @@ namespace Raven.Studio.Commands
 				.Select(x => x.Name)
 				.FirstOrDefault();
 
-            if (index == null)
-                return false;
-
-			return index.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase);
-		}
+            return index != null && index.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase);
+        }
 
         protected override void ExecuteOverride(IEnumerable<IndexItem> items)
         {
@@ -52,17 +49,18 @@ namespace Raven.Studio.Commands
 			DatabaseCommands
 				.GetIndexAsync(oldIndexName)
 				.ContinueOnSuccess(index =>
-				                   	{
-				                   		index.Name = newIndexName;
-				                   		DatabaseCommands.PutIndexAsync(newIndexName, index, false)
-				                   			.ContinueOnSuccess(() => DatabaseCommands.DeleteIndexAsync(oldIndexName))
-				                   			.ContinueOnSuccessInTheUIThread(() =>
-				                   			                                	{
-				                   			                                		ApplicationModel.Current.AddInfoNotification("Temp index " + oldIndexName + " successfully promoted");
-				                   			                                		model.ForceTimerTicked();
-				                   			                                	})
-				                   			.Catch();
-				                   	});
+				{
+					index.Name = newIndexName;
+					DatabaseCommands.PutIndexAsync(newIndexName, index, false)
+					                .ContinueOnSuccess(() => DatabaseCommands.DeleteIndexAsync(oldIndexName))
+					                .ContinueOnSuccessInTheUIThread(() =>
+					                {
+						                ApplicationModel.Current.AddInfoNotification("Temp index " + oldIndexName +
+						                                                             " successfully promoted");
+						                model.ForceTimerTicked();
+					                })
+					                .Catch();
+				});
 		}
 	}
 }

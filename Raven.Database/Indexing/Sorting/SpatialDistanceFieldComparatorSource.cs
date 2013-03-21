@@ -20,27 +20,31 @@ namespace Raven.Database.Indexing.Sorting
 	public class SpatialDistanceFieldComparatorSource : FieldComparatorSource
 	{
 		private readonly Point center;
+	    private readonly SpatialField spatialField;
 
-		public SpatialDistanceFieldComparatorSource(Point center)
+		public SpatialDistanceFieldComparatorSource(SpatialField spatialField, Point center)
 		{
+		    this.spatialField = spatialField;
 			this.center = center;
 		}
 
 		public override FieldComparator NewComparator(string fieldname, int numHits, int sortPos, bool reversed)
 		{
-			return new SpatialDistanceFieldComparator(center, numHits);
+			return new SpatialDistanceFieldComparator(spatialField, center, numHits);
 		}
 
 		public class SpatialDistanceFieldComparator : FieldComparator
 		{
+			private readonly SpatialField spatialField;
 			private readonly DistanceValue[] values;
 			private DistanceValue bottom;
 			private readonly Point originPt;
 
 			private IndexReader currentIndexReader;
 
-			public SpatialDistanceFieldComparator(Point origin, int numHits)
+			public SpatialDistanceFieldComparator(SpatialField spatialField, Point origin, int numHits)
 			{
+				this.spatialField = spatialField;
 				values = new DistanceValue[numHits];
 				originPt = origin;
 			}
@@ -98,7 +102,7 @@ namespace Raven.Database.Indexing.Sorting
 				Shape shape;
 				try
 				{
-					shape = SpatialIndex.ReadShape(shapeAsText);
+					shape = spatialField.ReadShape(shapeAsText);
 				}
 				catch (InvalidOperationException)
 				{
@@ -107,7 +111,7 @@ namespace Raven.Database.Indexing.Sorting
 				var pt = shape as Point;
 				if (pt == null)
 					pt = shape.GetCenter();
-				return SpatialIndex.Context.GetDistCalc().Distance(pt, originPt);
+				return spatialField.GetContext().GetDistCalc().Distance(pt, originPt);
 			}
 
 			public override void SetNextReader(IndexReader reader, int docBase)

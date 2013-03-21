@@ -148,11 +148,11 @@ namespace Raven.Studio.Features.Documents
 			var display = Id;
 
 			var prefixToRemoves = new[]
-			                      {
-				                      "Raven/",
-				                      CollectionType + "/",
-				                      CollectionType + "-"
-			                      };
+			{
+				"Raven/",
+				CollectionType + "/",
+				CollectionType + "-"
+			};
 
 			foreach (var prefixToRemove in prefixToRemoves)
 			{

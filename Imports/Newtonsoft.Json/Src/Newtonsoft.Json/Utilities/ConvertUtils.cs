@@ -32,7 +32,7 @@ using System.Reflection;
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #endif
 
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
 using System.Data.SqlTypes;
 #endif
 #if NETFX_CORE
@@ -378,7 +378,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         throw new Exception("Can not convert null {0} into non-nullable {1}.".FormatWith(CultureInfo.InvariantCulture, initialType, targetType));
       }
 #endif
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
       if (initialValue is INullable)
         return EnsureTypeAssignable(ToValue((INullable)initialValue), initialType, targetType);
 #endif
@@ -464,7 +464,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
       throw new ArgumentException("Could not cast or convert from {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, (initialType != null) ? initialType.ToString() : "{null}", targetType));
     }
 
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
     public static object ToValue(INullable nullableValue)
     {
       if (nullableValue == null)

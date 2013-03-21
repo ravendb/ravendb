@@ -29,48 +29,45 @@ namespace Raven.Studio.Features.Documents
             return builder.BuildUrl();
         }
 
-        public override Task<DocumentAndNavigationInfo> GetDocument()
-        {
-            if (string.IsNullOrEmpty(id))
-            {
-                return DatabaseCommands.GetDocumentsAsync(itemIndex, 1)
-                    .ContinueWith(t =>
-                                      {
-                                          var totalDocuments = GetTotalDocuments();
-                                          var info = PopulateDocumentOrConflictsFromDocuments(t.Result);
-                                          info.TotalDocuments = totalDocuments;
-                                          info.Index = itemIndex;
-                                          info.ParentPath = GetParentPath(info);
-                                          info.UrlForFirst = GetUrlForIndex(0);
-                                          info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
-                                          info.UrlForNext = itemIndex < totalDocuments - 1 ? GetUrlForIndex(itemIndex + 1) : null;
-                                          info.UrlForLast = GetUrlForIndex(totalDocuments - 1);
-                                          return info;
-                                      }
-                    );
-            }
-            else
-            {
-                return DatabaseCommands.GetAsync(id).ContinueWith
-                    (t =>
-                         {
-                             var totalDocuments = GetTotalDocuments();
-                             var info = PopulateDocumentOrConflictsFromTask(t, id);
+	    public override Task<DocumentAndNavigationInfo> GetDocument()
+	    {
+		    if (string.IsNullOrEmpty(id))
+		    {
+			    return DatabaseCommands.GetDocumentsAsync(itemIndex, 1)
+			                           .ContinueWith(t =>
+			                           {
+				                           var totalDocuments = GetTotalDocuments();
+				                           var info = PopulateDocumentOrConflictsFromDocuments(t.Result);
+				                           info.TotalDocuments = totalDocuments;
+				                           info.Index = itemIndex;
+				                           info.ParentPath = GetParentPath(info);
+				                           info.UrlForFirst = GetUrlForIndex(0);
+				                           info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+				                           info.UrlForNext = itemIndex < totalDocuments - 1 ? GetUrlForIndex(itemIndex + 1) : null;
+				                           info.UrlForLast = GetUrlForIndex(totalDocuments - 1);
+				                           return info;
+			                           }
+				    );
+		    }
 
-                             info.TotalDocuments = GetTotalDocuments();
-                             info.Index = itemIndex;
-                             info.ParentPath = GetParentPath(info);
-                             info.UrlForFirst = GetUrlForIndex(0);
-                             info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
-                             info.UrlForNext = itemIndex < totalDocuments - 1 ? GetUrlForIndex(itemIndex + 1) : null;
-                             info.UrlForLast = GetUrlForIndex(totalDocuments - 1);
-                             return info;
-                         }
-                    );
-            }
-        }
+		    return DatabaseCommands.GetAsync(id).ContinueWith
+			    (t =>
+			    {
+				    var totalDocuments = GetTotalDocuments();
+				    var info = PopulateDocumentOrConflictsFromTask(t, id);
 
-        private static long GetTotalDocuments()
+				    info.TotalDocuments = GetTotalDocuments();
+				    info.Index = itemIndex;
+				    info.ParentPath = GetParentPath(info);
+				    info.UrlForFirst = GetUrlForIndex(0);
+				    info.UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null;
+				    info.UrlForNext = itemIndex < totalDocuments - 1 ? GetUrlForIndex(itemIndex + 1) : null;
+				    info.UrlForLast = GetUrlForIndex(totalDocuments - 1);
+				    return info;
+			    });
+	    }
+
+	    private static long GetTotalDocuments()
         {
             // since we're working on a background thread, we have to be prepare for observable to change underneath us.
             var databaseModel = ApplicationModel.Database.Value;
@@ -121,16 +118,12 @@ namespace Raven.Studio.Features.Documents
             {
                 return new[]
                            {
-                               new PathSegment() {Name = "Documents", Url = "/documents"},
-                               new PathSegment()
-                                   {Name = entityType, Url = "/collections?name=" + entityType}
+                               new PathSegment {Name = "Documents", Url = "/documents"},
+                               new PathSegment {Name = entityType, Url = "/collections?name=" + entityType}
                            };
             }
 
-            return new[]
-                       {
-                           new PathSegment() { Name = "Documents", Url = "/documents"}
-                       };
+	        return new[] {new PathSegment {Name = "Documents", Url = "/documents"}};
         }
 
         private string GetUrlForIndex(long index)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -11,7 +10,6 @@ using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Extensions;
-using Raven.Database.Bundles.SqlReplication;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Settings;
@@ -47,12 +45,9 @@ namespace Raven.Studio.Commands
 					{
 						bundlesModel = ConfigureSettingsModel(newDatabase);
 
-						var bundleView = new SettingsDialog()
-						{
-							DataContext = bundlesModel
-						};
+						var bundleView = new SettingsDialog {DataContext = bundlesModel};
 
-						var bundlesSettingsWindow = new ChildWindow()
+						var bundlesSettingsWindow = new ChildWindow
 						{
 							Title = "Setup bundles",
 							Content = bundleView,
@@ -113,7 +108,7 @@ namespace Raven.Studio.Commands
 
 			if (newDatabase.Quotas.IsChecked == true)
 			{
-				AddSection(bundlesModel, new QuotaSettingsSectionModel()
+				AddSection(bundlesModel, new QuotaSettingsSectionModel
 				{
 					MaxSize = 50,
 					WarnSize = 45,
@@ -136,6 +131,7 @@ namespace Raven.Studio.Commands
 	                }
 				});
 			}
+
 			return bundlesModel;
 		}
 
@@ -149,7 +145,6 @@ namespace Raven.Studio.Commands
 		private Dictionary<string, string> UpdateSecuredSettings(IEnumerable<ChildWindow> bundlesData)
 		{
 			var settings = new Dictionary<string, string>();
-
 
 			var encryptionData = bundlesData.FirstOrDefault(window => window is EncryptionSettings) as EncryptionSettings;
 			if (encryptionData != null)
@@ -262,7 +257,9 @@ namespace Raven.Studio.Commands
 
 		public static void AssertValidName(string name)
 		{
-			if (name == null) throw new ArgumentNullException("name");
+			if (name == null) 
+				throw new ArgumentNullException("name");
+
 			var result = Regex.Matches(name, validDbNameChars);
 			if (result.Count == 0 || result[0].Value != name)
 			{

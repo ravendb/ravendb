@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 #if SILVERLIGHT || NETFX_CORE
+using Raven.Abstractions.Replication;
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
 using System.Transactions;
@@ -30,6 +31,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -46,11 +48,12 @@ namespace Raven.Client.Connection.Async
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
-	public class AsyncServerClient : IAsyncDatabaseCommands
+	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly string url;
+		private readonly string rootUrl;
 		private readonly ICredentials credentials;
 		private readonly DocumentConvention convention;
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
@@ -78,6 +81,12 @@ namespace Raven.Client.Connection.Async
 			this.url = url;
 			if (this.url.EndsWith("/"))
 				this.url = this.url.Substring(0, this.url.Length - 1);
+			rootUrl = this.url;
+			var databasesIndex = rootUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+			if (databasesIndex > 0)
+			{
+				rootUrl = rootUrl.Substring(0, databasesIndex);
+			}
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
@@ -264,7 +273,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="operationUrl">The server's url</param>
 		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string operationUrl)
 		{
-			var requestUri = operationUrl + "/indexes/" + Uri.EscapeUriString(name) +"?definition=yes";
+			var requestUri = operationUrl + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -398,7 +407,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("PUT", opUrl => DirectPutAsync(opUrl, key, etag, document, metadata));
 		}
 
-        private Task<PutResult> DirectPutAsync(string opUrl, string key, Etag etag, RavenJObject document, RavenJObject metadata)
+		private Task<PutResult> DirectPutAsync(string opUrl, string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			if (metadata == null)
 				metadata = new RavenJObject();
@@ -934,12 +943,12 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
-				                                                                         convention)
+
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
 				{
 					AvoidCachingRequest = query.DisableCaching
-				});
+				}.AddOperationHeaders(OperationsHeaders));
 
 			request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1155,7 +1164,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-        public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
+		public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", operationUrl =>
 			{
@@ -1251,7 +1260,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-        public Task DeleteAttachmentAsync(string key, Etag etag)
+		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			return ExecuteWithReplication("DELETE", operationUrl =>
 			{
@@ -1334,6 +1343,20 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("HEAD", u => DirectHeadAsync(u, key));
 		}
 
+#if NETFX_CORE
+		//TODO: Mono implement 
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                            int pageSize = Int32.MaxValue)
+		{
+			throw new NotImplementedException();
+		}
+
+#else
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
@@ -1359,6 +1382,7 @@ namespace Raven.Client.Connection.Async
 
 			return new YieldStreamResults(webResponse);
 		}
+
 		public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
 		{
 			private readonly WebResponse webResponse;
@@ -1411,7 +1435,7 @@ namespace Raven.Client.Connection.Async
 				if (reader.TokenType == JsonToken.EndArray)
 					return false;
 
-				Current = (RavenJObject) await RavenJToken.ReadFromAsync(reader);
+				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader);
 				return true;
 			}
 
@@ -1420,7 +1444,7 @@ namespace Raven.Client.Connection.Async
 
 
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-		                            int pageSize = Int32.MaxValue)
+									int pageSize = Int32.MaxValue)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -1457,6 +1481,16 @@ namespace Raven.Client.Connection.Async
 			var webResponse = await request.RawExecuteRequestAsync();
 			return new YieldStreamResults(webResponse);
 		}
+#endif
+#if SILVERLIGHT
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		{
+			return new RemoteBulkInsertOperation(options, this);
+		}
+#endif
 
 		/// <summary>
 		/// Do a direct HEAD request against the server for the specified document
@@ -1466,9 +1500,9 @@ namespace Raven.Client.Connection.Async
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
-																			   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
-																				   .AddOperationHeaders(OperationsHeaders))
-														.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			                                                                   new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
+				                                                                   .AddOperationHeaders(OperationsHeaders))
+			                                            .AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			return request.ReadResponseJsonAsync().ContinueWith(task =>
 			{
@@ -1490,7 +1524,7 @@ namespace Raven.Client.Connection.Async
 					if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 					{
 						throw new ConflictException("Conflict detected on " + key +
-													", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
+						                            ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
 						{
 							Etag = httpWebResponse.GetEtagHeader()
 						};
@@ -1500,11 +1534,12 @@ namespace Raven.Client.Connection.Async
 			}).Unwrap();
 		}
 
-		public HttpJsonRequest CreateRequest(string requestUrl, string method)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
@@ -1594,12 +1629,12 @@ namespace Raven.Client.Connection.Async
 				{
 					if (t.Result)
 					{
-						return (ConflictException) null;
+						return (ConflictException)null;
 					}
 
 					return new ConflictException("Conflict detected on " + key +
-					                             ", conflict must be resolved before the document will be accessible",
-					                             true)
+												 ", conflict must be resolved before the document will be accessible",
+												 true)
 					{
 						ConflictedVersionIds = conflictIds,
 						Etag = etag
@@ -1686,5 +1721,70 @@ namespace Raven.Client.Connection.Async
 				resolvingConflictRetries = false;
 			}
 		}
+
+		public Task<RavenJToken> GetOperationStatusAsync(long id)
+		{
+			var request = jsonRequestFactory
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
+				.AddOperationHeaders(OperationsHeaders));
+
+			return
+				request
+					.ReadResponseJsonAsync()
+					.ContinueWith(task => task.Result);
+		}
+
+		#region IAsyncGlobalAdminDatabaseCommands
+
+		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
+		{
+			get { return this; }
+		}
+
+		Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
+		{
+			return rootUrl.AdminStats()
+					.NoCache()
+					.ToJsonRequest(this, credentials, convention)
+					.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var jo = ((RavenJObject)task.Result);
+						return jo.Deserialize<AdminStatistics>(convention);
+					});
+		}
+
+		#endregion
+
+		#region IAsyncAdminDatabaseCommands
+		
+		public IAsyncAdminDatabaseCommands Admin
+		{
+			get { return this; }
+		}
+
+		#endregion
+
+		#region IAsyncInfoDatabaseCommands
+
+		public IAsyncInfoDatabaseCommands Info
+		{
+			get { return this; }
+		}
+
+		Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
+		{
+			return url.ReplicationInfo()
+					.NoCache()
+					.ToJsonRequest(this, credentials, convention)
+					.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var jo = ((RavenJObject)task.Result);
+						return jo.Deserialize<ReplicationStatistics>(convention);
+					});
+		}
+
+		#endregion
 	}
 }

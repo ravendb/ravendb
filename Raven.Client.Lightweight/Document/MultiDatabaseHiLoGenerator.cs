@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -28,3 +29,4 @@ namespace Raven.Client.Document
 		}
 	}
 }
+#endif

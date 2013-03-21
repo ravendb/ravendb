@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Linq;
 using System.Threading;
@@ -71,6 +72,7 @@ namespace Raven.Client.Document
 		{
 #if !NETFX_CORE
 			using (new TransactionScope(TransactionScopeOption.Suppress))
+			using (databaseCommands.ForceReadFromMaster())
 			{
 #endif
 				ModifyCapacityIfRequired();
@@ -139,7 +141,7 @@ namespace Raven.Client.Document
 #endif
 		}
 
-		private void PutDocument(IDatabaseCommands databaseCommands,JsonDocument document)
+		private void PutDocument(IDatabaseCommands databaseCommands, JsonDocument document)
 		{
 			databaseCommands.Put(HiLoDocumentKey, document.Etag,
 								 document.DataAsJson,
@@ -153,3 +155,4 @@ namespace Raven.Client.Document
 		}
 	}
 }
+#endif

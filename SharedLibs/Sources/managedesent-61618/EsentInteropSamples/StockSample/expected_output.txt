@@ -1,4 +1,4 @@
-
+﻿
 ** Populating the table
 	Apple Inc.                               AAPL $90    
 	eBay Inc.                                EBAY $14.45 

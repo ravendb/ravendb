@@ -41,6 +41,16 @@ namespace Raven.Client.Connection
 			return url + "/stats";
 		}
 
+		public static string AdminStats(this string url)
+		{
+			return url + "/admin/stats";
+		}
+
+		public static string ReplicationInfo(this string url)
+		{
+			return url + "/replication/info";
+		}
+
 		//public static string Static(this string url, string key)
 		//{
 		//    return url + "/static/" + HttpUtility.UrlEncode(key);
@@ -48,7 +58,7 @@ namespace Raven.Client.Connection
 
 		public static string Databases(this string url, int pageSize, int start)
 		{
-			var databases = url + "/databases/?pageSize=" + pageSize;
+			var databases = url + "/databases?pageSize=" + pageSize;
 			return start > 0 ? databases + "&start=" + start : databases;
 		}
 

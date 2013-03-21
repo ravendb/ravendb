@@ -737,7 +737,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				VisitEnumerableMethodCall(expression, negated);
 				return;
 			}
-			if (declaringType.IsGenericType &&
+			if (declaringType.IsGenericType() &&
 			    declaringType.GetGenericTypeDefinition() == typeof (List<>))
 			{
 				VisitListMethodCall(expression);
@@ -1082,6 +1082,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if (chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1093,6 +1095,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if(chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1104,6 +1108,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if (chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1128,7 +1134,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 			}
 		}
-
+        static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
+        {
+            typeof(int),
+            typeof(long),
+            typeof(float),
+            typeof(decimal),
+            typeof(double),
+            typeof(TimeSpan)
+        };
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
 			var memberExpression = linqPathProvider.GetMemberExpression(expression.Body);
@@ -1138,7 +1152,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var type = propertyInfo != null
 				           ? propertyInfo.PropertyType
 				           : (fieldInfo != null ? fieldInfo.FieldType : typeof (object));
-			luceneQuery.AddOrder(expressionMemberInfo.Path, descending, type);
+            string fieldName = expressionMemberInfo.Path;
+		    if (requireOrderByToUseRange.Contains(type))
+                fieldName = fieldName + "_Range";
+		    luceneQuery.AddOrder(fieldName, descending, type);
 		}
 
 		private bool insideSelect;

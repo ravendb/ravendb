@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
@@ -124,7 +123,7 @@ namespace Raven.Tests.MailingList
 			{
 				public Guid ClientGuid { get; set; }
 				public string[] ClientNames { get; set; }
-				public string Query { get; set; }
+				public string[] Query { get; set; }
 			}
 		}
 
@@ -155,7 +154,7 @@ namespace Raven.Tests.MailingList
 				RavenQueryStatistics stats;
 				List<LogEntries_Search.ReduceResult> reduceResults = documentSession.Query<LogEntries_Search.ReduceResult, LogEntries_Search>()
 					.Statistics(out stats)
-					.Where(x => x.Query.StartsWith(query))
+					.Search(x => x.Query, query + "*", escapeQueryOptions: EscapeQueryOptions.AllowPostfixWildcard)
 					.ToList();
 				return reduceResults;
 			}

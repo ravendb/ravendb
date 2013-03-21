@@ -22,7 +22,9 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
+#if !MONO && !NETFX_CORE
 	[System.ComponentModel.Composition.InheritedExport]
+#endif
 	public abstract class AbstractTransformerCreationTask : AbstractCommonApiForIndexesAndTransformers
 	{
 		/// <summary>
@@ -48,7 +50,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public abstract TransformerDefinition CreateTransformerDefinition();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
 		public void Execute(IDocumentStore store)
 		{

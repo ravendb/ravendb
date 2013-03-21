@@ -53,7 +53,7 @@ namespace Raven.Client.Document.Batches
 		public object Result { get; set; }
 
 		public bool RequiresRetry { get; set; }
-
+#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var count = responses.Count(x => x.Status == 404);
@@ -76,7 +76,7 @@ namespace Raven.Client.Document.Batches
 				afterQueryExecuted(queryResult);
 			Result = queryOperation.Complete<T>();
 		}
-
+#endif
 		public void HandleResponse(GetResponse response)
 		{
 			if (response.Status == 404)
@@ -102,10 +102,12 @@ namespace Raven.Client.Document.Batches
 			return queryOperation.EnterQueryContext();
 		}
 
+#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.Query(queryOperation.IndexName, queryOperation.IndexQuery, includes.ToArray());
 		}
+#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{

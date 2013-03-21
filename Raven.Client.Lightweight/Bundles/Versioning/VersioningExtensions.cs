@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿#if !SILVERLIGHT && !NETFX_CORE
+using System.Linq;
 using Raven.Client.Document;
 
 namespace Raven.Client.Bundles.Versioning
@@ -23,3 +24,4 @@ namespace Raven.Client.Bundles.Versioning
 		}
 	}
 }
+#endif

@@ -1,4 +1,4 @@
-Raven DB - A Document Database for the .NET platfrom
+﻿Raven DB - A Document Database for the .NET platfrom
 Copyright (C) 2010 Hibernating rhinos
 ===================================================================
 

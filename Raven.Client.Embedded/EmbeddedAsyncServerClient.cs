@@ -10,6 +10,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -19,7 +20,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
-	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands
+	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
 		private readonly IDatabaseCommands databaseCommands;
 
@@ -232,6 +233,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<PutResult>(databaseCommands.Put(key, etag, document, metadata));
 		}
 
+		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false)
+		{
+			throw new NotImplementedException();
+		}
+
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
 			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
@@ -383,37 +389,53 @@ namespace Raven.Client.Embedded
 			QueryHeaderInformation info;
 			var result = databaseCommands.StreamQuery(index, query, out info);
 			queryHeaderInfo.Value = info;
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(result));
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(result));
 		}
 
 		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
 		                            int pageSize = 2147483647)
 		{
 			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge(streamDocs));
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
 	
 		}
-	}
 
-	internal class AsyncEnumeratorBridge : IAsyncEnumerator<RavenJObject>
-	{
-		private readonly IEnumerator<RavenJObject> enumerator;
 
-		public AsyncEnumeratorBridge(IEnumerator<RavenJObject> enumerator)
+		#region IAsyncGlobalAdminDatabaseCommands
+
+		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{
-			this.enumerator = enumerator;
+			get { return this; }
 		}
 
-		public void Dispose()
+		Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
 		{
-			enumerator.Dispose();
+			throw new NotSupportedException();
 		}
 
-		public Task<bool> MoveNextAsync()
+		#endregion
+
+		#region IAsyncAdminDatabaseCommands
+
+		public IAsyncAdminDatabaseCommands Admin
 		{
-			return new CompletedTask<bool>(enumerator.MoveNext());
+			get { return this; }
 		}
 
-		public RavenJObject Current { get { return enumerator.Current; } }
+		#endregion
+
+		#region IAsyncInfoDatabaseCommands
+
+		public IAsyncInfoDatabaseCommands Info
+		{
+			get { return this; }
+		}
+
+		Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
+		{
+			throw new NotSupportedException();
+		}
+
+		#endregion
 	}
 }

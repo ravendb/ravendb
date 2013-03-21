@@ -88,6 +88,17 @@ namespace Raven.Abstractions.Extensions
 		{
 			return CreateDefaultJsonSerializer().Deserialize<T>(self);
 		}
+		
+		/// <summary>
+		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
+		/// </summary>
+		public static T JsonDeserialization<T>(this Stream stream)
+		{
+			using (var reader = new StreamReader(stream))
+			{
+				return reader.JsonDeserialization<T>();
+			}
+		}
 
 		public static T Deserialize<T>(this JsonSerializer self, TextReader reader)
 		{

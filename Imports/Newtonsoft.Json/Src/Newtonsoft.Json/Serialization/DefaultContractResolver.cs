@@ -106,7 +106,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 #if (!(SILVERLIGHT || PORTABLE) || WINDOWS_PHONE)
         new XmlNodeConverter(),
 #endif
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
         new BinaryConverter(),
         new DataSetConverter(),
         new DataTableConverter(),
@@ -274,7 +274,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       
       if (memberSerialization != MemberSerialization.Fields)
       {
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
         DataContractAttribute dataContractAttribute = JsonTypeReflector.GetDataContractAttribute(objectType);
 #endif
 
@@ -297,7 +297,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
               // or are a field if serializing just fields
               if (JsonTypeReflector.GetAttribute<JsonPropertyAttribute>(member.GetCustomAttributeProvider()) != null)
                 serializableMembers.Add(member);
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
               else if (dataContractAttribute != null && JsonTypeReflector.GetAttribute<DataMemberAttribute>(member.GetCustomAttributeProvider()) != null)
                 serializableMembers.Add(member);
 #endif
@@ -517,7 +517,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       {
         contract.IsReference = containerAttribute._isReference;
       }
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
       else
       {
         DataContractAttribute dataContractAttribute = JsonTypeReflector.GetDataContractAttribute(contract.NonNullableUnderlyingType);
@@ -937,7 +937,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
     private void SetPropertySettingsFromAttributes(JsonProperty property, ICustomAttributeProvider attributeProvider, string name, Type declaringType, MemberSerialization memberSerialization, out bool allowNonPublicAccess)
     {
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
       DataContractAttribute dataContractAttribute = JsonTypeReflector.GetDataContractAttribute(declaringType);
 
       MemberInfo memberInfo = null;
@@ -961,7 +961,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       string mappedName;
       if (propertyAttribute != null && propertyAttribute.PropertyName != null)
         mappedName = propertyAttribute.PropertyName;
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
       else if (dataMemberAttribute != null && dataMemberAttribute.Name != null)
         mappedName = dataMemberAttribute.Name;
 #endif
@@ -979,7 +979,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         property.DefaultValueHandling = propertyAttribute._defaultValueHandling;
         hasMemberAttribute = true;
       }
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
       else if (dataMemberAttribute != null)
       {
         property._required = (dataMemberAttribute.IsRequired) ? Required.AllowNull : Required.Default;
@@ -1000,7 +1000,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       {
        bool hasIgnoreDataMemberAttribute = false;
         
-#if !(NET20 || NET35)
+#if !(NET20 || NET35 || MONO)
         hasIgnoreDataMemberAttribute = (JsonTypeReflector.GetAttribute<IgnoreDataMemberAttribute>(attributeProvider) != null);
 #endif
 
@@ -1044,7 +1044,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       if (memberSerialization == MemberSerialization.Fields)
         allowNonPublicAccess = true;
 
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
       if (dataMemberAttribute != null)
       {
         allowNonPublicAccess = true;
