@@ -42,9 +42,14 @@ namespace Raven.Client.Changes
 		private static int connectionCounter;
 		private readonly string id;
 
-		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory,
-		                             DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose,
-		                             Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
+		public RemoteDatabaseChanges(
+            string url, 
+            ICredentials credentials, 
+            HttpJsonRequestFactory jsonRequestFactory,
+		    DocumentConvention conventions, 
+            ReplicationInformer replicationInformer, 
+            Action onDispose,
+		    Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
 		{
 			ConnectionStatusChanged = LogOnConnectionStatusChanged;
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
@@ -70,12 +75,14 @@ namespace Raven.Client.Changes
 			if (disposed)
 				return new CompletedTask();
 
-			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
+
+            
+            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
 									{
 										AvoidCachingRequest = true
 									};
 
-			logger.Info("Trying to connect to {1}", requestParams.Url);
+            logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);
 
 			return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
 				.ServerPullAsync()
@@ -85,8 +92,8 @@ namespace Raven.Client.Changes
 										throw new ObjectDisposedException("RemoteDatabaseChanges");
 									if (task.IsFaulted)
 									{
-										logger.WarnException("Could not connect to server: " + url, task.Exception);
-										Connected = false;
+                                        logger.WarnException("Could not connect to server: " + url + " and id " + id, task.Exception);
+                                        Connected = false;
 										ConnectionStatusChanged(this, EventArgs.Empty);
 										
 										if (disposed)
@@ -102,8 +109,8 @@ namespace Raven.Client.Changes
 												HttpStatusCode.Forbidden))
 											return task;
 
-										logger.Warn("Failed to connect to {0}, will try again in 15 seconds", url);
-										return Time.Delay(TimeSpan.FromSeconds(15))
+                                        logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
+                                        return Time.Delay(TimeSpan.FromSeconds(15))
 											.ContinueWith(_ => EstablishConnection())
 											.Unwrap();
 									}
@@ -134,8 +141,8 @@ namespace Raven.Client.Changes
 
 		private void LogOnConnectionStatusChanged(object sender, EventArgs eventArgs)
 		{
-			logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
-		}
+            logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
+        }
 
 		public Task<IDatabaseChanges> Task { get; private set; }
 
@@ -187,8 +194,8 @@ namespace Raven.Client.Changes
 		{
 			lock (this)
 			{
-				logger.Info("Sending command {0} - {1}", command, value);
-				var sendTask = lastSendTask;
+                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
+                var sendTask = lastSendTask;
 				if (sendTask != null)
 				{
 					sendTask.ContinueWith(_ =>
@@ -401,7 +408,7 @@ namespace Raven.Client.Changes
 									}
 									catch (Exception e)
 									{
-										logger.WarnException("Error when disposing of connection", e);
+                                        logger.WarnException("Error when disposing of connection " + url + " with id " + id, e);
 									}
 								});
 		}
@@ -412,7 +419,7 @@ namespace Raven.Client.Changes
 			var value = ravenJObject.Value<RavenJObject>("Value");
 			var type = ravenJObject.Value<string>("Type");
 
-			logger.Debug("Got notification from {0} of type {1}", url, dataFromConnection);
+            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
 
 			switch (type)
 			{
@@ -466,7 +473,7 @@ namespace Raven.Client.Changes
 
 		public void OnError(Exception error)
 		{
-			logger.ErrorException("Got error from server connection", error);
+            logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
 
 			EstablishConnection()
 				.ObserveException()

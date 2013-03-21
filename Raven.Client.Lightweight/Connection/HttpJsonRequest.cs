@@ -1,3 +1,4 @@
+#if !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="HttpJsonRequest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -14,6 +15,9 @@ using System.Diagnostics;
 using System.IO;
 #if !SILVERLIGHT
 using System.IO.Compression;
+#endif
+#if NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using System.Net;
 using System.Text;
@@ -890,3 +894,4 @@ namespace Raven.Client.Connection
 		}
 	}
 }
+#endif

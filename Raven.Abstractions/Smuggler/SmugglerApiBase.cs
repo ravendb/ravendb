@@ -1,3 +1,4 @@
+#if !NETFX_CORE
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -605,3 +606,4 @@ namespace Raven.Abstractions.Smuggler
 		}
 	}
 }
+#endif

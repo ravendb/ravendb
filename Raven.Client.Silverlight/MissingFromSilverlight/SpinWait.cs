@@ -1,4 +1,5 @@
-﻿// SpinWait.cs
+﻿#if !NETFX_CORE
+// SpinWait.cs
 //
 // Copyright (c) 2008 Jérémie "Garuma" Laval
 //
@@ -94,3 +95,4 @@ namespace System.Threading
 		}
 	}
 }
+#endif
