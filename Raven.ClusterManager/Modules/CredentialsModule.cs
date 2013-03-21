@@ -19,7 +19,7 @@ namespace Raven.ClusterManager.Modules
 		{
 			this.session = session;
 
-			Post["/test", true] = async (parameters, ct) =>
+			Post["/save", true] = async (parameters, ct) =>
 			{
 				string serverId = Request.Query.ServerId;
 
@@ -35,7 +35,7 @@ namespace Raven.ClusterManager.Modules
 				return null;
 			};
 
-			Post["/save", true] = async (parameters, ct) =>
+			Post["/test", true] = async (parameters, ct) =>
 			{
 				string serverId = Request.Query.ServerId;
 
