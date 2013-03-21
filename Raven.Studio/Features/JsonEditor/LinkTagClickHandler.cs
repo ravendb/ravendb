@@ -1,16 +1,25 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Compatibility;
 using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.JsonEditor
 {
     public class LinkTagClickHandler : IEditorViewMouseInputEventSink
     {
+        private Point lastPoint;
+        private LinkTagQuickInfoProvider tagInfoProvider;
+        private bool sessionOpen;
+        private IQuickInfoSession session;
+
         public LinkTagClickHandler()
         {
+            tagInfoProvider = new LinkTagQuickInfoProvider();
         }
 
         public void NotifyMouseDown(IEditorView view, MouseButtonEventArgs e)
@@ -52,7 +61,22 @@ namespace Raven.Studio.Features.JsonEditor
 
         public void NotifyMouseHover(IEditorView view, RoutedEventArgsEx e)
         {
+            var result = view.SyntaxEditor.HitTest(lastPoint);
+            var context = tagInfoProvider.GetContext(result) as LinkTagContext;
 
+            if (context != null)
+            {
+                tagInfoProvider.RequestSession(view, context, canTrackMouse: false);
+
+                session =
+                    view.SyntaxEditor.IntelliPrompt.Sessions.OfType<IQuickInfoSession>()
+                        .FirstOrDefault(s => s.Context == context);
+                if (session != null)
+                {
+                    session.Closed += delegate { session = null; };
+                }
+
+            }
         }
 
         public void NotifyMouseLeave(IEditorView view, MouseEventArgs e)
@@ -62,7 +86,28 @@ namespace Raven.Studio.Features.JsonEditor
 
         public void NotifyMouseMove(IEditorView view, MouseEventArgs e)
         {
+            lastPoint = e.GetPosition(view.SyntaxEditor);
 
+            if (session != null)
+            {
+                try
+                {
+                    var inflatedBounds = Inflate(session.Bounds.Value, 40);
+                    if (!inflatedBounds.Contains(lastPoint))
+                    {
+                        session.Close(true);
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    
+                }
+            }
+        }
+
+        private Rect Inflate(Rect value, int inflateBy)
+        {
+            return new Rect(new Point(value.Left - inflateBy, value.Top - inflateBy), new Size(value.Width + inflateBy * 2, value.Height + inflateBy * 2));
         }
 
         public void NotifyMouseUp(IEditorView view, MouseButtonEventArgs e)
