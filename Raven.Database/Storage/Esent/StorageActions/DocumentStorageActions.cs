@@ -133,7 +133,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<AttachmentInformation>();
 
-			var optimizer = new OptimizedIndexReader(pageSize);
+			var optimizer = new OptimizedIndexReader();
 			do
 			{
 				Api.MakeKey(session, Files, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
@@ -162,7 +162,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
 				return Enumerable.Empty<AttachmentInformation>();
 
-			var optimizer = new OptimizedIndexReader(take);
+			var optimizer = new OptimizedIndexReader();
 			do
 			{
 				optimizer.Add(Session, Files);
