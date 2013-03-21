@@ -1362,7 +1362,7 @@ namespace Raven.Client.Connection.Async
 			EnsureIsNotNullOrEmpty(index, "index");
 			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 											.AddReplicationStatusHeaders(Url, url, replicationInformer,
 																		 convention.FailoverBehavior,
@@ -1389,6 +1389,7 @@ namespace Raven.Client.Connection.Async
 			private readonly Stream stream;
 			private readonly StreamReader streamReader;
 			private readonly JsonTextReaderAsync reader;
+		    private bool complete;
 
 			private bool wasInitalized;
 
@@ -1423,6 +1424,13 @@ namespace Raven.Client.Connection.Async
 
 			public async Task<bool> MoveNextAsync()
 			{
+                if (complete)
+                {
+                    // to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
+                    // also return false, rather than throwing
+                    return false;
+                }
+
 				if (wasInitalized == false)
 				{
 					await InitAsync();
@@ -1433,7 +1441,10 @@ namespace Raven.Client.Connection.Async
 					throw new InvalidOperationException("Unexpected end of data");
 
 				if (reader.TokenType == JsonToken.EndArray)
-					return false;
+				{
+				    complete = true;
+				    return false;
+				}
 
 				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader);
 				return true;
@@ -1475,7 +1486,7 @@ namespace Raven.Client.Connection.Async
 
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 				.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 			var webResponse = await request.RawExecuteRequestAsync();
