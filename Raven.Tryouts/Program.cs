@@ -15,12 +15,6 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			for (int i = 0; i < 100; i++)
-			{
-				Console.WriteLine(i);
-				using (var x = new PeriodicBackupTests())
-					x.CanBackupToDirectory_MultipleBackups();
-			}
-		} 
+		}
 	}
 }

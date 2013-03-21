@@ -142,7 +142,7 @@ namespace Raven.Database.Impl
 				// We have to load the document if user explicitly asked for the id, since 
 				// we normalize the casing for the document id on the index, and we need to return
 				// the id to the user with the same casing they gave us.
-				var fetchingId = fieldsToFetch.Fields.Any(fieldToFetch => fieldToFetch == Constants.DocumentIdFieldName);
+				var fetchingId = fieldsToFetch.HasField(Constants.DocumentIdFieldName);
 				var fieldsToFetchFromDocument = fieldsToFetch.Fields
 					.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null)
 					.ToArray();

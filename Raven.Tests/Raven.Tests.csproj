@@ -651,6 +651,7 @@
     <Compile Include="MailingList\Maxime2.cs" />
     <Compile Include="MailingList\Oguzhntopcu.cs" />
     <Compile Include="MailingList\Pfeffer.cs" />
+    <Compile Include="MailingList\ProjectionShouldNotLoadDocument.cs" />
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RacielRod.cs" />
