@@ -1129,7 +1129,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 			}
 		}
-
+        static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
+        {
+            typeof(int),
+            typeof(long),
+            typeof(float),
+            typeof(decimal),
+            typeof(double),
+            typeof(TimeSpan)
+        };
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
 			var memberExpression = linqPathProvider.GetMemberExpression(expression.Body);
@@ -1139,7 +1147,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var type = propertyInfo != null
 				           ? propertyInfo.PropertyType
 				           : (fieldInfo != null ? fieldInfo.FieldType : typeof (object));
-			luceneQuery.AddOrder(expressionMemberInfo.Path, descending, type);
+            string fieldName = expressionMemberInfo.Path;
+		    if (requireOrderByToUseRange.Contains(type))
+                fieldName = fieldName + "_Range";
+		    luceneQuery.AddOrder(fieldName, descending, type);
 		}
 
 		private bool insideSelect;

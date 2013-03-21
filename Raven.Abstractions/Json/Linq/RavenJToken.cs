@@ -314,6 +314,8 @@ namespace Raven.Json.Linq
 										byte[] tokenBytes = token.Type == JTokenType.String
 																? Convert.FromBase64String(token.Value<string>())
 																: token.Value<byte[]>();
+								        if (tokenBytes == null)
+								            return false;
 										if (bytes.Length != tokenBytes.Length)
 											return false;
 
