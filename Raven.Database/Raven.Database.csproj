@@ -162,6 +162,7 @@
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
+    <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
