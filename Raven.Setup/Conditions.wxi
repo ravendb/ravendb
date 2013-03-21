@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <!-- Check that we have elevated permissions if installing -->
+  <Property Id="MSIUSEREALADMINDETECTION" Value="1" />
+  <Condition Message="This setup requires administrator privileges">Installed OR (Privileged AND AdminUser)</Condition>
+
+  <!-- .NET 4 Version Check -->
+  <PropertyRef Id="NETFRAMEWORK40FULL"/>
+  <Condition Message="This setup requires the .NET Framework 4.0 installed.">Installed OR NETFRAMEWORK40FULL</Condition>
+</Include>

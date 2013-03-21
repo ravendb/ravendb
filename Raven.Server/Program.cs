@@ -348,6 +348,14 @@ Configuration options:
 		{
 			try
 			{
+				for (var i = 0; i < cmdLineArgs.Length; i++)
+				{
+					if (cmdLineArgs[i].Contains(" "))
+					{
+						cmdLineArgs[i] = "\"" + cmdLineArgs[i] + "\"";
+					}
+				}
+
 				var process = Process.Start(new ProcessStartInfo
 				{
 					Arguments = string.Join(" ", cmdLineArgs),
@@ -594,7 +602,7 @@ Enjoy...
 		static void SetRecoveryOptions(string serviceName)
 		{
 			int exitCode;
-			var arguments = string.Format("failure {0} reset= 500 actions= restart/60000", serviceName);
+			var arguments = string.Format("failure \"{0}\" reset= 500 actions= restart/60000", serviceName);
 			using (var process = new Process())
 			{
 				var startInfo = process.StartInfo;
