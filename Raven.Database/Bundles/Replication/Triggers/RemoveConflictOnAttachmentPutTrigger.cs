@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Json.Linq;
@@ -31,7 +32,7 @@ namespace Raven.Bundles.Replication.Triggers
 				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
 					return;
 
-				var history = new RavenJArray(metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
+				var history = new RavenJArray(ReplicationData.GetHistory(metadata));
 				metadata[Constants.RavenReplicationHistory] = history;
 
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
@@ -50,7 +51,7 @@ namespace Raven.Bundles.Replication.Triggers
 					Database.DeleteStatic(id, null);
 
 					// add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
-					var conflictHistory = new RavenJArray(attachment.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
+					var conflictHistory = new RavenJArray(ReplicationData.GetHistory(attachment.Metadata));
 					conflictHistory.Add(new RavenJObject
 					{
 						{Constants.RavenReplicationVersion, attachment.Metadata[Constants.RavenReplicationVersion]},
