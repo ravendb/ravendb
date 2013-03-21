@@ -776,7 +776,7 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
-			return new Operation(null, 0);
+			return new Operation(0);
 		}
 
 		/// <summary>
@@ -791,7 +791,7 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
 			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
-			return new Operation(null, 0);
+			return new Operation(0);
 		}
 
 		/// <summary>
@@ -816,7 +816,7 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
-			return new Operation(null, 0);
+			return new Operation(0);
 		}
 
 		/// <summary>
