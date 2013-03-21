@@ -33,7 +33,9 @@ namespace Raven.Setup.CustomActions
  
 		[CustomAction]
         public static ActionResult GetWebSites(Session session)
-        {
+		{
+			session["IIS_WEBSITES_INITIALIZED"] = "1";
+
             try
             {
                 var comboBoxView = session.Database.OpenView(GetComboContent);
@@ -157,6 +159,8 @@ namespace Raven.Setup.CustomActions
 		[CustomAction]
 		public static ActionResult GetAppPools(Session session)
 		{
+			session["IIS_APPPOOLS_INITIALIZED"] = "1";
+
 			try
 			{
 				var comboBoxView = session.Database.OpenView(GetComboContent);

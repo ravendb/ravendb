@@ -119,11 +119,6 @@
         <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
       </Custom>
     </InstallExecuteSequence>
-
-    <InstallUISequence>
-      <Custom Action="GetIISWebSites" After="CostFinalize" Overridable="yes">NOT Installed</Custom>
-      <Custom Action="GetAppPools" After="CostFinalize" Overridable="yes">NOT Installed</Custom>
-    </InstallUISequence>
     
   </Product>
 </Wix>

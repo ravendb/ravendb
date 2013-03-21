@@ -13,7 +13,9 @@
 
       <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="InstallationType" Order="3">LicenseAccepted = "1"</Publish>
 
-      <Publish Dialog="InstallationType" Control="Next" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
+      <Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="GetIISWebSites" Order="1"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND NOT IIS_WEBSITES_INITIALIZED]]></Publish>
+      <Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="GetAppPools" Order="2"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND NOT IIS_APPPOOLS_INITIALIZED]]></Publish>
+      <Publish Dialog="InstallationType" Control="Next" Event="NewDialog" Value="LicenseFileChooser" Order="3">1</Publish>
       <Publish Dialog="InstallationType" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg">1</Publish>
       <Publish Dialog="InstallationType" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 
