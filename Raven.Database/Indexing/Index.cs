@@ -256,12 +256,13 @@ namespace Raven.Database.Indexing
 		public static RavenJObject CreateDocumentFromFields(Document document, FieldsToFetch fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
-			IEnumerable<string> fields = fieldsToFetch.Fields;
-
+			var fields = fieldsToFetch.Fields;
 			if (fieldsToFetch.FetchAllStoredFields)
 				fields = fields.Concat(document.GetFields().Select(x => x.Name));
 
+
 			var q = fields
+				.Distinct()
 				.SelectMany(name => document.GetFields(name) ?? new Field[0])
 				.Where(x => x != null)
 				.Where(
