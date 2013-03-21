@@ -24,6 +24,6 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        public abstract Task<IAsyncEnumerator<ViewableDocument>> StreamAsync(Reference<long> totalResults);
+        public abstract Task<IAsyncEnumerator<JsonDocument>> StreamAsync(Reference<long> totalResults);
     }
 }

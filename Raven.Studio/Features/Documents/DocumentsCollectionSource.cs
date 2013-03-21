@@ -39,16 +39,14 @@ namespace Raven.Studio.Features.Documents
                 .Catch();
         }
 
-        public async override Task<IAsyncEnumerator<ViewableDocument>> StreamAsync(Reference<long> totalResults)
+        public async override Task<IAsyncEnumerator<JsonDocument>> StreamAsync(Reference<long> totalResults)
         {
             var statistics = await ApplicationModel.DatabaseCommands.GetStatisticsAsync();
             totalResults.Value = statistics.CountOfDocuments;
 
             var enumerator = await ApplicationModel.DatabaseCommands.StreamDocsAsync();
 
-            return new ConvertingEnumerator<ViewableDocument, RavenJObject>(enumerator,
-                                                                            doc =>
-                                                                            new ViewableDocument(doc.ToJsonDocument()));
+            return new ConvertingEnumerator<JsonDocument, RavenJObject>(enumerator, doc => doc.ToJsonDocument());
         }
     }
 }

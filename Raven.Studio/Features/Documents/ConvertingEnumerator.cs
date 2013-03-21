@@ -33,17 +33,11 @@ namespace Raven.Studio.Features.Documents
             enumerator.Dispose();
         }
 
-        public async Task<bool> MoveNextAsync()
+        public Task<bool> MoveNextAsync()
         {
-            if (await enumerator.MoveNextAsync() == false)
-                return false;
-            var result = converter(enumerator.Current);
-
-            Current = result;
-
-            return true;
+            return enumerator.MoveNextAsync();
         }
 
-        public TResult Current { get; private set; }
+        public TResult Current { get { return converter(enumerator.Current); } }
     }
 }

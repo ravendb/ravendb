@@ -151,7 +151,7 @@ namespace Raven.Studio.Features.Query
             }
         }
 
-        public async override Task<IAsyncEnumerator<ViewableDocument>> StreamAsync(Reference<long> totalResults)
+        public async override Task<IAsyncEnumerator<JsonDocument>> StreamAsync(Reference<long> totalResults)
         {
             IndexQuery templateQuery;
             string indexName;
@@ -172,9 +172,7 @@ namespace Raven.Studio.Features.Query
 
             totalResults.Value = reference.Value.TotalResults;
 
-            return new ConvertingEnumerator<ViewableDocument, RavenJObject>(enumerator,
-                                                                            doc =>
-                                                                            new ViewableDocument(doc.ToJsonDocument()));
+            return new ConvertingEnumerator<JsonDocument, RavenJObject>(enumerator, doc => doc.ToJsonDocument());
         }
     }
 
