@@ -427,7 +427,8 @@ namespace Raven.Database.Server
 				}
 
 				var database = databaseTask.Result;
-				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 5)
+				if (skipIfActive &&
+					(SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 10)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -471,7 +472,14 @@ namespace Raven.Database.Server
 
 			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
 			{
-				HandleTooBusyError(ctx);
+				try
+				{
+					HandleTooBusyError(ctx);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not send a too busy error to the client", e);
+				}
 				return;
 			}
 			try
@@ -1304,6 +1312,8 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
+				if(prop.Value == null)
+					continue;
 				var bytes = Encoding.UTF8.GetBytes(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
 				var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
@@ -1321,10 +1331,20 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
+				if(prop.Value == null)
+					continue;
 				var bytes = Convert.FromBase64String(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-				var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-				databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+				try
+				{
+					var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+					databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not unprotect secured db data " + prop.Key +" setting the value to '<data could not be decrypted>'", e);
+					databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
+				}
 			}
 		}
 	}

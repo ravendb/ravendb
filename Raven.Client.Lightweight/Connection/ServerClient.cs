@@ -1104,7 +1104,7 @@ namespace Raven.Client.Connection
 
 
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			req.Write(jArray.ToString(Formatting.None));
+			req.Write(jArray.ToString(Formatting.None, Default.Converters));
 
 			RavenJArray response;
 			try
@@ -1212,9 +1212,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
-		public void ForceReadFromMaster()
+		public IDisposable ForceReadFromMaster()
 		{
+			var old = readStripingBase;
 			readStripingBase = -1;// this means that will have to use the master url first
+			return new DisposableAction(() => readStripingBase = old);
 		}
 
 		/// <summary>
@@ -1717,7 +1719,7 @@ namespace Raven.Client.Connection
 		public RavenJToken GetOperationStatus(long id)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, url + "/operation/status?id" + id, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 			try
 			{

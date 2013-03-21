@@ -19,8 +19,18 @@ namespace Raven.Abstractions.Data
 		public string LocalFolderName { get; set; }
 
 		public int IntervalMilliseconds { get; set; }
+	}
 
+	public class PeriodicBackupStatus
+	{
+		public const string RavenDocumentKey = "Raven/Backup/Periodic/Status";
 		public Guid LastDocsEtag { get; set; }
 		public Guid LastAttachmentsEtag { get; set; }
+
+		public PeriodicBackupStatus()
+		{
+			LastAttachmentsEtag = Guid.Empty;
+			LastDocsEtag = Guid.Empty;
+		}
 	}
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -73,7 +74,7 @@ namespace Raven.Bundles.Replication.Responders
 			                                                                            {
 			                                                                            	Id = id,
 			                                                                            	Type = ReplicationConflict
-			                                                                            }));
+			                                                                            }, metadata));
 
 			var newDocumentConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 
@@ -124,8 +125,8 @@ namespace Raven.Bundles.Replication.Responders
 			if(existingMetadata.Value<bool>(Constants.RavenDeleteMarker)) //deleted locally as well
 			{
 				log.Debug("Replicating deleted item {0} from {1} that was deleted locally. Merging histories", id, Src);
-				var existingHistory = new RavenJArray(existingMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
-				var newHistory = new RavenJArray(metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
+				var existingHistory = new RavenJArray(ReplicationData.GetHistory(existingMetadata));
+				var newHistory = new RavenJArray(ReplicationData.GetHistory(metadata));
 
 				foreach (var item in newHistory)
 				{
@@ -164,7 +165,7 @@ namespace Raven.Bundles.Replication.Responders
 																						{
 																							Id = id,
 																							Type = DocumentChangeTypes.ReplicationConflict
-																						}));
+																						}, metadata));
 			var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 			log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 

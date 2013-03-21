@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.Connections
@@ -76,5 +77,10 @@ namespace Raven.Database.Server.Connections
 			                                		return connectionState;
 			                                	});
 		}
+
+	    public object[] DebugStatuses
+	    {
+	        get { return connections.Values.Select(x=>x.DebugStatus).ToArray(); }
+	    }
 	}
 }

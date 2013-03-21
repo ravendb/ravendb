@@ -48,7 +48,6 @@ namespace Raven.Client.Connection
 		private string postedData;
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
-		public object Headers;
 		private Stream postedStream;
 		private bool writeCalled;
 		public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
@@ -489,6 +488,15 @@ namespace Raven.Client.Connection
 			{
 				webRequest.Headers[header.Key] = header.Value;
 			}
+			return this;
+		}
+
+		/// <summary>
+		/// Adds the operation header.
+		/// </summary>
+		public HttpJsonRequest AddOperationHeader(string key, string value)
+		{
+			webRequest.Headers[key] = value;
 			return this;
 		}
 

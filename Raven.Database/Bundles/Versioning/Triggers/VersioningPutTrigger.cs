@@ -7,6 +7,7 @@ using System;
 using System.ComponentModel.Composition;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -37,11 +38,8 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
 				return;
 
-			int revision = 0;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				revision = (int)accessor.General.GetNextIdentityValue(key + "/revisions/");
-			});
+			var revision = GetNextRevisionNumber(key);
+
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
@@ -52,8 +50,6 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			metadata[VersioningUtil.RavenDocumentRevisionStatus] = RavenJToken.FromObject("Current");
 			metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
-
-
 		}
 
 		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Guid etag, TransactionInformation transactionInformation)
@@ -80,8 +76,67 @@ namespace Raven.Bundles.Versioning.Triggers
 				metadata.__ExternalState.TryGetValue("Next-Revision", out value);
 				Database.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
 							 transactionInformation);
-
 			}
+		}
+
+		private int GetNextRevisionNumber(string key)
+		{
+			var revision = 0;
+
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				revision = (int)accessor.General.GetNextIdentityValue(key + "/revisions/");
+
+				if (revision == 1)
+				{
+					var existingDoc = Database.Get(key, null);
+					if (existingDoc != null)
+					{
+						RavenJToken existingRevisionToken;
+						if (existingDoc.Metadata.TryGetValue(VersioningUtil.RavenDocumentRevision, out existingRevisionToken))
+							revision = existingRevisionToken.Value<int>() + 1;
+					}
+					else
+					{
+						var latestRevisionsDoc = GetLatestRevisionsDoc(key);
+						if (latestRevisionsDoc != null)
+						{
+							var id = latestRevisionsDoc["@metadata"].Value<string>("@id");
+							var revisionNum = id.Substring((key + "/revisions/").Length);
+							revision = Int32.Parse(revisionNum) + 1;
+						}
+					}
+
+					if (revision > 1)
+						accessor.General.SetIdentityValue(key + "/revisions/", revision);
+				}
+			});
+
+			return revision;
+		}
+
+		private RavenJObject GetLatestRevisionsDoc(string key)
+		{
+			const int pageSize = 100;
+			int start = 0;
+
+			RavenJObject lastRevisionDoc = null;
+
+			while (true)
+			{
+				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, start, pageSize);
+				if (!docs.Any())
+					break;
+
+				lastRevisionDoc = (RavenJObject)docs.Last();
+
+				if (docs.Length < pageSize)
+					break;
+
+				start += pageSize;
+			}
+
+			return lastRevisionDoc;
 		}
 
 		private bool TryGetVersioningConfiguration(string key, RavenJObject metadata,

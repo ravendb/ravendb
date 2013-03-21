@@ -68,6 +68,7 @@ namespace Raven.Client.Document
 		private RangeValue GetNextRange(IDatabaseCommands databaseCommands)
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
+			using (databaseCommands.ForceReadFromMaster())
 			{
 				ModifyCapacityIfRequired();
 				while (true)
@@ -106,8 +107,7 @@ namespace Raven.Client.Document
 							max = minNextMax + capacity;
 							document = new JsonDocument
 							{
-								Etag = Guid.Empty,
-								// sending empty guid means - ensure the that the document does NOT exists
+								Etag = Guid.Empty, // sending empty guid means - ensure the that the document does NOT exists
 								Metadata = new RavenJObject(),
 								DataAsJson = RavenJObject.FromObject(new { Max = max }),
 								Key = HiLoDocumentKey
@@ -133,7 +133,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void PutDocument(IDatabaseCommands databaseCommands,JsonDocument document)
+		private void PutDocument(IDatabaseCommands databaseCommands, JsonDocument document)
 		{
 			databaseCommands.Put(HiLoDocumentKey, document.Etag,
 								 document.DataAsJson,

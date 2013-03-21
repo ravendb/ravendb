@@ -1333,6 +1333,8 @@ namespace Jint {
                 }
             }
 
+	        var methodName = lastIdentifier;
+
             #region Evaluates parameters
             var parameters = new JsInstance[methodCall.Arguments.Count];
 
@@ -1397,7 +1399,7 @@ namespace Jint {
                 return;
             }
             else {
-                throw new JsException(Global.ErrorClass.New("Function expected: " + lastIdentifier));
+				throw new JsException(Global.ErrorClass.New("Function expected: " + methodName));
             }
 
         }

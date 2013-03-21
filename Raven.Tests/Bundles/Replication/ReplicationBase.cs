@@ -12,6 +12,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Listeners;
 using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -161,9 +162,9 @@ namespace Raven.Tests.Bundles.Replication
 			TellInstanceToReplicateToAnotherInstance(0, 1, apiKey);
 		}
 
-		protected void TellSecondInstanceToReplicateToFirstInstance()
+		protected void TellSecondInstanceToReplicateToFirstInstance(string apiKey = null)
 		{
-			TellInstanceToReplicateToAnotherInstance(1, 0);
+			TellInstanceToReplicateToAnotherInstance(1, 0, apiKey);
 		}
 
 		protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null)
@@ -175,10 +176,11 @@ namespace Raven.Tests.Bundles.Replication
 			TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None,
 			bool disabled = false,
 			bool ignoredClient = false,
-			string apiKey = null)
+			string apiKey = null,
+			string db = null)
 		{
-			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
-			using (var session = source.OpenSession())
+			Console.WriteLine("Replicating from {0} to {1} with db = {2}.", source.Url, destination.Url, db ?? Constants.SystemDatabase);
+			using (var session = source.OpenSession(db))
 			{
 				var replicationDestination = new ReplicationDestination
 				{
@@ -187,6 +189,8 @@ namespace Raven.Tests.Bundles.Replication
 					Disabled = disabled,
 					IgnoredClient = ignoredClient
 				};
+				if (db != null)
+					replicationDestination.Database = db;
 				if (apiKey != null)
 					replicationDestination.ApiKey = apiKey;
 				SetupDestination(replicationDestination);
@@ -206,17 +210,20 @@ namespace Raven.Tests.Bundles.Replication
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			Assert.NotEmpty(urls);
-			source.Put(Constants.RavenReplicationDestinations,
-					   null, new RavenJObject
-			           {
-			           	{
-			           		"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
-			           		{
-			           			{"Url", url}
-			           		}))
-			           		}
-			           }, new RavenJObject());
+            SetupReplication(source, urls.Select(url => new RavenJObject { { "Url", url } }));
 		}
+
+        protected void SetupReplication(IDatabaseCommands source, IEnumerable<RavenJObject> destinations)
+        {
+            Assert.NotEmpty(destinations);
+            source.Put(Constants.RavenReplicationDestinations,
+                       null, new RavenJObject
+                       {
+                           {
+                               "Destinations", new RavenJArray(destinations)
+                           }
+                       }, new RavenJObject());
+        }
 
 		protected void RemoveReplication(IDatabaseCommands source)
 		{
@@ -309,15 +316,57 @@ namespace Raven.Tests.Bundles.Replication
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 
-		protected void WaitForReplication(IDocumentStore store2, string id)
+		protected void WaitForReplication(IDocumentStore store, string id, string db = null, Guid? changedSince = null)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
-				using (var session = store2.OpenSession())
+				using (var session = store.OpenSession(db))
 				{
-					var company = session.Load<object>(id);
-					if (company != null)
-						break;
+					var e = session.Load<object>(id);
+					if (e == null)
+					{
+						if (changedSince != null)
+						{
+							if (session.Advanced.GetEtagFor(e) != changedSince)
+								break;
+						}
+						Thread.Sleep(100);
+						continue;
+					}
+					
+					break;
+				}
+			}
+		}
+
+		protected class ClientSideConflictResolution : IDocumentConflictListener
+		{
+			public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
+			{
+				resolvedDocument = new JsonDocument
+				{
+					DataAsJson = new RavenJObject
+					 {
+						 {"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x=>x))}
+					 },
+					Metadata = new RavenJObject()
+				};
+				return true;
+			}
+		}
+
+		protected void WaitForReplication(IDocumentStore store, Func<IDocumentSession, bool>  predicate, string db = null)
+		{
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				using (var session = store.OpenSession(new OpenSessionOptions
+				{
+					Database = db,
+					ForceReadFromMaster = true
+				}))
+				{
+					if (predicate(session))
+						return;
 					Thread.Sleep(100);
 				}
 			}

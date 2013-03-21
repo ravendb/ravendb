@@ -8,162 +8,180 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Server.Connections
 {
-	public class ConnectionState
-	{
-		private readonly ConcurrentSet<string> matchingIndexes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocuments =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+    public class ConnectionState
+    {
+        private readonly ConcurrentSet<string> matchingIndexes =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingDocuments =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingDocumentPrefixes =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
+        private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
 
-		private EventsTransport eventsTransport;
+        private EventsTransport eventsTransport;
 
-		private int watchAllDocuments;
-		private int watchAllIndexes;
+        private int watchAllDocuments;
+        private int watchAllIndexes;
 
-		public ConnectionState(EventsTransport eventsTransport)
-		{
-			this.eventsTransport = eventsTransport;
-		}
+        public ConnectionState(EventsTransport eventsTransport)
+        {
+            this.eventsTransport = eventsTransport;
+        }
 
-		public void WatchIndex(string name)
-		{
-			matchingIndexes.TryAdd(name);
-		}
+        public object DebugStatus
+        {
+            get
+            {
+                return new
+                {
+                    eventsTransport.Id,
+                    eventsTransport.Connected,
+                    WatchAllDocuments = watchAllDocuments > 0,
+                    WatchAllIndexes = watchAllIndexes > 0,
+                    WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
+                    WatchIndexes = matchingIndexes.ToArray(),
+                    WatchDocuments = matchingDocuments.ToArray(),
+                    PendingMessages = pendingMessages.Count
+                };
+            }
+        }
 
-		public void UnwatchIndex(string name)
-		{
-			matchingIndexes.TryRemove(name);
-		}
+        public void WatchIndex(string name)
+        {
+            matchingIndexes.TryAdd(name);
+        }
 
-		public void WatchAllIndexes()
-		{
-			Interlocked.Increment(ref watchAllIndexes);
-		}
+        public void UnwatchIndex(string name)
+        {
+            matchingIndexes.TryRemove(name);
+        }
 
-		public void UnwatchAllIndexes()
-		{
-			Interlocked.Decrement(ref watchAllIndexes);
-		}
+        public void WatchAllIndexes()
+        {
+            Interlocked.Increment(ref watchAllIndexes);
+        }
 
-		public void Send(DocumentChangeNotification documentChangeNotification)
-		{
-			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
-			if (watchAllDocuments > 0)
-			{
-				Enqueue(value);
-				return;
-			}
+        public void UnwatchAllIndexes()
+        {
+            Interlocked.Decrement(ref watchAllIndexes);
+        }
 
-			if (documentChangeNotification.Id != null)
-			{
-				if (matchingDocuments.Contains(documentChangeNotification.Id))
-				{
-					Enqueue(value);
-					return;
-				}
+        public void Send(DocumentChangeNotification documentChangeNotification)
+        {
+            var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
+            if (watchAllDocuments > 0)
+            {
+                Enqueue(value);
+                return;
+            }
 
-				var hasPrefix = matchingDocumentPrefixes.Any(
-						x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
-				if (hasPrefix == false)
-					return;
-			}
-			Enqueue(value);
-		}
+            if (documentChangeNotification.Id != null)
+            {
+                if (matchingDocuments.Contains(documentChangeNotification.Id))
+                {
+                    Enqueue(value);
+                    return;
+                }
 
-		public void Send(IndexChangeNotification indexChangeNotification)
-		{
-			var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
+                var hasPrefix = matchingDocumentPrefixes.Any(
+                        x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
+                if (hasPrefix == false)
+                    return;
+            }
+            Enqueue(value);
+        }
 
-			if (watchAllIndexes > 0)
-			{
-				Enqueue(value);
-				return;
-			}
+        public void Send(IndexChangeNotification indexChangeNotification)
+        {
+            var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
 
-			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
-				return;
+            if (watchAllIndexes > 0)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			Enqueue(value);
-		}
+            if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
+                return;
 
-		private void Enqueue(object msg)
-		{
-			if (eventsTransport == null || eventsTransport.Connected == false)
-			{
-				pendingMessages.Enqueue(msg);
-				return;
-			}
+            Enqueue(value);
+        }
 
-			eventsTransport.SendAsync(msg)
-				.ContinueWith(task =>
-								{
-									if (task.IsFaulted == false)
-										return;
-									pendingMessages.Enqueue(msg);
-								});
-		}
+        private void Enqueue(object msg)
+        {
+            if (eventsTransport == null || eventsTransport.Connected == false)
+            {
+                pendingMessages.Enqueue(msg);
+                return;
+            }
 
-		public void WatchAllDocuments()
-		{
-			Interlocked.Increment(ref watchAllDocuments);
-		}
+            eventsTransport.SendAsync(msg)
+                .ContinueWith(task =>
+                                {
+                                    if (task.IsFaulted == false)
+                                        return;
+                                    pendingMessages.Enqueue(msg);
+                                });
+        }
 
-		public void UnwatchAllDocuments()
-		{
-			Interlocked.Decrement(ref watchAllDocuments);
-		}
+        public void WatchAllDocuments()
+        {
+            Interlocked.Increment(ref watchAllDocuments);
+        }
 
-		public void WatchDocument(string name)
-		{
-			matchingDocuments.TryAdd(name);
-		}
+        public void UnwatchAllDocuments()
+        {
+            Interlocked.Decrement(ref watchAllDocuments);
+        }
 
-		public void UnwatchDocument(string name)
-		{
-			matchingDocuments.TryRemove(name);
-		}
+        public void WatchDocument(string name)
+        {
+            matchingDocuments.TryAdd(name);
+        }
 
-		public void WatchDocumentPrefix(string name)
-		{
-			matchingDocumentPrefixes.TryAdd(name);
-		}
+        public void UnwatchDocument(string name)
+        {
+            matchingDocuments.TryRemove(name);
+        }
 
-		public void UnwatchDocumentPrefix(string name)
-		{
-			matchingDocumentPrefixes.TryRemove(name);
-		}
+        public void WatchDocumentPrefix(string name)
+        {
+            matchingDocumentPrefixes.TryAdd(name);
+        }
 
-		public void Reconnect(EventsTransport transport)
-		{
-			eventsTransport = transport;
-			var items = new List<object>();
-			object result;
-			while (pendingMessages.TryDequeue(out result))
-			{
-				items.Add(result);
-			}
+        public void UnwatchDocumentPrefix(string name)
+        {
+            matchingDocumentPrefixes.TryRemove(name);
+        }
 
-			eventsTransport.SendManyAsync(items)
-				.ContinueWith(task =>
-								{
-									if (task.IsFaulted == false)
-										return;
-									foreach (var item in items)
-									{
-										pendingMessages.Enqueue(item);
-									}
-								});
-		}
+        public void Reconnect(EventsTransport transport)
+        {
+            eventsTransport = transport;
+            var items = new List<object>();
+            object result;
+            while (pendingMessages.TryDequeue(out result))
+            {
+                items.Add(result);
+            }
 
-		public void Disconnect()
-		{
-			if (eventsTransport != null)
-				eventsTransport.Disconnect();
-		}
-	}
+            eventsTransport.SendManyAsync(items)
+                .ContinueWith(task =>
+                                {
+                                    if (task.IsFaulted == false)
+                                        return;
+                                    foreach (var item in items)
+                                    {
+                                        pendingMessages.Enqueue(item);
+                                    }
+                                });
+        }
+
+        public void Disconnect()
+        {
+            if (eventsTransport != null)
+                eventsTransport.Disconnect();
+        }
+    }
 }

@@ -21,6 +21,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -59,20 +60,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 				update.Save();
 			}
-
-			IncrementReduceKeyCounter(view, reduceKey);
-		}
-
-		Dictionary<Tuple<string, string>, int> reduceKeyChanges;
-		private void IncrementReduceKeyCounter(string view, string reduceKey)
-		{
-			if (reduceKeyChanges == null)
-			{
-				reduceKeyChanges = new Dictionary<Tuple<string, string>, int>();
-			}
-
-			var key = Tuple.Create(view, reduceKey);
-			reduceKeyChanges[key] = reduceKeyChanges.GetOrAdd(key) + 1;
 		}
 
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize)
@@ -85,7 +72,7 @@ namespace Raven.Storage.Esent.StorageActions
 			while (start > 0)
 			{
 				var viewFromDb = Api.RetrieveColumnAsString(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["view"]);
-				if(string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 					yield break;
 				start--;
 				if (Api.TryMoveNext(session, ReduceKeysCounts) == false)
@@ -100,7 +87,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var viewFromDb = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
 													tableColumnsCache.ReduceKeysCountsColumns["view"], Encoding.Unicode);
 
-				if(string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(view, viewFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 					continue;
 
 				var key = Api.RetrieveColumnAsString(session, ReduceKeysCounts,
@@ -145,34 +132,31 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
+		public void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBucket)
 		{
-			foreach (var reduceKeysAndBucket in reduceKeysAndBuckets)
+			var bucket = reduceKeysAndBucket.Bucket;
+
+			using (var map = new Update(session, ScheduledReductions, JET_prep.Insert))
 			{
-				var bucket = reduceKeysAndBucket.Bucket;
+				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
+							  view, Encoding.Unicode);
+				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"],
+							  reduceKeysAndBucket.ReduceKey, Encoding.Unicode);
+				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["hashed_reduce_key"],
+							  HashReduceKey(reduceKeysAndBucket.ReduceKey));
 
-				using (var map = new Update(session, ScheduledReductions, JET_prep.Insert))
-				{
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
-								  view, Encoding.Unicode);
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"],
-								  reduceKeysAndBucket.ReduceKey, Encoding.Unicode);
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["hashed_reduce_key"],
-												  HashReduceKey(reduceKeysAndBucket.ReduceKey));
+				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"],
+							  uuidGenerator.CreateSequentialUuid(UuidType.ScheduledReductions));
 
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"],
-								  uuidGenerator.CreateSequentialUuid(UuidType.ScheduledReductions));
-
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"],
-								  SystemTime.UtcNow.ToBinary());
+				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"],
+							  SystemTime.UtcNow.ToBinary());
 
 
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"],
-								  bucket);
+				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"],
+							  bucket);
 
-					Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], level);
-					map.Save();
-				}
+				Api.SetColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], level);
+				map.Save();
 			}
 		}
 
@@ -181,7 +165,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var hasResult = false;
 			var result = new ScheduledReductionInfo();
 			var currentEtagBinary = Guid.Empty.ToByteArray();
-			foreach (OptimizedIndexReader reader in itemsToDelete)
+			foreach (OptimizedDeleter reader in itemsToDelete)
 			{
 				foreach (var sortedBookmark in reader.GetSortedBookmarks())
 				{
@@ -204,37 +188,69 @@ namespace Raven.Storage.Esent.StorageActions
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData, int take, 
-			List<object> itemsToDelete,
-			HashSet<Tuple<string, int>> itemsAlreadySeen
-		)
+		public void DeleteScheduledReduction(string indexName, int level, string reduceKey)
+		{
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
+			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+			Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
+			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ) == false)
+				return;
+
+			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+			Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
+			Api.TrySetIndexRange(session, ScheduledReductions,
+									 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+			do
+			{
+				var indexFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+				var levelFromDb =
+							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], RetrieveColumnGrbit.RetrieveFromIndex).
+								Value;
+				var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
+											   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
+
+				if (string.Equals(indexName, indexFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					continue;
+				if (levelFromDb != level)
+					continue;
+				if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					continue;
+
+				Api.JetDelete(Session, ScheduledReductions);
+			} while (Api.TryMoveNext(Session, ScheduledReductions));
+		}
+
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
 			var seenLocally = new HashSet<Tuple<string, int>>();
-			foreach (var reduceKey in reduceKeys)
+			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
-				Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 				if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ) == false)
-					yield break;
+					continue;
 
-				Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 
 				Api.TrySetIndexRange(session, ScheduledReductions,
 									 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
 				// this isn't used for optimized reading, but to make it easier to delete records later on
-				OptimizedIndexReader reader;
-				if (itemsToDelete.Count == 0)
+				OptimizedDeleter reader;
+				if (getItemsToReduceParams.ItemsToDelete.Count == 0)
 				{
-					itemsToDelete.Add(reader = new OptimizedIndexReader());
+					getItemsToReduceParams.ItemsToDelete.Add(reader = new OptimizedDeleter());
 				}
 				else
 				{
-					reader = (OptimizedIndexReader)itemsToDelete[0];
+					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete[0];
 				}
 				do
 				{
@@ -245,12 +261,11 @@ namespace Raven.Storage.Esent.StorageActions
 					var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
 												   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
 
-					if (string.Equals(index, indexFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					if (string.Equals(getItemsToReduceParams.Index, indexFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
 						continue;
-					if (levelFromDb != level)
+					if (levelFromDb != getItemsToReduceParams.Level)
 						continue;
-					if (string.IsNullOrEmpty(reduceKey) == false &&
-						string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
 						continue;
 
 					var bucket =
@@ -258,24 +273,26 @@ namespace Raven.Storage.Esent.StorageActions
 
 					var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
 					var thisIsNewScheduledReductionRow = reader.Add(session, ScheduledReductions);
-					var neverSeenThisKeyAndBucket = itemsAlreadySeen.Add(rowKey);
-					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket) 
+					var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
+					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 					{
 						if (seenLocally.Add(rowKey))
 						{
-							foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
+							foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData))
 							{
-								take--;
+								getItemsToReduceParams.Take--;
 								yield return mappedResultInfo;
-							}	
+							}
 						}
 					}
 
-					if (take <= 0)
+					if (getItemsToReduceParams.Take <= 0)
 						break;
 				} while (Api.TryMoveNext(session, ScheduledReductions));
 
-				if (take <= 0)
+				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
+
+				if (getItemsToReduceParams.Take <= 0)
 					break;
 			}
 		}
@@ -611,6 +628,56 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults) && take > 0);
 		}
 
+		public IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string indexName, int start, int take)
+		{
+			if (take <= 0)
+				yield break;
+
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key");
+			Api.MakeKey(session, ScheduledReductions, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+
+			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
+				yield break;
+
+			if (TryMoveTableRecords(ScheduledReductions, start, false))
+				yield break;
+
+			do
+			{
+				var indexNameFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode,
+																 RetrieveColumnGrbit.RetrieveFromIndex);
+
+				var indexCompare = string.Compare(indexNameFromDb, indexName, StringComparison.InvariantCultureIgnoreCase);
+
+				if (indexCompare < 0)
+					continue;
+				if (indexCompare > 0)
+					break;
+
+				var levelFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"]).Value;
+
+				var keyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
+
+				var etagFromDb = new Guid(Api.RetrieveColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"]));
+
+				var timestampFromDb = Api.RetrieveColumnAsInt64(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
+				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"]).Value;
+
+				take--;
+
+				yield return new ScheduledReductionDebugInfo
+				{
+					Key = keyFromDb,
+					Level = levelFromDb,
+					Etag = etagFromDb,
+					Timestamp = DateTime.FromBinary(timestampFromDb),
+					Bucket = bucketFromDb
+				};
+
+			} while (Api.TryMoveNext(session, ScheduledReductions) && take > 0);
+
+		}
+
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take)
 		{
 			if (take <= 0)
@@ -717,15 +784,15 @@ namespace Raven.Storage.Esent.StorageActions
 
 					update.Save();
 				}
-			},
-			createIfMissing: true);
+			}, () => Api.SetColumn(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"],
+								  (int)performedReduceType));
 		}
 
 		private void ExecuteOnReduceKey(string view, string reduceKey,
 			Table table,
 			IDictionary<string, JET_COLUMNID> columnids,
-			Action action,
-			bool createIfMissing)
+			Action updateAction,
+			Action insertAction)
 		{
 			var hashReduceKey = HashReduceKey(reduceKey);
 
@@ -736,7 +803,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			if (Api.TrySeek(session, table, SeekGrbit.SeekEQ) == false)
 			{
-				if (createIfMissing == false)
+				if (insertAction == null)
 					return;
 				using (var update = new Update(session, table, JET_prep.Insert))
 				{
@@ -744,9 +811,9 @@ namespace Raven.Storage.Esent.StorageActions
 					Api.SetColumn(session, table, columnids["reduce_key"], reduceKey, Encoding.Unicode);
 					Api.SetColumn(session, table, columnids["hashed_reduce_key"], hashReduceKey);
 
+					insertAction();
 					update.SaveAndGotoBookmark();
 				}
-				action();
 				return;
 			}
 
@@ -761,9 +828,25 @@ namespace Raven.Storage.Esent.StorageActions
 				if (StringComparer.Ordinal.Equals(reduceKey, reduceKeyFromDb) == false)
 					continue;
 
-				action();
+				updateAction();
 				return;
 			} while (Api.TryMoveNext(session, table));
+
+			// couldn't find it...
+
+			if (insertAction == null)
+				return;
+
+			using (var update = new Update(session, table, JET_prep.Insert))
+			{
+				Api.SetColumn(session, table, columnids["view"], view, Encoding.Unicode);
+				Api.SetColumn(session, table, columnids["reduce_key"], reduceKey, Encoding.Unicode);
+				Api.SetColumn(session, table, columnids["hashed_reduce_key"], hashReduceKey);
+
+				insertAction();
+
+				update.SaveAndGotoBookmark();
+			}
 		}
 
 		public ReduceType GetLastPerformedReduceType(string indexName, string reduceKey)
@@ -772,7 +855,7 @@ namespace Raven.Storage.Esent.StorageActions
 			ExecuteOnReduceKey(indexName, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns, () =>
 			{
 				reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"]).Value;
-			}, createIfMissing: false);
+			}, null);
 			return (ReduceType)reduceType;
 		}
 
@@ -791,7 +874,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.MakeKey(session, MappedResults, int.MaxValue, MakeKeyGrbit.None);
 			if (Api.TrySetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
-				yield break; 
+				yield break;
 			do
 			{
 				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
@@ -808,7 +891,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData)
+		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, IEnumerable<string> keysToReduce, bool loadData)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_hashed_reduce_key_and_bucket");
 
@@ -863,23 +946,25 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public void FlushMapReduceUpdates()
+		public void IncrementReduceKeyCounter(string view, string reduceKey, int val)
 		{
-			if (reduceKeyChanges == null)
-				return;
-			foreach (var reduceKeyChange in reduceKeyChanges)
+			try
 			{
-				MaybePulseTransaction();
-				IncrementReduceKeyCounter(reduceKeyChange.Key.Item1, reduceKeyChange.Key.Item2, reduceKeyChange.Value);
+				ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
+								   () => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val),
+								   () => Api.SetColumn(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val));
 			}
-		}
-
-		private void IncrementReduceKeyCounter(string view, string reduceKey, int val)
-		{
-			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
-				() => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val),
-				createIfMissing: true);
+			catch (EsentErrorException e)
+			{
+				// we should NOT be getting this error, we still got it, and while I think I fixed the reason for that...
+				// if we do, it is okay to ignore it in this specific instance, since it will just skew the number for reduce counts a bit
+				// and it will all fix itself one way or the other
+				if (e.Error != JET_err.WriteConflict)
+					throw;
+				logger.WarnException(
+					"Could not update the reduce key counter for index " + view + ", key: " + reduceKey +
+					". Ignoring this, multi step reduce promotion may be delayed for this value.", e);
+			}
 		}
 
 		private void DecrementReduceKeyCounter(string view, string reduceKey)
@@ -895,12 +980,12 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.JetDelete(session, ReduceKeysCounts);
 						removeReducedKeyStatus = true;
 					}
-				}, createIfMissing: false);
+				}, null);
 
 			if (removeReducedKeyStatus)
 			{
 				ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns,
-								   () => Api.JetDelete(session, ReduceKeysStatus), createIfMissing: false);
+								   () => Api.JetDelete(session, ReduceKeysStatus), null);
 			}
 		}
 
@@ -910,7 +995,7 @@ namespace Raven.Storage.Esent.StorageActions
 			ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns, () =>
 			{
 				numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
-			}, createIfMissing: false);
+			}, null);
 
 			return numberOfMappedItemsPerReduceKey;
 		}

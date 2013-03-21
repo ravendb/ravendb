@@ -50,7 +50,11 @@ namespace Raven.Client.Indexes
 		/// <param name="documentStore">The document store.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
-			CreateIndexes(catalogToGetnIndexingTasksFrom, documentStore.DatabaseCommands, documentStore.Conventions);
+			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
+			foreach (var task in tasks)
+			{
+				task.Execute(documentStore);
+			}
 		}
 #endif
 

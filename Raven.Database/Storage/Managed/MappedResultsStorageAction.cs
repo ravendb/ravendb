@@ -56,8 +56,6 @@ namespace Raven.Storage.Managed
 				{"timestamp", SystemTime.UtcNow}
 			};
 			storage.MappedResults.Put(key, ms.ToArray());
-
-			IncrementReduceKeyCounter(view, reduceKey, 1);
 		}
 
 		private RavenJObject LoadMappedResult(Table.ReadResult readResult)
@@ -90,38 +88,47 @@ namespace Raven.Storage.Managed
 
 		public void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed)
 		{
+			var statsByKey = new Dictionary<string, int>();
 			foreach (var reduceKeyAndBucket in removed)
 			{
-				IncrementReduceKeyCounter(view, reduceKeyAndBucket.ReduceKey, -1);
+				statsByKey[reduceKeyAndBucket.ReduceKey] = statsByKey.GetOrDefault(reduceKeyAndBucket.ReduceKey) - 1;
+			}
+
+			foreach (var reduceKeyStat in statsByKey)
+			{
+				IncrementReduceKeyCounter(view, reduceKeyStat.Key, reduceKeyStat.Value);
 			}
 		}
 
 		public void DeleteMappedResultsForView(string view)
 		{
+			var statsByKey = new Dictionary<string, int>();
 			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", view } })
 			.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))
 			{
 				storage.MappedResults.Remove(key);
 
-				IncrementReduceKeyCounter(view, key.Value<string>("reduceKey"), -1);
+				var reduceKey = key.Value<string>("reduceKey");
+				statsByKey[reduceKey] = statsByKey.GetOrDefault(reduceKey) - 1;
+			}
+			foreach (var reduceKeyStat in statsByKey)
+			{
+				IncrementReduceKeyCounter(view, reduceKeyStat.Key, reduceKeyStat.Value);
 			}
 		}
 
-		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
+		public void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBucket)
 		{
-			foreach (var reduceKeysAndBucket in reduceKeysAndBuckets)
+			var etag = generator.CreateSequentialUuid(UuidType.ScheduledReductions).ToByteArray();
+			storage.ScheduleReductions.UpdateKey(new RavenJObject
 			{
-				var etag = generator.CreateSequentialUuid(UuidType.ScheduledReductions).ToByteArray();
-				storage.ScheduleReductions.UpdateKey(new RavenJObject
-					{
-						{"view", view},
-						{"reduceKey", reduceKeysAndBucket.ReduceKey},
-						{"bucket", reduceKeysAndBucket.Bucket},
-						{"level", level},
-						{"etag", etag},
-						{"timestamp", SystemTime.UtcNow}
-					});
-			}
+				{"view", view},
+				{"reduceKey", reduceKeysAndBucket.ReduceKey},
+				{"bucket", reduceKeysAndBucket.Bucket},
+				{"level", level},
+				{"etag", etag},
+				{"timestamp", SystemTime.UtcNow}
+			});
 		}
 
 		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
@@ -149,19 +156,41 @@ namespace Raven.Storage.Managed
 			return hasResult ? result : null;
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, string[] reduceKeys, int level, bool loadData,
-				int take,
-				List<object> itemsToDelete,
-				HashSet<Tuple<string, int>> itemsAlreadySeen
-			)
+		public void DeleteScheduledReduction(string indexName, int level, string reduceKey)
+		{
+			var keyCriteria = new RavenJObject
+			                  {
+				                  {"view", indexName},
+				                  {"level", level},
+								  {"reduceKey", reduceKey}
+			                  };
+
+			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(keyCriteria))
+			{
+				var indexFromDb = result.Value<string>("view");
+				var levelFromDb = result.Value<int>("level");
+				var reduceKeyFromDb = result.Value<string>("reduceKey");
+
+				if (string.Equals(indexFromDb, indexName, StringComparison.InvariantCultureIgnoreCase) == false ||
+				    levelFromDb != level)
+					break;
+
+				if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
+					break;
+
+				storage.ScheduleReductions.Remove(reduceKey);
+			}
+		}
+
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			var seenLocally = new HashSet<Tuple<string, int>>();
-			foreach (var reduceKey in reduceKeys)
+			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
 				var keyCriteria = new RavenJObject
 			                  {
-				                  {"view", index},
-				                  {"level", level},
+				                  {"view", getItemsToReduceParams.Index},
+				                  {"level", getItemsToReduceParams.Level},
 								  {"reduceKey", reduceKey}
 			                  };
 
@@ -171,8 +200,8 @@ namespace Raven.Storage.Managed
 					var levelFromDb = result.Value<int>("level");
 					var reduceKeyFromDb = result.Value<string>("reduceKey");
 
-					if (string.Equals(indexFromDb, index, StringComparison.InvariantCultureIgnoreCase) == false ||
-						levelFromDb != level)
+					if (string.Equals(indexFromDb, getItemsToReduceParams.Index, StringComparison.InvariantCultureIgnoreCase) == false ||
+						levelFromDb != getItemsToReduceParams.Level)
 						break;
 
 					if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
@@ -183,27 +212,29 @@ namespace Raven.Storage.Managed
 					var bucket = result.Value<int>("bucket");
 
 					var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
-					var thisIsNewScheduledReductionRow = itemsToDelete.Contains(result, RavenJTokenEqualityComparer.Default) == false;
-					var neverSeenThisKeyAndBucket = itemsAlreadySeen.Add(rowKey);
+					var thisIsNewScheduledReductionRow = getItemsToReduceParams.ItemsToDelete.Contains(result, RavenJTokenEqualityComparer.Default) == false;
+					var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 					if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 					{
 						if (seenLocally.Add(rowKey))
 						{
-							foreach (var mappedResultInfo in GetResultsForBucket(index, level, reduceKeyFromDb, bucket, loadData))
+							foreach (var mappedResultInfo in GetResultsForBucket(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKeyFromDb, bucket, getItemsToReduceParams.LoadData))
 							{
-								take--;
+								getItemsToReduceParams.Take--;
 								yield return mappedResultInfo;
 							}
 						}
 					}
 					if(thisIsNewScheduledReductionRow)
-						itemsToDelete.Add(result);
+						getItemsToReduceParams.ItemsToDelete.Add(result);
 
-					if (take <= 0)
+					if (getItemsToReduceParams.Take <= 0)
 						break;
 				}
 
-				if (take <= 0)
+				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
+
+				if (getItemsToReduceParams.Take <= 0)
 					break;
 			}
 		}
@@ -420,7 +451,7 @@ namespace Raven.Storage.Managed
 				.Distinct();
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData)
+		public IEnumerable<MappedResultInfo> GetMappedResults(string indexName, IEnumerable<string> keysToReduce, bool loadData)
 		{
 			foreach (var reduceKey in keysToReduce)
 			{
@@ -490,6 +521,30 @@ namespace Raven.Storage.Managed
 					   };
 		}
 
+		public IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string indexName, int start, int take)
+		{
+			var keyCriteria = new RavenJObject
+			{
+				{"view", indexName},
+			};
+
+			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(keyCriteria)
+				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), indexName))
+				.Skip(start)
+				.Take(take)
+			)
+			{
+				yield return new ScheduledReductionDebugInfo
+				{
+					Key = result.Value<string>("reduceKey"),
+					Bucket = result.Value<int>("bucket"),
+					Etag = new Guid(result.Value<byte[]>("etag")),
+					Level = result.Value<int>("level"),
+					Timestamp = result.Value<DateTime>("timestamp"),
+				};
+			}
+		}
+
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take)
 		{
 			var results = storage.ReduceResults["ByViewReduceKeyLevelAndBucket"].SkipTo(new RavenJObject
@@ -532,19 +587,8 @@ namespace Raven.Storage.Managed
 				});
 		}
 
-		Dictionary<Tuple<string, string>, int> reduceKeyChanges;
-		private void IncrementReduceKeyCounter(string view, string reduceKey, int val)
-		{
-			if (reduceKeyChanges == null)
-			{
-				reduceKeyChanges = new Dictionary<Tuple<string, string>, int>();
-			}
 
-			var key = Tuple.Create(view, reduceKey);
-			reduceKeyChanges[key] = reduceKeyChanges.GetOrAdd(key) + val;
-		}
-
-		private void UpdateReduceKeyCounter(string view, string reduceKey, int value)
+		public void IncrementReduceKeyCounter(string view, string reduceKey, int value)
 		{
 			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", view }, { "reduceKey", reduceKey } });
 
@@ -585,17 +629,6 @@ namespace Raven.Storage.Managed
 				return 0;
 
 			return readResult.Key.Value<int>("mappedItemsCount");
-		}
-
-		public void PreCommit()
-		{
-			if (reduceKeyChanges == null)
-				return;
-
-			foreach (var reduceKeyChange in reduceKeyChanges)
-			{
-				UpdateReduceKeyCounter(reduceKeyChange.Key.Item1, reduceKeyChange.Key.Item2, reduceKeyChange.Value);
-			}
 		}
 	}
 }

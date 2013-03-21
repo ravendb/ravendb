@@ -19,6 +19,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -29,14 +30,12 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing.Sorting;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
-using Lucene.Net.Search.Vectorhighlight;
 
 namespace Raven.Database.Indexing
 {
@@ -75,7 +74,7 @@ namespace Raven.Database.Indexing
 
 		public TimeSpan LastIndexingDuration { get; set; }
 		public long TimePerDoc { get; set; }
-		public Task CurrentMapIndexingTask { get; set; } 
+		public Task CurrentMapIndexingTask { get; set; }
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -257,12 +256,13 @@ namespace Raven.Database.Indexing
 		public static RavenJObject CreateDocumentFromFields(Document document, FieldsToFetch fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
-			IEnumerable<string> fields = fieldsToFetch.Fields;
-
+			var fields = fieldsToFetch.Fields;
 			if (fieldsToFetch.FetchAllStoredFields)
 				fields = fields.Concat(document.GetFields().Select(x => x.Name));
 
+
 			var q = fields
+				.Distinct()
 				.SelectMany(name => document.GetFields(name) ?? new Field[0])
 				.Where(x => x != null)
 				.Where(
@@ -489,8 +489,7 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs,
-															IStorageActionsAccessor actions, IndexingWorkStats stats)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, IEnumerable<IndexingFunc> funcs, IndexingWorkStats stats)
 		{
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
@@ -539,8 +538,7 @@ namespace Raven.Database.Indexing
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func,
-															IStorageActionsAccessor actions, WorkContext context)
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
@@ -888,10 +886,10 @@ namespace Raven.Database.Indexing
 												highlightedField.FragmentLength,
 												highlightedField.FragmentCount)
 										}
-										into fieldHighlitings
-										where fieldHighlitings.Fragments != null &&
-											  fieldHighlitings.Fragments.Length > 0
-										select fieldHighlitings;
+											into fieldHighlitings
+											where fieldHighlitings.Fragments != null &&
+												  fieldHighlitings.Fragments.Length > 0
+											select fieldHighlitings;
 
 									if (fieldsToFetch.IsProjection || parent.IsMapReduce)
 									{
@@ -899,7 +897,8 @@ namespace Raven.Database.Indexing
 											if (!string.IsNullOrEmpty(highlighting.FragmentsField))
 												indexQueryResult.Projection[highlighting.FragmentsField]
 													= new RavenJArray(highlighting.Fragments);
-									} else
+									}
+									else
 										indexQueryResult.Highligtings = highlightings
 											.ToDictionary(x => x.Field, x => x.Fragments);
 								}
@@ -1257,40 +1256,60 @@ namespace Raven.Database.Indexing
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
+			bool hasSnapshot = false;
+			bool throwOnFinallyException = true;
 			try
 			{
-				var existingFiles = new List<string>();
+				if (indexDefinition.IsTemp)
+					return; // we don't backup temp indexes
+				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
-				
+
 				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
 				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
 				System.IO.Directory.CreateDirectory(saveToFolder);
 				if (File.Exists(allFilesPath))
 				{
-					existingFiles.AddRange(File.ReadLines(allFilesPath));
+					foreach (var file in File.ReadLines(allFilesPath))
+					{
+						existingFiles.Add(file);
+					}
 				}
 
+				var neededFilePath = Path.Combine(saveToFolder, "index-files.required-for-index-restore");
 				using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
-				using (var neededFilesWriter = File.CreateText(Path.Combine(saveToFolder, "index-files.required-for-index-restore")))
+				using (var neededFilesWriter = File.CreateText(neededFilePath))
 				{
-					// this is called for the side effect of creating the snapshotter and the writer
-					// we explicitly handle the backup outside of the write, to allow concurrent indexing
-					Write((writer, analyzer, stats) =>
+					try
 					{
-						// however, we copy the current segments.gen & index.version to make 
-						// sure that we get the _at the time_ of the write. 
-						foreach (var fileName in new[] { "segments.gen", "index.version" })
+						// this is called for the side effect of creating the snapshotter and the writer
+						// we explicitly handle the backup outside of the write, to allow concurrent indexing
+						Write((writer, analyzer, stats) =>
 						{
-							var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
-							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
-							allFilesWriter.WriteLine(fileName);
-						}
-						return 0;
-					});
+							// however, we copy the current segments.gen & index.version to make 
+							// sure that we get the _at the time_ of the write. 
+							foreach (var fileName in new[] {"segments.gen", "index.version"})
+							{
+								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+								allFilesWriter.WriteLine(fileName);
+							}
+							return 0;
+						});
+					}
+					catch (CorruptIndexException e)
+					{
+						logIndexing.WarnException(
+							"Could not backup index " + name +
+							" because it is corrupted. Skipping the index, will force index reset on restore", e);
+						neededFilesWriter.Dispose();
+						TryDelete(neededFilePath);
+						return;
+					}
 
 					var commit = snapshotter.Snapshot();
-
+					hasSnapshot = true;
 					foreach (var fileName in commit.FileNames)
 					{
 						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
@@ -1313,10 +1332,36 @@ namespace Raven.Database.Indexing
 					neededFilesWriter.Flush();
 				}
 			}
+			catch
+			{
+				throwOnFinallyException = false;
+				throw;
+			}
 			finally
 			{
-				if (snapshotter != null)
-					snapshotter.Release();
+				if (snapshotter != null && hasSnapshot)
+				{
+					try
+					{
+						snapshotter.Release();
+					}
+					catch 
+					{
+						if (throwOnFinallyException)
+							throw;
+					}
+				}
+			}
+		}
+
+		private static void TryDelete(string neededFilePath)
+		{
+			try
+			{
+				File.Delete(neededFilePath);
+			}
+			catch (Exception)
+			{
 			}
 		}
 

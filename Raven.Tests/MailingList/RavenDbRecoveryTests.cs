@@ -16,7 +16,7 @@ namespace Raven.Tests.MailingList
 {
 	public class RavenDbRecoveryTests : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.DefaultStorageTypeName = "esent";
 		}

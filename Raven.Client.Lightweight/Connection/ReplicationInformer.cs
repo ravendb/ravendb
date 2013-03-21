@@ -385,7 +385,7 @@ namespace Raven.Client.Connection
 					};
 				return new ReplicationDestinationData
 				{
-					Url = MultiDatabase.GetRootDatabaseUrl(x.Url) + "/databases/" + x.Database + "/",
+					Url = MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
 				};
 			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them

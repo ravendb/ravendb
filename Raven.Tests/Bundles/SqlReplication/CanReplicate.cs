@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Embedded;
 using Raven.Database.Bundles.SqlReplication;
 using Xunit;
 
@@ -15,7 +16,7 @@ namespace Raven.Tests.Bundles.SqlReplication
 {
 	public class CanReplicate : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/ActiveBundles"] = "sqlReplication";
 		}
@@ -60,7 +61,6 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-
 		[FactIfSqlServerIsAvailable]
 		public void SimpleTransformation()
 		{
@@ -69,8 +69,12 @@ CREATE TABLE [dbo].[Orders]
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
-					 .First().AfterReplicationCompleted += () => eventSlim.Set();
-				
+					.First().AfterReplicationCompleted += successCount =>
+					{
+						if (successCount != 0)
+							eventSlim.Set();
+					};
+
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Order
@@ -84,36 +88,7 @@ CREATE TABLE [dbo].[Orders]
 					session.SaveChanges();
 				}
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new SqlReplicationConfig
-					{
-						Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
-						Name = "OrdersAndLines",
-						ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
-						FactoryName = FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
-						RavenEntityName = "Orders",
-						Script = @"
-var orderData = {
-	Id: documentId,
-	OrderLinesCount: this.OrderLines.length,
-	TotalCost: 0
-};
-sqlReplicate('Orders', 'Id', orderData);
-
-for (var i = 0; i < this.OrderLines.length; i++) {
-	var line = this.OrderLines[i];
-	orderData.TotalCost += line.Cost;
-	sqlReplicate('OrderLines','OrderId', {
-		OrderId: documentId,
-		Qty: line.Quantity,
-		Product: line.Product,
-		Cost: line.Cost
-	});
-}"
-					});
-					session.SaveChanges();
-				}
+				SetupSqlReplication(store);
 
 				eventSlim.Wait(TimeSpan.FromMinutes(5));
 
@@ -132,6 +107,160 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 					}
 				}
 
+			}
+		}
+
+		protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
+		{
+			
+		}
+
+		[FactIfSqlServerIsAvailable]
+		public void CanUpdateToBeNoItemsInChildTable()
+		{
+			CreateRdbmsSchema();
+			using (var store = NewDocumentStore())
+			{
+				var eventSlim = new ManualResetEventSlim(false);
+				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+					 .First().AfterReplicationCompleted += successCount =>
+					 {
+						 if (successCount != 0)
+							 eventSlim.Set();
+					 };
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Order
+					{
+						OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+					});
+					session.SaveChanges();
+				}
+
+				SetupSqlReplication(store);
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				AssertCounts(1, 2);
+
+				eventSlim.Reset();
+
+				using (var session = store.OpenSession())
+				{
+					session.Load<Order>(1).OrderLines.Clear();
+					session.SaveChanges();
+				}
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				AssertCounts(1, 0);
+
+			}
+		}
+
+		[FactIfSqlServerIsAvailable]
+		public void CanDelete()
+		{
+			CreateRdbmsSchema();
+			using (var store = NewDocumentStore())
+			{
+				var eventSlim = new ManualResetEventSlim(false);
+				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+					 .First().AfterReplicationCompleted += successCount =>
+					 {
+						 if (successCount != 0)
+							 eventSlim.Set();
+					 };
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Order
+					{
+						OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+					});
+					session.SaveChanges();
+				}
+
+				SetupSqlReplication(store);
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				AssertCounts(1, 2);
+
+				eventSlim.Reset();
+
+				store.DatabaseCommands.Delete("orders/1", null);
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				AssertCounts(0, 0);
+
+			}
+		}
+
+		private static void AssertCounts(int ordersCount, int orderLineCounts)
+		{
+			var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+			using (var con = providerFactory.CreateConnection())
+			{
+				con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+				con.Open();
+
+				using (var dbCommand = con.CreateCommand())
+				{
+					dbCommand.CommandText = "SELECT COUNT(*) FROM Orders";
+					Assert.Equal(ordersCount, dbCommand.ExecuteScalar());
+					dbCommand.CommandText = "SELECT COUNT(*) FROM OrderLines";
+					Assert.Equal(orderLineCounts, dbCommand.ExecuteScalar());
+				}
+			}
+		}
+
+		private static void SetupSqlReplication(EmbeddableDocumentStore store)
+		{
+			using (var session = store.OpenSession())
+			{
+				session.Store(new SqlReplicationConfig
+				{
+					Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
+					Name = "OrdersAndLines",
+					ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
+					FactoryName = FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
+					RavenEntityName = "Orders",
+					SqlReplicationTables =
+					{
+						new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id"},
+						new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId"},
+					},
+					Script = @"
+var orderData = {
+	Id: documentId,
+	OrderLinesCount: this.OrderLines.length,
+	TotalCost: 0
+};
+replicateToOrders(orderData);
+
+for (var i = 0; i < this.OrderLines.length; i++) {
+	var line = this.OrderLines[i];
+	orderData.TotalCost += line.Cost;
+	replicateToOrderLines({
+		OrderId: documentId,
+		Qty: line.Quantity,
+		Product: line.Product,
+		Cost: line.Cost
+	});
+}"
+				});
+				session.SaveChanges();
 			}
 		}
 

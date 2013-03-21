@@ -104,7 +104,6 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
@@ -198,26 +197,13 @@
                            MouseLeftButtonDown="ToggleBundles"
 						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Versioning}"/>
 
-				<CheckBox x:Name="Authorization"
-                          Checked="Checked"
-                          Unchecked="UnChecked"
-                          Grid.Row="7"
-                          Margin="5"
-						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Authorization}"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="7"
-                           Text="Authorization Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"/>
-
 				<CheckBox x:Name="Periodic"
-                          Grid.Row="8"
+                          Grid.Row="7"
                           Margin="5"
 						  IsChecked="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=PeriodicBackup}"
 						  IsEnabled="False"/>
 				<TextBlock Grid.Column="1"
-                           Grid.Row="8"
+                           Grid.Row="7"
                            Text="Periodic Backup Bundle"
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"

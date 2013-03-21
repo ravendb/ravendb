@@ -1,49 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
+using System.IO;
 using Raven.Abstractions.Data;
-using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Shard;
-using Raven.Tests.Faceted;
 using System.Linq;
-using Raven.Tests.MailingList;
+using Raven.Tests.Bundles.PeriodicBackups;
+using Raven.Tests.Bundles.Replication.Bugs;
+using Raven.Tests.Bundles.Versioning;
 
-internal class Program
+namespace Raven.Tryouts
 {
-	private static void Main(string[] args)
+	class Program
 	{
-		using (var ds = new DocumentStore
+		static void Main(string[] args)
 		{
-			Url = "http://localhost:8080",
-			DefaultDatabase = "sql"
-		}.Initialize())
-		{
-			int pages = 0;
-			while (true)
-			{
-				using (var session = ds.OpenSession(new OpenSessionOptions
-				{
-					ForceReadFromMaster = true
-				}))
-				{
-					session.Advanced.MaxNumberOfRequestsPerSession = 10000;
-					var results = session.Query<User>()
-					       .Take(1024)
-					       .Skip(pages*1024)
-					       .ToList();
-					if (results.Count == 0)
-						break;
-					pages++;
-				}
-			}
 		}
-	}
-
-	public class User
-	{
-		public string Name, Email;
-		public string[] Phones;
 	}
 }

@@ -90,30 +90,55 @@ namespace Raven.Studio.Commands
 			{
 				if (sqlReplicationSettings.SqlReplicationConfigs.Any(config => config.Name == "Temp_Name") == false && sqlReplicationSettings.SqlReplicationConfigs.Any(config => string.IsNullOrWhiteSpace(config.Name)) == false)
 				{
-					session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
-					       .ContinueOnSuccessInTheUIThread(documents =>
-					       {
-						       sqlReplicationSettings.UpdateIds();
-						       if (documents != null)
-						       {
-							       foreach (var sqlReplicationConfig in documents)
-							       {
-								       if (sqlReplicationSettings.SqlReplicationConfigs.All(config => config.Id != sqlReplicationConfig.Id))
-								       {
-									       session.Delete(sqlReplicationConfig);
-								       }
-							       }
-						       }
+					var problemWithTable = false;
+					foreach (var sqlReplicationConfigModel in sqlReplicationSettings.SqlReplicationConfigs)
+					{
+						var hashset = new HashSet<string>();
+						foreach (var sqlReplicationTable in sqlReplicationConfigModel.SqlReplicationTables)
+						{
+							var exists = !hashset.Add(sqlReplicationTable.TableName);
+							if (string.IsNullOrWhiteSpace(sqlReplicationTable.DocumentKeyColumn) || string.IsNullOrWhiteSpace(sqlReplicationTable.TableName) || exists)
+							{
+								problemWithTable = true;
+								break;
+							}
+						}
+						if(problemWithTable)
+							break;
+					}
 
-						       foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
-						       {
-							       sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
-							       session.Store(sqlReplicationConfig);
-						       }
+					if (problemWithTable)
+					{
+						ApplicationModel.Current.AddNotification(new Notification("Sql Replicaiton settings were not saved, all tables must distinct names and have document keys", NotificationLevel.Error));
+					}
+					else
+					{
+						session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
+						   .ContinueOnSuccessInTheUIThread(documents =>
+						   {
+							   sqlReplicationSettings.UpdateIds();
+							   if (documents != null)
+							   {
+								   foreach (var sqlReplicationConfig in documents)
+								   {
+									   if (sqlReplicationSettings.SqlReplicationConfigs.All(config => config.Id != sqlReplicationConfig.Id))
+									   {
+										   session.Delete(sqlReplicationConfig);
+									   }
+								   }
+							   }
 
-						       session.SaveChangesAsync().Catch();
-					       })
-					       .Catch();
+							   foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
+							   {
+								   sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
+								   session.Store(sqlReplicationConfig.ToSqlReplicationConfig());
+							   }
+
+							   session.SaveChangesAsync().Catch();
+						   })
+						   .Catch();
+					}
+					
 				}
 				else
 				{
@@ -199,6 +224,16 @@ namespace Raven.Studio.Commands
 
             settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
+
+			string activeBundles;
+			settingsModel.DatabaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
+
+			if (activeBundles == null || activeBundles.Contains("PeriodicBackup") == false)
+			{
+				activeBundles = "PeriodicBackup;" + activeBundles;
+			}
+
+			settingsModel.DatabaseDocument.Settings["Raven/ActiveBundles"] = activeBundles;
 
 			DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 

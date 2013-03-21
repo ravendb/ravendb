@@ -407,7 +407,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
-		void ForceReadFromMaster();
+		IDisposable ForceReadFromMaster();
 
 		/// <summary>
 		/// Get the low level  bulk insert operation

@@ -7,6 +7,7 @@ using Raven.Client.Silverlight.MissingFromSilverlight;
 #endif
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;

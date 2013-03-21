@@ -5,9 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Jint.Native;
+using Raven.Database.Exceptions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Reflection;
@@ -69,17 +70,17 @@ namespace Raven.Database.Json
 			{
 				jintEngine = scriptsCache.CheckoutScript(CreateEngine, patch);
 			}
-			catch (NotSupportedException)
+			catch (NotSupportedException e)
 			{
-				throw;
+				throw new ParseException("Could not parse script", e);
 			}
-			catch (JintException)
+			catch (JintException e)
 			{
-				throw;
+				throw new ParseException("Could not parse script", e);
 			}
 			catch (Exception e)
 			{
-				throw new InvalidOperationException("Could not parse: " + Environment.NewLine + patch.Script, e);
+				throw new ParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
 			}
 
 			loadDocumentStatic = loadDocument;
@@ -296,6 +297,7 @@ function ExecutePatchScript(docInner){{
 
 
 			AddScript(jintEngine, "Raven.Database.Json.Map.js");
+			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
 			AddScript(jintEngine, "Raven.Database.Json.lodash.js");
 			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
 
@@ -361,6 +363,28 @@ function ExecutePatchScript(docInner){{
 					return reader.ReadToEnd();
 				}
 			}
+		}
+	}
+
+	[Serializable]
+	public class ParseException : Exception
+	{
+		public ParseException()
+		{
+		}
+
+		public ParseException(string message) : base(message)
+		{
+		}
+
+		public ParseException(string message, Exception inner) : base(message, inner)
+		{
+		}
+
+		protected ParseException(
+			SerializationInfo info,
+			StreamingContext context) : base(info, context)
+		{
 		}
 	}
 }

@@ -7,7 +7,7 @@ namespace Raven.Tests.Bugs
 {
 	public class FindPropertyNameForIndex : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 		}
 

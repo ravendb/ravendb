@@ -83,5 +83,10 @@ namespace Raven.Database.Indexing
 				ensuredFieldNames = new HashSet<string>();
 			ensuredFieldNames.Add(ensuredFieldName);
 		}
+
+		public bool HasField(string name)
+		{
+			return fieldsToFetch.Contains(name);
+		}
 	}
 }

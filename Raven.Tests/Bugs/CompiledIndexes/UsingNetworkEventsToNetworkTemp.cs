@@ -36,7 +36,7 @@ namespace Raven.Tests.Bugs.CompiledIndexes
 			}
 		}
 
-		protected override void ModifyConfiguration(RavenConfiguration configuration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (NetworkEventsToNetworkTemp)));
 		}

@@ -33,6 +33,7 @@ namespace Raven.Abstractions.Extensions
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",
 			"Raven-Last-Modified",
+			"Has-Api-Key",
 
 			// COTS
 			"Access-Control-Allow-Origin",
@@ -106,6 +107,12 @@ namespace Raven.Abstractions.Extensions
 			"Upgrade",
 			"Via",
 			"Warning",
+
+			// IIS Application Request Routing Module
+			"X-ARR-LOG-ID",
+			"X-ARR-SSL",
+			"X-Forwarded-For",
+			"X-Original-URL"
 		};
 
 		/// <summary>

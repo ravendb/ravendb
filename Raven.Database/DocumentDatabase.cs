@@ -317,10 +317,8 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			using(LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
-			using (new DisposableAction(() => LogContext.DatabaseName.Value = null))
+			using (LogContext.WithDatabase(Name))
 			{
-				LogContext.DatabaseName.Value = Name;
 				foreach (var task in StartupTasks)
 				{
 					var disposable = task.Value as IDisposable;
@@ -345,6 +343,7 @@ namespace Raven.Database
 					CountOfIndexes = IndexStorage.Indexes.Length,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
+					DatabaseId = TransactionalStorage.Id,
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
 						.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
@@ -381,10 +380,13 @@ namespace Raven.Database
 					result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
 				});
 
-				foreach (var index in result.Indexes)
+				if (result.Indexes != null)
 				{
-					index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
-					index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+					foreach (var index in result.Indexes)
+					{
+						index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
+						index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+					}
 				}
 
 				return result;
@@ -522,8 +524,22 @@ namespace Raven.Database
 		public void StopIndexingWorkers()
 		{
 			workContext.StopIndexing();
-			indexingBackgroundTask.Wait();
-			reducingBackgroundTask.Wait();
+			try
+			{
+				indexingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background indexing", e);
+			}
+			try
+			{
+				reducingBackgroundTask.Wait();
+			}
+			catch (Exception e)
+			{
+				log.WarnException("Error while trying to stop background reducing", e);
+			}
 
 			backgroundWorkersSpun = false;
 		}
@@ -567,12 +583,12 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		public void RaiseNotifications(DocumentChangeNotification obj)
+		public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
 		{
 			TransportState.Send(obj);
 			var onDocumentChange = OnDocumentChange;
 			if (onDocumentChange != null)
-				onDocumentChange(this, obj);
+				onDocumentChange(this, obj, metadata);
 
 		}
 
@@ -581,7 +597,7 @@ namespace Raven.Database
 			TransportState.Send(obj);
 		}
 
-		public event EventHandler<DocumentChangeNotification> OnDocumentChange;
+		public event Action<DocumentDatabase,DocumentChangeNotification, RavenJObject> OnDocumentChange;
 
 		public void RunIdleOperations()
 		{
@@ -670,6 +686,7 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveMetadataReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
+
 			lock (putSerialLock)
 			{
 				TransactionalStorage.Batch(actions =>
@@ -712,7 +729,7 @@ namespace Raven.Database
 									Id = key,
 									Type = DocumentChangeTypes.Put,
 									Etag = newEtag,
-								});
+								}, metadata);
 							});
 					}
 					else
@@ -739,6 +756,9 @@ namespace Raven.Database
 				Guid? preTouchEtag;
 				Guid? afterTouchEtag;
 				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+
+				actions.General.MaybePulseTransaction();
+
 				if(preTouchEtag == null || afterTouchEtag == null)
 					continue;
 
@@ -932,7 +952,7 @@ namespace Raven.Database
 								{
 									Id = key,
 									Type = DocumentChangeTypes.Delete,
-								});
+								}, metadataVar);
 							});
 
 					}
@@ -1799,7 +1819,7 @@ namespace Raven.Database
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
-		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag = true)
+		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
 			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
 			{
@@ -2027,14 +2047,31 @@ namespace Raven.Database
 
 		public void AddAlert(Alert alert)
 		{
-			AlertsDocument alertsDocument;
-			var alertsDoc = Get(Constants.RavenAlerts, null);
-			if (alertsDoc == null)
-				alertsDocument = new AlertsDocument();
-			else
-				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+			lock (putSerialLock)
+			{
+				AlertsDocument alertsDocument;
+				var alertsDoc = Get(Constants.RavenAlerts, null);
+				RavenJObject metadata;
+				if (alertsDoc == null)
+				{
+					alertsDocument = new AlertsDocument();
+					metadata = new RavenJObject();
+				}
+				else
+				{
+					alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+					metadata = alertsDoc.Metadata;
+				}
 
-			alertsDocument.Alerts.Add(alert);
+				var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
+				if (withSameUniqe != null)
+					alertsDocument.Alerts.Remove(withSameUniqe);
+
+				alertsDocument.Alerts.Add(alert);
+				var document = RavenJObject.FromObject(alertsDocument);
+				document.Remove("Id");
+				Put(Constants.RavenAlerts, null, document, metadata, null);
+			}
 		}
 
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
@@ -2045,7 +2082,7 @@ namespace Raven.Database
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertStarted
-				});
+				}, null);
 				foreach (var docs in docBatches)
 				{
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
@@ -2056,6 +2093,9 @@ namespace Raven.Database
 						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 						foreach (var doc in docs)
 						{
+							RemoveReservedProperties(doc.DataAsJson);
+							RemoveMetadataReservedProperties(doc.Metadata);
+		
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
@@ -2068,6 +2108,10 @@ namespace Raven.Database
 							var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
 							if (result.Updated == false)
 								inserts++;
+
+							doc.Metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							doc.DataAsJson.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+
 							foreach (var trigger in PutTriggers)
 							{
 								trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
@@ -2089,7 +2133,7 @@ namespace Raven.Database
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertEnded
-				});
+				}, null);
 				if (documents == 0)
 					return;
 				workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");

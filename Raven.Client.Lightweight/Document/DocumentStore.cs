@@ -17,7 +17,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Document.OAuth;
 using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -471,7 +470,7 @@ namespace Raven.Client.Document
 				Credentials = null;
 			}
 
-			var basicAuthenticator = new BasicAuthenticator(ApiKey, jsonRequestFactory);
+			var basicAuthenticator = new BasicAuthenticator(ApiKey, jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
 			var securedAuthenticator = new SecuredAuthenticator(ApiKey);
 
 			jsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
@@ -486,7 +485,7 @@ namespace Raven.Client.Document
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
-					return basicAuthenticator.HandleOAuthResponse(oauthSource);
+					return basicAuthenticator.DoOAuthRequest(oauthSource);
 				}
 
 				if (ApiKey == null)
@@ -495,7 +494,8 @@ namespace Raven.Client.Document
 
 					return null;
 				}
-				oauthSource = Url + "/OAuth/API-Key";
+				if (string.IsNullOrEmpty(oauthSource))
+					oauthSource = Url + "/OAuth/API-Key";
 
 				return securedAuthenticator.DoOAuthRequest(oauthSource);
 			};
@@ -789,7 +789,7 @@ namespace Raven.Client.Document
 				maxNumberOfCachedRequests = value;
 				if (jsonRequestFactory != null)
 					jsonRequestFactory.Dispose();
-				jsonRequestFactory = null;
+				jsonRequestFactory = new HttpJsonRequestFactory(value);
 			}
 		}
 #endif

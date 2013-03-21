@@ -8,7 +8,7 @@
 	function ($, _, Backbone, Session) {
 		return Backbone.Model.extend({
 			defaults: {
-				profilerVisibility: false,
+				profilerVisible: false,
 				activeRequest: null
 			},
 

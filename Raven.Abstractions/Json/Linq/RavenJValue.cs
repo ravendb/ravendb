@@ -107,6 +107,15 @@ namespace Raven.Json.Linq
 		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
 		/// </summary>
 		/// <param name="value">The value.</param>
+		public RavenJValue(float value)
+			: this(value, JTokenType.Float)
+		{
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
+		/// </summary>
+		/// <param name="value">The value.</param>
 		public RavenJValue(DateTime value)
 			: this(value, JTokenType.Date)
 		{
@@ -303,6 +312,11 @@ namespace Raven.Json.Linq
 					if (_value is decimal)
 					{
 						writer.WriteValue((decimal)_value);
+						return;
+					}
+					if (_value is float)
+					{
+						writer.WriteValue((float)_value);
 						return;
 					}
 					writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));

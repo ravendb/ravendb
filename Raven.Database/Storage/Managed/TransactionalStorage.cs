@@ -97,7 +97,8 @@ namespace Raven.Storage.Managed
 					return;
 				}
 			}
-		    disposerLock.EnterReadLock();
+			StorageActionsAccessor result;
+			disposerLock.EnterReadLock();
 			try
 			{
 				if (disposed)
@@ -106,7 +107,7 @@ namespace Raven.Storage.Managed
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
-				ExecuteBatch(action);
+				result = ExecuteBatch(action);
 			}
 			finally
 			{
@@ -114,11 +115,12 @@ namespace Raven.Storage.Managed
 				if (disposed == false)
 					current.Value = null;
 			}
+			result.InvokeOnCommit();
 			onCommit(); // call user code after we exit the lock
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
+		private StorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			Interlocked.Exchange(ref lastUsageTime, SystemTime.UtcNow.ToBinary());
 			using (tableStorage.BeginTransaction())
@@ -127,9 +129,8 @@ namespace Raven.Storage.Managed
 				current.Value = storageActionsAccessor;
 				action(current.Value);
 				storageActionsAccessor.SaveAllTasks();
-				storageActionsAccessor.InvokePreCommit();
 				tableStorage.Commit();
-				storageActionsAccessor.InvokeOnCommit();
+				return storageActionsAccessor;
 			}
 		}
 

@@ -631,15 +631,42 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (memberExpression.Type == typeof (bool))
 			{
-				var memberInfo = GetMember(memberExpression);
-
-				luceneQuery.WhereEquals(new WhereParams
+				ExpressionInfo memberInfo;
+				if (memberExpression.Member.Name == "HasValue" &&
+				    Nullable.GetUnderlyingType(memberExpression.Member.DeclaringType) != null)
 				{
-					FieldName = memberInfo.Path,
-					Value = boolValue,
-					IsAnalyzed = true,
-					AllowWildcards = false
-				});
+					memberInfo = GetMember(memberExpression.Expression);
+					if (boolValue)
+					{
+						luceneQuery.OpenSubclause();
+						luceneQuery.Where("*:*");
+						luceneQuery.AndAlso();
+						luceneQuery.NegateNext();
+					}
+					luceneQuery.WhereEquals(new WhereParams
+					{
+						FieldName = memberInfo.Path,
+						Value = null,
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
+					if (boolValue)
+					{
+						luceneQuery.CloseSubclause();
+					}
+				}
+				else
+				{
+					memberInfo = GetMember(memberExpression);
+
+					luceneQuery.WhereEquals(new WhereParams
+					{
+						FieldName = memberInfo.Path,
+						Value = boolValue,
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
+				}
 			}
 			else if (memberExpression.Type == typeof(string))
 			{
@@ -775,8 +802,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 				search = search.Arguments[0] as MethodCallExpression;
 				if (search == null ||
-				    searchExpression.Method.Name != "Search" ||
-				    searchExpression.Method.DeclaringType != typeof (LinqExtensions))
+					search.Method.Name != "Search" ||
+					search.Method.DeclaringType != typeof(LinqExtensions))
 					break;
 
 				target = search.Arguments[0];
@@ -1050,6 +1077,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if (chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1061,6 +1090,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if(chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1072,6 +1103,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitExpression(expression.Arguments[0]);
 					if (expression.Arguments.Count == 2)
 					{
+						if (chainedWhere)
+							luceneQuery.AndAlso();
 						VisitExpression(((UnaryExpression) expression.Arguments[1]).Operand);
 					}
 
@@ -1096,7 +1129,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 			}
 		}
-
+        static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
+        {
+            typeof(int),
+            typeof(long),
+            typeof(float),
+            typeof(decimal),
+            typeof(double),
+            typeof(TimeSpan)
+        };
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
 			var memberExpression = linqPathProvider.GetMemberExpression(expression.Body);
@@ -1106,7 +1147,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var type = propertyInfo != null
 				           ? propertyInfo.PropertyType
 				           : (fieldInfo != null ? fieldInfo.FieldType : typeof (object));
-			luceneQuery.AddOrder(expressionMemberInfo.Path, descending, type);
+            string fieldName = expressionMemberInfo.Path;
+		    if (requireOrderByToUseRange.Contains(type))
+                fieldName = fieldName + "_Range";
+		    luceneQuery.AddOrder(fieldName, descending, type);
 		}
 
 		private bool insideSelect;
@@ -1131,7 +1175,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression) body);
-					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
+					AddToFieldsToFetch(GetSelectPath(memberExpression), memberExpression.Member.Name);
 					if (insideSelect == false)
 					{
 						foreach (var renamedField in FieldsToRename.Where(x=>x.OriginalField == memberExpression.Member.Name).ToArray())

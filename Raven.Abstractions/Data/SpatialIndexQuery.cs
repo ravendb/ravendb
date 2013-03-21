@@ -14,12 +14,15 @@ namespace Raven.Abstractions.Data
 	/// </summary>
 	public class SpatialIndexQuery : IndexQuery
 	{
-		public static string GetQueryShapeFromLatLon(double lat, double lng, double radius)
+		public static string GetQueryShapeFromLatLon(double lat, double lng, double radius, SpatialUnits units = SpatialUnits.Kilometers)
 		{
+            const double kilometersInMile = 1.60934;
+            var radiusInKilometers = units == SpatialUnits.Kilometers ? radius : radius * kilometersInMile;
+
 			return "Circle(" +
 			       lng.ToString("F6", CultureInfo.InvariantCulture) + " " +
 			       lat.ToString("F6", CultureInfo.InvariantCulture) + " " +
-			       "d=" + radius.ToString("F6", CultureInfo.InvariantCulture) +
+			       "d=" + radiusInKilometers.ToString("F6", CultureInfo.InvariantCulture) +
 			       ")";
 		}
 
