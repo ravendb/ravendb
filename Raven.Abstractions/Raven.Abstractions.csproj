@@ -590,6 +590,7 @@
     <Compile Include="Data\HighlightedField.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
+    <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
@@ -643,6 +644,10 @@
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Data\UserInfo.cs" />
     <Compile Include="Data\UuidType.cs" />
+    <Compile Include="Exceptions\BadRequestException.cs" />
+    <Compile Include="Exceptions\IndexDisabledException.cs" />
+    <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\OperationVetoedException.cs" />
     <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CharExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />

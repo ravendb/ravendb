@@ -18,7 +18,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 using System.Linq;

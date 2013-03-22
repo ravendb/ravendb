@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text;
 using Jint.Native;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Reflection;

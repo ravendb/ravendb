@@ -34,7 +34,6 @@ using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
