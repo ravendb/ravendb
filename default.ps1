@@ -529,7 +529,7 @@ task CreateNugetPackages -depends Compile {
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-	$sourceFeed = "https://nuget.org/api/v2"
+	$sourceFeed = "https://nuget.org/"
 	
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
 		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
