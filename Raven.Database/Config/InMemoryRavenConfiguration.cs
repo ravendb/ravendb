@@ -254,6 +254,11 @@ namespace Raven.Database.Config
 
 		}
 
+		public bool UseDefaultOAuthTokenServer
+		{
+			get { return Settings["Raven/OAuthTokenServer"] == null;  }
+		}
+
 		private void SetupOAuth()
 		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??

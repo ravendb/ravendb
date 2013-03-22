@@ -15,6 +15,8 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
+			var uri = new Uri("ftp://localhost/");
+			Console.WriteLine(uri.Port);
 		}
 	}
 }
