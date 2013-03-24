@@ -193,8 +193,7 @@ namespace Raven.Database.Linq
 			if (string.IsNullOrEmpty(shapeWKT))
 				return Enumerable.Empty<IFieldable>();
 
-			var options = new SpatialOptionsFactory().Geography(maxTreeLevel, spatialSearchStrategy);
-
+			var options = SpatialOptionsFactory.FromLegacy(spatialSearchStrategy, maxTreeLevel);
 			var spatialField = GetSpatialField(fieldName, options);
 			var strategy = spatialField.GetStrategy();
 
@@ -206,7 +205,7 @@ namespace Raven.Database.Linq
 		[CLSCompliant(false)]
 		public SpatialField GetSpatialField(string fieldName)
 		{
-			return GetSpatialField(fieldName, new SpatialOptionsFactory().Geography());
+			return GetSpatialField(fieldName, new SpatialOptionsFactory().Geography.Default());
 		}
 
 		[CLSCompliant(false)]
@@ -215,7 +214,7 @@ namespace Raven.Database.Linq
 			SpatialOptions opt;
 			indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
 			if (opt == null)
-				opt = options ?? new SpatialOptionsFactory().Geography();
+				opt = options ?? new SpatialOptionsFactory().Geography.Default();
 
 			return SpatialFields.GetOrAdd(fieldName, s =>
 			{

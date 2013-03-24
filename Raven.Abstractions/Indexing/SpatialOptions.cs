@@ -12,6 +12,10 @@
 			Type = SpatialFieldType.Geography;
 			Strategy = SpatialSearchStrategy.GeohashPrefixTree;
 			MaxTreeLevel = DefaultGeohashLevel;
+			MinX = -180;
+			MaxX = 180;
+			MinY = -90;
+			MaxY = 90;
 		}
 
 		public SpatialFieldType Type { get; set; }

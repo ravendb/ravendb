@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Spatial;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Xunit;
@@ -100,7 +99,7 @@ namespace Raven.Tests.Spatial
 			{
 				Map = docs => from doc in docs select new { doc.WKT };
 
-				Spatial(x => x.WKT, x => x.Geography());
+				Spatial(x => x.WKT, x => x.Geography.Default());
 			}
 		}
 	}

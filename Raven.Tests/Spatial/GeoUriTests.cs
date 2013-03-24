@@ -18,7 +18,7 @@ namespace Raven.Tests.Spatial
 			{
 				Map = docs => from doc in docs select new { doc.Point };
 
-				Spatial(x => x.Point, x => x.Geography());
+				Spatial(x => x.Point, x => x.Geography.Default());
 			}
 		}
 
