@@ -63,7 +63,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\DH.Scrypt.dll.1.0.3\lib\sl40\DH.Scrypt.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5">
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\sl50\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -113,8 +114,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Changes\*.cs">
       <Link>Changes\%(FileName)</Link>
     </Compile>
-		<Compile Include="..\Raven.Client.Lightweight\Connection\*.cs">
-			<Link>Connection\%(FileName)</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\*.cs">
+      <Link>Connection\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\*.cs">
       <Link>Connection\Async\%(FileName)</Link>
