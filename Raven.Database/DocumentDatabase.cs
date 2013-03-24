@@ -2057,8 +2057,16 @@ namespace Raven.Database
 			get
 			{
 				return buildVersion ??
-					   (buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FileBuildPart.ToString(CultureInfo.InvariantCulture));
+					   (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture));
 			}
+		}
+
+		private static int GetBuildVersion()
+		{
+			var fileVersionInfo = FileVersionInfo.GetVersionInfo(typeof (DocumentDatabase).Assembly.Location);
+			if (fileVersionInfo.FilePrivatePart != 0)
+				return fileVersionInfo.FilePrivatePart;
+			return fileVersionInfo.FileBuildPart;
 		}
 
 		private volatile bool disposed;

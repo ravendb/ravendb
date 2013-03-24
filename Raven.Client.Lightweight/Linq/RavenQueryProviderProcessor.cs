@@ -1117,9 +1117,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				}
 				case "Distinct":
-					luceneQuery.GroupBy(AggregationOperation.Distinct);
-					VisitExpression(expression.Arguments[0]);
-					break;
+                    if (expression.Arguments.Count == 1)
+                    {
+						luceneQuery.GroupBy(AggregationOperation.Distinct);
+						VisitExpression(expression.Arguments[0]);
+						break;
+                    }
+                    throw new NotSupportedException("Method not supported: Distinct(IEqualityComparer<T>)");
 				case "OrderBy":
 				case "ThenBy":
 				case "ThenByDescending":
