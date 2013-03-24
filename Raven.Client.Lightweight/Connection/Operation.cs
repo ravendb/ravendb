@@ -9,7 +9,7 @@ namespace Raven.Client.Connection
 		private readonly AsyncServerClient asyncServerClient;
 		private readonly long id;
 		
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		private readonly ServerClient client;
 
 		public Operation(ServerClient serverClient, long id)
@@ -47,7 +47,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public void WaitForCompletion()
 		{
 			if(client == null)
