@@ -112,6 +112,7 @@ namespace Raven.Studio.Models
 					field.MaxX = pair.Value.MaxX;
 					field.MinY = pair.Value.MinY;
 					field.MaxY = pair.Value.MaxY;
+					field.Units = pair.Value.Units;
 				}
 			}
 
@@ -251,7 +252,8 @@ namespace Raven.Studio.Models
 													  MinX = item.MinX,
 													  MaxX = item.MaxX,
 													  MinY = item.MinY,
-													  MaxY = item.MaxY
+													  MaxY = item.MaxY,
+													  Units = item.Units
 				                                  };
 			}
 			index.RemoveDefaultValues();
@@ -887,6 +889,7 @@ namespace Raven.Studio.Models
 				get { return type; }
 				set
 				{
+					IsGeographical = value == SpatialFieldType.Geography;
 					if (type != value)
 					{
 						type = value;
@@ -1008,12 +1011,39 @@ namespace Raven.Studio.Models
 				}
 			}
 
+			private SpatialUnits units;
+			public SpatialUnits Units
+			{
+				get { return units; }
+				set
+				{
+					if (units != value)
+					{
+						units = value;
+						OnPropertyChanged(() => Units);
+					}
+				}
+			}
+
+			private bool isGeographical;
+			public bool IsGeographical
+			{
+				get { return isGeographical; }
+				set
+				{
+					if (isGeographical == value) return;
+					isGeographical = value;
+					OnPropertyChanged(() => IsGeographical);
+				}
+			}
+
 			private void ResetToDefaults(SpatialFieldType type)
 			{
 				if (type == SpatialFieldType.Geography)
 				{
 					Strategy = SpatialSearchStrategy.GeohashPrefixTree;
 					MaxTreeLevel = SpatialOptions.DefaultGeohashLevel;
+					Units = SpatialUnits.Kilometers;
 					MinX = -180;
 					MinY = -90;
 					MaxX = 180;
@@ -1043,6 +1073,7 @@ namespace Raven.Studio.Models
 				MaxX = spatialOptions.Value.MaxX;
 				MinY = spatialOptions.Value.MinY;
 				MaxY = spatialOptions.Value.MaxY;
+				Units = spatialOptions.Value.Units;
 			}
 
 			public static SpatialFieldProperties Default

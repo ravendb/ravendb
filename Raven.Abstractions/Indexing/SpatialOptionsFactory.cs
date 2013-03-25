@@ -46,12 +46,12 @@ namespace Raven.Abstractions.Indexing
 		/// Defines a Geohash Prefix Tree index using a default Max Tree Level <see cref="SpatialOptions.DefaultGeohashLevel" />
 		/// </summary>
 		/// <returns></returns>
-		public SpatialOptions Default()
+		public SpatialOptions Default(SpatialUnits circleRadiusUnits = SpatialUnits.Kilometers)
 		{
-			return GeohashPrefixTreeIndex(0);
+			return GeohashPrefixTreeIndex(0, circleRadiusUnits);
 		}
 
-		public SpatialOptions GeohashPrefixTreeIndex(int maxTreeLevel)
+		public SpatialOptions GeohashPrefixTreeIndex(int maxTreeLevel, SpatialUnits circleRadiusUnits = SpatialUnits.Kilometers)
 		{
 			if (maxTreeLevel == 0)
 				maxTreeLevel = SpatialOptions.DefaultGeohashLevel;
@@ -60,11 +60,12 @@ namespace Raven.Abstractions.Indexing
 			{
 				Type = SpatialFieldType.Geography,
 				MaxTreeLevel = maxTreeLevel,
-				Strategy = SpatialSearchStrategy.GeohashPrefixTree
+				Strategy = SpatialSearchStrategy.GeohashPrefixTree,
+				Units = circleRadiusUnits
 			};
 		}
 
-		public SpatialOptions QuadPrefixTreeIndex(int maxTreeLevel)
+		public SpatialOptions QuadPrefixTreeIndex(int maxTreeLevel, SpatialUnits circleRadiusUnits = SpatialUnits.Kilometers)
 		{
 			if (maxTreeLevel == 0)
 				maxTreeLevel = SpatialOptions.DefaultQuadTreeLevel;
@@ -73,7 +74,8 @@ namespace Raven.Abstractions.Indexing
 			{
 				Type = SpatialFieldType.Geography,
 				MaxTreeLevel = maxTreeLevel,
-				Strategy = SpatialSearchStrategy.QuadPrefixTree
+				Strategy = SpatialSearchStrategy.QuadPrefixTree,
+				Units = circleRadiusUnits
 			};
 		}
 	}

@@ -65,7 +65,11 @@ namespace Raven.Database.Indexing.Spatial
 
 					// Uncertainty is in meters when in a geographic context
 					if (uncertainty > 0 && options.Type != SpatialFieldType.Geography)
+					{
 						uncertainty = uncertainty / 1000;
+						if (options.Units == SpatialUnits.Miles)
+							uncertainty *= KmToMiles;
+					}
 				}
 			}
 
@@ -89,5 +93,7 @@ namespace Raven.Database.Indexing.Spatial
 		{
 			return string.Format(CultureInfo.InvariantCulture, "Circle({0} {1} d={2})", x, y, radius);
 		}
+
+		private const double KmToMiles = 0.621371;
 	}
 }

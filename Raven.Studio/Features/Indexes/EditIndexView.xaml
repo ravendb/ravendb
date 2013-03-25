@@ -233,6 +233,22 @@
                               VerticalAlignment="Center"
                               Margin="0,0,4,0" />
 
+                    <TextBlock Text="Circle Radius Units"
+							   Visibility="{Binding IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
+                               Grid.Row="2"
+                               Grid.Column="5"
+                               Grid.ColumnSpan="2"
+                               Margin="8,0,4,0"
+                               VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding Units, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+                              SelectedItem="{Binding Units, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+							  Visibility="{Binding IsGeographical, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
+							  Grid.Row="2"
+							  Grid.Column="7"
+							  MinWidth="40"
+							  Margin="0,5,5,0"
+                              VerticalAlignment="Center" />
+
                     <TextBlock Text="Strategy"
                                Grid.Row="4"
                                VerticalAlignment="Center"

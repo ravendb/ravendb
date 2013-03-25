@@ -54,7 +54,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void LineStringsShouldIntersect()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var store = NewDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new GeoIndex());

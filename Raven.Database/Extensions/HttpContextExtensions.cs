@@ -121,6 +121,8 @@ namespace Raven.Database.Extensions
 	
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
 			var queryShape = context.Request.QueryString["queryShape"];
+			SpatialUnits units;
+			bool unitsSpecified = Enum.TryParse(context.Request.QueryString["spatialUnits"], out units);
 			double distanceErrorPct;
 			if (!double.TryParse(context.Request.QueryString["distErrPrc"], out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
@@ -132,6 +134,7 @@ namespace Raven.Database.Extensions
 				{
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
+					RadiusUnitOverride = unitsSpecified ? units : (SpatialUnits?) null,
 					SpatialRelation = spatialRelation,
 					DistanceErrorPercentage = distanceErrorPct,
 				};

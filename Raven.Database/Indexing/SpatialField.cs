@@ -82,12 +82,17 @@ namespace Raven.Database.Indexing
 			}
 			return null;
 		}
+		
+		public Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, SpatialIndexQuery spatialQuery)
+		{
+			return MakeQuery(existingQuery, spatialStrategy, spatialQuery.QueryShape, spatialQuery.SpatialRelation, spatialQuery.DistanceErrorPercentage, spatialQuery.RadiusUnitOverride);
+		}
 
 		public Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation,
-									  double distanceErrorPct = 0.025)
+									  double distanceErrorPct = 0.025, SpatialUnits? unitOverride = null)
 		{
 			SpatialOperation spatialOperation;
-			var shape = ReadShape(shapeWKT);
+			var shape = ReadShape(shapeWKT, unitOverride);
 
 			switch (relation)
 			{
@@ -121,7 +126,7 @@ namespace Raven.Database.Indexing
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, ReadShape(spatialQry.QueryShape));
+			var args = new SpatialArgs(SpatialOperation.IsWithin, ReadShape(spatialQry.QueryShape, spatialQry.RadiusUnitOverride));
 			return spatialStrategy.MakeFilter(args);
 		}
 
@@ -137,9 +142,9 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public Shape ReadShape(string shapeWKT)
+		public Shape ReadShape(string shapeWKT, SpatialUnits? unitOverride = null)
 		{
-			return shapeStringReadWriter.ReadShape(shapeWKT);
+			return shapeStringReadWriter.ReadShape(shapeWKT, unitOverride);
 		}
 
 		public string WriteShape(Shape shape)

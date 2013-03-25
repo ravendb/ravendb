@@ -112,12 +112,22 @@ namespace Raven.Client
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
-		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
 
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
-		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+		
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits);
 
 		/// <summary>
 		/// Filter matches based on a given shape - only documents with the shape defined in fieldName that
