@@ -4,7 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
-namespace Raven.Studio.Features.Documents
+namespace Raven.Abstractions.Util
 {
     public static class DocumentHelpers
     {

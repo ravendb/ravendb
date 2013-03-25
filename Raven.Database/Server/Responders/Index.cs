@@ -23,12 +23,6 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
-	using System;
-	using System.Linq.Expressions;
-
-	using Raven.Database.Indexing;
-	using Raven.Database.Linq;
-
 	public class Index : AbstractRequestResponder
 	{
 		public override string UrlPattern
@@ -395,7 +389,23 @@ namespace Raven.Database.Server.Responders
 			context.WriteETag(indexEtag);
 			if(queryResult.NonAuthoritativeInformation)
 				context.SetStatusToNonAuthoritativeInformation();
-			context.WriteJson(queryResult);
+
+			var format = context.Request.QueryString["format"];
+			if (string.IsNullOrEmpty(format))
+			{
+				context.WriteJson(queryResult);
+				return;
+			}
+
+			switch (format.ToLower())
+			{
+				case "csv":
+					context.Response.ContentType = "text/csv";
+					context.WriteCsv(queryResult.Results);
+					break;
+				default:
+					throw new NotSupportedException(format + " format is not supported.");
+			}
 		}
 
 		private void GetIndexDefinition(IHttpContext context, string index)

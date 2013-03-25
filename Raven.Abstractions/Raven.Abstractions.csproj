@@ -737,6 +737,7 @@
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\DocumentHelpers.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
     <Compile Include="Util\EtagUtil.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
