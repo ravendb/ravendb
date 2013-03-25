@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using GeoAPI;
+using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Function;
 using Lucene.Net.Spatial;
@@ -81,6 +84,18 @@ namespace Raven.Database.Indexing
 					return new RecursivePrefixTreeStrategyThatSupportsWithin(new QuadPrefixTree(context, opt.MaxTreeLevel), fieldName);
 			}
 			return null;
+		}
+
+		public IEnumerable<AbstractField> CreateIndexableFields(object value)
+		{
+			var shape = value as Shape;
+			if (shape != null || TryReadShape(value, out shape))
+			{
+				return strategy.CreateIndexableFields(shape)
+					.Concat(new[] { new Field(Constants.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+			}
+
+			return Enumerable.Empty<AbstractField>();	
 		}
 		
 		public Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, SpatialIndexQuery spatialQuery)

@@ -88,7 +88,7 @@ namespace Raven.Tests.Spatial
 			{
 				Map = docs => from doc in docs select new { doc.Geometry };
 
-				Spatial(x => x.Geometry, x => x.Cartesian.QuadPrefixTreeIndex(12, new SpatialBounds(0, 2000, 0, 2000)));
+				Spatial(x => x.Geometry, x => x.Cartesian.QuadPrefixTreeIndex(12, new SpatialBounds(0, 0, 2000, 2000)));
 			}
 		}
 	}

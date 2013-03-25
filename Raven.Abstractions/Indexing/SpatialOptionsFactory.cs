@@ -107,7 +107,7 @@ namespace Raven.Abstractions.Indexing
 		public double MinY { get; private set; }
 		public double MaxY { get; private set; }
 
-		public SpatialBounds(double minX, double maxX, double minY, double maxY)
+		public SpatialBounds(double minX, double minY, double maxX, double maxY)
 		{
 			MinX = minX;
 			MaxX = maxX;
