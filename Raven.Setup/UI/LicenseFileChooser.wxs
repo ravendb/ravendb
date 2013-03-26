@@ -5,7 +5,7 @@
     <CustomAction Id="LicenseFileExists" Return="check" Execute="immediate" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="LicenseFileExists" />
 
     <UI>
-      <TextStyle Id="Red8" FaceName="Tahoma" Size="8" Red="255" Green="0" Blue="0" />
+      <TextStyle Id="Red8" FaceName="Tahoma" Size="8" Red="210" Green="0" Blue="0" />
       <Dialog Id="LicenseFileChooser" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
