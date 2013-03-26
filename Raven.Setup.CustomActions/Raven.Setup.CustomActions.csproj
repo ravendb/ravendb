@@ -58,6 +58,7 @@
     <Compile Include="IISActions.cs" />
     <Compile Include="IISExtensions.cs" />
     <Compile Include="LicenseActions.cs" />
+    <Compile Include="LoggingHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Content Include="CustomAction.config" />
   </ItemGroup>
