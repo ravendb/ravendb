@@ -196,6 +196,9 @@ namespace Raven.Setup.CustomActions
 
 			var numberOfAttributes = 1;
 
+			var attributesColumn1 = string.Empty;
+			var attributesColumn2 = string.Empty;
+
 			foreach (XmlAttribute attrib in license.Attributes)
 			{
 				if (attrib.Name == "type" || attrib.Name == "expiration" || attrib.Name == "id")
@@ -206,13 +209,16 @@ namespace Raven.Setup.CustomActions
 
 				if (numberOfAttributes <= 10)
 				{
-					session["RAVEN_LICENSE_ATTRIBUTES1"] += attribute;
+					attributesColumn1 += attribute;
 				}
 				else
 				{
-					session["RAVEN_LICENSE_ATTRIBUTES2"] += attribute;
+					attributesColumn2 += attribute;
 				}
 			}
+
+			session["RAVEN_LICENSE_ATTRIBUTES1"] = attributesColumn1;
+			session["RAVEN_LICENSE_ATTRIBUTES2"] = attributesColumn2;
 		}
 
 		public static string ToUpperFirstLetter( string source)
