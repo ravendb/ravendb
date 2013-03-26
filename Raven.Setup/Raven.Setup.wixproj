@@ -28,6 +28,7 @@
     <Compile Include="Components\Raven.Database.wxs" />
     <Compile Include="Components\Service\Raven.Server.wxs" />
     <Compile Include="Product.wxs" />
+    <Compile Include="UI\CustomFatalError.wxs" />
     <Compile Include="UI\IIS\ApplicationPoolSettings.wxs" />
     <Compile Include="UI\IIS\PerformanceCounters.wxs" />
     <Compile Include="UI\IIS\IISSetup.wxs" />
