@@ -34,6 +34,8 @@ namespace Raven.Setup.CustomActions
 		[CustomAction]
         public static ActionResult GetWebSites(Session session)
 		{
+			session["IIS_WEBSITES_INITIALIZED"] = "1";
+
             try
             {
                 var comboBoxView = session.Database.OpenView(GetComboContent);
@@ -52,7 +54,7 @@ namespace Raven.Setup.CustomActions
             }
             catch (Exception ex)
             {
-				session.Log("Exception was thrown during GetWebSites custom action execution" + ex);
+				LoggingHelper.Log(session, "Exception was thrown during GetWebSites execution: " + ex);
 	            return ActionResult.Failure;
             }
         }
@@ -87,7 +89,7 @@ namespace Raven.Setup.CustomActions
             }
             catch (Exception ex)
             {
-				session.Log("Exception was thrown during UpdateIISPropsWithSelectedWebSite custom action execution" + ex.ToString());
+				LoggingHelper.Log(session, "Exception was thrown during UpdateIISPropsWithSelectedWebSite execution" + ex);
 	            return ActionResult.Failure;
             }
         }
@@ -195,7 +197,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				session.Log("Exception was thrown during GetAppPools custom action execution: " + ex);
+				LoggingHelper.Log(session, "Exception was thrown during GetAppPools execution: " + ex);
 				return ActionResult.Failure;
 			}
 		}
@@ -229,7 +231,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				session.Log("Exception was thrown during UpdateIISPropsWithSelectedWebSite custom action execution" + ex);
+				LoggingHelper.Log(session, "Exception was thrown during UpdateIISPropsWithSelectedWebSite: " + ex);
 				return ActionResult.Failure;
 			}
 		}
@@ -319,7 +321,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				session.Log("Exception was thrown during SetupPerformanceCountersForIISUser custom action:" + ex);
+				LoggingHelper.Log(session, "Exception was thrown during SetupPerformanceCountersForIISUser:" + ex);
 				return ActionResult.Failure;
 			}
 
