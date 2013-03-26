@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Spatial;
 using Spatial4n.Core.Context.Nts;
@@ -55,9 +56,9 @@ namespace Raven.Database.Indexing.Spatial
 		private double TranslateCircleRadius(double radius, SpatialUnits units)
 		{
 			if (units == SpatialUnits.Miles)
-				radius *= MilesToKm;
+				radius *= Constants.MilesToKm;
 
-			return (radius / EarthMeanRadiusKm) * RadiansToDegrees;
+			return (radius / Constants.EarthMeanRadiusKm) * RadiansToDegrees;
 		}
 
 		private string TranslateCircleRadius(string shapeWKT, SpatialUnits units)
@@ -75,15 +76,8 @@ namespace Raven.Database.Indexing.Spatial
 				   shapeWKT.Substring(radCapture.Index + radCapture.Length);
 		}
 
-		/// <summary>
-		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
-		///
-		/// [1] http://en.wikipedia.org/wiki/Earth_radius
-		/// </summary>
-		private const double EarthMeanRadiusKm = 6371.0087714;
 		private const double DegreesToRadians = Math.PI / 180;
 		private const double RadiansToDegrees = 1 / DegreesToRadians;
-		private const double MilesToKm = 1.60934;
 
 		private static readonly Regex CircleShape =
 			new Regex(@"Circle \s* \( \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ d=([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* \)",
