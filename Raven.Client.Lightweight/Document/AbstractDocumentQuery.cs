@@ -459,14 +459,14 @@ namespace Raven.Client.Document
 			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within, distanceErrorPct, radiusUnits);
 		}
 
-		protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025, SpatialUnits? spatialUnits = null)
+		protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
 		{
 			isSpatialQuery = true;
 			spatialFieldName = fieldName;
 			queryShape = new WktSanitizer().Sanitize(shapeWKT);
 			spatialRelation = relation;
 			this.distanceErrorPct = distanceErrorPct;
-			this.spatialUnits = spatialUnits;
+			spatialUnits = radiusUnits;
 			return (TSelf) this;
 		}
 

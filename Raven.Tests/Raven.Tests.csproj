@@ -1056,6 +1056,7 @@
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
+    <Compile Include="Spatial\SpatialUnitTests.cs" />
     <Compile Include="Spatial\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Notifications\NotificationOnWrongDatabase.cs" />

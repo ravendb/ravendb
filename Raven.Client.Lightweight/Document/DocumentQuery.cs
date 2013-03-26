@@ -117,6 +117,7 @@ namespace Raven.Client.Document
 				spatialFieldName = spatialFieldName,
 				queryShape = queryShape,
 				spatialRelation = spatialRelation,
+				spatialUnits = spatialUnits,
 				distanceErrorPct = distanceErrorPct,
 				rootTypes = {typeof(T)},
 				defaultField = defaultField,
