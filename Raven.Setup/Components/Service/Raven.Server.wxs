@@ -14,6 +14,8 @@
                 <Shortcut Id="RavenDesktop" Directory="DesktopFolder" Name="RavenDB Service"
                   WorkingDirectory='INSTALLDIR' Icon="Raven.ico" Advertise="yes" />-->
         </File>
+        <File Id='System.Net.Http.dll' Name='System.Net.Http.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\System.Net.Http.dll' />
+        <File Id='System.Net.Http.Primitives.dll' Name='System.Net.Http.Primitives.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\System.Net.Http.Primitives.dll' />
         <util:XmlFile Id="ModifyPort"
                  Action="setValue"
                  Permanent="yes"
