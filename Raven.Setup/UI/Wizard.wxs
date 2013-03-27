@@ -78,6 +78,9 @@
       <Publish Dialog="ServiceSettings" Control="Next" Event="NewDialog" Value="InstallDirDlg"><![CDATA[SERVICE_NAME <> "" AND SERVICE_PORT <> ""]]></Publish>
       <Publish Dialog="ServiceSettings" Control="Back" Event="NewDialog" Value="InstallationType">1</Publish>
       <Publish Dialog="ServiceSettings" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+      <Publish Dialog="ServiceSettings" Control="checkPort" Event="DoAction" Value="CheckPortAvailability" Order="1">1</Publish>
+      <Publish Dialog="ServiceSettings" Control="checkPort" Property="PORT_AVAILABILITY" Value="[PORT_AVAILABILITY]" Order="2">1</Publish>
+      
 
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="ServiceSettings"><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
       <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="PerformanceCounterDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
