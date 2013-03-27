@@ -11,7 +11,7 @@ using Microsoft.Deployment.WindowsInstaller;
 
 namespace Raven.Setup.CustomActions
 {
-	public class ErrorActions
+	public class LoggingActions
 	{
 		[CustomAction]
 		public static ActionResult SetLogFileLocation(Session session)
