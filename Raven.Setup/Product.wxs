@@ -9,7 +9,9 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' />
- 
+
+    <PropertyRef Id="IISMAJORVERSION"/>
+
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     
     <?include Settings.wxi ?>
@@ -96,6 +98,8 @@
                   Execute="immediate" Return="check" />
 
     <CustomAction Id="SetIISInstallFolder" Directory="INSTALLFOLDER" Value="[WEBSITE_PATH]\[WEBSITE_VD]" />
+
+    <CustomAction Id="SetInstallationTypeToService" Property="RAVEN_INSTALLATION_TYPE" Value="SERVICE" />
     
     <CustomAction Id="SetupPerformanceCountersForIISUser" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetupPerformanceCountersForIISUser"
                   Execute="immediate" Return="check" />
