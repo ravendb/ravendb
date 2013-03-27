@@ -60,6 +60,7 @@
     <Compile Include="LicenseActions.cs" />
     <Compile Include="LoggingHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServiceActions.cs" />
     <Content Include="CustomAction.config" />
   </ItemGroup>
   <ItemGroup>

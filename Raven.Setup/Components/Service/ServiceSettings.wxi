@@ -2,5 +2,5 @@
 <Include>
   <Property Id="SERVICE_NAME" Value="RavenDB" />
 
-  <Property Id="SERVICE_PORT" Value="*" />
+  <Property Id="SERVICE_PORT" Value="8080" />
 </Include>
