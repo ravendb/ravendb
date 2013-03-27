@@ -54,7 +54,7 @@
     <Compile Include="..\Raven.Database\Util\PerformanceCountersUtils.cs">
       <Link>PerformanceCountersUtils.cs</Link>
     </Compile>
-    <Compile Include="ErrorActions.cs" />
+    <Compile Include="LoggingActions.cs" />
     <Compile Include="IISActions.cs" />
     <Compile Include="IISExtensions.cs" />
     <Compile Include="LicenseActions.cs" />

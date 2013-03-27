@@ -22,10 +22,13 @@
             <RadioButton Text="IIS application" Value="IIS" Height="17" Width="120" X="0" Y="0" />
             <RadioButton Text="Windows Service" Value="SERVICE" Height="17" Width="120" X="0" Y="25" />
           </RadioButtonGroup>
-          <Condition Action="hide"><![CDATA[NOT IISMAJORVERSION]]></Condition>
+          <Condition Action="hide"><![CDATA[NOT IISMAJORVERSION OR IISMAJORVERSION <= "#5"]]></Condition>
         </Control>
-        <Control Type="Text" Id="noIISInfo" Width="280" Height="42" X="40" Y="120" Text="Installation as a service in only available because IIS is not installed.">
-          <Condition Action="hide"><![CDATA[IISMAJORVERSION]]></Condition>
+        <Control Type="Text" Id="noIISInfo" Width="280" Height="42" X="40" Y="120" Text="Installation as a service in only available because IIS is not installed." Hidden="yes">
+          <Condition Action="show"><![CDATA[NOT IISMAJORVERSION]]></Condition>
+        </Control>
+        <Control Type="Text" Id="noSupportedIISInfo" Width="280" Height="42" X="30" Y="120" Text="Installation as a service in only available because installed version of IIS is not supported." Hidden="yes">
+          <Condition Action="show"><![CDATA[IISMAJORVERSION AND IISMAJORVERSION <= "#5"]]></Condition>
         </Control>
       </Dialog>
     </UI>
