@@ -12,6 +12,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -592,6 +593,38 @@ namespace Raven.Database.Extensions
 			context.Response.AddHeader("ETag", "\"" + etag + "\"");
 		}
 
+		public static void WriteCsv(this IHttpContext context, IList<RavenJObject> results)
+		{
+			if(results.Count == 0)
+				return;
+
+			var properties =
+				DocumentHelpers.GetPropertiesFromJObjects(results, includeNestedProperties: true, includeMetadata: false,
+				                                          excludeParentPropertyNames: true)
+				               .Distinct()
+				               .ToList();
+
+			var writer = new StreamWriter(context.Response.OutputStream);
+			writer.WriteLine(properties.Aggregate(string.Empty, (current, next) => current + (next + ";")));
+
+			foreach (var result in results)
+			{
+				var row = string.Empty;
+				foreach (var value in properties.Select(propertyPath => result.SelectToken(propertyPath)))
+				{
+					if (value != null)
+					{
+						row += value.ToString();
+					}
+
+					row += ";";
+				}
+				
+				writer.WriteLine(row);
+			}
+
+			writer.Flush();
+		}
 
 		private static string GetContentType(string docPath)
 		{
