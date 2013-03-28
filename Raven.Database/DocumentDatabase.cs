@@ -1724,7 +1724,7 @@ namespace Raven.Database
 				(jsonDoc, size) =>
 				{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
-					return scriptedJsonPatcher.Apply(jsonDoc, patch);
+					return scriptedJsonPatcher.Apply(jsonDoc, patch, size);
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 		}

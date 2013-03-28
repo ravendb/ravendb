@@ -28,11 +28,16 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
+		private readonly int maxSteps;
+		private readonly int additionalStepsPerSize;
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
+			
 			if (database == null)
 			{
+				maxSteps = 10 * 1000;
+				additionalStepsPerSize = 5;
 				loadDocument = (s =>
 				{
 					throw new InvalidOperationException(
@@ -41,6 +46,8 @@ namespace Raven.Database.Json
 			}
 			else
 			{
+				maxSteps = database.Configuration.MaxStepsForScript;
+				additionalStepsPerSize = database.Configuration.AdditionalStepsForScriptBasedOnDocumentSize;
 				loadDocument = id =>
 				{
 					var jsonDocument = database.Get(id, null);
@@ -105,7 +112,7 @@ namespace Raven.Database.Json
 				jintEngine.ResetSteps();
 				if (size != 0)
 				{
-					jintEngine.SetMaxSteps(10*1000 + (size*5));
+					jintEngine.SetMaxSteps(maxSteps + (size* additionalStepsPerSize));
 				}
 				jintEngine.CallFunction("ExecutePatchScript", jsObject);
 				foreach (var kvp in patch.Values)
