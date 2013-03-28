@@ -29,7 +29,7 @@ namespace Raven.Abstractions.Util
             return jObjects.SelectMany(doc => GetPropertiesFromJObject(doc, "", includeNestedProperties, includeMetadata, excludeParentPropertyNames));
         }
 
-		private static IEnumerable<string> GetPropertiesFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties, bool includeMetadata = true, bool excludeParentPropertyNames = false)
+	    public static IEnumerable<string> GetPropertiesFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties, bool includeMetadata = true, bool excludeParentPropertyNames = false)
 		{
 			var properties = from property in jObject
 							 select

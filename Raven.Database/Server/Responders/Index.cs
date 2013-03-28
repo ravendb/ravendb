@@ -390,22 +390,7 @@ namespace Raven.Database.Server.Responders
 			if(queryResult.NonAuthoritativeInformation)
 				context.SetStatusToNonAuthoritativeInformation();
 
-			var format = context.Request.QueryString["format"];
-			if (string.IsNullOrEmpty(format))
-			{
-				context.WriteJson(queryResult);
-				return;
-			}
-
-			switch (format.ToLower())
-			{
-				case "csv":
-					context.Response.ContentType = "text/csv";
-					context.WriteCsv(queryResult.Results);
-					break;
-				default:
-					throw new NotSupportedException(format + " format is not supported.");
-			}
+			context.WriteJson(queryResult);
 		}
 
 		private void GetIndexDefinition(IHttpContext context, string index)
