@@ -43,7 +43,7 @@ namespace Raven.Studio.Models
 				{
 					var req = ApplicationModel
 						.DatabaseCommands
-						.CreateRequest("/indexes/" + Name + "/forceWriteToDisk" , "POST");
+						.CreateRequest("/indexes/" + Name + "?op=forceWriteToDisk" , "POST");
 					req.ExecuteRequestAsync();
 				});
 			}

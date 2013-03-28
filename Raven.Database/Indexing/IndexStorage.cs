@@ -1110,5 +1110,10 @@ namespace Raven.Database.Indexing
 		{
 			return GetIndexByName(name).IsOnRam;
 		}
+
+		public void ForceWriteToDisk(string index)
+		{
+			GetIndexByName(index).ForceWriteToDisk();
+		}
 	}
 }
