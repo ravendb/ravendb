@@ -16,27 +16,34 @@ namespace Raven.Studio.Models
 	public class IndexItem : IndexListItem
 	{
 		public IndexStats IndexStats { get; set; }
-		public string ModifiedName{get
+		public string ModifiedName
 		{
-			if (IndexStats.Priority.HasFlag(IndexingPriority.Abandoned))
-				return Name + " (abandoned)";
+			get
+			{
+				if (IndexStats.Priority.HasFlag(IndexingPriority.Abandoned))
+					return Name + " (abandoned)";
 
-			if (IndexStats.Priority.HasFlag(IndexingPriority.Idle))
-				return Name + " (idle)";
+				if (IndexStats.Priority.HasFlag(IndexingPriority.Idle))
+					return Name + " (idle)";
 
-			if (IndexStats.Priority.HasFlag(IndexingPriority.Disabled))
-				return Name + " (disabled)";
+				if (IndexStats.Priority.HasFlag(IndexingPriority.Disabled))
+					return Name + " (disabled)";
 
-			return Name;
-		}}
+				return Name;
+			}
+		}
+
+		public bool CanPersist { get { return Name.StartsWith("Auto/") && IndexStats.IsOnRam; } }
+
 		public ICommand MakeIndexPersisted
 		{
 			get
 			{
 				return new ActionCommand(() =>
 				{
-					var req = ApplicationModel.DatabaseCommands
-										  .CreateRequest("/indexes/" + Name + "/forceWriteToDisk" , "POST");
+					var req = ApplicationModel
+						.DatabaseCommands
+						.CreateRequest("/indexes/" + Name + "/forceWriteToDisk" , "POST");
 					req.ExecuteRequestAsync();
 				});
 			}
