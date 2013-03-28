@@ -14,6 +14,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
@@ -27,13 +28,13 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "HEAD"}; }
+			get { return new[] { "GET", "HEAD" }; }
 		}
 
 		public override void Respond(IHttpContext context)
 		{
 			context.Response.BufferOutput = false;
-			
+
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
 
@@ -54,8 +55,8 @@ namespace Raven.Database.Server.Responders
 					context.Response.AddHeader("Raven-Index", information.Index);
 					context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
 					context.Response.AddHeader("Raven-Index-Timestamp",
-					                           information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-					                                                               CultureInfo.InvariantCulture));
+											   information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+																				   CultureInfo.InvariantCulture));
 
 					if (isHeadRequest)
 						return;
@@ -68,7 +69,7 @@ namespace Raven.Database.Server.Responders
 		private static IOutputWriter GetOutputWriter(IHttpContext context)
 		{
 			var useExcelFormat = "excel".Equals(context.Request.QueryString["format"], StringComparison.InvariantCultureIgnoreCase);
-			if (useExcelFormat) 
+			if (useExcelFormat)
 				return new ExcelOutputWriter(context);
 			return new JsonOutputWriter(context);
 		}
@@ -81,7 +82,7 @@ namespace Raven.Database.Server.Responders
 
 		private class ExcelOutputWriter : IOutputWriter
 		{
-		
+
 			private readonly IHttpContext context;
 			private StreamWriter writer;
 
@@ -117,7 +118,22 @@ namespace Raven.Database.Server.Responders
 				{
 					var token = result.SelectToken(property);
 					if (token != null)
-						OutputCsvValue(token.ToString(Formatting.None));
+					{
+						switch (token.Type)
+						{
+							case JTokenType.Null:
+								break;
+
+							case JTokenType.Array:
+							case JTokenType.Object:
+								OutputCsvValue(token.ToString(Formatting.None));
+								break;
+
+							default:
+								OutputCsvValue(token.Value<string>());
+								break;
+						}
+					}
 
 					writer.Write(',');
 				}
@@ -128,10 +144,10 @@ namespace Raven.Database.Server.Responders
 			private void GetPropertiesAndWriteCsvHeader(RavenJObject result)
 			{
 				properties = DocumentHelpers.GetPropertiesFromJObject(result,
-				                                                      parentPropertyPath: "",
-				                                                      includeNestedProperties: true,
-				                                                      includeMetadata: false,
-				                                                      excludeParentPropertyNames: true);
+																	  parentPropertyPath: "",
+																	  includeNestedProperties: true,
+																	  includeMetadata: false,
+																	  excludeParentPropertyNames: true);
 
 				foreach (var property in properties)
 				{
