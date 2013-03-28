@@ -5,7 +5,7 @@
 					  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 					  mc:Ignorable="d" 
 					  x:Class="Raven.Studio.Controls.NewDatabase"
-					  Width="500" Height="300" 
+					  Width="500" Height="330" 
 					  Title="Create a New Database" 
 					  x:Name="NewDatabaseControl"
 					  Style="{StaticResource ChildWindowNoAnimationStyle}">
@@ -98,6 +98,7 @@
 					<ColumnDefinition Width="*" />
 				</Grid.ColumnDefinitions>
 				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
@@ -208,6 +209,21 @@
                            Margin="5"
                            MouseLeftButtonDown="ToggleBundles"
 						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=PeriodicBackup}"/>
+
+				<CheckBox x:Name="Authorization"
+						  Visibility="{Binding ElementName=NewDatabaseControl, Path=HasAuth.Value, Converter={StaticResource BooleanToVisibility}}"
+                          Grid.Row="8"
+						  Checked="Checked"
+                          Unchecked="UnChecked"
+                          Margin="5"/>
+					
+				<TextBlock Grid.Column="1"
+						  Visibility="{Binding ElementName=NewDatabaseControl, Path=HasAuth.Value, Converter={StaticResource BooleanToVisibility}}"
+                           Grid.Row="8"
+                           Text="Authorization Bundle"
+                           Margin="5"
+                           MouseLeftButtonDown="ToggleBundles"
+						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"/>
 			</Grid>
 		</Grid>
 		
