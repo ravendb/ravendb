@@ -385,6 +385,7 @@ namespace Raven.Database
 					{
 						index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
 						index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+						index.IsOnRam = IndexStorage.IndexOnRam(index.Name);
 					}
 				}
 

@@ -116,6 +116,11 @@ namespace Raven.Database.Indexing
 
 		protected DateTime PreviousIndexTime { get; set; }
 
+		public bool IsOnRam
+		{
+			get { return directory is RAMDirectory; }
+		}
+
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);

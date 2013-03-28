@@ -1105,5 +1105,10 @@ namespace Raven.Database.Indexing
 			Parallel.ForEach(indexes.Values, index =>
 											 index.MergeSegments());
 		}
+
+		public bool IndexOnRam(string name)
+		{
+			return GetIndexByName(name).IsOnRam;
+		}
 	}
 }
