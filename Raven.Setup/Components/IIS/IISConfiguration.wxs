@@ -8,8 +8,18 @@
 
     <!-- Install to default web site -->
     <iis:WebSite Id="SelectedWebSite" Description='[WEBSITE_DESCRIPTION]' SiteId='[WEBSITE_ID]'>
-      <iis:WebAddress Id="AllUnassigned" Port="80" />
+      <iis:WebAddress Id="AllUnassigned" Port="[WEBSITE_PORT]" Header="[WEBSITE_HOSTNAME]" />
     </iis:WebSite>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="NewWebSite" Guid="{06A732B9-A902-4255-B50C-C1BBF6205735}" KeyPath="yes">
+        <Condition><![CDATA[WEBSITE_TYPE = "NEW"]]></Condition>
+        <iis:WebSite Id="MyWebSite" Description='[WEBSITE_DESCRIPTION]' Directory='NEW_WEB_SITE_DIRECTORY'>
+          <iis:WebAddress Id="NewWebSiteAddress" Port="[WEBSITE_PORT]" Header="[WEBSITE_HOSTNAME]" />
+        </iis:WebSite>
+        <CreateFolder />
+      </Component>
+    </DirectoryRef>
 
     <DirectoryRef Id="INSTALLFOLDER">
 
@@ -141,6 +151,8 @@
     </DirectoryRef>
 
     <ComponentGroup Id="IssConfiguration">
+      <ComponentRef Id="NewWebSite" />
+      <ComponentRef Id="NewApplicationPoolWithOtherIdentity" />
       <ComponentRef Id="DefaultWebSiteApplicationPool" />
       <ComponentRef Id="UseExistingApplicationPool" />
       <ComponentRef Id="NewApplicationPoolWithApplicationPoolIdentity" />

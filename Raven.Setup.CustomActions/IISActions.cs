@@ -9,10 +9,13 @@ using System.Diagnostics;
 using System.DirectoryServices;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Windows.Forms;
 using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Web.Administration;
 using Microsoft.Win32;
 using Raven.Database.Util;
+using View = Microsoft.Deployment.WindowsInstaller.View;
 
 namespace Raven.Setup.CustomActions
 {
@@ -64,26 +67,29 @@ namespace Raven.Setup.CustomActions
         {
             try
             {
-                string selectedWebSiteId = session[WebSiteProperty];
-                session.Log("CA: Found web site id: " + selectedWebSiteId);
+				if (session["WEBSITE_TYPE"] == "EXISTING")
+				{
+					string selectedWebSiteId = session[WebSiteProperty];
+					session.Log("CA: Found web site id: " + selectedWebSiteId);
 
-                using (var availableWebSitesView = session.Database.OpenView(SpecificSite + selectedWebSiteId))
-                {
-                    availableWebSitesView.Execute();
+					using (var availableWebSitesView = session.Database.OpenView(SpecificSite + selectedWebSiteId))
+					{
+						availableWebSitesView.Execute();
 
-                    using (Record record = availableWebSitesView.Fetch())
-                    {
-                        if ((record[1].ToString()) == selectedWebSiteId)
-                        {
-                            session["WEBSITE_ID"] = selectedWebSiteId;
-                            session["WEBSITE_DESCRIPTION"] = (string)record[2];
-                            session["WEBSITE_PATH"] = (string)record[3];
-	                        session["WEBSITE_DEFAULT_APPPOOL"] = (string) record[4];
-
-	                        //session.DoAction("SetIISInstallFolder");
-                        }
-                    }
-                }
+						using (var record = availableWebSitesView.Fetch())
+						{
+							if ((record[1].ToString()) == selectedWebSiteId)
+							{
+								session["WEBSITE_ID"] = selectedWebSiteId;
+								session["WEBSITE_DESCRIPTION"] = (string)record[2];
+								session["WEBSITE_PATH"] = (string)record[3];
+								session["WEBSITE_DEFAULT_APPPOOL"] = (string)record[4];
+							}
+						}
+					}
+				}
+                
+				session.DoAction("SetIISInstallFolder");
 
                 return ActionResult.Success;
             }
@@ -126,7 +132,7 @@ namespace Raven.Setup.CustomActions
                         var id = webSite.Name;
                         var name = webSite.Properties[ServerComment].Value.ToString();
                         var path = webSite.PhysicalPath();
-	                    var defaultAppPool = "";// TODO
+	                    var defaultAppPool = "";// TODO arek
 
                         StoreSiteDataInComboBoxTable(id, name, path, order++, comboView);
                         StoreSiteDataInAvailableSitesTable(id, name, path, defaultAppPool, availableView);
@@ -341,5 +347,25 @@ namespace Raven.Setup.CustomActions
                 }
             }
         }
+
+		[CustomAction]
+		public static ActionResult OpenWebSiteDirectoryChooser(Session session)
+		{
+			var task = new Thread(() =>
+			{
+				var fileDialog = new FolderBrowserDialog {ShowNewFolderButton = true};
+				if (fileDialog.ShowDialog() == DialogResult.OK)
+				{
+					session["WEBSITE_PATH"] = fileDialog.SelectedPath;
+				}
+
+				session.DoAction("SetNewWebSiteDirectory");
+			});
+			task.SetApartmentState(ApartmentState.STA);
+			task.Start();
+			task.Join();
+
+			return ActionResult.Success;
+		}
 	}
 }

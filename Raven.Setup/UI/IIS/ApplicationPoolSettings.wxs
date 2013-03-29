@@ -33,7 +33,7 @@
           <Text>{\WixUI_Font_Title}Application Pool Settings</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
-        <Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="240" Height="31" X="15" Y="56">
+        <Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="240" Height="33" X="15" Y="56">
           <RadioButtonGroup Property="APPLICATION_POOL_TYPE">
             <RadioButton Text="Create a new one" Value="NEW" Height="17" Width="170" X="0" Y="0" />
             <RadioButton Text="Use an existing one (Integrated mode, .NET Framework v4.0)" Value="EXISTING" Height="17" Width="240" X="0" Y="15" />
