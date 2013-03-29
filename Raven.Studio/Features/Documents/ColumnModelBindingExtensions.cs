@@ -125,6 +125,11 @@ namespace Raven.Studio.Features.Documents
 
         private static object GetTokenValue(RavenJToken token)
         {
+            if (token == null)
+            {
+                return "";
+            }
+
             switch (token.Type)
             {
                 case JTokenType.Object:
