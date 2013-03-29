@@ -77,7 +77,7 @@ namespace Raven.Database.Queries
 					if (stopWordsSetup.StopWords != null)
 					{
 						var stopWords = stopWordsSetup.StopWords;
-						var ht = new HashSet<string>();
+						var ht = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 						foreach (var stopWord in stopWords)
 						{
 							ht.Add(stopWord);
