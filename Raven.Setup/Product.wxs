@@ -18,9 +18,12 @@
     <?include Conditions.wxi ?>
     <?include Binaries.wxi ?>
 
+    
+    
     <Directory Id="TARGETDIR" Name="SourceDir">
       <!--<Directory Id="ProgramFilesFolder">
         <Directory Id='HibernatingRhinos' Name='HibernatingRhinos'>-->
+      
           <Directory Id="INSTALLFOLDER" Name="RavenDB">
             <Directory Id="Bin" Name="bin">
             </Directory>
@@ -28,6 +31,8 @@
         </Directory>-->
       </Directory>
 
+      <Directory Id="NEW_WEB_SITE_DIRECTORY" />
+      
       <!--<Directory Id="ProgramMenuFolder" Name="Programs">
         <Directory Id="ProgramMenuDir" Name="RavenDB">
           <Component Id="ProgramMenuDir" Guid="ECB41950-1566-4EE1-93E9-5B8E23B77D80">
@@ -106,6 +111,8 @@
 
     <CustomAction Id="SetLogFileLocation" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetLogFileLocation"
                   Execute="immediate" Return="check" />
+
+    <CustomAction Id="SetNewWebSiteDirectory" Directory="NEW_WEB_SITE_DIRECTORY" Value="[WEBSITE_PATH]" />
 
     <InstallExecuteSequence>
       <Custom Action="InstallRavenService_Cmd" After="CostFinalize">
