@@ -300,6 +300,7 @@
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
+    <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
     <Compile Include="Features\JsonEditor\QuickDocumentView.xaml.cs">
       <DependentUpon>QuickDocumentView.xaml</DependentUpon>
     </Compile>
@@ -480,7 +481,7 @@
     <Compile Include="Features\JsonEditor\JsonTokenTaggerProvider.g.cs" />
     <Compile Include="Features\JsonEditor\LinkTag.cs" />
     <Compile Include="Features\JsonEditor\LinkTagAdornmentManager.cs" />
-    <Compile Include="Features\JsonEditor\LinkTagClickHandler.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagMouseHandler.cs" />
     <Compile Include="Features\JsonEditor\LinkTagQuickInfoProvider.cs" />
     <Compile Include="Features\JsonEditor\PropertyValueLinkTagger.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />

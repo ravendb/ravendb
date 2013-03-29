@@ -10,14 +10,11 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.JsonEditor
 {
-    public class LinkTagClickHandler : IEditorViewMouseInputEventSink
+    public class LinkTagMouseHandler : IEditorViewMouseInputEventSink
     {
-        private Point lastPoint;
         private LinkTagQuickInfoProvider tagInfoProvider;
-        private bool sessionOpen;
-        private IQuickInfoSession session;
 
-        public LinkTagClickHandler()
+        public LinkTagMouseHandler()
         {
             tagInfoProvider = new LinkTagQuickInfoProvider();
         }
@@ -61,19 +58,22 @@ namespace Raven.Studio.Features.JsonEditor
 
         public void NotifyMouseHover(IEditorView view, RoutedEventArgsEx e)
         {
-            var result = view.SyntaxEditor.HitTest(lastPoint);
+            var state = GetState(view);
+
+            var result = view.SyntaxEditor.HitTest(state.LastMousePosition);
             var context = tagInfoProvider.GetContext(result) as LinkTagContext;
 
-            if (session== null && context != null)
+            if (state.Session == null && context != null)
             {
                 tagInfoProvider.RequestSession(view, context, canTrackMouse: false);
 
-                session =
+                state.Session =
                     view.SyntaxEditor.IntelliPrompt.Sessions.OfType<IQuickInfoSession>()
                         .FirstOrDefault(s => s.Context == context);
-                if (session != null)
+
+                if (state.Session != null)
                 {
-                    session.Closed += delegate { session = null; };
+                    state.Session.Closed += delegate { state.Session = null; };
                 }
 
             }
@@ -86,16 +86,18 @@ namespace Raven.Studio.Features.JsonEditor
 
         public void NotifyMouseMove(IEditorView view, MouseEventArgs e)
         {
-            lastPoint = e.GetPosition(view.SyntaxEditor);
+            var state = GetState(view);
 
-            if (session != null)
+            state.LastMousePosition = e.GetPosition(view.SyntaxEditor);
+
+            if (state.Session != null)
             {
                 try
                 {
-                    var inflatedBounds = Inflate(session.Bounds.Value, 40);
-                    if (!inflatedBounds.Contains(lastPoint))
+                    var inflatedBounds = Inflate(state.Session.Bounds.Value, 40);
+                    if (!inflatedBounds.Contains(state.LastMousePosition))
                     {
-                        session.Close(true);
+                        state.Session.Close(true);
                     }
                 }
                 catch (ArgumentException)
@@ -118,6 +120,17 @@ namespace Raven.Studio.Features.JsonEditor
         public void NotifyMouseWheel(IEditorView view, MouseWheelEventArgs e)
         {
 
+        }
+
+        private HandlerViewState GetState(IEditorView view)
+        {
+            return view.Properties.GetOrCreateSingleton(() => new HandlerViewState());
+        }
+
+        private class HandlerViewState
+        {
+            public Point LastMousePosition;
+            public IQuickInfoSession Session;
         }
     }
 }

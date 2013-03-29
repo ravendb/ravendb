@@ -31,7 +31,7 @@
         </StackPanel>
         <Grid x:Name="EditorGrid" Grid.Row="1" Visibility="Collapsed" Margin="-3,3,-3,-3">
             <TextBlock x:Name="StatusMessage" Margin="5"/>
-            <editors:JsonEditor x:Name="Editor" Width="300" Height="300" MinWidth="{Binding (behaviors:SizeBindings.ActualWidth), ElementName=Header}" />
+            <editors:JsonEditor x:Name="Editor" Width="400" Height="200" MinWidth="{Binding (behaviors:SizeBindings.ActualWidth), ElementName=Header}" />
             <Border Grid.Row="1" HorizontalAlignment="Right" Width="5" Margin="0,0,-2,0" Background="Transparent">
                 <i:Interaction.Behaviors>
                     <behaviors:ResizeDragBehavior ResizeElementName="Editor" ResizeDirection="Left"/>

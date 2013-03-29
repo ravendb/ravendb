@@ -34,7 +34,9 @@ namespace Raven.Studio.Features.JsonEditor
 
             RegisterService(new CodeDocumentTaggerProvider<PropertyValueLinkTagger>(typeof(PropertyValueLinkTagger)));
 
-            RegisterService<IEditorViewMouseInputEventSink>(new LinkTagClickHandler());
+            RegisterService<IEditorViewMouseInputEventSink>(new LinkTagMouseHandler());
+
+            RegisterService<ICodeDocumentPropertyChangeEventSink>(new DocumentReferencesFinder());
         }
     }
 }

@@ -9,7 +9,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using Microsoft.Expression.Interactivity.Core;
+using Raven.Studio.Extensions;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.JsonEditor
@@ -64,6 +66,11 @@ namespace Raven.Studio.Features.JsonEditor
                 Editor.Document.SetText(doc.DataAsJson.ToString());
                 Editor.Document.IsReadOnly = true;
 
+                // since we're in a compact environment, collapse the document automatically
+                Editor.Document.OutliningMode = OutliningMode.None;
+                Editor.Document.OutliningMode = OutliningMode.Automatic;
+                Editor.Document.OutliningManager.EnsureCollapsed();
+
                 _documentLoaded = true;
                 StatusMessage.Visibility = Visibility.Collapsed;
             }
@@ -73,5 +80,6 @@ namespace Raven.Studio.Features.JsonEditor
                 StatusMessage.Visibility = Visibility.Visible;
             }
         }
+
     }
 }
