@@ -18,8 +18,10 @@ namespace Raven.Abstractions.Data
 
 		public const int DefaultMaximumNumberOfTokensParsed = 5000;
 		public const int DefaultMinimumTermFrequency = 2;
-		public const int DefaltMinimumDocumentFrequency = 5;
+		public const int DefaultMinimumDocumentFrequency = 5;
+		public const int DefaultMaximumDocumentFrequency = int.MaxValue;
 		public const bool DefaultBoost = false;
+		public const float DefaultBoostFactor = 1;
 		public const int DefaultMinimumWordLength = 0;
 		public const int DefaultMaximumWordLength = 0;
 		public const int DefaultMaximumQueryTerms = 25;
@@ -35,9 +37,25 @@ namespace Raven.Abstractions.Data
 		public int? MinimumDocumentFrequency { get; set; }
 
 		/// <summary>
+		/// Ignore words which occur in more than this many documents. Default is Int32.MaxValue.
+		/// </summary>
+		public int? MaximumDocumentFrequency { get; set; }
+
+		/// <summary>
+		/// Ignore words which occur in more than this percentage of documents.
+		/// </summary>
+		public int? MaximumDocumentFrequencyPercentage { get; set; }
+
+
+		/// <summary>
 		/// Boost terms in query based on score. Default is false.
 		/// </summary>
 		public bool? Boost { get; set; }
+
+		/// <summary>
+		/// Boost factor when boosting based on score. Default is 1.
+		/// </summary>
+		public float? BoostFactor { get; set; }
 
 		/// <summary>
 		/// Ignore words less than this length or if 0 then this has no effect. Default is 0.
@@ -117,14 +135,20 @@ namespace Raven.Abstractions.Data
 			}
 			if (Boost != null && Boost != DefaultBoost)
 				uri.Append("boost=true&");
+			if (BoostFactor != null && BoostFactor != DefaultBoostFactor)
+				uri.AppendFormat("boostFactor={0}&", BoostFactor);
 			if (MaximumQueryTerms != null && MaximumQueryTerms != DefaultMaximumQueryTerms)
 				uri.AppendFormat("maxQueryTerms={0}&", MaximumQueryTerms);
 			if (MaximumNumberOfTokensParsed != null && MaximumNumberOfTokensParsed != DefaultMaximumNumberOfTokensParsed)
 				uri.AppendFormat("maxNumTokens={0}&", MaximumNumberOfTokensParsed);
 			if (MaximumWordLength != null && MaximumWordLength != DefaultMaximumWordLength)
 				uri.AppendFormat("maxWordLen={0}&", MaximumWordLength);
-			if (MinimumDocumentFrequency != null && MinimumDocumentFrequency != DefaltMinimumDocumentFrequency)
+			if (MinimumDocumentFrequency != null && MinimumDocumentFrequency != DefaultMinimumDocumentFrequency)
 				uri.AppendFormat("minDocFreq={0}&", MinimumDocumentFrequency);
+			if (MaximumDocumentFrequency != null && MaximumDocumentFrequency != DefaultMaximumDocumentFrequency)
+				uri.AppendFormat("maxDocFreq={0}&", MaximumDocumentFrequency);
+			if (MaximumDocumentFrequencyPercentage != null)
+				uri.AppendFormat("maxDocFreqPct={0}&", MaximumDocumentFrequencyPercentage);
 			if (MinimumTermFrequency != null && MinimumTermFrequency != DefaultMinimumTermFrequency)
 				uri.AppendFormat("minTermFreq={0}&", MinimumTermFrequency);
 			if (MinimumWordLength != null && MinimumWordLength != DefaultMinimumWordLength)

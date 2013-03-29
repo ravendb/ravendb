@@ -77,10 +77,10 @@ namespace Raven.Database.Queries
 					if (stopWordsSetup.StopWords != null)
 					{
 						var stopWords = stopWordsSetup.StopWords;
-						var ht = new Hashtable(StringComparer.OrdinalIgnoreCase);
+						var ht = new HashSet<string>();
 						foreach (var stopWord in stopWords)
 						{
-							ht[stopWord] = stopWord;
+							ht.Add(stopWord);
 						}
 						mlt.SetStopWords(ht);
 					}
@@ -94,7 +94,7 @@ namespace Raven.Database.Queries
 				try
 				{
 					perFieldAnalyzerWrapper = index.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
-					mlt.SetAnalyzer(perFieldAnalyzerWrapper);
+					mlt.Analyzer = perFieldAnalyzerWrapper;
 
 					var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
 					var tsdc = TopScoreDocCollector.Create(pageSize, true);
@@ -173,17 +173,18 @@ namespace Raven.Database.Queries
 				.ToArray();
 		}
 
-		private static void AssignParameters(Similarity.Net.MoreLikeThis mlt, MoreLikeThisQuery parameters)
+		private static void AssignParameters(Lucene.Net.Search.Similar.MoreLikeThis mlt, MoreLikeThisQuery parameters)
 		{
-			if (parameters.Boost != null) mlt.SetBoost(parameters.Boost.Value);
-			if (parameters.MaximumNumberOfTokensParsed != null)
-				mlt.SetMaxNumTokensParsed(parameters.MaximumNumberOfTokensParsed.Value);
-			if (parameters.MaximumNumberOfTokensParsed != null) mlt.SetMaxNumTokensParsed(parameters.MaximumNumberOfTokensParsed.Value);
-			if (parameters.MaximumQueryTerms != null) mlt.SetMaxQueryTerms(parameters.MaximumQueryTerms.Value);
-			if (parameters.MaximumWordLength != null) mlt.SetMaxWordLen(parameters.MaximumWordLength.Value);
-			if (parameters.MinimumDocumentFrequency != null) mlt.SetMinDocFreq(parameters.MinimumDocumentFrequency.Value);
-			if (parameters.MinimumTermFrequency != null) mlt.SetMinTermFreq(parameters.MinimumTermFrequency.Value);
-			if (parameters.MinimumWordLength != null) mlt.SetMinWordLen(parameters.MinimumWordLength.Value);
+			if (parameters.Boost != null) mlt.Boost = parameters.Boost.Value;
+			if (parameters.BoostFactor != null) mlt.BoostFactor = parameters.BoostFactor.Value;
+			if (parameters.MaximumNumberOfTokensParsed != null) mlt.MaxNumTokensParsed = parameters.MaximumNumberOfTokensParsed.Value;
+			if (parameters.MaximumQueryTerms != null) mlt.MaxQueryTerms = parameters.MaximumQueryTerms.Value;
+			if (parameters.MinimumWordLength != null) mlt.MinWordLen = parameters.MinimumWordLength.Value;
+			if (parameters.MaximumWordLength != null) mlt.MaxWordLen = parameters.MaximumWordLength.Value;
+			if (parameters.MinimumTermFrequency != null) mlt.MinTermFreq = parameters.MinimumTermFrequency.Value;
+			if (parameters.MinimumDocumentFrequency != null) mlt.MinDocFreq = parameters.MinimumDocumentFrequency.Value;
+			if (parameters.MaximumDocumentFrequency != null) mlt.MaxDocFreq = parameters.MaximumDocumentFrequency.Value;
+			if (parameters.MaximumDocumentFrequencyPercentage != null) mlt.SetMaxDocFreqPct(parameters.MaximumDocumentFrequencyPercentage.Value);
 		}
 
 		private static string[] GetFieldNames(IndexReader indexReader)

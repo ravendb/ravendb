@@ -15,32 +15,26 @@
  * limitations under the License.
  */
 
-using System.IO;
-using Lucene.Net.Analysis;
+using System.Collections.Generic;
 using Lucene.Net.Analysis.Tokenattributes;
+using System.Linq;
 using Lucene.Net.Index;
-using Lucene.Net.Search;
+using Lucene.Net.Support;
 using Lucene.Net.Util;
 using IndexReader = Lucene.Net.Index.IndexReader;
 using Term = Lucene.Net.Index.Term;
-using BooleanClause = Lucene.Net.Search.BooleanClause;
-using DefaultSimilarity = Lucene.Net.Search.DefaultSimilarity;
-using TermQuery = Lucene.Net.Search.TermQuery;
-using BooleanQuery = Lucene.Net.Search.BooleanQuery;
-using Query = Lucene.Net.Search.Query;
 using Analyzer = Lucene.Net.Analysis.Analyzer;
 using TokenStream = Lucene.Net.Analysis.TokenStream;
 using StandardAnalyzer = Lucene.Net.Analysis.Standard.StandardAnalyzer;
 using Document = Lucene.Net.Documents.Document;
-using Version = Lucene.Net.Util.Version;
 
-namespace Similarity.Net
+namespace Lucene.Net.Search.Similar
 {
 
 
 	/// <summary> Generate "more like this" similarity queries. 
 	/// Based on this mail:
-	/// <code><pre>
+	/// <pre>
 	/// Lucene does let you access the document frequency of terms, with IndexReader.DocFreq().
 	/// Term frequencies can be computed by re-tokenizing the text, which, for a single document,
 	/// is usually fast enough.  But looking up the DocFreq() of every term in the document is
@@ -67,16 +61,16 @@ namespace Similarity.Net
 	/// above.  The frequency and length thresholds could be parameters, etc.
 	/// 
 	/// Doug
-	/// </pre></code>
+	/// </pre>
 	/// 
 	/// <h3>Initial Usage</h3>
 	/// 
 	/// This class has lots of options to try to make it efficient and flexible.
-	/// See the body of {@link #main Main()} below in the source for real code, or
+	/// See the body of <see cref="Main"/> below in the source for real code, or
 	/// if you want pseudo code, the simplest possible usage is as follows. The bold
 	/// fragment is specific to this class.
 	/// 
-	/// <code><pre>
+	/// <pre>
 	/// 
 	/// IndexReader ir = ...
 	/// IndexSearcher is = ...
@@ -89,7 +83,7 @@ namespace Similarity.Net
 	/// <em>// now the usual iteration thru 'hits' - the only thing to watch for is to make sure
 	/// you ignore the doc if it matches your 'target' document, as it should be similar to itself </em>
 	/// 
-	/// </pre></code>
+	/// </pre>
 	/// 
 	/// Thus you:
 	/// <ol>
@@ -102,20 +96,24 @@ namespace Similarity.Net
 	/// 
 	/// <h3>More Advanced Usage</h3>
 	/// 
-	/// You may want to use {@link #SetFieldNames SetFieldNames(...)} so you can examine
+	/// You may want to use <see cref="SetFieldNames"/> so you can examine
 	/// multiple fields (e.g. body and title) for similarity.
 	/// Depending on the size of your index and the size and makeup of your documents you
 	/// may want to call the other set methods to control how the similarity queries are
 	/// generated:
 	/// <ul>
-	/// <li> {@link #SetMinTermFreq SetMinTermFreq(...)}</li>
-	/// <li> {@link #SetMinDocFreq SetMinDocFreq(...)}</li>
-	/// <li> {@link #SetMinWordLen SetMinWordLen(...)}</li>
-	/// <li> {@link #SetMaxWordLen SetMaxWordLen(...)}</li>
-	/// <li> {@link #SetMaxQueryTerms SetMaxQueryTerms(...)}</li>
-	/// <li> {@link #SetMaxNumTokensParsed SetMaxNumTokensParsed(...)}</li>
-	/// <li> {@link #SetStopWords SetStopWord(...)} </li>
+	/// <li> <see cref="MinTermFreq"/> </li>
+	/// <li> <see cref="MinDocFreq"/> </li>
+	/// <li> <see cref="MaxDocFreq"/></li>
+	/// <li> <see cref="SetMaxDocFreqPct(int)"/></li>
+	/// <li> <see cref="MinWordLen"/> </li>
+	/// <li> <see cref="MaxWordLen"/></li>
+	/// <li> <see cref="MaxQueryTerms"/></li>
+	/// <li> <see cref="MaxNumTokensParsed"/></li>
+	/// <li> <see cref="SetStopWords(ISet{string})"/> </li>
 	/// </ul> 
+	/// 
+	/// <hr/>
 	/// <pre>
 	/// Changes: Mark Harwood 29/02/04
 	/// Some bugfixing, some refactoring, some optimization.
@@ -126,44 +124,45 @@ namespace Similarity.Net
 	/// - optimize: when no termvector support available - used maxNumTermsParsed to limit amount of tokenization
 	/// </pre>
 	/// </summary>
-	/// <author>  David Spencer
-	/// </author>
-	/// <author>  Bruce Ritchie
-	/// </author>
-	/// <author>  Mark Harwood
-	/// </author>
 	public class MoreLikeThis
 	{
 
 		/// <summary> Default maximum number of tokens to parse in each example doc field that is not stored with TermVector support.</summary>
-		/// <seealso cref="GetMaxNumTokensParsed">
+		/// <seealso cref="MaxNumTokensParsed">
 		/// </seealso>
 		public const int DEFAULT_MAX_NUM_TOKENS_PARSED = 5000;
 
 
 		/// <summary> Default analyzer to parse source doc with.</summary>
-		/// <seealso cref="GetAnalyzer">
+		/// <seealso cref="Analyzer">
 		/// </seealso>
 		public static readonly Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_29);
 
 		/// <summary> Ignore terms with less than this frequency in the source doc.</summary>
-		/// <seealso cref="GetMinTermFreq">
+		/// <seealso cref="MinTermFreq">
 		/// </seealso>
-		/// <seealso cref="SetMinTermFreq">
+		/// <seealso cref="MinTermFreq">
 		/// </seealso>
 		public const int DEFAULT_MIN_TERM_FREQ = 2;
 
 		/// <summary> Ignore words which do not occur in at least this many docs.</summary>
-		/// <seealso cref="GetMinDocFreq">
+		/// <seealso cref="MinDocFreq">
 		/// </seealso>
-		/// <seealso cref="SetMinDocFreq">
+		/// <seealso cref="MinDocFreq">
 		/// </seealso>
-		public const int DEFALT_MIN_DOC_FREQ = 5;
+		public const int DEFAULT_MIN_DOC_FREQ = 5;
+
+		/// <summary>
+		/// Ignore words wich occur in more than this many docs
+		/// </summary>
+		/// <seealso cref="MaxDocFreq"/>
+		/// <seealso cref="MaxDocFreq"/>
+		public const int DEFAULT_MAX_DOC_FREQ = int.MaxValue;
 
 		/// <summary> Boost terms in query based on score.</summary>
-		/// <seealso cref="IsBoost">
+		/// <seealso cref="Boost">
 		/// </seealso>
-		/// <seealso cref="SetBoost">
+		/// <seealso cref="Boost">
 		/// </seealso>
 		public const bool DEFAULT_BOOST = false;
 
@@ -173,16 +172,16 @@ namespace Similarity.Net
 		public static readonly System.String[] DEFAULT_FIELD_NAMES = new System.String[] { "contents" };
 
 		/// <summary> Ignore words less than this length or if 0 then this has no effect.</summary>
-		/// <seealso cref="GetMinWordLen">
+		/// <seealso cref="MinWordLen">
 		/// </seealso>
-		/// <seealso cref="SetMinWordLen">
+		/// <seealso cref="MinWordLen">
 		/// </seealso>
 		public const int DEFAULT_MIN_WORD_LENGTH = 0;
 
 		/// <summary> Ignore words greater than this length or if 0 then this has no effect.</summary>
-		/// <seealso cref="GetMaxWordLen">
+		/// <seealso cref="MaxWordLen">
 		/// </seealso>
-		/// <seealso cref="SetMaxWordLen">
+		/// <seealso cref="MaxWordLen">
 		/// </seealso>
 		public const int DEFAULT_MAX_WORD_LENGTH = 0;
 
@@ -194,19 +193,19 @@ namespace Similarity.Net
 		/// </seealso>
 		/// <seealso cref="GetStopWords">
 		/// </seealso>
-		public static readonly System.Collections.Hashtable DEFAULT_STOP_WORDS = null;
+		public static readonly ISet<string> DEFAULT_STOP_WORDS = null;
 
 		/// <summary> Current set of stop words.</summary>
-		private System.Collections.Hashtable stopWords = DEFAULT_STOP_WORDS;
+		private ISet<string> stopWords = DEFAULT_STOP_WORDS;
 
 		/// <summary> Return a Query with no more than this many terms.
 		/// 
 		/// </summary>
-		/// <seealso cref="BooleanQuery.get_MaxClauseCount">
+		/// <seealso cref="BooleanQuery.MaxClauseCount">
 		/// </seealso>
-		/// <seealso cref="GetMaxQueryTerms">
+		/// <seealso cref="MaxQueryTerms">
 		/// </seealso>
-		/// <seealso cref="SetMaxQueryTerms">
+		/// <seealso cref="MaxQueryTerms">
 		/// </seealso>
 		public const int DEFAULT_MAX_QUERY_TERMS = 25;
 
@@ -217,7 +216,12 @@ namespace Similarity.Net
 		private int minTermFreq = DEFAULT_MIN_TERM_FREQ;
 
 		/// <summary> Ignore words which do not occur in at least this many docs.</summary>
-		private int minDocFreq = DEFALT_MIN_DOC_FREQ;
+		private int minDocFreq = DEFAULT_MIN_DOC_FREQ;
+
+		/// <summary>
+		/// Ignore words which occur in more than this many docs.
+		/// </summary>
+		private int maxDocfreq = DEFAULT_MAX_DOC_FREQ;
 
 		/// <summary> Should we apply a boost to the Query based on the scores?</summary>
 		private bool boost = DEFAULT_BOOST;
@@ -240,113 +244,111 @@ namespace Similarity.Net
 		private int maxQueryTerms = DEFAULT_MAX_QUERY_TERMS;
 
 		/// <summary> For idf() calculations.</summary>
-		private Lucene.Net.Search.Similarity similarity = new DefaultSimilarity();
+		private Lucene.Net.Search.Similarity similarity = null;
 
 		/// <summary> IndexReader to use</summary>
 		private IndexReader ir;
 
+		/// <summary> Boost factor to use when boosting the terms </summary>
+		private float boostFactor = 1;
+
+		/// <summary>
+		/// Gets or sets the boost factor used when boosting terms
+		/// </summary>
+		public float BoostFactor
+		{
+			get { return boostFactor; }
+			set { this.boostFactor = value; }
+		}
+
 		/// <summary> Constructor requiring an IndexReader.</summary>
 		public MoreLikeThis(IndexReader ir)
+			: this(ir, new DefaultSimilarity())
+		{
+		}
+
+		public MoreLikeThis(IndexReader ir, Lucene.Net.Search.Similarity sim)
 		{
 			this.ir = ir;
+			this.similarity = sim;
 		}
 
-		/// <summary> Returns an analyzer that will be used to parse source doc with. The default analyzer
-		/// is the {@link #DEFAULT_ANALYZER}.
-		/// 
+		public Similarity Similarity
+		{
+			get { return similarity; }
+			set { this.similarity = value; }
+		}
+
+		/// <summary> Gets or sets the analyzer used to parse source doc with. The default analyzer
+		/// is the <see cref="DEFAULT_ANALYZER"/>.
+		/// <para />
+		/// An analyzer is not required for generating a query with the
+		/// <see cref="Like(int)"/> method, all other 'like' methods require an analyzer.
 		/// </summary>
-		/// <returns> the analyzer that will be used to parse source doc with.
-		/// </returns>
+		/// <value> the analyzer that will be used to parse source doc with. </value>
 		/// <seealso cref="DEFAULT_ANALYZER">
 		/// </seealso>
-		public Analyzer GetAnalyzer()
+		public Analyzer Analyzer
 		{
-			return analyzer;
+			get { return analyzer; }
+			set { this.analyzer = value; }
 		}
 
-		/// <summary> Sets the analyzer to use. An analyzer is not required for generating a query with the
-		/// {@link #Like(int)} method, all other 'like' methods require an analyzer.
-		/// 
+		/// <summary>
+		/// Gets or sets the frequency below which terms will be ignored in the source doc. The default
+		/// frequency is the <see cref="DEFAULT_MIN_TERM_FREQ"/>.
 		/// </summary>
-		/// <param name="analyzer">the analyzer to use to tokenize text.
+		public int MinTermFreq
+		{
+			get { return minTermFreq; }
+			set { this.minTermFreq = value; }
+		}
+
+		/// <summary>
+		/// Gets or sets the frequency at which words will be ignored which do not occur in at least this
+		/// many docs. The default frequency is <see cref="DEFAULT_MIN_DOC_FREQ"/>.
+		/// </summary>
+		public int MinDocFreq
+		{
+			get { return minDocFreq; }
+			set { this.minDocFreq = value; }
+		}
+
+		/// <summary>
+		/// Gets or sets the maximum frequency in which words may still appear. 
+		/// Words that appear in more than this many docs will be ignored. The default frequency is 
+		/// <see cref="DEFAULT_MAX_DOC_FREQ"/>
+		/// </summary>
+		public int MaxDocFreq
+		{
+			get { return this.maxDocfreq; }
+			set { this.maxDocfreq = value; }
+		}
+
+		/// <summary>
+		/// Set the maximum percentage in which words may still appear. Words that appear
+		/// in more than this many percent of all docs will be ignored.
+		/// </summary>
+		/// <param name="maxPercentage">
+		/// the maximum percentage of documents (0-100) that a term may appear 
+		/// in to be still considered relevant
 		/// </param>
-		public void SetAnalyzer(Analyzer analyzer)
+		public void SetMaxDocFreqPct(int maxPercentage)
 		{
-			this.analyzer = analyzer;
+			this.maxDocfreq = maxPercentage * ir.NumDocs() / 100;
 		}
 
-		/// <summary> Returns the frequency below which terms will be ignored in the source doc. The default
-		/// frequency is the {@link #DEFAULT_MIN_TERM_FREQ}.
-		/// 
+		/// <summary> Gets or sets a boolean indicating whether to boost terms in query based 
+		/// on "score" or not. The default is <see cref="DEFAULT_BOOST"/>.
 		/// </summary>
-		/// <returns> the frequency below which terms will be ignored in the source doc.
-		/// </returns>
-		public int GetMinTermFreq()
+		public bool Boost
 		{
-			return minTermFreq;
-		}
-
-		/// <summary> Sets the frequency below which terms will be ignored in the source doc.
-		/// 
-		/// </summary>
-		/// <param name="minTermFreq">the frequency below which terms will be ignored in the source doc.
-		/// </param>
-		public void SetMinTermFreq(int minTermFreq)
-		{
-			this.minTermFreq = minTermFreq;
-		}
-
-		/// <summary> Returns the frequency at which words will be ignored which do not occur in at least this
-		/// many docs. The default frequency is {@link #DEFALT_MIN_DOC_FREQ}.
-		/// 
-		/// </summary>
-		/// <returns> the frequency at which words will be ignored which do not occur in at least this
-		/// many docs.
-		/// </returns>
-		public int GetMinDocFreq()
-		{
-			return minDocFreq;
-		}
-
-		/// <summary> Sets the frequency at which words will be ignored which do not occur in at least this
-		/// many docs.
-		/// 
-		/// </summary>
-		/// <param name="minDocFreq">the frequency at which words will be ignored which do not occur in at
-		/// least this many docs.
-		/// </param>
-		public void SetMinDocFreq(int minDocFreq)
-		{
-			this.minDocFreq = minDocFreq;
-		}
-
-		/// <summary> Returns whether to boost terms in query based on "score" or not. The default is
-		/// {@link #DEFAULT_BOOST}.
-		/// 
-		/// </summary>
-		/// <returns> whether to boost terms in query based on "score" or not.
-		/// </returns>
-		/// <seealso cref="SetBoost">
-		/// </seealso>
-		public bool IsBoost()
-		{
-			return boost;
-		}
-
-		/// <summary> Sets whether to boost terms in query based on "score" or not.
-		/// 
-		/// </summary>
-		/// <param name="boost">true to boost terms in query based on "score", false otherwise.
-		/// </param>
-		/// <seealso cref="IsBoost">
-		/// </seealso>
-		public void SetBoost(bool boost)
-		{
-			this.boost = boost;
+			get { return boost; }
+			set { this.boost = value; }
 		}
 
 		/// <summary> Returns the field names that will be used when generating the 'More Like This' query.
-		/// The default field names that will be used is {@link #DEFAULT_FIELD_NAMES}.
+		/// The default field names that will be used is <see cref="DEFAULT_FIELD_NAMES"/>.
 		/// 
 		/// </summary>
 		/// <returns> the field names that will be used when generating the 'More Like This' query.
@@ -369,46 +371,24 @@ namespace Similarity.Net
 			this.fieldNames = fieldNames;
 		}
 
-		/// <summary> Returns the minimum word length below which words will be ignored. Set this to 0 for no
-		/// minimum word length. The default is {@link #DEFAULT_MIN_WORD_LENGTH}.
-		/// 
+		/// <summary>
+		/// Gets or sets the minimum word length below which words will be ignored. 
+		/// Set this to 0 for no minimum word length. The default is <see cref="DEFAULT_MIN_WORD_LENGTH"/>.
 		/// </summary>
-		/// <returns> the minimum word length below which words will be ignored.
-		/// </returns>
-		public int GetMinWordLen()
+		public int MinWordLen
 		{
-			return minWordLen;
+			get { return minWordLen; }
+			set { this.minWordLen = value; }
 		}
 
-		/// <summary> Sets the minimum word length below which words will be ignored.
-		/// 
+		/// <summary>
+		/// Gets or sets the maximum word length above which words will be ignored. Set this to 0 for no
+		/// maximum word length. The default is <see cref="DEFAULT_MAX_WORD_LENGTH"/>.
 		/// </summary>
-		/// <param name="minWordLen">the minimum word length below which words will be ignored.
-		/// </param>
-		public void SetMinWordLen(int minWordLen)
+		public int MaxWordLen
 		{
-			this.minWordLen = minWordLen;
-		}
-
-		/// <summary> Returns the maximum word length above which words will be ignored. Set this to 0 for no
-		/// maximum word length. The default is {@link #DEFAULT_MAX_WORD_LENGTH}.
-		/// 
-		/// </summary>
-		/// <returns> the maximum word length above which words will be ignored.
-		/// </returns>
-		public int GetMaxWordLen()
-		{
-			return maxWordLen;
-		}
-
-		/// <summary> Sets the maximum word length above which words will be ignored.
-		/// 
-		/// </summary>
-		/// <param name="maxWordLen">the maximum word length above which words will be ignored.
-		/// </param>
-		public void SetMaxWordLen(int maxWordLen)
-		{
-			this.maxWordLen = maxWordLen;
+			get { return maxWordLen; }
+			set { this.maxWordLen = value; }
 		}
 
 		/// <summary> Set the set of stopwords.
@@ -420,11 +400,11 @@ namespace Similarity.Net
 		/// <param name="stopWords">set of stopwords, if null it means to allow stop words
 		/// 
 		/// </param>
-		/// <seealso cref="StopFilter.MakeStopSet(string[])">
+		/// <seealso cref="Lucene.Net.Analysis.StopFilter.MakeStopSet(string[])">
 		/// </seealso>
 		/// <seealso cref="GetStopWords">
 		/// </seealso>
-		public void SetStopWords(System.Collections.Hashtable stopWords)
+		public void SetStopWords(ISet<string> stopWords)
 		{
 			this.stopWords = stopWords;
 		}
@@ -432,71 +412,43 @@ namespace Similarity.Net
 		/// <summary> Get the current stop words being used.</summary>
 		/// <seealso cref="SetStopWords">
 		/// </seealso>
-		public System.Collections.Hashtable GetStopWords()
+		public ISet<string> GetStopWords()
 		{
 			return stopWords;
 		}
 
 
-		/// <summary> Returns the maximum number of query terms that will be included in any generated query.
-		/// The default is {@link #DEFAULT_MAX_QUERY_TERMS}.
-		/// 
+		/// <summary>
+		/// Gets or sets the maximum number of query terms that will be included in any generated query.
+		/// The default is <see cref="DEFAULT_MAX_QUERY_TERMS"/>.
 		/// </summary>
-		/// <returns> the maximum number of query terms that will be included in any generated query.
-		/// </returns>
-		public int GetMaxQueryTerms()
+		public int MaxQueryTerms
 		{
-			return maxQueryTerms;
+			get { return maxQueryTerms; }
+			set { this.maxQueryTerms = value; }
 		}
 
-		/// <summary> Sets the maximum number of query terms that will be included in any generated query.
-		/// 
+		/// <summary>
+		/// Gets or sets the maximum number of tokens to parse in each example doc
+		/// field that is not stored with TermVector support
 		/// </summary>
-		/// <param name="maxQueryTerms">the maximum number of query terms that will be included in any
-		/// generated query.
-		/// </param>
-		public void SetMaxQueryTerms(int maxQueryTerms)
+		/// <seealso cref="DEFAULT_MAX_NUM_TOKENS_PARSED" />
+		public int MaxNumTokensParsed
 		{
-			this.maxQueryTerms = maxQueryTerms;
+			get { return maxNumTokensParsed; }
+			set { maxNumTokensParsed = value; }
 		}
 
-		/// <returns> The maximum number of tokens to parse in each example doc field that is not stored with TermVector support
-		/// </returns>
-		/// <seealso cref="DEFAULT_MAX_NUM_TOKENS_PARSED">
-		/// </seealso>
-		public int GetMaxNumTokensParsed()
-		{
-			return maxNumTokensParsed;
-		}
-
-		/// <param name="i">The maximum number of tokens to parse in each example doc field that is not stored with TermVector support
-		/// </param>
-		public void SetMaxNumTokensParsed(int i)
-		{
-			maxNumTokensParsed = i;
-		}
-
-
-
-
-		/// <summary> Return a query that will return docs like the passed lucene document ID.
-		/// 
-		/// </summary>
-		/// <param name="docNum">the documentID of the lucene doc to generate the 'More Like This" query for.
-		/// </param>
-		/// <returns> a query that will return docs like the passed lucene document ID.
-		/// </returns>
+		/// <summary>Return a query that will return docs like the passed lucene document ID.</summary>
+		/// <param name="docNum">the documentID of the lucene doc to generate the 'More Like This" query for.</param>
+		/// <returns> a query that will return docs like the passed lucene document ID.</returns>
 		public Query Like(int docNum)
 		{
 			if (fieldNames == null)
 			{
 				// gather list of valid fields from lucene
-				System.Collections.Generic.ICollection<string> fields = ir.GetFieldNames(IndexReader.FieldOption.INDEXED);
-				System.Collections.IEnumerator e = fields.GetEnumerator();
-				fieldNames = new System.String[fields.Count];
-				int index = 0;
-				while (e.MoveNext())
-					fieldNames[index++] = (System.String)e.Current;
+				ICollection<string> fields = ir.GetFieldNames(IndexReader.FieldOption.INDEXED);
+				fieldNames = fields.ToArray();
 			}
 
 			return CreateQuery(RetrieveTerms(docNum));
@@ -512,12 +464,8 @@ namespace Similarity.Net
 			if (fieldNames == null)
 			{
 				// gather list of valid fields from lucene
-				System.Collections.Generic.ICollection<string> fields = ir.GetFieldNames(IndexReader.FieldOption.INDEXED);
-				System.Collections.IEnumerator e = fields.GetEnumerator();
-				fieldNames = new System.String[fields.Count];
-				int index = 0;
-				while (e.MoveNext())
-					fieldNames[index++] = (System.String)e.Current;
+				ICollection<string> fields = ir.GetFieldNames(IndexReader.FieldOption.INDEXED);
+				fieldNames = fields.ToArray();
 			}
 
 			return Like(new System.IO.StreamReader(f.FullName, System.Text.Encoding.Default));
@@ -530,7 +478,7 @@ namespace Similarity.Net
 		/// </returns>
 		public Query Like(System.Uri u)
 		{
-			return Like(new System.IO.StreamReader(((System.Net.HttpWebRequest)System.Net.WebRequest.Create(u)).GetResponse().GetResponseStream(), System.Text.Encoding.Default));
+			return Like(new System.IO.StreamReader((System.Net.WebRequest.Create(u)).GetResponse().GetResponseStream(), System.Text.Encoding.Default));
 		}
 
 		/// <summary> Return a query that will return docs like the passed stream.
@@ -548,7 +496,7 @@ namespace Similarity.Net
 		/// </summary>
 		/// <returns> a query that will return docs like the passed Reader.
 		/// </returns>
-		public Query Like(System.IO.StreamReader r)
+		public Query Like(System.IO.TextReader r)
 		{
 			return CreateQuery(RetrieveTerms(r));
 		}
@@ -570,11 +518,11 @@ namespace Similarity.Net
 				{
 					if (qterms == 0)
 					{
-						bestScore = (float)((System.Single)ar[2]);
+						bestScore = (float)ar[2];
 					}
-					float myScore = (float)((System.Single)ar[2]);
+					float myScore = (float)ar[2];
 
-					tq.Boost = myScore / bestScore;
+					tq.Boost = boostFactor * myScore / bestScore;
 				}
 
 				try
@@ -601,19 +549,19 @@ namespace Similarity.Net
 		/// </summary>
 		/// <param name="words">a map of words keyed on the word(String) with Int objects as the values.
 		/// </param>
-		protected PriorityQueue<object[]> CreateQueue(System.Collections.IDictionary words)
+		protected PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words)
 		{
 			// have collected all words in doc and their freqs
 			int numDocs = ir.NumDocs();
 			FreqQ res = new FreqQ(words.Count); // will order words by score
 
-			System.Collections.IEnumerator it = words.Keys.GetEnumerator();
+			var it = words.Keys.GetEnumerator();
 			while (it.MoveNext())
 			{
 				// for every word
-				System.String word = (System.String)it.Current;
+				System.String word = it.Current;
 
-				int tf = ((Int)words[word]).x; // term freq in the source doc
+				int tf = words[word].x; // term freq in the source doc
 				if (minTermFreq > 0 && tf < minTermFreq)
 				{
 					continue; // filter out words that don't occur enough times in the source
@@ -634,6 +582,11 @@ namespace Similarity.Net
 					continue; // filter out words that don't occur in enough docs
 				}
 
+				if (docFreq > maxDocfreq)
+				{
+					continue; // filter out words that occur in too many docs
+				}
+
 				if (docFreq == 0)
 				{
 					continue; // index update problem?
@@ -643,7 +596,7 @@ namespace Similarity.Net
 				float score = tf * idf;
 
 				// only really need 1st 3 entries, other ones are for troubleshooting
-				res.InsertWithOverflow(new System.Object[] { word, topField, (float)score, (float)idf, (System.Int32)docFreq, (System.Int32)tf });
+				res.InsertWithOverflow(new System.Object[] { word, topField, score, idf, docFreq, tf });
 			}
 			return res;
 		}
@@ -677,11 +630,11 @@ namespace Similarity.Net
 		/// </param>
 		protected virtual PriorityQueue<object[]> RetrieveTerms(int docNum)
 		{
-			System.Collections.IDictionary termFreqMap = new System.Collections.Hashtable();
+			IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
 			for (int i = 0; i < fieldNames.Length; i++)
 			{
 				System.String fieldName = fieldNames[i];
-				var vector = ir.GetTermFreqVector(docNum, fieldName);
+				ITermFreqVector vector = ir.GetTermFreqVector(docNum, fieldName);
 
 				// field does not store term vector info
 				if (vector == null)
@@ -692,8 +645,7 @@ namespace Similarity.Net
 					{
 						for (int j = 0; j < text.Length; j++)
 						{
-							var stringReader = new System.IO.StringReader(text[j]);
-							AddTermFrequencies(stringReader, termFreqMap, fieldName);
+							AddTermFrequencies(new System.IO.StringReader(text[j]), termFreqMap, fieldName);
 						}
 					}
 				}
@@ -711,7 +663,7 @@ namespace Similarity.Net
 		/// </param>
 		/// <param name="vector">List of terms and their frequencies for a doc/field
 		/// </param>
-		protected void AddTermFrequencies(System.Collections.IDictionary termFreqMap, ITermFreqVector vector)
+		protected void AddTermFrequencies(IDictionary<string, Int> termFreqMap, ITermFreqVector vector)
 		{
 			System.String[] terms = vector.GetTerms();
 			int[] freqs = vector.GetTermFrequencies();
@@ -724,7 +676,7 @@ namespace Similarity.Net
 					continue;
 				}
 				// increment frequency
-				Int cnt = (Int)termFreqMap[term];
+				Int cnt = termFreqMap[term];
 				if (cnt == null)
 				{
 					cnt = new Int();
@@ -744,15 +696,16 @@ namespace Similarity.Net
 		/// </param>
 		/// <param name="fieldName">Used by analyzer for any special per-field analysis
 		/// </param>
-		protected void AddTermFrequencies(System.IO.TextReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
+		protected void AddTermFrequencies(System.IO.TextReader r, IDictionary<string, Int> termFreqMap, System.String fieldName)
 		{
 			TokenStream ts = analyzer.TokenStream(fieldName, r);
-			var termAtt = ts.AddAttribute<ITermAttribute>();
 			int tokenCount = 0;
+			// for every token
+			ITermAttribute termAtt = ts.AddAttribute<ITermAttribute>();
+
 			while (ts.IncrementToken())
 			{
-				// for every token
-				System.String word = termAtt.Term;
+				string word = termAtt.Term;
 				tokenCount++;
 				if (tokenCount > maxNumTokensParsed)
 				{
@@ -764,7 +717,7 @@ namespace Similarity.Net
 				}
 
 				// increment frequency
-				Int cnt = (Int)termFreqMap[word];
+				Int cnt = termFreqMap[word];
 				if (cnt == null)
 				{
 					termFreqMap[word] = new Int();
@@ -809,15 +762,15 @@ namespace Similarity.Net
 		/// The elements are:
 		/// <ol>
 		/// <li> The word (String)</li>
-		/// <li> The top field that this word comes from (String)</li>	
-		/// <li> The score for this word (Float)</li>	
-		/// <li> The IDF value (Float)</li>	
-		/// <li> The frequency of this word in the index (Integer)</li>	
-		/// <li> The frequency of this word in the source document (Integer)	 	 </li>	
+		/// <li> The top field that this word comes from (String)</li>
+		/// <li> The score for this word (Float)</li>
+		/// <li> The IDF value (Float)</li>
+		/// <li> The frequency of this word in the index (Integer)</li>
+		/// <li> The frequency of this word in the source document (Integer)</li>
 		/// </ol>
 		/// This is a somewhat "advanced" routine, and in general only the 1st entry in the array is of interest.
 		/// This method is exposed so that you can identify the "interesting words" in a document.
-		/// For an easier method to call see {@link #retrieveInterestingTerms retrieveInterestingTerms()}.
+		/// For an easier method to call see <see cref="RetrieveInterestingTerms(System.IO.TextReader)"/>.
 		/// 
 		/// </summary>
 		/// <param name="r">the reader that has the content of the document
@@ -825,11 +778,11 @@ namespace Similarity.Net
 		/// <returns> the most intresting words in the document ordered by score, with the highest scoring, or best entry, first
 		/// 
 		/// </returns>
-		/// <seealso cref="RetrieveInterestingTerms">
+		/// <seealso cref="RetrieveInterestingTerms(System.IO.TextReader)">
 		/// </seealso>
-		public PriorityQueue<object[]> RetrieveTerms(System.IO.StreamReader r)
+		public PriorityQueue<object[]> RetrieveTerms(System.IO.TextReader r)
 		{
-			System.Collections.IDictionary words = new System.Collections.Hashtable();
+			IDictionary<string, Int> words = new HashMap<string, Int>();
 			for (int i = 0; i < fieldNames.Length; i++)
 			{
 				System.String fieldName = fieldNames[i];
@@ -838,22 +791,11 @@ namespace Similarity.Net
 			return CreateQueue(words);
 		}
 
-		/// <summary> Convenience routine to make it easy to return the most interesting words in a document.
-		/// More advanced users will call {@link #RetrieveTerms(java.io.Reader) retrieveTerms()} directly.
-		/// </summary>
-		/// <param name="r">the source document
-		/// </param>
-		/// <returns> the most interesting words in the document
-		/// 
-		/// </returns>
-		/// <seealso cref="RetrieveTerms(StreamReader)">
-		/// </seealso>
-		/// <seealso cref="SetMaxQueryTerms">
-		/// </seealso>
-		public System.String[] RetrieveInterestingTerms(System.IO.StreamReader r)
+
+		public System.String[] RetrieveInterestingTerms(int docNum)
 		{
-			System.Collections.ArrayList al = new System.Collections.ArrayList(maxQueryTerms);
-			var pq = RetrieveTerms(r);
+			List<object> al = new List<object>(maxQueryTerms);
+			PriorityQueue<object[]> pq = RetrieveTerms(docNum);
 			System.Object cur;
 			int lim = maxQueryTerms; // have to be careful, retrieveTerms returns all words but that's probably not useful to our caller...
 			// we just want to return the top words
@@ -862,9 +804,38 @@ namespace Similarity.Net
 				System.Object[] ar = (System.Object[])cur;
 				al.Add(ar[0]); // the 1st entry is the interesting word
 			}
-			System.String[] res = new System.String[al.Count];
+			//System.String[] res = new System.String[al.Count];
+			//return al.toArray(res);
+			return al.Select(x => x.ToString()).ToArray();
+		}
+
+		/// <summary> Convenience routine to make it easy to return the most interesting words in a document.
+		/// More advanced users will call <see cref="RetrieveTerms(System.IO.TextReader)"/> directly.
+		/// </summary>
+		/// <param name="r">the source document
+		/// </param>
+		/// <returns> the most interesting words in the document
+		/// 
+		/// </returns>
+		/// <seealso cref="RetrieveTerms(System.IO.TextReader)">
+		/// </seealso>
+		/// <seealso cref="MaxQueryTerms">
+		/// </seealso>
+		public System.String[] RetrieveInterestingTerms(System.IO.TextReader r)
+		{
+			List<object> al = new List<object>(maxQueryTerms);
+			PriorityQueue<object[]> pq = RetrieveTerms(r);
+			System.Object cur;
+			int lim = maxQueryTerms; // have to be careful, retrieveTerms returns all words but that's probably not useful to our caller...
+			// we just want to return the top words
+			while (((cur = pq.Pop()) != null) && lim-- > 0)
+			{
+				System.Object[] ar = (System.Object[])cur;
+				al.Add(ar[0]); // the 1st entry is the interesting word
+			}
+			//System.String[] res = new System.String[al.Count];
 			// return (System.String[]) SupportClass.ICollectionSupport.ToArray(al, res);
-			return (System.String[])al.ToArray(typeof(System.String));
+			return al.Select(x => x.ToString()).ToArray();
 		}
 
 		/// <summary> PriorityQueue that orders words by score.</summary>
@@ -875,12 +846,10 @@ namespace Similarity.Net
 				Initialize(s);
 			}
 
-			public override bool LessThan(object[] a, object[] b)
+			public override bool LessThan(System.Object[] aa, System.Object[] bb)
 			{
-				System.Object[] aa = (System.Object[])a;
-				System.Object[] bb = (System.Object[])b;
-				System.Single fa = (System.Single)aa[2];
-				System.Single fb = (System.Single)bb[2];
+				float fa = (float)aa[2];
+				float fb = (float)bb[2];
 				return (float)fa > (float)fb;
 			}
 		}

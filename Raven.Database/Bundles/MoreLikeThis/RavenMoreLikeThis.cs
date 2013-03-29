@@ -1,10 +1,11 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 
 namespace Raven.Database.Bundles.MoreLikeThis
 {
-	class RavenMoreLikeThis : Similarity.Net.MoreLikeThis
+	class RavenMoreLikeThis : Lucene.Net.Search.Similar.MoreLikeThis
 	{
 		private readonly IndexReader _ir;
 
@@ -18,8 +19,8 @@ namespace Raven.Database.Bundles.MoreLikeThis
 		{
 			var fieldNames = GetFieldNames();
 
-			var termFreqMap = new System.Collections.Hashtable();
-			var d = _ir.Document(docNum);
+			IDictionary<string, Int> termFreqMap = new Lucene.Net.Support.HashMap<string, Int>();
+			
 			foreach (var fieldName in fieldNames)
 			{
 				var vector = _ir.GetTermFreqVector(docNum, fieldName);
@@ -27,6 +28,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 				// field does not store term vector info
 				if (vector == null)
 				{
+					var d = _ir.Document(docNum);
 					var text = d.GetValues(fieldName);
 					if (text != null)
 					{
