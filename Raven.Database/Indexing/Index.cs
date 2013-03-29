@@ -74,6 +74,7 @@ namespace Raven.Database.Indexing
 
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
+		private bool forceWriteToDisk;
 
 		public TimeSpan LastIndexingDuration { get; set; }
 		public long TimePerDoc { get; set; }
@@ -115,6 +116,11 @@ namespace Raven.Database.Indexing
 		public DateTime LastIndexTime { get; set; }
 
 		protected DateTime PreviousIndexTime { get; set; }
+
+		public bool IsOnRam
+		{
+			get { return directory is RAMDirectory; }
+		}
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
@@ -260,12 +266,13 @@ namespace Raven.Database.Indexing
 		public static RavenJObject CreateDocumentFromFields(Document document, FieldsToFetch fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
-			IEnumerable<string> fields = fieldsToFetch.Fields;
-
+			var fields = fieldsToFetch.Fields;
 			if (fieldsToFetch.FetchAllStoredFields)
 				fields = fields.Concat(document.GetFields().Select(x => x.Name));
 
+
 			var q = fields
+				.Distinct()
 				.SelectMany(name => document.GetFields(name) ?? new Field[0])
 				.Where(x => x != null)
 				.Where(
@@ -449,7 +456,7 @@ namespace Raven.Database.Indexing
 				stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
 			});
 
-			if (toobig || !stale)
+			if (forceWriteToDisk || toobig || !stale)
 			{
 				indexWriter.Commit();
 				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
@@ -1412,6 +1419,11 @@ namespace Raven.Database.Indexing
 			if (jsonDocument == null)
 				return new DynamicNullObject();
 			return new DynamicJsonObject(jsonDocument.ToJson());
+		}
+
+		public void ForceWriteToDisk()
+		{
+			forceWriteToDisk = true;
 		}
 	}
 }

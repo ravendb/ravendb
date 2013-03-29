@@ -113,53 +113,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Changes\*.cs">
       <Link>Changes\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\CachedRequest.cs">
-      <Link>Connection\CachedRequest</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\CreateHttpJsonRequestParams.cs">
-      <Link>Connection\CreateHttpJsonRequestParams</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
-      <Link>Connection\DocumentConventionJsonExtensions</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
-      <Link>Connection\HttpExtensions</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\IDatabaseCommands.cs">
-      <Link>Connection\IDatabaseCommands</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\IRavenQueryInspector.cs">
-      <Link>Connection\IRavenQueryInspector</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\JsonLuceneDateTimeConverter.cs">
-      <Link>Connection\JsonLuceneDateTimeConverter</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\MultiGetOperation.cs">
-      <Link>Connection\MultiGetOperation</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ObservableLineStream.cs">
-      <Link>Connection\ObservableLineStream</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenTransactionAccessor.cs">
-      <Link>Connection\RavenTransactionAccessor</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
-      <Link>Connection\RavenUrlExtensions</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformer.cs">
-      <Link>Connection\ReplicationInformer</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformerCache.cs">
-      <Link>Connection\ReplicationInformerCache</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\SerializationHelper.cs">
-      <Link>Connection\SerializationHelper</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerClient.cs">
-      <Link>Connection\ServerClient</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerHash.cs">
-      <Link>Connection\ServerHash</Link>
+		<Compile Include="..\Raven.Client.Lightweight\Connection\*.cs">
+			<Link>Connection\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\*.cs">
       <Link>Connection\Async\%(FileName)</Link>

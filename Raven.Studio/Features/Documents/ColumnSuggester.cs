@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 
 namespace Raven.Studio.Features.Documents
 {

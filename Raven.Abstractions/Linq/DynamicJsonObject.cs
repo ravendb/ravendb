@@ -306,7 +306,7 @@ namespace Raven.Abstractions.Linq
 		/// </summary>
 		/// <param name="name">The name.</param>
 		/// <returns></returns>
-		public object GetValue(string name)
+		public virtual object GetValue(string name)
 		{
 			if (name == Constants.DocumentIdFieldName)
 			{

@@ -9,7 +9,7 @@ using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Plugins;
 using Raven.Tests.Storage;
 using Xunit;

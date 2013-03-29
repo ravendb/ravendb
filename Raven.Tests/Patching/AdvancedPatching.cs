@@ -414,7 +414,8 @@ this.Value = another.Value;
 
 			store.DatabaseCommands.UpdateByIndex("TestIndex",
 											new IndexQuery { Query = "Owner:Bob" },
-											new ScriptedPatchRequest { Script = sampleScript });
+											new ScriptedPatchRequest { Script = sampleScript })
+											.WaitForCompletion();
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
 			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());

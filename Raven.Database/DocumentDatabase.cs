@@ -34,7 +34,6 @@ using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -386,6 +385,7 @@ namespace Raven.Database
 					{
 						index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
 						index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+						index.IsOnRam = IndexStorage.IndexOnRam(index.Name);
 					}
 				}
 
@@ -507,7 +507,7 @@ namespace Raven.Database
 			if (workContext != null)
 				exceptionAggregator.Execute(workContext.Dispose);
 
-			if(batchCompletedEvent != null)
+			if (batchCompletedEvent != null)
 				exceptionAggregator.Execute(batchCompletedEvent.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
@@ -1311,7 +1311,7 @@ namespace Raven.Database
 			if (transformFunc == null)
 				return results.Select(x => x.ToJson());
 
-			var dynamicJsonObjects = results.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
+			var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson())).ToArray();
 			var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
 			{
 				OnError =
@@ -1725,7 +1725,7 @@ namespace Raven.Database
 				(jsonDoc, size) =>
 				{
 					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
-					return scriptedJsonPatcher.Apply(jsonDoc, patch);
+					return scriptedJsonPatcher.Apply(jsonDoc, patch, size);
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 		}
@@ -1824,7 +1824,7 @@ namespace Raven.Database
 						if (e is AggregateException)
 							throw;
 
-						var internalPreserveStackTrace = typeof(Exception).GetMethod("InternalPreserveStackTrace", 
+						var internalPreserveStackTrace = typeof(Exception).GetMethod("InternalPreserveStackTrace",
 								System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 						internalPreserveStackTrace.Invoke(e, null);
 
@@ -1838,9 +1838,9 @@ namespace Raven.Database
 		public BatchResult[] Batch(IList<ICommandData> commands)
 		{
 			var pending = new PendingBatch
-			{
-				Commands = commands,
-			};
+		{
+			Commands = commands,
+		};
 
 			var shouldRetryIfGotConcurrencyError = pending.Commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
 			var currentTask = pending.CompletionSource.Task;
@@ -1884,7 +1884,7 @@ namespace Raven.Database
 							actions.General.PulseTransaction();
 							totalCommands += currentBatch.Commands.Count;
 						}
-						if(batches > 1)
+						if (batches > 1)
 						{
 							log.Debug(
 								"Merged {0} concurrent transactions with {1} operations into a single transaction to improve performance",
@@ -2057,8 +2057,16 @@ namespace Raven.Database
 			get
 			{
 				return buildVersion ??
-					   (buildVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).FileBuildPart.ToString(CultureInfo.InvariantCulture));
+					   (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture));
 			}
+		}
+
+		private static int GetBuildVersion()
+		{
+			var fileVersionInfo = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location);
+			if (fileVersionInfo.FilePrivatePart != 0)
+				return fileVersionInfo.FilePrivatePart;
+			return fileVersionInfo.FileBuildPart;
 		}
 
 		private volatile bool disposed;

@@ -57,5 +57,32 @@ namespace Raven.Tests.MonoForAndroid
 			}
 		}
 
+		[Test]
+		public void CanDelete()
+		{
+			using (var store = CreateDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				session.Store(new Info(), "delete/1");
+				session.SaveChanges();
+			}
+
+			using (var store = CreateDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				var item = session.Load<Info>("delete/1");
+				session.Delete(item);
+				session.SaveChanges();
+			}
+
+			using (var store = CreateDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				var shouldBeNull = session.Load<Info>("delete/1");
+				Assert.Null(shouldBeNull);
+			}
+
+		}
+
 	}
 }

@@ -167,6 +167,7 @@
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
+    <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
@@ -235,6 +236,7 @@
     <Compile Include="Indexing\CurrentTransformationScope.cs" />
     <Compile Include="Indexing\IndexCommitPoint.cs" />
     <Compile Include="Indexing\IndexCommitPointDirectory.cs" />
+    <Compile Include="Indexing\DynamicLuceneOrDocumntObject.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
@@ -396,7 +398,6 @@
     <Compile Include="Server\AbstractRequestResponder.cs" />
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
-    <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
     <Compile Include="Server\HttpServer.cs" />
@@ -459,7 +460,6 @@
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
     <Compile Include="Queries\DynamicQueryOptimizer.cs" />
     <Compile Include="Queries\DynamicQueryRunner.cs" />
-    <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
     <Compile Include="Extensions\HttpContextExtensions.cs" />
@@ -630,10 +630,7 @@
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
-    <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
-    <Compile Include="Exceptions\IndexDisabledException.cs" />
-    <Compile Include="Exceptions\OperationVetoedException.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Indexing\MapReduceIndex.cs" />
     <Compile Include="Indexing\QueryBuilder.cs" />

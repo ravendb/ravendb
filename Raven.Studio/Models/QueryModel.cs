@@ -14,6 +14,7 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;

@@ -75,7 +75,8 @@
 													 Style="{StaticResource Style_Button_MouseOverChrome}"
 													 Padding="4"
 													 Margin="2"
-													 ToolTipService.ToolTip="Make Index Persisted">
+													 ToolTipService.ToolTip="Make Index Persisted"
+													 Visibility="{Binding CanPersist, Converter={StaticResource BooleanToVisibility}}">
 										<HyperlinkButton.Content>
 											<Image Source="{StaticResource Image_Index_Down}"
 												   Stretch="None" />

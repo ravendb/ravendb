@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI Id="InstallerUI">
+
+      <UIRef Id="WixUI_InstallDir" />
+      <UIRef Id="WixUI_ErrorProgressText" />
+
+      <ProgressText Action="SetupPerformanceCountersForIISUser">Granting permissions to performance counters</ProgressText>
+      <ProgressText Action="InstallRavenService">Installing [SERVICE_NAME] service</ProgressText>
+      
+      <DialogRef Id="IisSetupDlg" />
+
+      <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="InstallationType" Order="3">LicenseAccepted = "1"</Publish>
+
+      <Publish Dialog="InstallationType" Control="Next" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
+      <Publish Dialog="InstallationType" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg">1</Publish>
+      <Publish Dialog="InstallationType" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+
+      <Publish Dialog="LicenseFileChooser" Control="Next" Event="NewDialog" Value="IisSetupDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND RAVEN_LICENSE_VALID = "True"]]></Publish>
+      <Publish Dialog="LicenseFileChooser" Control="Next" Event="NewDialog" Value="ServiceSettings"><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE" AND RAVEN_LICENSE_VALID = "True"]]></Publish>
+      <Publish Dialog="LicenseFileChooser" Control="Back" Event="NewDialog" Value="InstallationType">1</Publish>
+      <Publish Dialog="LicenseFileChooser" Control="Cancel" Event="SpawnDialog" Value="CancelDlg" Order="1">1</Publish>
+
+      <Publish Dialog="ServiceSettings" Control="Next" Event="NewDialog" Value="InstallDirDlg"><![CDATA[SERVICE_NAME <> "" AND SERVICE_PORT <> ""]]></Publish>
+      <Publish Dialog="ServiceSettings" Control="Back" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
+      <Publish Dialog="ServiceSettings" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="ServiceSettings"><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="PerformanceCounterDlg"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
+
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedWebSite" Order="1">1</Publish>
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="DoAction" Value="UpdateIISAppPoolUser" Order="2"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg" Order="3"><![CDATA[WEBSITE_VD <> "" AND CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="IisSetupDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3"><![CDATA[WEBSITE_VD <> "" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="IisSetupDlg" Control="Back" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
+      <Publish Dialog="IisSetupDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+
+      
+      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedAppPool" Order="1">1</Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISAppPoolUser" Order="2">1</Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3">
+        <!--<![CDATA[WEB_APP_POOL_NAME <> "" or WEB_APP_POOL_IDENTITY_DOMAIN <> 
+                          "" or WEB_APP_POOL_IDENTITY_NAME <> "" 
+                          or WEB_APP_POOL_IDENTITY_PWD <> ""]]>-->
+        1
+      </Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Back" Event="NewDialog" Value="IisSetupDlg">1</Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+
+
+      
+      <Publish Dialog="PerformanceCounterDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">
+      1
+      </Publish>
+      <Publish Dialog="PerformanceCounterDlg" Control="Back" Event="NewDialog" Value="AppPoolSettingsDlg"><![CDATA[CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="PerformanceCounterDlg" Control="Back" Event="NewDialog" Value="IisSetupDlg"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="PerformanceCounterDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
+    </UI>
+  </Fragment>
+</Wix>

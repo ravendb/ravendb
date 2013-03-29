@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Diagnostics;
 using System.Linq;
-using Raven.Storage.Esent;
 
 namespace Raven.Database.Util
 {

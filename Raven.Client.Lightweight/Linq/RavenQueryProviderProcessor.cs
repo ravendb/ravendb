@@ -16,7 +16,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Linq
 {
@@ -1117,9 +1116,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				}
 				case "Distinct":
-					luceneQuery.GroupBy(AggregationOperation.Distinct);
-					VisitExpression(expression.Arguments[0]);
-					break;
+                    if (expression.Arguments.Count == 1)
+                    {
+						luceneQuery.GroupBy(AggregationOperation.Distinct);
+						VisitExpression(expression.Arguments[0]);
+						break;
+                    }
+                    throw new NotSupportedException("Method not supported: Distinct(IEqualityComparer<T>)");
 				case "OrderBy":
 				case "ThenBy":
 				case "ThenByDescending":
@@ -1179,8 +1182,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					}
 					break;
 				case ExpressionType.MemberAccess:
-					MemberExpression memberExpression = ((MemberExpression) body);
-					AddToFieldsToFetch(GetSelectPath(memberExpression), memberExpression.Member.Name);
+					var memberExpression = ((MemberExpression) body);
+					AddToFieldsToFetch(GetSelectPath(memberExpression), GetSelectPath(memberExpression));
 					if (insideSelect == false)
 					{
 						foreach (var renamedField in FieldsToRename.Where(x=>x.OriginalField == memberExpression.Member.Name).ToArray())
@@ -1205,8 +1208,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						if (field == null)
 							continue;
 						var expression = linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
-						var renamedField = GetSelectPath(expression);
-						AddToFieldsToFetch(renamedField, newExpression.Members[index].Name);
+						AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
 					}
 					break;
 					//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -1222,7 +1224,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						var expression = linqPathProvider.GetMemberExpression(field.Expression);
 						var renamedField = GetSelectPath(expression);
 
-						AddToFieldsToFetch(renamedField, field.Member.Name);
+						AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
 					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -1233,17 +1235,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 		}
 
+		private string GetSelectPath(MemberInfo member)
+		{
+			return LinqPathProvider.HandlePropertyRenames(member, member.Name);
+
+		}
+
 		private string GetSelectPath(MemberExpression expression)
 		{
-			var sb = new StringBuilder(expression.Member.Name);
-			expression = expression.Expression as MemberExpression;
-			while (expression != null)
-			{
-				sb.Insert(0, ".");
-				sb.Insert(0, expression.Member.Name);
-				expression = expression.Expression as MemberExpression;
-			}
-			return sb.ToString();
+			var expressionInfo = GetMember(expression);
+			return expressionInfo.Path;
 		}
 
 		private void AddToFieldsToFetch(string docField, string renamedField)
