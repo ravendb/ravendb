@@ -497,6 +497,11 @@ namespace Raven.Storage.Esent
 			}
 		}
 
+		public IMultipleCallsBatch CreateMultipleCallsBatch()
+		{
+			throw new NotImplementedException();
+		}
+
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		[CLSCompliant(false)]
 		public void Batch(Action<IStorageActionsAccessor> action)
