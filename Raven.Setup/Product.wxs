@@ -122,7 +122,7 @@
         <![CDATA[(&Service=2) AND (!Service=3)]]>
       </Custom>
 
-      <Custom Action='SetupPerformanceCountersForIISUser' Before='InstallFinalize'>
+      <Custom Action='SetupPerformanceCountersForIISUser' After='InstallFinalize'>
         <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
       </Custom>
     </InstallExecuteSequence>
