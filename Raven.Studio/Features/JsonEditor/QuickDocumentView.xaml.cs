@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.JsonEditor
@@ -24,25 +25,52 @@ namespace Raven.Studio.Features.JsonEditor
         public static readonly DependencyProperty DocumentIdProperty =
             DependencyProperty.Register("DocumentId", typeof(string), typeof(QuickDocumentView), new PropertyMetadata(""));
 
-        
+        private ICommand _showDocumentCommand;
+
+        private bool _documentLoaded;
+
         public QuickDocumentView()
         {
             InitializeComponent();
+
+            Unloaded += HandleUnloaded;
         }
 
-        private async void ButtonBase_OnClick(object sender, RoutedEventArgs e)
+        private void HandleUnloaded(object sender, RoutedEventArgs e)
         {
+            Editor.IntelliPrompt.CloseAllSessions();
+        }
+
+        public ICommand ShowDocument
+        {
+            get { return _showDocumentCommand ?? (_showDocumentCommand = new ActionCommand(HandleShowDocument)); }
+        }
+
+        private async void HandleShowDocument()
+        {
+            if (_documentLoaded)
+            {
+                return;
+            }
+
+            EditorGrid.Visibility = Visibility.Visible;
+
             try
             {
+                StatusMessage.Text = "Loading document ...";
+                StatusMessage.Visibility = Visibility.Visible;
+
                 var doc = await ApplicationModel.DatabaseCommands.GetAsync(DocumentId);
                 Editor.Document.SetText(doc.DataAsJson.ToString());
                 Editor.Document.IsReadOnly = true;
 
-                Editor.Visibility = Visibility.Visible;
+                _documentLoaded = true;
+                StatusMessage.Visibility = Visibility.Collapsed;
             }
             catch (Exception ex)
             {
-                
+                StatusMessage.Text = "Failed to load document";
+                StatusMessage.Visibility = Visibility.Visible;
             }
         }
     }

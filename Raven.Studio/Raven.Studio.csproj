@@ -236,6 +236,9 @@
     <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
+    <Compile Include="Behaviors\MouseHoverTrigger.cs" />
+    <Compile Include="Behaviors\ResizeDragBehavior.cs" />
+    <Compile Include="Behaviors\SizeBindings.cs" />
     <Compile Include="Behaviors\StudioDataTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
@@ -921,6 +924,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Assets\SplitHyperlinkButtonPopupStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\SyntaxEditorStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

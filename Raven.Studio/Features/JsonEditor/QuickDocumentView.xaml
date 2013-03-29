@@ -4,21 +4,49 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:editors="clr-namespace:Raven.Studio.Controls.Editors"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:behaviors="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:jsonEditor="clr-namespace:Raven.Studio.Features.JsonEditor"
              mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400">
-    
-    <Border Background="#FEFEE0">
+
     <Grid x:Name="LayoutRoot" >
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal">
-            <Button Content="+" Click="ButtonBase_OnClick" Width="30" Height="30" VerticalAlignment="Center" />
-            <TextBlock Margin="5,0,0,0"  Text="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DocumentId, StringFormat='Shift-Click to Navigate to Document {0}'}" Grid.Column="1" VerticalAlignment="Center"/>
+        <StackPanel x:Name="Header" Orientation="Horizontal" HorizontalAlignment="Left" behaviors:SizeBindings.IsEnabled="True">
+            <Button Content="+" Command="{Binding Path=ShowDocument, RelativeSource={RelativeSource AncestorType=jsonEditor:QuickDocumentView}}" Padding="1" Width="16" Height="16" MinWidth="16" MinHeight="16" VerticalAlignment="Center">
+                <i:Interaction.Triggers>
+                    <behaviors:MouseHoverTrigger>
+                        <i:InvokeCommandAction Command="{Binding Path=ShowDocument, RelativeSource={RelativeSource AncestorType=jsonEditor:QuickDocumentView}}"></i:InvokeCommandAction>
+                    </behaviors:MouseHoverTrigger>
+                </i:Interaction.Triggers>
+            </Button>
+            <StackPanel  Margin="5,0,0,0" >
+                <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=jsonEditor:QuickDocumentView}, Path=DocumentId, StringFormat='Document {0}'}" Grid.Column="1" VerticalAlignment="Center"/>
+            <TextBlock Text="Shift + Click to go to document"/>
+            </StackPanel>
         </StackPanel>
-        <editors:JsonEditor x:Name="Editor" Grid.Row="1" Width="400" Height="400" Visibility="Collapsed"/>
+        <Grid x:Name="EditorGrid" Grid.Row="1" Visibility="Collapsed" Margin="-3,3,-3,-3">
+            <TextBlock x:Name="StatusMessage" Margin="5"/>
+            <editors:JsonEditor x:Name="Editor" Width="300" Height="300" MinWidth="{Binding (behaviors:SizeBindings.ActualWidth), ElementName=Header}" />
+            <Border Grid.Row="1" HorizontalAlignment="Right" Width="5" Margin="0,0,-2,0" Background="Transparent">
+                <i:Interaction.Behaviors>
+                    <behaviors:ResizeDragBehavior ResizeElementName="Editor" ResizeDirection="Left"/>
+                </i:Interaction.Behaviors>
+            </Border>
+            <Border Grid.Row="1" VerticalAlignment="Bottom" Height="5" Margin="0,0,-2,0" Background="Transparent">
+                <i:Interaction.Behaviors>
+                    <behaviors:ResizeDragBehavior ResizeElementName="Editor" ResizeDirection="Up"/>
+                </i:Interaction.Behaviors>
+            </Border>
+            <Border Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Height="10" Width="10" Margin="0,0,-2,-2" Background="Transparent">
+                <i:Interaction.Behaviors>
+                    <behaviors:ResizeDragBehavior ResizeElementName="Editor" ResizeDirection="LeftUp"/>
+                </i:Interaction.Behaviors>
+            </Border>
+        </Grid>
     </Grid>
-    </Border>
 </UserControl>

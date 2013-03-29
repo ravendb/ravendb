@@ -22,11 +22,13 @@ namespace Raven.Studio.Features.JsonEditor
 
             RegisterService(new TextViewTaggerProvider<WordHighlightTagger>(typeof(WordHighlightTagger)));
 
-            // Register a tagger provider for showing parse errors
-            RegisterService<ICodeDocumentTaggerProvider>(new CodeDocumentTaggerProvider<ParseErrorTagger>(typeof(ParseErrorTagger)));
-
             // Register a squiggle tag quick info provider
             RegisterService<IQuickInfoProvider>(new SquiggleTagQuickInfoProvider());
+
+            RegisterService<IQuickInfoProvider>(new CollapsedRegionQuickInfoProvider());
+
+            // Register a tagger provider for showing parse errors
+            RegisterService<ICodeDocumentTaggerProvider>(new CodeDocumentTaggerProvider<ParseErrorTagger>(typeof(ParseErrorTagger)));
 
             RegisterService(new AdornmentManagerProvider<LinkTagAdornmentManager>(typeof(LinkTagAdornmentManager)));
 

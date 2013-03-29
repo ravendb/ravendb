@@ -28,6 +28,7 @@
 		<ResourceDictionary Source="ProgressBarStyles.xaml" />
 		<ResourceDictionary Source="NumericUpDown.xaml" />
 		<ResourceDictionary Source="SplitHyperlinkButtonPopupStyle.xaml" />
+		<ResourceDictionary Source="SyntaxEditorStyles.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">

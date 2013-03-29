@@ -64,7 +64,7 @@ namespace Raven.Studio.Features.JsonEditor
             var result = view.SyntaxEditor.HitTest(lastPoint);
             var context = tagInfoProvider.GetContext(result) as LinkTagContext;
 
-            if (context != null)
+            if (session== null && context != null)
             {
                 tagInfoProvider.RequestSession(view, context, canTrackMouse: false);
 
