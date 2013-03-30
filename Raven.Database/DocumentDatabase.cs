@@ -16,7 +16,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
@@ -63,6 +62,10 @@ namespace Raven.Database
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
+		public InFlightTransactionalState InFlightTransactionalState
+		{
+			get { return inFlightTransactionalState; }
+		}
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractIndexQueryTrigger> IndexQueryTriggers { get; set; }
@@ -562,10 +565,10 @@ namespace Raven.Database
 			backgroundWorkersSpun = true;
 
 			workContext.StartWork();
-			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+			indexingBackgroundTask = Task.Factory.StartNew(
 				indexingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+			reducingBackgroundTask = Task.Factory.StartNew(
 				new ReducingExecuter(workContext).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
@@ -653,7 +656,10 @@ namespace Raven.Database
 			});
 
 			DocumentRetriever.EnsureIdInMetadata(document);
-			return new DocumentRetriever(null, ReadTriggers)
+
+			document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
+
+			return new DocumentRetriever(null, ReadTriggers, inFlightTransactionalState)
 				.ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
 		}
 
@@ -669,7 +675,8 @@ namespace Raven.Database
 			});
 
 			DocumentRetriever.EnsureIdInMetadata(document);
-			return new DocumentRetriever(null, ReadTriggers)
+			document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
+			return new DocumentRetriever(null, ReadTriggers, inFlightTransactionalState)
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
 
@@ -768,9 +775,6 @@ namespace Raven.Database
 					continue;
 
 				actions.General.MaybePulseTransaction();
-
-				if (preTouchEtag == null || afterTouchEtag == null)
-					continue;
 
 				recentTouches.Set(key, new TouchedDocumentInfo
 				{
@@ -1179,7 +1183,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					var docRetriever = new DocumentRetriever(actions, ReadTriggers, query.QueryInputs, idsToLoad);
+					var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
 														  viewGenerator.ReduceDefinition == null
@@ -1579,15 +1583,16 @@ namespace Raven.Database
 				{
 					int docCount = 0;
 					var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
-					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+					var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
 					foreach (var doc in documents)
 					{
 						docCount++;
 						if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
 							continue;
 						DocumentRetriever.EnsureIdInMetadata(doc);
-						var document = documentRetriever
-							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						var document = inFlightTransactionalState.SetNonAuthoritativeInformation(null, doc.Key, doc);
+						document = documentRetriever
+							.ExecuteReadTriggers(document, null, ReadOperation.Load);
 						if (document == null)
 							continue;
 
@@ -1618,7 +1623,7 @@ namespace Raven.Database
 					var documents = etag == null
 										? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
 										: actions.Documents.GetDocumentsAfter(etag, pageSize);
-					var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
+					var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
 					int docCount = 0;
 					foreach (var doc in documents)
 					{
@@ -1626,8 +1631,9 @@ namespace Raven.Database
 						if (etag != null)
 							etag = doc.Etag;
 						DocumentRetriever.EnsureIdInMetadata(doc);
-						var document = documentRetriever
-							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						var document = inFlightTransactionalState.SetNonAuthoritativeInformation(null, doc.Key, doc);
+						document = documentRetriever
+							.ExecuteReadTriggers(document, null, ReadOperation.Load);
 						if (document == null)
 							continue;
 
@@ -2320,7 +2326,7 @@ namespace Raven.Database
 			TransactionalStorage.Batch(
 			actions =>
 			{
-				var docRetriever = new DocumentRetriever(actions, ReadTriggers, queryInputs);
+				var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, queryInputs);
 				using (new CurrentTransformationScope(docRetriever))
 				{
 					var document = Get(key, transactionInformation);

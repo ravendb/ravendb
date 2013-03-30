@@ -77,10 +77,10 @@ namespace Raven.Database.Impl
 			return changedInTransaction.ContainsKey(key);
 		}
 
-		public TDocument IsModified<TDocument>(Guid txId, string key, TDocument document) where TDocument : class, IJsonDocumentMetadata, new()
+		public TDocument SetNonAuthoritativeInformation<TDocument>(TransactionInformation tx, string key, TDocument document) where TDocument : class, IJsonDocumentMetadata, new()
 		{
 			ChangedDoc existing;
-			if (changedInTransaction.TryGetValue(key, out existing) == false || txId == existing.transactionId)
+			if (changedInTransaction.TryGetValue(key, out existing) == false || (tx != null && tx.Id == existing.transactionId))
 				return document;
 
 			TransactionState value;

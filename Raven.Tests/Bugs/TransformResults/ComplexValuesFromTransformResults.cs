@@ -96,7 +96,7 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				documentStore.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
-					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>());
+					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(), new InFlightTransactionalState());
 					var dynamicJsonObjects = new[] { new DynamicJsonObject(accessor.Documents.DocumentByKey("answer2s/" + answerId.ToString(), null).ToJson()), };
 					var transformResultsDefinition = abstractViewGenerator.TransformResultsDefinition(documentRetriever,
 																									  dynamicJsonObjects
