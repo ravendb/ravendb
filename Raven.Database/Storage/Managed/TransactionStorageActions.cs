@@ -216,7 +216,7 @@ namespace Raven.Storage.Managed
 				perDocumentModified(new DocumentInTransactionData
 				{
 					Key = readResult.Key.Value<string>("key"),
-					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+					Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 					Delete = readResult.Key.Value<bool>("deleted"),
 					Metadata = metadata,
 					Data = data,

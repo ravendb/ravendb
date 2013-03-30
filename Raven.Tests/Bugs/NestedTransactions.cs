@@ -31,6 +31,27 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
+
+		[Fact]
+		public void ShouldBeASingleTransaction_Embedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.Initialize();
+
+				using (var outer = new TransactionScope(TransactionScopeOption.Required))
+				{
+					var id = Guid.NewGuid().ToString();
+					SaveObject(store, id);
+					var loaded = LoadObject(store, id);
+
+					Assert.NotNull(loaded);
+
+					outer.Complete();
+				}
+			}
+		}
+
 		private static void SaveObject(IDocumentStore store, string id)
 		{
 			using (var session = store.OpenSession())

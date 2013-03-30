@@ -13,6 +13,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Database.Impl
 {
@@ -48,13 +49,14 @@ namespace Raven.Database.Impl
 			return AddToTransactionState(key, etag,
 			                      transactionInformation,
 			                      committedEtag,
-			                      uuidGenerator,
 			                      new DocumentInTransactionData
 			                      {
 				                      Metadata = metadata,
 				                      Data = data,
 				                      Delete = false,
-				                      Key = key
+				                      Key = key,
+									  LastModified = SystemTime.UtcNow,
+									  Etag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions)
 			                      });
 		}
 
@@ -65,10 +67,11 @@ namespace Raven.Database.Impl
 			Etag committedEtag,
 			SequentialUuidGenerator uuidGenerator)
 		{
-			AddToTransactionState(key, etag, transactionInformation, committedEtag, uuidGenerator, new DocumentInTransactionData
+			AddToTransactionState(key, etag, transactionInformation, committedEtag, new DocumentInTransactionData
 			{
 				Delete = true,
-				Key = key
+				Key = key,
+				LastModified = SystemTime.UtcNow
 			});
 		}
 
@@ -143,7 +146,6 @@ namespace Raven.Database.Impl
 			Etag etag,
 			TransactionInformation transactionInformation,
 			Etag committedEtag,
-			SequentialUuidGenerator uuidGenerator,
 			DocumentInTransactionData item)
 		{
 			try
@@ -165,7 +167,7 @@ namespace Raven.Database.Impl
 						{
 							transactionId = transactionInformation.Id,
 							committedEtag = committedEtag,
-							currentEtag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions)
+							currentEtag = item.Etag
 						};
 					}, (_, existing) =>
 					{
@@ -190,7 +192,7 @@ namespace Raven.Database.Impl
 							{
 								transactionId = transactionInformation.Id,
 								committedEtag = committedEtag,
-								currentEtag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions)
+								currentEtag = item.Etag
 							};
 						}
 
@@ -208,6 +210,55 @@ namespace Raven.Database.Impl
 				Rollback(transactionInformation.Id);
 				throw;
 			}
+		}
+
+		public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
+		{
+			return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocument
+			{
+				DataAsJson = change.Data,
+				Metadata = change.Metadata,
+				Key = theKey,
+				Etag = change.Etag,
+				NonAuthoritativeInformation = false,
+				LastModified = change.LastModified
+			}, out document);
+		}
+
+		public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocumentMetadata document)
+		{
+			return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocumentMetadata
+			{
+				Metadata = change.Metadata,
+				Key = theKey,
+				Etag = change.Etag,
+				NonAuthoritativeInformation = false,
+				LastModified = change.LastModified
+			}, out document);
+		}
+
+		private bool TryGetInternal<T>(string key, TransactionInformation transactionInformation, Func<string, DocumentInTransactionData, T> createDoc, out T document)
+			where T : class
+		{
+			TransactionState state;
+			if (transactionStates.TryGetValue(transactionInformation.Id, out state) == false)
+			{
+				document = null;
+				return false;
+			}
+			var change = state.changes.LastOrDefault(x => string.Equals(x.Key, key, StringComparison.InvariantCultureIgnoreCase));
+			if (change == null)
+			{
+				document = null;
+				return false;
+			}
+			if (change.Delete)
+			{
+				document = null;
+				return true;
+			}
+			document = createDoc(key, change);
+			return true;
 		}
 	}
 }

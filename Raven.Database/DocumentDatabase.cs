@@ -649,15 +649,20 @@ namespace Raven.Database
 			if (key == null)
 				throw new ArgumentNullException("key");
 			key = key.Trim();
+
 			JsonDocument document = null;
-			TransactionalStorage.Batch(actions =>
+			if (transactionInformation == null || 
+				inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
 			{
-				document = actions.Documents.DocumentByKey(key, transactionInformation);
-			});
+				TransactionalStorage.Batch(actions =>
+				{
+					document = actions.Documents.DocumentByKey(key, transactionInformation);
+				});
+			
+				document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
+			}
 
 			DocumentRetriever.EnsureIdInMetadata(document);
-
-			document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
 
 			return new DocumentRetriever(null, ReadTriggers, inFlightTransactionalState)
 				.ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
@@ -669,11 +674,15 @@ namespace Raven.Database
 				throw new ArgumentNullException("key");
 			key = key.Trim();
 			JsonDocumentMetadata document = null;
-			TransactionalStorage.Batch(actions =>
+			if (transactionInformation == null ||
+			    inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
 			{
-				document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
-			});
-
+				TransactionalStorage.Batch(actions =>
+				{
+					document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
+				});
+			}
+			
 			DocumentRetriever.EnsureIdInMetadata(document);
 			document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
 			return new DocumentRetriever(null, ReadTriggers, inFlightTransactionalState)

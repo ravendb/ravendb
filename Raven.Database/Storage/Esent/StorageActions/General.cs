@@ -318,9 +318,8 @@ namespace Raven.Storage.Esent.StorageActions
 					Delete =
 						Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions,
 													tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
-					Etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
-											  tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).
-						TransfromToGuidWithProperSorting(),
+					Etag = Etag.Parse(Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
+											  tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"])),
 					Key = key,
 					Metadata = metadata.ToJObject(),
 				});
