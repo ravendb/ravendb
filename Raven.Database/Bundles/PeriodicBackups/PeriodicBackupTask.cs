@@ -11,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Smuggler;

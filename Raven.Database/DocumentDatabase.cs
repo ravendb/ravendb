@@ -2251,32 +2251,6 @@ namespace Raven.Database
 			}
 		}
 
-		public void AddAlert(Alert alert)
-		{
-			AlertsDocument alertsDocument;
-			var alertsDoc = Get(Constants.RavenAlerts, null);
-			RavenJObject metadata;
-			if (alertsDoc == null)
-			{
-				alertsDocument = new AlertsDocument();
-				metadata = new RavenJObject();
-			}
-			else
-			{
-				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
-				metadata = alertsDoc.Metadata;
-			}
-
-			var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
-			if (withSameUniqe != null)
-				alertsDocument.Alerts.Remove(withSameUniqe);
-
-			alertsDocument.Alerts.Add(alert);
-			var document = RavenJObject.FromObject(alertsDocument);
-			document.Remove("Id");
-			Put(Constants.RavenAlerts, null, document, metadata, null);
-		}
-
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
 		{
 			var documents = 0;
