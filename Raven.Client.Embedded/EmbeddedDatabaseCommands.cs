@@ -702,7 +702,7 @@ namespace Raven.Client.Embedded
 		public byte[] PromoteTransaction(Guid fromTxId)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.PromoteTransaction(fromTxId);
+			throw new NotSupportedException();
 		}
 
 		/// <summary>

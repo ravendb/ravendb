@@ -683,7 +683,6 @@
     <Compile Include="Server\Responders\SuggestionResponder.cs" />
     <Compile Include="Server\Responders\Terms.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
-    <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
     <Compile Include="Server\Connections\TransportState.cs" />
