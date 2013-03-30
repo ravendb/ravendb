@@ -123,7 +123,7 @@ namespace Raven.Database
 		/// <summary>
 		/// This is required to ensure serial generation of etags during puts
 		/// </summary>
-		private readonly object putSerialLock = new object();
+		private readonly PutSerialLock putSerialLocker = new PutSerialLock();
 
 		/// <summary>
 		/// Requires to avoid having serialize writes to the same attachments
@@ -693,7 +693,7 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveMetadataReservedProperties(metadata);
 			Etag newEtag = Etag.Empty;
-			lock (putSerialLock)
+			using(putSerialLocker.Lock())
 			{
 				TransactionalStorage.Batch(actions =>
 				{
@@ -904,7 +904,7 @@ namespace Raven.Database
 				throw new ArgumentNullException("key");
 			key = key.Trim();
 
-			lock (putSerialLock)
+			using(putSerialLocker.Lock())
 			{
 				var deleted = false;
 				log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
@@ -990,7 +990,7 @@ namespace Raven.Database
 		{
 			try
 			{
-				lock (putSerialLock)
+				using(putSerialLocker.Lock())
 				{
 					TransactionalStorage.Batch(actions =>
 					{
@@ -1861,7 +1861,7 @@ namespace Raven.Database
 			if (currentTask.Completed())
 				return pending.Result;
 
-			lock (putSerialLock)
+			using(putSerialLocker.Lock())
 			{
 				try
 				{
@@ -1905,7 +1905,7 @@ namespace Raven.Database
 		private void BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(PendingBatch pending)
 		{
 			int retries = 128;
-			lock (putSerialLock)
+			using(putSerialLocker.Lock())
 			{
 				while (true)
 				{
@@ -2253,31 +2253,28 @@ namespace Raven.Database
 
 		public void AddAlert(Alert alert)
 		{
-			lock (putSerialLock)
+			AlertsDocument alertsDocument;
+			var alertsDoc = Get(Constants.RavenAlerts, null);
+			RavenJObject metadata;
+			if (alertsDoc == null)
 			{
-				AlertsDocument alertsDocument;
-				var alertsDoc = Get(Constants.RavenAlerts, null);
-				RavenJObject metadata;
-				if (alertsDoc == null)
-				{
-					alertsDocument = new AlertsDocument();
-					metadata = new RavenJObject();
-				}
-				else
-				{
-					alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
-					metadata = alertsDoc.Metadata;
-				}
-
-				var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
-				if (withSameUniqe != null)
-					alertsDocument.Alerts.Remove(withSameUniqe);
-
-				alertsDocument.Alerts.Add(alert);
-				var document = RavenJObject.FromObject(alertsDocument);
-				document.Remove("Id");
-				Put(Constants.RavenAlerts, null, document, metadata, null);
+				alertsDocument = new AlertsDocument();
+				metadata = new RavenJObject();
 			}
+			else
+			{
+				alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
+				metadata = alertsDoc.Metadata;
+			}
+
+			var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
+			if (withSameUniqe != null)
+				alertsDocument.Alerts.Remove(withSameUniqe);
+
+			alertsDocument.Alerts.Add(alert);
+			var document = RavenJObject.FromObject(alertsDocument);
+			document.Remove("Id");
+			Put(Constants.RavenAlerts, null, document, metadata, null);
 		}
 
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
@@ -2292,7 +2289,7 @@ namespace Raven.Database
 				foreach (var docs in docBatches)
 				{
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
-					lock (putSerialLock)
+					using(putSerialLocker.Lock())
 					{
 						var inserts = 0;
 						var batch = 0;
