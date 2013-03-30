@@ -97,7 +97,9 @@ namespace Raven.Database
 		private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
 		private long pendingTaskCounter;
-		private ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, PendingTaskAndState>();
+		private readonly ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, PendingTaskAndState>();
+
+		private readonly InFlightTransactionalState inFlightTransactionalState = new InFlightTransactionalState();
 
 		private class PendingTaskAndState
 		{
@@ -117,8 +119,6 @@ namespace Raven.Database
 		{
 			get { return indexingExecuter; }
 		}
-
-		private readonly ConcurrentDictionary<Guid, CommittableTransaction> promotedTransactions = new ConcurrentDictionary<Guid, CommittableTransaction>();
 
 		/// <summary>
 		/// This is required to ensure serial generation of etags during puts
@@ -740,8 +740,10 @@ namespace Raven.Database
 					}
 					else
 					{
-						newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
-																				document, metadata, transactionInformation);
+						var doc = actions.Documents.DocumentMetadataByKey(key, null);
+						newEtag = inFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata, transactionInformation,
+							doc == null ? Etag.Empty : doc.Etag, 
+							sequentialUuidGenerator);
 					}
 					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
 				});
@@ -966,7 +968,13 @@ namespace Raven.Database
 					}
 					else
 					{
-						deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
+						var doc = actions.Documents.DocumentMetadataByKey(key, null);
+
+						inFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
+							etag,
+							doc == null ? Etag.Empty : doc.Etag, 
+							sequentialUuidGenerator);
+						deleted = doc != null;
 					}
 					workContext.ShouldNotifyAboutWork(() => "DEL " + key);
 				});
@@ -994,7 +1002,7 @@ namespace Raven.Database
 				{
 					TransactionalStorage.Batch(actions =>
 					{
-						actions.Transactions.CompleteTransaction(txId, doc =>
+						inFlightTransactionalState.Commit(txId, doc =>
 						{
 							// doc.Etag - represent the _modified_ document etag, and we already
 							// checked etags on previous PUT/DELETE, so we don't pass it here
@@ -1005,11 +1013,9 @@ namespace Raven.Database
 									doc.Data,
 									doc.Metadata, null);
 						});
-						actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
 						workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
 					});
 				}
-				TryCompletePromotedTransaction(txId);
 			}
 			catch (Exception e)
 			{
@@ -1017,57 +1023,11 @@ namespace Raven.Database
 					return;
 				throw;
 			}
-		}
-
-		private void TryCompletePromotedTransaction(Guid txId)
-		{
-			CommittableTransaction transaction;
-			if (!promotedTransactions.TryRemove(txId, out transaction))
-				return;
-			System.Threading.Tasks.Task.Factory.FromAsync(transaction.BeginCommit, transaction.EndCommit, null)
-				.ContinueWith(task =>
-				{
-					if (task.Exception != null)
-						log.WarnException("Could not commit dtc transaction", task.Exception);
-					try
-					{
-						transaction.Dispose();
-					}
-					catch (Exception e)
-					{
-						log.WarnException("Could not dispose of dtc transaction", e);
-					}
-				});
-		}
-
-		private void TryUndoPromotedTransaction(Guid txId)
-		{
-			CommittableTransaction transaction;
-			if (!promotedTransactions.TryRemove(txId, out transaction))
-				return;
-			transaction.Rollback();
-			transaction.Dispose();
 		}
 
 		public void Rollback(Guid txId)
 		{
-			try
-			{
-				TransactionalStorage.Batch(actions =>
-				{
-					actions.Transactions.RollbackTransaction(txId);
-					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-					workContext.ShouldNotifyAboutWork(() => "ROLLBACK " + txId);
-				});
-				TryUndoPromotedTransaction(txId);
-			}
-			catch (Exception e)
-			{
-				if (TransactionalStorage.HandleException(e))
-					return;
-
-				throw;
-			}
+			inFlightTransactionalState.Rollback(txId);
 		}
 
 		[MethodImpl(MethodImplOptions.Synchronized)]
@@ -2021,18 +1981,6 @@ namespace Raven.Database
 
 				transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
 			}
-		}
-
-		public byte[] PromoteTransaction(Guid fromTxId)
-		{
-			var committableTransaction = new CommittableTransaction();
-			var transmitterPropagationToken = TransactionInterop.GetTransmitterPropagationToken(committableTransaction);
-			TransactionalStorage.Batch(
-				actions =>
-					actions.Transactions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
-												TransactionManager.DefaultTimeout));
-			promotedTransactions.TryAdd(committableTransaction.TransactionInformation.DistributedIdentifier, committableTransaction);
-			return transmitterPropagationToken;
 		}
 
 		public void ResetIndex(string index)
