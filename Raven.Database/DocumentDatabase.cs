@@ -681,10 +681,10 @@ namespace Raven.Database
 				{
 					document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
 				});
+				document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
 			}
 			
 			DocumentRetriever.EnsureIdInMetadata(document);
-			document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
 			return new DocumentRetriever(null, ReadTriggers, inFlightTransactionalState)
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
 		}
@@ -1015,7 +1015,7 @@ namespace Raven.Database
 				{
 					TransactionalStorage.Batch(actions =>
 					{
-						inFlightTransactionalState.Commit(txId, doc =>
+						inFlightTransactionalState.Commit(txId, doc => // this just commit the values, not remove the tx
 						{
 							// doc.Etag - represent the _modified_ document etag, and we already
 							// checked etags on previous PUT/DELETE, so we don't pass it here
@@ -1028,6 +1028,7 @@ namespace Raven.Database
 						});
 						workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
 					});
+					inFlightTransactionalState.Rollback(txId);  // this is where we actually remove the tx
 				}
 			}
 			catch (Exception e)

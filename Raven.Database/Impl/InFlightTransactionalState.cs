@@ -113,7 +113,7 @@ namespace Raven.Database.Impl
 		public void Rollback(Guid id)
 		{
 			TransactionState value;
-			if (transactionStates.TryRemove(id, out value) == false)
+			if (transactionStates.TryGetValue(id, out value) == false)
 				return;
 			lock (value)
 			{
@@ -123,12 +123,14 @@ namespace Raven.Database.Impl
 					changedInTransaction.TryRemove(change.Key, out guid);
 				}
 			}
+
+			transactionStates.TryRemove(id, out value);
 		}
 
 		public void Commit(Guid id, Action<DocumentInTransactionData> action)
 		{
 			TransactionState value;
-			if (transactionStates.TryRemove(id, out value) == false)
+			if (transactionStates.TryGetValue(id, out value) == false)
 				throw new InvalidOperationException("There is no transaction with id: " + id);
 
 			lock (value)
@@ -136,8 +138,6 @@ namespace Raven.Database.Impl
 				foreach (var change in value.changes)
 				{
 					action(change);
-					ChangedDoc guid;
-					changedInTransaction.TryRemove(change.Key, out guid);
 				}
 			}
 		}
