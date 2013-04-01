@@ -89,34 +89,36 @@ namespace Raven.Database.Impl
 			return doc.transactionId != value;
 		}
 
-		public TDocument SetNonAuthoritativeInformation<TDocument>(TransactionInformation tx, string key, TDocument document) where TDocument : class, IJsonDocumentMetadata, new()
+		public Func<TDocument, TDocument> GetNonAuthoritativeInformationBehavior<TDocument>(TransactionInformation tx, string key) where TDocument : class, IJsonDocumentMetadata, new()
 		{
 			ChangedDoc existing;
 			if (changedInTransaction.TryGetValue(key, out existing) == false || (tx != null && tx.Id == existing.transactionId))
-				return document;
+				return null;
 
 			TransactionState value;
 			if (transactionStates.TryGetValue(existing.transactionId, out value) == false ||
 				SystemTime.UtcNow > value.lastSeen.Value)
 			{
 				Rollback(existing.transactionId);
-				return document;
+				return null;
 			}
-
-			if (document == null)
+			return document =>
 			{
-				return new TDocument
+				if (document == null)
 				{
-					Key = key,
-					Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
-					LastModified = DateTime.MinValue,
-					NonAuthoritativeInformation = true,
-					Etag = Etag.Empty
-				};
-			}
+					return new TDocument
+					{
+						Key = key,
+						Metadata = new RavenJObject {{Constants.RavenDocumentDoesNotExists, true}},
+						LastModified = DateTime.MinValue,
+						NonAuthoritativeInformation = true,
+						Etag = Etag.Empty
+					};
+				}
 
-			document.NonAuthoritativeInformation = true;
-			return document;
+				document.NonAuthoritativeInformation = true;
+				return document;
+			};
 		}
 
 		public void Rollback(Guid id)

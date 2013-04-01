@@ -205,7 +205,9 @@ namespace Raven.Database.Impl
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
 			EnsureIdInMetadata(doc);
-			doc = inFlightTransactionalState.SetNonAuthoritativeInformation(null, key, doc);
+			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
+			if (nonAuthoritativeInformationBehavior != null)
+				doc = nonAuthoritativeInformationBehavior(doc);
 			cache[key] = doc;
 			return doc;
 		}

@@ -654,12 +654,13 @@ namespace Raven.Database
 			if (transactionInformation == null || 
 				inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
 			{
-				TransactionalStorage.Batch(actions =>
-				{
-					document = actions.Documents.DocumentByKey(key, transactionInformation);
-				});
-			
-				document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
+				// first we check the dtc state, then the storage, to avoid race conditions
+				var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
+
+				TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key, transactionInformation); });
+
+				if (nonAuthoritativeInformationBehavior != null)
+					document = nonAuthoritativeInformationBehavior(document);
 			}
 
 			DocumentRetriever.EnsureIdInMetadata(document);
@@ -677,11 +678,13 @@ namespace Raven.Database
 			if (transactionInformation == null ||
 			    inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
 			{
+				var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior < JsonDocumentMetadata>(transactionInformation, key);
 				TransactionalStorage.Batch(actions =>
 				{
 					document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
 				});
-				document = inFlightTransactionalState.SetNonAuthoritativeInformation(transactionInformation, key, document);
+				if (nonAuthoritativeInformationBehavior != null)
+					document = nonAuthoritativeInformationBehavior(document);
 			}
 			
 			DocumentRetriever.EnsureIdInMetadata(document);
@@ -1016,10 +1019,12 @@ namespace Raven.Database
 			{
 				using(putSerialLocker.Lock())
 				{
+					log.Debug("Committing tx {0}", txId);
 					TransactionalStorage.Batch(actions =>
 					{
 						inFlightTransactionalState.Commit(txId, doc => // this just commit the values, not remove the tx
 						{
+							log.Debug("Commit of txId {0}: {1} {2}", txId, doc.Delete ? "DEL" : "PUT", doc.Key);
 							// doc.Etag - represent the _modified_ document etag, and we already
 							// checked etags on previous PUT/DELETE, so we don't pass it here
 							if (doc.Delete)
@@ -1603,9 +1608,10 @@ namespace Raven.Database
 						if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
 							continue;
 						DocumentRetriever.EnsureIdInMetadata(doc);
-						var document = inFlightTransactionalState.SetNonAuthoritativeInformation(null, doc.Key, doc);
+						var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+						JsonDocument document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
 						document = documentRetriever
-							.ExecuteReadTriggers(document, null, ReadOperation.Load);
+							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
 						if (document == null)
 							continue;
 
@@ -1644,7 +1650,8 @@ namespace Raven.Database
 						if (etag != null)
 							etag = doc.Etag;
 						DocumentRetriever.EnsureIdInMetadata(doc);
-						var document = inFlightTransactionalState.SetNonAuthoritativeInformation(null, doc.Key, doc);
+						var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+						var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
 						document = documentRetriever
 							.ExecuteReadTriggers(document, null, ReadOperation.Load);
 						if (document == null)
