@@ -19,7 +19,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
-		/// <summary>
+	    /// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
@@ -50,11 +50,13 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			var props = typeof (TProjection).GetProperties().Select(x => x.Name).ToArray();
-			return SelectFields<TProjection>(props, props);
+			var propertyInfos = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var projections = propertyInfos.Select(x => x.Name).ToArray();
+			var fields = propertyInfos.Select(x => DocumentConvention.FindIdentityProperty(x) ? Constants.DocumentIdFieldName : x.Name).ToArray();
+			return SelectFields<TProjection>(fields, projections);
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
@@ -695,7 +697,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Sorts the query results by distance.
+        /// Sorts the query results by distance.
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
 		{
