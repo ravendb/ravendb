@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -46,18 +47,20 @@ namespace Raven.Database.Impl
 			Etag committedEtag,
 			SequentialUuidGenerator uuidGenerator)
 		{
+			metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+			data.EnsureCannotBeChangeAndEnableSnapshotting();
 			return AddToTransactionState(key, etag,
-			                      transactionInformation,
-			                      committedEtag,
-			                      new DocumentInTransactionData
-			                      {
-				                      Metadata = metadata,
-				                      Data = data,
-				                      Delete = false,
-				                      Key = key,
+								  transactionInformation,
+								  committedEtag,
+								  new DocumentInTransactionData
+								  {
+									  Metadata = metadata,
+									  Data = data,
+									  Delete = false,
+									  Key = key,
 									  LastModified = SystemTime.UtcNow,
 									  Etag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions)
-			                      });
+								  });
 		}
 
 		public void DeleteDocumentInTransaction(
@@ -77,7 +80,13 @@ namespace Raven.Database.Impl
 
 		public bool IsModified(string key)
 		{
-			return changedInTransaction.ContainsKey(key);
+			var value = currentlyCommittingTransaction.Value;
+			if (value == Guid.Empty)
+				return changedInTransaction.ContainsKey(key);
+			ChangedDoc doc;
+			if (changedInTransaction.TryGetValue(key, out doc) == false)
+				return false;
+			return doc.transactionId != value;
 		}
 
 		public TDocument SetNonAuthoritativeInformation<TDocument>(TransactionInformation tx, string key, TDocument document) where TDocument : class, IJsonDocumentMetadata, new()
@@ -127,6 +136,8 @@ namespace Raven.Database.Impl
 			transactionStates.TryRemove(id, out value);
 		}
 
+		private readonly ThreadLocal<Guid> currentlyCommittingTransaction = new ThreadLocal<Guid>();
+
 		public void Commit(Guid id, Action<DocumentInTransactionData> action)
 		{
 			TransactionState value;
@@ -135,9 +146,25 @@ namespace Raven.Database.Impl
 
 			lock (value)
 			{
-				foreach (var change in value.changes)
+				currentlyCommittingTransaction.Value = id;
+				try
 				{
-					action(change);
+					foreach (var change in value.changes)
+					{
+						action(new DocumentInTransactionData
+						{
+							Metadata = (RavenJObject)change.Metadata.CreateSnapshot(),
+							Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
+							Delete = change.Delete,
+							Etag = change.Etag,
+							LastModified = change.LastModified,
+							Key = change.Key
+						});
+					}
+				}
+				finally
+				{
+					currentlyCommittingTransaction.Value = Guid.Empty;
 				}
 			}
 		}
@@ -157,12 +184,12 @@ namespace Raven.Database.Impl
 					{
 						Value = SystemTime.UtcNow + transactionInformation.Timeout
 					};
-					
+
 					var result = changedInTransaction.AddOrUpdate(key, s =>
 					{
 						if (etag != null && etag != committedEtag)
 							throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
-							
+
 						return new ChangedDoc
 						{
 							transactionId = transactionInformation.Id,
@@ -175,7 +202,7 @@ namespace Raven.Database.Impl
 						{
 							if (etag != null && etag != existing.currentEtag)
 								throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
-					
+
 							return existing;
 						}
 
@@ -187,7 +214,7 @@ namespace Raven.Database.Impl
 
 							if (etag != null && etag != committedEtag)
 								throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
-					
+
 							return new ChangedDoc
 							{
 								transactionId = transactionInformation.Id,
@@ -216,8 +243,8 @@ namespace Raven.Database.Impl
 		{
 			return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocument
 			{
-				DataAsJson = change.Data,
-				Metadata = change.Metadata,
+				DataAsJson = (RavenJObject)change.Data.CreateSnapshot(),
+				Metadata = (RavenJObject)change.Metadata.CreateSnapshot(),
 				Key = theKey,
 				Etag = change.Etag,
 				NonAuthoritativeInformation = false,
@@ -229,7 +256,7 @@ namespace Raven.Database.Impl
 		{
 			return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocumentMetadata
 			{
-				Metadata = change.Metadata,
+				Metadata = (RavenJObject)change.Metadata.CreateSnapshot(),
 				Key = theKey,
 				Etag = change.Etag,
 				NonAuthoritativeInformation = false,

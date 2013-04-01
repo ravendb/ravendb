@@ -720,6 +720,9 @@ namespace Raven.Database
 					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
 					if (transactionInformation == null)
 					{
+						if(inFlightTransactionalState.IsModified(key))
+							throw new ConcurrencyException("PUT attempted on : " + key + " while it is being locked by another transaction");
+					
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
 						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
