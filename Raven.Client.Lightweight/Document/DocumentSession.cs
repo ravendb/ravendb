@@ -654,17 +654,6 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Promotes a transaction specified to a distributed transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns>The token representing the distributed transaction</returns>
-		public override byte[] PromoteTransaction(Guid fromTxId)
-		{
-			IncrementRequestCount();
-			return DatabaseCommands.PromoteTransaction(fromTxId);
-		}
-
-		/// <summary>
 		/// Query RavenDB dynamically using LINQ
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>

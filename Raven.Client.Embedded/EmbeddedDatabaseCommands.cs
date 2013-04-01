@@ -695,17 +695,6 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Promotes the transaction.
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
-		public byte[] PromoteTransaction(Guid fromTxId)
-		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			throw new NotSupportedException();
-		}
-
-		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
@@ -730,14 +719,6 @@ namespace Raven.Client.Embedded
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
 		{
 			return new EmbeddedBulkInsertOperation(database, options);
-		}
-
-		/// <summary>
-		/// It seems that we can't promote a transaction inside the same process
-		/// </summary>
-		public bool SupportsPromotableTransactions
-		{
-			get { return false; }
 		}
 
 		/// <summary>

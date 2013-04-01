@@ -884,43 +884,15 @@ more responsive application.
 			if (registered.Add(StoreIdentifier))
 			{
 				var transactionalSession = (ITransactionalDocumentSession)this;
-				if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false)
-				{
-					Transaction.Current.EnlistDurable(
-						ResourceManagerId,
-						new RavenClientEnlistment(transactionalSession, () =>
-						{
-							RegisteredStoresInTransaction.Remove(localIdentifier);
-							if (documentStore.WasDisposed)
-								throw new ObjectDisposedException("RavenDB Session");
-						}),
-						EnlistmentOptions.None);
-				}
-				else
-				{
-					var promotableSinglePhaseNotification = new PromotableRavenClientEnlistment(transactionalSession,
-						() =>
-						{
-							RegisteredStoresInTransaction.Remove(localIdentifier);
-							if (documentStore.WasDisposed)
-								throw new ObjectDisposedException("RavenDB Session");
-						});
-					var registeredSinglePhaseNotification =
-						Transaction.Current.EnlistPromotableSinglePhase(promotableSinglePhaseNotification);
-
-					if (registeredSinglePhaseNotification == false)
+				Transaction.Current.EnlistDurable(
+					ResourceManagerId,
+					new RavenClientEnlistment(transactionalSession, () =>
 					{
-						Transaction.Current.EnlistDurable(
-							ResourceManagerId,
-							new RavenClientEnlistment(transactionalSession, () =>
-							{
-								RegisteredStoresInTransaction.Remove(localIdentifier);
-								if(documentStore.WasDisposed)
-									throw new ObjectDisposedException("RavenDB Session");
-							}),
-							EnlistmentOptions.None);
-					}
-				}
+						RegisteredStoresInTransaction.Remove(localIdentifier);
+						if (documentStore.WasDisposed)
+							throw new ObjectDisposedException("RavenDB Session");
+					}),
+					EnlistmentOptions.None);
 			}
 			hasEnlisted = true;
 		}
@@ -1024,12 +996,6 @@ more responsive application.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
 		public abstract void Rollback(Guid txId);
-		/// <summary>
-		/// Promotes the transaction.
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
-		public abstract byte[] PromoteTransaction(Guid fromTxId);
 
 #if !SILVERLIGHT
 		/// <summary>

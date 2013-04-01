@@ -400,16 +400,6 @@ namespace Raven.Client.Document.Async
 		}
 
 		/// <summary>
-		/// Promotes the transaction.
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
-		public override byte[] PromoteTransaction(Guid fromTxId)
-		{
-			throw new NotImplementedException();
-		}
-
-		/// <summary>
 		/// Dynamically queries RavenDB using LINQ
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>

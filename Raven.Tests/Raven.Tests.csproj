@@ -883,7 +883,6 @@
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
     <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests.cs" />
-    <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
     <Compile Include="Document\DynamicDocuments.cs" />
     <Compile Include="Document\Game.cs" />
     <Compile Include="Document\Inheritance.cs" />

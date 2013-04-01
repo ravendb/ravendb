@@ -58,7 +58,6 @@ namespace Raven.Tests.Shard.BlogModel
 				var txId = Guid.NewGuid();
 				Assert.Throws<NotSupportedException>(() => session.Commit(txId));
 				Assert.Throws<NotSupportedException>(() => session.Rollback(txId));
-				Assert.Throws<NotSupportedException>(() => session.PromoteTransaction(txId));
 			}
 		}
 	}

@@ -1373,26 +1373,6 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		/// <summary>
-		/// Promotes the transaction.
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
-		public byte[] PromoteTransaction(Guid fromTxId)
-		{
-			return ExecuteWithReplication("PUT", u => DirectPromoteTransaction(fromTxId, u));
-		}
-
-		private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
-		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/promote?fromTxId=" + fromTxId, "POST", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			return webRequest.ReadResponseBytes();
-		}
 
 		private void DirectRollback(Guid txId, string operationUrl)
 		{
@@ -1458,19 +1438,6 @@ namespace Raven.Client.Connection
 			{
 				OperationsHeaders = OperationsHeaders
 			};
-		}
-
-
-
-		/// <summary>
-		/// Gets a value indicating whether [supports promotable transactions].
-		/// </summary>
-		/// <value>
-		/// 	<c>true</c> if [supports promotable transactions]; otherwise, <c>false</c>.
-		/// </value>
-		public bool SupportsPromotableTransactions
-		{
-			get { return true; }
 		}
 
 		/// <summary>

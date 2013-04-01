@@ -250,26 +250,12 @@ namespace Raven.Client.Connection
 		void Rollback(Guid txId);
 
 		/// <summary>
-		/// Promotes the transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
-		byte[] PromoteTransaction(Guid fromTxId);
-
-		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IDatabaseCommands With(ICredentials credentialsForSession);
 
-		/// <summary>
-		/// Gets a value indicating whether [supports promotable transactions].
-		/// </summary>
-		/// <value>
-		/// 	<c>true</c> if [supports promotable transactions]; otherwise, <c>false</c>.
-		/// </value>
-		bool SupportsPromotableTransactions { get; }
-
+	
 		/// <summary>
 		/// Perform a set based deletes using the specified index, not allowing the operation
 		/// if the index is stale
