@@ -16,7 +16,7 @@ namespace Raven.Tests.MailingList
 	public class Jalchr : RavenTest
 	{
 		[Fact]
-		public void CanGetIdWithCorrectCase()
+		public void CanGetProperError()
 		{
 			using (var store = NewDocumentStore())
 			{

@@ -57,8 +57,10 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			var props = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Select(x => x.Name).ToArray();
-			return SelectFields<TProjection>(props, props);
+			var propertyInfos = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var projections = propertyInfos.Select(x => x.Name).ToArray();
+			var fields = propertyInfos.Select(x => DocumentConvention.FindIdentityProperty(x) ? Constants.DocumentIdFieldName : x.Name).ToArray();
+			return SelectFields<TProjection>(fields, projections);
 		}
 
 	    public IDocumentQuery<T> SetResultTransformer(string resultsTransformer)
