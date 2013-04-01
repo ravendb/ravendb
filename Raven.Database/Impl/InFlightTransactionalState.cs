@@ -185,6 +185,13 @@ namespace Raven.Database.Impl
 						Value = SystemTime.UtcNow + transactionInformation.Timeout
 					};
 
+					var currentTxVal = state.changes.LastOrDefault(x => string.Equals(x.Key, key, StringComparison.InvariantCultureIgnoreCase));
+					if (currentTxVal != null)
+					{
+						if (etag != null && currentTxVal.Etag != etag)
+							throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
+						state.changes.Remove(currentTxVal);
+					}
 					var result = changedInTransaction.AddOrUpdate(key, s =>
 					{
 						if (etag != null && etag != committedEtag)
