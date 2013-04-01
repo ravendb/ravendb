@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void Should_save_put_to_tenant_database_if_tenant_database_is_reloaded_after_the_put_transaction()
+        public void Should_fail_put_to_tenant_database_if_tenant_database_is_reloaded_after_the_put_transaction_because_tx_was_reset()
         {
             using (var server = GetNewServer(runInMemory: false))
             using (var store = new DocumentStore
@@ -96,11 +96,8 @@ namespace Raven.Tests.Issues
                 tenantDb.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
                 tenantDb.Commit(tx2.Id);
 
-                server.Database.Commit(tx1.Id);
-
-                tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
-                var fooDoc = tenantDb.Get("Foo/1", new TransactionInformation { Id = Guid.NewGuid() });
-                Assert.NotNull(fooDoc);
+	            var exception = Assert.Throws<InvalidOperationException>(() => server.Database.Commit(tx1.Id));
+				Assert.Contains("There is no transaction with id:", exception.Message);
             }
         }
 
