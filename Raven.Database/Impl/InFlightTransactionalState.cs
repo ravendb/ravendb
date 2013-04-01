@@ -153,7 +153,7 @@ namespace Raven.Database.Impl
 					{
 						action(new DocumentInTransactionData
 						{
-							Metadata = (RavenJObject)change.Metadata.CreateSnapshot(),
+							Metadata = change.Metadata == null ? null : (RavenJObject)change.Metadata.CreateSnapshot(),
 							Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
 							Delete = change.Delete,
 							Etag = change.Etag,
