@@ -107,6 +107,11 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       _currentErrorContext = null;
     }
 
+	protected void TryClearErrorContext()
+	{
+		_currentErrorContext = null;
+	}
+
     protected bool IsErrorHandled(object currentObject, JsonContract contract, object keyValue, IJsonLineInfo lineInfo, string path, Exception ex)
     {
       ErrorContext errorContext = GetErrorContext(currentObject, keyValue, path, ex);
