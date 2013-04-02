@@ -68,7 +68,7 @@ namespace Raven.Bundles.Replication.Responders
 			if(existingDoc != null)
 			{
 				existingItem = existingDoc;
-				existingEtag = existingDoc.Etag;
+				existingEtag = existingDoc.Etag.Value;
 				deleted = false;
 				return existingDoc.Metadata;
 			}
