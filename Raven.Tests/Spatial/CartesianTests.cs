@@ -24,7 +24,7 @@ namespace Raven.Tests.Spatial
 				Index(x => x.Name, FieldIndexing.Analyzed);
 				Store(x => x.Name, FieldStorage.Yes);
 
-				Spatial(x => x.WKT, x => x.Cartesian(minX:0, maxX:2000, minY:0, maxY:2000, maxTreeLevel:12));
+				Spatial(x => x.WKT, x => x.Cartesian.QuadPrefixTreeIndex(12, new SpatialBounds(0, 0, 2000, 2000)));
 			}
 		}
 

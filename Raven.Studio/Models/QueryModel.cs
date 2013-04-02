@@ -521,15 +521,17 @@ namespace Raven.Studio.Models
 						.Select(x => new SpatialQueryField
 						{
 							Name = x.Key,
-							Geographical = x.Value.Type == SpatialFieldType.Geography
+							IsGeographical = x.Value.Type == SpatialFieldType.Geography,
+							Units = x.Value.Units
 						})
 						.ToList();
 
 					legacyFields.ForEach(x => spatialFields.Add(new SpatialQueryField
-					{
-						Name = x,
-						Geographical = true
-					}));
+						{
+							Name = x,
+							IsGeographical = true,
+							Units = SpatialUnits.Kilometers
+						}));
 
 					UpdateSpatialFields(spatialFields);
 
@@ -768,15 +770,14 @@ namespace Raven.Studio.Models
 			if (IsSpatialQuerySupported && SpatialQuery.Y.HasValue && SpatialQuery.X.HasValue)
 			{
 				var radiusValue = SpatialQuery.Radius.HasValue ? SpatialQuery.Radius.Value : 1;
-				if (SpatialQuery.RadiusUnits == SpatialUnits.Miles)
-					radiusValue *= 1.60934;
 
 				q = new SpatialIndexQuery(q)
 				{
 					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(SpatialQuery.Y.Value, SpatialQuery.X.Value, radiusValue),
 					SpatialRelation = SpatialRelation.Within,
 					SpatialFieldName = SpatialQuery.FieldName,
-					DefaultOperator = DefaultOperator
+					DefaultOperator = DefaultOperator,
+					RadiusUnitOverride = SpatialQuery.RadiusUnits
 				};
 			}
 

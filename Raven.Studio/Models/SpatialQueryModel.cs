@@ -10,7 +10,8 @@ namespace Raven.Studio.Models
 	public class SpatialQueryField
 	{
 		public string Name { get; set; }
-		public bool Geographical { get; set; }
+		public bool IsGeographical { get; set; }
+		public SpatialUnits Units { get; set; }
 	}
 
 	public class SpatialQueryModel : NotifyPropertyChangedBase
@@ -26,7 +27,7 @@ namespace Raven.Studio.Models
 		}
 
 		public string IndexName { get; set; }
-		private readonly Dictionary<string, bool> fields = new Dictionary<string, bool>();
+		private readonly Dictionary<string, SpatialQueryField> fields = new Dictionary<string, SpatialQueryField>();
 		public BindableCollection<string> Fields { get; private set; }
 
 		public void UpdateFields(IEnumerable<SpatialQueryField> queryFields)
@@ -37,7 +38,7 @@ namespace Raven.Studio.Models
 			foreach (var queryField in queryFields.OrderBy(x => x.Name))
 			{
 				Fields.Add(queryField.Name);
-				fields[queryField.Name] = queryField.Geographical;
+				fields[queryField.Name] = queryField;
 			}
 
 			FieldName = Fields.FirstOrDefault();
@@ -50,7 +51,17 @@ namespace Raven.Studio.Models
 			Radius = null;
 		}
 
-		public SpatialUnits RadiusUnits { get; set; }
+		private SpatialUnits radiusUnits;
+		public SpatialUnits RadiusUnits
+		{
+			get { return radiusUnits; }
+			set
+			{
+				if (radiusUnits == value) return;
+				radiusUnits = value;
+				OnPropertyChanged(() => RadiusUnits);
+			}
+		}
 
 		private string fieldName;
 		public string FieldName
@@ -60,7 +71,8 @@ namespace Raven.Studio.Models
 			{
 				if (fieldName == value) return;
 				fieldName = value;
-				IsGeographical = fields[fieldName];
+				IsGeographical = fields[fieldName].IsGeographical;
+				RadiusUnits = fields[fieldName].Units;
 				OnPropertyChanged(() => FieldName);
 			}
 		}

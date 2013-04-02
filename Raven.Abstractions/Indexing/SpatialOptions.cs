@@ -12,6 +12,11 @@
 			Type = SpatialFieldType.Geography;
 			Strategy = SpatialSearchStrategy.GeohashPrefixTree;
 			MaxTreeLevel = DefaultGeohashLevel;
+			MinX = -180;
+			MaxX = 180;
+			MinY = -90;
+			MaxY = 90;
+			Units = SpatialUnits.Kilometers;
 		}
 
 		public SpatialFieldType Type { get; set; }
@@ -22,9 +27,29 @@
 		public double MinY { get; set; }
 		public double MaxY { get; set; }
 
+		/// <summary>
+		/// Circle radius units, only used for geography  indexes
+		/// </summary>
+		public SpatialUnits Units { get; set; }
+
 		protected bool Equals(SpatialOptions other)
 		{
-			return Type == other.Type && Strategy == other.Strategy && MaxTreeLevel == other.MaxTreeLevel && MinX.Equals(other.MinX) && MaxX.Equals(other.MaxX) && MinY.Equals(other.MinY) && MaxY.Equals(other.MaxY);
+			var result = Type == other.Type
+			             && Strategy == other.Strategy
+			             && MaxTreeLevel == other.MaxTreeLevel;
+
+			if (Type == SpatialFieldType.Geography)
+			{
+				return result && Units == other.Units;
+			}
+			else
+			{
+				return result
+					&& MinX.Equals(other.MinX)
+					&& MaxX.Equals(other.MaxX)
+					&& MinY.Equals(other.MinY)
+					&& MaxY.Equals(other.MaxY);
+			}
 		}
 
 		public override bool Equals(object obj)
@@ -42,10 +67,19 @@
 				int hashCode = (int)Type;
 				hashCode = (hashCode * 397) ^ (int)Strategy;
 				hashCode = (hashCode * 397) ^ MaxTreeLevel;
-				hashCode = (hashCode * 397) ^ MinX.GetHashCode();
-				hashCode = (hashCode * 397) ^ MaxX.GetHashCode();
-				hashCode = (hashCode * 397) ^ MinY.GetHashCode();
-				hashCode = (hashCode * 397) ^ MaxY.GetHashCode();
+
+				if (Type == SpatialFieldType.Geography)
+				{
+					hashCode = (hashCode * 397) ^ Units.GetHashCode();
+				}
+				else
+				{
+					hashCode = (hashCode * 397) ^ MinX.GetHashCode();
+					hashCode = (hashCode * 397) ^ MaxX.GetHashCode();
+					hashCode = (hashCode * 397) ^ MinY.GetHashCode();
+					hashCode = (hashCode * 397) ^ MaxY.GetHashCode();
+				}
+
 				return hashCode;
 			}
 		}

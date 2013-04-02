@@ -12,6 +12,9 @@ namespace Raven.Database.Indexing.Spatial
 	{
 		private readonly SpatialOptions options;
 
+		private static readonly Regex RegexBox = new Regex(@"^BOX(?:2D)? \s* \( \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* , \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* \)$",
+																   RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
 		private static readonly Regex RegexGeoUriCoord = new Regex(@"^ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* , \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ,? \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+))? $",
 		                                                           RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 		private static readonly Regex RegexGeoUriUncert = new Regex(@"^ u \s* = \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) $",
@@ -30,11 +33,26 @@ namespace Raven.Database.Indexing.Spatial
 				string result;
 				if (TryParseGeoUri(shape, out result))
 					return result;
+				if (TryParseBox(shape, out result))
+					return result;
 
 				return shape;
 			}
 
 			return default(string);
+		}
+
+		private bool TryParseBox(string value, out string shape)
+		{
+			var match = RegexBox.Match(value);
+			if (match.Success)
+			{
+				shape = string.Format("{0} {1} {2} {3}", match.Groups[1].Value, match.Groups[2].Value,
+					match.Groups[3].Value, match.Groups[4].Value);
+				return true;
+			}
+			shape = default(string);
+			return false;
 		}
 
 		private bool TryParseGeoUri(string uriString, out string shape)
@@ -64,13 +82,20 @@ namespace Raven.Database.Indexing.Spatial
 					uncertainty = double.Parse(u.Groups[1].Value);
 
 					// Uncertainty is in meters when in a geographic context
-					if (uncertainty > 0 && options.Type != SpatialFieldType.Geography)
+					if (uncertainty > 0 && options.Type == SpatialFieldType.Geography)
+					{
 						uncertainty = uncertainty / 1000;
+						if (options.Units == SpatialUnits.Miles)
+							uncertainty *= KmToMiles;
+					}
 				}
 			}
 
 			if (coordinate == null)
 				return false;
+
+			if (options.Type == SpatialFieldType.Geography)
+				coordinate = new double[] { coordinate[1], coordinate[0] };
 
 			if (!double.IsNaN(uncertainty) && uncertainty > 0)
 				shape = MakeCircle(coordinate[0], coordinate[1], uncertainty);
@@ -89,5 +114,7 @@ namespace Raven.Database.Indexing.Spatial
 		{
 			return string.Format(CultureInfo.InvariantCulture, "Circle({0} {1} d={2})", x, y, radius);
 		}
+
+		private const double KmToMiles = 0.621371;
 	}
 }

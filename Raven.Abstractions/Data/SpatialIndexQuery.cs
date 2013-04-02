@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Raven.Abstractions.Indexing;
 
@@ -15,21 +14,23 @@ namespace Raven.Abstractions.Data
 	/// </summary>
 	public class SpatialIndexQuery : IndexQuery
 	{
-		public static string GetQueryShapeFromLatLon(double lat, double lng, double radius, SpatialUnits units = SpatialUnits.Kilometers)
+		public static string GetQueryShapeFromLatLon(double lat, double lng, double radius)
 		{
-            const double kilometersInMile = 1.60934;
-            var radiusInKilometers = units == SpatialUnits.Kilometers ? radius : radius * kilometersInMile;
-
 			return "Circle(" +
 			       lng.ToString("F6", CultureInfo.InvariantCulture) + " " +
 			       lat.ToString("F6", CultureInfo.InvariantCulture) + " " +
-			       "d=" + radiusInKilometers.ToString("F6", CultureInfo.InvariantCulture) +
+				   "d=" + radius.ToString("F6", CultureInfo.InvariantCulture) +
 			       ")";
 		}
 
 		public string QueryShape { get; set; }
 		public SpatialRelation SpatialRelation { get; set; }
 		public double DistanceErrorPercentage { get; set; }
+
+		/// <summary>
+		/// Overrides the units defined in the spatial index
+		/// </summary>
+		public SpatialUnits? RadiusUnitOverride { get; set; }
 
 		private string spatialFieldName = Constants.DefaultSpatialFieldName;
 		public string SpatialFieldName
@@ -71,11 +72,16 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		protected override string GetCustomQueryStringVariables()
 		{
-			return string.Format("queryShape={0}&spatialRelation={1}&spatialField={2}&distErrPrc={3}",
+			var unitsParam = string.Empty;
+			if (RadiusUnitOverride.HasValue)
+				unitsParam = string.Format("&spatialUnits={0}", RadiusUnitOverride.Value);
+
+			return string.Format("queryShape={0}&spatialRelation={1}&spatialField={2}&distErrPrc={3}{4}",
 				Uri.EscapeDataString(QueryShape),
 				SpatialRelation,
 				spatialFieldName,
-				DistanceErrorPercentage);
+				DistanceErrorPercentage,
+				unitsParam);
 		}
 	}
 }

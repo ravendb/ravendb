@@ -18,7 +18,7 @@ namespace Raven.Tests.Spatial
 			{
 				Map = docs => from doc in docs select new { doc.GeoJson };
 
-				Spatial(x => x.GeoJson, x => x.Geography());
+				Spatial(x => x.GeoJson, x => x.Geography.Default());
 			}
 		}
 

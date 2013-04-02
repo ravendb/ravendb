@@ -89,24 +89,9 @@ namespace Raven.Database.Indexing
 			}
 
 			if (viewGenerator.IsSpatialField(name))
-				return CreateSpatialFields(name, value);
+				return viewGenerator.GetSpatialField(name).CreateIndexableFields(value);
 
 			return CreateRegularFields(name, value, defaultStorage, nestedArray, defaultTermVector);
-		}
-
-		protected IEnumerable<AbstractField> CreateSpatialFields(string name, object value)
-		{
-			var spatialField = viewGenerator.GetSpatialField(name);
-			var strategy = spatialField.GetStrategy();
-
-			Shape shape;
-			if (spatialField.TryReadShape(value, out shape))
-			{
-				return strategy.CreateIndexableFields(shape)
-					.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
-			}
-
-			return Enumerable.Empty<AbstractField>();
 		}
 
 		private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO)

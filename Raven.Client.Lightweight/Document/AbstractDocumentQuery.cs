@@ -45,6 +45,7 @@ namespace Raven.Client.Document
 	{
 		protected bool isSpatialQuery;
 		protected string spatialFieldName, queryShape;
+		protected SpatialUnits? spatialUnits;
 		protected SpatialRelation spatialRelation;
 		protected double distanceErrorPct;
 		private readonly LinqPathProvider linqPathProvider;
@@ -406,9 +407,26 @@ namespace Raven.Client.Document
 		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-        /// <param name = "radiusUnits">The units of the <paramref name="radius"/></param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude,
-																			   double longitude, SpatialUnits radiusUnits)
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude)
+		{
+			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
+			return this;
+		}
+
+		/// <summary>
+		///   Filter matches to be inside the specified radius
+		/// </summary>
+		/// <param name = "radius">The radius.</param>
+		/// <param name = "latitude">The latitude.</param>
+		/// <param name = "longitude">The longitude.</param>
+		/// <param name = "radiusUnits">The units of the <paramref name="radius"/></param>
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits)
 		{
 			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
 			return this;
@@ -436,25 +454,24 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
-        protected TSelf GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
+        protected TSelf GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
 		{
-			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius, radiusUnits), SpatialRelation.Within, distanceErrorPct);
+			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within, distanceErrorPct, radiusUnits);
 		}
 
-		protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025)
+		protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
 		{
 			isSpatialQuery = true;
 			spatialFieldName = fieldName;
 			queryShape = new WktSanitizer().Sanitize(shapeWKT);
 			spatialRelation = relation;
 			this.distanceErrorPct = distanceErrorPct;
+			spatialUnits = radiusUnits;
 			return (TSelf) this;
 		}
 
 		protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria, double distanceErrorPct = 0.025)
 		{
-
-
 			var wkt = criteria.Shape as string;
 			if (wkt == null && criteria.Shape != null)
 			{
@@ -1719,6 +1736,7 @@ If you really want to do in memory filtering on the data returned from the query
 					FieldsToFetch = fieldsToFetch,
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
+					RadiusUnitOverride = spatialUnits,
 					SpatialRelation = spatialRelation,
 					DistanceErrorPercentage = distanceErrorPct,
 					DefaultField = defaultField,

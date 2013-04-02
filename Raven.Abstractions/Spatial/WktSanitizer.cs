@@ -25,7 +25,7 @@ namespace Raven.Abstractions.Spatial
 
 			RectangleRegex = new Regex(@"^ \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s* $", options);
 			DimensionFlagRegex = new Regex(@"\s+ (?:z|m|zm|Z|M|ZM) \s* \(", options);
-			ReducerRegex = new Regex(@"([+-]?(?:\d+\.?\d*|\d*\.?\d+)) \s+ ([+-]?(?:\d+\.?\d*|\d*\.?\d+)) (?:\s+[+-]?(?:\d+\.?\d*|\d*\.?\d+))*", options);
+			ReducerRegex = new Regex(@"([+-]?(?:\d+\.?\d*|\d*\.?\d+) \s+ [+-]?(?:\d+\.?\d*|\d*\.?\d+)) (?:\s+[+-]?(?:\d+\.?\d*|\d*\.?\d+))+", options);
 		}
 
 		public string Sanitize(string shapeWkt)
@@ -35,7 +35,7 @@ namespace Raven.Abstractions.Spatial
 
 			shapeWkt = DimensionFlagRegex.Replace(shapeWkt, " (");
 
-			return ReducerRegex.Replace(shapeWkt, "$1 $2");
+			return ReducerRegex.Replace(shapeWkt, "$1");
 		}
 	}
 }

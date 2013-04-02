@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using GeoAPI.Geometries;
 using NetTopologySuite.Geometries;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -157,7 +158,7 @@ namespace Raven.Tests.Spatial
 			{
 				Map = docs => from doc in docs select new { doc.Geometry };
 
-				Spatial(x => x.Geometry, x => x.Cartesian(minX: 0, maxX: 2000, minY: 0, maxY: 2000, maxTreeLevel: 12));
+				Spatial(x => x.Geometry, x => x.Cartesian.QuadPrefixTreeIndex(12, new SpatialBounds(0, 0, 2000, 2000)));
 			}
 		}
 	}

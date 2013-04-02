@@ -760,6 +760,7 @@
     <Compile Include="Spatial\JsonConverters\Wkt\WktConverter.cs" />
     <Compile Include="Spatial\PointObjectTests.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
+    <Compile Include="Spatial\ShapeStringConverterTests.cs" />
     <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\ShapeConverterTests.cs" />
@@ -1059,6 +1060,7 @@
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
+    <Compile Include="Spatial\SpatialUnitTests.cs" />
     <Compile Include="Spatial\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Notifications\NotificationOnWrongDatabase.cs" />

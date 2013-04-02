@@ -28,7 +28,7 @@ namespace Raven.Tests.Spatial
 					var doc = new Lucene.Net.Documents.Document();
 
 					var writeShape = NtsSpatialContext.GEO.ReadShape("LINESTRING (0 0, 1 1, 2 1)");
-					var spatialField = new SpatialField("WKT", new SpatialOptionsFactory().Geography());
+					var spatialField = new SpatialField("WKT", new SpatialOptionsFactory().Geography.Default());
 					var writeStrategy = spatialField.GetStrategy();
 					foreach (var f in writeStrategy.CreateIndexableFields(writeShape))
 					{
@@ -40,7 +40,7 @@ namespace Raven.Tests.Spatial
 
 				var shape = NtsSpatialContext.GEO.ReadShape("LINESTRING (1 0, 1 1, 1 2)");
 				SpatialArgs args = new SpatialArgs(SpatialOperation.Intersects, shape);
-				var spatialField2 = new SpatialField("WKT", new SpatialOptionsFactory().Geography());
+				var spatialField2 = new SpatialField("WKT", new SpatialOptionsFactory().Geography.Default());
 				var writeStrategy2 = spatialField2.GetStrategy();
 				var makeQuery = writeStrategy2.MakeQuery(args);
 				using(var search = new IndexSearcher(dir))
@@ -54,7 +54,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void LineStringsShouldIntersect()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var store = NewDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new GeoIndex());

@@ -1130,7 +1130,7 @@ namespace Raven.Database.Indexing
 				if (spatialIndexQuery != null)
 				{
 					var spatialField = parent.viewGenerator.GetSpatialField(spatialIndexQuery.SpatialFieldName);
-					var dq = spatialField.MakeQuery(q, spatialField.GetStrategy(), spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
+					var dq = spatialField.MakeQuery(q, spatialField.GetStrategy(), spatialIndexQuery);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery { { q, Occur.MUST }, { dq, Occur.MUST } };

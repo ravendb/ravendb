@@ -4,10 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using GeoAPI;
+using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Function;
 using Lucene.Net.Spatial;
+using Lucene.Net.Spatial.BBox;
 using Lucene.Net.Spatial.Prefix.Tree;
 using Lucene.Net.Spatial.Queries;
 using Lucene.Net.Spatial.Util;
@@ -82,11 +86,28 @@ namespace Raven.Database.Indexing
 			return null;
 		}
 
+		public IEnumerable<AbstractField> CreateIndexableFields(object value)
+		{
+			var shape = value as Shape;
+			if (shape != null || TryReadShape(value, out shape))
+			{
+				return strategy.CreateIndexableFields(shape)
+					.Concat(new[] { new Field(Constants.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+			}
+
+			return Enumerable.Empty<AbstractField>();	
+		}
+		
+		public Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, SpatialIndexQuery spatialQuery)
+		{
+			return MakeQuery(existingQuery, spatialStrategy, spatialQuery.QueryShape, spatialQuery.SpatialRelation, spatialQuery.DistanceErrorPercentage, spatialQuery.RadiusUnitOverride);
+		}
+
 		public Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation,
-									  double distanceErrorPct = 0.025)
+									  double distanceErrorPct = 0.025, SpatialUnits? unitOverride = null)
 		{
 			SpatialOperation spatialOperation;
-			var shape = ReadShape(shapeWKT);
+			var shape = ReadShape(shapeWKT, unitOverride);
 
 			switch (relation)
 			{
@@ -120,7 +141,7 @@ namespace Raven.Database.Indexing
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, ReadShape(spatialQry.QueryShape));
+			var args = new SpatialArgs(SpatialOperation.IsWithin, ReadShape(spatialQry.QueryShape, spatialQry.RadiusUnitOverride));
 			return spatialStrategy.MakeFilter(args);
 		}
 
@@ -136,9 +157,9 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public Shape ReadShape(string shapeWKT)
+		public Shape ReadShape(string shapeWKT, SpatialUnits? unitOverride = null)
 		{
-			return shapeStringReadWriter.ReadShape(shapeWKT);
+			return shapeStringReadWriter.ReadShape(shapeWKT, unitOverride);
 		}
 
 		public string WriteShape(Shape shape)
