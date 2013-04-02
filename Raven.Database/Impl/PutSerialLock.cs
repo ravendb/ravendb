@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Impl
@@ -17,8 +18,10 @@ namespace Raven.Database.Impl
 	{
 		private readonly object lockObj = new object();
 
-		public IDisposable Lock()
+		public IDisposable Lock(TransactionInformation tx)
 		{
+			if (tx != null)
+				return null;
 			Monitor.Enter(lockObj);
 			return new DisposableAction(() => Monitor.Exit(lockObj));
 		}

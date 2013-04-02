@@ -651,7 +651,7 @@ namespace Raven.Database
 			key = key.Trim();
 
 			JsonDocument document = null;
-			if (transactionInformation == null || 
+			if (transactionInformation == null ||
 				inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
 			{
 				// first we check the dtc state, then the storage, to avoid race conditions
@@ -676,9 +676,9 @@ namespace Raven.Database
 			key = key.Trim();
 			JsonDocumentMetadata document = null;
 			if (transactionInformation == null ||
-			    inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
+				inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
 			{
-				var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior < JsonDocumentMetadata>(transactionInformation, key);
+				var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
 				TransactionalStorage.Batch(actions =>
 				{
 					document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
@@ -686,7 +686,7 @@ namespace Raven.Database
 				if (nonAuthoritativeInformationBehavior != null)
 					document = nonAuthoritativeInformationBehavior(document);
 			}
-			
+
 			DocumentRetriever.EnsureIdInMetadata(document);
 			return new DocumentRetriever(null, ReadTriggers, inFlightTransactionalState)
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
@@ -712,7 +712,7 @@ namespace Raven.Database
 			RemoveReservedProperties(document);
 			RemoveMetadataReservedProperties(metadata);
 			Etag newEtag = Etag.Empty;
-			using(putSerialLocker.Lock())
+			using (putSerialLocker.Lock(transactionInformation))
 			{
 				TransactionalStorage.Batch(actions =>
 				{
@@ -723,9 +723,9 @@ namespace Raven.Database
 					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
 					if (transactionInformation == null)
 					{
-						if(inFlightTransactionalState.IsModified(key))
+						if (inFlightTransactionalState.IsModified(key))
 							throw new ConcurrencyException("PUT attempted on : " + key + " while it is being locked by another transaction");
-					
+
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
 						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
@@ -764,7 +764,7 @@ namespace Raven.Database
 					{
 						var doc = actions.Documents.DocumentMetadataByKey(key, null);
 						newEtag = inFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata, transactionInformation,
-							doc == null ? Etag.Empty : doc.Etag, 
+							doc == null ? Etag.Empty : doc.Etag,
 							sequentialUuidGenerator);
 					}
 					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
@@ -925,7 +925,7 @@ namespace Raven.Database
 				throw new ArgumentNullException("key");
 			key = key.Trim();
 
-			using(putSerialLocker.Lock())
+			using (putSerialLocker.Lock(transactionInformation))
 			{
 				var deleted = false;
 				log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
@@ -991,7 +991,7 @@ namespace Raven.Database
 
 						inFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
 							etag,
-							doc == null ? Etag.Empty : doc.Etag, 
+							doc == null ? Etag.Empty : doc.Etag,
 							sequentialUuidGenerator);
 						deleted = doc != null;
 					}
@@ -1008,18 +1008,71 @@ namespace Raven.Database
 			return inFlightTransactionalState.HasTransaction(txId);
 		}
 
+		private readonly ConcurrentQueue<ComittingTransaction> committingTransactions = new ConcurrentQueue<ComittingTransaction>();
+		private readonly ManualResetEventSlim commitWaitEvent = new ManualResetEventSlim();
+		private class ComittingTransaction
+		{
+			public Guid Id;
+			public readonly TaskCompletionSource<object> Result = new TaskCompletionSource<object>();
+		}
+
 		public void Commit(Guid txId)
 		{
+			var commit = new ComittingTransaction { Id = txId };
+			committingTransactions.Enqueue(commit);
+
+			var txTask = commit.Result.Task;
+			while (txTask.Completed() == false && committingTransactions.Peek() != commit)
+			{
+				commitWaitEvent.Wait();
+			}
+
+			if (txTask.Completed())
+			{
+				txTask.AssertNotFailed();
+				return;
+			}
+
 			try
 			{
-				using(putSerialLocker.Lock())
+				using (putSerialLocker.Lock(null))
 				{
-					log.Debug("Committing tx {0}", txId);
-					TransactionalStorage.Batch(actions =>
+					var ids = new List<Guid>(committingTransactions.Count);
+					try
 					{
-						inFlightTransactionalState.Commit(txId, doc => // this just commit the values, not remove the tx
+						ActualCommitPendingTransactions(txId, ids);
+					}
+					finally
+					{
+						foreach (var id in ids)
 						{
-							log.Debug("Commit of txId {0}: {1} {2}", txId, doc.Delete ? "DEL" : "PUT", doc.Key);
+							inFlightTransactionalState.Rollback(id);  // this is where we actually remove the tx
+						}
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				if (TransactionalStorage.HandleException(e))
+					return;
+				throw;
+			}
+		}
+
+		private void ActualCommitPendingTransactions(Guid txId, List<Guid> ids)
+		{
+			TransactionalStorage.Batch(actions =>
+			{
+				ComittingTransaction current = null;
+				try
+				{
+					while (ids.Count < 128 && committingTransactions.TryDequeue(out current))
+					{
+						ids.Add(current.Id);
+						log.Debug("Committing tx {0}", current.Id);
+						inFlightTransactionalState.Commit(current.Id, doc => // this just commit the values, not remove the tx
+						{
+							log.Debug("Commit of txId {0}: {1} {2}", current.Id, doc.Delete ? "DEL" : "PUT", doc.Key);
 							// doc.Etag - represent the _modified_ document etag, and we already
 							// checked etags on previous PUT/DELETE, so we don't pass it here
 							if (doc.Delete)
@@ -1029,17 +1082,19 @@ namespace Raven.Database
 									doc.Data,
 									doc.Metadata, null);
 						});
+						actions.General.PulseTransaction();
 						workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
-					});
-					inFlightTransactionalState.Rollback(txId);  // this is where we actually remove the tx
+						current.Result.SetResult(null); // completed
+					}
 				}
-			}
-			catch (Exception e)
-			{
-				if (TransactionalStorage.HandleException(e))
-					return;
-				throw;
-			}
+				catch (Exception e)
+				{
+					if (current != null)
+						current.Result.SetException(e);
+					throw;
+				}
+				log.Debug("Merged {0} transactions into a single commit", ids.Count);
+			});
 		}
 
 		public void Rollback(Guid txId)
@@ -1819,13 +1874,17 @@ namespace Raven.Database
 		public BatchResult[] Batch(IList<ICommandData> commands)
 		{
 			var pending = new PendingBatch
-		{
-			Commands = commands,
-		};
+			{
+				Commands = commands,
+			};
 
+			var hasTx = commands.Any(x => x.TransactionInformation != null);
 			var shouldRetryIfGotConcurrencyError = pending.Commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
 			var currentTask = pending.CompletionSource.Task;
-			if (shouldRetryIfGotConcurrencyError) // for patches, we don't do any transaction merging
+			// for patches, we don't do any transaction merging
+			// for tx, we don't want to go through the optimized code path anyway, since it assumes locking, and 
+			// for tx we are all in memory
+			if (hasTx || shouldRetryIfGotConcurrencyError)
 			{
 				var sp = Stopwatch.StartNew();
 				BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(pending);
@@ -1842,7 +1901,7 @@ namespace Raven.Database
 			if (currentTask.Completed())
 				return pending.Result;
 
-			using(putSerialLocker.Lock())
+			using (putSerialLocker.Lock(null))
 			{
 				try
 				{
@@ -1886,7 +1945,7 @@ namespace Raven.Database
 		private void BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(PendingBatch pending)
 		{
 			int retries = 128;
-			using(putSerialLocker.Lock())
+			using (putSerialLocker.Lock(pending.Commands.Select(x => x.TransactionInformation).FirstOrDefault(x => x != null)))
 			{
 				while (true)
 				{
@@ -2232,7 +2291,7 @@ namespace Raven.Database
 				foreach (var docs in docBatches)
 				{
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
-					using(putSerialLocker.Lock())
+					using (putSerialLocker.Lock(null))
 					{
 						var inserts = 0;
 						var batch = 0;
