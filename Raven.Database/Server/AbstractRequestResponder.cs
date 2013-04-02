@@ -114,7 +114,8 @@ namespace Raven.Database.Server
 				return;
 			}
 
-			if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
+			if (context.Response.BufferOutput && 
+				replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
 			{
 				context.Response.AddHeader(Constants.RavenForcePrimaryServerCheck, "True");
 			}

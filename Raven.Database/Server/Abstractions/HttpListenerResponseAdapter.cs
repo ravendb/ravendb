@@ -68,10 +68,14 @@ namespace Raven.Database.Server.Abstractions
 			get { return response.ContentType; }
 			set { response.ContentType = value; }
 		}
+
+		// for HTTP Listener, we never actually buffer, but we pretend we do
+		// so we won't send the headers after we already sent data to the client
+		private bool bufferOutput = true;
 		public bool BufferOutput
 		{
-			get { return false; }
-			set { }
+			get { return bufferOutput; }
+			set { bufferOutput = value; }
 		}
 
 		public void Redirect(string url)
