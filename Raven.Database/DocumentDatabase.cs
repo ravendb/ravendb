@@ -1037,6 +1037,14 @@ namespace Raven.Database
 			{
 				using (putSerialLocker.Lock(null))
 				{
+					commitWaitEvent.Reset();
+
+					if (txTask.Completed())
+					{
+						txTask.AssertNotFailed();
+						return;
+					}
+
 					var ids = new List<Guid>(committingTransactions.Count);
 					try
 					{
@@ -1906,6 +1914,9 @@ namespace Raven.Database
 				try
 				{
 					batchCompletedEvent.Reset();
+
+					if (currentTask.Completed())
+						return pending.Result;
 
 					var sp = Stopwatch.StartNew();
 					int totalCommands = 0;
