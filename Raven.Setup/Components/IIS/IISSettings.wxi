@@ -35,7 +35,7 @@
   <Property Id="WEB_APP_POOL_IDENTITY_PWD" Hidden="yes" />
 
   <Property Id="WEBSITE_PORT" Value="80" />
-  <Property Id="WEBSITE_HOSTNAME" Value="RavenHost" />
+  <Property Id="WEBSITE_HOSTNAME" />
   
   <SetProperty Id="WEB_APP_POOL_IDENTITY_DOMAIN" Value="[%USERDOMAIN]" Before="CostFinalize" Sequence="ui"/>
   <SetProperty Id="WEB_APP_POOL_IDENTITY_NAME" Value="[%USERNAME]" Before="CostFinalize" Sequence="ui"/>
