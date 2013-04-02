@@ -367,14 +367,14 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
-		void Patch(string key, PatchRequest[] patches);
+		RavenJObject Patch(string key, PatchRequest[] patches);
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		void Patch(string key, ScriptedPatchRequest patch);
+		RavenJObject Patch(string key, ScriptedPatchRequest patch);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -382,7 +382,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-        void Patch(string key, PatchRequest[] patches, Etag etag);
+		RavenJObject Patch(string key, PatchRequest[] patches, Etag etag);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -390,7 +390,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-        void Patch(string key, ScriptedPatchRequest patch, Etag etag);
+		RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

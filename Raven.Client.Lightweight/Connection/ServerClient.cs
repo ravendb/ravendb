@@ -1843,9 +1843,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
-		public void Patch(string key, PatchRequest[] patches)
+		public RavenJObject Patch(string key, PatchRequest[] patches)
 		{
-			Patch(key, patches, null);
+			return Patch(key, patches, null);
 		}
 
 		/// <summary>
@@ -1853,9 +1853,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public void Patch(string key, ScriptedPatchRequest patch)
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
-			Patch(key, patch, null);
+			return Patch(key, patch, null);
 		}
 
 		/// <summary>
@@ -1864,9 +1864,9 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, PatchRequest[] patches, Etag etag)
+		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
-			Batch(new[]
+			var batchResults = Batch(new[]
 			      	{
 			      		new PatchCommandData
 			      			{
@@ -1875,6 +1875,7 @@ namespace Raven.Client.Connection
 			      				Etag = etag
 			      			}
 			      	});
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>
@@ -1883,17 +1884,18 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, ScriptedPatchRequest patch, Etag etag)
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
-			Batch(new[]
-					{
-						new ScriptedPatchCommandData
-							{
-								Key = key,
-								Patch = patch,
-								Etag = etag
-							}
-					});
+			var batchResults = Batch(new[]
+			{
+				new ScriptedPatchCommandData
+				{
+					Key = key,
+					Patch = patch,
+					Etag = etag
+				}
+			});
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>

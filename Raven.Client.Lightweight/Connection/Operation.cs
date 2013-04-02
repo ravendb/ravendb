@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -8,7 +9,8 @@ namespace Raven.Client.Connection
 	{
 		private readonly AsyncServerClient asyncServerClient;
 		private readonly long id;
-		
+		private readonly RavenJToken state;
+
 #if !SILVERLIGHT
 		private readonly ServerClient client;
 
@@ -19,9 +21,10 @@ namespace Raven.Client.Connection
 		}
 #endif
 
-		public Operation(long id)
+		public Operation(long id, RavenJToken state)
 		{
 			this.id = id;
+			this.state = state;
 		}
 
 		public Operation(AsyncServerClient asyncServerClient, long id)
@@ -31,35 +34,35 @@ namespace Raven.Client.Connection
 		}
 
 
-		public async Task WaitForCompletionAsync()
+		public async Task<RavenJToken> WaitForCompletionAsync()
 		{
 			if (asyncServerClient == null)
-				return;
+				return state;
 
 			while (true)
 			{
 				var status = await asyncServerClient.GetOperationStatusAsync(id);
 				if (status == null)
-					break;
+					return null;
 				if (status.Value<bool>("Completed"))
-					break;
+					return status.Value<RavenJToken>("State");
 				await TaskEx.Delay(500);
 			}
 		}
 
 #if !SILVERLIGHT
-		public void WaitForCompletion()
+		public RavenJToken WaitForCompletion()
 		{
-			if(client == null)
-				return;
+			if (client == null)
+				return state;
 
 			while (true)
 			{
 				var status = client.GetOperationStatus(id);
 				if (status == null)
-					break;
+					return null;
 				if (status.Value<bool>("Completed"))
-					break;
+					return status.Value<RavenJToken>("State");
 				Thread.Sleep(500);
 			}
 		}

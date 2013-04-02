@@ -756,8 +756,8 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
-			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
-			return new Operation(0);
+			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
+			return new Operation(0, state);
 		}
 
 		/// <summary>
@@ -771,8 +771,8 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
-			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
-			return new Operation(0);
+			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
+			return new Operation(0, state);
 		}
 
 		/// <summary>
@@ -796,8 +796,8 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
-			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
-			return new Operation(0);
+			var state = databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
+			return new Operation(0, state);
 		}
 
 		/// <summary>
@@ -885,9 +885,9 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
-		public void Patch(string key, PatchRequest[] patches)
+		public RavenJObject Patch(string key, PatchRequest[] patches)
 		{
-			Patch(key, patches, null);
+			return Patch(key, patches, null);
 		}
 
 		/// <summary>
@@ -895,9 +895,9 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public void Patch(string key, ScriptedPatchRequest patch)
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
-			Patch(key, patch, null);
+			return Patch(key, patch, null);
 		}
 
 		/// <summary>
@@ -906,17 +906,17 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, PatchRequest[] patches, Etag etag)
+		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
-			Batch(new[]
-			      {
-				      new PatchCommandData
-				      {
-					      Key = key,
-					      Patches = patches,
-					      Etag = etag
-				      }
-			      });
+			var batchResults = Batch(new[]
+			{
+				new PatchCommandData
+				{
+					Key = key, Patches = patches, Etag = etag
+				}
+			});
+
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>
@@ -925,9 +925,9 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, ScriptedPatchRequest patch, Etag etag)
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
-			Batch(new[]
+			var batchResults = Batch(new[]
 			      {
 				      new ScriptedPatchCommandData
 				      {
@@ -936,6 +936,7 @@ namespace Raven.Client.Embedded
 					      Etag = etag
 				      }
 			      });
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>

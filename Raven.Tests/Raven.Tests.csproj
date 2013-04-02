@@ -727,6 +727,7 @@
     <Compile Include="MailingList\UintId.cs" />
     <Compile Include="MailingList\UrlInIdsRepro.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
+    <Compile Include="MailingList\Wayne.cs" />
     <Compile Include="MailingList\WhereInTests.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
     <Compile Include="MailingList\Willem.cs" />
