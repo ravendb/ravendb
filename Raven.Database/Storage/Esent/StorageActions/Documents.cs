@@ -185,13 +185,26 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MoveAfterLast(session, Documents);
 			if (TryMoveTableRecords(Documents, start, backward: true))
 				return Enumerable.Empty<JsonDocument>();
-			var optimizer = new OptimizedIndexReader();
-			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
+			if (take < 1024*4)
 			{
-				optimizer.Add(Session, Documents);
-			}
+				var optimizer = new OptimizedIndexReader();
+				while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
+				{
+					optimizer.Add(Session, Documents);
+				}
 
-			return optimizer.Select(Session, Documents, ReadCurrentDocument);
+				return optimizer.Select(Session, Documents, ReadCurrentDocument);
+			}
+			return GetDocumentsWithoutBuffering(take);
+		}
+
+		private IEnumerable<JsonDocument> GetDocumentsWithoutBuffering(int take)
+		{
+			while (Api.TryMovePrevious(session, Documents) && take >= 0)
+			{
+				take--;
+				yield return ReadCurrentDocument();
+			}
 		}
 
 		private bool TryMoveTableRecords(Table table, int start, bool backward)
