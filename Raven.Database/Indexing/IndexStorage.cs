@@ -157,7 +157,7 @@ namespace Raven.Database.Indexing
 					if (resetTried)
 						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
 
-					if (recoveryTried == false)
+					if (recoveryTried == false && luceneDirectory != null)
 					{
 						recoveryTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
