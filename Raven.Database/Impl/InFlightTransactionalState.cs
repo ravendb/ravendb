@@ -296,5 +296,10 @@ namespace Raven.Database.Impl
 			document = createDoc(key, change);
 			return true;
 		}
+
+		public bool HasTransaction(Guid txId)
+		{
+			return transactionStates.ContainsKey(txId);
+		}
 	}
 }

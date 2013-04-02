@@ -706,6 +706,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From43To44.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
@@ -737,7 +738,6 @@
     <Compile Include="Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
-    <Compile Include="Storage\ITransactionStorageActions.cs" />
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
     <Compile Include="Storage\Managed\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Managed\Backup\BackupOperation.cs" />
@@ -775,10 +775,8 @@
     <Compile Include="Storage\Managed\QueueStorageActions.cs" />
     <Compile Include="Storage\Managed\StalenessStorageActions.cs" />
     <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
-    <Compile Include="Storage\Managed\StorageHelper.cs" />
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
-    <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

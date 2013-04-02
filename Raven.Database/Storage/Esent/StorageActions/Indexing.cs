@@ -181,7 +181,7 @@ namespace Raven.Storage.Esent.StorageActions
 			foreach (var op in new[]
 			{
 				new { Table = MappedResults, Index = "by_view_and_doc_key" },
-				new { Table = ScheduledReductions, Index = "by_view_level_bucket_and_hashed_reduce_key" },
+				new { Table = ScheduledReductions, Index = "by_view_level_and_hashed_reduce_key_and_bucket" },
 				new { Table = ReducedResults, Index = "by_view_level_hashed_reduce_key_and_bucket" },
 				new { Table = ReduceKeysCounts, Index = "by_view_and_hashed_reduce_key" },
 				new { Table = ReduceKeysStatus, Index = "by_view_and_hashed_reduce_key" },

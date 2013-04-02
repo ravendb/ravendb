@@ -21,7 +21,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
-	public partial class DocumentStorageActions : IDocumentStorageActions, ITransactionStorageActions
+	public partial class DocumentStorageActions : IDocumentStorageActions
 	{
 		public long GetDocumentsCount()
 		{
@@ -55,52 +55,11 @@ namespace Raven.Storage.Esent.StorageActions
 		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
 			where T : class
 		{
-			bool existsInTx = IsDocumentModifiedInsideTransaction(key);
-
-			if (transactionInformation != null && existsInTx)
-			{
-				var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
-				if (new Guid(txId) == transactionInformation.Id)
-				{
-					if (Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]) == true)
-					{
-						logger.Debug("Document with key '{0}' was deleted in transaction: {1}", key, transactionInformation.Id);
-						return null;
-					}
-					var etag = Etag.Parse(Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]));
-
-					RavenJObject metadata = ReadDocumentMetadataInTransaction(key, etag);
-
-
-					logger.Debug("Document with key '{0}' was found in transaction: {1}", key, transactionInformation.Id);
-					var lastModified = Api.RetrieveColumnAsInt64(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"]).Value;
-					return createResult(new JsonDocumentMetadata()
-					{
-						NonAuthoritativeInformation = false,// we are the transaction, therefor we are Authoritative
-						Etag = etag,
-						LastModified = DateTime.FromBinary(lastModified),
-						Key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], Encoding.Unicode),
-						Metadata = metadata
-					}, ReadDocumentDataInTransaction);
-				}
-			}
 
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
-				if (existsInTx)
-				{
-					logger.Debug("Committed document with key '{0}' was not found, but exists in a separate transaction", key);
-					return createResult(new JsonDocumentMetadata
-					{
-						Etag = Etag.Empty,
-						Key = key,
-						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
-						NonAuthoritativeInformation = true,
-						LastModified = DateTime.MinValue,
-					}, (docKey, etag, metadata) => new RavenJObject());
-				}
 				logger.Debug("Document with key '{0}' was not found", key);
 				return null;
 			}
@@ -110,43 +69,10 @@ namespace Raven.Storage.Esent.StorageActions
 			return createResult(new JsonDocumentMetadata()
 			{
 				Etag = existingEtag,
-				NonAuthoritativeInformation = existsInTx,
 				LastModified = DateTime.FromBinary(lastModifiedInt64),
 				Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
 				Metadata = ReadDocumentMetadata(key, existingEtag)
 			}, ReadDocumentData);
-		}
-
-		private RavenJObject ReadDocumentMetadataInTransaction(string key, Etag etag)
-		{
-			var cachedDocument = cacher.GetCachedDocument(key, etag);
-			if (cachedDocument != null)
-			{
-				return cachedDocument.Metadata;
-			}
-
-			return Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]).ToJObject();
-
-		}
-
-		private RavenJObject ReadDocumentDataInTransaction(string key, Etag etag, RavenJObject metadata)
-		{
-			var cachedDocument = cacher.GetCachedDocument(key, etag);
-			if (cachedDocument != null)
-			{
-				return cachedDocument.Document;
-			}
-
-			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
-			{
-				var size = stream.Length;
-				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
-				{
-					var data = aggregate.ToJObject();
-					cacher.SetCachedDocument(key, etag, data, metadata, (int)size);
-					return data;
-				}
-			}
 		}
 
 		private RavenJObject ReadDocumentMetadata(string key, Etag existingEtag)
@@ -228,12 +154,8 @@ namespace Raven.Storage.Esent.StorageActions
 			return false;
 		}
 
-		private JsonDocument ReadCurrentDocument()
-		{
-			return ReadCurrentDocument(true);
-		}
 
-		private JsonDocument ReadCurrentDocument(bool checkTransactionStatus)
+		private JsonDocument ReadCurrentDocument()
 		{
 			int docSize;
 
@@ -252,8 +174,6 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			bool isDocumentModifiedInsideTransaction = false;
-			if (checkTransactionStatus)
-				isDocumentModifiedInsideTransaction = IsDocumentModifiedInsideTransaction(key);
 			var lastModified = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
 			return new JsonDocument
 			{
@@ -284,7 +204,7 @@ namespace Raven.Storage.Esent.StorageActions
 					if (EtagUtil.IsGreaterThanOrEqual(docEtag, untilEtag))
 						yield break;
 				}
-				var readCurrentDocument = ReadCurrentDocument(checkTransactionStatus: false);
+				var readCurrentDocument = ReadCurrentDocument();
 				totalSize += readCurrentDocument.SerializedSizeOnDisk;
 				if (maxSize != null && totalSize > maxSize.Value)
 				{
@@ -406,7 +326,6 @@ namespace Raven.Storage.Esent.StorageActions
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
-				EnsureNotLockedByTransaction(key, null);
 				EnsureDocumentEtagMatch(key, etag, "PUT");
 
 			}
@@ -418,7 +337,6 @@ namespace Raven.Storage.Esent.StorageActions
 					{
 						ExpectedETag = etag
 					};
-				EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
 			}
@@ -525,74 +443,6 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public Etag AddDocumentInTransaction(string key, Etag etag, RavenJObject data, RavenJObject metadata, TransactionInformation transactionInformation)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
-			if (isUpdate)
-			{
-				EnsureNotLockedByTransaction(key, transactionInformation.Id);
-				EnsureDocumentEtagMatchInTransaction(key, etag);
-				using (var update = new Update(session, Documents, JET_prep.Replace))
-				{
-					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
-					update.Save();
-				}
-			}
-			else
-			{
-				EnsureDocumentIsNotCreatedInAnotherTransaction(key, transactionInformation.Id);
-			}
-			EnsureTransactionExists(transactionInformation);
-			Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions);
-
-			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
-			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			var isUpdateInTransaction = Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ);
-
-			using (var update = new Update(session, DocumentsModifiedByTransactions, isUpdateInTransaction ? JET_prep.Replace : JET_prep.Insert))
-			{
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
-
-				using (var columnStream = new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"]))
-				{
-					if (isUpdate)
-						columnStream.SetLength(0);
-					using (Stream stream = new BufferedStream(columnStream))
-					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
-					{
-						data.WriteTo(finalStream);
-						finalStream.Flush();
-					}
-				}
-
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-
-				using (var columnStream = new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]))
-				{
-					if (isUpdate)
-						columnStream.SetLength(0);
-					using (Stream stream = new BufferedStream(columnStream))
-					{
-						metadata.WriteTo(stream);
-						stream.Flush();
-					}
-				}
-
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"], SystemTime.UtcNow.ToBinary());
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"], false);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
-
-				update.Save();
-			}
-			logger.Debug("Inserted a new document with key '{0}', update: {1}, in transaction: {2}",
-							   key, isUpdate, transactionInformation.Id);
-
-			return newEtag;
-		}
-
-
 		public bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag)
 		{
 			metadata = null;
@@ -608,7 +458,6 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], -1);
 
 			var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
-			EnsureNotLockedByTransaction(key, null);
 
 			metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 			deletedETag = existingEtag;
@@ -617,61 +466,6 @@ namespace Raven.Storage.Esent.StorageActions
 			logger.Debug("Document with key '{0}' was deleted", key);
 
 			cacher.RemoveCachedDocument(key, existingEtag);
-
-			return true;
-		}
-
-
-		public bool DeleteDocumentInTransaction(TransactionInformation transactionInformation, string key, Etag etag)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
-			{
-				if (etag != null && etag != Etag.Empty)
-				{
-					throw new ConcurrencyException("DELETE attempted on document '" + key +
-											   "' using a non current etag")
-					{
-						ActualETag = Etag.Empty,
-						ExpectedETag = etag
-					};
-				}
-				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
-				return false;
-			}
-
-			EnsureNotLockedByTransaction(key, transactionInformation.Id);
-			EnsureDocumentEtagMatchInTransaction(key, etag);
-
-			using (var update = new Update(session, Documents, JET_prep.Replace))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
-				update.Save();
-			}
-			EnsureTransactionExists(transactionInformation);
-
-			Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.DocumentTransactions);
-
-			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_key");
-			Api.MakeKey(session, DocumentsModifiedByTransactions, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			var isUpdateInTransaction = Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ);
-
-			using (var update = new Update(session, DocumentsModifiedByTransactions, isUpdateInTransaction ? JET_prep.Replace : JET_prep.Insert))
-			{
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"],
-					Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"]));
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["last_modified"],
-					Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"],
-					Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]));
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"], true);
-				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"], transactionInformation.Id.ToByteArray());
-
-				update.Save();
-			}
 
 			return true;
 		}

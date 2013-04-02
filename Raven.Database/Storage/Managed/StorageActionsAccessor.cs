@@ -28,8 +28,7 @@ namespace Raven.Storage.Managed
 		{
 			General = new GeneralStorageActions(storage);
 			Attachments = new AttachmentsStorageActions(storage, generator);
-			Transactions = new TransactionStorageActions(storage, generator, documentCodecs);
-			Documents = new DocumentsStorageActions(storage, Transactions, generator, documentCodecs, documentCacher);
+			Documents = new DocumentsStorageActions(storage, generator, documentCodecs, documentCacher);
 			Indexing = new IndexingStorageActions(storage);
 			mappedResultsStorageAction = new MappedResultsStorageAction(storage, generator, documentCodecs);
 			MapReduce = mappedResultsStorageAction;
@@ -41,7 +40,6 @@ namespace Raven.Storage.Managed
 
 		public IListsStorageActions Lists { get; private set; }
 
-		public ITransactionStorageActions Transactions { get; private set; }
 
 		public IDocumentStorageActions Documents { get; private set; }
 

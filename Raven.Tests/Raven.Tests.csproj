@@ -1178,9 +1178,6 @@
     <Compile Include="Storage\Queues.cs" />
     <Compile Include="Storage\Storage.cs" />
     <Compile Include="Storage\Tasks.cs" />
-    <Compile Include="Storage\Transactions.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="MultiGet\Bugs.cs" />
     <Compile Include="MultiGet\MultiGetBasic.cs" />
     <Compile Include="MultiGet\MultiGetCaching.cs" />
