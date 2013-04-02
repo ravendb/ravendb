@@ -76,13 +76,14 @@ namespace Raven.Bundles.Replication.Responders
 			};
 		}
 
-		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Etag existingEtag)
+		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Etag existingEtag, out bool deleted)
 		{
 			var existingDoc = Actions.Documents.DocumentByKey(id, null);
 			if(existingDoc != null)
 			{
 				existingItem = existingDoc;
 				existingEtag = existingDoc.Etag;
+				deleted = false;
 				return existingDoc.Metadata;
 			}
 
@@ -90,6 +91,7 @@ namespace Raven.Bundles.Replication.Responders
 			if(listItem != null)
 			{
 				existingEtag = listItem.Etag;
+				deleted = true;
 				existingItem = new JsonDocument
 				{
 					Etag = listItem.Etag,
@@ -101,6 +103,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			existingEtag = Etag.Empty;
 			existingItem = null;
+			deleted = false;
 			return null;
 
 		}
