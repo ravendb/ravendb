@@ -29,7 +29,7 @@ namespace Raven.Studio.Models
         private ICommand deleteSelectedDocuments;
         private ICommand copyIdsToClipboard;
         private ICommand editDocument;
-        private IDictionary<string, string> replicationSourcesLookup;
+        private Dictionary<string, ReplicationSourceInfo> replicationSourcesLookup;
         private static ConcurrentSet<string> performedIndexChecks = new ConcurrentSet<string>();
         private IDisposable replicationSourcesChanges;
 
@@ -37,7 +37,7 @@ namespace Raven.Studio.Models
 
         public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
 
-        public IDictionary<string, string> ReplicationSourcesLookup
+        public Dictionary<string, ReplicationSourceInfo> ReplicationSourcesLookup
         {
             get { return replicationSourcesLookup; }
             private set
@@ -97,8 +97,12 @@ namespace Raven.Studio.Models
                             .ContinueOnSuccessInTheUIThread(
                                 docs =>
                                 {
-                                    ReplicationSourcesLookup =
-                                        docs.ToDictionary(d => d.DataAsJson.Value<string>("ServerInstanceId"), d => d.DataAsJson.Value<string>("Source"));
+                                    var sourcesLookup = docs.ToDictionary(d => d.DataAsJson.Value<string>("ServerInstanceId"), d => new ReplicationSourceInfo(d.DataAsJson.Value<string>("Source")));
+                                    var currentUrl = ApplicationModel.Current.Server.Value.Url + "databases/" + ApplicationModel.Database.Value.Name;
+
+                                    sourcesLookup.Add(ApplicationModel.Database.Value.Statistics.Value.DatabaseId.ToString(), new ReplicationSourceInfo(currentUrl));
+
+                                    ReplicationSourcesLookup = sourcesLookup;
                                 });
         }
 

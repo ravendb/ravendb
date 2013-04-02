@@ -119,6 +119,7 @@ namespace Raven.Studio.Models
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
 			documentIdManager = JsonDataDocument.Properties.GetOrCreateSingleton(() => new DocumentReferencedIdManager());
+		    documentIdManager.CurrentIdsChanged += HandleCurrentIdsChanged;
 
 			InitializeDocument();
 
@@ -137,11 +138,11 @@ namespace Raven.Studio.Models
 			           .Subscribe(e => HandleDocumentChanged());
 		}
 
-		private void HandleDocumentChanged()
+
+	    private void HandleDocumentChanged()
 		{
 			UpdateErrors();
 			UpdateDocumentSize();
-			UpdateReferences();
 		}
 
 		private void UpdateErrors()
@@ -742,43 +743,15 @@ namespace Raven.Studio.Models
 			DocumentSize = string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
 		}
 
-		private void UpdateReferences()
+
+        private void HandleCurrentIdsChanged(object sender, EventArgs e)
+        {
+            UpdateListWithKnownIds();
+        }
+
+		private void UpdateListWithKnownIds()
 		{
-			if (Separator == null)
-				return;
-
-			// Note: if this proves to be too slow with large documents, we can potentially optimize the finding 
-			// of references by only considering the parts of the AST which occur after the Offset at which the text change began
-			// (we can find this by getting hold of the TextSnapshotChangedEventArgs)
-			var potentialReferences = FindPotentialReferences(JsonDataDocument).ToList();
-			var newReferences = potentialReferences.Where(id => documentIdManager.NeedsChecking(id)).ToArray();
-
-			if (newReferences.Any())
-			{
-				ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(
-					newReferences, null, metadataOnly: true)
-				                .ContinueOnSuccessInTheUIThread(results =>
-				                {
-					                var ids =
-						                results.Results.Where(r => r != null).Select(
-							                r => r["@metadata"].SelectToken("@id").ToString()).ToList();
-
-					                documentIdManager.AddKnownIds(ids);
-					                documentIdManager.AddKnownInvalidIds(newReferences.Except(ids));
-
-					                UpdateListWithKnownIds(potentialReferences);
-				                });
-			}
-			else
-			{
-				UpdateListWithKnownIds(potentialReferences);
-			}
-		}
-
-		private void UpdateListWithKnownIds(IEnumerable<string> potentialReferences)
-		{
-			var referenceModels = potentialReferences.Where(id => documentIdManager.IsId(id))
-			                                         .Select(key => new LinkModel
+			var referenceModels = documentIdManager.CurrentIds.Select(key => new LinkModel
 			                                                        {
 				                                                        Title = key,
 				                                                        HRef = "/Edit?id=" + key
@@ -786,23 +759,6 @@ namespace Raven.Studio.Models
 			                                         .ToArray();
 
 			References.Match(referenceModels);
-		}
-
-		private IEnumerable<string> FindPotentialReferences(ICodeDocument codeDocument)
-		{
-			var stringValueNodes = codeDocument.FindAllStringValueNodes();
-			return stringValueNodes.Select(n => n.Text).Distinct().Where(IsPotentialReference);
-		}
-
-		private bool IsPotentialReference(string value)
-		{
-			if (string.IsNullOrWhiteSpace(value))
-			{
-				return false;
-			}
-
-			var pattern = "\\w" + Separator + "\\w";
-			return Regex.IsMatch(value, pattern);
 		}
 
 		private void UpdateRelated()

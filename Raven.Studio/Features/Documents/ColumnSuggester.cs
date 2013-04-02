@@ -34,7 +34,7 @@ namespace Raven.Studio.Features.Documents
         {
             var bindings = DocumentHelpers.GetPropertiesFromDocuments(jsonDocuments, true).Distinct()
                 .Concat(DocumentHelpers.GetMetadataFromDocuments(jsonDocuments, true).Distinct().Select(b => "$Meta:" + b))
-                .Concat(new[] {"$JsonDocument:ETag", "$JsonDocument:LastModified", "$Temp:Score"})
+                .Concat(new[] {"$JsonDocument:Etag", "$JsonDocument:LastModified", "$Temp:Score"})
                 .ToArray();
             
             return bindings;

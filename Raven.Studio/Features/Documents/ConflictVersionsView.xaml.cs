@@ -28,14 +28,14 @@ namespace Raven.Studio.Features.Documents
             set { SetValue(ConflictVersionInfoProperty, value); }
         }
 
-        public IDictionary<string,string> ReplicationSourcesLookup
+        public IDictionary<string,ReplicationSourceInfo> ReplicationSourcesLookup
         {
-            get { return (IDictionary<string,string>)GetValue(ReplicationSourcesLookupProperty); }
+            get { return (IDictionary<string, ReplicationSourceInfo>)GetValue(ReplicationSourcesLookupProperty); }
             set { SetValue(ReplicationSourcesLookupProperty, value); }
         }
 
         public static readonly DependencyProperty ReplicationSourcesLookupProperty =
-            DependencyProperty.Register("ReplicationSourcesLookup", typeof(IDictionary<string,string>), typeof(ConflictVersionsView), new PropertyMetadata(null, OnVersionsChanged));
+            DependencyProperty.Register("ReplicationSourcesLookup", typeof(IDictionary<string, ReplicationSourceInfo>), typeof(ConflictVersionsView), new PropertyMetadata(null, OnVersionsChanged));
 
         public static readonly DependencyProperty ConflictVersionInfoProperty =
             DependencyProperty.Register("ConflictVersionInfo", typeof(RavenJArray), typeof(ConflictVersionsView), new PropertyMetadata(null, OnVersionsChanged));
@@ -63,19 +63,28 @@ namespace Raven.Studio.Features.Documents
                 var versionId = version.Value<string>("Id");
                 var sourceId = version.Value<string>("SourceId");
 
+                ReplicationSourceInfo sourceInfo = null;
+
+                if (ReplicationSourcesLookup != null)
+                {
+                    ReplicationSourcesLookup.TryGetValue(sourceId, out sourceInfo);
+                }
+
                 var hyperlink = new InlineUIContainer()
                 {
                     Child = new HyperlinkButton()
                     {
-                        Content = count.ToString(),
+                        Content = count.ToString() + (sourceInfo != null ? " (" + sourceInfo.Name + ")" : ""),
                         Command = navigateCommand,
                         CommandParameter = "/edit?id=" + versionId
                     }
                 };
 
-                var toolTip = CreateToolTip(versionId, sourceId);
-
-                ToolTipService.SetToolTip(hyperlink.Child, toolTip);
+                if (sourceInfo != null)
+                {
+                    var toolTip = CreateToolTip(versionId, sourceInfo);
+                    ToolTipService.SetToolTip(hyperlink.Child, toolTip);
+                }
 
                 para.Inlines.Add(hyperlink);
                 para.Inlines.Add(" ");
@@ -86,15 +95,8 @@ namespace Raven.Studio.Features.Documents
             TextBlock.Blocks.Add(para);
         }
 
-        private object CreateToolTip(string versionId, string sourceId)
+        private object CreateToolTip(string versionId, ReplicationSourceInfo sourceInfo)
         {
-            string serverUrl = string.Empty;
-
-            if (ReplicationSourcesLookup != null)
-            {
-                ReplicationSourcesLookup.TryGetValue(sourceId, out serverUrl);
-            }
-
             var textBlock = new TextBlock()
             {
                 Inlines =
@@ -105,7 +107,7 @@ namespace Raven.Studio.Features.Documents
                     new LineBreak(),
                     new Bold() {Inlines = {new Run {Text = "Server Url:"}}},
                     new Run() {Text = " "},
-                    new Run {Text = serverUrl},
+                    new Run {Text = sourceInfo.Url},
                 }
             };
 

@@ -732,8 +732,9 @@ namespace Raven.Studio.Models
 	    public IndexQuery CreateTemplateQuery()
 	    {
 		    var transfomer = SelectedTransformer.Value;
-			if (transfomer == "None")
+			if (transfomer == "None" || !UseTransformer)
 				transfomer = "";
+
             var q = new IndexQuery
             {
                 Query = Query,

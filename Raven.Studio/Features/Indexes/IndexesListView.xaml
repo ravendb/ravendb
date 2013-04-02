@@ -178,13 +178,13 @@
 							</HyperlinkButton.Content>
 						</HyperlinkButton>
 
-						<Controls1:RecentQueriesButton/>
+                        <Controls1:RecentQueriesButton VerticalAlignment="Center"/>
 
 						<Delay:SplitButton Command="{Binding DeleteIndexes}"
 										   CommandParameter="Idle"
 										   DropDownToolTip="More Options"
-										   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,5" 
-										   VerticalAlignment="Center">
+										   Margin="12,6,4,6" Padding="4,5" 
+										   VerticalAlignment="Center" Style="{StaticResource Style_SplitButton_MouseOverChrome}">
 							<Delay:SplitButton.ButtonMenuItemsSource>
 								<ContextMenu:MenuItem Header="Delete All Idle Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Idle"/>
 								<ContextMenu:MenuItem Header="Delete All Disabled Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Disabled"/>
