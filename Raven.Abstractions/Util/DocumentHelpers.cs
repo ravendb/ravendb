@@ -4,7 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
-namespace Raven.Studio.Features.Documents
+namespace Raven.Abstractions.Util
 {
     public static class DocumentHelpers
     {
@@ -29,7 +29,7 @@ namespace Raven.Studio.Features.Documents
             return jObjects.SelectMany(doc => GetPropertiesFromJObject(doc, "", includeNestedProperties, includeMetadata, excludeParentPropertyNames));
         }
 
-		private static IEnumerable<string> GetPropertiesFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties, bool includeMetadata = true, bool excludeParentPropertyNames = false)
+	    public static IEnumerable<string> GetPropertiesFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties, bool includeMetadata = true, bool excludeParentPropertyNames = false)
 		{
 			var properties = from property in jObject
 							 select

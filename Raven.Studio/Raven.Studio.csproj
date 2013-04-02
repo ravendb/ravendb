@@ -208,6 +208,9 @@
     <Compile Include="..\Raven.Abstractions\Util\ComparableByteArray.cs">
       <Link>Imports\Util\ComparableByteArray.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\DocumentHelpers.cs">
+      <Link>Features\Documents\DocumentHelpers.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Util\EtagUtil.cs">
       <Link>Imports\Util\EtagUtil.cs</Link>
     </Compile>
@@ -431,7 +434,6 @@
     <Compile Include="Features\Documents\ColumnSet.cs" />
     <Compile Include="Features\Documents\ColumnsModel.cs" />
     <Compile Include="Features\Documents\ColumnSuggester.cs" />
-    <Compile Include="Features\Documents\DocumentHelpers.cs" />
     <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
     <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\EditNeighboringDocumentCommand.cs" />

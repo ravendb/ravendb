@@ -386,7 +386,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					patcher.Apply(document, new ScriptedPatchRequest
 					{
 						Script = cfg.Script
-					});
+					}, jsonDocument.SerializedSizeOnDisk);
 
 					replicationStats.ScriptSuccess();
 				}

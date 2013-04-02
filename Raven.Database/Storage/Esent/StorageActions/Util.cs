@@ -11,7 +11,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
-using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 
 namespace Raven.Storage.Esent.StorageActions

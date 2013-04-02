@@ -12,13 +12,14 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 using System.Linq;
@@ -591,7 +592,6 @@ namespace Raven.Database.Extensions
 
 			context.Response.AddHeader("ETag", "\"" + etag + "\"");
 		}
-
 
 		private static string GetContentType(string docPath)
 		{

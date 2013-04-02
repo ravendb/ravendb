@@ -1725,13 +1725,27 @@ namespace Raven.Client.Connection.Async
 		public Task<RavenJToken> GetOperationStatusAsync(long id)
 		{
 			var request = jsonRequestFactory
-				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/operation/status?id=" + id).NoCache(), "GET", credentials, convention)
 				.AddOperationHeaders(OperationsHeaders));
 
-			return
-				request
-					.ReadResponseJsonAsync()
-					.ContinueWith(task => task.Result);
+			return request.ReadResponseJsonAsync()
+			              .ContinueWith(task =>
+			              {
+				              if (task.IsFaulted)
+				              {
+					              var webException = task.Exception.ExtractSingleInnerException() as WebException;
+
+					              if (webException != null)
+					              {
+						              var httpWebResponse = webException.Response as HttpWebResponse;
+						              if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						              {
+							              return null;
+						              }
+					              }
+				              }
+				              return task.Result;
+			              });
 		}
 
 		#region IAsyncGlobalAdminDatabaseCommands

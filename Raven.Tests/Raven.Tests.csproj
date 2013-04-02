@@ -551,6 +551,8 @@
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
+    <Compile Include="Issues\RavenDB1019.cs" />
+    <Compile Include="Issues\RavenDB1025.cs" />
     <Compile Include="Issues\RavenDB937.cs" />
     <Compile Include="Issues\DatabaseReloadingTests.cs" />
     <Compile Include="Issues\RavenDB1009.cs" />
@@ -564,6 +566,7 @@
     <Compile Include="Issues\RavenDB921.cs" />
     <Compile Include="Issues\RavenDB934.cs" />
     <Compile Include="Issues\RavenDB982.cs" />
+    <Compile Include="Issues\RavenDB_1018.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -692,6 +695,7 @@
     <Compile Include="MailingList\Maxime2.cs" />
     <Compile Include="MailingList\Oguzhntopcu.cs" />
     <Compile Include="MailingList\Pfeffer.cs" />
+    <Compile Include="MailingList\ProjectionShouldNotLoadDocument.cs" />
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RacielRod.cs" />

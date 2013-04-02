@@ -1,6 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Xunit;
 

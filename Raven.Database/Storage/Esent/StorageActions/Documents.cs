@@ -185,7 +185,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MoveAfterLast(session, Documents);
 			if (TryMoveTableRecords(Documents, start, backward: true))
 				return Enumerable.Empty<JsonDocument>();
-			var optimizer = new OptimizedIndexReader(take);
+			var optimizer = new OptimizedIndexReader();
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
 				optimizer.Add(Session, Documents);
@@ -310,7 +310,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (TryMoveTableRecords(Documents, start, backward: false))
 				return Enumerable.Empty<JsonDocument>();
 
-			var optimizer = new OptimizedIndexReader(take);
+			var optimizer = new OptimizedIndexReader();
 			do
 			{
 				optimizer.Add(Session, Documents);

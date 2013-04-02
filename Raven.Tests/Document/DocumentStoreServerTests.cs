@@ -112,10 +112,12 @@ namespace Raven.Tests.Document
 				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray(); // wait for the index to settle down
 			}
 
-			documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
-			                                                                            	{
-			                                                                            		Query = "Tag:[[Companies]]"
-			                                                                            	}, allowStale: false);
+			documentStore
+				.DatabaseCommands
+				.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				                                              {
+					                                              Query = "Tag:[[Companies]]"
+				                                              }, allowStale: false).WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -127,10 +129,12 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_order_by_using_linq()
 		{
-			documentStore.DatabaseCommands.PutIndex("CompaniesByName", new IndexDefinition
-			                                                           	{
-			                                                           		Map = "from company in docs.Companies select new { company.Name, company.Phone }",
-			                                                           	});
+			documentStore
+				.DatabaseCommands
+				.PutIndex("CompaniesByName", new IndexDefinition
+				                             {
+					                             Map = "from company in docs.Companies select new { company.Name, company.Phone }",
+				                             });
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -285,7 +289,7 @@ namespace Raven.Tests.Document
 			                                                                            	   				Name = "Name",
 			                                                                            	   				Value = RavenJToken.FromObject("Another Company")
 			                                                                            	   			},
-			                                                                            	   	}, allowStale: false);
+			                                                                            	   	}, allowStale: false).WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{

@@ -88,6 +88,9 @@ namespace Raven.Database.Config
 
 			ServerName = ravenSettings.ServerName.Value;
 
+			MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
+			AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
+
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
 
@@ -276,6 +279,11 @@ namespace Raven.Database.Config
 
 			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
 
+		}
+
+		public bool UseDefaultOAuthTokenServer
+		{
+			get { return Settings["Raven/OAuthTokenServer"] == null;  }
 		}
 
 		private void SetupOAuth()
@@ -721,6 +729,19 @@ namespace Raven.Database.Config
 		/// The server name
 		/// </summary>
 		public string ServerName { get; set; }
+		
+		/// <summary>
+		/// The maximum number of steps (instructions) to give a script before timing out.
+		/// Default: 10,000
+		/// </summary>
+		public int MaxStepsForScript { get; set; }
+
+		/// <summary>
+		/// The number of additional steps to add to a given script based on the processed document's quota.
+		/// Set to 0 to give use a fixed size quota. This value is multiplied with the doucment size.
+		/// Default: 5
+		/// </summary>
+		public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
