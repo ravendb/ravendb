@@ -34,6 +34,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			context.Response.BufferOutput = false;
+			context.Response.ContentType = "application/json; charset=utf-8";
 
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;

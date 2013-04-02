@@ -21,6 +21,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			context.Response.BufferOutput = false;
+			context.Response.ContentType = "application/json; charset=utf-8";
 		
 			using (var writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream)))
 			{
