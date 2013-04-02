@@ -24,7 +24,9 @@
     <DirectoryRef Id="INSTALLFOLDER">
 
       <Component Id="DefaultWebSiteApplicationPool" Guid="{5358DD73-9D8D-43BF-9248-2040CFC41F63}" KeyPath="yes">
-        <Condition>NOT CUSTOM_APPLICATION_POOL</Condition>
+        <Condition>
+          <![CDATA[NOT CUSTOM_APPLICATION_POOL]]>
+        </Condition>
         <iis:WebVirtualDir Id="VirtualDir0"
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
@@ -56,7 +58,8 @@
         <iis:WebAppPool Id="AppPool2"
                         Name="[WEB_APP_POOL_NAME]"
                         ManagedPipelineMode="Integrated"
-                        ManagedRuntimeVersion="v4.0"/> <!-- no identity specified will make that default ApplicationPoolIdentity will be used -->
+                        ManagedRuntimeVersion="v4.0"/>
+        <!-- no identity specified will make that default ApplicationPoolIdentity will be used -->
         <iis:WebVirtualDir Id="VirtualDir2"
                   Alias="[WEBSITE_VD]"
                   Directory="INSTALLFOLDER"
@@ -69,7 +72,8 @@
 
       <Component Id="NewApplicationPoolWithLocalServiceIdentity" Guid="{203658CA-E7D2-48EE-AB2C-FBAF3B4555D5}" KeyPath="yes">
         <Condition>
-          <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "LocalService"]]></Condition>
+          <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "LocalService"]]>
+        </Condition>
         <iis:WebAppPool Id="AppPool3"
                         Name="[WEB_APP_POOL_NAME]"
                         Identity="localService"
