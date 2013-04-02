@@ -15,14 +15,14 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		internal Func<IDisposable> disableAllCaching { get; set; }
 		private readonly string[] ids;
-		private readonly string[] includes;
+		private readonly KeyValuePair<string, Type>[] includes;
 		bool firstRequest = true;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
 
 		private Stopwatch sp;
 
-		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string[] ids, string[] includes)
+        public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
@@ -61,11 +61,12 @@ namespace Raven.Client.Document.SessionOperations
 
 		public T[] Complete<T>()
 		{
-			foreach (var include in includeResults)
-			{
-				sessionOperations.TrackEntity<object>(include);
-			}
-
+            for (var i = 0; i < includeResults.Length; i++)
+            {
+                var include = includeResults[i];
+                var includedEntityType = this.includes[i].Value;
+                sessionOperations.TrackEntity(includedEntityType, include);
+            }
 
 			var finalResults = SelectResults()
 				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))
@@ -77,7 +78,7 @@ namespace Raven.Client.Document.SessionOperations
 					sessionOperations.RegisterMissing(ids[i]);
 			}
 
-			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includes);
+			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includes.Select(x => x.Key).ToArray());
 
 			return finalResults;
 		}

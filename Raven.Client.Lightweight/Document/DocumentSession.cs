@@ -118,7 +118,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Lazy<T[]> Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
 		{
-			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+			return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
 		}
 
 		/// <summary>
@@ -165,7 +165,7 @@ namespace Raven.Client.Document
 		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
 		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return LazyLoadInternal(documentKeys.ToArray(), new string[0], onEval);
+			return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
 		}
 
 		/// <summary>
@@ -300,25 +300,25 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
-		public T[] LoadInternal<T>(string[] ids, string[] includes)
-		{
-			if (ids.Length == 0)
-				return new T[0];
+        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+        {
+            if (ids.Length == 0)
+                return new T[0];
 
-			IncrementRequestCount();
-			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
-			MultiLoadResult multiLoadResult;
-			do
-			{
-				multiLoadOperation.LogOperation();
-				using (multiLoadOperation.EnterMultiLoadContext())
-				{
-					multiLoadResult = DatabaseCommands.Get(ids, includes);
-				}
-			} while (multiLoadOperation.SetResult(multiLoadResult));
+            IncrementRequestCount();
+            var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
+            MultiLoadResult multiLoadResult;
+            do
+            {
+                multiLoadOperation.LogOperation();
+                using (multiLoadOperation.EnterMultiLoadContext())
+                {
+                    multiLoadResult = DatabaseCommands.Get(ids, includes.Select(x => x.Key).ToArray());
+                }
+            } while (multiLoadOperation.SetResult(multiLoadResult));
 
-			return multiLoadOperation.Complete<T>();
-		}
+            return multiLoadOperation.Complete<T>();
+        }
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
@@ -610,7 +610,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>
-		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
+        public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
 		{
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);

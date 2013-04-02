@@ -328,28 +328,49 @@ more responsive application.
 		/// <returns></returns>
 		public T TrackEntity<T>(JsonDocument documentFound)
 		{
-			if (documentFound.NonAuthoritativeInformation.HasValue
-				&& documentFound.NonAuthoritativeInformation.Value
-				&& AllowNonAuthoritativeInformation == false)
-			{
-				throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
-				" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-			}
-			if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
-			{
-				return default(T); // document is not really there.
-			}
-			if (!documentFound.Metadata.ContainsKey("@etag"))
-			{
-				documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
-			}
-			if (!documentFound.Metadata.ContainsKey(Constants.LastModified))
-			{
-				documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
-			}
-
-			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
+            return (T)TrackEntity(typeof(T), documentFound);
 		}
+
+        /// <summary>
+        /// Gets the default value of the specified type.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        static object GetDefaultValue(Type type)
+        {
+            return type.IsValueType ? Activator.CreateInstance(type) : null;
+        }
+
+        /// <summary>
+        /// Tracks the entity inside the unit of work
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="documentFound">The document found.</param>
+        /// <returns></returns>
+        public object TrackEntity(Type entityType, JsonDocument documentFound)
+        {
+            if (documentFound.NonAuthoritativeInformation.HasValue
+                && documentFound.NonAuthoritativeInformation.Value
+                && AllowNonAuthoritativeInformation == false)
+            {
+                throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
+                " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+            }
+            if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
+            {
+                return GetDefaultValue(entityType); // document is not really there.
+            }
+            if (!documentFound.Metadata.ContainsKey("@etag"))
+            {
+                documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
+            }
+            if (!documentFound.Metadata.ContainsKey(Constants.LastModified))
+            {
+                documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
+            }
+
+            return TrackEntity(entityType, documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
+        }
 
 		/// <summary>
 		/// Tracks the entity.
@@ -361,36 +382,49 @@ more responsive application.
 		/// <returns></returns>
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
 		{
-			document.Remove("@metadata");
-			object entity;
-			if (entitiesByKey.TryGetValue(key, out entity) == false)
-			{
-				entity = ConvertToEntity<T>(key, document, metadata);
-			}
-			else
-			{
-				// the local instance may have been changed, we adhere to the current Unit of Work
-				// instance, and return that, ignoring anything new.
-				return (T)entity;
-			}
-			var etag = metadata.Value<string>("@etag");
-			if (metadata.Value<bool>("Non-Authoritative-Information") &&
-				AllowNonAuthoritativeInformation == false)
-			{
-				throw new NonAuthoritativeInformationException("Document " + key +
-					" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-			}
-			entitiesAndMetadata[entity] = new DocumentMetadata
-			{
-				OriginalValue = document,
-				Metadata = metadata,
-				OriginalMetadata = (RavenJObject)metadata.CloneToken(),
-				ETag = HttpExtensions.EtagHeaderToGuid(etag),
-				Key = key
-			};
-			entitiesByKey[key] = entity;
-			return (T)entity;
+            return (T)TrackEntity(typeof(T), key, document, metadata);
 		}
+
+        /// <summary>
+        /// Tracks the entity.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="key">The key.</param>
+        /// <param name="document">The document.</param>
+        /// <param name="metadata">The metadata.</param>
+        /// <returns></returns>
+        public object TrackEntity(Type entityType, string key, RavenJObject document, RavenJObject metadata)
+        {
+            document.Remove("@metadata");
+            object entity;
+            if (entitiesByKey.TryGetValue(key, out entity) == false)
+            {
+                entity = ConvertToEntity(entityType, key, document, metadata);
+            }
+            else
+            {
+                // the local instance may have been changed, we adhere to the current Unit of Work
+                // instance, and return that, ignoring anything new.
+                return entity;
+            }
+            var etag = metadata.Value<string>("@etag");
+            if (metadata.Value<bool>("Non-Authoritative-Information") &&
+                AllowNonAuthoritativeInformation == false)
+            {
+                throw new NonAuthoritativeInformationException("Document " + key +
+                    " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+            }
+            entitiesAndMetadata[entity] = new DocumentMetadata
+            {
+                OriginalValue = document,
+                Metadata = metadata,
+                OriginalMetadata = (RavenJObject)metadata.CloneToken(),
+                ETag = HttpExtensions.EtagHeaderToGuid(etag),
+                Key = key
+            };
+            entitiesByKey[key] = entity;
+            return entity;
+        }
 
 		/// <summary>
 		/// Gets or sets a value indicating whether non authoritative information is allowed.
@@ -433,36 +467,50 @@ more responsive application.
 		/// <returns></returns>
 		protected object ConvertToEntity<T>(string id, RavenJObject documentFound, RavenJObject metadata)
 		{
-			if (typeof(T) == typeof(RavenJObject))
-				return (T)(object)documentFound.CloneToken();
-
-			var entity = default(T);
-			EnsureNotReadVetoed(metadata);
-			var documentType = Conventions.GetClrType(id, documentFound, metadata);
-			if (documentType != null)
-			{
-				var type = Type.GetType(documentType);
-				if (type != null)
-					entity = (T)documentFound.Deserialize(type, Conventions);
-			}
-			if (Equals(entity, default(T)))
-			{
-				entity = documentFound.Deserialize<T>(Conventions);
-				var document = entity as RavenJObject;
-				if (document != null)
-				{
-					entity = (T)(object)(new DynamicJsonObject(document));
-				}
-			}
-			GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
-
-			foreach (var documentConversionListener in listeners.ConversionListeners)
-			{
-				documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
-			}
-
-			return entity;
+            return (T)ConvertToEntity(typeof(T), id, documentFound, metadata);
 		}
+
+        /// <summary>
+        /// Converts the json document to an entity.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="id">The id.</param>
+        /// <param name="documentFound">The document found.</param>
+        /// <param name="metadata">The metadata.</param>
+        /// <returns></returns>
+        object ConvertToEntity(Type entityType, string id, RavenJObject documentFound, RavenJObject metadata)
+        {
+            if (entityType == typeof(RavenJObject))
+                return (object)documentFound.CloneToken();
+
+            var defaultValue = GetDefaultValue(entityType);
+            var entity = defaultValue;
+            EnsureNotReadVetoed(metadata);
+            var documentType = Conventions.GetClrType(id, documentFound, metadata);
+            if (documentType != null)
+            {
+                var type = Type.GetType(documentType);
+                if (type != null)
+                    entity = documentFound.Deserialize(type, Conventions);
+            }
+            if (Equals(entity, defaultValue))
+            {
+                entity = documentFound.Deserialize(entityType, Conventions);
+                var document = entity as RavenJObject;
+                if (document != null)
+                {
+                    entity = (object)(new DynamicJsonObject(document));
+                }
+            }
+            GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+
+            foreach (var documentConversionListener in listeners.ConversionListeners)
+            {
+                documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
+            }
+
+            return entity;
+        }
 
 		private static void EnsureNotReadVetoed(RavenJObject metadata)
 		{

@@ -3,7 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Raven.Client.Document;
 
 namespace Raven.Client
@@ -15,6 +17,6 @@ namespace Raven.Client
 	{
 		DocumentConvention Conventions { get; }
 
-		Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes);
+        Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes);
 	}
 }

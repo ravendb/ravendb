@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 
@@ -17,8 +18,7 @@ namespace Raven.Client
 		DocumentConvention Conventions { get; }
 
 		T[] LoadInternal<T>(string[] ids);
-		T[] LoadInternal<T>(string[] ids, string[] includes);
-		
-		Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval);
+        T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes);
+        Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval);
 	}
 }
