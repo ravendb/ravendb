@@ -176,13 +176,14 @@ namespace Raven.Client.Shard
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
-			return LoadInternal<T>(ids, new string[0]);
+            return LoadInternal<T>(ids, new KeyValuePair<string, Type>[0]);
 		}
 
-		public T[] LoadInternal<T>(string[] ids, string[] includes)
+		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
+            var includePaths = includes.Select(x => x.Key).ToArray();
 			var results = new T[ids.Length];
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includes);
+            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
 
 			if (!idsToLoad.Any())
 				return results;
@@ -205,7 +206,7 @@ namespace Raven.Client.Shard
 						multiLoadOperation.LogOperation();
 						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							multiLoadResult = dbCmd.Get(currentShardIds, includes);
+                            multiLoadResult = dbCmd.Get(currentShardIds, includePaths);
 						}
 					} while (multiLoadOperation.SetResult(multiLoadResult));
 					return multiLoadOperation;
@@ -260,7 +261,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
 		{
-			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+            return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
 		}
 
 		/// <summary>
@@ -395,7 +396,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>
-		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
+        public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
 		{
 			var idsAndShards = ids.Select(id => new
 			{
