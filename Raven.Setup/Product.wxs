@@ -3,7 +3,7 @@
      xmlns:iis="http://schemas.microsoft.com/wix/IIsExtension"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <Product Id="*" Name="RavenDB" Language="1033" Version="2.5.0.0" Manufacturer="Hibernating Rhinos LTD" UpgradeCode="79a41e9e-dc99-4df8-9820-1de16e63c655">
-    <Package InstallerVersion="200" Compressed="yes" />
+    <Package InstallerVersion="300" Compressed="yes" />
     
     <!--InstallPrivileges="elevated" InstallScope="perMachine"-->
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
@@ -68,7 +68,8 @@
       <ComponentRef Id='Raven.Web.Config'/>
       
       <!-- Include IIS Configuration. -->
-      <ComponentGroupRef Id="IssConfiguration" />
+      <ComponentGroupRef Id="IISConfigurationBasedOnExistingWebSite" />
+      <ComponentGroupRef Id="IISConfigurationBasedOnNewRavenWebSite" />
       <ComponentRef Id="PersistWebSiteValues" />
     </Feature>
 
