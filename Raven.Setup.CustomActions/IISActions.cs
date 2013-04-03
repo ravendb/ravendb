@@ -88,7 +88,11 @@ namespace Raven.Setup.CustomActions
 						}
 					}
 				}
-                
+				else
+				{
+					session["WEBSITE_ID"] = "*";
+					session["WEBSITE_DEFAULT_APPPOOL"] = "DefaultAppPool";
+				}
 				session.DoAction("SetIISInstallFolder");
 
                 return ActionResult.Success;
@@ -132,7 +136,7 @@ namespace Raven.Setup.CustomActions
                         var id = webSite.Name;
                         var name = webSite.Properties[ServerComment].Value.ToString();
                         var path = webSite.PhysicalPath();
-	                    var defaultAppPool = "";// TODO arek
+	                    var defaultAppPool = (string) webSite.Properties["AppPoolId"].Value;
 
                         StoreSiteDataInComboBoxTable(id, name, path, order++, comboView);
                         StoreSiteDataInAvailableSitesTable(id, name, path, defaultAppPool, availableView);
