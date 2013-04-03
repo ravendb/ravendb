@@ -144,7 +144,7 @@ namespace Raven.Client.Shard
 		public Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			var results = new T[ids.Length];
-			var includePaths = includes.Select(x => x.Key).ToArray();
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
             var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
 
 			if (!idsToLoad.Any())

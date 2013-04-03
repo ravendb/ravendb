@@ -197,7 +197,7 @@ namespace Raven.Client.Shard
 	    private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 	    {
 			var results = new T[ids.Length];
-			var includePaths = includes.Select(x => x.Key).ToArray();
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
 			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
 
 			if (!idsToLoad.Any())
