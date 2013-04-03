@@ -161,7 +161,7 @@ namespace Raven.Database.Indexing
 			return results;
 		}
 
-		private static string TranslateField(string field)
+		public static string TranslateField(string field)
 		{
 			var fieldParts = field.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
 

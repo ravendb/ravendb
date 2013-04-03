@@ -303,6 +303,11 @@ namespace Raven.Abstractions.Data
 		{
 			return (IndexQuery)MemberwiseClone();
 		}
+
+		public override string ToString()
+		{
+			return Query;
+		}
 	}
 
     public enum QueryOperator

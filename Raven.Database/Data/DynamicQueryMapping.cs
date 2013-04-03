@@ -248,11 +248,16 @@ namespace Raven.Database.Data
 			{
 				foreach (var sortedField in query.SortedFields)
 				{
-					if (sortedField.Field.StartsWith(Constants.RandomFieldName))
+					var field = sortedField.Field;
+					if (field.StartsWith(Constants.RandomFieldName))
 						continue;
-					if (sortedField.Field == Constants.TemporaryScoreValue)
+					if (field == Constants.TemporaryScoreValue)
 						continue;
-					fields.Add(Tuple.Create(sortedField.Field, sortedField.Field));
+
+					if (field.EndsWith("_Range"))
+						field = field.Substring(0, field.Length - "_Range".Length);
+				
+					fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
 				}
 			}
 

@@ -74,29 +74,8 @@ namespace Raven.Database.Queries
 			var sp = Stopwatch.StartNew();
 			while (true)
 			{
-				result = documentDatabase.Query(map.IndexName,
-												new IndexQuery
-												{
-													Cutoff = query.Cutoff,
-													PageSize = query.PageSize,
-													Query = realQuery,
-													Start = query.Start,
-													FieldsToFetch = query.FieldsToFetch,
-													GroupBy = query.GroupBy,
-													AggregationOperation = query.AggregationOperation,
-													SortedFields = query.SortedFields,
-													DefaultField = query.DefaultField,
-													CutoffEtag = query.CutoffEtag,
-													DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
-													DefaultOperator = query.DefaultOperator,
-													SkipTransformResults = query.SkipTransformResults,
-													SkippedResults = query.SkippedResults,
-													HighlighterPreTags = query.HighlighterPreTags,
-													HighlighterPostTags = query.HighlighterPostTags,
-													HighlightedFields = query.HighlightedFields,
-                                                    ResultsTransformer = query.ResultsTransformer,
-                                                    QueryInputs = query.QueryInputs
-												});
+				var indexQuery = CreateIndexQuery(query, map, realQuery);
+				result = documentDatabase.Query(map.IndexName, indexQuery);
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||
@@ -108,6 +87,54 @@ namespace Raven.Database.Queries
 
 				Thread.Sleep(100);
 			}
+		}
+
+		private static IndexQuery CreateIndexQuery(IndexQuery query, DynamicQueryMapping map, string realQuery)
+		{
+			var indexQuery = new IndexQuery
+			{
+				Cutoff = query.Cutoff,
+				PageSize = query.PageSize,
+				Query = realQuery,
+				Start = query.Start,
+				FieldsToFetch = query.FieldsToFetch,
+				GroupBy = query.GroupBy,
+				AggregationOperation = query.AggregationOperation,
+				SortedFields = query.SortedFields,
+				DefaultField = query.DefaultField,
+				CutoffEtag = query.CutoffEtag,
+				DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
+				DefaultOperator = query.DefaultOperator,
+				SkipTransformResults = query.SkipTransformResults,
+				SkippedResults = query.SkippedResults,
+				HighlighterPreTags = query.HighlighterPreTags,
+				HighlighterPostTags = query.HighlighterPostTags,
+				HighlightedFields = query.HighlightedFields,
+				ResultsTransformer = query.ResultsTransformer,
+				QueryInputs = query.QueryInputs
+			};
+			if (indexQuery.SortedFields == null)
+				return indexQuery;
+
+			for (int index = 0; index < indexQuery.SortedFields.Length; index++)
+			{
+				var sortedField = indexQuery.SortedFields[index];
+				var fieldName = sortedField.Field;
+				bool hasRange = false;
+				if (fieldName.EndsWith("_Range"))
+				{
+					fieldName = fieldName.Substring(0, fieldName.Length - "_Range".Length);
+					hasRange = true;
+				}
+			
+				var item = map.Items.FirstOrDefault(x => string.Equals(x.QueryFrom, fieldName, StringComparison.InvariantCultureIgnoreCase));
+				if (item == null)
+					continue;
+
+				indexQuery.SortedFields[index] = new SortedField(hasRange ? item.To + "_Range" : item.To);
+				indexQuery.SortedFields[index].Descending = sortedField.Descending;
+			}
+			return indexQuery;
 		}
 
 		private Tuple<string, bool> GetAppropriateIndexToQuery(string entityName, IndexQuery query, DynamicQueryMapping map)
