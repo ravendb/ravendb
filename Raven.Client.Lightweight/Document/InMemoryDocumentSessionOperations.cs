@@ -342,18 +342,18 @@ more responsive application.
 			return (T)TrackEntity(typeof(T), documentFound);
 		}
 
-
 		/// <summary>
 		/// Tracks the entity.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="key">The key.</param>
 		/// <param name="document">The document.</param>
-		/// <param name="metadata">The metadata.</param>
+		/// <param name="metadata">The metadata.</param>'
+		/// <param name="noTracking"></param>
 		/// <returns></returns>
-		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata)
+		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
-			return (T)TrackEntity(typeof(T), key, document, metadata);
+			return (T)TrackEntity(typeof(T), key, document, metadata, noTracking);
 		}
 
 		/// <summary>
@@ -384,31 +384,17 @@ more responsive application.
 				documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
 			}
 
-			return TrackEntity(entityType, documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
+			return TrackEntity(entityType, documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);
 		}
 
 		/// <summary>
 		/// Tracks the entity.
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
 		/// <param name="key">The key.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
 		/// <returns></returns>
-		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
-		{
-            return (T)TrackEntity(typeof(T), key, document, metadata);
-		}
-
-		/// <summary>
-		/// Tracks the entity.
-		/// </summary>
-		/// <param name="entityType"></param>
-		/// <param name="key">The key.</param>
-		/// <param name="document">The document.</param>
-		/// <param name="metadata">The metadata.</param>
-		/// <returns></returns>
-		public object TrackEntity(Type entityType, string key, RavenJObject document, RavenJObject metadata)
+		object TrackEntity(Type entityType, string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
 			document.Remove("@metadata");
 			object entity;
@@ -429,15 +415,20 @@ more responsive application.
 				throw new NonAuthoritativeInformationException("Document " + key +
 					" returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
 			}
-			entitiesAndMetadata[entity] = new DocumentMetadata
+
+			if (noTracking == false)
 			{
-				OriginalValue = document,
-				Metadata = metadata,
-				OriginalMetadata = (RavenJObject)metadata.CloneToken(),
-				ETag = HttpExtensions.EtagHeaderToEtag(etag),
-				Key = key
-			};
-			entitiesByKey[key] = entity;
+				entitiesAndMetadata[entity] = new DocumentMetadata
+				{
+					OriginalValue = document,
+					Metadata = metadata,
+					OriginalMetadata = (RavenJObject)metadata.CloneToken(),
+					ETag = HttpExtensions.EtagHeaderToEtag(etag),
+					Key = key
+				};
+				entitiesByKey[key] = entity;
+			}
+
 			return entity;
 		}
 
