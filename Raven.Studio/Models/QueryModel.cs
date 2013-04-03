@@ -611,10 +611,7 @@ namespace Raven.Studio.Models
 			Query = state.Query;
 
 			IsSpatialQuery = state.IsSpatialQuery;
-			SpatialQuery.FieldName = state.SpatialFieldName ?? Constants.DefaultSpatialFieldName;
-			SpatialQuery.Y = state.Latitude;
-			SpatialQuery.X = state.Longitude;
-			SpatialQuery.Radius = state.Radius;
+			SpatialQuery.UpdateFromState(state);
 
 	        UseTransformer = state.UseTransformer;
 			DefaultOperator = state.DefaultOperator;

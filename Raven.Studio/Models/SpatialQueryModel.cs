@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -30,12 +32,25 @@ namespace Raven.Studio.Models
 		private readonly Dictionary<string, SpatialQueryField> fields = new Dictionary<string, SpatialQueryField>();
 		public BindableCollection<string> Fields { get; private set; }
 
+		public void Clear()
+		{
+			Y = null;
+			X = null;
+			Radius = null;
+		}
+
+		public void Reset()
+		{
+			FieldName = Fields.FirstOrDefault();
+			Clear();
+		}
+
 		public void UpdateFields(IEnumerable<SpatialQueryField> queryFields)
 		{
 			fields.Clear();
 			Fields.Clear();
 			
-			foreach (var queryField in queryFields.OrderBy(x => x.Name))
+			foreach (var queryField in queryFields.OrderBy(c => c.Name))
 			{
 				Fields.Add(queryField.Name);
 				fields[queryField.Name] = queryField;
@@ -44,11 +59,25 @@ namespace Raven.Studio.Models
 			FieldName = Fields.FirstOrDefault();
 		}
 
-		public void Clear()
+		public void UpdateFromState(QueryState state)
 		{
-			Y = null;
-			X = null;
-			Radius = null;
+			if (state.IsSpatialQuery)
+			{
+				var key = state.SpatialFieldName ?? Constants.DefaultSpatialFieldName;
+
+				if (!fields.ContainsKey(key))
+					key = Fields.FirstOrDefault();
+
+				FieldName = key;
+
+				Y = state.Latitude;
+				X = state.Longitude;
+				Radius = state.Radius;
+			}
+			else
+			{
+				Reset();
+			}
 		}
 
 		private SpatialUnits radiusUnits;
@@ -71,8 +100,16 @@ namespace Raven.Studio.Models
 			{
 				if (fieldName == value) return;
 				fieldName = value;
-				IsGeographical = fields[fieldName].IsGeographical;
-				RadiusUnits = fields[fieldName].Units;
+				if (!string.IsNullOrWhiteSpace(fieldName))
+				{
+					IsGeographical = fields[fieldName].IsGeographical;
+					RadiusUnits = fields[fieldName].Units;
+				}
+				else
+				{
+					IsGeographical = true;
+					RadiusUnits = SpatialUnits.Kilometers;
+				}
 				OnPropertyChanged(() => FieldName);
 			}
 		}
