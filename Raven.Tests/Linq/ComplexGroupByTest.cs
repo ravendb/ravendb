@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -285,6 +286,11 @@ namespace Raven.Tests.Linq
 			public ImportStatus Status { get; set; }
 			public DateTime Date { get; set; }
 			public int Count { get; set; }
+		}
+
+		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
+		{
+			// No need to create the default index here
 		}
 	}
 }

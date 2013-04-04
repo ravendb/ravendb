@@ -431,6 +431,7 @@ Reduce only fields: {2}
 				var parameter = lambdaExpression.Parameters.First();
 				var identifier = parameter.Name;
 
+				// Support getting the __document_id from IGrouping parameter
 				var castExpression = parameter.Parent.Parent.Parent as CastExpression;
 				if (castExpression != null)
 				{
