@@ -9,6 +9,8 @@ using System.Diagnostics;
 using System.DirectoryServices;
 using System.Globalization;
 using System.Linq;
+using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Deployment.WindowsInstaller;
@@ -332,7 +334,25 @@ namespace Raven.Setup.CustomActions
 			catch (Exception ex)
 			{
 				LoggingHelper.Log(session, "Exception was thrown during SetupPerformanceCountersForIISUser:" + ex);
-				return ActionResult.Failure;
+
+				var sb =
+					new StringBuilder(
+						string.Format("Warning: The access to performance counters has not been configured for the account '{0}\\{1}'. ",
+						              session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"]));
+
+
+				if (ex is IdentityNotMappedException)
+				{
+					sb.Append("The account does not exist.");
+				}
+				else
+				{
+					sb.Append("Exception type: " + ex.GetType());
+				}
+
+				MessageBox.Show(sb.ToString(), "Failed to grant permissions", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+				return ActionResult.Success;
 			}
 
 			return ActionResult.Success;
