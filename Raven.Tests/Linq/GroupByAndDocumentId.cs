@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Linq
 {
-	public class ComplexGroupByTest : RavenTest
+	public class GroupByAndDocumentId : RavenTest
 	{
 		public class Client
 		{
