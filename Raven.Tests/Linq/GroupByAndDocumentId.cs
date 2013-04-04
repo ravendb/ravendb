@@ -150,6 +150,8 @@ namespace Raven.Tests.Linq
 
 				WaitForIndexing(documentStore);
 
+				AssertNoIndexErrors(documentStore);
+
 				using (var session = documentStore.OpenSession())
 				{
 					var results = session.Query<ImportSummary, TIndex>().ToArray();
