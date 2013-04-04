@@ -1585,13 +1585,14 @@ namespace Raven.Client.Connection
 
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
+				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}&popularity={6}",
 													 Uri.EscapeUriString(index),
 													 Uri.EscapeDataString(suggestionQuery.Term),
 													 Uri.EscapeDataString(suggestionQuery.Field),
 													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
 													 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()));
+													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()),
+													 suggestionQuery.Popularity);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
