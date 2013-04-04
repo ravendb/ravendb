@@ -674,6 +674,7 @@
     <Compile Include="MailingList\Hancock.cs" />
     <Compile Include="MailingList\Holt.cs" />
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
+    <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="MailingList\InIssues.cs" />
     <Compile Include="MailingList\InQueries.cs" />
     <Compile Include="MailingList\Jalchr.cs" />

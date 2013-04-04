@@ -19,7 +19,7 @@ namespace Raven.Client.Document
 	public class MultiLoaderWithInclude<T> : ILoaderWithInclude<T>
 	{
 		private readonly IDocumentSessionImpl session;
-		private readonly List<string> includes = new List<string>();
+		private readonly List<KeyValuePair<string, Type>> includes = new List<KeyValuePair<string, Type>>();
 
 		/// <summary>
 		/// Includes the specified path.
@@ -27,7 +27,12 @@ namespace Raven.Client.Document
 		/// <param name="path">The path.</param>
 		public MultiLoaderWithInclude<T> Include(string path)
 		{
-			includes.Add(path);
+			return Include(path, typeof(object));
+		}
+
+		MultiLoaderWithInclude<T> Include(string path, Type type)
+		{
+			includes.Add(new KeyValuePair<string, Type>(path, type));
 			return this;
 		}
 
@@ -58,7 +63,7 @@ namespace Raven.Client.Document
 				id += "(" + idPrefix + ")";
 			}
 
-			return Include(id);
+			return Include(id, typeof(TInclude));
 		}
 
 		/// <summary>
