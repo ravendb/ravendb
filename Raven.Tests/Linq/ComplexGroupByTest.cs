@@ -149,8 +149,6 @@ namespace Raven.Tests.Linq
 
 				WaitForIndexing(documentStore);
 
-				WaitForUserToContinueTheTest(documentStore);
-
 				using (var session = documentStore.OpenSession())
 				{
 					var results = session.Query<ImportSummary, TIndex>().ToArray();
