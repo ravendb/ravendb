@@ -192,6 +192,16 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument DirectGet(string serverUrl, string key, string transform = null)
 		{
+			if (key.Length > 127)
+			{
+				// avoid hitting UrlSegmentMaxLength limits in Http.sys
+				var multiLoadResult = DirectGet(new string[] {key}, serverUrl, new string[0], null, new Dictionary<string, RavenJToken>(), false);
+				var result = multiLoadResult.Results.FirstOrDefault();
+				if (result == null)
+					return null;
+				return SerializationHelper.RavenJObjectToJsonDocument(result);
+			}
+
 			var metadata = new RavenJObject();
 		    var actualUrl = serverUrl + "/docs/" + Uri.EscapeDataString(key);
 		    if (!string.IsNullOrEmpty(transform))
@@ -1585,13 +1595,14 @@ namespace Raven.Client.Connection
 
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
+				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}&popularity={6}",
 													 Uri.EscapeUriString(index),
 													 Uri.EscapeDataString(suggestionQuery.Term),
 													 Uri.EscapeDataString(suggestionQuery.Field),
 													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
 													 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()));
+													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()),
+													 suggestionQuery.Popularity);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)

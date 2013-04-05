@@ -294,30 +294,31 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task<T[]> LoadAsync<T>(params string[] ids)
 		{
-			return LoadAsyncInternal<T>(ids, new string[0]);
+			return LoadAsyncInternal<T>(ids, new KeyValuePair<string, Type>[0]);
 		}
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
 		{
-			return LoadAsyncInternal<T>(ids.ToArray(), new string[0]);
+			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0]);
 		}
 
 		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
-		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
+		public Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			IncrementRequestCount();
 			var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
 			return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
 		}
 
-		private Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes, MultiLoadOperation multiLoadOperation)
+		private Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, MultiLoadOperation multiLoadOperation)
 		{
 			multiLoadOperation.LogOperation();
 			using (multiLoadOperation.EnterMultiLoadContext())
 			{
-				return AsyncDatabaseCommands.GetAsync(ids, includes)
+				var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+				return AsyncDatabaseCommands.GetAsync(ids, includePaths)
 				                            .ContinueWith(t =>
 				                            {
 					                            if (multiLoadOperation.SetResult(t.Result) == false)

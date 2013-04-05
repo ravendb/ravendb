@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Extensions
 				return dynamicJsonObject.Inner;
 			if (result is string || result is ValueType)
 				return new RavenJObject { { "Value", new RavenJValue(result) } };
-			return RavenJObject.FromObject(result);
+			return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
 		}
 
 		/// <summary>

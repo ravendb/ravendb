@@ -48,11 +48,12 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var query = session.Query<AgencyDb, Agency_Entity>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite());
-					var ex = Assert.Throws<JsonSerializationException>(() => query.Where(x => x.Code == code).As<Agency>()
-					                                                     .SingleOrDefault());
+					var result = query.Where(x => x.Code == code)
+						 .As<Agency>()
+					     .SingleOrDefault();
 
-					Assert.Equal("Could not read value for property: Countries", ex.Message);
-					Assert.NotNull(ex.InnerException);
+
+					Assert.NotNull(result);
 				}
 			}
 		}
