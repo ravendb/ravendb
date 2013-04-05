@@ -9,6 +9,8 @@ using System.Runtime.Serialization;
 using System.Text;
 using Jint.Native;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Reflection;
@@ -28,6 +30,7 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
+		public IList<JsonDocument> CreatedDocs;
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
@@ -315,6 +318,52 @@ function ExecutePatchScript(docInner){{
 					return null;
 				loadedDoc[Constants.DocumentIdFieldName] = value;
 				return ToJsObject(jintEngine.Global, loadedDoc);
+			})));
+
+			CreatedDocs = new List<JsonDocument>();
+
+			jintEngine.SetFunction("CreateDocument", ((Action<string, string, string, string>)((key, etag, jsonDocument, jsonMetadata) =>
+			{
+				if (string.IsNullOrEmpty(jsonDocument))
+				{
+					throw new InvalidOperationException(string.Format("Created document cannot be null or empty. Document key: '{0}'", key));
+				}
+
+				RavenJObject data;
+				using (var stringReader = new StringReader(jsonDocument))
+				using (var jsonReader = new RavenJsonTextReader(stringReader))
+				{
+					data = RavenJObject.Load(jsonReader);
+				}
+
+				Etag newDocumentEtag = null;
+
+				if (string.IsNullOrEmpty(etag) == false)
+				{
+					if (Etag.TryParse(etag, out newDocumentEtag) == false)
+					{
+						throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'", etag, key));
+					}
+				}
+
+				var newDocument = new JsonDocument
+				{
+					Key = key,
+					Etag = newDocumentEtag,
+					DataAsJson = data
+				};
+
+				if (string.IsNullOrEmpty(jsonMetadata) == false)
+				{
+					using (var stringReader = new StringReader(jsonMetadata))
+					using (var jsonReader = new RavenJsonTextReader(stringReader))
+					{
+						var metadata = RavenJObject.Load(jsonReader);
+						newDocument.Metadata = metadata;
+					}
+				}
+
+				CreatedDocs.Add(newDocument);
 			})));
 
 			jintEngine.Run(wrapperScript);

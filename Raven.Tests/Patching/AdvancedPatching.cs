@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Jint;
+using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using Raven.Client.Document;
@@ -353,6 +354,230 @@ this.Value = another.Value;
 															 Script = "this.Test = 'a';"
 														 });
 
+			}
+		}
+
+		[Fact]
+		public void CanCreateDocument()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Value = 10 });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+					Script = @"CreateDocument(
+'NewTypes/1', 
+null, 
+'{ ""CopiedValue"":' + this.Value + '}',
+'{""CreatedBy"": ""JS_Script""}');",
+				});
+
+				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
+
+				Assert.Equal(10, resultDoc.DataAsJson.Value<int>("CopiedValue"));
+				Assert.Equal("JS_Script", resultDoc.Metadata.Value<string>("CreatedBy"));
+			}
+		}
+
+		[Fact]
+		public void CanCreateMultipleDocuments()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Id = "Items/1", Value = 10, Comments = new List<string>(new[] { "one", "two", "three" }) });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("Items/1", new ScriptedPatchRequest
+				{
+					Script = @"_(this.Comments).forEach(function(comment){CreateDocument(
+						'Comments/', 
+						null, 
+						'{ ""Comment"":""' + comment + '""}',
+						null);
+					});",
+				});
+
+				var resultDoc = store.DatabaseCommands.GetDocuments(0, 10);
+
+				Assert.Equal(4, resultDoc.Length);
+
+				Assert.Equal("one", store.DatabaseCommands.Get("Comments/1").DataAsJson.Value<string>("Comment"));
+				Assert.Equal("two", store.DatabaseCommands.Get("Comments/2").DataAsJson.Value<string>("Comment"));
+				Assert.Equal("three", store.DatabaseCommands.Get("Comments/3").DataAsJson.Value<string>("Comment"));
+			}
+		}
+
+		[Fact]
+		public void CreateDocumentWillAssignKeyAndEtagIfNotProvided()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Id = "CustomTypes/1", Value = 10 });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+					Script = @"CreateDocument(
+null, 
+null, 
+'{ ""Property"": ""Value""}',
+null);",
+				});
+
+				var resultDocs = store.DatabaseCommands.GetDocuments(0, 10);
+
+				Assert.Equal(2, resultDocs.Length);
+
+				var newDoc = resultDocs.First(x => x.DataAsJson.Value<string>("Property") == "Value");
+				Assert.NotNull(newDoc.Key);
+				Assert.NotEqual(string.Empty, newDoc.Key);
+
+				var newDocEtag = newDoc.Etag;
+				Assert.NotNull(newDocEtag);
+				Assert.NotEqual(Etag.Empty, newDocEtag);
+			}
+		}
+
+
+		[Fact]
+		public void CreateDocumentShouldThrowInvalidEtagException()
+		{
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			{
+				Script = @"CreateDocument('Items/1', 'invalid-etag', '{ Property: 1}', null);"
+			}));
+
+			Assert.Contains("Invalid ETag value 'invalid-etag' for document 'Items/1'", x.InnerException.Message);
+		}
+
+		[Fact]
+		public void ShouldThrowConcurrencyExceptionIfNonCurrentEtagWasSpecified()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Value = 10 });
+					s.SaveChanges();
+				}
+
+				var x = Assert.Throws<ConcurrencyException>(() => store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+					Script = @"CreateDocument(
+'Items/1', 
+'01000000-0000-0001-0000-000000000010', 
+'{ ""Property"":""Value""}',
+null);",
+				}));
+
+				Assert.Contains("PUT attempted on document 'Items/1' using a non current etag", x.Message);
+			}
+		}
+
+		[Fact]
+		public void CanCreateEmptyDocument()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Value = 10 });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+					Script = @"CreateDocument(
+'NewTypes/1', 
+null, 
+'{ }',
+null);",
+				});
+
+				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
+
+				Assert.Equal(0, resultDoc.DataAsJson.Keys.Count);
+			}
+		}
+
+		[Fact]
+		public void CreateDocumentShouldThrowIfSpecifiedJsonIsNullOrEmptyString()
+		{
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			{
+				Script = @"CreateDocument('Items/1', null, null, null);"
+			}));
+
+			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
+
+			x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			{
+				Script = @"CreateDocument('Items/1', null, '', null);"
+			}));
+
+			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
+		}
+
+		[Fact]
+		public void CanCreateDocumentsIfPatchingAppliedByIndex()
+		{
+			var item1 = new CustomType
+			{
+				Id = "Item/1",
+				Value = 1
+			};
+			var item2 = new CustomType
+			{
+				Id = "Item/2",
+				Value = 2
+			};
+
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(item1);
+					s.Store(item2);
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.PutIndex("TestIndex",
+				                                new IndexDefinition
+				                                {
+					                                Map = @"from doc in docs 
+									select new { doc.Value }"
+												});
+
+				store.OpenSession().Advanced.LuceneQuery<CustomType>("TestIndex")
+				     .WaitForNonStaleResults().ToList();
+
+				store.DatabaseCommands.UpdateByIndex("TestIndex",
+				                                     new IndexQuery {Query = "Value:1"},
+				                                     new ScriptedPatchRequest {Script = @"CreateDocument('NewItem/3', null, '{""CopiedValue"":' + this.Value +'}', null);"})
+				     .WaitForCompletion();
+
+				var jsonDocuments = store.DatabaseCommands.GetDocuments(0, 10);
+
+				Assert.Equal(3, jsonDocuments.Length);
+
+				var jsonDocument = store.DatabaseCommands.Get("NewItem/3");
+
+				Assert.Equal(1, jsonDocument.DataAsJson.Value<int>("CopiedValue"));
 			}
 		}
 
