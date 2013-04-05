@@ -32,7 +32,7 @@ namespace Raven.Client.Document.Batches
 			string query = "?";
 			if (includes != null && includes.Length > 0)
 			{
-				query += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+				query += string.Join("&", includes.Select(x => "include=" + x.Key).ToArray());
 			}
 			query += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
 			return new GetRequest
