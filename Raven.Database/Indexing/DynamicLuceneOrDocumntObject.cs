@@ -5,10 +5,12 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Linq;
 using Raven.Database.Impl;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
+	[JsonObject]
     public class DynamicLuceneOrParentDocumntObject : DynamicJsonObject
     {
         private readonly DocumentRetriever retriever;

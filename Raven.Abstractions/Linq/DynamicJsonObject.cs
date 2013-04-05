@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -27,6 +28,7 @@ namespace Raven.Abstractions.Linq
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="RavenJObject"/>
 	/// </summary>
+	[JsonObject]
 	public class DynamicJsonObject : DynamicObject, IEnumerable<object>, IDynamicJsonObject
 	{
 		private DynamicJsonObject parent;
