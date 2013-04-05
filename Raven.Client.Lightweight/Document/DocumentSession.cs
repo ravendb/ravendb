@@ -313,7 +313,7 @@ namespace Raven.Client.Document
 
             if (typeof (T).IsArray)
             {
-                // REturns array of arrays, public APIs don't surface that yet though as we only support Transform
+                // Returns array of arrays, public APIs don't surface that yet though as we only support Transform
                 // With a single Id
                 var arrayOfArrays = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
                                             .Results

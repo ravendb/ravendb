@@ -687,6 +687,7 @@
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
     <Compile Include="MailingList\LoadAllStartingWith.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
+    <Compile Include="MailingList\LongIds.cs" />
     <Compile Include="MailingList\LuceneSearchSample.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />

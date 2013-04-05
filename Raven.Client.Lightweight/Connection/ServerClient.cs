@@ -192,6 +192,16 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument DirectGet(string serverUrl, string key, string transform = null)
 		{
+			if (key.Length > 127)
+			{
+				// avoid hitting UrlSegmentMaxLength limits in Http.sys
+				var multiLoadResult = DirectGet(new string[] {key}, serverUrl, new string[0], null, new Dictionary<string, RavenJToken>(), false);
+				var result = multiLoadResult.Results.FirstOrDefault();
+				if (result == null)
+					return null;
+				return SerializationHelper.RavenJObjectToJsonDocument(result);
+			}
+
 			var metadata = new RavenJObject();
 		    var actualUrl = serverUrl + "/docs/" + Uri.EscapeDataString(key);
 		    if (!string.IsNullOrEmpty(transform))
