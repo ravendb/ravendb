@@ -32,7 +32,7 @@
     <Compile Include="UI\CustomFatalError.wxs" />
     <Compile Include="UI\IIS\ApplicationPoolSettings.wxs" />
     <Compile Include="UI\IIS\PerformanceCounters.wxs" />
-    <Compile Include="UI\IIS\IISSetup.wxs" />
+    <Compile Include="UI\IIS\WebSiteSettings.wxs" />
     <Compile Include="UI\InstallationType.wxs" />
     <Compile Include="UI\LicenseFileChooser.wxs" />
     <Compile Include="UI\Service\Settings.wxs" />

@@ -17,7 +17,7 @@
     <Property Id="WEBSITE_TYPE" Value="NEW" />
 
     <UI>
-      <Dialog Id="IisSetupDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
+      <Dialog Id="WebSiteSettingsDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
           <Condition Action="disable">
@@ -87,8 +87,8 @@
         </Control>
       </Dialog>
 
-      <Publish Dialog="IisSetupDlg" Control="btnChange" Event="DoAction" Value="OpenWebSiteDirectoryChooser" Order="1">1</Publish>
-      <Publish Dialog="IisSetupDlg" Control="btnChange" Property="WEBSITE_PATH" Value="[WEBSITE_PATH]" Order="2">1</Publish>
+      <Publish Dialog="WebSiteSettingsDlg" Control="btnChange" Event="DoAction" Value="OpenWebSiteDirectoryChooser" Order="1">1</Publish>
+      <Publish Dialog="WebSiteSettingsDlg" Control="btnChange" Property="WEBSITE_PATH" Value="[WEBSITE_PATH]" Order="2">1</Publish>
       
     </UI>
   </Fragment>
