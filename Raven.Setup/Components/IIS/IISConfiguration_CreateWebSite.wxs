@@ -6,6 +6,7 @@
   <Fragment>
     <?include IISSettings.wxi ?>
 
+    <!-- Create a new website to install there -->
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="CreateNewRaveWebSite" Guid="{06A732B9-A902-4255-B50C-C1BBF6205731}" KeyPath="yes">
         <Condition><![CDATA[WEBSITE_TYPE = "NEW"]]></Condition>

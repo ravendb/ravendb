@@ -5,7 +5,6 @@
   <Product Id="*" Name="RavenDB" Language="1033" Version="2.5.0.0" Manufacturer="Hibernating Rhinos LTD" UpgradeCode="79a41e9e-dc99-4df8-9820-1de16e63c655">
     <Package InstallerVersion="300" Compressed="yes" />
     
-    <!--InstallPrivileges="elevated" InstallScope="perMachine"-->
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' />
@@ -18,32 +17,12 @@
     <?include Conditions.wxi ?>
     <?include Binaries.wxi ?>
 
-    
-    
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <!--<Directory Id="ProgramFilesFolder">
-        <Directory Id='HibernatingRhinos' Name='HibernatingRhinos'>-->
-      
-          <Directory Id="INSTALLFOLDER" Name="RavenDB">
-            <Directory Id="Bin" Name="bin">
-            </Directory>
-          <!--</Directory>
-        </Directory>-->
-      </Directory>
-
-      <Directory Id="NEW_WEB_SITE_DIRECTORY" />
-      
-      <!--<Directory Id="ProgramMenuFolder" Name="Programs">
-        <Directory Id="ProgramMenuDir" Name="RavenDB">
-          <Component Id="ProgramMenuDir" Guid="ECB41950-1566-4EE1-93E9-5B8E23B77D80">
-            <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
-            <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
-          </Component>
+      <Directory Id="INSTALLFOLDER" Name="RavenDB">
+        <Directory Id="Bin" Name="bin">
         </Directory>
-      </Directory>-->
-
-      <!--<Directory Id="DesktopFolder" Name="Desktop" />-->
-
+      </Directory>
+      <Directory Id="NEW_WEB_SITE_DIRECTORY" />
     </Directory>
 
     <Feature Id='Service' 
@@ -54,7 +33,7 @@
       <ComponentRef Id='Raven.Server' />
       <ComponentRef Id='Raven.Database.Service' />
       <ComponentRef Id='Raven.Abstractions.Service' />
-      <ComponentRef Id='Raven.Server.ProvidedServiceName' />
+      <ComponentRef Id='PersistServiceValues' />
     </Feature>
 
     <Feature Id='IIS'
@@ -67,8 +46,6 @@
       <ComponentRef Id='Raven.Abstractions.Web' />
       <ComponentRef Id='Raven.Web.Config.IIS_7_And_8'/>
       <ComponentRef Id='Raven.Web.Config.IIS_6'/>
-      
-      <!-- Include IIS Configuration. -->
       <ComponentGroupRef Id="IISConfigurationBasedOnExistingWebSite" />
       <ComponentGroupRef Id="IISConfigurationBasedOnNewRavenWebSite" />
       <ComponentRef Id="PersistWebSiteValues" />
@@ -79,14 +56,10 @@
     <WixVariable Id="WixUILicenseRtf" Value="License\RavenDB.rtf" />
     <WixVariable Id="WixUIBannerBmp" Value="Images\banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="Images\dialog.bmp" />
-
-    <Property Id="SERVICE_NAME_FROM_REGISTRY">
-      <RegistrySearch Id="ServiceNaneFromRegistry"
-                      Root="HKLM"
-                      Key="SOFTWARE\[Manufacturer]\[ProductName]"
-                      Name="ServiceName"
-                      Type="raw" />
-    </Property>
+    
+    <!-- General custom actions -->
+    <CustomAction Id="SetLogFileLocation" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetLogFileLocation"
+              Execute="immediate" Return="check" />
 
     <!-- Service custom actions -->
     <CustomAction Id="InstallRavenService_Cmd" Property="InstallRavenService"
@@ -94,8 +67,11 @@
     <CustomAction Id="InstallRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
 
     <CustomAction Id="UninstallRavenService_Cmd" Property="UninstallRavenService"
-              Value="&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME_FROM_REGISTRY]&quot; /uninstall" Execute="immediate"/>
+              Value="&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME]&quot; /uninstall" Execute="immediate"/>
+    
     <CustomAction Id="UninstallRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
+
+    <CustomAction Id="SetInstallationTypeToService" Property="RAVEN_INSTALLATION_TYPE" Value="SERVICE" />
     
     <!-- IIS custom actions -->
     <CustomAction Id="GetIISWebSites" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="GetWebSites"
@@ -106,12 +82,7 @@
 
     <CustomAction Id="SetIISInstallFolder" Directory="INSTALLFOLDER" Value="[WEBSITE_PATH]\[WEBSITE_VD]" />
 
-    <CustomAction Id="SetInstallationTypeToService" Property="RAVEN_INSTALLATION_TYPE" Value="SERVICE" />
-    
     <CustomAction Id="SetupPerformanceCountersForIISUser" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetupPerformanceCountersForIISUser"
-                  Execute="immediate" Return="check" />
-
-    <CustomAction Id="SetLogFileLocation" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetLogFileLocation"
                   Execute="immediate" Return="check" />
 
     <CustomAction Id="SetNewWebSiteDirectory" Directory="NEW_WEB_SITE_DIRECTORY" Value="[WEBSITE_PATH]" />
