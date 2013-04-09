@@ -23,8 +23,10 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
+			var i = 0;
+
 			CreateReduceKeysCountsTable(session,dbid);
 			CreateReduceKeysStatusTable(session, dbid);
 
@@ -45,8 +47,14 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					var reduceKey = Api.RetrieveColumnAsString(session, mappedResults, columnDictionary["reduce_key"], Encoding.Unicode);
 					var countPerKey = countsPerKeyPerIndex.GetOrAdd(index);
 					countPerKey[reduceKey] = countPerKey.GetOrDefault(reduceKey) + 1;
+
+					if (i++%10000 == 0)
+						output("Processed " + (i - 1) + " rows in mapped_results");
 				}
 			}
+
+			output("Finished processing mapped_results");
+
 			using (var reduceKeys = new Table(session, dbid, "reduce_keys_status", OpenTableGrbit.None))
 			{
 				var columnDictionary = Api.GetColumnDictionary(session, reduceKeys);
@@ -65,6 +73,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					}
 				}
 			}
+
+			output("Finished processing reduce_keys_status");
 
 			using (var reduceKeys = new Table(session, dbid, "reduce_keys_counts", OpenTableGrbit.None))
 			{
@@ -85,6 +95,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 				}
 			}
 
+			output("Finished processing reduce_keys_counts");
+
 			using (var scheduledReductions = new Table(session, dbid, "scheduled_reductions", OpenTableGrbit.None))
 			{
 				SchemaCreator.CreateIndexes(session, scheduledReductions, new JET_INDEXCREATE
@@ -93,6 +105,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					szKey = "+view\0+level\0+hashed_reduce_key\0\0",
 				});
 			}
+
+			output("Finished processing scheduled_reductions");
 		
 			SchemaCreator.UpdateVersion(session, dbid, "4.1");
 		}

@@ -426,12 +426,12 @@ namespace Raven.Storage.Esent
 											schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
 
 								log.Info("Updating schema from version {0}: ", schemaVersion);
-								Console.Write("Updating schema from version {0}: ", schemaVersion);
+								Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
 
 								ticker.Start();
 
 								updater.Value.Init(generator);
-								updater.Value.Update(session, dbid);
+								updater.Value.Update(session, dbid, Output);
 								schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 
 								ticker.Stop();
@@ -621,6 +621,13 @@ namespace Raven.Storage.Esent
 
 				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param) JET_paramEnableIndexCleanup, 0, null);
 			}
+		}
+
+		private void Output(string message)
+		{
+			log.Info(message);
+			Console.Write(message);
+			Console.WriteLine();
 		}
 	}
 }

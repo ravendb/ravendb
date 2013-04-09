@@ -17,7 +17,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 		{
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
 			Api.JetDeleteTable(session, dbid, "transactions");
 			Api.JetDeleteTable(session, dbid, "documents_modified_by_transaction");
