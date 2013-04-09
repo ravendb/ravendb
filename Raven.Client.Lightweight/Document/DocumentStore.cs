@@ -866,7 +866,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="timeout">Optional timeout</param>
 		/// <returns>Task representing replication that is being in progress</returns>
-		public Task ReplicationOperation(TimeSpan? timeout = null)
+		public Task<int> ReplicationOperation(TimeSpan? timeout = null)
 		{
 			return ReplicationOperationOf(LastEtagHolder.GetLastWrittenEtag(), timeout);
 		}
@@ -876,23 +876,26 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="etag">ETag of an replicated item</param>
 		/// <param name="timeout">Optional timeout</param>
+		/// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
+		/// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
 		/// <returns>Task representing replication that is being in progress</returns>
-		public async Task ReplicationOperationOf(Etag etag, TimeSpan? timeout = null, string database = null)
+		public async Task<int> ReplicationOperationOf(Etag etag, TimeSpan? timeout = null, string database = null, int replicas = 3)
 		{
 			var asyncDatabaseCommands = AsyncDatabaseCommands;
 			if (database != null)
 				asyncDatabaseCommands = asyncDatabaseCommands.ForDatabase(database);
 
+
 			var doc = await asyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
 			if (doc == null)
-				return;
+				return -1;
 
 			var replicationDocument = doc.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			if (replicationDocument == null)
-				return;
+				return -1;
 
 			if (replicationDocument.Destinations.Count == 0)
-				return;
+				return 0;
 
 			var destinationsToCheck = new List<string>(replicationDocument.Destinations
 				.Where(x=>x.Disabled == false && x.IgnoredClient == false)
