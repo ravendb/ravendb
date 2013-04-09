@@ -877,9 +877,13 @@ namespace Raven.Client.Document
 		/// <param name="etag">ETag of an replicated item</param>
 		/// <param name="timeout">Optional timeout</param>
 		/// <returns>Task representing replication that is being in progress</returns>
-		public async Task ReplicationOperationOf(Etag etag, TimeSpan? timeout = null)
+		public async Task ReplicationOperationOf(Etag etag, TimeSpan? timeout = null, string database = null)
 		{
-			var doc = await AsyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
+			var asyncDatabaseCommands = AsyncDatabaseCommands;
+			if (database != null)
+				asyncDatabaseCommands = asyncDatabaseCommands.ForDatabase(database);
+
+			var doc = await asyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
 			if (doc == null)
 				return;
 
