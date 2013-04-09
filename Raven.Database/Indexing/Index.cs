@@ -122,6 +122,8 @@ namespace Raven.Database.Indexing
 			get { return directory is RAMDirectory; }
 		}
 
+		public IndexLockMode LockMode { get { return indexDefinition.LockMode; } }
+
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
@@ -1424,6 +1426,11 @@ namespace Raven.Database.Indexing
 		public void ForceWriteToDisk()
 		{
 			forceWriteToDisk = true;
+		}
+
+		public void SetIndexLock(IndexLockMode lockMode)
+		{
+			indexDefinition.LockMode = lockMode;
 		}
 	}
 }

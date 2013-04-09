@@ -1115,5 +1115,15 @@ namespace Raven.Database.Indexing
 		{
 			GetIndexByName(index).ForceWriteToDisk();
 		}
+
+		public void SetIndexLock(string index, IndexLockMode lockMode)
+		{
+			GetIndexByName(index).SetIndexLock(lockMode);
+		}
+
+		public IndexLockMode GetIndexLock(string index)
+		{
+			return GetIndexByName(index).LockMode;
+		}
 	}
 }

@@ -37,6 +37,11 @@ namespace Raven.Abstractions.Indexing
 		public string Name { get; set; }
 
 		/// <summary>
+		/// Get or set the index lock mode
+		/// </summary>
+		public IndexLockMode LockMode { get; set; }
+
+		/// <summary>
 		/// Gets or sets the map function, if there is only one
 		/// </summary>
 		/// <remarks>
@@ -319,6 +324,12 @@ namespace Raven.Abstractions.Indexing
 		}
 	}
 
+	public enum IndexLockMode
+	{
+		Unlock,
+		LockedIgnore,
+		LockedError
+	}
 
 	public class TransformerDefinition
 	{
@@ -337,7 +348,7 @@ namespace Raven.Abstractions.Indexing
 		{
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
-			if (obj.GetType() != this.GetType()) return false;
+			if (obj.GetType() != GetType()) return false;
 			return Equals((TransformerDefinition) obj);
 		}
 
@@ -348,8 +359,7 @@ namespace Raven.Abstractions.Indexing
 
 		public TransformerDefinition Clone()
 		{
-			return (TransformerDefinition) base.MemberwiseClone();
+			return (TransformerDefinition) MemberwiseClone();
 		}
 	}
-
 }

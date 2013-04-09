@@ -389,6 +389,7 @@ namespace Raven.Database
 						index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
 						index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
 						index.IsOnRam = IndexStorage.IndexOnRam(index.Name);
+						index.LockMode = IndexStorage.GetIndexLock(index.Name);
 					}
 				}
 
@@ -1137,6 +1138,21 @@ namespace Raven.Database
 		{
 			if (name == null)
 				throw new ArgumentNullException("name");
+
+			var existingIndex = IndexStorage.GetIndexInstance(name);
+
+			if (existingIndex != null)
+			{
+				switch (existingIndex.LockMode)
+				{
+						case IndexLockMode.LockedIgnore:
+						log.Info(() => "Index not saved because it is locked");
+						return name;
+
+						case IndexLockMode.LockedError:
+						throw new InvalidOperationException("Can not override locked index");
+				}
+			}
 
 			name = name.Trim();
 
