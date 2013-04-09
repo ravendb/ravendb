@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Impl;
 using BitConverter = System.BitConverter;
@@ -17,7 +18,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
         {
         }
 
-        public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
         {
             using (var table = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
             {
