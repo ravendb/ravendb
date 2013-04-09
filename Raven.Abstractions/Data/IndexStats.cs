@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Abstractions.Data
 {
@@ -26,6 +27,7 @@ namespace Raven.Abstractions.Data
         public DateTime CreatedTimestamp { get; set; }
 		public DateTime LastIndexingTime { get; set; }
 		public bool IsOnRam { get; set; }
+		public IndexLockMode LockMode { get; set; }
 
 		public IndexingPerformanceStats[] Performance { get; set; }
 

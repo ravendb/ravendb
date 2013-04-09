@@ -72,6 +72,18 @@ namespace Raven.Database.Server.Responders
 			{
 				Database.IndexStorage.ForceWriteToDisk(index);
 			}
+			else if ("unlock".Equals(context.Request.QueryString["op"], StringComparison.InvariantCultureIgnoreCase))
+			{
+				Database.IndexStorage.SetIndexLock(index, IndexLockMode.Unlock);
+			}
+			else if ("lockIgnore".Equals(context.Request.QueryString["op"], StringComparison.InvariantCultureIgnoreCase))
+			{
+				Database.IndexStorage.SetIndexLock(index, IndexLockMode.LockedIgnore);
+			}
+			else if ("lockError".Equals(context.Request.QueryString["op"], StringComparison.InvariantCultureIgnoreCase))
+			{
+				Database.IndexStorage.SetIndexLock(index, IndexLockMode.LockedError);
+			}
 			else
 			{
 				context.SetStatusToBadRequest();
