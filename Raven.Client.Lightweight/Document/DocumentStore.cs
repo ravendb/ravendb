@@ -894,7 +894,9 @@ namespace Raven.Client.Document
 			if (replicationDocument.Destinations.Count == 0)
 				return;
 
-			var destinationsToCheck = new List<string>(replicationDocument.Destinations.Select(x => x.Url));
+			var destinationsToCheck = new List<string>(replicationDocument.Destinations
+				.Where(x=>x.Disabled == false && x.IgnoredClient == false)
+				.Select(x => x.Url));
 
 			var sp = new Stopwatch();
 			sp.Start();
