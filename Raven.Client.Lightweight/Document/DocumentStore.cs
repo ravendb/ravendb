@@ -898,8 +898,7 @@ namespace Raven.Client.Document
 				.Where(x=>x.Disabled == false && x.IgnoredClient == false)
 				.Select(x => x.ClientVisibleUrl ??  x.Url));
 
-			var sp = new Stopwatch();
-			sp.Start();
+			var sp = Stopwatch.StartNew();
 
 			do
 			{
