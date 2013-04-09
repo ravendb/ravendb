@@ -896,7 +896,7 @@ namespace Raven.Client.Document
 
 			var destinationsToCheck = new List<string>(replicationDocument.Destinations
 				.Where(x=>x.Disabled == false && x.IgnoredClient == false)
-				.Select(x => x.Url));
+				.Select(x => x.ClientVisibleUrl ??  x.Url));
 
 			var sp = new Stopwatch();
 			sp.Start();
