@@ -11,7 +11,7 @@ namespace Raven.Client.Connection
 		private readonly long id;
 		private readonly RavenJToken state;
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		private readonly ServerClient client;
 
 		public Operation(ServerClient serverClient, long id)
@@ -46,11 +46,13 @@ namespace Raven.Client.Connection
 					return null;
 				if (status.Value<bool>("Completed"))
 					return status.Value<RavenJToken>("State");
+#if !MONO
 				await TaskEx.Delay(500);
+#endif
 			}
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public RavenJToken WaitForCompletion()
 		{
 			if (client == null)

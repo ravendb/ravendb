@@ -28,12 +28,16 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
+			if(ApplicationModel.Current == null || ApplicationModel.Current.Server.Value == null || ApplicationModel.Current.Server.Value.SelectedDatabase.Value == null)
+				return;
+			if (settingsModel == null)
+				return;
+
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 
 			var periodicBackup = settingsModel.GetSection<PeriodicBackupSettingsSectionModel>();
 			if (periodicBackup != null)
 				SavePeriodicBackup(databaseName, periodicBackup);
-
 
 			if(databaseName == Constants.SystemDatabase)
 			{
@@ -114,8 +118,6 @@ namespace Raven.Studio.Commands
 					}
 					else
 					{
-
-
 						var hasChanges = new List<string>();
 						session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/")
 						       .ContinueOnSuccessInTheUIThread(documents =>
@@ -138,7 +140,6 @@ namespace Raven.Studio.Commands
 										       session.Delete(sqlReplicationConfig);
 									       }
 								       }
-
 							       }
 
 							       if (hasChanges != null && hasChanges.Count > 0)
@@ -163,8 +164,6 @@ namespace Raven.Studio.Commands
 										       session.SaveChangesAsync().Catch();
 									       });
 								       });
-
-
 							       }
 
 							       foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
@@ -332,12 +331,10 @@ namespace Raven.Studio.Commands
 				return false;
 			}
 
-
 			windowsAuthModel.Document.Value.RequiredGroups = windowsAuthModel.RequiredGroups.ToList();
 			windowsAuthModel.Document.Value.RequiredUsers = windowsAuthModel.RequiredUsers.ToList();
 
 			session.Store(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
-
 			session.SaveChangesAsync();
 
 			return true;

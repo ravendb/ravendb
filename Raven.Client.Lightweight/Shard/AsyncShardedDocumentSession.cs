@@ -264,7 +264,7 @@ namespace Raven.Client.Shard
 			return AsyncLuceneQuery<T>(GetDynamicIndexName<T>());
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query)
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
 		{
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());
 		}
@@ -274,7 +274,7 @@ namespace Raven.Client.Shard
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}

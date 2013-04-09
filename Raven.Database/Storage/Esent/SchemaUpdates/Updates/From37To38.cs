@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Impl;
 
@@ -16,7 +17,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 		{
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
 			Api.JetDeleteTable(session, dbid, "mapped_results"); // just kill the old table, we won't use the data anyway
 			CreateMapResultsTable(session, dbid);
