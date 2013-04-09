@@ -80,7 +80,7 @@ namespace Raven.Abstractions.Data
 				Uri.EscapeDataString(QueryShape),
 				SpatialRelation,
 				spatialFieldName,
-				DistanceErrorPercentage,
+				DistanceErrorPercentage.ToString(CultureInfo.InvariantCulture),
 				unitsParam);
 		}
 	}
