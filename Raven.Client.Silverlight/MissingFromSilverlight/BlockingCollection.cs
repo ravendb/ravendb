@@ -10,17 +10,26 @@ using System.Threading;
 
 namespace System.Collections.Concurrent
 {
-	public class BlockingCollection<T> where T : class
+	public class BlockingCollection<T> : IEnumerable<T> 
+		where T : class
 	{
-		private readonly int boundedCapacity;
 
 		private readonly IList<T> collection;
 
 		private readonly object readLocker = new object();
 
+		// ReSharper disable UnusedParameter.Local
 		public BlockingCollection(int boundedCapacity)
+			: this()
+		// ReSharper restore UnusedParameter.Local
 		{
-			this.boundedCapacity = boundedCapacity;
+
+		}
+
+		public int Count { get { return collection.Count; } }
+
+		public BlockingCollection()
+		{
 			this.collection = new Collection<T>();
 		}
 
@@ -52,6 +61,16 @@ namespace System.Collections.Concurrent
 		public void Add(T item)
 		{
 			collection.Add(item);
+		}
+
+		public IEnumerator<T> GetEnumerator()
+		{
+			return collection.GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 	}
 }

@@ -69,6 +69,8 @@
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
+    <Compile Include="Util\AsyncCountdownEvent.cs" />
+    <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\EvictItemsFromCacheBasedOnChanges.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
     <Compile Include="Changes\LocalConnectionState.cs" />

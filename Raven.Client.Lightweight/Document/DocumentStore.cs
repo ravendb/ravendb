@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -26,6 +27,8 @@ using Raven.Client.Document.Async;
 #if SILVERLIGHT
 using System.Net.Browser;
 using Raven.Client.Silverlight.Connection;
+using Raven.Client.Util;
+
 #elif NETFX_CORE
 using System.Collections.Concurrent;
 using Raven.Client.Util;
@@ -34,7 +37,6 @@ using Raven.Client.WinRT.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
 using System.Security.Cryptography;
-using System.Collections.Concurrent;
 using Raven.Client.Util;
 using Raven.Abstractions.Connection;
 using Raven.Json.Linq;
@@ -728,7 +730,7 @@ namespace Raven.Client.Document
 				Conventions,
 				GetReplicationInformerForDatabase(database),
 				() => databaseChanges.Remove(database),
-				((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+				((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
 		}
 
 		/// <summary>
@@ -878,7 +880,7 @@ namespace Raven.Client.Document
 		/// <param name="timeout">Optional timeout</param>
 		/// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
 		/// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
-		/// <returns>Task representing replication that is being in progress</returns>
+		/// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
 		public async Task<int> ReplicationOperationOf(Etag etag, TimeSpan? timeout = null, string database = null, int replicas = 3)
 		{
 			var asyncDatabaseCommands = AsyncDatabaseCommands;
@@ -895,43 +897,57 @@ namespace Raven.Client.Document
 			if (replicationDocument == null)
 				return -1;
 
-			if (replicationDocument.Destinations.Count == 0)
+			var destinationsToCheck = new List<string>(replicationDocument.Destinations
+			                                                              .Where(
+				                                                              x => x.Disabled == false && x.IgnoredClient == false)
+			                                                              .Select(x => x.ClientVisibleUrl ?? x.Url))
+				.ToList();
+
+
+			if (destinationsToCheck.Count == 0)
 				return 0;
 
-			var destinationsToCheck = new List<string>(replicationDocument.Destinations
-				.Where(x=>x.Disabled == false && x.IgnoredClient == false)
-				.Select(x => x.ClientVisibleUrl ??  x.Url));
+			var countDown = new AsyncCountdownEvent(Math.Min(replicas, destinationsToCheck.Count));
+			var errors = new BlockingCollection<Exception>();
 
-			var sp = Stopwatch.StartNew();
-
-			do
+			foreach (var url in destinationsToCheck)
 			{
-				var tasks = destinationsToCheck.Select(GetReplicatedEtagsFor);
+				WaitForReplicationFromServerAsync(url, countDown, etag, errors);
+			}
 
-				var replicatedEtagInfos = timeout == null
-					                          ? await TaskEx.WhenAll(tasks)
-					                          : await TaskEx.WhenAll(tasks).DefaultAfterTimeout(timeout.Value);
+			await countDown.WaitAsync().WaitWithTimeout(timeout);
 
-				if(replicatedEtagInfos == null) // if timeout exceeded
-					break;
+			if (errors.Count > 0 && countDown.Count > 0)
+				throw new AggregateException(errors);
 
-				foreach (var etags in replicatedEtagInfos)
+			return countDown.Count;
+		}
+
+		private async void WaitForReplicationFromServerAsync(string url, AsyncCountdownEvent countDown, Etag etag, BlockingCollection<Exception> errors)
+		{
+			try
+			{
+				while (countDown.Active)
 				{
+					var etags = await GetReplicatedEtagsFor(url);
+
 					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
 
-					if (replicated)
+					if (!replicated)
 					{
-						destinationsToCheck.Remove(etags.DestinationUrl);
+						if (countDown.Active)
+							await TaskEx.Delay(100);
+						continue;
 					}
+					countDown.Signal();
+					return;
 				}
-
-				if(timeout != null && sp.Elapsed > timeout)
-					break;
-
-				if (destinationsToCheck.Count > 0)
-					await TaskEx.Delay(100);
-
-			} while (destinationsToCheck.Count > 0);
+			}
+			catch (Exception ex)
+			{
+				errors.Add(ex);
+				countDown.Signal();
+			}
 		}
 
 		/// <summary>
