@@ -885,6 +885,7 @@ namespace Raven.Client.Document
 			if (database != null)
 				asyncDatabaseCommands = asyncDatabaseCommands.ForDatabase(database);
 
+			asyncDatabaseCommands.ForceReadFromMaster();
 
 			var doc = await asyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
 			if (doc == null)
