@@ -1764,14 +1764,10 @@ namespace Raven.Database
 
 		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch, TransactionInformation transactionInformation, bool debugMode = false)
 		{
-			ScriptedJsonPatcher scriptedJsonPatcher = null;
+			var scriptedJsonPatcher = new ScriptedJsonPatcher(this);
 			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-				(jsonDoc, size) =>
-				{
-					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
-					return scriptedJsonPatcher.Apply(jsonDoc, patch, size);
-				}, debugMode);
-			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
+				(jsonDoc, size) => scriptedJsonPatcher.Apply(jsonDoc, patch, size), () => scriptedJsonPatcher.CreatedDocs, debugMode);
+			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
 		}
 
 		public PatchResultData ApplyPatch(string docId, Etag etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation, bool debugMode = false)
@@ -1779,12 +1775,12 @@ namespace Raven.Database
 
 			if (docId == null)
 				throw new ArgumentNullException("docId");
-			return ApplyPatchInternal(docId, etag, transactionInformation, (jsonDoc, size) => new JsonPatcher(jsonDoc).Apply(patchDoc), debugMode);
+			return ApplyPatchInternal(docId, etag, transactionInformation, (jsonDoc, size) => new JsonPatcher(jsonDoc).Apply(patchDoc), () => null, debugMode);
 		}
 
 		private PatchResultData ApplyPatchInternal(string docId, Etag etag,
 												TransactionInformation transactionInformation,
-												Func<RavenJObject, int, RavenJObject> patcher, bool debugMode)
+												Func<RavenJObject, int, RavenJObject> patcher, Func<IList<JsonDocument>> getDocsCreatedInPatch, bool debugMode)
 		{
 			if (docId == null) throw new ArgumentNullException("docId");
 			docId = docId.Trim();
@@ -1825,7 +1821,16 @@ namespace Raven.Database
 						{
 							try
 							{
-								Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);
+								Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+
+								var docsCreatedInPatch = getDocsCreatedInPatch();
+								if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
+								{
+									foreach (var docFromPatch in docsCreatedInPatch)
+									{
+										Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson, docFromPatch.Metadata, transactionInformation);
+									}
+								}
 							}
 							catch (ConcurrencyException)
 							{
