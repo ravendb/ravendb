@@ -63,7 +63,7 @@ namespace Raven.Client
 		/// CLR types along the way.
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query);
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query);
 
 		/// <summary>
 		/// Stream the results on the query to the client, converting them to 
@@ -77,7 +77,7 @@ namespace Raven.Client
 		/// CLR types along the way.
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
 		/// <summary>
 		/// Stream the results on the query to the client, converting them to 

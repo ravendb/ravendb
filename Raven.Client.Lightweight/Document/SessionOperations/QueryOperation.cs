@@ -152,7 +152,7 @@ namespace Raven.Client.Document.SessionOperations
 			return transformResults(indexQuery, list.Cast<object>()).Cast<T>().ToList();
 		}
 
-		private T Deserialize<T>(RavenJObject result)
+	    public T Deserialize<T>(RavenJObject result)
 		{
 			var metadata = result.Value<RavenJObject>("@metadata");
 			if ((projectionFields == null || projectionFields.Length <= 0)  &&
@@ -316,6 +316,9 @@ namespace Raven.Client.Document.SessionOperations
 
 		private void AddOperationHeaders()
 		{
+		    if (setOperationHeaders == null)
+		        return;
+
 			foreach (var sortByHint in sortByHints)
 			{
 				if (sortByHint.Value == null)
