@@ -122,8 +122,33 @@ namespace Raven.Studio.Models
 				if (enumerable != null)
 				{
 					var list = enumerable as List<object> ?? enumerable.ToList();
-					if (list.Count == 0)
+
+					if (propertyInfo.Name == "StaleIndexes")
+					{
+						if (list.Count == 0)
+						{
+							Statistics.Add(propertyInfo.Name, new StatInfo
+							{
+								Message = "No Stale Indexes",
+								ToolTipData = "No Stale Indexes"
+							});
+						}
+						else
+						{
+							Statistics.Add(propertyInfo.Name, new StatInfo
+							{
+								Message = string.Format("There are {0} Stale indexes", list.Count),
+								ToolTipData = string.Join(", ", list)
+							});
+						}
+
 						continue;
+					}
+
+					if (list.Count == 0)
+					{
+						continue;						
+					}
 
 					if ((list.First() is string == false) && (list.First() is IndexStats == false))
 						continue;
@@ -154,7 +179,8 @@ namespace Raven.Studio.Models
 
 					Statistics.Add(propertyInfo.Name, new StatInfo
 					{
-						Message = GetValueWithFormat(propertyInfo.GetValue(StatsData.Value, null))
+						Message = GetValueWithFormat(propertyInfo.GetValue(StatsData.Value, null)),
+						ToolTipData = GetValueWithFormat(propertyInfo.GetValue(StatsData.Value, null))
 					});
 				}
 			}
@@ -308,6 +334,7 @@ namespace Raven.Studio.Models
 	{
 		public bool IsList { get; set; }
 		public string Message { get; set; }
+		public string ToolTipData { get; set; }
 		public List<StatInfoItem> ListItems { get; set; }
 	}
 

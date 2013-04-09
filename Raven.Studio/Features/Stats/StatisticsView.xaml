@@ -17,7 +17,13 @@
 				</Grid.ColumnDefinitions>
 
 				<TextBlock Text="{Binding Key}" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<TextBlock Grid.Column="1" Text="{Binding Value.Message}" Visibility="{Binding Value.IsList, Converter={StaticResource BooleanToOppositeVisibility}}"/>
+				<TextBlock Grid.Column="1" 
+						   Text="{Binding Value.Message}" 
+						   Visibility="{Binding Value.IsList, Converter={StaticResource BooleanToOppositeVisibility}}" 
+						   TextTrimming="WordEllipsis"
+						   TextWrapping="NoWrap"
+						   ToolTipService.ToolTip="{Binding Value.ToolTipData, Converter={StaticResource BreakToLines}}">
+				</TextBlock>
 				<ListBox Grid.Column="1"
 						 Visibility="{Binding Value.IsList, Converter={StaticResource BooleanToVisibility}}"
 						 ItemsSource="{Binding Value.ListItems}"
@@ -29,7 +35,6 @@
 									<HyperlinkButton Content="{Binding Item}"
 													 Click="IndexClicked"/>
 								</Grid>
-
 								<Grid Visibility="{Binding ItemType, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Raven.Abstractions.Data.IndexStats'}">
 									<Grid.RowDefinitions>
 										<RowDefinition Height="Auto"/>
@@ -159,7 +164,8 @@
 						 Grid.ColumnSpan="2"
 						 ItemsSource="{Binding StatisticsToView}"
 						 ItemTemplate="{StaticResource Statistics_Item_Tamplate}"
-						 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}">
+						 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}"
+						 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 				</ListBox>
 			</Grid>
 
