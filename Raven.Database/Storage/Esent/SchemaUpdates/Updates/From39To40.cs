@@ -122,7 +122,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					}
 
 					if (i++ % 10000 == 0)
-						output("Processed " + (i - 1) + " rows in mapped_results");
+						output("Processed " + (i - 1) + " rows in reduce_results");
 				}
 
 				Api.JetDeleteIndex(session, reduceResults, "by_view_level_reduce_key_and_bucket");
