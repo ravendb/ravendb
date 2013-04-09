@@ -24,6 +24,7 @@
   <ItemGroup>
     <Compile Include="Components\IIS\IISConfiguration_CreateWebSite.wxs" />
     <Compile Include="Components\IIS\IISConfiguration_ExistingWebSite.wxs" />
+    <Compile Include="Components\IIS\Setup.wxs" />
     <Compile Include="Components\IIS\Raven.Web.wxs" />
     <Compile Include="Components\Raven.Abstractions.wxs" />
     <Compile Include="Components\Raven.Database.wxs" />

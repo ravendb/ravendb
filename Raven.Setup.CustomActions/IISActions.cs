@@ -17,25 +17,25 @@ using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Web.Administration;
 using Microsoft.Win32;
 using Raven.Database.Util;
+using Raven.Setup.CustomActions.Infrastructure.IIS;
 using View = Microsoft.Deployment.WindowsInstaller.View;
 
 namespace Raven.Setup.CustomActions
 {
 	public class IISActions
 	{
-		private const string IISEntry = "IIS://localhost/W3SVC";
 		private const string WebSiteProperty = "WEBSITE";
-		private const string ServerComment = "ServerComment";
+
 		private const string IISRegKey = @"Software\Microsoft\InetStp";
 		private const string MajorVersion = "MajorVersion";
-		private const string IISWebServer = "iiswebserver";
 		private const string GetComboContent = "select * from ComboBox";
 		private const string AvailableSites = "select * from AvailableWebSites";
 		private const string SpecificSite = "select * from AvailableWebSites where WebSiteID=";
 		private const string AppPoolProperty = "APPPOOL";
 		private const string AvailableAppPools = "select * from AvailableApplicationPools";
 		private const string SpecificAppPool = "select * from AvailableApplicationPools where PoolID=";
- 
+		private const string AsteriskSiteId = "*";
+
 		[CustomAction]
         public static ActionResult GetWebSites(Session session)
 		{
@@ -43,17 +43,14 @@ namespace Raven.Setup.CustomActions
 
             try
             {
-                var comboBoxView = session.Database.OpenView(GetComboContent);
-                var availableSitesView = session.Database.OpenView(AvailableSites);
+	            var webSites = GetWebSites();
 
-                if (IsIIS7Upwards)
-                {
-                    GetWebSitesViaWebAdministration(comboBoxView, availableSitesView);
-                }
-                else
-                {
-                    GetWebSitesViaMetabase(comboBoxView, availableSitesView);
-                }
+	            var order = 1;
+	            foreach (var webSite in webSites)
+	            {
+		            StoreSiteDataInComboBoxTable(session, webSite, order++);
+		            StoreSiteDataInAvailableSitesTable(session, webSite);
+	            }
 
                 return ActionResult.Success;
             }
@@ -92,7 +89,7 @@ namespace Raven.Setup.CustomActions
 				}
 				else
 				{
-					session["WEBSITE_ID"] = "*";
+					session["WEBSITE_ID"] = AsteriskSiteId;
 					session["WEBSITE_DEFAULT_APPPOOL"] = "DefaultAppPool";
 				}
 				session.DoAction("SetIISInstallFolder");
@@ -106,66 +103,36 @@ namespace Raven.Setup.CustomActions
             }
         }
 
-        private static void GetWebSitesViaWebAdministration(View comboView, View availableView)
+		private static IEnumerable<WebSite> GetWebSites()
+		{
+			return IsIIS7Upwards ? IIS7UpwardsManager.GetWebSitesViaWebAdministration() : IIS6Manager.GetWebSitesViaMetabase();
+		}
+
+		private static void StoreSiteDataInComboBoxTable(Session session, WebSite webSite, int order)
         {
-            using (var iisManager = new ServerManager())
-            {
-                var order = 1;
+			var comboBoxTable = session.Database.OpenView(GetComboContent);
 
-                foreach (var webSite in iisManager.Sites)
-                {
-                    var id = webSite.Id.ToString(CultureInfo.InvariantCulture);
-                    var name = webSite.Name;
-                    var path = webSite.PhysicalPath();
-	                var defaultAppPool = webSite.ApplicationDefaults.ApplicationPoolName;
-
-                    StoreSiteDataInComboBoxTable(id, name, path, order++, comboView);
-                    StoreSiteDataInAvailableSitesTable(id, name, path, defaultAppPool, availableView);
-                }
-            }
-        }
-
-        private static void GetWebSitesViaMetabase(View comboView, View availableView)
-        {
-            using (var iisRoot = new DirectoryEntry(IISEntry))
-            {
-                var order = 1;
-
-                foreach (DirectoryEntry webSite in iisRoot.Children)
-                {
-                    if (webSite.SchemaClassName.ToLower(CultureInfo.InvariantCulture) == IISWebServer)
-                    {
-                        var id = webSite.Name;
-                        var name = webSite.Properties[ServerComment].Value.ToString();
-                        var path = webSite.PhysicalPath();
-	                    var defaultAppPool = (string) webSite.Properties["AppPoolId"].Value;
-
-                        StoreSiteDataInComboBoxTable(id, name, path, order++, comboView);
-                        StoreSiteDataInAvailableSitesTable(id, name, path, defaultAppPool, availableView);
-                    }
-                }
-            }
-        }
-
-        private static void StoreSiteDataInComboBoxTable(string id, string name, string physicalPath, int order, View comboView)
-        {
             var newComboRecord = new Record(5);
             newComboRecord[1] = WebSiteProperty;
             newComboRecord[2] = order;
-            newComboRecord[3] = id;
-            newComboRecord[4] = name;
-            newComboRecord[5] = physicalPath;
-            comboView.Modify(ViewModifyMode.InsertTemporary, newComboRecord);
+			newComboRecord[3] = webSite.Id;
+			newComboRecord[4] = webSite.Name;
+			newComboRecord[5] = webSite.PhysicalPath;
+
+			comboBoxTable.Modify(ViewModifyMode.InsertTemporary, newComboRecord);
         }
 
-        private static void StoreSiteDataInAvailableSitesTable(string id, string name, string physicalPath, string defaultAppPool, View availableView)
+        private static void StoreSiteDataInAvailableSitesTable(Session session, WebSite webSite)
         {
+			var availableSitesTable = session.Database.OpenView(AvailableSites);
+
             var newWebSiteRecord = new Record(4);
-            newWebSiteRecord[1] = id;
-            newWebSiteRecord[2] = name;
-            newWebSiteRecord[3] = physicalPath;
-			newWebSiteRecord[4] = defaultAppPool;
-            availableView.Modify(ViewModifyMode.InsertTemporary, newWebSiteRecord);
+            newWebSiteRecord[1] = webSite.Id;
+            newWebSiteRecord[2] = webSite.Name;
+            newWebSiteRecord[3] = webSite.PhysicalPath;
+			newWebSiteRecord[4] = webSite.DefaultAppPool;
+
+			availableSitesTable.Modify(ViewModifyMode.InsertTemporary, newWebSiteRecord);
         }
 
 		[CustomAction]

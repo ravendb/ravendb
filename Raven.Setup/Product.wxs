@@ -44,8 +44,9 @@
       <ComponentRef Id='Raven.Web' />
       <ComponentRef Id='Raven.Database.Web' />
       <ComponentRef Id='Raven.Abstractions.Web' />
-      <ComponentRef Id='Raven.Web.Config.IIS_7_And_8'/>
-      <ComponentRef Id='Raven.Web.Config.IIS_6'/>
+      <ComponentRef Id='Raven.Web.Config.IIS_7_And_8' />
+      <ComponentRef Id='Raven.Web.Config.IIS_6' />
+      <ComponentRef Id="EnableASPNet4Extension" />
       <ComponentGroupRef Id="IISConfigurationBasedOnExistingWebSite" />
       <ComponentGroupRef Id="IISConfigurationBasedOnNewRavenWebSite" />
       <ComponentRef Id="PersistWebSiteValues" />
@@ -87,6 +88,8 @@
 
     <CustomAction Id="SetNewWebSiteDirectory" Directory="NEW_WEB_SITE_DIRECTORY" Value="[WEBSITE_PATH]" />
 
+    <CustomAction Id="RegisterAspNet" Directory="INSTALLFOLDER" Return="check" ExeCommand='[ASPNETREGIIS] -ir' />
+
     <InstallExecuteSequence>
       <Custom Action="InstallRavenService_Cmd" After="CostFinalize">
         <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
@@ -102,6 +105,9 @@
         <![CDATA[(&Service=2) AND (!Service=3)]]>
       </Custom>
 
+      <Custom Action="RegisterAspNet" After="InstallFinalize">
+        <![CDATA[NOT ASPNETREGISTERED AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
+      </Custom>
       <Custom Action='SetupPerformanceCountersForIISUser' After='InstallFinalize'>
         <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
       </Custom>

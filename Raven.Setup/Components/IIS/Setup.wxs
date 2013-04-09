@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:iis="http://schemas.microsoft.com/wix/IIsExtension">
+	<Fragment>
+    <Property Id="ASPNETREGISTERED">
+      <RegistrySearch Id="ASPNETREG" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="AssemblyVersion" Type="raw" Win64="yes"/>
+    </Property>
+    
+    <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR"/>
+    <SetProperty Id="ASPNETISAPIDLL" Sequence="execute" Before="ConfigureIIs"
+                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_isapi.dll" />
+    <SetProperty Id="ASPNETREGIIS" Sequence="execute" Before="ConfigureIIs"
+                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_regiis.exe" />
+    
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="EnableASPNet4Extension" Permanent="yes" Guid="{6449C546-034B-444F-B544-2DC2F2CE16C5}">
+        <CreateFolder/>
+        <iis:WebServiceExtension Id="ASPNet4Extension" Group="ASP.NET v4.0.30319" Allow="yes"
+                                 File="[ASPNETISAPIDLL]" Description="ASP.NET v4.0.30319"
+                                 UIDeletable="no"/>
+      </Component>
+    </DirectoryRef>
+	</Fragment>
+</Wix>
