@@ -543,6 +543,11 @@ namespace Raven.Studio.Models
 				this.index = index;
 			}
 
+			public override bool CanExecute(object parameter)
+			{
+				return index.index.LockMode == IndexLockMode.Unlock;
+			}
+
 			public override void Execute(object parameter)
 			{
 				if (string.IsNullOrWhiteSpace(index.Name))
@@ -1144,6 +1149,12 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => IsNewIndex);
 			}
 		}
+
+		public bool IsLocked
+		{
+			get { return index.LockMode != IndexLockMode.Unlock; }
+		}
+
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
 			var list = new List<object>
