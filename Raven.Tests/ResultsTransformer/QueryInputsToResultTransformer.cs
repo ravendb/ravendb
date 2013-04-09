@@ -104,6 +104,31 @@ namespace Raven.Tests.ResultsTransformer
             }
         }
 
+		[Fact]
+		public void CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				new ProductWithQueryInput().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Product() { Name = "Irrelevant" });
+					session.SaveChanges();
+				}
+				using (var session = store.OpenSession())
+				{
+					var result = session.Query<Product>()
+								.Customize(x => x.WaitForNonStaleResults())
+								.TransformWith<ProductWithQueryInput, ProductWithQueryInput.Result>()
+								.AddQueryInput("input", "Foo")
+								.Single();
+
+					Assert.Equal("Irrelevant", result.ProductName);
+
+				}
+			}
+		}
+
         [Fact]
         public void CanUseResultsTransformerWithQuery()
         {

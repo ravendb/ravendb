@@ -5,8 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -146,6 +149,30 @@ namespace Raven.Studio.Features.Query
 	            else
 					handler(this, e);
             }
+        }
+
+        public async override Task<IAsyncEnumerator<JsonDocument>> StreamAsync(Reference<long> totalResults)
+        {
+            IndexQuery templateQuery;
+            string indexName;
+
+            lock (_lockObject)
+            {
+                templateQuery = TemplateQuery;
+                indexName = _indexName;
+            }
+
+            var query = templateQuery.Clone();
+            query.Start = 0;
+            query.PageSize = int.MaxValue;
+
+            var reference = new Reference<QueryHeaderInformation>();
+
+            var enumerator = await ApplicationModel.DatabaseCommands.StreamQueryAsync(indexName, query,reference);
+
+            totalResults.Value = reference.Value.TotalResults;
+
+            return new ConvertingEnumerator<JsonDocument, RavenJObject>(enumerator, doc => doc.ToJsonDocument());
         }
     }
 

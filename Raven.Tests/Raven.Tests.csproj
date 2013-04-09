@@ -552,6 +552,7 @@
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\RavenDB1019.cs" />
+    <Compile Include="Issues\RavenDB1025.cs" />
     <Compile Include="Issues\RavenDB937.cs" />
     <Compile Include="Issues\DatabaseReloadingTests.cs" />
     <Compile Include="Issues\RavenDB1009.cs" />
@@ -565,6 +566,7 @@
     <Compile Include="Issues\RavenDB921.cs" />
     <Compile Include="Issues\RavenDB934.cs" />
     <Compile Include="Issues\RavenDB982.cs" />
+    <Compile Include="Issues\RavenDB_1018.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -652,6 +654,7 @@
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DynamicObjectTests.cs" />
     <Compile Include="MailingList\FacetHits.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
@@ -666,12 +669,16 @@
     <Compile Include="MailingList\FilteredIndexTest.cs" />
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
+    <Compile Include="MailingList\Garrett.cs" />
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
     <Compile Include="MailingList\Holt.cs" />
+    <Compile Include="MailingList\IdComesBackLowerCase.cs" />
+    <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="MailingList\InIssues.cs" />
     <Compile Include="MailingList\InQueries.cs" />
+    <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\jbartruf.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
@@ -681,6 +688,7 @@
     <Compile Include="MailingList\LinqInExtensionTests.cs" />
     <Compile Include="MailingList\LoadAllStartingWith.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
+    <Compile Include="MailingList\LongIds.cs" />
     <Compile Include="MailingList\LuceneSearchSample.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
@@ -695,6 +703,7 @@
     <Compile Include="MailingList\Pfeffer.cs" />
     <Compile Include="MailingList\ProjectionShouldNotLoadDocument.cs" />
     <Compile Include="MailingList\QueryIn.cs" />
+    <Compile Include="MailingList\QueryingOn_A_Prefix.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\RacielRod.cs" />
     <Compile Include="MailingList\RavenCountTest.cs" />
@@ -723,6 +732,7 @@
     <Compile Include="MailingList\UintId.cs" />
     <Compile Include="MailingList\UrlInIdsRepro.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
+    <Compile Include="MailingList\Wayne.cs" />
     <Compile Include="MailingList\WhereInTests.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
     <Compile Include="MailingList\Willem.cs" />
@@ -755,6 +765,7 @@
     <Compile Include="Spatial\JsonConverters\Wkt\WktConverter.cs" />
     <Compile Include="Spatial\PointObjectTests.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
+    <Compile Include="Spatial\ShapeStringConverterTests.cs" />
     <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\ShapeConverterTests.cs" />
@@ -881,7 +892,6 @@
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
     <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests.cs" />
-    <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
     <Compile Include="Document\DynamicDocuments.cs" />
     <Compile Include="Document\Game.cs" />
     <Compile Include="Document\Inheritance.cs" />
@@ -1055,6 +1065,7 @@
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
+    <Compile Include="Spatial\SpatialUnitTests.cs" />
     <Compile Include="Spatial\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Notifications\NotificationOnWrongDatabase.cs" />
@@ -1172,9 +1183,6 @@
     <Compile Include="Storage\Queues.cs" />
     <Compile Include="Storage\Storage.cs" />
     <Compile Include="Storage\Tasks.cs" />
-    <Compile Include="Storage\Transactions.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="MultiGet\Bugs.cs" />
     <Compile Include="MultiGet\MultiGetBasic.cs" />
     <Compile Include="MultiGet\MultiGetCaching.cs" />

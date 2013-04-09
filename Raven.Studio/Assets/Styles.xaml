@@ -28,6 +28,7 @@
 		<ResourceDictionary Source="ProgressBarStyles.xaml" />
 		<ResourceDictionary Source="NumericUpDown.xaml" />
 		<ResourceDictionary Source="SplitHyperlinkButtonPopupStyle.xaml" />
+		<ResourceDictionary Source="SyntaxEditorStyles.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
@@ -2098,7 +2099,7 @@
 								<VisualState x:Name="MouseOver"/>
 							  <VisualState x:Name="Disabled">
 									<Storyboard>
-										<DoubleAnimation Duration="00:00:00" To=".55" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="DisabledVisualElement"/>
+                                        <DoubleAnimation Duration="00:00:00" To=".35" Storyboard.TargetProperty="(UIElement.Opacity)" Storyboard.TargetName="ContentPresenter"/>
 									</Storyboard>
 								</VisualState>
 							</VisualStateGroup>
@@ -2139,9 +2140,7 @@
 								</ContentPresenter>
 							</Grid>
 						</Border>
-						
-						<Rectangle x:Name="DisabledVisualElement" Fill="White" IsHitTestVisible="false" Opacity="0" RadiusY="3" RadiusX="3"/>
-						
+												
 						<Popup x:Name="Popup">
 							<Border x:Name="PopupBorder" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0" HorizontalAlignment="Stretch" Height="Auto">
 								<Border.Background>

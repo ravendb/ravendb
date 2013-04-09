@@ -107,25 +107,16 @@ namespace Raven.Database.Indexing
 
 		private class CodecIndexInput : BufferedIndexInput
 		{
+			private FileInfo file;
+			private Func<Stream, Stream> applyCodecs;
 			private Stream stream;
-			private bool isStreamOwned;
 
 			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs, int bufferSize)
-				: this(
-					stream: applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite)),
-					isStreamOwned: true,
-					bufferSize: bufferSize
-				)
-			{ }
-
-			private CodecIndexInput(Stream stream, bool isStreamOwned, int bufferSize)
 				: base(bufferSize)
 			{
-				this.stream = stream;
-				this.isStreamOwned = isStreamOwned;
-
-				if (!isStreamOwned)
-					GC.SuppressFinalize(this);
+				this.file = file;
+				this.applyCodecs = applyCodecs;
+				this.stream = applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
 			}
 
 			public override long Length()
@@ -135,19 +126,14 @@ namespace Raven.Database.Indexing
 
 			protected override void Dispose(bool disposing)
 			{
-				GC.SuppressFinalize(this);
-				if (isStreamOwned)
-					stream.Close();
+				stream.Close();
 			}
 
 			public override void ReadInternal(byte[] b, int offset, int length)
 			{
-				lock (stream)
-				{
-					stream.Position = FilePointer;
+				stream.Position = FilePointer;
 
-					stream.ReadEntireBlock(b, offset, length);
-				}
+				stream.ReadEntireBlock(b, offset, length);
 			}
 
 			public override void SeekInternal(long pos)
@@ -157,8 +143,9 @@ namespace Raven.Database.Indexing
 			public override object Clone()
 			{
 				var codecIndexInput = (CodecIndexInput) base.Clone();
-				codecIndexInput.isStreamOwned = false;
-				codecIndexInput.stream = stream;
+				codecIndexInput.file = file;
+				codecIndexInput.applyCodecs = applyCodecs;
+				codecIndexInput.stream = applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
 				return codecIndexInput;
 			}
 		}

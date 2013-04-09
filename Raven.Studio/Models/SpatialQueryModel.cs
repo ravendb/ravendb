@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -10,7 +12,8 @@ namespace Raven.Studio.Models
 	public class SpatialQueryField
 	{
 		public string Name { get; set; }
-		public bool Geographical { get; set; }
+		public bool IsGeographical { get; set; }
+		public SpatialUnits Units { get; set; }
 	}
 
 	public class SpatialQueryModel : NotifyPropertyChangedBase
@@ -26,22 +29,8 @@ namespace Raven.Studio.Models
 		}
 
 		public string IndexName { get; set; }
-		private readonly Dictionary<string, bool> fields = new Dictionary<string, bool>();
+		private readonly Dictionary<string, SpatialQueryField> fields = new Dictionary<string, SpatialQueryField>();
 		public BindableCollection<string> Fields { get; private set; }
-
-		public void UpdateFields(IEnumerable<SpatialQueryField> queryFields)
-		{
-			fields.Clear();
-			Fields.Clear();
-			
-			foreach (var queryField in queryFields.OrderBy(x => x.Name))
-			{
-				Fields.Add(queryField.Name);
-				fields[queryField.Name] = queryField.Geographical;
-			}
-
-			FieldName = Fields.FirstOrDefault();
-		}
 
 		public void Clear()
 		{
@@ -50,7 +39,58 @@ namespace Raven.Studio.Models
 			Radius = null;
 		}
 
-		public SpatialUnits RadiusUnits { get; set; }
+		public void Reset()
+		{
+			FieldName = Fields.FirstOrDefault();
+			Clear();
+		}
+
+		public void UpdateFields(IEnumerable<SpatialQueryField> queryFields)
+		{
+			fields.Clear();
+			Fields.Clear();
+			
+			foreach (var queryField in queryFields.OrderBy(c => c.Name))
+			{
+				Fields.Add(queryField.Name);
+				fields[queryField.Name] = queryField;
+			}
+
+			FieldName = Fields.FirstOrDefault();
+		}
+
+		public void UpdateFromState(QueryState state)
+		{
+			if (state.IsSpatialQuery)
+			{
+				var key = state.SpatialFieldName ?? Constants.DefaultSpatialFieldName;
+
+				if (!fields.ContainsKey(key))
+					key = Fields.FirstOrDefault();
+
+				FieldName = key;
+
+				Y = state.Latitude;
+				X = state.Longitude;
+				Radius = state.Radius;
+			}
+			else
+			{
+				Reset();
+			}
+		}
+
+		private SpatialUnits radiusUnits;
+		public SpatialUnits RadiusUnits
+		{
+			get { return radiusUnits; }
+			set
+			{
+				if (radiusUnits == value) return;
+				radiusUnits = value;
+				OnPropertyChanged(() => RadiusUnits);
+			}
+		}
 
 		private string fieldName;
 		public string FieldName
@@ -60,7 +100,16 @@ namespace Raven.Studio.Models
 			{
 				if (fieldName == value) return;
 				fieldName = value;
-				IsGeographical = fields[fieldName];
+				if (!string.IsNullOrWhiteSpace(fieldName))
+				{
+					IsGeographical = fields[fieldName].IsGeographical;
+					RadiusUnits = fields[fieldName].Units;
+				}
+				else
+				{
+					IsGeographical = true;
+					RadiusUnits = SpatialUnits.Kilometers;
+				}
 				OnPropertyChanged(() => FieldName);
 			}
 		}

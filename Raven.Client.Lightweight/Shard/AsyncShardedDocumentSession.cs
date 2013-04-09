@@ -141,10 +141,11 @@ namespace Raven.Client.Shard
 			return LoadAsyncInternal<T>(ids, null);
 		}
 
-		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
+		public Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			var results = new T[ids.Length];
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includes);
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
 
 			if (!idsToLoad.Any())
 				return CompletedTask.With(new T[ids.Length]);
@@ -170,7 +171,7 @@ namespace Raven.Client.Shard
 						multiLoadOperation.LogOperation();
 
 						IDisposable loadContext = multiLoadOperation.EnterMultiLoadContext();
-						return commands.GetAsync(idsForCurrentShards, includes).ContinueWith(task =>
+						return commands.GetAsync(idsForCurrentShards, includePaths).ContinueWith(task =>
 						{
 							loadContext.Dispose();
 

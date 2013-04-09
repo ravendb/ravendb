@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Commands;
 using Raven.Database.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Extensions
 {
@@ -49,9 +50,10 @@ namespace Raven.Database.Extensions
 				var result = database.ApplyPatch(advPatchCommandData.Key, advPatchCommandData.Etag,
 									advPatchCommandData.Patch, advPatchCommandData.TransactionInformation, advPatchCommandData.DebugMode);
 
+				advPatchCommandData.AdditionalData = new RavenJObject { { "Debug", new RavenJArray(result.Item2) } };
 				if(advPatchCommandData.DebugMode)
 				{
-					advPatchCommandData.AdditionalData = result.Item1.Document;
+					advPatchCommandData.AdditionalData["Document"] = result.Item1.Document;
 					return;
 				}
 

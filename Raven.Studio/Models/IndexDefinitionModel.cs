@@ -104,15 +104,7 @@ namespace Raven.Studio.Models
 				if (field == null)
 					SpatialFields.Add(new SpatialFieldProperties(pair));
 				else
-				{
-					field.Type = pair.Value.Type;
-					field.Strategy = pair.Value.Strategy;
-					field.MaxTreeLevel = pair.Value.MaxTreeLevel;
-					field.MinX = pair.Value.MinX;
-					field.MaxX = pair.Value.MaxX;
-					field.MinY = pair.Value.MinY;
-					field.MaxY = pair.Value.MaxY;
-				}
+					field.UpdateFromSpatialOptions(pair.Value);
 			}
 
 
@@ -251,7 +243,8 @@ namespace Raven.Studio.Models
 													  MinX = item.MinX,
 													  MaxX = item.MaxX,
 													  MinY = item.MinY,
-													  MaxY = item.MaxY
+													  MaxY = item.MaxY,
+													  Units = item.Units
 				                                  };
 			}
 			index.RemoveDefaultValues();
@@ -887,6 +880,7 @@ namespace Raven.Studio.Models
 				get { return type; }
 				set
 				{
+					IsGeographical = value == SpatialFieldType.Geography;
 					if (type != value)
 					{
 						type = value;
@@ -1008,12 +1002,40 @@ namespace Raven.Studio.Models
 				}
 			}
 
+			private SpatialUnits units;
+			public SpatialUnits Units
+			{
+				get { return units; }
+				set
+				{
+					if (units != value)
+					{
+						units = value;
+						OnPropertyChanged(() => Units);
+						UpdatePrecision();
+					}
+				}
+			}
+
+			private bool isGeographical;
+			public bool IsGeographical
+			{
+				get { return isGeographical; }
+				set
+				{
+					if (isGeographical == value) return;
+					isGeographical = value;
+					OnPropertyChanged(() => IsGeographical);
+				}
+			}
+
 			private void ResetToDefaults(SpatialFieldType type)
 			{
 				if (type == SpatialFieldType.Geography)
 				{
 					Strategy = SpatialSearchStrategy.GeohashPrefixTree;
 					MaxTreeLevel = SpatialOptions.DefaultGeohashLevel;
+					Units = SpatialUnits.Kilometers;
 					MinX = -180;
 					MinY = -90;
 					MaxX = 180;
@@ -1036,13 +1058,26 @@ namespace Raven.Studio.Models
 			public SpatialFieldProperties(KeyValuePair<string, SpatialOptions> spatialOptions) : base()
 			{
 				Name = spatialOptions.Key;
-				Type = spatialOptions.Value.Type;
-				Strategy = spatialOptions.Value.Strategy;
-				MaxTreeLevel = spatialOptions.Value.MaxTreeLevel;
-				MinX = spatialOptions.Value.MinX;
-				MaxX = spatialOptions.Value.MaxX;
-				MinY = spatialOptions.Value.MinY;
-				MaxY = spatialOptions.Value.MaxY;
+				UpdateFromSpatialOptions(spatialOptions.Value);
+			}
+
+			public void UpdateFromSpatialOptions(SpatialOptions spatialOptions)
+			{
+				Type = spatialOptions.Type;
+				ResetToDefaults(spatialOptions.Type);
+				Strategy = spatialOptions.Strategy;
+				MaxTreeLevel = spatialOptions.MaxTreeLevel;
+				if (spatialOptions.Type == SpatialFieldType.Geography)
+				{
+					Units = spatialOptions.Units;
+				}
+				else
+				{
+					MinX = spatialOptions.MinX;
+					MaxX = spatialOptions.MaxX;
+					MinY = spatialOptions.MinY;
+					MaxY = spatialOptions.MaxY;
+				}
 			}
 
 			public static SpatialFieldProperties Default
@@ -1060,28 +1095,33 @@ namespace Raven.Studio.Models
 					{
 						if (i%2 == 0)
 						{
-							x = x / 8;
-							y = y / 4;
+							x /= 8;
+							y /= 4;
 						}
 						else
 						{
-							x = x / 4;
-							y = y / 8;
+							x /= 4;
+							y /= 8;
 						}
 					}
 					else if (strategy == SpatialSearchStrategy.QuadPrefixTree)
 					{
-						x = x / 2;
-						y = y / 2;
+						x /= 2;
+						y /= 2;
 					}
 				}
 
 				if (type == SpatialFieldType.Geography)
 				{
-					const double factor = (6371.0087714*Math.PI*2)/360;
+					const double factor = (Constants.EarthMeanRadiusKm*Math.PI*2)/360;
 					x = x * factor;
 					y = y * factor;
-					Precision = string.Format(CultureInfo.InvariantCulture, "Precision at equator; X: {0:F6} km, Y: {1:F6} km", x, y);
+					if (units == SpatialUnits.Miles)
+					{
+						x /= Constants.MilesToKm;
+						y /= Constants.MilesToKm;
+					}
+					Precision = string.Format(CultureInfo.InvariantCulture, "Precision at equator; X: {0:F6}, Y: {1:F6} {2}", x, y, units.ToString().ToLowerInvariant());
 				}
 				else
 				{

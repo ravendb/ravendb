@@ -34,12 +34,5 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
 		void Rollback(Guid txId);
-
-		/// <summary>
-		/// Promotes a transaction specified to a distributed transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns>The token representing the distributed transaction</returns>
-		byte[] PromoteTransaction(Guid fromTxId);
 	}
 }

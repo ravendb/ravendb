@@ -185,7 +185,10 @@
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
+    <Compile Include="Extensions\DocDbExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Impl\InFlightTransactionalState.cs" />
+    <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
@@ -236,6 +239,7 @@
     <Compile Include="Indexing\CurrentTransformationScope.cs" />
     <Compile Include="Indexing\IndexCommitPoint.cs" />
     <Compile Include="Indexing\IndexCommitPointDirectory.cs" />
+    <Compile Include="Indexing\DynamicLuceneOrDocumntObject.cs" />
     <Compile Include="Indexing\IndexedTerms.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
@@ -397,7 +401,6 @@
     <Compile Include="Server\AbstractRequestResponder.cs" />
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
-    <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
     <Compile Include="Server\HttpServer.cs" />
@@ -460,7 +463,6 @@
     <Compile Include="Queries\DynamicQueryExtensions.cs" />
     <Compile Include="Queries\DynamicQueryOptimizer.cs" />
     <Compile Include="Queries\DynamicQueryRunner.cs" />
-    <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
     <Compile Include="Extensions\HttpContextExtensions.cs" />
@@ -631,10 +633,7 @@
     <Compile Include="Plugins\ReadVetoResult.cs" />
     <Compile Include="Data\QueryResults.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
-    <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
-    <Compile Include="Exceptions\IndexDisabledException.cs" />
-    <Compile Include="Exceptions\OperationVetoedException.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Indexing\MapReduceIndex.cs" />
     <Compile Include="Indexing\QueryBuilder.cs" />
@@ -684,7 +683,6 @@
     <Compile Include="Server\Responders\SuggestionResponder.cs" />
     <Compile Include="Server\Responders\Terms.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
-    <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
     <Compile Include="Server\Connections\TransportState.cs" />
@@ -708,6 +706,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From43To44.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
@@ -739,7 +738,6 @@
     <Compile Include="Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
-    <Compile Include="Storage\ITransactionStorageActions.cs" />
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
     <Compile Include="Storage\Managed\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Managed\Backup\BackupOperation.cs" />
@@ -777,10 +775,8 @@
     <Compile Include="Storage\Managed\QueueStorageActions.cs" />
     <Compile Include="Storage\Managed\StalenessStorageActions.cs" />
     <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
-    <Compile Include="Storage\Managed\StorageHelper.cs" />
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
-    <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

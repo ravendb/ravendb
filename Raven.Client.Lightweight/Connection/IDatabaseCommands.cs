@@ -250,26 +250,12 @@ namespace Raven.Client.Connection
 		void Rollback(Guid txId);
 
 		/// <summary>
-		/// Promotes the transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
-		byte[] PromoteTransaction(Guid fromTxId);
-
-		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IDatabaseCommands With(ICredentials credentialsForSession);
 
-		/// <summary>
-		/// Gets a value indicating whether [supports promotable transactions].
-		/// </summary>
-		/// <value>
-		/// 	<c>true</c> if [supports promotable transactions]; otherwise, <c>false</c>.
-		/// </value>
-		bool SupportsPromotableTransactions { get; }
-
+	
 		/// <summary>
 		/// Perform a set based deletes using the specified index, not allowing the operation
 		/// if the index is stale
@@ -381,14 +367,14 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
-		void Patch(string key, PatchRequest[] patches);
+		RavenJObject Patch(string key, PatchRequest[] patches);
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		void Patch(string key, ScriptedPatchRequest patch);
+		RavenJObject Patch(string key, ScriptedPatchRequest patch);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -396,7 +382,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-        void Patch(string key, PatchRequest[] patches, Etag etag);
+		RavenJObject Patch(string key, PatchRequest[] patches, Etag etag);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -404,7 +390,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-        void Patch(string key, ScriptedPatchRequest patch, Etag etag);
+		RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

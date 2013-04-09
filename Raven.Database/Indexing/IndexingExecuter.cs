@@ -201,10 +201,12 @@ namespace Raven.Database.Indexing
 
 						return done;
 					}
-					finally 
+					finally
 					{
-						indexingSemaphore.Release();
-						indexingCompletedEvent.Set();
+						if (indexingSemaphore != null)
+							indexingSemaphore.Release();
+						if (indexingCompletedEvent != null)
+							indexingCompletedEvent.Set();
 						if (Thread.VolatileRead(ref isSlowIndex) != 0)
 						{
 							// we now need to notify the engine that the slow index(es) is done, and we need to resume its indexing
@@ -336,7 +338,7 @@ namespace Raven.Database.Indexing
 
 			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
 
-			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
+			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers, context.Database.InFlightTransactionalState);
 
 			var filteredDocs =
 				BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>

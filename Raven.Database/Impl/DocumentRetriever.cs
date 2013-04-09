@@ -32,16 +32,19 @@ namespace Raven.Database.Impl
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
-	    private readonly Dictionary<string, RavenJToken> queryInputs;
+		private readonly InFlightTransactionalState inFlightTransactionalState;
+		private readonly Dictionary<string, RavenJToken> queryInputs;
 	    private readonly HashSet<string> itemsToInclude;
 
 		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
+			InFlightTransactionalState inFlightTransactionalState,
             Dictionary<string, RavenJToken> queryInputs = null,
             HashSet<string> itemsToInclude = null)
 		{
 			this.actions = actions;
 			this.triggers = triggers;
-		    this.queryInputs = queryInputs ?? new Dictionary<string, RavenJToken>();
+			this.inFlightTransactionalState = inFlightTransactionalState;
+			this.queryInputs = queryInputs ?? new Dictionary<string, RavenJToken>();
 		    this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
 		}
 
@@ -202,6 +205,9 @@ namespace Raven.Database.Impl
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
 			EnsureIdInMetadata(doc);
+			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
+			if (nonAuthoritativeInformationBehavior != null)
+				doc = nonAuthoritativeInformationBehavior(doc);
 			cache[key] = doc;
 			return doc;
 		}

@@ -6,12 +6,14 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Raven.Database.Exceptions
+namespace Raven.Abstractions.Exceptions
 {
 	/// <summary>
 	/// This exception is raised when a bad request is made to the server
 	/// </summary>
+#if !SILVERLIGHT
 	[Serializable]
+#endif
 	public class BadRequestException : Exception
 	{
 		/// <summary>
@@ -40,6 +42,7 @@ namespace Raven.Database.Exceptions
 		{
 		}
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Initializes a new instance of the <see cref="BadRequestException"/> class.
 		/// </summary>
@@ -53,5 +56,6 @@ namespace Raven.Database.Exceptions
 			: base(info, context)
 		{
 		}
+#endif
 	}
 }

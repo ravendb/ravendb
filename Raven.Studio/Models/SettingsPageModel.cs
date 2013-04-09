@@ -78,27 +78,17 @@ namespace Raven.Studio.Models
 					        Settings.Sections.Add(new VersioningSettingsSectionModel());
 
 				        if (bundles.Contains("Authorization"))
-					        Settings.Sections.Add(new AuthorizationSettingsSectionModel());
+				        {
+							var triggers = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value.Triggers;
+							if (triggers.Any(info => info.Name.Contains("Authorization")))
+								Settings.Sections.Add(new AuthorizationSettingsSectionModel());					        
+				        }
 			        }
 
 			        foreach (var settingsSectionModel in Settings.Sections)
 			        {
 				        settingsSectionModel.LoadFor(databaseDocument);
 			        }
-
-					var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/plugins/status".NoCache(), "GET");
-
-					req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(item =>
-					{
-						var plugins = ((RavenJObject)item).Deserialize<PluginsStatus>(new DocumentConvention());
-
-						if (plugins == null || plugins.Plugins.Contains("Raven.Bundles.Authorization", StringComparer.InvariantCultureIgnoreCase) == false)
-							return;
-
-						var authSection = new AuthorizationSettingsSectionModel();
-						Settings.Sections.Add(authSection);
-						authSection.LoadFor(databaseDocument);
-					});
 		        });
         }
 

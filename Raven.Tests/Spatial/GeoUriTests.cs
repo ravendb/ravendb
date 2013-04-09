@@ -18,7 +18,7 @@ namespace Raven.Tests.Spatial
 			{
 				Map = docs => from doc in docs select new { doc.Point };
 
-				Spatial(x => x.Point, x => x.Geography());
+				Spatial(x => x.Point, x => x.Geography.Default());
 			}
 		}
 
@@ -41,7 +41,7 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					var matches = session.Query<SpatialDoc, PointIndex>()
-										 .Spatial(x => x.Point, x => x.Within("geo:45.0,45.0,-78.4;u=1.0"))
+										 .Spatial(x => x.Point, x => x.Within("geo:45.0,45.0,-78.4;u=100.0"))
 										 .Any();
 
 					Assert.True(matches);

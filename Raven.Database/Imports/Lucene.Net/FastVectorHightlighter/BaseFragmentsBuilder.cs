@@ -271,7 +271,7 @@ namespace Lucene.Net.Search.Vectorhighlight
 					localStart = startOffset;
 		    }
 
-			if (endOffset != buffer.Length && buffer[endOffset + 1] != ' ')
+			if (endOffset != buffer.Length && buffer[endOffset] != ' ')
 			{
 				while (buffer[localEnd] != ' ' && localEnd != localStart && localEnd > minEnd)
 				{

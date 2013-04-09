@@ -157,7 +157,7 @@ namespace Raven.Database.Indexing
 					if (resetTried)
 						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
 
-					if (recoveryTried == false)
+					if (recoveryTried == false && luceneDirectory != null)
 					{
 						recoveryTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
@@ -1104,6 +1104,16 @@ namespace Raven.Database.Indexing
 		{
 			Parallel.ForEach(indexes.Values, index =>
 											 index.MergeSegments());
+		}
+
+		public bool IndexOnRam(string name)
+		{
+			return GetIndexByName(name).IsOnRam;
+		}
+
+		public void ForceWriteToDisk(string index)
+		{
+			GetIndexByName(index).ForceWriteToDisk();
 		}
 	}
 }

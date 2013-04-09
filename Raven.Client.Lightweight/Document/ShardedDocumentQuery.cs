@@ -127,6 +127,7 @@ namespace Raven.Client.Document
 				queryShape = queryShape,
 				spatialFieldName = spatialFieldName,
 				spatialRelation = spatialRelation,
+				spatialUnits = spatialUnits,
 				databaseCommands = databaseCommands,
 				indexQuery = indexQuery,
 				disableEntitiesTracking = disableEntitiesTracking,

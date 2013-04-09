@@ -1,20 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Raven.Studio.Features.JsonEditor
 {
     public class DocumentReferencedIdManager
     {
         public event EventHandler<EventArgs> Changed;
+        public event EventHandler<EventArgs> CurrentIdsChanged;
+
         private object gate = new object();
         private HashSet<string> knownIds = new HashSet<string>();
         private HashSet<string> knownInvalidIds = new HashSet<string>();
- 
+        private List<string> currentIds;
+
         protected void OnChanged(EventArgs e)
         {
             var handler = Changed;
             if (handler != null) handler(this, e);
         }
+
+        protected virtual void OnCurrentIdsChanged()
+        {
+            var handler = CurrentIdsChanged;
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public IList<String> CurrentIds
+        {
+            get
+            {
+                lock (gate)
+                {
+                    if (currentIds == null)
+                    {
+                        return new string[0];
+                    }
+                    else
+                    {
+                        return currentIds.AsReadOnly();
+                    }
+                }
+            }
+        } 
 
         public bool IsKnownInvalid(string value)
         {
@@ -22,6 +51,17 @@ namespace Raven.Studio.Features.JsonEditor
             {
                 return knownInvalidIds.Contains(value);
             }
+        }
+
+        public bool IsPotentialId(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var pattern = @"\w+[/-]\w+";
+            return Regex.IsMatch(value, pattern);
         }
 
         public bool IsId(string value)
@@ -76,6 +116,16 @@ namespace Raven.Studio.Features.JsonEditor
             {
                 return !knownInvalidIds.Contains(id) && !knownIds.Contains(id);
             }
+        }
+
+        public void UpdateCurrentIds(IEnumerable<string> potentialReferences)
+        {
+            lock (gate)
+            {
+                currentIds = potentialReferences.Where(id => knownIds.Contains(id)).ToList();
+            }
+
+            OnCurrentIdsChanged();
         }
     }
 }

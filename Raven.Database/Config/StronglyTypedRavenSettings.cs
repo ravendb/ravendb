@@ -111,7 +111,10 @@ namespace Raven.Database.Config
 			DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
 
 			ClusterName = new StringSetting(settings["Raven/ClusterName"], (string)null);
-			ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);		
+			ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);
+
+			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10*1000);
+			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 		}
 
 	    
@@ -219,5 +222,9 @@ namespace Raven.Database.Config
 		public TimeSpanSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
 
 		public TimeSpanSetting TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
+		
+		public IntegerSetting MaxStepsForScript { get; private set; }
+
+		public IntegerSetting AdditionalStepsForScriptBasedOnDocumentSize { get; private set; }
 	}
 }

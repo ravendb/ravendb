@@ -16,7 +16,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Linq
 {
@@ -434,6 +433,11 @@ namespace Raven.Client.Linq
 				return new ExpressionInfo(currentPath, parameterExpression.Type, false);
 			}
 
+			return GetMemberDirect(expression);
+		}
+
+		private ExpressionInfo GetMemberDirect(Expression expression)
+		{
 			var result = linqPathProvider.GetPath(expression);
 
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
@@ -444,8 +448,10 @@ namespace Raven.Client.Linq
 				result.Path += ".Length";
 
 			var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
-				                   ? queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof (T), indexName, CurrentPath, result.Path)
-				                   : queryGenerator.Conventions.FindPropertyNameForIndex(typeof (T), indexName, CurrentPath, result.Path);
+				                   ? queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof (T), indexName, CurrentPath,
+				                                                                                result.Path)
+				                   : queryGenerator.Conventions.FindPropertyNameForIndex(typeof (T), indexName, CurrentPath,
+				                                                                         result.Path);
 			return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath);
 		}
 
@@ -1149,17 +1155,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
         };
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
-			var memberExpression = linqPathProvider.GetMemberExpression(expression.Body);
-			var propertyInfo = memberExpression.Member as PropertyInfo;
-			var fieldInfo = memberExpression.Member as FieldInfo;
-			var expressionMemberInfo = GetMember(expression.Body);
-			var type = propertyInfo != null
-				           ? propertyInfo.PropertyType
-				           : (fieldInfo != null ? fieldInfo.FieldType : typeof (object));
-            string fieldName = expressionMemberInfo.Path;
-		    if (requireOrderByToUseRange.Contains(type))
+			var result = GetMemberDirect(expression.Body);
+			var fieldName = result.Path;
+
+		    if (requireOrderByToUseRange.Contains(result.Type))
                 fieldName = fieldName + "_Range";
-		    luceneQuery.AddOrder(fieldName, descending, type);
+			luceneQuery.AddOrder(fieldName, descending, result.Type);
 		}
 
 		private bool insideSelect;
@@ -1183,8 +1184,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					}
 					break;
 				case ExpressionType.MemberAccess:
-					MemberExpression memberExpression = ((MemberExpression) body);
-					AddToFieldsToFetch(GetSelectPath(memberExpression), memberExpression.Member.Name);
+					var memberExpression = ((MemberExpression) body);
+					AddToFieldsToFetch(GetSelectPath(memberExpression), GetSelectPath(memberExpression));
 					if (insideSelect == false)
 					{
 						foreach (var renamedField in FieldsToRename.Where(x=>x.OriginalField == memberExpression.Member.Name).ToArray())
@@ -1209,8 +1210,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						if (field == null)
 							continue;
 						var expression = linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
-						var renamedField = GetSelectPath(expression);
-						AddToFieldsToFetch(renamedField, newExpression.Members[index].Name);
+						AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
 					}
 					break;
 					//for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -1226,7 +1226,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						var expression = linqPathProvider.GetMemberExpression(field.Expression);
 						var renamedField = GetSelectPath(expression);
 
-						AddToFieldsToFetch(renamedField, field.Member.Name);
+						AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
 					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -1237,17 +1237,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 		}
 
+		private string GetSelectPath(MemberInfo member)
+		{
+			return LinqPathProvider.HandlePropertyRenames(member, member.Name);
+
+		}
+
 		private string GetSelectPath(MemberExpression expression)
 		{
-			var sb = new StringBuilder(expression.Member.Name);
-			expression = expression.Expression as MemberExpression;
-			while (expression != null)
-			{
-				sb.Insert(0, ".");
-				sb.Insert(0, expression.Member.Name);
-				expression = expression.Expression as MemberExpression;
-			}
-			return sb.ToString();
+			var expressionInfo = GetMember(expression);
+			return expressionInfo.Path;
 		}
 
 		private void AddToFieldsToFetch(string docField, string renamedField)

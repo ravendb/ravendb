@@ -23,12 +23,6 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
-	using System;
-	using System.Linq.Expressions;
-
-	using Raven.Database.Indexing;
-	using Raven.Database.Linq;
-
 	public class Index : AbstractRequestResponder
 	{
 		public override string UrlPattern
@@ -38,7 +32,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "PUT", "DELETE","HEAD","RESET"}; }
+			get { return new[] {"GET", "PUT", "POST", "DELETE","HEAD","RESET"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -55,6 +49,9 @@ namespace Raven.Database.Server.Responders
 				case "GET":
 					OnGet(context, index);
 					break;
+				case "POST":
+					OnPost(context, index);
+					break;
 				case "PUT":
 					Put(context, index);
 					break;
@@ -66,6 +63,22 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToDeleted();
 					Database.DeleteIndex(index);
 					break;
+			}
+		}
+
+		private void OnPost(IHttpContext context, string index)
+		{
+			if ("forceWriteToDisk".Equals(context.Request.QueryString["op"], StringComparison.InvariantCultureIgnoreCase))
+			{
+				Database.IndexStorage.ForceWriteToDisk(index);
+			}
+			else
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				{
+					Error = "Not idea how to handle a POST on " + index + " with op=" + (context.Request.QueryString["op"] ?? "<no val specified>")
+				});
 			}
 		}
 
@@ -395,6 +408,7 @@ namespace Raven.Database.Server.Responders
 			context.WriteETag(indexEtag);
 			if(queryResult.NonAuthoritativeInformation)
 				context.SetStatusToNonAuthoritativeInformation();
+
 			context.WriteJson(queryResult);
 		}
 

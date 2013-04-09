@@ -318,7 +318,7 @@ task CopySmuggler {
 }
 
 task CopyBackup {
-	Copy-Item $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
+	Copy-Item $build_dir\Raven.Abstractions.??? $build_dir\Output\Backup
 	Copy-Item $build_dir\Raven.Backup.??? $build_dir\Output\Backup
 }
 

@@ -1,6 +1,11 @@
+using System;
 using System.Transactions;
+using NLog;
+using NLog.Targets;
 using Raven.Client.Document;
 using Xunit;
+using log4net.Appender;
+using log4net.Layout;
 
 namespace Raven.Tests.Bugs
 {
@@ -14,8 +19,8 @@ namespace Raven.Tests.Bugs
 				using (var tx = new TransactionScope())
 				{
 					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-					                                  EnlistmentOptions.None);
+													  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+													  EnlistmentOptions.None);
 
 					using (var session = store.OpenSession())
 					{
@@ -43,7 +48,7 @@ namespace Raven.Tests.Bugs
 		public void CanQueryDtcForUncommittedItem()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				for (int i = 0; i < 150; i++)
 				{
@@ -51,8 +56,8 @@ namespace Raven.Tests.Bugs
 					using (var tx = new TransactionScope())
 					{
 						Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-						                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-						                                  EnlistmentOptions.None);
+														  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+														  EnlistmentOptions.None);
 
 						using (var session = store.OpenSession())
 						{
@@ -96,8 +101,8 @@ namespace Raven.Tests.Bugs
 					using (var tx = new TransactionScope())
 					{
 						Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-						                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
-						                                  EnlistmentOptions.None);
+														  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+														  EnlistmentOptions.None);
 
 						using (var session = store.OpenSession())
 						{
@@ -106,7 +111,6 @@ namespace Raven.Tests.Bugs
 							session.SaveChanges();
 							id = entity.Id;
 						}
-
 
 						tx.Complete();
 					}

@@ -65,7 +65,7 @@ namespace Raven.Client.Document
 		{
 			var jObject = entity as RavenJObject;
 			if (jObject != null)
-				return jObject;
+				return (RavenJObject)jObject.CloneToken();
 
 			if (CachedJsonDocs != null && CachedJsonDocs.TryGetValue(entity, out jObject))
 				return (RavenJObject)jObject.CreateSnapshot();

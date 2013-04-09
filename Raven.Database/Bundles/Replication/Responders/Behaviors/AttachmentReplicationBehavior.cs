@@ -86,13 +86,14 @@ namespace Raven.Bundles.Replication.Responders
 			};
 		}
 
-		protected override RavenJObject TryGetExisting(string id, out Attachment existingItem, out Etag existingEtag)
+		protected override RavenJObject TryGetExisting(string id, out Attachment existingItem, out Etag existingEtag, out bool deleted)
 		{
 			var existingAttachment = Actions.Attachments.GetAttachment(id);
 			if (existingAttachment != null)
 			{
 				existingItem = existingAttachment;
 				existingEtag = existingAttachment.Etag;
+				deleted = false;
 				return existingAttachment.Metadata;
 			}
 
@@ -107,8 +108,10 @@ namespace Raven.Bundles.Replication.Responders
 					Metadata = listItem.Data,
 					Data = () => new MemoryStream()
 				};
+				deleted = true;
 				return listItem.Data;
 			}
+			deleted = false;
 			existingEtag = Etag.Empty;
 			existingItem = null;
 			return null;

@@ -24,10 +24,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenLastModified = "Raven-Last-Modified";
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
-		public const string DefaultSpatialFieldName = "__spatial";
-		public const string SpatialShapeFieldName = "__spatialShape";
-		public const double DefaultSpatialDistanceErrorPct = 0.025d;
-		public const string DistanceFieldName = "__distance";
 		public const string RandomFieldName = "__random";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
 		public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
@@ -96,5 +92,18 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
+
+		//Spatial
+		public const string DefaultSpatialFieldName = "__spatial";
+		public const string SpatialShapeFieldName = "__spatialShape";
+		public const double DefaultSpatialDistanceErrorPct = 0.025d;
+		public const string DistanceFieldName = "__distance";
+		/// <summary>
+		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
+		///
+		/// [1] http://en.wikipedia.org/wiki/Earth_radius
+		/// </summary>
+		public const double EarthMeanRadiusKm = 6371.0087714;
+		public const double MilesToKm = 1.60934;
 	}
 }

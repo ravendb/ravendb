@@ -8,6 +8,7 @@ using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;

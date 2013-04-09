@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Spatial;
 using Spatial4n.Core.Context.Nts;
@@ -35,14 +36,14 @@ namespace Raven.Database.Indexing.Spatial
 			return geoShapeReadWriter ?? (geoShapeReadWriter = new NtsShapeReadWriter(ntsContext));
 		}
 
-		public Shape ReadShape(string shape)
+		public Shape ReadShape(string shape, SpatialUnits? unitOverride = null)
 		{
 			shape = shapeStringConverter.ConvertToWKT(shape);
 			shape = WktSanitizer.Sanitize(shape);
 
 			// Circle translation should be done last, before passing to NtsShapeReadWriter
 			if (options.Type == SpatialFieldType.Geography)
-				shape = TranslateCircleFromKmToRadians(shape);
+				shape = TranslateCircleRadius(shape, unitOverride.HasValue ? unitOverride.Value : options.Units);
 
 			return ntsShapeReadWriter.ReadShape(shape);
 		}
@@ -52,12 +53,15 @@ namespace Raven.Database.Indexing.Spatial
 			return ntsShapeReadWriter.WriteShape(shape);
 		}
 
-		private double TranslateCircleFromKmToRadians(double radius)
+		private double TranslateCircleRadius(double radius, SpatialUnits units)
 		{
-			return (radius / EarthMeanRadiusKm) * RadiansToDegrees;
+			if (units == SpatialUnits.Miles)
+				radius *= Constants.MilesToKm;
+
+			return (radius / Constants.EarthMeanRadiusKm) * RadiansToDegrees;
 		}
 
-		private string TranslateCircleFromKmToRadians(string shapeWKT)
+		private string TranslateCircleRadius(string shapeWKT, SpatialUnits units)
 		{
 			var match = CircleShape.Match(shapeWKT);
 			if (match.Success == false)
@@ -66,18 +70,12 @@ namespace Raven.Database.Indexing.Spatial
 			var radCapture = match.Groups[3];
 			var radius = double.Parse(radCapture.Value, CultureInfo.InvariantCulture);
 
-			radius = TranslateCircleFromKmToRadians(radius);
+			radius = TranslateCircleRadius(radius, units);
 
 			return shapeWKT.Substring(0, radCapture.Index) + radius.ToString("F6", CultureInfo.InvariantCulture) +
 				   shapeWKT.Substring(radCapture.Index + radCapture.Length);
 		}
 
-		/// <summary>
-		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
-		///
-		/// [1] http://en.wikipedia.org/wiki/Earth_radius
-		/// </summary>
-		private const double EarthMeanRadiusKm = 6371.0087714;
 		private const double DegreesToRadians = Math.PI / 180;
 		private const double RadiansToDegrees = 1 / DegreesToRadians;
 

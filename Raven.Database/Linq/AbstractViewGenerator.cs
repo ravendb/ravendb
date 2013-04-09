@@ -182,45 +182,30 @@ namespace Raven.Database.Linq
 				return Enumerable.Empty<IFieldable>();
 
 			Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
-			return spatialField.GetStrategy().CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+			return spatialField.CreateIndexableFields(shape);
 		}
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, string shapeWKT,
 			SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree,
 			int maxTreeLevel = 0, double distanceErrorPct = 0.025)
 		{
-			if (string.IsNullOrEmpty(shapeWKT))
-				return Enumerable.Empty<IFieldable>();
-
-			var options = new SpatialOptionsFactory().Geography(maxTreeLevel, spatialSearchStrategy);
-
-			var spatialField = GetSpatialField(fieldName, options);
-			var strategy = spatialField.GetStrategy();
-
-			var shape = spatialField.ReadShape(shapeWKT);
-			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, spatialField.WriteShape(shape), Field.Store.YES, Field.Index.NO), });
+			var spatialField = GetSpatialField(fieldName, spatialSearchStrategy, maxTreeLevel);
+			return spatialField.CreateIndexableFields(shapeWKT);
 		}
 
 		[CLSCompliant(false)]
-		public SpatialField GetSpatialField(string fieldName)
+		public SpatialField GetSpatialField(string fieldName, SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree, int maxTreeLevel = 0)
 		{
-			return GetSpatialField(fieldName, new SpatialOptionsFactory().Geography());
-		}
-
-		[CLSCompliant(false)]
-		public SpatialField GetSpatialField(string fieldName, SpatialOptions options)
-		{
-			SpatialOptions opt;
-			indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
-			if (opt == null)
-				opt = options ?? new SpatialOptionsFactory().Geography();
-
 			return SpatialFields.GetOrAdd(fieldName, s =>
 			{
 				if (SpatialFields.Count > 1024)
 					throw new InvalidOperationException("The number of spatial fields in an index is limited to 1,024");
+				
+				SpatialOptions opt;
+				indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
+
+				if (opt == null)
+					opt = SpatialOptionsFactory.FromLegacy(spatialSearchStrategy, maxTreeLevel);
 
 				return new SpatialField(fieldName, opt);
 			});
@@ -230,6 +215,7 @@ namespace Raven.Database.Linq
 		{
 			if (indexDefinition == null || indexDefinition.SpatialIndexes == null)
 				return false;
+
 			SpatialOptions opt;
 			indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
 			if (opt == null)

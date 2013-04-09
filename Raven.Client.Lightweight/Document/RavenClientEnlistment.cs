@@ -52,7 +52,7 @@ namespace Raven.Client.Document
 					using (var writer = new BinaryWriter(file))
 					{
 						writer.Write(session.ResourceManagerId.ToString());
-						writer.Write(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction).ToString());
+						writer.Write(GetLocalOrDistributedTransactionId(transaction).ToString());
 						writer.Write(session.DatabaseName ?? "");
 						writer.Write(preparingEnlistment.RecoveryInformation());
 						file.Flush(true);
@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+				session.Commit(GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
 			}
@@ -102,7 +102,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+				session.Rollback(GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
 			}
@@ -151,7 +151,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+				session.Rollback(GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
 			}
@@ -178,7 +178,7 @@ namespace Raven.Client.Document
 			onTxComplete();
 			try
 			{
-				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+				session.Rollback(GetLocalOrDistributedTransactionId(transaction));
 
 				DeleteFile();
 			}
@@ -189,6 +189,31 @@ namespace Raven.Client.Document
 				return;
 			}
 			singlePhaseEnlistment.Aborted();
+		}
+
+
+		/// <summary>
+		/// Gets the local or distributed transaction id.
+		/// </summary>
+		/// <param name="transactionInformation">The transaction information.</param>
+		/// <returns></returns>
+		public static Guid GetLocalOrDistributedTransactionId(TransactionInformation transactionInformation)
+		{
+			if (transactionInformation.DistributedIdentifier != Guid.Empty)
+				return transactionInformation.DistributedIdentifier;
+			string[] parts = transactionInformation.LocalIdentifier.Split(':');
+			if (parts.Length != 2)
+				throw new InvalidOperationException("Could not parse TransactionInformation.LocalIdentifier: " + transactionInformation.LocalIdentifier);
+
+			var localOrDistributedTransactionId = new Guid(parts[0]);
+			var num = BitConverter.GetBytes(int.Parse(parts[1]));
+			byte[] txId = localOrDistributedTransactionId.ToByteArray();
+			for (int i = 0; i < num.Length; i++)
+			{
+				txId[txId.Length - 1 - i] ^= num[i];
+			}
+			var transactionId = new Guid(txId);
+			return transactionId;
 		}
 	}
 }

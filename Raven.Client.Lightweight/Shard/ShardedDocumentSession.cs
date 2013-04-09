@@ -110,7 +110,7 @@ namespace Raven.Client.Shard
 	    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 	    {
 	        var transformer = new TTransformer().TransfomerName;
-	        return LoadInternal<TResult>(new[] {id}, new string[] {}, transformer).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, new KeyValuePair<string, Type>[] { }, transformer).FirstOrDefault();
 	    }
 
         public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
@@ -118,7 +118,7 @@ namespace Raven.Client.Shard
             var transformer = new TTransformer().TransfomerName;
             var configuration = new RavenLoadConfiguration();
             configure(configuration);
-            return LoadInternal<TResult>(new[] { id }, new string[] { }, transformer, configuration.QueryInputs).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, new KeyValuePair<string, Type>[] { }, transformer, configuration.QueryInputs).FirstOrDefault();
         }
 
 	    public T Load<T>(string id)
@@ -191,13 +191,14 @@ namespace Raven.Client.Shard
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
-			return LoadInternal<T>(ids, new string[0]);
+			return LoadInternal<T>(ids, new KeyValuePair<string, Type>[0]);
 		}
 
-	    private T[] LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+	    private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 	    {
 			var results = new T[ids.Length];
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includes);
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
 
 			if (!idsToLoad.Any())
 				return results;
@@ -220,7 +221,7 @@ namespace Raven.Client.Shard
 						multiLoadOperation.LogOperation();
 						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							multiLoadResult = dbCmd.Get(currentShardIds, includes, transformer, queryInputs);
+							multiLoadResult = dbCmd.Get(currentShardIds, includePaths, transformer, queryInputs);
 						}
 					} while (multiLoadOperation.SetResult(multiLoadResult));
 					return multiLoadOperation;
@@ -251,7 +252,7 @@ namespace Raven.Client.Shard
 			}).ToArray();
 	    }
 
-		public T[] LoadInternal<T>(string[] ids, string[] includes)
+		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 		    return LoadInternal<T>(ids, includes, null);
 		}
@@ -281,7 +282,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
 		{
-			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+			return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
 		}
 
 		/// <summary>
@@ -416,7 +417,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>
-		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
+		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
 		{
 			var idsAndShards = ids.Select(id => new
 			{

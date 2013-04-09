@@ -10,31 +10,6 @@ namespace Raven.Studio.Features.JsonEditor
 {
     public class LinkTagQuickInfoProvider : QuickInfoProviderBase
     {
-        private class LinkTagContext
-        {
-            public TagSnapshotRange<LinkTag> TagRange { get; set; }
-
-            public bool Equals(LinkTagContext other)
-            {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
-                return Equals(other.TagRange, TagRange);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != typeof (LinkTagContext)) return false;
-                return Equals((LinkTagContext) obj);
-            }
-
-            public override int GetHashCode()
-            {
-                return (TagRange != null ? TagRange.GetHashCode() : 0);
-            }
-        }
-
         public override object GetContext(IHitTestResult hitTestResult)
         {
             if (hitTestResult.Type == HitTestResultType.ViewTextAreaOverCharacter)
@@ -61,14 +36,20 @@ namespace Raven.Studio.Features.JsonEditor
                 return false;
 
             var linkTag = linkTagContext.TagRange.Tag;
-            var htmlSnippet = linkTag.NavigationType == LinkTagNavigationType.ExternalUrl ? "Shift-Click to navigate to Url " + linkTag.Url
-                : "Shift-Click to navigate to document " + linkTag.Url;
-
             var session = new QuickInfoSession()
             {
                 Context = context,
-                Content = new HtmlContentProvider(htmlSnippet).GetContent()
             };
+
+            if (linkTag.NavigationType == LinkTagNavigationType.ExternalUrl)
+            {
+                var htmlSnippet = string.Format("{0}<br/>Shift + Click to follow link", linkTag.Url);
+                session.Content = new HtmlContentProvider(htmlSnippet).GetContent();
+            }
+            else
+            {
+                session.Content = new QuickDocumentView() {DocumentId = linkTag.Url};
+            }
 
             session.Open(view, linkTagContext.TagRange.SnapshotRange);
 
@@ -78,6 +59,31 @@ namespace Raven.Studio.Features.JsonEditor
         protected override IEnumerable<Type> ContextTypes
         {
             get { return new[] {typeof (LinkTagContext)}; }
+        }
+    }
+
+    internal class LinkTagContext
+    {
+        public TagSnapshotRange<LinkTag> TagRange { get; set; }
+
+        public bool Equals(LinkTagContext other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(other.TagRange, TagRange);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != typeof (LinkTagContext)) return false;
+            return Equals((LinkTagContext) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (TagRange != null ? TagRange.GetHashCode() : 0);
         }
     }
 }

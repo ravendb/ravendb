@@ -15,12 +15,12 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly MultiLoadOperation loadOperation;
 		private readonly string[] ids;
-		private readonly string[] includes;
+		private readonly KeyValuePair<string, Type>[] includes;
 
 		public LazyMultiLoadOperation(
 			MultiLoadOperation loadOperation,
-			string[] ids, 
-			string[] includes)
+			string[] ids,
+			KeyValuePair<string, Type>[] includes)
 		{
 			this.loadOperation = loadOperation;
 			this.ids = ids;
@@ -32,7 +32,7 @@ namespace Raven.Client.Document.Batches
 			string query = "?";
 			if (includes != null && includes.Length > 0)
 			{
-				query += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+				query += string.Join("&", includes.Select(x => "include=" + x.Key).ToArray());
 			}
 			query += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
 			return new GetRequest
@@ -110,7 +110,8 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			return commands.Get(ids, includes);
+			var includePaths = this.includes != null ? this.includes.Select(x => x.Key).ToArray() : null;
+			return commands.Get(ids, includePaths);
 		}
 
 		public void HandleEmbeddedResponse(object result)

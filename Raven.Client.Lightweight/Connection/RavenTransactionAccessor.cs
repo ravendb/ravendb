@@ -69,7 +69,7 @@ namespace Raven.Client.Connection
 				return null;
 			return new TransactionInformation
 			{
-				Id = PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
+				Id = RavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
 				Timeout = DefaultTimeout ?? TransactionManager.DefaultTimeout
 			};
 		}

@@ -15,7 +15,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			//suggest/index?term={0}&field={1}&numOfSuggestions={2}&distance={3}&accuracy={4}
+			//suggest/index?term={0}&field={1}&numOfSuggestions={2}&distance={3}&accuracy={4}&popularity={5}
 			get { return "/suggest/(.+)"; }
 		}
 

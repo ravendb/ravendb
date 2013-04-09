@@ -264,7 +264,7 @@ namespace Raven.Database.Server.Responders
 				this.getResponse = getResponse;
 				RedirectionPrefix = response.RedirectionPrefix;
 				OutputStream = new MemoryStream();
-
+				BufferOutput = true;
 			}
 
 			public string RedirectionPrefix

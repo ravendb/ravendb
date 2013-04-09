@@ -14,6 +14,7 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
@@ -520,15 +521,17 @@ namespace Raven.Studio.Models
 						.Select(x => new SpatialQueryField
 						{
 							Name = x.Key,
-							Geographical = x.Value.Type == SpatialFieldType.Geography
+							IsGeographical = x.Value.Type == SpatialFieldType.Geography,
+							Units = x.Value.Units
 						})
 						.ToList();
 
 					legacyFields.ForEach(x => spatialFields.Add(new SpatialQueryField
-					{
-						Name = x,
-						Geographical = true
-					}));
+						{
+							Name = x,
+							IsGeographical = true,
+							Units = SpatialUnits.Kilometers
+						}));
 
 					UpdateSpatialFields(spatialFields);
 
@@ -608,10 +611,7 @@ namespace Raven.Studio.Models
 			Query = state.Query;
 
 			IsSpatialQuery = state.IsSpatialQuery;
-			SpatialQuery.FieldName = state.SpatialFieldName ?? Constants.DefaultSpatialFieldName;
-			SpatialQuery.Y = state.Latitude;
-			SpatialQuery.X = state.Longitude;
-			SpatialQuery.Radius = state.Radius;
+			SpatialQuery.UpdateFromState(state);
 
 	        UseTransformer = state.UseTransformer;
 			DefaultOperator = state.DefaultOperator;
@@ -729,8 +729,9 @@ namespace Raven.Studio.Models
 	    public IndexQuery CreateTemplateQuery()
 	    {
 		    var transfomer = SelectedTransformer.Value;
-			if (transfomer == "None")
+			if (transfomer == "None" || !UseTransformer)
 				transfomer = "";
+
             var q = new IndexQuery
             {
                 Query = Query,
@@ -767,15 +768,14 @@ namespace Raven.Studio.Models
 			if (IsSpatialQuerySupported && SpatialQuery.Y.HasValue && SpatialQuery.X.HasValue)
 			{
 				var radiusValue = SpatialQuery.Radius.HasValue ? SpatialQuery.Radius.Value : 1;
-				if (SpatialQuery.RadiusUnits == SpatialUnits.Miles)
-					radiusValue *= 1.60934;
 
 				q = new SpatialIndexQuery(q)
 				{
 					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(SpatialQuery.Y.Value, SpatialQuery.X.Value, radiusValue),
 					SpatialRelation = SpatialRelation.Within,
 					SpatialFieldName = SpatialQuery.FieldName,
-					DefaultOperator = DefaultOperator
+					DefaultOperator = DefaultOperator,
+					RadiusUnitOverride = SpatialQuery.RadiusUnits
 				};
 			}
 

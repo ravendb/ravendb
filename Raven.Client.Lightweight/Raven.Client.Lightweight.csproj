@@ -156,7 +156,6 @@
     <Compile Include="Document\DocumentSessionListeners.cs" />
     <Compile Include="Document\MultiLoaderWithInclude.cs" />
     <Compile Include="Document\MultiTypeHiLoKeyGenerator.cs" />
-    <Compile Include="Document\PromotableRavenClientEnlistment.cs" />
     <Compile Include="Document\RavenClientEnlistment.cs" />
     <Compile Include="Document\ReflectionUtil.cs" />
     <Compile Include="Document\SessionOperations\LoadOperation.cs" />

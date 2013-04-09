@@ -203,16 +203,6 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Promotes a transaction specified to a distributed transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns>The token representing the distributed transaction</returns>
-		public override byte[] PromoteTransaction(Guid fromTxId)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		/// <summary>
 		/// Stores the recovery information for the specified transaction
 		/// </summary>
 		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>

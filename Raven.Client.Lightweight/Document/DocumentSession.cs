@@ -122,7 +122,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Lazy<T[]> Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
 		{
-			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+			return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
 		}
 
 		/// <summary>
@@ -169,7 +169,7 @@ namespace Raven.Client.Document
 		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
 		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return LazyLoadInternal(documentKeys.ToArray(), new string[0], onEval);
+			return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
 		}
 
 		/// <summary>
@@ -313,7 +313,7 @@ namespace Raven.Client.Document
 
             if (typeof (T).IsArray)
             {
-                // REturns array of arrays, public APIs don't surface that yet though as we only support Transform
+                // Returns array of arrays, public APIs don't surface that yet though as we only support Transform
                 // With a single Id
                 var arrayOfArrays = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
                                             .Results
@@ -350,10 +350,12 @@ namespace Raven.Client.Document
             }
 	    }
 
-	    public T[] LoadInternal<T>(string[] ids, string[] includes)
+		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 	    {
 			if (ids.Length == 0)
 				return new T[0];
+
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
 
 			IncrementRequestCount();
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
@@ -363,7 +365,7 @@ namespace Raven.Client.Document
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-					multiLoadResult = DatabaseCommands.Get(ids, includes);
+					multiLoadResult = DatabaseCommands.Get(ids, includePaths);
 				}
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
@@ -654,17 +656,6 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Promotes a transaction specified to a distributed transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns>The token representing the distributed transaction</returns>
-		public override byte[] PromoteTransaction(Guid fromTxId)
-		{
-			IncrementRequestCount();
-			return DatabaseCommands.PromoteTransaction(fromTxId);
-		}
-
-		/// <summary>
 		/// Query RavenDB dynamically using LINQ
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
@@ -725,7 +716,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>
-		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
+		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
 		{
 			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);

@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Json.Linq;

@@ -74,6 +74,7 @@ namespace Raven.Database.Indexing
 
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
+		private bool forceWriteToDisk;
 
 		public TimeSpan LastIndexingDuration { get; set; }
 		public long TimePerDoc { get; set; }
@@ -115,6 +116,11 @@ namespace Raven.Database.Indexing
 		public DateTime LastIndexTime { get; set; }
 
 		protected DateTime PreviousIndexTime { get; set; }
+
+		public bool IsOnRam
+		{
+			get { return directory is RAMDirectory; }
+		}
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
@@ -450,7 +456,7 @@ namespace Raven.Database.Indexing
 				stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
 			});
 
-			if (toobig || !stale)
+			if (forceWriteToDisk || toobig || !stale)
 			{
 				indexWriter.Commit();
 				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
@@ -1124,7 +1130,7 @@ namespace Raven.Database.Indexing
 				if (spatialIndexQuery != null)
 				{
 					var spatialField = parent.viewGenerator.GetSpatialField(spatialIndexQuery.SpatialFieldName);
-					var dq = spatialField.MakeQuery(q, spatialField.GetStrategy(), spatialIndexQuery.QueryShape, spatialIndexQuery.SpatialRelation, spatialIndexQuery.DistanceErrorPercentage);
+					var dq = spatialField.MakeQuery(q, spatialField.GetStrategy(), spatialIndexQuery);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery { { q, Occur.MUST }, { dq, Occur.MUST } };
@@ -1413,6 +1419,11 @@ namespace Raven.Database.Indexing
 			if (jsonDocument == null)
 				return new DynamicNullObject();
 			return new DynamicJsonObject(jsonDocument.ToJson());
+		}
+
+		public void ForceWriteToDisk()
+		{
+			forceWriteToDisk = true;
 		}
 	}
 }

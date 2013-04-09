@@ -10,7 +10,7 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Json.Linq;

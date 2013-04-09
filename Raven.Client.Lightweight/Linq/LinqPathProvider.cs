@@ -97,35 +97,39 @@ namespace Raven.Client.Linq
 				MemberType = memberExpression.Member.GetMemberType()
 			};
 
-			var jsonPropAttributes = memberExpression.Member.GetCustomAttributes(false)
-				.Where(x => x.GetType().Name == "JsonPropertyAttribute")
-				.ToArray();
+			result.Path = HandlePropertyRenames(memberExpression.Member, result.Path);
+
+			return result;
+		}
+
+		public static string HandlePropertyRenames(MemberInfo member, string name)
+		{
+			var jsonPropAttributes = member.GetCustomAttributes(false)
+			                                         .Where(x => x.GetType().Name == "JsonPropertyAttribute")
+			                                         .ToArray();
 
 			if (jsonPropAttributes.Length != 0)
 			{
-				string propertyName = ((dynamic)jsonPropAttributes[0]).PropertyName;
+				string propertyName = ((dynamic) jsonPropAttributes[0]).PropertyName;
 				if (String.IsNullOrEmpty(propertyName) == false)
 				{
-					result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
-					              propertyName;
+					return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 				}
 			}
 
-			var dataMemberAttributes = memberExpression.Member.GetCustomAttributes(false)
-				.Where(x => x.GetType().Name == "DataMemberAttribute")
-				.ToArray();
+			var dataMemberAttributes = member.GetCustomAttributes(false)
+			                                           .Where(x => x.GetType().Name == "DataMemberAttribute")
+			                                           .ToArray();
 
 			if (dataMemberAttributes.Length != 0)
 			{
-				string propertyName = ((dynamic)dataMemberAttributes[0]).Name;
+				string propertyName = ((dynamic) dataMemberAttributes[0]).Name;
 				if (String.IsNullOrEmpty(propertyName) == false)
 				{
-					result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
-								  propertyName;
+					return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 				}
 			}
-			
-			return result;
+			return name;
 		}
 
 		private static Expression SimplifyExpression(Expression expression)

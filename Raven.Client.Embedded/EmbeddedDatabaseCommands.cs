@@ -695,17 +695,6 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Promotes the transaction.
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
-		public byte[] PromoteTransaction(Guid fromTxId)
-		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.PromoteTransaction(fromTxId);
-		}
-
-		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
@@ -730,14 +719,6 @@ namespace Raven.Client.Embedded
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
 		{
 			return new EmbeddedBulkInsertOperation(database, options);
-		}
-
-		/// <summary>
-		/// It seems that we can't promote a transaction inside the same process
-		/// </summary>
-		public bool SupportsPromotableTransactions
-		{
-			get { return false; }
 		}
 
 		/// <summary>
@@ -775,8 +756,8 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
-			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
-			return new Operation(0);
+			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
+			return new Operation(0, state);
 		}
 
 		/// <summary>
@@ -790,8 +771,8 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
-			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
-			return new Operation(0);
+			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
+			return new Operation(0, state);
 		}
 
 		/// <summary>
@@ -815,8 +796,8 @@ namespace Raven.Client.Embedded
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
-			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
-			return new Operation(0);
+			var state = databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
+			return new Operation(0, state);
 		}
 
 		/// <summary>
@@ -904,9 +885,9 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
-		public void Patch(string key, PatchRequest[] patches)
+		public RavenJObject Patch(string key, PatchRequest[] patches)
 		{
-			Patch(key, patches, null);
+			return Patch(key, patches, null);
 		}
 
 		/// <summary>
@@ -914,9 +895,9 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public void Patch(string key, ScriptedPatchRequest patch)
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
-			Patch(key, patch, null);
+			return Patch(key, patch, null);
 		}
 
 		/// <summary>
@@ -925,17 +906,17 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, PatchRequest[] patches, Etag etag)
+		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
-			Batch(new[]
-			      {
-				      new PatchCommandData
-				      {
-					      Key = key,
-					      Patches = patches,
-					      Etag = etag
-				      }
-			      });
+			var batchResults = Batch(new[]
+			{
+				new PatchCommandData
+				{
+					Key = key, Patches = patches, Etag = etag
+				}
+			});
+
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>
@@ -944,9 +925,9 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, ScriptedPatchRequest patch, Etag etag)
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
-			Batch(new[]
+			var batchResults = Batch(new[]
 			      {
 				      new ScriptedPatchCommandData
 				      {
@@ -955,6 +936,7 @@ namespace Raven.Client.Embedded
 					      Etag = etag
 				      }
 			      });
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>

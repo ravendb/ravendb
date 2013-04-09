@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
@@ -108,9 +109,16 @@ namespace Raven.Studio.Commands
 							{
 								id = record[column];
 							}
-							else if (string.Equals("Raven-Entity-Name", column, StringComparison.OrdinalIgnoreCase))
+							else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
 							{
-								metadata = new RavenJObject { { "Raven-Entity-Name", record[column] } };
+								metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenEntityName] = record[column];
+								id = id ?? record[column] + "/";
+							}
+							else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
+							{
+								metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenClrType] = record[column];
 								id = id ?? record[column] + "/";
 							}
 							else

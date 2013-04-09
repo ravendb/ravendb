@@ -37,7 +37,8 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			TInternal existingItem;
 			Etag existingEtag;
-			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag);
+			bool deleted;
+			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag, out deleted);
 			if (existingMetadata == null)
 			{
 				log.Debug("New item {0} replicated successfully from {1}", id, Src);
@@ -64,7 +65,7 @@ namespace Raven.Bundles.Replication.Responders
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
 
-				var etag = existingDocumentIsDeleted == false ? existingEtag : null;
+				var etag = deleted == false ? existingEtag : null;
 				AddWithoutConflict(id, etag, metadata, incoming);
 				return;
 			}
@@ -123,7 +124,8 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			TInternal existingItem;
 			Etag existingEtag;
-			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag);
+			bool deleted;
+			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag, out deleted);
 			if (existingMetadata == null)
 			{
 				log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring", id, Src);
@@ -207,7 +209,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected abstract CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, TInternal existingItem);
 
-		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag);
+		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag, out bool deleted);
 
 		protected abstract bool TryResolveConflict(string id, RavenJObject metadata, TExternal document,
 												  TInternal existing);

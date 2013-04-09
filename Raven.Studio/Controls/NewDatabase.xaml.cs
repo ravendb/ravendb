@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Infrastructure.Converters;
@@ -17,9 +20,11 @@ namespace Raven.Studio.Controls
 	{
 		public List<string> Bundles { get; private set; }
 		public Observable<LicensingStatus> LicensingStatus { get; set; }
+		public Observable<bool> HasAuth { get; set; }
 
 		public NewDatabase()
 		{
+			HasAuth = new Observable<bool>();
 			LicensingStatus = new Observable<LicensingStatus>();
 			InitializeComponent();
 			var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/license/status", "GET");
@@ -33,6 +38,18 @@ namespace Raven.Studio.Controls
 				{
 					Bundles.Add("PeriodicBackup");
 				}
+			});
+
+			req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/plugins/status".NoCache(), "GET");
+
+			req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(item =>
+			{
+				var plugins = ((RavenJObject)item).Deserialize<PluginsStatus>(new DocumentConvention());
+
+				if (plugins == null || plugins.Plugins.Contains("Raven.Bundles.Authorization") == false)
+					return;
+
+				HasAuth.Value = true;
 			});
 
 			
