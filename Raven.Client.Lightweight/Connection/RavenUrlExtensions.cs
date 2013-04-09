@@ -51,6 +51,11 @@ namespace Raven.Client.Connection
 			return url + "/replication/info";
 		}
 
+		public static string LastReplicatedEtagFor(this string destinationUrl, string sourceUrl)
+		{
+			return destinationUrl + "/replication/lastEtag?from=" + Uri.EscapeDataString(sourceUrl);
+		}
+
 		//public static string Static(this string url, string key)
 		//{
 		//    return url + "/static/" + HttpUtility.UrlEncode(key);

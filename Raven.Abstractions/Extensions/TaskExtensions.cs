@@ -44,5 +44,11 @@ namespace Raven.Abstractions.Extensions
 			             .Unwrap();
 		}
 
+		public static async Task<T> DefaultAfterTimeout<T>(this Task<T> task, TimeSpan timeout)
+		{
+			if (task == await TaskEx.WhenAny(task, TaskEx.Delay(timeout.Milliseconds)))
+				return await task;
+			return default(T);
+		}
 	}
 }

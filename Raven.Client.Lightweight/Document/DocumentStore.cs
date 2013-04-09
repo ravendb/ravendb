@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -12,6 +13,7 @@ using System.Security;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -35,6 +37,8 @@ using System.Security.Cryptography;
 using System.Collections.Concurrent;
 using Raven.Client.Util;
 using Raven.Abstractions.Connection;
+using Raven.Json.Linq;
+
 #endif
 
 
@@ -857,5 +861,105 @@ namespace Raven.Client.Document
 		}
 #endif
 
+		/// <summary>
+		/// Represents an replication operation to all destination servers of an last stored entity
+		/// </summary>
+		/// <param name="timeout">Optional timeout</param>
+		/// <returns>Task representing replication that is being in progress</returns>
+		public Task ReplicationOperation(TimeSpan? timeout = null)
+		{
+			return ReplicationOperationOf(LastEtagHolder.GetLastWrittenEtag(), timeout);
+		}
+
+		/// <summary>
+		/// Represents an replication operation to all destination servers of an item specified by ETag
+		/// </summary>
+		/// <param name="etag">ETag of an replicated item</param>
+		/// <param name="timeout">Optional timeout</param>
+		/// <returns>Task representing replication that is being in progress</returns>
+		public async Task ReplicationOperationOf(Etag etag, TimeSpan? timeout = null)
+		{
+			var doc = await AsyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
+			if (doc == null)
+				return;
+
+			var replicationDocument = doc.DataAsJson.JsonDeserialization<ReplicationDocument>();
+			if (replicationDocument == null)
+				return;
+
+			if (replicationDocument.Destinations.Count == 0)
+				return;
+
+			var destinationsToCheck = new List<string>(replicationDocument.Destinations.Select(x => x.Url));
+
+			var sp = new Stopwatch();
+			sp.Start();
+
+			do
+			{
+				var tasks = destinationsToCheck.Select(GetReplicatedEtagsFor);
+
+				var replicatedEtagInfos = timeout == null
+					                          ? await TaskEx.WhenAll(tasks)
+					                          : await TaskEx.WhenAll(tasks).DefaultAfterTimeout(timeout.Value);
+
+				if(replicatedEtagInfos == null) // if timeout exceeded
+					break;
+
+				foreach (var etags in replicatedEtagInfos)
+				{
+					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
+
+					if (replicated)
+					{
+						destinationsToCheck.Remove(etags.DestinationUrl);
+					}
+				}
+
+				if(timeout != null && sp.Elapsed > timeout)
+					break;
+
+				if (destinationsToCheck.Count > 0)
+					await TaskEx.Delay(100);
+
+			} while (destinationsToCheck.Count > 0);
+		}
+
+		/// <summary>
+		/// Waits until a last stored entity will be replicated to all destination servers.
+		/// </summary>
+		/// <param name="timeout">Optional timeout</param>
+		public void WaitForReplication(TimeSpan? timeout = null)
+		{
+			WaitForReplicationOf(LastEtagHolder.GetLastWrittenEtag(), timeout);
+		}
+
+		/// <summary>
+		/// Waits until an item with the specified ETag will be replicated to all destination servers.
+		/// </summary>
+		/// <param name="etag">ETag of an replicated item</param>
+		/// <param name="timeout">Optional timeout</param>
+		public void WaitForReplicationOf(Etag etag, TimeSpan? timeout = null)
+		{
+			ReplicationOperationOf(etag, timeout).Wait();
+		}
+
+		private Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl)
+		{
+			return jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(null, destinationUrl.LastReplicatedEtagFor(Url), "GET", Credentials, Conventions))
+									 .ReadResponseJsonAsync()
+									 .ContinueWith(task =>
+									 {
+										 var json = task.Result;
+
+										 return new ReplicatedEtagInfo
+										 {
+											 DestinationUrl = destinationUrl,
+											 DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")),
+											 AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
+										 };
+									 });
+		}
 	}
 }
