@@ -370,11 +370,10 @@ this.Value = another.Value;
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
 				{
-					Script = @"CreateDocument(
+					Script = @"PutDocument(
 'NewTypes/1', 
-null, 
-'{ ""CopiedValue"":' + this.Value + '}',
-'{""CreatedBy"": ""JS_Script""}');",
+{ 'CopiedValue':  this.Value },
+{'CreatedBy': 'JS_Script'});",
 				});
 
 				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
@@ -383,6 +382,37 @@ null,
 				Assert.Equal("JS_Script", resultDoc.Metadata.Value<string>("CreatedBy"));
 			}
 		}
+
+        [Fact]
+        public void CanUpdateDocument()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new CustomType { Value = 10 });
+                    s.SaveChanges();
+                }
+
+                store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+                {
+                    Script = @"PutDocument(
+'NewTypes/1', 
+{ 'CopiedValue':this.Value },
+{'CreatedBy': 'JS_Script'});
+
+PutDocument(
+'NewTypes/1', 
+{ 'CopiedValue': this.Value },
+{'CreatedBy': 'JS_Script 2'});",
+                });
+
+                var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
+
+                Assert.Equal(10, resultDoc.DataAsJson.Value<int>("CopiedValue"));
+                Assert.Equal("JS_Script 2", resultDoc.Metadata.Value<string>("CreatedBy"));
+            }
+        }
 
 		[Fact]
 		public void CanCreateMultipleDocuments()
@@ -397,11 +427,10 @@ null,
 
 				store.DatabaseCommands.Patch("Items/1", new ScriptedPatchRequest
 				{
-					Script = @"_(this.Comments).forEach(function(comment){CreateDocument(
+                    Script = @"_(this.Comments).forEach(function(comment){PutDocument(
 						'Comments/', 
-						null, 
-						'{ ""Comment"":""' + comment + '""}',
-						null);
+						    { 'Comment':comment }
+                        );
 					});",
 				});
 
@@ -428,11 +457,7 @@ null,
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
 				{
-					Script = @"CreateDocument(
-null, 
-null, 
-'{ ""Property"": ""Value""}',
-null);",
+					Script = @"PutDocument(null, { 'Property': 'Value'});",
 				});
 
 				var resultDocs = store.DatabaseCommands.GetDocuments(0, 10);
@@ -457,7 +482,7 @@ null);",
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
 			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			{
-				Script = @"CreateDocument('Items/1', 'invalid-etag', '{ Property: 1}', null);"
+                Script = @"PutDocument('Items/1', { Property: 1}, {'@etag': 'invalid-etag' });"
 			}));
 
 			Assert.Contains("Invalid ETag value 'invalid-etag' for document 'Items/1'", x.InnerException.Message);
@@ -476,11 +501,10 @@ null);",
 
 				var x = Assert.Throws<ConcurrencyException>(() => store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
 				{
-					Script = @"CreateDocument(
+                    Script = @"PutDocument(
 'Items/1', 
-'01000000-0000-0001-0000-000000000010', 
-'{ ""Property"":""Value""}',
-null);",
+{ 'Property':'Value'},
+{'@etag': '01000000-0000-0001-0000-000000000010'} );",
 				}));
 
 				Assert.Contains("PUT attempted on document 'Items/1' using a non current etag", x.Message);
@@ -500,11 +524,7 @@ null);",
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
 				{
-					Script = @"CreateDocument(
-'NewTypes/1', 
-null, 
-'{ }',
-null);",
+                    Script = @"PutDocument('NewTypes/1', { });",
 				});
 
 				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
@@ -520,14 +540,14 @@ null);",
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
 			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			{
-				Script = @"CreateDocument('Items/1', null, null, null);"
+                Script = @"PutDocument('Items/1', null);"
 			}));
 
 			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
 
 			x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
 			{
-				Script = @"CreateDocument('Items/1', null, '', null);"
+                Script = @"PutDocument('Items/1', null, null);"
 			}));
 
 			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
@@ -568,7 +588,7 @@ null);",
 
 				store.DatabaseCommands.UpdateByIndex("TestIndex",
 				                                     new IndexQuery {Query = "Value:1"},
-				                                     new ScriptedPatchRequest {Script = @"CreateDocument('NewItem/3', null, '{""CopiedValue"":' + this.Value +'}', null);"})
+                                                     new ScriptedPatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" })
 				     .WaitForCompletion();
 
 				var jsonDocuments = store.DatabaseCommands.GetDocuments(0, 10);
