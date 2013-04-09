@@ -100,9 +100,10 @@ namespace Raven.Database.Json
 				
 				foreach (var kvp in patch.Values)
 				{
-					if (kvp.Value is RavenJToken)
+				    var token = kvp.Value as RavenJToken;
+				    if (token != null)
 					{
-						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, (RavenJToken)kvp.Value));
+						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
 					}
 					else
 					{
@@ -111,7 +112,7 @@ namespace Raven.Database.Json
 						jintEngine.SetParameter(kvp.Key, jsInstance);
 					}
 				}
-				var jsObject = ToJsObject(jintEngine.Global, doc);
+			    var jsObject = ToJsObject(jintEngine.Global, doc);
 				jintEngine.ResetSteps();
 				if (size != 0)
 				{
