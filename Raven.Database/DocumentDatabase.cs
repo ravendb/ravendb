@@ -1009,103 +1009,46 @@ namespace Raven.Database
             return inFlightTransactionalState.HasTransaction(txId);
         }
 
-        private readonly ConcurrentQueue<ComittingTransaction> committingTransactions = new ConcurrentQueue<ComittingTransaction>();
-        private readonly ManualResetEventSlim commitWaitEvent = new ManualResetEventSlim();
-        private class ComittingTransaction
-        {
-            public Guid Id;
-            public readonly TaskCompletionSource<object> Result = new TaskCompletionSource<object>();
-        }
-
         public void Commit(Guid txId)
         {
-            var commit = new ComittingTransaction { Id = txId };
-            committingTransactions.Enqueue(commit);
-
-            var txTask = commit.Result.Task;
-            while (txTask.Completed() == false && committingTransactions.Peek() != commit)
-            {
-                commitWaitEvent.Wait();
-            }
-
-            if (txTask.Completed())
-            {
-                txTask.AssertNotFailed();
-                return;
-            }
-
-            try
-            {
-                using (putSerialLocker.Lock(null))
-                {
-                    commitWaitEvent.Reset();
-
-                    if (txTask.Completed())
-                    {
-                        txTask.AssertNotFailed();
-                        return;
-                    }
-
-                    var ids = new List<Guid>(committingTransactions.Count);
-                    try
-                    {
-                        ActualCommitPendingTransactions(txId, ids);
-                    }
-                    finally
-                    {
-                        foreach (var id in ids)
-                        {
-                            inFlightTransactionalState.Rollback(id);  // this is where we actually remove the tx
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                if (TransactionalStorage.HandleException(e))
-                    return;
-                throw;
-            }
+	        try
+	        {
+		        using (putSerialLocker.Lock(null))
+		        {
+			        try
+			        {
+				        TransactionalStorage.Batch(actions =>
+				        {
+					        inFlightTransactionalState.Commit(txId, doc => // this just commit the values, not remove the tx
+					        {
+						        log.Debug("Commit of txId {0}: {1} {2}", txId, doc.Delete ? "DEL" : "PUT", doc.Key);
+						        // doc.Etag - represent the _modified_ document etag, and we already
+						        // checked etags on previous PUT/DELETE, so we don't pass it here
+						        if (doc.Delete)
+							        Delete(doc.Key, null, null);
+						        else
+							        Put(doc.Key, null,
+							            doc.Data,
+							            doc.Metadata, null);
+					        });
+					        log.Debug("Commit of tx {0} completed", txId);
+				        });
+			        }
+			        finally
+			        {
+				        inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
+			        }
+		        }
+	        }
+	        catch (Exception e)
+	        {
+		        if (TransactionalStorage.HandleException(e))
+			        return;
+		        throw;
+	        }
         }
 
-        private void ActualCommitPendingTransactions(Guid txId, List<Guid> ids)
-        {
-            TransactionalStorage.Batch(actions =>
-            {
-                ComittingTransaction current = null;
-                try
-                {
-                    while (ids.Count < 128 && committingTransactions.TryDequeue(out current))
-                    {
-                        ids.Add(current.Id);
-                        log.Debug("Committing tx {0}", current.Id);
-                        inFlightTransactionalState.Commit(current.Id, doc => // this just commit the values, not remove the tx
-                        {
-                            log.Debug("Commit of txId {0}: {1} {2}", current.Id, doc.Delete ? "DEL" : "PUT", doc.Key);
-                            // doc.Etag - represent the _modified_ document etag, and we already
-                            // checked etags on previous PUT/DELETE, so we don't pass it here
-                            if (doc.Delete)
-                                Delete(doc.Key, null, null);
-                            else
-                                Put(doc.Key, null,
-                                    doc.Data,
-                                    doc.Metadata, null);
-                        });
-                        actions.General.PulseTransaction();
-                        workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
-                        current.Result.SetResult(null); // completed
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (current != null)
-                        current.Result.SetException(e);
-                    throw;
-                }
-                log.Debug("Merged {0} transactions into a single commit", ids.Count);
-            });
-        }
-
+ 
         public void Rollback(Guid txId)
         {
             inFlightTransactionalState.Rollback(txId);
