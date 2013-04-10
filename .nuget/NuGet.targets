@@ -19,10 +19,12 @@
     <ItemGroup Condition=" '$(PackageSources)' == '' ">
         <!-- Package sources used to restore packages. By default, registered sources under %APPDATA%\NuGet\NuGet.Config will be used -->
         <!-- The official NuGet package source (https://nuget.org/api/v2/) will be excluded if package sources are specified and it does not appear in the list -->
-        <!--
+        
             <PackageSource Include="https://nuget.org/api/v2/" />
-            <PackageSource Include="https://my-nuget-source/nuget/" />
-        -->
+            <PackageSource Include="http://www.myget.org/F/ravendb/" />
+            <PackageSource Include="http://www.myget.org/F/ravendbvnext/" />
+            <PackageSource Include="http://www.myget.org/F/nancyfx" />
+            <PackageSource Include="http://www.myget.org/F/nancyasync" />
     </ItemGroup>
 
     <PropertyGroup Condition=" '$(OS)' == 'Windows_NT'">

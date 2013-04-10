@@ -23,6 +23,7 @@ using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Esent.Debug;
+using Raven.Database.Util;
 using Raven.Storage.Esent.Backup;
 using Raven.Storage.Esent.SchemaUpdates;
 using Raven.Storage.Esent.StorageActions;
@@ -403,15 +404,40 @@ namespace Raven.Storage.Esent
 						var schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 						if (schemaVersion == SchemaCreator.SchemaVersion)
 							return;
-						do
+
+						using (var ticker = new OutputTicker(TimeSpan.FromSeconds(3), () =>
 						{
-							var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
-							if (updater == null)
-								throw new InvalidOperationException(string.Format("The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.", schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
-							updater.Value.Init(generator);
-							updater.Value.Update(session, dbid);
-							schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
-						} while (schemaVersion != SchemaCreator.SchemaVersion);
+							log.Info(".");
+							Console.Write(".");
+						}, null, () =>
+						{
+							log.Info("OK");
+							Console.Write("OK");
+							Console.WriteLine();
+						}))
+						{
+							do
+							{
+								var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
+								if (updater == null)
+									throw new InvalidOperationException(
+										string.Format(
+											"The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
+											schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
+
+								log.Info("Updating schema from version {0}: ", schemaVersion);
+								Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
+
+								ticker.Start();
+
+								updater.Value.Init(generator);
+								updater.Value.Update(session, dbid, Output);
+								schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
+
+								ticker.Stop();
+
+							} while (schemaVersion != SchemaCreator.SchemaVersion);
+						}
 					}
 				});
 			}
@@ -595,6 +621,13 @@ namespace Raven.Storage.Esent
 
 				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param) JET_paramEnableIndexCleanup, 0, null);
 			}
+		}
+
+		private void Output(string message)
+		{
+			log.Info(message);
+			Console.Write(message);
+			Console.WriteLine();
 		}
 	}
 }

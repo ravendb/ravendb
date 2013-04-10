@@ -10,9 +10,9 @@ namespace Raven.Abstractions.Exceptions
 {
 	/// <summary>
 	/// This exception is raised when a bad request is made to the server
-	/// </summary>
-#if !SILVERLIGHT
-	[Serializable]
+    /// </summary>
+#if !SILVERLIGHT && !NETFX_CORE
+    [Serializable]
 #endif
 	public class BadRequestException : Exception
 	{
@@ -42,8 +42,8 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT
-		/// <summary>
+#if !SILVERLIGHT && !NETFX_CORE
+        /// <summary>
 		/// Initializes a new instance of the <see cref="BadRequestException"/> class.
 		/// </summary>
 		/// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>

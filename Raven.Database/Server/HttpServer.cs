@@ -691,6 +691,9 @@ namespace Raven.Database.Server
 
 		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams)
 		{
+			if (logger.IsDebugEnabled == false)
+				return;
+			
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.

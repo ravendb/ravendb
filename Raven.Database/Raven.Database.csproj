@@ -782,6 +782,7 @@
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
+    <Compile Include="Util\OutputTicker.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
