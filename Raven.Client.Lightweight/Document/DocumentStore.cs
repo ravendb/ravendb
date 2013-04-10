@@ -6,15 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Security;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
-using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -34,12 +30,8 @@ using System.Collections.Concurrent;
 using Raven.Client.Util;
 using Raven.Client.WinRT.Connection;
 #else
-using Raven.Client.Listeners;
 using Raven.Client.Document.DTC;
-using System.Security.Cryptography;
 using Raven.Client.Util;
-using Raven.Abstractions.Connection;
-using Raven.Json.Linq;
 
 #endif
 
@@ -93,6 +85,9 @@ namespace Raven.Client.Document
 		{
 			get { return true; }
 		}
+
+		public ReplicationBehavior Replication { get; private set; }
+
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
 		///</summary>
@@ -151,6 +146,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentStore()
 		{
+			Replication = new ReplicationBehavior(this);
 #if !SILVERLIGHT && !NETFX_CORE
 			Credentials = CredentialCache.DefaultNetworkCredentials;
 #endif
@@ -862,129 +858,5 @@ namespace Raven.Client.Document
 			return changes == null ? new CompletedTask() : changes.ConnectionTask;
 		}
 #endif
-
-		/// <summary>
-		/// Represents an replication operation to all destination servers of an last stored entity
-		/// </summary>
-		/// <param name="timeout">Optional timeout</param>
-		/// <returns>Task representing replication that is being in progress</returns>
-		public Task<int> ReplicationOperation(TimeSpan? timeout = null)
-		{
-			return ReplicationOperationOf(LastEtagHolder.GetLastWrittenEtag(), timeout);
-		}
-
-		/// <summary>
-		/// Represents an replication operation to all destination servers of an item specified by ETag
-		/// </summary>
-		/// <param name="etag">ETag of an replicated item</param>
-		/// <param name="timeout">Optional timeout</param>
-		/// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
-		/// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
-		/// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
-		public async Task<int> ReplicationOperationOf(Etag etag, TimeSpan? timeout = null, string database = null, int replicas = 3)
-		{
-			var asyncDatabaseCommands = AsyncDatabaseCommands;
-			if (database != null)
-				asyncDatabaseCommands = asyncDatabaseCommands.ForDatabase(database);
-
-			asyncDatabaseCommands.ForceReadFromMaster();
-
-			var doc = await asyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
-			if (doc == null)
-				return -1;
-
-			var replicationDocument = doc.DataAsJson.JsonDeserialization<ReplicationDocument>();
-			if (replicationDocument == null)
-				return -1;
-
-			var destinationsToCheck = new List<string>(replicationDocument.Destinations
-			                                                              .Where(
-				                                                              x => x.Disabled == false && x.IgnoredClient == false)
-			                                                              .Select(x => x.ClientVisibleUrl ?? x.Url))
-				.ToList();
-
-
-			if (destinationsToCheck.Count == 0)
-				return 0;
-
-			var countDown = new AsyncCountdownEvent(Math.Min(replicas, destinationsToCheck.Count));
-			var errors = new BlockingCollection<Exception>();
-
-			foreach (var url in destinationsToCheck)
-			{
-				WaitForReplicationFromServerAsync(url, countDown, etag, errors);
-			}
-
-			await countDown.WaitAsync().WaitWithTimeout(timeout);
-
-			if (errors.Count > 0 && countDown.Count > 0)
-				throw new AggregateException(errors);
-
-			return countDown.Count;
-		}
-
-		private async void WaitForReplicationFromServerAsync(string url, AsyncCountdownEvent countDown, Etag etag, BlockingCollection<Exception> errors)
-		{
-			try
-			{
-				while (countDown.Active)
-				{
-					var etags = await GetReplicatedEtagsFor(url);
-
-					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
-
-					if (!replicated)
-					{
-						if (countDown.Active)
-							await TaskEx.Delay(100);
-						continue;
-					}
-					countDown.Signal();
-					return;
-				}
-			}
-			catch (Exception ex)
-			{
-				errors.Add(ex);
-				countDown.Signal();
-			}
-		}
-
-		/// <summary>
-		/// Waits until a last stored entity will be replicated to all destination servers.
-		/// </summary>
-		/// <param name="timeout">Optional timeout</param>
-		public void WaitForReplication(TimeSpan? timeout = null)
-		{
-			WaitForReplicationOf(LastEtagHolder.GetLastWrittenEtag(), timeout);
-		}
-
-		/// <summary>
-		/// Waits until an item with the specified ETag will be replicated to all destination servers.
-		/// </summary>
-		/// <param name="etag">ETag of an replicated item</param>
-		/// <param name="timeout">Optional timeout</param>
-		public void WaitForReplicationOf(Etag etag, TimeSpan? timeout = null)
-		{
-			ReplicationOperationOf(etag, timeout).Wait();
-		}
-
-		private Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl)
-		{
-			return jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(null, destinationUrl.LastReplicatedEtagFor(Url), "GET", Credentials, Conventions))
-									 .ReadResponseJsonAsync()
-									 .ContinueWith(task =>
-									 {
-										 var json = task.Result;
-
-										 return new ReplicatedEtagInfo
-										 {
-											 DestinationUrl = destinationUrl,
-											 DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")),
-											 AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
-										 };
-									 });
-		}
 	}
 }

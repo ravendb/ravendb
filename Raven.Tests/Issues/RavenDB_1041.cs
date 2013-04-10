@@ -35,7 +35,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			((DocumentStore) store1).WaitForReplication();
+			((DocumentStore) store1).Replication.WaitAsync().Wait();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -53,12 +53,12 @@ namespace Raven.Tests.Issues
 			var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
 			var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
 
-			((DocumentStore)store1).WaitForReplicationOf(putResult.ETag);
+			((DocumentStore)store1).Replication.WaitAsync(putResult.ETag).Wait();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
 
-			((DocumentStore)store1).WaitForReplicationOf(putResult2.ETag);
+			((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag).Wait();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
@@ -80,7 +80,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 			
-			await ((DocumentStore) store1).ReplicationOperation();
+			await ((DocumentStore) store1).Replication.WaitAsync();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			((DocumentStore)store1).WaitForReplication(TimeSpan.FromSeconds(20));
+			((DocumentStore)store1).Replication.WaitAsync(timeout:TimeSpan.FromSeconds(20));
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}
