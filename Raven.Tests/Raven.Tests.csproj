@@ -753,6 +753,7 @@
     <Compile Include="PreFetching.cs" />
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
+    <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\GeoJsonConverterTests.cs" />
