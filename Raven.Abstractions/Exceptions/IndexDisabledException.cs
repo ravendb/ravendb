@@ -11,9 +11,9 @@ namespace Raven.Abstractions.Exceptions
 {
 	/// <summary>
 	/// This exception is raised when querying an index that was disabled because the error rate exceeded safety margins
-	/// </summary>
-#if !SILVERLIGHT
-[Serializable]
+    /// </summary>
+#if !SILVERLIGHT && !NETFX_CORE
+    [Serializable]
 #endif
 
 	public class IndexDisabledException : Exception
@@ -51,8 +51,8 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT
-	/// <summary>
+#if !SILVERLIGHT && !NETFX_CORE
+        /// <summary>
 	/// Initializes a new instance of the <see cref="IndexDisabledException"/> class.
 	/// </summary>
 	/// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>

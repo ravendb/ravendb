@@ -23,7 +23,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
 			var tableAndColumns = new[]
 			{
@@ -57,13 +57,18 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 						}
 
 						if (rows++ % 10000 == 0)
+						{
+							output("Processed " + (rows - 1) + " rows in " + tableAndColumn.Table);
 							continue;
+						}
 
 						// pulsing transaction
 						Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
 						Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
 					}
 				}
+
+				output("Finished processing " + tableAndColumn.Table);
 			}
 
 			SchemaCreator.UpdateVersion(session, dbid, "4.3");

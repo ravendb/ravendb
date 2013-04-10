@@ -256,6 +256,7 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\ChangeLockOfIndexCommand.cs" />
     <Compile Include="Commands\CsvImportCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
     <Compile Include="Commands\CreateSampleDataCommand.cs" />
@@ -324,6 +325,8 @@
     <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
       <DependentUpon>TransformersListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\BreakToLinesConverter.cs" />
+    <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
@@ -1462,6 +1465,10 @@
     <Resource Include="Assets\Images\transformer_tiny.png" />
     <Resource Include="Assets\Images\transformer_small.png" />
     <Resource Include="Assets\Images\index_down.png" />
+    <Resource Include="Assets\Images\lock.png" />
+    <Resource Include="Assets\Images\lock_error.png" />
+    <Resource Include="Assets\Images\lock_open.png" />
+    <Resource Include="Assets\Images\lock_preferences.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

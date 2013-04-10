@@ -377,6 +377,8 @@
 				<RowDefinition Height="Auto"/>
 			</Grid.RowDefinitions>
 			<Border Background="{StaticResource Brush_ToolbarBackground}">
+				<StackPanel>
+					
 				<StackPanel  VerticalAlignment="Center" Orientation="Horizontal" Margin="0,5">
 					<Button x:Name="Save"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -574,6 +576,12 @@
                                Stretch="None" />
 					</Button>
 				</StackPanel>
+					<TextBlock Text="Can not save index because it it locked to changes. You need to unlock it in the indexes page before any changes can be made" 
+							   Foreground="Red" 
+							   Margin="5"
+							   Visibility="{Binding IsLocked, Converter={StaticResource BooleanToVisibility}}"/>
+				</StackPanel>
+
 			</Border>
 			<ScrollViewer Grid.Row="1"
                           BorderThickness="0"

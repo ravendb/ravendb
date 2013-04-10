@@ -86,10 +86,10 @@ clusterManagerApp.controller('ServerAuthenticationDialogCtrl', function serverAu
         
         $http.post('/api/servers/credentials/test?serverId=' + server.id, $scope.credentials)
             .success(function (data) {
-                if (data.result.success) {
+                if (data.success) {
                     $scope.alert = { type: 'success', message: 'Credentials are good. You can save them.' };
                 } else {
-                    $scope.alert = { type: 'error', message: data.result.message };
+                    $scope.alert = { type: 'error', message: data.message };
                 }
             }).error(function(data) {
                 $scope.alert = { type: 'error', message: 'There was an error.' };

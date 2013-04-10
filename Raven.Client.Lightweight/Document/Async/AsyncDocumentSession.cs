@@ -59,7 +59,7 @@ namespace Raven.Client.Document.Async
 			                            .ContinueWith(task => (IEnumerable<T>) task.Result.Select(TrackEntity<T>).ToList());
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query)
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
 		{
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());
 		}
@@ -72,33 +72,33 @@ namespace Raven.Client.Document.Async
 
 		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
-			var ravenQueryInspector = ((IRavenQueryInspector)query);
-			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
-			var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery,  queryHeaderInformation);
-			return new YieldStream<T>(this, enumerator);
+		    var queryInspector = (IRavenQueryProvider) query.Provider;
+			var indexQuery = queryInspector.ToAsyncLuceneQuery<T>(query.Expression);
+		    return await StreamAsync(indexQuery, queryHeaderInformation);
 		}
 
-		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
 			var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation);
-			return new YieldStream<T>(this, enumerator);
+		    var queryOperation = ((AsyncDocumentQuery<T>) query).InitializeQueryOperation(null);
+		    return new QueryYieldStream<T>(this, enumerator, queryOperation);
 		}
 
 		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
 		                           int pageSize = Int32.MaxValue)
 		{
 			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize);
-			return new YieldStream<T>(this, enumerator);
+			return new DocsYieldStream<T>(this, enumerator);
 		}
 
-		public class YieldStream<T> : IAsyncEnumerator<StreamResult<T>>
+		public abstract class YieldStream<T> : IAsyncEnumerator<StreamResult<T>>
 		{
-			private readonly AsyncDocumentSession parent;
-			private readonly IAsyncEnumerator<RavenJObject> enumerator;
+		    protected readonly AsyncDocumentSession parent;
+		    protected readonly IAsyncEnumerator<RavenJObject> enumerator;
 
-			public YieldStream(AsyncDocumentSession parent,IAsyncEnumerator<RavenJObject> enumerator)
+		    protected YieldStream(AsyncDocumentSession parent,IAsyncEnumerator<RavenJObject> enumerator)
 			{
 				this.parent = parent;
 				this.enumerator = enumerator;
@@ -113,21 +113,68 @@ namespace Raven.Client.Document.Async
 			{
 				if (await enumerator.MoveNextAsync() == false)
 					return false;
-				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
 
-				Current = new StreamResult<T>
-				{
-					Document = (T)parent.ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
-					Etag = document.Etag,
-					Key = document.Key,
-					Metdata = document.Metadata
-				};
+				SetCurrent();
 
-				return true;
+			    return true;
 			}
 
-			public StreamResult<T> Current { get; private set; }
+		    protected abstract void SetCurrent();
+
+		    public StreamResult<T> Current { get; protected set; }
 		}
+        public class QueryYieldStream<T> : YieldStream<T>
+        {
+            private readonly QueryOperation queryOperation;
+
+            public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation) : base(parent, enumerator)
+            {
+                this.queryOperation = queryOperation;
+            }
+
+            protected override void SetCurrent()
+            {
+                var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+
+                string key = null;
+                Etag etag = null;
+                if (meta != null)
+                {
+                    key = meta.Value<string>(Constants.DocumentIdFieldName);
+                    var value = meta.Value<string>("@etag");
+                    if (value != null)
+                        etag = Etag.Parse(value);
+                }
+
+                Current = new StreamResult<T>
+                {
+                    Document = queryOperation.Deserialize<T>(enumerator.Current),
+                    Etag = etag,
+                    Key = key,
+                    Metdata = meta
+                };
+            }
+        }
+
+        public class DocsYieldStream<T> : YieldStream<T>
+        {
+            public DocsYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator) : base(parent, enumerator)
+            {
+            }
+
+            protected override void SetCurrent()
+            {
+                var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
+
+                Current = new StreamResult<T>
+                {
+                    Document = (T)parent.ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+                    Etag = document.Etag,
+                    Key = document.Key,
+                    Metdata = document.Metadata
+                };
+            }
+        }
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>

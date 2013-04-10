@@ -10,9 +10,9 @@ namespace Raven.Abstractions.Exceptions
 {
 	/// <summary>
 	/// This exception is raised when a query is made against a non existing index
-	/// </summary>
-#if !SILVERLIGHT
-[Serializable]
+    /// </summary>
+#if !SILVERLIGHT && !NETFX_CORE
+    [Serializable]
 #endif
 
 	public class IndexDoesNotExistsException : Exception
@@ -41,9 +41,9 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 
-	/// <summary>
+        /// <summary>
 	/// Initializes a new instance of the <see cref="IndexDoesNotExistsException"/> class.
 	/// </summary>
 	/// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>

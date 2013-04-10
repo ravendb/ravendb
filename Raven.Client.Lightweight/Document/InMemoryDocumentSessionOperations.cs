@@ -481,7 +481,11 @@ more responsive application.
 		/// <returns></returns>
 		static object GetDefaultValue(Type type)
 		{
+#if !NETFX_CORE
 			return type.IsValueType ? Activator.CreateInstance(type) : null;
+#else
+            return null;
+#endif
 		}
 
 		/// <summary>

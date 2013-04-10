@@ -18,8 +18,10 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 		{
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
+			var i = 0;
+
 			JET_COLUMNID columnid;
 
 			using (var scheduledReductions = new Table(session, dbid, "scheduled_reductions", OpenTableGrbit.None))
@@ -44,6 +46,9 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
 						update.Save();
 					}
+
+					if (i++ % 10000 == 0)
+						output("Processed " + (i - 1) + " rows in scheduled_reductions");
 				}
 
 				Api.JetDeleteIndex(session, scheduledReductions, "by_view_level_reduce_key_and_bucket");
@@ -53,6 +58,9 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					szKey = "+view\0+level\0+bucket\0+hashed_reduce_key\0\0",
 				});
 			}
+
+			output("Finished processing scheduled_reductions");
+			i = 0;
 
 			using (var mappedResults = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
 			{
@@ -75,6 +83,9 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
 						update.Save();
 					}
+
+					if (i++ % 10000 == 0)
+						output("Processed " + (i - 1) + " rows in mapped_results");
 				}
 
 				Api.JetDeleteIndex(session, mappedResults, "by_view_reduce_key_and_bucket");
@@ -84,6 +95,9 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					szKey = "+view\0+bucket\0+hashed_reduce_key\0\0",
 				});
 			}
+
+			output("Finished processing mapped_results");
+			i = 0;
 
 			using (var reduceResults = new Table(session, dbid, "reduce_results", OpenTableGrbit.None))
 			{
@@ -106,6 +120,9 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
 						update.Save();
 					}
+
+					if (i++ % 10000 == 0)
+						output("Processed " + (i - 1) + " rows in reduce_results");
 				}
 
 				Api.JetDeleteIndex(session, reduceResults, "by_view_level_reduce_key_and_bucket");
@@ -122,6 +139,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					                            szKey = "+view\0+level\0+source_bucket\0+hashed_reduce_key\0\0",
 				                            });
 			}
+
+			output("Finished processing reduce_results");
 
 			SchemaCreator.UpdateVersion(session, dbid, "4.0");
 		}
