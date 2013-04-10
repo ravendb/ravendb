@@ -511,9 +511,6 @@ namespace Raven.Database
             if (workContext != null)
                 exceptionAggregator.Execute(workContext.Dispose);
 
-            if (batchCompletedEvent != null)
-                exceptionAggregator.Execute(batchCompletedEvent.Dispose);
-
             exceptionAggregator.ThrowIfNeeded();
         }
 
@@ -713,7 +710,7 @@ namespace Raven.Database
             RemoveReservedProperties(document);
             RemoveMetadataReservedProperties(metadata);
             Etag newEtag = Etag.Empty;
-            using (putSerialLocker.Lock(transactionInformation))
+            using (putSerialLocker.Lock())
             {
                 TransactionalStorage.Batch(actions =>
                 {
@@ -926,7 +923,7 @@ namespace Raven.Database
                 throw new ArgumentNullException("key");
             key = key.Trim();
 
-            using (putSerialLocker.Lock(transactionInformation))
+            using (putSerialLocker.Lock())
             {
                 var deleted = false;
                 log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
@@ -1013,7 +1010,7 @@ namespace Raven.Database
         {
 	        try
 	        {
-		        using (putSerialLocker.Lock(null))
+		        using (putSerialLocker.Lock())
 		        {
 			        try
 			        {
@@ -1811,123 +1808,41 @@ namespace Raven.Database
             return result;
         }
 
-        private readonly ConcurrentQueue<PendingBatch> pendingBatches = new ConcurrentQueue<PendingBatch>();
-        private readonly ManualResetEventSlim batchCompletedEvent = new ManualResetEventSlim();
-
-        private class PendingBatch
-        {
-            public IList<ICommandData> Commands;
-            public readonly TaskCompletionSource<BatchResult[]> CompletionSource = new TaskCompletionSource<BatchResult[]>();
-            public BatchResult[] Result
-            {
-                get
-                {
-                    try
-                    {
-                        return CompletionSource.Task.Result;
-                    }
-                    catch (AggregateException ae)
-                    {
-                        var e = ae.ExtractSingleInnerException();
-                        if (e is AggregateException)
-                            throw;
-
-                        var internalPreserveStackTrace = typeof(Exception).GetMethod("InternalPreserveStackTrace",
-                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                        internalPreserveStackTrace.Invoke(e, null);
-
-                        throw e;
-
-                    }
-                }
-            }
-        }
-
         public BatchResult[] Batch(IList<ICommandData> commands)
         {
-            var pending = new PendingBatch
-            {
-                Commands = commands,
-            };
-
-            var hasTx = commands.Any(x => x.TransactionInformation != null);
-            var shouldRetryIfGotConcurrencyError = pending.Commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
-            var currentTask = pending.CompletionSource.Task;
-            // for patches, we don't do any transaction merging
-            // for tx, we don't want to go through the optimized code path anyway, since it assumes locking, and 
-            // for tx we are all in memory
-            if (hasTx || shouldRetryIfGotConcurrencyError)
+			var shouldRetryIfGotConcurrencyError = commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
+            if (shouldRetryIfGotConcurrencyError)
             {
                 var sp = Stopwatch.StartNew();
-                BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(pending);
+	            var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
                 log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
-                return pending.Result;
+                return result;
             }
 
-            pendingBatches.Enqueue(pending);
-
-            while (currentTask.Completed() == false && pendingBatches.Peek() != pending)
+			using (putSerialLocker.Lock())
             {
-                batchCompletedEvent.Wait();
+	            BatchResult[] results = null;
+	            TransactionalStorage.Batch(actions =>
+	            {
+		            results = ProcessBatch(commands);
+	            });
+
+	            return results;
             }
-            if (currentTask.Completed())
-                return pending.Result;
-
-            using (putSerialLocker.Lock(null))
-            {
-                try
-                {
-                    batchCompletedEvent.Reset();
-
-                    if (currentTask.Completed())
-                        return pending.Result;
-
-                    var sp = Stopwatch.StartNew();
-                    int totalCommands = 0;
-                    TransactionalStorage.Batch(actions =>
-                    {
-                        int batches = 0;
-                        PendingBatch currentBatch;
-                        while (totalCommands < 1024 &&  // let us no overload the transaction buffer size too much
-                                pendingBatches.TryDequeue(out currentBatch))
-                        {
-                            batches++;
-                            if (ProcessBatch(currentBatch) == false)
-                                // we only go on committing transactions as long as we are successful, if there is an error, 
-                                // we abort and do the rest in another cycle
-                                break;
-                            actions.General.PulseTransaction();
-                            totalCommands += currentBatch.Commands.Count;
-                        }
-                        if (batches > 1)
-                        {
-                            log.Debug(
-                                "Merged {0} concurrent transactions with {1} operations into a single transaction to improve performance",
-                                batches, totalCommands);
-                        }
-                    });
-                    log.Debug("Successfully executed {0} commands in {1}", commands.Count, sp.Elapsed);
-                }
-                finally
-                {
-                    batchCompletedEvent.Set();
-                }
-            }
-
-            return pending.Result;
         }
 
-        private void BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(PendingBatch pending)
+        private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
         {
             int retries = 128;
-            using (putSerialLocker.Lock(pending.Commands.Select(x => x.TransactionInformation).FirstOrDefault(x => x != null)))
+            using (putSerialLocker.Lock())
             {
                 while (true)
                 {
                     try
                     {
-                        TransactionalStorage.Batch(_ => ProcessBatch(pending));
-                        return;
+	                    BatchResult[] results = null;
+						TransactionalStorage.Batch(_ => results = ProcessBatch(commands));
+	                    return results;
                     }
                     catch (ConcurrencyException)
                     {
@@ -1941,35 +1856,26 @@ namespace Raven.Database
             }
         }
 
-        private bool ProcessBatch(PendingBatch batch)
+        private BatchResult[] ProcessBatch(IList<ICommandData> commands)
         {
-            try
-            {
-                var results = new BatchResult[batch.Commands.Count];
-                for (int index = 0; index < batch.Commands.Count; index++)
-                {
-                    var command = batch.Commands[index];
-                    command.Execute(this);
-                    results[index] = new BatchResult
-                    {
-                        Method = command.Method,
-                        Key = command.Key,
-                        Etag = command.Etag,
-                        Metadata = command.Metadata,
-                        AdditionalData = command.AdditionalData
-                    };
-                }
-                batch.CompletionSource.TrySetResult(results);
-                return true;
-            }
-            catch (Exception e)
-            {
-                batch.CompletionSource.TrySetException(e);
-                return false;
-            }
+	        var results = new BatchResult[commands.Count];
+	        for (int index = 0; index < commands.Count; index++)
+	        {
+		        var command = commands[index];
+		        command.Execute(this);
+		        results[index] = new BatchResult
+		        {
+			        Method = command.Method,
+			        Key = command.Key,
+			        Etag = command.Etag,
+			        Metadata = command.Metadata,
+			        AdditionalData = command.AdditionalData
+		        };
+	        }
+	        return results;
         }
 
-        public bool HasTasks
+	    public bool HasTasks
         {
             get
             {
@@ -2266,7 +2172,7 @@ namespace Raven.Database
                 foreach (var docs in docBatches)
                 {
                     WorkContext.CancellationToken.ThrowIfCancellationRequested();
-                    using (putSerialLocker.Lock(null))
+                    using (putSerialLocker.Lock())
                     {
                         var inserts = 0;
                         var batch = 0;

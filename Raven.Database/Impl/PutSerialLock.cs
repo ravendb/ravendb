@@ -18,10 +18,8 @@ namespace Raven.Database.Impl
 	{
 		private readonly object lockObj = new object();
 
-		public IDisposable Lock(TransactionInformation tx)
+		public IDisposable Lock()
 		{
-			if (tx != null)
-				return null;
 			Monitor.Enter(lockObj);
 			return new DisposableAction(() => Monitor.Exit(lockObj));
 		}
