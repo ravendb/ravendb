@@ -113,7 +113,7 @@ namespace Raven.Database.Server.Responders
             }
             var definition = indexDefinition.Clone();
             definition.LockMode = indexLockMode;
-            Database.IndexDefinitionStorage.UpdateIndexDefintionWithoutUpdatingCompiledIndex(definition);
+            Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
         }
 
         private void Put(IHttpContext context, string index)

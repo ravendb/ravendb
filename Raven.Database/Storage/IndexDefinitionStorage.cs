@@ -203,7 +203,7 @@ namespace Raven.Database.Storage
             return transformer.Name;
         }
 
-        public void UpdateIndexDefintionWithoutUpdatingCompiledIndex(IndexDefinition definition)
+        public void UpdateIndexDefinitionWithoutUpdatingCompiledIndex(IndexDefinition definition)
         {
             indexDefinitions.AddOrUpdate(definition.Name, s => 
             {
