@@ -708,8 +708,6 @@ namespace Raven.Database
 						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
-						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
-
 						actions.AfterStorageCommitBeforeWorkNotifications(new JsonDocument
 						{
 							Metadata = metadata,
@@ -719,6 +717,8 @@ namespace Raven.Database
 							LastModified = addDocumentResult.SavedAt,
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
 						}, indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications);
+
+						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
 						TransactionalStorage
 							.ExecuteImmediatelyOrRegisterForSynchronization(() =>
