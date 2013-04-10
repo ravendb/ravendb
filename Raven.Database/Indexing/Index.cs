@@ -68,7 +68,7 @@ namespace Raven.Database.Indexing
 		protected readonly WorkContext context;
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
-		private IndexWriter indexWriter;
+		private RavenIndexWriter indexWriter;
 		private SnapshotDeletionPolicy snapshotter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
@@ -315,7 +315,7 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected void Write(Func<IndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action)
+		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
@@ -428,13 +428,7 @@ namespace Raven.Database.Indexing
 		private void CreateIndexWriter()
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			indexWriter = new IndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
-			using (indexWriter.MergeScheduler) { }
-			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
-
-			// RavenDB already manages the memory for those, no need for Lucene to do this as well
-			indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
-			indexWriter.SetRAMBufferSizeMB(1024);
+			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate);
 		}
 
 		private void WriteInMemoryIndexToDiskIfNecessary()
@@ -628,7 +622,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
+		protected void AddDocumentToIndex(RavenIndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
 		{
 			Analyzer newAnalyzer = AnalyzerGenerators.Aggregate(analyzer,
 																(currentAnalyzer, generator) =>

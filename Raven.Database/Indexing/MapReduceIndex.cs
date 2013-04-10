@@ -537,7 +537,7 @@ namespace Raven.Database.Indexing
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", ReduceKeys)));
 			}
 
-			private void WriteDocumentToIndex(object doc, IndexWriter indexWriter, Analyzer analyzer)
+			private void WriteDocumentToIndex(object doc, RavenIndexWriter indexWriter, Analyzer analyzer)
 			{
 				float boost;
 				var fields = GetFields(doc, out boost).ToList();
@@ -570,7 +570,7 @@ namespace Raven.Database.Indexing
 				parent.AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 			}
 
-			private void RemoveExistingReduceKeysFromIndex(IndexWriter indexWriter)
+			private void RemoveExistingReduceKeysFromIndex(RavenIndexWriter indexWriter)
 			{
 				foreach (var reduceKey in ReduceKeys)
 				{
