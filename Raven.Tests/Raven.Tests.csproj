@@ -642,6 +642,7 @@
     <Compile Include="Linq\IsNullOrEmpty.cs" />
     <Compile Include="Issues\RavenDB_556.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
+    <Compile Include="Linq\OfTypeSupport.cs" />
     <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="MailingList\Accounts.cs" />
     <Compile Include="MailingList\Afif.cs" />
