@@ -1114,14 +1114,13 @@ namespace Raven.Database
         [MethodImpl(MethodImplOptions.Synchronized)]
         public string PutTransform(string name, TransformerDefinition definition)
         {
-            if (name == null)
-                throw new ArgumentNullException("name");
+            if (name == null) throw new ArgumentNullException("name");
             if (definition == null) throw new ArgumentNullException("definition");
 
             name = name.Trim();
 
-            var existingDefintition = IndexDefinitionStorage.GetTransformerDefinition(name);
-            if (existingDefintition != null && existingDefintition.Equals(definition))
+            var existingDefinition = IndexDefinitionStorage.GetTransformerDefinition(name);
+            if (existingDefinition != null && existingDefinition.Equals(definition))
                 return name; // no op for the same transformer
 
             IndexDefinitionStorage.CreateAndPersistTransform(definition);
