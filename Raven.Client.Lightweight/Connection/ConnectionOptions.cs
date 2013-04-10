@@ -13,7 +13,7 @@ namespace Raven.Client.Connection
 	{
 		public static IDisposable Expect100Continue(string url)
 		{
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 			return new DisposableAction(() => { });
 #else
 			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));

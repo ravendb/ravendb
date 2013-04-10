@@ -561,7 +561,7 @@ namespace Raven.Client.Document
 			timeout = waitTimeout;
 		}
 
-		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
+		protected internal QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
 			var indexQuery = GetIndexQuery(isAsync: false);
 

@@ -9,7 +9,9 @@
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
 			 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
-             xmlns:Delay="clr-namespace:Delay" mc:Ignorable="d"
+             xmlns:Delay="clr-namespace:Delay" 
+			 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
+             mc:Ignorable="d"
 			 x:Name="this"
 			 x:Class="Raven.Studio.Features.Indexes.IndexesListView"
 			 d:DesignWidth="600"
@@ -53,6 +55,7 @@
 										<ColumnDefinition Width="*" />
 										<ColumnDefinition Width="Auto" />
 										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="Auto" />
 									</Grid.ColumnDefinitions>
 									<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 										   Stretch="None"
@@ -82,7 +85,72 @@
 												   Stretch="None" />
 										</HyperlinkButton.Content>
 									</HyperlinkButton>
-									<HyperlinkButton Grid.Column="3"
+									<Delay:PopupButton Grid.Column="3"
+													 VerticalAlignment="Center"
+													 Padding="4"
+													 Margin="2"
+													 ToolTipService.ToolTip="Change Lock of index">
+										<StackPanel Orientation="Horizontal">
+											<Image Source="{Binding LockImage}"
+												   Stretch="None" VerticalAlignment="Center"/>
+										</StackPanel>
+										<Delay:PopupButton.PopupContent>
+											<Border Background="{StaticResource Brush_ToolbarBackground}"
+													BorderThickness="1"
+													BorderBrush="Gray"
+													Margin="0,20,0,0">
+											<StackPanel>
+													<HyperlinkButton Command="{Binding UnlockIndex}" 
+																	 Style="{StaticResource Style_Button_MouseOverChrome}"
+																	 VerticalAlignment="Center">
+														<HyperlinkButton.Content>
+															<StackPanel Orientation="Horizontal">
+																<Image Source="{StaticResource Image_Lock_Open_Tiny}"
+																	   Stretch="None"
+																	   VerticalAlignment="Center"
+																	   Margin="4,0,4,0" />
+																<TextBlock Text="Unlock Index"
+																		   VerticalAlignment="Center" />
+															</StackPanel>
+														</HyperlinkButton.Content>
+													</HyperlinkButton>
+
+													<HyperlinkButton  Command="{Binding LockIgnoreIndex}"
+																	 Style="{StaticResource Style_Button_MouseOverChrome}"
+																	 VerticalAlignment="Center">
+														<HyperlinkButton.Content>
+															<StackPanel Orientation="Horizontal">
+																<Image Source="{StaticResource Image_Lock_Tiny}"
+																	   Stretch="None"
+																	   VerticalAlignment="Center"
+																	   Margin="4,0,4,0" />
+																<TextBlock Text="Locked (Ignore)"
+																		   VerticalAlignment="Center" />
+															</StackPanel>
+														</HyperlinkButton.Content>
+													</HyperlinkButton>
+
+													<HyperlinkButton  Command="{Binding LockErrorIndex}"
+																	 Style="{StaticResource Style_Button_MouseOverChrome}"
+																	 VerticalAlignment="Center">
+														<HyperlinkButton.Content>
+															<StackPanel Orientation="Horizontal">
+																<Image Source="{StaticResource Image_Lock_Error_Tiny}"
+																	   Stretch="None"
+																	   VerticalAlignment="Center"
+																	   Margin="4,0,4,0" />
+																<TextBlock Text="Locked (Error)"
+																		   VerticalAlignment="Center" />
+															</StackPanel>
+														</HyperlinkButton.Content>
+													</HyperlinkButton>
+												</StackPanel>
+											</Border>
+											
+										</Delay:PopupButton.PopupContent>
+									</Delay:PopupButton>
+		
+									<HyperlinkButton Grid.Column="4"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding Name, StringFormat=/indexes/\{0\}}"
 													 VerticalAlignment="Center"

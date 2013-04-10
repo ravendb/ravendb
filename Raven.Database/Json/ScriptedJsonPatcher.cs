@@ -9,6 +9,8 @@ using System.Runtime.Serialization;
 using System.Text;
 using Jint.Native;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Reflection;
@@ -28,6 +30,7 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
+		public IList<JsonDocument> CreatedDocs;
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
@@ -97,9 +100,10 @@ namespace Raven.Database.Json
 				
 				foreach (var kvp in patch.Values)
 				{
-					if (kvp.Value is RavenJToken)
+				    var token = kvp.Value as RavenJToken;
+				    if (token != null)
 					{
-						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, (RavenJToken)kvp.Value));
+						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
 					}
 					else
 					{
@@ -108,7 +112,7 @@ namespace Raven.Database.Json
 						jintEngine.SetParameter(kvp.Key, jsInstance);
 					}
 				}
-				var jsObject = ToJsObject(jintEngine.Global, doc);
+			    var jsObject = ToJsObject(jintEngine.Global, doc);
 				jintEngine.ResetSteps();
 				if (size != 0)
 				{
@@ -285,6 +289,7 @@ namespace Raven.Database.Json
 			return jsArr;
 		}
 
+	  
 		private JintEngine CreateEngine(ScriptedPatchRequest patch)
 		{
 			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
@@ -317,12 +322,62 @@ function ExecutePatchScript(docInner){{
 				return ToJsObject(jintEngine.Global, loadedDoc);
 			})));
 
+			CreatedDocs = new List<JsonDocument>();
+
+			jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>)(PutDocument)));
+
 			jintEngine.Run(wrapperScript);
 
 			return jintEngine;
 		}
 
-		private static string NormalizeLineEnding(string script)
+        private static readonly string[] EtagKeyNames = new[]
+	    {
+	        "etag",
+	        "@etag",
+	        "Etag",
+	        "ETag",
+	    };
+
+	    private void PutDocument(string key, JsObject doc, JsObject meta)
+	    {
+	        if (doc == null)
+	        {
+	            throw new InvalidOperationException(
+	                string.Format("Created document cannot be null or empty. Document key: '{0}'", key));
+	        }
+
+            var newDocument = new JsonDocument
+            {
+                Key = key,
+                DataAsJson = ToRavenJObject(doc)
+            };
+            CreatedDocs.Add(newDocument);
+
+	        if (meta == null) 
+                return;
+
+	        foreach (var etagKeyName in EtagKeyNames)
+	        {
+	            JsInstance result;
+	            if (!meta.TryGetProperty(etagKeyName, out result)) 
+	                continue;
+	            string etag = result.ToString();
+                meta.Delete(etagKeyName);
+	            if (string.IsNullOrEmpty(etag))
+	                continue;
+	            Etag newDocumentEtag;
+	            if (Etag.TryParse(etag, out newDocumentEtag) == false)
+	            {
+	                throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'",
+	                                                                  etag, key));
+	            }
+	            newDocument.Etag = newDocumentEtag;
+	        }
+	        newDocument.Metadata = ToRavenJObject(meta);
+	    }
+
+	    private static string NormalizeLineEnding(string script)
 		{
 			var sb = new StringBuilder();
 			using (var reader = new StringReader(script))

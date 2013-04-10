@@ -48,6 +48,9 @@ namespace Raven.Abstractions.Logging
 				return null;
 			};
 			logger.Log(logLevel, wrappedMessageFunc);
+
+			if (ShouldLog(logLevel) == false)
+				return;
 			foreach (var target in targets)
 			{
 				target.Write(new LogEventInfo
@@ -58,6 +61,22 @@ namespace Raven.Abstractions.Logging
 					LoggerName = loggerName,
 					TimeStamp = SystemTime.UtcNow,
 				});
+			}
+		}
+
+		private bool ShouldLog(LogLevel logLevel)
+		{
+			switch (logLevel)
+			{
+				case LogLevel.Debug:
+				case LogLevel.Info:
+					return logger.IsDebugEnabled;
+				case LogLevel.Warn:
+				case LogLevel.Error:
+				case LogLevel.Fatal:
+					return logger.IsWarnEnabled;
+				default:
+					return true;
 			}
 		}
 

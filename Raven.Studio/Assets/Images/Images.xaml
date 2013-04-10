@@ -30,7 +30,10 @@
 	<BitmapImage x:Key="Image_Key_Add_Tiny" UriSource="Image_Key_Add_Tiny.png"/>
 	<BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="save_tiny.png"/>
-    <BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
+	<BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
+	<BitmapImage x:Key="Image_Lock_Tiny" UriSource="lock.png" />
+	<BitmapImage x:Key="Image_Lock_Open_Tiny" UriSource="lock_open.png" />
+	<BitmapImage x:Key="Image_Lock_Error_Tiny" UriSource="lock_preferences.png" />
     <BitmapImage x:Key="Image_Undo_Small" UriSource="undo_tiny.png"/>
     <BitmapImage x:Key="Image_Query_Small" UriSource="index_query_tiny.png"/>
     <BitmapImage x:Key="Image_Edit_Small" UriSource="edit_tiny.png"/>
