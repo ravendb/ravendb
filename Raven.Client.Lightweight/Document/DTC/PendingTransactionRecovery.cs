@@ -18,46 +18,52 @@ namespace Raven.Client.Document.DTC
 {
 	public class PendingTransactionRecovery
 	{
+		private readonly DocumentStore documentStore;
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
+		public PendingTransactionRecovery(DocumentStore documentStore)
+		{
+			this.documentStore = documentStore;
+		}
 
 		public void Execute(Guid myResourceManagerId, IDatabaseCommands commands)
 		{
 			var resourceManagersRequiringRecovery = new HashSet<Guid>();
-			using (var store = TryGetMachineStoreForDomain())
+			var filesToDelete = new List<string>();
+			using (var ctx = documentStore.TransactionRecoveryStorage.Create())
 			{
-				if (store == null)
-					return;
-				var filesToDelete = new List<string>();
-				foreach (var file in store.GetFileNames("*.recovery-information"))
+				foreach (var file in ctx.GetFileNames("*.recovery-information"))
 				{
 					var txId = Guid.Empty;
 					try
 					{
-						IsolatedStorageFileStream stream;
+						Stream stream;
 						try
 						{
-							stream = store.OpenFile(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+							stream = ctx.OpenRead(file);
 						}
 						catch (Exception e)
 						{
-							logger.WarnException("Could not open recovery information: " + file +", this is expected if it is an active transaction / held by another server", e);
+							logger.WarnException(
+								"Could not open recovery information: " + file +
+								", this is expected if it is an active transaction / held by another server", e);
 							continue;
 						}
 						using (stream)
-						using(var reader = new BinaryReader(stream))
+						using (var reader = new BinaryReader(stream))
 						{
 							var resourceManagerId = new Guid(reader.ReadString());
 
-							if(myResourceManagerId != resourceManagerId)
+							if (myResourceManagerId != resourceManagerId)
 								continue; // it doesn't belong to us, ignore
 							filesToDelete.Add(file);
 							txId = new Guid(reader.ReadString());
 
 							var db = reader.ReadString();
 
-							var dbCmds = string.IsNullOrEmpty(db) == false ? 
-								commands.ForDatabase(db) : 
-								commands.ForSystemDatabase();
+							var dbCmds = string.IsNullOrEmpty(db) == false
+											 ? commands.ForDatabase(db)
+											 : commands.ForSystemDatabase();
 
 							TransactionManager.Reenlist(resourceManagerId, stream.ReadData(), new InternalEnlistment(dbCmds, txId));
 							resourceManagersRequiringRecovery.Add(resourceManagerId);
@@ -87,8 +93,7 @@ namespace Raven.Client.Document.DTC
 				{
 					try
 					{
-						if (store.FileExists(file))
-							store.DeleteFile(file);
+						ctx.DeleteFile(file);
 					}
 					catch (Exception e)
 					{
@@ -97,18 +102,6 @@ namespace Raven.Client.Document.DTC
 				}
 				if (errors.Count > 0)
 					throw new AggregateException(errors);
-			}
-		}
-
-		private static IsolatedStorageFile TryGetMachineStoreForDomain()
-		{
-			try
-			{
-				return IsolatedStorageFile.GetMachineStoreForDomain();
-			}
-			catch (IsolatedStorageException)
-			{
-				return null; // may be because we can't get the domain, at any rate, we can't work with it, so not even going to try
 			}
 		}
 

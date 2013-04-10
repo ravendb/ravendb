@@ -67,6 +67,12 @@
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\Operation.cs" />
+    <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
+    <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
+    <Compile Include="Document\DTC\ITransactionRecoveryStorage.cs" />
+    <Compile Include="Document\DTC\ITransactionRecoveryStorageContext.cs" />
+    <Compile Include="Document\DTC\LocalDirectoryTransactionRecoveryStorage.cs" />
+    <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />

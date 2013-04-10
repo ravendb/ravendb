@@ -11,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document.DTC;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
@@ -33,6 +34,7 @@ namespace Raven.Client
 		protected DocumentStoreBase()
 		{
 			LastEtagHolder = new GlobalLastEtagHolder();
+			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
 		}
 
 		public abstract void Dispose();
@@ -279,6 +281,7 @@ namespace Raven.Client
 		protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
 		public ILastEtagHolder LastEtagHolder { get; set; }
+		public ITransactionRecoveryStorage TransactionRecoveryStorage { get; set; }
 
 		/// <summary>
 		///  Get the profiling information for the given id

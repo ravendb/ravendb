@@ -20,6 +20,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
+using Raven.Client.Document.DTC;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
@@ -964,15 +965,16 @@ more responsive application.
 			if (registered.Add(StoreIdentifier))
 			{
 				var transactionalSession = (ITransactionalDocumentSession)this;
-				Transaction.Current.EnlistDurable(
-					ResourceManagerId,
-					new RavenClientEnlistment(transactionalSession, () =>
+				var ravenClientEnlistment = new RavenClientEnlistment(documentStore, transactionalSession, () =>
 					{
 						RegisteredStoresInTransaction.Remove(localIdentifier);
 						if (documentStore.WasDisposed)
 							throw new ObjectDisposedException("RavenDB Session");
-					}),
-					EnlistmentOptions.None);
+					});
+				if(documentStore.TransactionRecoveryStorage is VolatileOnlyTransactionRecoveryStorage)
+					Transaction.Current.EnlistVolatile(ravenClientEnlistment, EnlistmentOptions.None);
+				else
+					Transaction.Current.EnlistDurable(ResourceManagerId, ravenClientEnlistment, EnlistmentOptions.None);
 			}
 			hasEnlisted = true;
 		}

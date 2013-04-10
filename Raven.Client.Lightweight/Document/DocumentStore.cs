@@ -485,7 +485,7 @@ namespace Raven.Client.Document
 			if (EnlistInDistributedTransactions == false)
 				return;
 
-			var pendingTransactionRecovery = new PendingTransactionRecovery();
+			var pendingTransactionRecovery = new PendingTransactionRecovery(this);
 			pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
 		}
 #endif
