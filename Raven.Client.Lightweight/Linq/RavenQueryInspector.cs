@@ -135,7 +135,7 @@ namespace Raven.Client.Linq
 	    public IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new()
 	    {
 	        var transformer = new TTransformer();
-	        provider.TransformWith(transformer.TransfomerName);
+	        provider.TransformWith(transformer.TransformerName);
 	        return (IRavenQueryable<TResult>)this.As<TResult>();
 	    }
 

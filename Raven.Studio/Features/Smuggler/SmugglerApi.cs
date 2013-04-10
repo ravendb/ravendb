@@ -180,7 +180,7 @@ namespace Raven.Studio.Features.Smuggler
 			{
 				var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
 
-				return commands.PutTransfomerAsync(transformerName, transformerDefinition);
+				return commands.PutTransformerAsync(transformerName, transformerDefinition);
 			}
 
 			return FlushBatch();

@@ -130,7 +130,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Puts the transformer definition for the specified name asynchronously
 		/// </summary>
-		Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition);
+		Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition);
 
 		/// <summary>
 		/// Deletes the index definition for the specified name asynchronously

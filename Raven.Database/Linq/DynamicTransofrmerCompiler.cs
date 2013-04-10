@@ -13,7 +13,7 @@ namespace Raven.Database.Linq
 	/// <summary>
 	/// 	Takes a query expression as string, and compile them.
 	/// 	Along the way we apply some minimal transformations, the end result is an instance
-	/// 	of AbstractTransfomer, representing the map/reduce functions
+	/// 	of AbstractTransformer, representing the map/reduce functions
 	/// </summary>
 	public class DynamicTransformerCompiler : DynamicCompilerBase
 	{

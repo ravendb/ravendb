@@ -368,7 +368,7 @@ namespace Raven.Database.Storage
 
         }
 
-        public void RemoveTransfomer(string name)
+        public void RemoveTransformer(string name)
         {
             AbstractTransformer ignoredViewGenerator;
             transformCache.TryRemove(name, out ignoredViewGenerator);
@@ -379,7 +379,7 @@ namespace Raven.Database.Storage
             File.Delete(GetIndexSourcePath(name) + ".transform");
         }
 
-        public AbstractTransformer GetTransfomer(string name)
+        public AbstractTransformer GetTransformer(string name)
         {
             AbstractTransformer value;
             if (transformCache.TryGetValue(name, out value) == false)

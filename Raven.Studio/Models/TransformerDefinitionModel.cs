@@ -126,7 +126,7 @@ namespace Raven.Studio.Models
 				}
 
 				ApplicationModel.Current.AddNotification(new Notification("saving transformer " + transformer.Transformer.Name));
-				DatabaseCommands.PutTransfomerAsync(transformer.Transformer.Name, transformer.Transformer)
+				DatabaseCommands.PutTransformerAsync(transformer.Transformer.Name, transformer.Transformer)
 					.ContinueOnSuccess(() =>
 					{
 						ApplicationModel.Current.AddNotification(

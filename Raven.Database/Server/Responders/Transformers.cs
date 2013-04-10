@@ -48,7 +48,7 @@ namespace Raven.Database.Server.Responders
 						return;
 					}
 					context.SetStatusToCreated("/transformers");
-					context.WriteJson(new { Transfomer = Database.PutTransform(transformer, data) });
+					context.WriteJson(new { Transformer = Database.PutTransform(transformer, data) });
 					break;
 				case "DELETE":
 					context.SetStatusToDeleted();

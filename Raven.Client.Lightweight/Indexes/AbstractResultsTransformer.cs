@@ -31,7 +31,7 @@ namespace Raven.Client.Indexes
 		/// Gets the name of the index.
 		/// </summary>
 		/// <value>The name of the index.</value>
-		public virtual string TransfomerName { get { return GetType().Name.Replace("_", "/"); } }
+		public virtual string TransformerName { get { return GetType().Name.Replace("_", "/"); } }
 
         protected RavenJToken Query(string key)
         {
@@ -45,7 +45,7 @@ namespace Raven.Client.Indexes
 		public DocumentConvention Conventions { get; set; }
 
 		/// <summary>
-		/// Creates the transfomer definition.
+		/// Creates the Transformer definition.
 		/// </summary>
 		/// <returns></returns>
 		public abstract TransformerDefinition CreateTransformerDefinition();
@@ -67,10 +67,10 @@ namespace Raven.Client.Indexes
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			databaseCommands.PutTransformer(TransfomerName, transformerDefinition);
+			databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-				commands.DirectPutTransfomer(TransfomerName, url, transformerDefinition));
+				commands.DirectPutTransformer(TransformerName, url, transformerDefinition));
 		}
 #endif
 
@@ -84,9 +84,9 @@ namespace Raven.Client.Indexes
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			return asyncDatabaseCommands.PutTransfomerAsync(TransfomerName, transformerDefinition)
+			return asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition)
 				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutTransformerAsync(TransfomerName, transformerDefinition, url)))
+					client.DirectPutTransformerAsync(TransformerName, transformerDefinition, url)))
 				.Unwrap();
 		}
 	}
@@ -109,7 +109,7 @@ namespace Raven.Client.Indexes
 	    {
 		    return new TransformerDefinition
 			{
-				Name = TransfomerName,
+				Name = TransformerName,
 				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TFrom, object>(
 					TransformResults, Conventions, "results", translateIdentityProperty: false),
 			};

@@ -728,15 +728,15 @@ namespace Raven.Studio.Models
 
 	    public IndexQuery CreateTemplateQuery()
 	    {
-		    var transfomer = SelectedTransformer.Value;
-			if (transfomer == "None" || !UseTransformer)
-				transfomer = "";
+		    var transformer = SelectedTransformer.Value;
+			if (transformer == "None" || !UseTransformer)
+				transformer = "";
 
             var q = new IndexQuery
             {
                 Query = Query,
                 DefaultOperator = DefaultOperator,
-				ResultsTransformer = transfomer
+				ResultsTransformer = transformer
             };
 
             if (SortBy != null && SortBy.Count > 0)

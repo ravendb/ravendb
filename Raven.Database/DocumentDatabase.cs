@@ -1355,7 +1355,7 @@ namespace Raven.Database
             // Check an explicitly declared one first
             if (query.ResultsTransformer != null)
             {
-                var transformGenerator = IndexDefinitionStorage.GetTransfomer(query.ResultsTransformer);
+                var transformGenerator = IndexDefinitionStorage.GetTransformer(query.ResultsTransformer);
                 if (transformGenerator != null && transformGenerator.TransformResultsDefinition != null)
                     transformFunc = transformGenerator.TransformResultsDefinition;
             }
@@ -1407,7 +1407,7 @@ namespace Raven.Database
         public void DeleteTransfom(string name)
         {
             name = IndexDefinitionStorage.FixupIndexName(name);
-            IndexDefinitionStorage.RemoveTransfomer(name);
+            IndexDefinitionStorage.RemoveTransformer(name);
         }
 
         public void DeleteIndex(string name)
@@ -2285,7 +2285,7 @@ namespace Raven.Database
                 list.AddRange(Encoding.Unicode.GetBytes(indexName));
                 if (string.IsNullOrWhiteSpace(resultTransformer) == false)
                 {
-                    var abstractTransformer = IndexDefinitionStorage.GetTransfomer(resultTransformer);
+                    var abstractTransformer = IndexDefinitionStorage.GetTransformer(resultTransformer);
                     list.AddRange(abstractTransformer.GetHashCodeBytes());
                 }
                 list.AddRange(lastDocEtag.ToByteArray());
@@ -2439,9 +2439,9 @@ namespace Raven.Database
                     if (document == null)
                         return;
 
-                    var storedTransformer = IndexDefinitionStorage.GetTransfomer(transformer);
+                    var storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
                     if (storedTransformer == null)
-                        throw new InvalidOperationException("No transfomer with the name: " + transformer);
+                        throw new InvalidOperationException("No transformer with the name: " + transformer);
 
                     var transformed = storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
                                      .Select(x => JsonExtensions.ToJObject(x))

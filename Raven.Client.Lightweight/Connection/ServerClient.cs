@@ -906,7 +906,7 @@ namespace Raven.Client.Connection
 		{
 			EnsureIsNotNullOrEmpty(name, "name");
 
-			return ExecuteWithReplication("PUT", operationUrl => DirectPutTransfomer(name, operationUrl, indexDef));
+			return ExecuteWithReplication("PUT", operationUrl => DirectPutTransformer(name, operationUrl, indexDef));
 	
 		}
 
@@ -924,7 +924,7 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("PUT", operationUrl => DirectPutIndex(name, operationUrl, overwrite, definition));
 		}
 
-		public string DirectPutTransfomer(string name, string operationUrl, TransformerDefinition definition)
+		public string DirectPutTransformer(string name, string operationUrl, TransformerDefinition definition)
 		{
 			string requestUri = operationUrl + "/transformers/" + name;
 
@@ -937,7 +937,7 @@ namespace Raven.Client.Connection
 
 
 			var responseJson = (RavenJObject)request.ReadResponseJson();
-			return responseJson.Value<string>("Transfomer");
+			return responseJson.Value<string>("Transformer");
 		}
 
 		public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)

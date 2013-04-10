@@ -35,7 +35,7 @@ namespace Raven.Database.Server.Responders
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
-		    var transfomer = context.Request.QueryString["transformer"];
+		    var transformer = context.Request.QueryString["transformer"];
 
 		    var queryInputs = context.ExtractQueryInputs();
             
@@ -48,9 +48,9 @@ namespace Raven.Database.Server.Responders
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)
 						continue;
-					JsonDocument documentByKey = string.IsNullOrEmpty(transfomer)
+					JsonDocument documentByKey = string.IsNullOrEmpty(transformer)
 				                        ? Database.Get(value, transactionInformation)
-                                        : Database.GetWithTransformer(value, transfomer, transactionInformation, queryInputs);
+                                        : Database.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
 				    if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());

@@ -514,13 +514,13 @@ namespace Raven.Client.Document
 
 	    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 	    {
-	        var transformer = new TTransformer().TransfomerName;
+	        var transformer = new TTransformer().TransformerName;
 	        return this.LoadInternal<TResult>(new string[] {id}, transformer).FirstOrDefault();
 	    }
 
 	    public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 	    {
-            var transformer = new TTransformer().TransfomerName;
+            var transformer = new TTransformer().TransformerName;
 	        var configuration = new RavenLoadConfiguration();
 	        configure(configuration);
             return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
