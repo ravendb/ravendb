@@ -109,13 +109,13 @@ namespace Raven.Client.Shard
 
 	    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 	    {
-	        var transformer = new TTransformer().TransfomerName;
+	        var transformer = new TTransformer().TransformerName;
 			return LoadInternal<TResult>(new[] { id }, new KeyValuePair<string, Type>[] { }, transformer).FirstOrDefault();
 	    }
 
         public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
         {
-            var transformer = new TTransformer().TransfomerName;
+            var transformer = new TTransformer().TransformerName;
             var configuration = new RavenLoadConfiguration();
             configure(configuration);
 			return LoadInternal<TResult>(new[] { id }, new KeyValuePair<string, Type>[] { }, transformer, configuration.QueryInputs).FirstOrDefault();

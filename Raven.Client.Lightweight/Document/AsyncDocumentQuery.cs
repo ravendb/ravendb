@@ -724,7 +724,8 @@ namespace Raven.Client.Document
 											highlighterPreTags = highlighterPreTags,
 											highlighterPostTags = highlighterPostTags,
 											disableEntitiesTracking = disableEntitiesTracking,
-											disableCaching = disableCaching
+											disableCaching = disableCaching,
+											resultsTransformer = resultsTransformer,
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
@@ -899,6 +900,16 @@ namespace Raven.Client.Document
 		{
 			NoCaching();
 			return this;
+		}
+
+		/// <summary>
+		/// Sets a transformer to use after executing a query
+		/// </summary>
+		/// <param name="resultsTransformer"></param>
+		public IAsyncDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+		{
+	        this.resultsTransformer = resultsTransformer;
+	        return this;
 		}
 	}
 }

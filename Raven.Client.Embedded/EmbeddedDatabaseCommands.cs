@@ -404,7 +404,7 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Creates a transformer with the specified name, based on an transfomer definition
+		/// Creates a transformer with the specified name, based on an transformer definition
 		/// </summary>
 		public string PutTransformer(string name, TransformerDefinition indexDef)
 		{

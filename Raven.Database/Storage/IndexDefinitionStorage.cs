@@ -38,7 +38,7 @@ namespace Raven.Database.Storage
         private readonly ConcurrentDictionary<string, AbstractTransformer> transformCache =
             new ConcurrentDictionary<string, AbstractTransformer>(StringComparer.InvariantCultureIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, TransformerDefinition> trasformDefinitions =
+        private readonly ConcurrentDictionary<string, TransformerDefinition> transformDefinitions =
             new ConcurrentDictionary<string, TransformerDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
 
@@ -169,7 +169,7 @@ namespace Raven.Database.Storage
 
         public string[] TransformerNames
         {
-            get { return trasformDefinitions.Keys.OrderBy(name => name).ToArray(); }
+            get { return transformDefinitions.Keys.OrderBy(name => name).ToArray(); }
         }
 
         public string CreateAndPersistIndex(IndexDefinition indexDefinition)
@@ -203,7 +203,7 @@ namespace Raven.Database.Storage
             return transformer.Name;
         }
 
-        public void UpdateIndexDefintionWithoutUpdatingCompiledIndex(IndexDefinition definition)
+        public void UpdateIndexDefinitionWithoutUpdatingCompiledIndex(IndexDefinition definition)
         {
             indexDefinitions.AddOrUpdate(definition.Name, s => 
             {
@@ -224,14 +224,14 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
-        private DynamicTransofrmerCompiler AddAndCompileTransform(TransformerDefinition transformerDefinition)
+        private DynamicTransformerCompiler AddAndCompileTransform(TransformerDefinition transformerDefinition)
         {
             var name = FixupIndexName(transformerDefinition.Name, path);
-            var transformer = new DynamicTransofrmerCompiler(transformerDefinition, configuration, extensions, name, path);
+            var transformer = new DynamicTransformerCompiler(transformerDefinition, configuration, extensions, name, path);
             var generator = transformer.GenerateInstance();
             transformCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
 
-            logger.Info("New traansformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
+            logger.Info("New transformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
                               transformer.CompiledQueryText);
             return transformer;
         }
@@ -249,7 +249,7 @@ namespace Raven.Database.Storage
 
         public void AddTransform(string name, TransformerDefinition definition)
         {
-            trasformDefinitions.AddOrUpdate(name, definition, (s1, def) => definition);
+            transformDefinitions.AddOrUpdate(name, definition, (s1, def) => definition);
         }
 
         public void RemoveIndex(string name)
@@ -283,7 +283,7 @@ namespace Raven.Database.Storage
         public TransformerDefinition GetTransformerDefinition(string name)
         {
             TransformerDefinition value;
-            trasformDefinitions.TryGetValue(name, out value);
+            transformDefinitions.TryGetValue(name, out value);
             if (value != null && value.Name == null) // backward compact, mostly
                 value.Name = name;
             return value;
@@ -368,18 +368,18 @@ namespace Raven.Database.Storage
 
         }
 
-        public void RemoveTransfomer(string name)
+        public void RemoveTransformer(string name)
         {
             AbstractTransformer ignoredViewGenerator;
             transformCache.TryRemove(name, out ignoredViewGenerator);
             TransformerDefinition ignoredIndexDefinition;
-            trasformDefinitions.TryRemove(name, out ignoredIndexDefinition);
+            transformDefinitions.TryRemove(name, out ignoredIndexDefinition);
             if (configuration.RunInMemory)
                 return;
             File.Delete(GetIndexSourcePath(name) + ".transform");
         }
 
-        public AbstractTransformer GetTransfomer(string name)
+        public AbstractTransformer GetTransformer(string name)
         {
             AbstractTransformer value;
             if (transformCache.TryGetValue(name, out value) == false)

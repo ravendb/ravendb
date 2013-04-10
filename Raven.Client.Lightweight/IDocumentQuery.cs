@@ -39,12 +39,6 @@ namespace Raven.Client
 		IDocumentQuery<TProjection> SelectFields<TProjection>();
 
         /// <summary>
-        /// Sets a transformer to use after executing a query
-        /// </summary>
-        /// <param name="resultsTransformer"></param>
-	    IDocumentQuery<T> SetResultTransformer(string resultsTransformer);
-
-        /// <summary>
         /// Sets user defined inputs to the query
         /// </summary>
         /// <param name="queryInputs"></param>

@@ -257,9 +257,9 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Puts the transfomer definition for the specified name asynchronously
+		/// Puts the transformer definition for the specified name asynchronously
 		/// </summary>
-		public Task<string> PutTransfomerAsync(string name, TransformerDefinition transformerDefinition)
+		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition)
 		{
 			return ExecuteWithReplication("PUT", opUrl => DirectPutTransformerAsync(name, transformerDefinition, opUrl));
 		}
@@ -325,7 +325,7 @@ namespace Raven.Client.Connection.Async
 			var serializeObject = JsonConvert.SerializeObject(transformerDefinition, Default.Converters);
 			return request.WriteAsync(serializeObject)
 				.ContinueWith(writeTask => request.ReadResponseJsonAsync()
-											.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("Transfomer"); })).
+											.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("Transformer"); })).
 				Unwrap();
 		}
 
