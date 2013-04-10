@@ -63,6 +63,15 @@ namespace Raven.Studio.Features.Patch
                         new HtmlContentProvider("(<em>documentId</em>)<br/>Loads the document with the given id")
                 });
 
+				session.Items.Add(new CompletionItem()
+				{
+					ImageSourceProvider = new CommonImageSourceProvider(CommonImage.MethodPublic),
+					Text = "PutDocument",
+					AutoCompletePreText = "PutDocument",
+					DescriptionProvider =
+						new HtmlContentProvider("(<em>documentId</em>, <em>doc</em>, <em>meta</em>)<br/>Puts a document with the given id, with doc and metadata objects")
+				});
+
                 foreach (var patchValue in patchValues)
                 {
 	                session.Items.Add(new CompletionItem()
