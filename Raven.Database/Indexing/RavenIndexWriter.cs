@@ -85,6 +85,8 @@ namespace Raven.Database.Indexing
 			RecreateIfNecessary();
 
 			indexWriter.DeleteDocuments(term);
+
+			currentNumberOfWrites += 2; // deletes are more expensive than additions
 		}
 
 		public void DeleteDocuments(Term[] terms)
@@ -92,6 +94,8 @@ namespace Raven.Database.Indexing
 			RecreateIfNecessary();
 
 			indexWriter.DeleteDocuments(terms);
+
+			currentNumberOfWrites += terms.Length*2; // deletes are more expensive than writes
 		}
 
 		public IndexReader GetReader()
@@ -133,28 +137,28 @@ namespace Raven.Database.Indexing
 
 		private void DisposeIndexWriter()
 		{
-			if (indexWriter != null)
+			if (indexWriter == null)
+				return;
+
+			var writer = indexWriter;
+			indexWriter = null;
+
+			try
 			{
-				var writer = indexWriter;
-				indexWriter = null;
+				writer.Analyzer.Close();
+			}
+			catch (Exception e)
+			{
+				LogIndexing.ErrorException("Error while closing the index (closing the analyzer failed)", e);
+			}
 
-				try
-				{
-					writer.Analyzer.Close();
-				}
-				catch (Exception e)
-				{
-					LogIndexing.ErrorException("Error while closing the index (closing the analyzer failed)", e);
-				}
-
-				try
-				{
-					writer.Dispose();
-				}
-				catch (Exception e)
-				{
-					LogIndexing.ErrorException("Error when closing the index", e);
-				}
+			try
+			{
+				writer.Dispose();
+			}
+			catch (Exception e)
+			{
+				LogIndexing.ErrorException("Error when closing the index", e);
 			}
 		}
 
