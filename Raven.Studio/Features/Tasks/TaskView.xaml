@@ -15,7 +15,7 @@
 			<tasks:BaseTaskView/>
 		</DataTemplate>
 		<DataTemplate DataType="tasks:ExportTaskSectionModel">
-			<tasks:BaseTaskView/>
+			<tasks:ExportTaskSectionView/>
 		</DataTemplate>
 		<DataTemplate DataType="tasks:StartBackupTaskSectionModel">
 			<tasks:BaseTaskView/>

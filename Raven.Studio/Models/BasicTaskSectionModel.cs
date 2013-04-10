@@ -16,11 +16,6 @@ namespace Raven.Studio.Models
 		public BindableCollection<TaskData> TaskDatas { get; set; }
 		private const int PixelsPerLetter = 7;
 
-		public new string SectionName
-		{
-			get { return Name; }
-		}
-
 		public int LongestInput
 		{
 			get

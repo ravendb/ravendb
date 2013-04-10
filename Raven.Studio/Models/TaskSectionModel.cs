@@ -16,7 +16,7 @@ namespace Raven.Studio.Models
 
 	public abstract class TaskSectionModel : ViewModel
 	{
-		public string SectionName { get; protected set; }
+		public string SectionName { get { return Name; } }
 
 		public Observable<bool> CanExecute { get; set; }
 		public bool StatusBarActive
