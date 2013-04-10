@@ -49,14 +49,15 @@ namespace Raven.Abstractions.Logging
 			};
 			logger.Log(logLevel, wrappedMessageFunc);
 
-			if (ShouldLog(logLevel) == false)
+			if (ShouldLogToTargets(logLevel) == false || targets.Length == 0)
 				return;
+			var formattedMessage = wrappedMessageFunc();
 			foreach (var target in targets)
 			{
 				target.Write(new LogEventInfo
 				{
 					Exception = null,
-					FormattedMessage = wrappedMessageFunc(),
+					FormattedMessage = formattedMessage,
 					Level = logLevel,
 					LoggerName = loggerName,
 					TimeStamp = SystemTime.UtcNow,
@@ -64,7 +65,7 @@ namespace Raven.Abstractions.Logging
 			}
 		}
 
-		private bool ShouldLog(LogLevel logLevel)
+		private bool ShouldLogToTargets(LogLevel logLevel)
 		{
 			switch (logLevel)
 			{
@@ -72,9 +73,10 @@ namespace Raven.Abstractions.Logging
 				case LogLevel.Info:
 					return logger.IsDebugEnabled;
 				case LogLevel.Warn:
+					return logger.IsWarnEnabled;
 				case LogLevel.Error:
 				case LogLevel.Fatal:
-					return logger.IsWarnEnabled;
+					return true; // errors & fatal are ALWAYS logged to registered targets
 				default:
 					return true;
 			}
