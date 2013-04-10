@@ -38,7 +38,7 @@ namespace Raven.Database.Storage
         private readonly ConcurrentDictionary<string, AbstractTransformer> transformCache =
             new ConcurrentDictionary<string, AbstractTransformer>(StringComparer.InvariantCultureIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, TransformerDefinition> trasformDefinitions =
+        private readonly ConcurrentDictionary<string, TransformerDefinition> transformDefinitions =
             new ConcurrentDictionary<string, TransformerDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
 
@@ -169,7 +169,7 @@ namespace Raven.Database.Storage
 
         public string[] TransformerNames
         {
-            get { return trasformDefinitions.Keys.OrderBy(name => name).ToArray(); }
+            get { return transformDefinitions.Keys.OrderBy(name => name).ToArray(); }
         }
 
         public string CreateAndPersistIndex(IndexDefinition indexDefinition)
@@ -249,7 +249,7 @@ namespace Raven.Database.Storage
 
         public void AddTransform(string name, TransformerDefinition definition)
         {
-            trasformDefinitions.AddOrUpdate(name, definition, (s1, def) => definition);
+            transformDefinitions.AddOrUpdate(name, definition, (s1, def) => definition);
         }
 
         public void RemoveIndex(string name)
@@ -283,7 +283,7 @@ namespace Raven.Database.Storage
         public TransformerDefinition GetTransformerDefinition(string name)
         {
             TransformerDefinition value;
-            trasformDefinitions.TryGetValue(name, out value);
+            transformDefinitions.TryGetValue(name, out value);
             if (value != null && value.Name == null) // backward compact, mostly
                 value.Name = name;
             return value;
@@ -373,7 +373,7 @@ namespace Raven.Database.Storage
             AbstractTransformer ignoredViewGenerator;
             transformCache.TryRemove(name, out ignoredViewGenerator);
             TransformerDefinition ignoredIndexDefinition;
-            trasformDefinitions.TryRemove(name, out ignoredIndexDefinition);
+            transformDefinitions.TryRemove(name, out ignoredIndexDefinition);
             if (configuration.RunInMemory)
                 return;
             File.Delete(GetIndexSourcePath(name) + ".transform");
