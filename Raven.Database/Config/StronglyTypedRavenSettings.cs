@@ -37,6 +37,9 @@ namespace Raven.Database.Config
 			MaxIndexingRunLatency =
 				new TimeSpanSetting(settings["Raven/MaxIndexingRunLatency"], TimeSpan.FromMinutes(5),
 				                    TimeSpanArgumentType.FromParse);
+			MaxIndexWritesBeforeRecreate =
+				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256000);
+
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
 				                          defaultMaxNumberOfItemsToIndexInSingleBatch, 128);
@@ -226,5 +229,7 @@ namespace Raven.Database.Config
 		public IntegerSetting MaxStepsForScript { get; private set; }
 
 		public IntegerSetting AdditionalStepsForScriptBasedOnDocumentSize { get; private set; }
+
+		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
 	}
 }
