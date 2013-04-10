@@ -15,11 +15,11 @@ namespace Raven.Database.Linq
 	/// 	Along the way we apply some minimal transformations, the end result is an instance
 	/// 	of AbstractTransfomer, representing the map/reduce functions
 	/// </summary>
-	public class DynamicTransofrmerCompiler : DynamicCompilerBase
+	public class DynamicTransformerCompiler : DynamicCompilerBase
 	{
 		private readonly TransformerDefinition transformerDefinition;
 
-		public DynamicTransofrmerCompiler(
+		public DynamicTransformerCompiler(
 			TransformerDefinition transformerDefinition,
 			InMemoryRavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath) : base(configuration, extensions, name, basePath)
 		{

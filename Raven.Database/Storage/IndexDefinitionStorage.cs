@@ -224,14 +224,14 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
-        private DynamicTransofrmerCompiler AddAndCompileTransform(TransformerDefinition transformerDefinition)
+        private DynamicTransformerCompiler AddAndCompileTransform(TransformerDefinition transformerDefinition)
         {
             var name = FixupIndexName(transformerDefinition.Name, path);
-            var transformer = new DynamicTransofrmerCompiler(transformerDefinition, configuration, extensions, name, path);
+            var transformer = new DynamicTransformerCompiler(transformerDefinition, configuration, extensions, name, path);
             var generator = transformer.GenerateInstance();
             transformCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
 
-            logger.Info("New traansformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
+            logger.Info("New transformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
                               transformer.CompiledQueryText);
             return transformer;
         }
