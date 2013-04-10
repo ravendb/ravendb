@@ -1,5 +1,6 @@
 using Raven.Abstractions.Smuggler;
 using Raven.Studio.Features.Smuggler;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using System;
@@ -17,12 +18,12 @@ namespace Raven.Studio.Commands
 
 		private readonly Action<string> output;
 		private Stream stream;
-		private readonly TaskModel taskModel;
+		private readonly ExportTaskSectionModel taskModel;
 		private bool includeAttachments, includeDocuments, includeIndexes, includeTransformers;
 
 		private readonly ISmugglerApi smuggler;
 
-		public ExportDatabaseCommand(TaskModel taskModel, Action<string> output)
+		public ExportDatabaseCommand(ExportTaskSectionModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;

@@ -50,19 +50,7 @@ namespace Raven.Studio.Models
 		{
 			this.name = name;
 			this.documentStore = documentStore;
-			Tasks = new BindableCollection<TaskModel>(x => x.Name)
-			{
-				new ExportTask(),
-				new StartBackupTask(),
-				new IndexingTask(),
-				new SampleDataTask(),
-                new CsvImportTask()
-			};
 
-			if (name == null || name == Constants.SystemDatabase)
-				Tasks.Insert(3, new StartRestoreTask());
-
-			SelectedTask = new Observable<TaskModel> { Value = Tasks.FirstOrDefault() };
 			Statistics = new Observable<DatabaseStatistics>();
 			Status = new Observable<string>
 			{

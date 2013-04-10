@@ -5,11 +5,11 @@
 						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 						 mc:Ignorable="d"
                          xmlns:infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-						 infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Features.Tasks.StartRestoreTask"
+						 infrastructure:ModelAttacher.AttachObservableModel="Raven.Studio.Features.Tasks.StartRestoreTaskSectionModel"
                          xmlns:tasks="clr-namespace:Raven.Studio.Features.Tasks"
                          d:DesignWidth="640" d:DesignHeight="480"
 						 Title="Import Page">
 	<Grid x:Name="LayoutRoot">
-		<tasks:TaskView/>
+		<tasks:BaseTaskView/>
 	</Grid>
 </infrastructure:PageView>

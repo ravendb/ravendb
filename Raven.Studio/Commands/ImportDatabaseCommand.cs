@@ -1,6 +1,7 @@
 using Raven.Abstractions.Smuggler;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Smuggler;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using System;
@@ -14,11 +15,11 @@ namespace Raven.Studio.Commands
 		const int BatchSize = 512;
 
 		private readonly Action<string> output;
-		private readonly TaskModel taskModel;
+		private readonly ImportTaskSectionModel taskModel;
 
 		private readonly ISmugglerApi smuggler;
 
-		public ImportDatabaseCommand(TaskModel taskModel, Action<string> output)
+		public ImportDatabaseCommand(ImportTaskSectionModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;

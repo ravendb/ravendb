@@ -5,9 +5,9 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class ExportTask : TaskModel
+	public class ExportTaskSectionModel : BasicTaskSectionModel
 	{
-		public ExportTask()
+		public ExportTaskSectionModel()
 		{
 			Name = "Export Database";
 		    IconResource = "Image_Export_Tiny";

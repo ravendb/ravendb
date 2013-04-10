@@ -5,13 +5,13 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class ImportTask : TaskModel
+	public class ImportTaskSectionModel : BasicTaskSectionModel
 	{
-		public ImportTask()
+		public ImportTaskSectionModel()
 		{
 			Name = "Import Database";
             IconResource = "Image_Import_Tiny";
-			Description = "Import data to the current database.\nImporting will overwrite any existing indexes.";       
+			Description = "Import data to the current database.\nImporting will overwrite any existing indexes.";
 		}
 
 		public override ICommand Action

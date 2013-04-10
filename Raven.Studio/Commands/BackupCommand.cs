@@ -11,15 +11,15 @@ namespace Raven.Studio.Commands
 {
 	public class BackupCommand : Command
 	{
-		private readonly StartBackupTask startBackupTask;
-		public BackupCommand(StartBackupTask startBackupTask)
+		private readonly StartBackupTaskSectionModel startBackupTaskSectionModel;
+		public BackupCommand(StartBackupTaskSectionModel startBackupTaskSectionModel)
 		{
-			this.startBackupTask = startBackupTask;
+			this.startBackupTaskSectionModel = startBackupTaskSectionModel;
 		}
 
 		protected override async Task ExecuteAsync(object _)
 		{
-			var location = startBackupTask.TaskInputs.FirstOrDefault(x => x.Name == "Location");
+			var location = startBackupTaskSectionModel.TaskInputs.FirstOrDefault(x => x.Name == "Location");
 
 			if (location == null)
 				return;
@@ -41,14 +41,14 @@ namespace Raven.Studio.Commands
 			try
 			{
 				await DatabaseCommands.StartBackupAsync(location.Value.ToString(), databaseDocument);
-				startBackupTask.Status= new BackupStatus
+				startBackupTaskSectionModel.Status= new BackupStatus
 				{
 					IsRunning = true
 				};
 			}
 			catch (Exception e)
 			{	
-					Infrastructure.Execute.OnTheUI(() => startBackupTask.ReportError(e));			
+					Infrastructure.Execute.OnTheUI(() => startBackupTaskSectionModel.ReportError(e));			
 					throw;
 			}
 		}
