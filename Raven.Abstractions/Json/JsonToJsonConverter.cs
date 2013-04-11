@@ -29,9 +29,11 @@ namespace Raven.Abstractions.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-		    return objectType.IsSubclassOf(typeof (RavenJToken))
-		           || objectType.IsSubclassOf(typeof (DynamicJsonObject))
-		           || objectType == typeof (DynamicNullObject);
+		    return objectType == typeof (RavenJToken) ||
+		           objectType == typeof (DynamicJsonObject) ||
+		           objectType == typeof (DynamicNullObject) ||
+		           objectType.IsSubclassOf(typeof (RavenJToken)) ||
+		           objectType.IsSubclassOf(typeof (DynamicJsonObject));
 		}
 	}
 }
