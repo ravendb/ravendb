@@ -88,6 +88,14 @@ namespace Raven.Studio.Commands
 				operateOnTypes |= ItemType.Transformers;
 			}
 
+			if (taskModel.UseCollections.Value)
+			{
+				foreach (var collection in taskModel.Collections.Where(collection => collection.Selected))
+				{
+					taskModel.Filters.Add(new FilterSetting { Path = "@metadata.Raven-Entity-Name", Value = collection.Name, ShouldMatch = true});
+				}
+			}
+
 			smuggler.ExportData(stream, new SmugglerOptions
 			{
 				BatchSize = taskModel.Options.Value.BatchSize,
