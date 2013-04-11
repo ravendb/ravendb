@@ -104,12 +104,15 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				if (SelectedReplication.Value == null)
-					return null;
-				if(SelectedReplication.Value.SqlReplicationTables == null)
-					SelectedReplication.Value.SqlReplicationTables = new ObservableCollection<SqlReplicationTable>();
+				return new ActionCommand(() =>
+				{
+					if (SelectedReplication.Value == null)
+						return;
+					if (SelectedReplication.Value.SqlReplicationTables == null)
+						SelectedReplication.Value.SqlReplicationTables = new ObservableCollection<SqlReplicationTable>();
 
-				return new ActionCommand(() => SelectedReplication.Value.SqlReplicationTables.Add(new SqlReplicationTable()));
+					SelectedReplication.Value.SqlReplicationTables.Add(new SqlReplicationTable());
+				});
 			}
 		}
 
