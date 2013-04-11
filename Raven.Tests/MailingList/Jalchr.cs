@@ -66,7 +66,7 @@ namespace Raven.Tests.MailingList
 				store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
 				new Agency_Entity().Execute(store);
-
+                new AgencyTransformer().Execute(store);
 
 				var code = "code";
 

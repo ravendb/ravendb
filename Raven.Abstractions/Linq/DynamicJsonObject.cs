@@ -24,6 +24,7 @@ namespace Raven.Abstractions.Linq
 		/// <value>The inner.</value>
 		RavenJObject Inner { get; }
 
+	    void WriteTo(JsonWriter writer);
 	}
 	/// <summary>
 	/// A dynamic implementation on top of <see cref="RavenJObject"/>
@@ -366,5 +367,9 @@ namespace Raven.Abstractions.Linq
 			get { return inner; }
 		}
 
+	    public virtual void WriteTo(JsonWriter writer)
+	    {
+	        inner.WriteTo(writer);
+	    }
 	}
 }

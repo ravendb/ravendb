@@ -3,10 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Dynamic;
 using Raven.Abstractions.Linq;
 using Raven.Database.Impl;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -19,6 +21,19 @@ namespace Raven.Database.Indexing
         public DynamicLuceneOrParentDocumntObject(DocumentRetriever retriever,RavenJObject inner) : base(inner)
         {
             this.retriever = retriever;
+        }
+
+        public override void WriteTo(JsonWriter writer)
+        {
+            var dynamicJsonObject = parentDoc as IDynamicJsonObject;
+            if (dynamicJsonObject != null)
+            {
+                dynamicJsonObject.WriteTo(writer);
+            }
+            else
+            {
+                base.WriteTo(writer);
+            }
         }
 
         public override object GetValue(string name)
