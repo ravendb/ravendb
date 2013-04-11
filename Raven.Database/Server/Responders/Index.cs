@@ -11,12 +11,14 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Linq;
 using Raven.Database.Queries;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Storage;
@@ -122,12 +124,29 @@ namespace Raven.Database.Server.Responders
             if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
             {
                 context.SetStatusToBadRequest();
-                context.Write("Expected json document with 'Map' or 'Maps' property");
+                context.WriteJson(new { Error = "Expected json document with 'Map' or 'Maps' property" });
                 return;
             }
 
-            context.SetStatusToCreated("/indexes/" + Uri.EscapeUriString(index));
-            context.WriteJson(new { Index = Database.PutIndex(index, data) });
+            try
+            {
+                Database.PutIndex(index, data);
+                context.SetStatusToCreated("/indexes/" + Uri.EscapeUriString(index));
+                context.WriteJson(new {Index = index});
+            }
+            catch (Exception ex)
+            {
+                var compilationException = ex as IndexCompilationException;
+                
+                context.SetStatusToBadRequest();
+                context.WriteJson(new
+                {
+                    Message = ex.Message, 
+                    IndexDefinitionProperty=compilationException != null ? compilationException.IndexDefinitionProperty : "",
+                    ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+                    Error = ex.ToString()
+                });
+            }
         }
 
         private void OnGet(IHttpContext context, string index)

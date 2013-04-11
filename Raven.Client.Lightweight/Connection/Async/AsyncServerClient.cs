@@ -297,6 +297,7 @@ namespace Raven.Client.Connection.Async
 						var response = we.Response as HttpWebResponse;
 						if (response == null || response.StatusCode != HttpStatusCode.NotFound)
 							throw;
+                       
 					}
 
 					var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -306,7 +307,42 @@ namespace Raven.Client.Connection.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 					return request.WriteAsync(serializeObject)
 						.ContinueWith(writeTask => request.ReadResponseJsonAsync()
-													.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("Index"); })).
+													.ContinueWith(readJsonTask =>
+													{
+													    try
+													    {
+													        return readJsonTask.Result.Value<string>("Index");
+													    }
+													    catch (AggregateException e)
+													    {
+                                                            var we = e.ExtractSingleInnerException() as WebException;
+                                                            if (we == null)
+                                                                throw;
+
+                                                            var response = we.Response as HttpWebResponse;
+
+                                                            if (response.StatusCode == HttpStatusCode.BadRequest)
+                                                            {
+                                                                var error = we.TryReadErrorResponseObject(
+                                                                    new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" });
+
+                                                                if (error == null)
+                                                                {
+                                                                    throw;
+                                                                }
+
+                                                                var compilationException = new IndexCompilationException(error.Message)
+                                                                {
+                                                                    IndexDefinitionProperty = error.IndexDefinitionProperty,
+                                                                    ProblematicText = error.ProblematicText
+                                                                };
+
+                                                                throw compilationException;
+                                                            }
+
+													        throw;
+													    }
+													})).
 						Unwrap();
 				}).Unwrap();
 		}

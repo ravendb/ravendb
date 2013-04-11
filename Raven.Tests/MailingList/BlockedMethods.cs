@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using System.Security;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
@@ -92,13 +93,13 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CannotUseDatetimeNowProp()
 		{
-			Assert.Throws<InvalidOperationException>(() => Compile("from doc in docs select new { DateTime.Now }"));
+			Assert.Throws<IndexCompilationException>(() => Compile("from doc in docs select new { DateTime.Now }"));
 		}
 
 		[Fact]
 		public void CannotUseSystemDatetimeNowProp()
 		{
-			Assert.Throws<InvalidOperationException>(() => Compile("from doc in docs select new { System.DateTime.Now }"));
+            Assert.Throws<IndexCompilationException>(() => Compile("from doc in docs select new { System.DateTime.Now }"));
 		}
 
 		private void Compile(string code)
