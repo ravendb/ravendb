@@ -1,11 +1,10 @@
 ﻿using System.Windows.Input;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class ImportTaskSectionModel : BasicTaskSectionModel
+	public class ImportTaskSectionModel : SmugglerTaskSectionModel
 	{
 		public ImportTaskSectionModel()
 		{

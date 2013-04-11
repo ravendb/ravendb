@@ -318,8 +318,9 @@
     <Compile Include="Features\Stats\UserInfoView.xaml.cs">
       <DependentUpon>UserInfoView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Tasks\ExportTaskSectionView.xaml.cs">
-      <DependentUpon>ExportTaskSectionView.xaml</DependentUpon>
+    <Compile Include="Features\Tasks\SmugglerTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\SmugglerTaskSectionView.xaml.cs">
+      <DependentUpon>SmugglerTaskSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\StartRestoreTaskSectionModel.cs" />
     <Compile Include="Features\Tasks\TasksPageView.xaml.cs">
@@ -1138,7 +1139,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Tasks\ExportTaskSectionView.xaml">
+    <Page Include="Features\Tasks\SmugglerTaskSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

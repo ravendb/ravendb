@@ -12,10 +12,10 @@
 					 d:DataContext="{d:DesignInstance Models:TaskModel}">
 	<UserControl.Resources>
 		<DataTemplate DataType="tasks:ImportTaskSectionModel">
-			<tasks:BaseTaskView/>
+			<tasks:SmugglerTaskSectionView/>
 		</DataTemplate>
 		<DataTemplate DataType="tasks:ExportTaskSectionModel">
-			<tasks:ExportTaskSectionView/>
+			<tasks:SmugglerTaskSectionView/>
 		</DataTemplate>
 		<DataTemplate DataType="tasks:StartBackupTaskSectionModel">
 			<tasks:BaseTaskView/>
