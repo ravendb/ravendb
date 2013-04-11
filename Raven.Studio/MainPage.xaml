@@ -10,7 +10,8 @@
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Delay="clr-namespace:Delay"
+			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" 
+			 xmlns:Delay="clr-namespace:Delay"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
 
 	<Grid x:Name="LayoutRoot"
@@ -186,58 +187,12 @@
                         </Border>
                     </Delay:SplitHyperlinkButtonPopup.PopupContent>
                 </Delay:SplitHyperlinkButtonPopup>
-				
-				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-				<Delay:SplitHyperlinkButtonPopup Content="Tasks"
+				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+
+				<HyperlinkButton Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/import">
-					<Behaviors:LinkHighlighter.AlternativeUris>
-						<Behaviors:StringCollection>
-							<System:String>/import</System:String>
-							<System:String>/export</System:String>
-							<System:String>/backup</System:String>
-							<System:String>/restore</System:String>
-							<System:String>/toggleindexing</System:String>
-							<System:String>/sample</System:String>
-							<System:String>/csvimport</System:String>
-						</Behaviors:StringCollection>
-					</Behaviors:LinkHighlighter.AlternativeUris>
-					<Delay:SplitHyperlinkButtonPopup.PopupContent>
-						<Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
-							<StackPanel>
-								<HyperlinkButton Content="Import Database"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/import"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Export Database"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/export"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Backup Database"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/backup"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Restore Databases"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/restore"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Toggle Indexing"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/toggleindexing"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Create Sample Data"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/sampledata"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Csv Import"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/csvimport"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-							</StackPanel>
-						</Border>
-					</Delay:SplitHyperlinkButtonPopup.PopupContent>
-				</Delay:SplitHyperlinkButtonPopup>
-				
+								 CommandParameter="/tasks"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
 
                 <HyperlinkButton Content="Settings"

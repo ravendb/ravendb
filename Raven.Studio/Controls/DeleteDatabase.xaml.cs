@@ -8,11 +8,11 @@ namespace Raven.Studio.Controls
 {
 	public partial class DeleteDatabase : ChildWindow
 	{
-		public ExportTask ExportTask;
+		public ExportTaskSectionModel ExportTaskSectionModel;
 		
 		public DeleteDatabase()
 		{
-			ExportTask = new ExportTask();
+			ExportTaskSectionModel = new ExportTaskSectionModel();
 			InitializeComponent();
 		}
 
@@ -28,7 +28,7 @@ namespace Raven.Studio.Controls
 
 		private void Export_Click(object sender, RoutedEventArgs e)
 		{
-			Command.ExecuteCommand(new ExportDatabaseCommand(ExportTask, line => Execute.OnTheUI(() => exportLog.Text = line + "\n" + exportLog.Text)));
+			Command.ExecuteCommand(new ExportDatabaseCommand(ExportTaskSectionModel, line => Execute.OnTheUI(() => exportLog.Text = line + "\n" + exportLog.Text)));
 		}
 	}
 }

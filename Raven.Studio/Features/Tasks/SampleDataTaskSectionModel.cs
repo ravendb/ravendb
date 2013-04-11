@@ -5,9 +5,9 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class SampleDataTask : TaskModel
+	public class SampleDataTaskSectionModel : BasicTaskSectionModel
 	{
-		public SampleDataTask()
+		public SampleDataTaskSectionModel()
 		{
 			Name = "Create Sample Data";
 			IconResource = "Image_EditColumns_Tiny";

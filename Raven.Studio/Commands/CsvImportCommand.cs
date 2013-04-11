@@ -11,6 +11,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using Kent.Boogaart.KBCsv;
@@ -22,9 +23,9 @@ namespace Raven.Studio.Commands
 	{
 		const int BatchSize = 512;
 		private readonly Action<string> output;
-		private readonly TaskModel taskModel;
+		private readonly CsvImportTaskSectionModel taskModel;
 
-		public CsvImportCommand(TaskModel taskModel, Action<string> output)
+		public CsvImportCommand(CsvImportTaskSectionModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;
@@ -58,7 +59,7 @@ namespace Raven.Studio.Commands
 
 		public class ImportImpl : IDisposable
 		{
-			private readonly TaskModel taskModel;
+			private readonly CsvImportTaskSectionModel taskModel;
 			private readonly Action<string> output;
 			private readonly IAsyncDatabaseCommands databaseCommands;
 			private readonly CsvReader csvReader;
@@ -69,7 +70,7 @@ namespace Raven.Studio.Commands
 			private int totalCount;
 			private bool hadError = false;
 
-			public ImportImpl(StreamReader reader, string file, TaskModel taskModel, Action<string> output, IAsyncDatabaseCommands databaseCommands)
+			public ImportImpl(StreamReader reader, string file, CsvImportTaskSectionModel taskModel, Action<string> output, IAsyncDatabaseCommands databaseCommands)
 			{
 				this.taskModel = taskModel;
 				this.output = output;

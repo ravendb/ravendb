@@ -7,11 +7,11 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class StartBackupTask : TaskModel
+	public class StartBackupTaskSectionModel : BasicTaskSectionModel
 	{
 		public BackupStatus Status { get; set; }
 
-		public StartBackupTask()
+		public StartBackupTaskSectionModel()
 		{
 			Name = "Backup Database";
 			Description = "Backup your database.";
