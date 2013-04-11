@@ -50,41 +50,22 @@
 					</Grid.RowDefinitions>
 
 					<StackPanel VerticalAlignment="Center">
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<CheckBox Grid.Column="0" IsChecked="{Binding IncludeDocuments.Value, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"></CheckBox>
-							<TextBlock Grid.Column="1" Text="Include Documents" Padding="5" VerticalAlignment="Center" />
-						</Grid>
+						<CheckBox Grid.Column="0" 
+								  IsChecked="{Binding IncludeDocuments.Value, Mode=TwoWay}" 
+								  VerticalAlignment="Center" Margin="5" Content=" Include Documents"/>
 
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<CheckBox Grid.Column="0" IsChecked="{Binding IncludeIndexes.Value, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"></CheckBox>
-							<TextBlock Grid.Column="1" Text="Include Indexes" Padding="5" VerticalAlignment="Center" />
-						</Grid>
+						<CheckBox Grid.Column="0" 
+								  IsChecked="{Binding IncludeIndexes.Value, Mode=TwoWay}" 
+								  VerticalAlignment="Center" Margin="5" Content=" Include Indexes"/>
 
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<CheckBox Grid.Column="0" IsChecked="{Binding IncludeAttachments.Value, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"></CheckBox>
-							<TextBlock Grid.Column="1" Text="Include Attachments" Padding="5" VerticalAlignment="Center" />
-						</Grid>
+						<CheckBox Grid.Column="0" 
+								  IsChecked="{Binding IncludeAttachments.Value, Mode=TwoWay}" 
+								  VerticalAlignment="Center" Margin="5" Content=" Include Attachments"/>
 
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<CheckBox Grid.Column="0" IsChecked="{Binding IncludeTransforms.Value, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"></CheckBox>
-							<TextBlock Grid.Column="1" Text="Include Transformers" Padding="5" VerticalAlignment="Center" />
-						</Grid>
+						<CheckBox Grid.Column="0" 
+								  IsChecked="{Binding IncludeTransforms.Value, Mode=TwoWay}" 
+								  VerticalAlignment="Center" Margin="5" Content=" Include Transformers"/>
+
 					</StackPanel>
 					<StackPanel Orientation="Horizontal" Grid.Row="1">
 						<Button Content="{Binding Name}"
@@ -141,6 +122,7 @@
 						<RowDefinition Height="*"/>
 					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
 						<ColumnDefinition Width="Auto"/>
 						<ColumnDefinition Width="Auto"/>
 						<ColumnDefinition Width="*"/>
@@ -200,14 +182,10 @@
 						</Button>
 					</Grid>
 					<StackPanel Margin="5" Grid.Column="1">
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<CheckBox Grid.Column="0" IsChecked="{Binding Options.Value.ShouldExcludeExpired, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"></CheckBox>
-							<TextBlock Grid.Column="1" Text="Should Exlude Expired" Padding="5" VerticalAlignment="Center" />
-						</Grid>
+
+							<CheckBox Grid.Column="0" 
+									  IsChecked="{Binding Options.Value.ShouldExcludeExpired, Mode=TwoWay}" 
+									  VerticalAlignment="Center" Margin="5" Content=" Should Exlude Expired"/>
 
 						<Grid>
 							<Grid.ColumnDefinitions>
@@ -219,8 +197,29 @@
 						</Grid>
 					</StackPanel>
 
-						<TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="Transform Script:"></TextBlock>
-					<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="3"  BoundDocument="{Binding Script}" Margin="5"/>
+					<Grid Grid.Column="2" Margin="5">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
+						
+						<CheckBox IsChecked="{Binding UseCollections.Value, Mode=TwoWay}"
+								  Content=" Use Collections"/>
+						
+						<ListBox Visibility="{Binding UseCollections.Value, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
+								 ItemsSource="{Binding Collections}"
+								 MaxHeight="156"
+								 Grid.Row="1">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}"/>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+					</Grid>
+					
+					<TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="Transform Script:"></TextBlock>
+					<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="4"  BoundDocument="{Binding Script}" Margin="5"/>
 				</Grid>
 			
 			</controls:TabItem>
