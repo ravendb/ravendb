@@ -1,5 +1,6 @@
 using Raven.Abstractions.Smuggler;
 using Raven.Studio.Features.Smuggler;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using System;
@@ -17,12 +18,12 @@ namespace Raven.Studio.Commands
 
 		private readonly Action<string> output;
 		private Stream stream;
-		private readonly TaskModel taskModel;
+		private readonly ExportTaskSectionModel taskModel;
 		private bool includeAttachments, includeDocuments, includeIndexes, includeTransformers;
 
 		private readonly ISmugglerApi smuggler;
 
-		public ExportDatabaseCommand(TaskModel taskModel, Action<string> output)
+		public ExportDatabaseCommand(ExportTaskSectionModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;
@@ -34,17 +35,10 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			var attachmentUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Attachments") as TaskCheckBox;
-			includeAttachments = attachmentUi != null && (bool)attachmentUi.Value;
-
-			var documentsUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Documents") as TaskCheckBox;
-			includeDocuments = documentsUi != null && (bool)documentsUi.Value;
-
-			var indexesUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Indexes") as TaskCheckBox;
-			includeIndexes = indexesUi != null && (bool)indexesUi.Value;
-
-			var transformersUi = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Transformers") as TaskCheckBox;
-			includeTransformers = transformersUi != null && (bool)transformersUi.Value;
+			includeAttachments = taskModel.IncludeAttachments.Value;
+			includeDocuments = taskModel.IncludeDocuments.Value;
+			includeIndexes = taskModel.IncludeIndexes.Value;
+			includeTransformers = taskModel.IncludeTransforms.Value;
 
 			if (includeDocuments == false && includeAttachments == false && includeIndexes == false && includeTransformers == false)
 				return;
@@ -94,9 +88,20 @@ namespace Raven.Studio.Commands
 				operateOnTypes |= ItemType.Transformers;
 			}
 
+			if (taskModel.UseCollections.Value)
+			{
+				foreach (var collection in taskModel.Collections.Where(collection => collection.Selected))
+				{
+					taskModel.Filters.Add(new FilterSetting { Path = "@metadata.Raven-Entity-Name", Value = collection.Name, ShouldMatch = true});
+				}
+			}
+
 			smuggler.ExportData(stream, new SmugglerOptions
 			{
-				BatchSize = BatchSize,
+				BatchSize = taskModel.Options.Value.BatchSize,
+				Filters = taskModel.Filters.ToList(),
+				TransformScript = taskModel.ScriptData,
+				ShouldExcludeExpired = taskModel.Options.Value.ShouldExcludeExpired,
 				OperateOnTypes = operateOnTypes
 			}, false)
 					.Catch(exception => Infrastructure.Execute.OnTheUI(() =>

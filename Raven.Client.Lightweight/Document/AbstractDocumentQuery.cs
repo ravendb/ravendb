@@ -86,7 +86,7 @@ namespace Raven.Client.Document
 
 		private int currentClauseDepth;
 
-		private KeyValuePair<string, string> lastEquality;
+	    protected KeyValuePair<string, string> lastEquality;
 
         protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
 
