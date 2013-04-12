@@ -124,11 +124,6 @@ namespace Raven.Database
         }
 
         /// <summary>
-        /// This is required to ensure serial generation of etags during puts
-        /// </summary>
-        private readonly PutSerialLock putSerialLocker = new PutSerialLock();
-
-        /// <summary>
         /// Requires to avoid having serialize writes to the same attachments
         /// </summary>
         private readonly ConcurrentDictionary<string, object> putAttachmentSerialLock = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -710,8 +705,7 @@ namespace Raven.Database
             RemoveReservedProperties(document);
             RemoveMetadataReservedProperties(metadata);
             Etag newEtag = Etag.Empty;
-            using (putSerialLocker.Lock())
-            {
+
                 TransactionalStorage.Batch(actions =>
                 {
                     if (key.EndsWith("/"))
@@ -767,7 +761,6 @@ namespace Raven.Database
                     }
                     workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                 });
-            }
 
             log.Debug("Put document {0} with etag {1}", key, newEtag);
             return new PutResult
@@ -923,8 +916,6 @@ namespace Raven.Database
                 throw new ArgumentNullException("key");
             key = key.Trim();
 
-            using (putSerialLocker.Lock())
-            {
                 var deleted = false;
                 log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
                 RavenJObject metadataVar = null;
@@ -998,7 +989,6 @@ namespace Raven.Database
 
                 metadata = metadataVar;
                 return deleted;
-            }
         }
 
         public bool HasTransaction(Guid txId)
@@ -1010,8 +1000,6 @@ namespace Raven.Database
         {
             try
             {
-		        using (putSerialLocker.Lock())
-                {
                     try
                     {
             TransactionalStorage.Batch(actions =>
@@ -1035,7 +1023,6 @@ namespace Raven.Database
 			        {
 				        inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
 			        }
-                    }
                 }
                 catch (Exception e)
                 {
@@ -1818,8 +1805,6 @@ namespace Raven.Database
                 return result;
             }
 
-			using (putSerialLocker.Lock())
-            {
 	            BatchResult[] results = null;
                     TransactionalStorage.Batch(actions =>
                     {
@@ -1827,14 +1812,11 @@ namespace Raven.Database
                     });
 
 	            return results;
-                }
             }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
         {
             int retries = 128;
-            using (putSerialLocker.Lock())
-            {
                 while (true)
                 {
                     try
@@ -1852,7 +1834,6 @@ namespace Raven.Database
                         throw;
                     }
                 }
-            }
         }
 
         private BatchResult[] ProcessBatch(IList<ICommandData> commands)
@@ -2171,8 +2152,7 @@ namespace Raven.Database
                 foreach (var docs in docBatches)
                 {
                     WorkContext.CancellationToken.ThrowIfCancellationRequested();
-                    using (putSerialLocker.Lock())
-                    {
+
                         var inserts = 0;
                         var batch = 0;
                         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -2214,7 +2194,7 @@ namespace Raven.Database
                         workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
                         workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
                     }
-                }
+
                 RaiseNotifications(new DocumentChangeNotification
                 {
                     Type = DocumentChangeTypes.BulkInsertEnded
