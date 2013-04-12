@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
@@ -184,7 +185,7 @@ namespace Raven.Storage.Managed
 				throw new InvalidOperationException("Backup operation is not supported when running in memory. In order to enable backup operation please make sure that you persistent the data to disk by setting the RunInMemory configuration parameter value to false.");
 
 			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory, databaseDocument);
-			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+			Task.Factory.StartNew(backupOperation.Execute);
 		}
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
