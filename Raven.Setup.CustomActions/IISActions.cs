@@ -5,9 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.DirectoryServices;
-using System.Globalization;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
@@ -18,7 +16,6 @@ using Microsoft.Web.Administration;
 using Microsoft.Win32;
 using Raven.Database.Util;
 using Raven.Setup.CustomActions.Infrastructure.IIS;
-using View = Microsoft.Deployment.WindowsInstaller.View;
 
 namespace Raven.Setup.CustomActions
 {
@@ -355,6 +352,22 @@ namespace Raven.Setup.CustomActions
 			task.SetApartmentState(ApartmentState.STA);
 			task.Start();
 			task.Join();
+
+			return ActionResult.Success;
+		}
+
+		[CustomAction]
+		public static ActionResult FindIdOfCreatedWebSite(Session session)
+		{
+			if (string.IsNullOrEmpty(session["WEBSITE_ID"]))
+				throw new ArgumentException("WEBSITE_ID cannot be null", "WEBSITE_ID");
+
+			if (session["WEBSITE_ID"] != AsteriskSiteId) // id was set by selecting existing web site
+				return ActionResult.Success;
+
+			var site = GetWebSites().First(x => x.Name == session["WEBSITE_DESCRIPTION"]);
+
+			session["WEBSITE_ID"] = site.Id;
 
 			return ActionResult.Success;
 		}

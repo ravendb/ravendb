@@ -46,7 +46,7 @@
       <ComponentRef Id='Raven.Abstractions.Web' />
       <ComponentRef Id='Raven.Web.Config.IIS_7_And_8' />
       <ComponentRef Id='Raven.Web.Config.IIS_6' />
-      <ComponentRef Id="EnableASPNet4Extension" />
+      <ComponentGroupRef Id="EnableASPNet4Extension" />
       <ComponentGroupRef Id="IISConfigurationBasedOnExistingWebSite" />
       <ComponentGroupRef Id="IISConfigurationBasedOnNewRavenWebSite" />
       <ComponentRef Id="PersistWebSiteValues" />
@@ -69,7 +69,6 @@
 
     <CustomAction Id="UninstallRavenService_Cmd" Property="UninstallRavenService"
               Value="&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME]&quot; /uninstall" Execute="immediate"/>
-    
     <CustomAction Id="UninstallRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
 
     <CustomAction Id="SetInstallationTypeToService" Property="RAVEN_INSTALLATION_TYPE" Value="SERVICE" />
@@ -88,7 +87,15 @@
 
     <CustomAction Id="SetNewWebSiteDirectory" Directory="NEW_WEB_SITE_DIRECTORY" Value="[WEBSITE_PATH]" />
 
-    <CustomAction Id="RegisterAspNet" Directory="INSTALLFOLDER" Return="check" ExeCommand='[ASPNETREGIIS] -ir' />
+    <CustomAction Id="RegisterAspNet" Directory="INSTALLFOLDER" Return="check" Execute="deferred" ExeCommand='[ASPNETREGIIS] -ir' />
+
+    <CustomAction Id="RegisterAspNet64" Directory="INSTALLFOLDER" Return="check" Execute="deferred" ExeCommand='[ASPNETREGIIS64] -ir' />
+
+    <CustomAction Id="FindIdOfCreatedWebSite" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="FindIdOfCreatedWebSite"
+                      Execute="immediate" Return="check" />
+
+    <CustomAction Id="UpdateAspNetMapping" Directory="INSTALLFOLDER" Return="check" Execute="deferred" ExeCommand='[ASPNETREGIIS64] -norestart -s "W3SVC/[WEBSITE_ID]/ROOT/[WEBSITE_VD]"' />
+    <CustomAction Id="UpdateAspNetMapping64" Directory="INSTALLFOLDER" Return="check" Execute="deferred" ExeCommand='[ASPNETREGIIS64] -norestart -s "W3SVC/[WEBSITE_ID]/ROOT/[WEBSITE_VD]"' />
 
     <InstallExecuteSequence>
       <Custom Action="InstallRavenService_Cmd" After="CostFinalize">
@@ -105,8 +112,20 @@
         <![CDATA[(&Service=2) AND (!Service=3)]]>
       </Custom>
 
-      <Custom Action="RegisterAspNet" After="InstallFinalize">
-        <![CDATA[NOT ASPNETREGISTERED AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
+      <Custom Action="RegisterAspNet" Before="InstallFinalize">
+        <![CDATA[NOT VersionNT64 AND (NOT ASPNETREGISTERED) AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
+      </Custom>
+      <Custom Action="RegisterAspNet64" After="RegisterAspNet">
+        <![CDATA[VersionNT64 AND (NOT ASPNETREGISTERED64) AND ASPNETREGIIS64 AND (&IIS=3) AND NOT(!IIS=3)]]>
+      </Custom>
+      <Custom Action="FindIdOfCreatedWebSite" After="RegisterAspNet64">
+        <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
+      </Custom>
+      <Custom Action="UpdateAspNetMapping" After="FindIdOfCreatedWebSite">
+        <![CDATA[NOT VersionNT64 AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
+      </Custom>
+      <Custom Action="UpdateAspNetMapping64" After="FindIdOfCreatedWebSite">
+        <![CDATA[VersionNT64 AND ASPNETREGIIS64 AND (&IIS=3) AND NOT(!IIS=3)]]>
       </Custom>
       <Custom Action='SetupPerformanceCountersForIISUser' After='InstallFinalize'>
         <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>

@@ -59,6 +59,7 @@
       <ProgressText Action="SetupPerformanceCountersForIISUser">Granting permissions to performance counters</ProgressText>
       <ProgressText Action="InstallRavenService">Installing [SERVICE_NAME] service</ProgressText>
       <ProgressText Action="RegisterAspNet">ASP.NET is being registed on IIS (aspnet_regiis.exe -ir)</ProgressText>
+      <ProgressText Action="RegisterAspNet64">ASP.NET is being registed on IIS (aspnet_regiis.exe -ir)</ProgressText>
       
       <DialogRef Id="WebSiteSettingsDlg" />
 

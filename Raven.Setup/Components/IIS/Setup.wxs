@@ -2,23 +2,62 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
      xmlns:iis="http://schemas.microsoft.com/wix/IIsExtension">
 	<Fragment>
+
+    <!--32 bit -->
+    <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR"/>
+    
     <Property Id="ASPNETREGISTERED">
-      <RegistrySearch Id="ASPNETREG" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="AssemblyVersion" Type="raw" Win64="yes"/>
+      <RegistrySearch Id="ASPNETREG" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="Path" Type="raw" />
     </Property>
     
-    <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR"/>
     <SetProperty Id="ASPNETISAPIDLL" Sequence="execute" Before="ConfigureIIs"
-                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_isapi.dll" />
+                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_isapi.dll">
+      <![CDATA[NOT VersionNT64]]>
+    </SetProperty>
+    
     <SetProperty Id="ASPNETREGIIS" Sequence="execute" Before="ConfigureIIs"
-                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_regiis.exe" />
+             Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_regiis.exe">
+      <![CDATA[NOT VersionNT64]]>
+    </SetProperty>
+
+    <!--64 bit-->
+    <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR64"/>
+    
+    <Property Id="ASPNETREGISTERED64">
+      <RegistrySearch Id="ASPNETREG64" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="Path" Type="raw" Win64="yes" />
+    </Property>
+    
+    <SetProperty Id="ASPNETISAPIDLL64" Sequence="execute" Before="ConfigureIIs"
+             Value="[NETFRAMEWORK40FULLINSTALLROOTDIR64]aspnet_isapi.dll">
+      <![CDATA[VersionNT64]]>
+    </SetProperty>
+    
+    <SetProperty Id="ASPNETREGIIS64" Sequence="execute" Before="ConfigureIIs"
+                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR64]aspnet_regiis.exe">
+      <![CDATA[VersionNT64]]>
+    </SetProperty>
     
     <DirectoryRef Id="INSTALLFOLDER">
-      <Component Id="EnableASPNet4Extension" Permanent="yes" Guid="{6449C546-034B-444F-B544-2DC2F2CE16C5}">
-        <CreateFolder/>
-        <iis:WebServiceExtension Id="ASPNet4Extension" Group="ASP.NET v4.0.30319" Allow="yes"
+      <Component Id="EnableASPNet4Extension32" Permanent="yes" Guid="{6449C546-034B-444F-B544-2DC2F2CE16C5}">
+        <Condition><![CDATA[NOT VersionNT64]]></Condition>
+        <CreateFolder />
+        <iis:WebServiceExtension Id="ASPNet4Extension32" Group="ASP.NET v4.0.30319" Allow="yes"
                                  File="[ASPNETISAPIDLL]" Description="ASP.NET v4.0.30319"
                                  UIDeletable="no"/>
       </Component>
+      <Component Id="EnableASPNet4Extension64" Permanent="yes" Guid="{C3CEE445-0609-43BD-8BD0-5EA3DB415F85}">
+        <Condition><![CDATA[VersionNT64]]></Condition>
+        <CreateFolder />
+        <iis:WebServiceExtension Id="ASPNet4Extension64" Group="ASP.NET v4.0.30319" Allow="yes"
+                                 File="[ASPNETISAPIDLL64]" Description="ASP.NET v4.0.30319"
+                                 UIDeletable="no"/>
+      </Component>
     </DirectoryRef>
+
+    <ComponentGroup Id="EnableASPNet4Extension">
+      <ComponentRef Id="EnableASPNet4Extension32" />
+      <ComponentRef Id="EnableASPNet4Extension64" />
+    </ComponentGroup>
+    
 	</Fragment>
 </Wix>
