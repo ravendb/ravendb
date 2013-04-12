@@ -29,7 +29,9 @@
                   WebSite="NewRavenWebSite">
           <iis:WebDirProperties Id="VirtualDirProperties0_New" AnonymousAccess="yes" BasicAuthentication="no"
              WindowsAuthentication="yes" />
-          <iis:WebApplication Id="Application0_New" Name="[WEBSITE_VD]" />
+          <iis:WebApplication Id="Application0_New" Name="[WEBSITE_VD]">
+            <iis:WebApplicationExtension CheckPath="no" Script="yes" Executable="[ASPNETISAPIDLL]" Verbs="GET,HEAD,POST"/>
+          </iis:WebApplication>
         </iis:WebVirtualDir>
       </Component>
 
@@ -45,7 +47,9 @@
                   WebSite="NewRavenWebSite">
           <iis:WebDirProperties Id="VirtualDirProperties1_New" AnonymousAccess="yes" BasicAuthentication="no"
              WindowsAuthentication="yes" />
-          <iis:WebApplication Id="Application1_New" Name="[WEBSITE_VD]" WebAppPool="AppPool1_New" />
+          <iis:WebApplication Id="Application1_New" Name="[WEBSITE_VD]" WebAppPool="AppPool1_New">
+            <iis:WebApplicationExtension CheckPath="no" Script="yes" Executable="[ASPNETISAPIDLL]" Verbs="GET,HEAD,POST"/>
+          </iis:WebApplication>
         </iis:WebVirtualDir>
       </Component>
 
@@ -62,7 +66,9 @@
                   WebSite="NewRavenWebSite">
           <iis:WebDirProperties Id="VirtualDirProperties2_New" AnonymousAccess="yes" BasicAuthentication="no"
              WindowsAuthentication="yes" />
-          <iis:WebApplication Id="Application2_New" Name="[WEBSITE_VD]" WebAppPool="AppPool2_New" />
+          <iis:WebApplication Id="Application2_New" Name="[WEBSITE_VD]" WebAppPool="AppPool2_New">
+            <iis:WebApplicationExtension CheckPath="no" Script="yes" Executable="[ASPNETISAPIDLL]" Verbs="GET,HEAD,POST"/>
+          </iis:WebApplication>
         </iis:WebVirtualDir>
       </Component>
 
@@ -81,7 +87,9 @@
                   WebSite="NewRavenWebSite">
           <iis:WebDirProperties Id="VirtualDirProperties3_New" AnonymousAccess="yes" BasicAuthentication="no"
              WindowsAuthentication="yes" />
-          <iis:WebApplication Id="Application3_New" Name="[WEBSITE_VD]" WebAppPool="AppPool3_New" />
+          <iis:WebApplication Id="Application3_New" Name="[WEBSITE_VD]" WebAppPool="AppPool3_New">
+            <iis:WebApplicationExtension CheckPath="no" Script="yes" Executable="[ASPNETISAPIDLL]" Verbs="GET,HEAD,POST"/>
+          </iis:WebApplication>
         </iis:WebVirtualDir>
       </Component>
 
@@ -100,7 +108,9 @@
                   WebSite="NewRavenWebSite">
           <iis:WebDirProperties Id="VirtualDirProperties4_New" AnonymousAccess="yes" BasicAuthentication="no"
              WindowsAuthentication="yes" />
-          <iis:WebApplication Id="Application4_New" Name="[WEBSITE_VD]" WebAppPool="AppPool4_New" />
+          <iis:WebApplication Id="Application4_New" Name="[WEBSITE_VD]" WebAppPool="AppPool4_New">
+            <iis:WebApplicationExtension CheckPath="no" Script="yes" Executable="[ASPNETISAPIDLL]" Verbs="GET,HEAD,POST"/>
+          </iis:WebApplication>
         </iis:WebVirtualDir>
       </Component>
 
@@ -119,7 +129,9 @@
                   WebSite="NewRavenWebSite">
           <iis:WebDirProperties Id="VirtualDirProperties5_New" AnonymousAccess="yes" BasicAuthentication="no"
              WindowsAuthentication="yes" />
-          <iis:WebApplication Id="Application5_New" Name="[WEBSITE_VD]" WebAppPool="AppPool5_New" />
+          <iis:WebApplication Id="Application5_New" Name="[WEBSITE_VD]" WebAppPool="AppPool5_New">
+            <iis:WebApplicationExtension CheckPath="no" Script="yes" Executable="[ASPNETISAPIDLL]" Verbs="GET,HEAD,POST"/>
+          </iis:WebApplication>
         </iis:WebVirtualDir>
       </Component>
 
@@ -144,7 +156,9 @@
                   WebSite="NewRavenWebSite">
           <iis:WebDirProperties Id="VirtualDirProperties6_New" AnonymousAccess="yes" BasicAuthentication="no"
              WindowsAuthentication="yes" />
-          <iis:WebApplication Id="Application6_New" Name="[WEBSITE_VD]" WebAppPool="AppPool6_New" />
+          <iis:WebApplication Id="Application6_New" Name="[WEBSITE_VD]" WebAppPool="AppPool6_New">
+            <iis:WebApplicationExtension CheckPath="no" Script="yes" Executable="[ASPNETISAPIDLL]" Verbs="GET,HEAD,POST"/>
+          </iis:WebApplication>
         </iis:WebVirtualDir>
       </Component>
 
