@@ -85,7 +85,9 @@
 												   Stretch="None" />
 										</HyperlinkButton.Content>
 									</HyperlinkButton>
-									<Delay:PopupButton Grid.Column="3"
+									<Delay:PopupButton 
+                                        x:Name="LockModePopupButton"
+                                        Grid.Column="3"
 													 VerticalAlignment="Center"
 													 Padding="4"
 													 Margin="2"
@@ -100,6 +102,11 @@
 													BorderBrush="Gray"
 													Margin="0,20,0,0">
 											<StackPanel>
+                                                <i:Interaction.Triggers>
+                                                    <Behaviors:HandledMouseLeftButtonUpTrigger>
+                                                            <Behaviors:CloseSplitButtonPopupAction TargetName="LockModePopupButton"/>
+                                                    </Behaviors:HandledMouseLeftButtonUpTrigger>
+                                                </i:Interaction.Triggers>
 													<HyperlinkButton Command="{Binding UnlockIndex}" 
 																	 Style="{StaticResource Style_Button_MouseOverChrome}"
 																	 VerticalAlignment="Center">
