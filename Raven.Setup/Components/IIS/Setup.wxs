@@ -6,6 +6,14 @@
     <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR"/>
     <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR64"/>
 
+    <SetProperty Id="NETFRAMEWORKROOT" Sequence="execute" After="CostFinalize" Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]" Action="SetNETFRAMEWORKROOT_ARCHITECTURE32">
+      <![CDATA[NOT VersionNT64 AND NETFRAMEWORK40FULLINSTALLROOTDIR]]>
+    </SetProperty>
+
+    <SetProperty Id="NETFRAMEWORKROOT" Sequence="execute" After="CostFinalize" Value="[NETFRAMEWORK40FULLINSTALLROOTDIR64]" Action="SetNETFRAMEWORKROOT_ARCHITECTURE64">
+      <![CDATA[VersionNT64 AND NETFRAMEWORK40FULLINSTALLROOTDIR64]]>
+    </SetProperty>
+
     <Property Id="ASPNETREGISTERED32">
       <RegistrySearch Id="ASPNETREG32" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="Path" Type="raw" />
     </Property>
@@ -23,24 +31,10 @@
     </SetProperty>
 
     <SetProperty Id="ASPNETISAPIDLL" Sequence="execute" Before="ConfigureIIs"
-                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_isapi.dll" Action="SetASPNETISAPIDLL32">
-      <![CDATA[NOT VersionNT64]]>
-    </SetProperty>
-
-    <SetProperty Id="ASPNETISAPIDLL" Sequence="execute" Before="ConfigureIIs"
-             Value="[NETFRAMEWORK40FULLINSTALLROOTDIR64]aspnet_isapi.dll" Action="SetASPNETISAPIDLL64">
-      <![CDATA[VersionNT64]]>
-    </SetProperty>
+                 Value="[NETFRAMEWORKROOT]aspnet_isapi.dll" Action="SetASPNETISAPIDLL32" />
 
     <SetProperty Id="ASPNETREGIIS" Sequence="execute" Before="ConfigureIIs"
-             Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]aspnet_regiis.exe" Action="SetASPNETREGIIS32">
-      <![CDATA[NOT VersionNT64]]>
-    </SetProperty>
-
-    <SetProperty Id="ASPNETREGIIS" Sequence="execute" Before="ConfigureIIs"
-                 Value="[NETFRAMEWORK40FULLINSTALLROOTDIR64]aspnet_regiis.exe" Action="SetASPNETREGIIS64">
-      <![CDATA[VersionNT64]]>
-    </SetProperty>
+             Value="[NETFRAMEWORKROOT]aspnet_regiis.exe" Action="SetASPNETREGIIS32" />
     
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="EnableASPNet4Extension" Permanent="yes" Guid="{6449C546-034B-444F-B544-2DC2F2CE16C5}">
