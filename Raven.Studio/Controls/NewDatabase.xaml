@@ -43,14 +43,14 @@
                 <TextBox x:Name="DbName"
 					 Grid.Column="1"
 					 Margin="5" KeyDown="DbName_KeyDown"/>
-                <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1" Margin="5">
-                    <CheckBox  HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanced"/>
-                    <TextBlock Text="Advanced Settings"
-                               Grid.Column="1"
-                               Grid.Row="1"
-                               Margin="6,0,0,0"
-                               MouseLeftButtonDown="Toggle"/>
-                </StackPanel>
+				
+				<CheckBox Grid.Row="1" 
+						  Grid.Column="1" 
+						  Margin="5"  
+						  HorizontalAlignment="Right" 
+						  Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" 
+						  x:Name="ShowAdvanced"
+						  Content=" Advanced Settings"/>
 
             </Grid>
             <Grid Grid.Row="1" x:Name="AdvancedSettings" Visibility="Collapsed">
@@ -93,10 +93,6 @@
             </Grid.RowDefinitions>
 
 			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
@@ -113,117 +109,80 @@
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Margin="5" 
+						  Content=" Compression Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Compression}"
 						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Compression}"/>
-				<TextBlock Grid.Column="1"
-                           Text="Compression Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Compression}"/>
 
 				<CheckBox x:Name="Encryption"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="1"
                           Margin="5"
+						  Content=" Encryption Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Encryption}"
 						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Encryption}"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="1"
-                           Text="Encryption Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Encryption}"/>
-
+						   
                 <CheckBox x:Name="DocumentExpiration"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="2"
                           Margin="5"
-                          IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=DocumentExpiration}"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="2"
-                           Text="Expiration Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=DocumentExpiration}"/>
-
+						  Content=" Expiration Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=DocumentExpiration}"
+						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=DocumentExpiration}"/>
+						   
 				<CheckBox x:Name="Quotas"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="3"
                           Margin="5"
+						  Content=" Quotas Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Quotas}"
 						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Quotas}"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="3"
-                           Text="Quotas Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Quotas}"/>
 
 				<CheckBox x:Name="Replication"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="4"
                           Margin="5"
+						  Content=" Replication Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Replication}"
 						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Replication}"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="4"
-                           Text="Replication Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Replication}"/>
-
+						   
 				<CheckBox x:Name="SqlReplication"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="5"
                           Margin="5"
+						  Content=" Sql Replication Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=SqlReplication}"
 						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=SqlReplication}"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="5"
-                           Text="Sql Replication Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=SqlReplication}"/>
 
 				<CheckBox x:Name="Versioning"
                           Checked="Checked"
                           Unchecked="UnChecked"
                           Grid.Row="6"
                           Margin="5"
+						  Content=" Versioning Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Versioning}"
 						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=Versioning}"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="6"
-                           Text="Versioning Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Versioning}"/>
-
+						   
 				<CheckBox x:Name="Periodic"
                           Grid.Row="7"
                           Margin="5"
+						  Content=" Periodic Backup Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=PeriodicBackup}"
 						  IsChecked="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=PeriodicBackup}"
 						  IsEnabled="False"/>
-				<TextBlock Grid.Column="1"
-                           Grid.Row="7"
-                           Text="Periodic Backup Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=PeriodicBackup}"/>
 
 				<CheckBox x:Name="Authorization"
 						  Visibility="{Binding ElementName=NewDatabaseControl, Path=HasAuth.Value, Converter={StaticResource BooleanToVisibility}}"
-                          Grid.Row="8"
+                          ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"
+						  Content=" Authorization Bundle"
+						  Grid.Row="8"
 						  Checked="Checked"
                           Unchecked="UnChecked"
                           Margin="5"/>
-					
-				<TextBlock Grid.Column="1"
-						  Visibility="{Binding ElementName=NewDatabaseControl, Path=HasAuth.Value, Converter={StaticResource BooleanToVisibility}}"
-                           Grid.Row="8"
-                           Text="Authorization Bundle"
-                           Margin="5"
-                           MouseLeftButtonDown="ToggleBundles"
-						   ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"/>
 			</Grid>
 		</Grid>
 		
