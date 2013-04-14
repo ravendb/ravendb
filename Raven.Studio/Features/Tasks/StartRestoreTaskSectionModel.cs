@@ -4,9 +4,9 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class StartRestoreTask : TaskModel
+	public class StartRestoreTaskSectionModel : BasicTaskSectionModel
 	{
-		public StartRestoreTask()
+		public StartRestoreTaskSectionModel()
 		{
 			Name = "Restore Database";
 			Description = "Restore a database.";

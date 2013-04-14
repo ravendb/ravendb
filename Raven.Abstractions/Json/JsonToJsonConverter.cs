@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Json
 			else if(value is DynamicNullObject)
 				writer.WriteNull();
 			else
-				((IDynamicJsonObject)value).Inner.WriteTo(writer);
+				((IDynamicJsonObject)value).WriteTo(writer);
 		}
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -29,8 +29,11 @@ namespace Raven.Abstractions.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof(RavenJToken) || objectType.IsSubclassOf(typeof(RavenJToken))
-				|| objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject);
+		    return objectType == typeof (RavenJToken) ||
+		           objectType == typeof (DynamicJsonObject) ||
+		           objectType == typeof (DynamicNullObject) ||
+		           objectType.IsSubclassOf(typeof (RavenJToken)) ||
+		           objectType.IsSubclassOf(typeof (DynamicJsonObject));
 		}
 	}
 }

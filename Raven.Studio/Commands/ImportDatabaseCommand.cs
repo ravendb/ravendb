@@ -1,6 +1,8 @@
+using System.Linq;
 using Raven.Abstractions.Smuggler;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Smuggler;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using System;
@@ -14,11 +16,12 @@ namespace Raven.Studio.Commands
 		const int BatchSize = 512;
 
 		private readonly Action<string> output;
-		private readonly TaskModel taskModel;
+		private readonly ImportTaskSectionModel taskModel;
+		private bool includeAttachments, includeDocuments, includeIndexes, includeTransformers;
 
 		private readonly ISmugglerApi smuggler;
 
-		public ImportDatabaseCommand(TaskModel taskModel, Action<string> output)
+		public ImportDatabaseCommand(ImportTaskSectionModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;
@@ -47,6 +50,14 @@ namespace Raven.Studio.Commands
 
 		private void ExecuteInternal()
 		{
+			includeAttachments = taskModel.IncludeAttachments.Value;
+			includeDocuments = taskModel.IncludeDocuments.Value;
+			includeIndexes = taskModel.IncludeIndexes.Value;
+			includeTransformers = taskModel.IncludeTransforms.Value;
+			
+			if (includeDocuments == false && includeAttachments == false && includeIndexes == false && includeTransformers == false)
+				return;
+			
 			var openFile = new OpenFileDialog
 			{
 				Filter = "Raven Dumps|*.ravendump;*.raven.dump",
@@ -61,7 +72,46 @@ namespace Raven.Studio.Commands
 
 			var stream = openFile.File.OpenRead();
 
-			smuggler.ImportData(stream, null, incremental: false)
+			ItemType operateOnTypes = 0;
+
+			if (includeDocuments)
+			{
+				operateOnTypes |= ItemType.Documents;
+			}
+
+			if (includeAttachments)
+			{
+				operateOnTypes |= ItemType.Attachments;
+			}
+
+			if (includeIndexes)
+			{
+				operateOnTypes |= ItemType.Indexes;
+			}
+
+			if (includeTransformers)
+			{
+				operateOnTypes |= ItemType.Transformers;
+			}
+
+			if (taskModel.UseCollections.Value)
+			{
+				foreach (var collection in taskModel.Collections.Where(collection => collection.Selected))
+				{
+					taskModel.Filters.Add(new FilterSetting { Path = "@metadata.Raven-Entity-Name", Value = collection.Name, ShouldMatch = true });
+				}
+			}
+
+			var smugglerOptions = new SmugglerOptions
+			{
+				BatchSize = taskModel.Options.Value.BatchSize,
+				Filters = taskModel.Filters.ToList(),
+				TransformScript = taskModel.ScriptData,
+				ShouldExcludeExpired = taskModel.Options.Value.ShouldExcludeExpired,
+				OperateOnTypes = operateOnTypes
+			};
+
+			smuggler.ImportData(stream, smugglerOptions, incremental: false)
 			        .Catch(exception => Infrastructure.Execute.OnTheUI(() => taskModel.ReportError(exception)))
 			        .Finally(() =>
 			        {

@@ -16,7 +16,7 @@ namespace Raven.Tests.MailingList
 	public class Jalchr : RavenTest
 	{
 		[Fact]
-		public void CanGetProperError()
+		public void CanGetIdWithCorrectCase()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -48,17 +48,60 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var query = session.Query<AgencyDb, Agency_Entity>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite());
-					var result = query.Where(x => x.Code == code)
-						 .As<Agency>()
-					     .SingleOrDefault();
+					var agency = query.Where(x => x.Code == code).As<Agency>().SingleOrDefault();
 
-
-					Assert.NotNull(result);
+					Assert.NotNull(agency);
+                    Assert.True(agency.Countries[0].Agency.Code == agency.Code);
 				}
 			}
 		}
 
-		class AgencyDb
+		[Fact]
+		public void CanGetIdWithCorrectCaseWithTransforms()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.Conventions.CustomizeJsonSerializer = serializer =>
+							   serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+				store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
+
+				new Agency_Entity().Execute(store);
+                new AgencyTransformer().Execute(store);
+
+				var code = "code";
+
+				using (var session = store.OpenSession())
+				{
+					var agency = new AgencyDb();
+					agency.Id = Guid.NewGuid();
+					agency.Name = "my-name";
+					agency.Code = code;
+					var country = new AgencyCountryDb();
+					country.AgencyId = agency.Id;
+					country.Country = "The-Country";
+					agency.Countries = new AgencyCountryDb[] { country };
+
+					session.Store(agency);
+					session.SaveChanges();
+				}
+
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<AgencyDb, Agency_Entity>()
+                        .TransformWith<AgencyTransformer, Agency>()
+                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite());
+                    var agency = query.Where(x => x.Code == code)
+                        .SingleOrDefault();
+
+
+                    Assert.NotNull(agency);
+                    Assert.True(agency.Countries[0].Agency.Code == agency.Code);
+                }
+			}
+		}
+		
+        class AgencyDb
 		{
 			public Guid Id { get; set; }
 			public string Name { get; set; }
@@ -121,6 +164,38 @@ namespace Raven.Tests.MailingList
 																		   }
 														   };
 			}
-		} 
-	}
+		}
+
+
+        class Agency_Entity2 : AbstractIndexCreationTask<AgencyDb>
+        {
+            public Agency_Entity2()
+            {
+                Map = agencies => from agency in agencies
+                                  select new
+                                  {
+                                      agency.Code,
+                                  };
+
+            }
+        }
+
+        class AgencyTransformer : AbstractTransformerCreationTask<AgencyDb>
+        {
+            public AgencyTransformer()
+            {
+                TransformResults = agencies => from agency in agencies
+                                               select new // Agency
+                                               {
+                                                   agency.Id,
+                                                   agency.Name,
+                                                   agency.Code,
+                                                   Countries = from com in agency.Countries
+                                                               select new // AgencyCountry
+                                                                           { com.Country, Agency = agency }
+                                               };
+            }
+        }
+
+    }
 }

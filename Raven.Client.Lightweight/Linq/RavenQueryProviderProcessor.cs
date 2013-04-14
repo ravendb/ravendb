@@ -1372,7 +1372,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization) luceneQuery);
 
-			return q;
+            return q.SelectFields<T>(FieldsToFetch.ToArray());
 		}
 
 		/// <summary>

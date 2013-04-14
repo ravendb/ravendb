@@ -2,9 +2,9 @@
 
 namespace Raven.Studio.Features.Tasks
 {
-	public partial class TaskView : View
+	public partial class SmugglerTaskSectionView : PageView
 	{
-		public TaskView()
+		public SmugglerTaskSectionView()
 		{
 			InitializeComponent();
 		}

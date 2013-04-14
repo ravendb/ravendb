@@ -22,12 +22,12 @@ namespace Raven.Studio.Commands
 	{
 		private readonly Observable<DatabaseModel> database;
 		private IObservable<Unit> databaseChanged;
-		private readonly SampleDataTask sampleDataTask;
+		private readonly SampleDataTaskSectionModel sampleDataTaskSectionModel;
 		private Action<string> output;
 
-		public CreateSampleDataCommand(SampleDataTask sampleDataTask, Action<string> output)
+		public CreateSampleDataCommand(SampleDataTaskSectionModel sampleDataTaskSectionModel, Action<string> output)
 		{
-			this.sampleDataTask = sampleDataTask;
+			this.sampleDataTaskSectionModel = sampleDataTaskSectionModel;
 			this.output = output;
 			database = ApplicationModel.Current.Server.Value.SelectedDatabase;
 
@@ -65,10 +65,10 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			sampleDataTask.TaskStatus = TaskStatus.Started;
+			sampleDataTaskSectionModel.TaskStatus = TaskStatus.Started;
 			CreateSampleData().ProcessTasks()
 				.ContinueOnSuccessInTheUIThread(() => output("Sample Data Created"))
-				.Finally(() => sampleDataTask.TaskStatus = TaskStatus.Ended);
+				.Finally(() => sampleDataTaskSectionModel.TaskStatus = TaskStatus.Ended);
 		}
 
 		private IEnumerable<Task> CreateSampleData()
