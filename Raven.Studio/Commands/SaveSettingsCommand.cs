@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
@@ -80,6 +82,8 @@ namespace Raven.Studio.Commands
 						{
 							document.Destinations.Add(destination);
 						}
+
+						CheckDestinations(document.Destinations);
 						
 						session.Store(document);
 						session.SaveChangesAsync().Catch();
@@ -238,7 +242,31 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-        private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
+		private async void CheckDestinations(List<ReplicationDestination> destinations)
+		{
+			var badReplication = new List<string>();
+
+			foreach (var replicationDestination in destinations)
+			{
+				var destination = replicationDestination;
+				var response = await ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+				                                     .AsyncDatabaseCommands
+				                                     .CreateRequest(string.Format(" /admin/replication/info").NoCache(), "GET")
+				                                     .ReadResponseJsonAsync();
+
+				if (response.SelectToken("Error") != null)
+				{
+					badReplication.Add(destination.Url + "databases/" + destination.Database + response.SelectToken("Error"));
+				}
+			}
+
+			var mesage = "Some of the replications could not be reached:" + Environment.NewLine +
+			             string.Join(Environment.NewLine, badReplication);
+
+			ApplicationModel.Current.Notifications.Add(new Notification(mesage, NotificationLevel.Warning));
+		}
+
+		private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
 		{
 			if (remote == null)
 				return false;
