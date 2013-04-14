@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -145,7 +146,7 @@ namespace Raven.Storage.Esent
 				throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to true.");
 
 			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
-			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
+			Task.Factory.StartNew(backupOperation.Execute);
 		}
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
