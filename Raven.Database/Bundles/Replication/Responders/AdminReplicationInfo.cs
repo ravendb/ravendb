@@ -3,7 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -18,7 +20,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders.Admin
 {
-	public class AdminReplicationInfo : AdminResponder
+    [ExportMetadata("Bundle", "Replication")]
+    [InheritedExport(typeof(AbstractRequestResponder))]
+    public class AdminReplicationInfo : AdminResponder
 	{
 		private readonly HttpRavenRequestFactory requestFactory;
 
@@ -34,20 +38,10 @@ namespace Raven.Database.Server.Responders.Admin
 
 		public override void RespondToAdmin(IHttpContext context)
 		{
-			if (Database == SystemDatabase)
-			{
-				context.SetStatusToBadRequest();
-				context.WriteJson(new
-				{
-					Error = "Cannot check replication against `system` database."
-				});
-
-				return;
-			}
-
+			
 			var replicationDocument = context.ReadJsonObject<ReplicationDocument>();
 
-			if (replicationDocument == null)
+			if (replicationDocument == null || replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
 			{
 				context.SetStatusToBadRequest();
 				context.WriteJson(new
@@ -58,36 +52,16 @@ namespace Raven.Database.Server.Responders.Admin
 				return;
 			}
 
-			var databaseReplicationDocument = Database.Get("Raven/Replication/Destinations", null);
-			if (databaseReplicationDocument == null)
-			{
-				context.WriteJson(new
-				{
-					Error = "`ReplicationDocument` is not available on " + Database.ServerUrl + "/databases/" + Database.Name
-				});
-				return;
-			}
-
-			var currentReplicationDocument = databaseReplicationDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
-			if (currentReplicationDocument == null)
-			{
-				context.WriteJson(new
-				{
-					Error = "`ReplicationDocument` is invalid on " + Database.ServerUrl + "/databases/" + Database.Name
-				});
-				return;
-			}
-
-			var statuses = CheckDestinations(currentReplicationDocument, replicationDocument);
+			var statuses = CheckDestinations(replicationDocument);
 
 			context.WriteJson(statuses);
 		}
 
-		private List<ReplicationInfoStatus> CheckDestinations(ReplicationDocument currentReplicationDocument, ReplicationDocument replicationDocument)
+		private ReplicationInfoStatus[] CheckDestinations(ReplicationDocument replicationDocument)
 		{
-			var results = new List<ReplicationInfoStatus>();
+			var results = new ReplicationInfoStatus[replicationDocument.Destinations.Count];
 
-			Parallel.ForEach(replicationDocument.Destinations, replicationDestination =>
+            Parallel.ForEach(replicationDocument.Destinations, (replicationDestination,state,i) =>
 			{
 				var url = replicationDestination.Url;
 
@@ -103,24 +77,20 @@ namespace Raven.Database.Server.Responders.Admin
 					Code = (int)HttpStatusCode.OK
 				};
 
-				results.Add(result);
+				results[i] = result;
 
-				var knownDestination =
-					currentReplicationDocument.Destinations.Any(x => x.Url.ToLower() == replicationDestination.Url.ToLower());
-
-				if (!knownDestination)
-				{
-					result.Status = "Unknown destination.";
-					result.Code = -1;
-					return;
-				}
-
-				var request = requestFactory.Create(url + "/replication/replicateDocs", "POST", new RavenConnectionStringOptions
-				{
-					ApiKey = replicationDestination.ApiKey,
-					DefaultDatabase = replicationDestination.Database
-				});
-
+			    var ravenConnectionStringOptions = new RavenConnectionStringOptions
+			    {
+			        ApiKey = replicationDestination.ApiKey, 
+                    DefaultDatabase = replicationDestination.Database,
+			    };
+                if (string.IsNullOrEmpty(replicationDestination.Username) == false)
+                {
+                    ravenConnectionStringOptions.Credentials = new NetworkCredential(replicationDestination.Username,
+                                                                                     replicationDestination.Password,
+                                                                                     replicationDestination.Domain ?? string.Empty);
+                }
+			    var request = requestFactory.Create(url + "/replication/info", "GET", ravenConnectionStringOptions);
 				try
 				{
 					request.Write(new RavenJObject());
@@ -152,14 +122,22 @@ namespace Raven.Database.Server.Responders.Admin
 				case HttpStatusCode.BadRequest:
 					using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 					{
-						var error = streamReader.ReadToEnd();
-						if (!string.IsNullOrEmpty(error)) // if 'empty' then response from replication responder
-						{
-							replicationInfoStatus.Status = error.Contains("Could not figure out what to do") ? "Replication Bundle not activated." : error;
-							replicationInfoStatus.Code = (int)response.StatusCode;
-						}
+					    var error = streamReader.ReadToEnd();
+					    replicationInfoStatus.Status = error.Contains("Could not figure out what to do")
+					                                       ? "Replication Bundle not activated."
+					                                       : error;
+					    replicationInfoStatus.Code = (int) response.StatusCode;
 					}
-					break;
+			        break;
+                case HttpStatusCode.PreconditionFailed:
+			        replicationInfoStatus.Status = "Could not authenticate using OAuth's API Key";
+			        replicationInfoStatus.Code = (int) response.StatusCode;
+			        break;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+			        replicationInfoStatus.Status = "Could not authenticate using Windows Auth";
+			        replicationInfoStatus.Code = (int) response.StatusCode;
+			        break;
 				default:
 					replicationInfoStatus.Status = response.StatusDescription;
 					replicationInfoStatus.Code = (int)response.StatusCode;
