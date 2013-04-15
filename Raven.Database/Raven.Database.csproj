@@ -187,6 +187,7 @@
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Impl\DatabaseEtagSynchronizer.cs" />
     <Compile Include="Impl\InFlightTransactionalState.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
