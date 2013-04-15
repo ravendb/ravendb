@@ -183,6 +183,8 @@ namespace Raven.Setup.CustomActions
 		{
 			try
 			{
+				session["APPLICATION_POOL_IDENTITY_TYPE_INITIALIZED"] = "1";
+
 				var comboBoxView = session.Database.OpenView(GetComboContent);
 
 				var availableAppPoolIdentities = new Dictionary<string, string>();
