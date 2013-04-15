@@ -13,6 +13,7 @@ using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Infrastructure.Converters;
 using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
@@ -885,14 +886,16 @@ namespace Raven.Studio.Models
 				get { return type; }
 				set
 				{
-					IsGeographical = value == SpatialFieldType.Geography;
 					if (type != value)
 					{
 						type = value;
 						OnPropertyChanged(() => Type);
-						ResetToDefaults(type);
+						ResetToDefaults();
 						UpdatePrecision();
 					}
+
+					IsGeographical = value == SpatialFieldType.Geography;
+					IsCartesian = value == SpatialFieldType.Cartesian;
 				}
 			}
 
@@ -906,6 +909,7 @@ namespace Raven.Studio.Models
 					{
 						strategy = value;
 						OnPropertyChanged(() => Strategy);
+
 						if (type == SpatialFieldType.Geography)
 						{
 							if (strategy == SpatialSearchStrategy.GeohashPrefixTree)
@@ -913,7 +917,18 @@ namespace Raven.Studio.Models
 							if (strategy == SpatialSearchStrategy.QuadPrefixTree)
 								MaxTreeLevel = SpatialOptions.DefaultQuadTreeLevel;
 						}
+
 						UpdatePrecision();
+					}
+
+					if (strategy == SpatialSearchStrategy.BoundingBox)
+					{
+						MaxTreeLevel = 0;
+						IsPrefixTreeIndex = false;
+					}
+					else
+					{
+						IsPrefixTreeIndex = true;
 					}
 				}
 			}
@@ -1034,7 +1049,56 @@ namespace Raven.Studio.Models
 				}
 			}
 
-			private void ResetToDefaults(SpatialFieldType type)
+			private bool isCartesian;
+			public bool IsCartesian
+			{
+				get { return isCartesian; }
+				set
+				{
+					if (isCartesian == value) return;
+					isCartesian = value;
+					OnPropertyChanged(() => IsCartesian);
+				}
+			}
+
+			private bool isPrefixTreeIndex;
+			public bool IsPrefixTreeIndex
+			{
+				get { return isPrefixTreeIndex; }
+				set
+				{
+					if (isPrefixTreeIndex == value) return;
+					isPrefixTreeIndex = value;
+					OnPropertyChanged(() => IsPrefixTreeIndex);
+				}
+			}
+
+			public List<object> CartesianStrategies
+			{
+				get
+				{
+					return typeof(SpatialSearchStrategy).GetFields()
+						.Where(field => field.IsLiteral)
+						.Select(field => field.GetValue(Strategy))
+						.Cast<SpatialSearchStrategy>()
+						.Where(field => field != SpatialSearchStrategy.GeohashPrefixTree)
+						.Cast<object>()
+						.ToList();
+				}
+			}
+
+			public List<object> GeographyStrategies
+			{
+				get
+				{
+					return typeof(SpatialSearchStrategy).GetFields()
+						.Where(field => field.IsLiteral)
+						.Select(field => field.GetValue(Strategy))
+						.ToList();
+				}
+			}
+
+			private void ResetToDefaults()
 			{
 				if (type == SpatialFieldType.Geography)
 				{
@@ -1057,7 +1121,7 @@ namespace Raven.Studio.Models
 			public SpatialFieldProperties() : base()
 			{
 				Type = SpatialFieldType.Geography;
-				ResetToDefaults(SpatialFieldType.Geography);
+				ResetToDefaults();
 			}
 
 			public SpatialFieldProperties(KeyValuePair<string, SpatialOptions> spatialOptions) : base()
@@ -1069,7 +1133,7 @@ namespace Raven.Studio.Models
 			public void UpdateFromSpatialOptions(SpatialOptions spatialOptions)
 			{
 				Type = spatialOptions.Type;
-				ResetToDefaults(spatialOptions.Type);
+				ResetToDefaults();
 				Strategy = spatialOptions.Strategy;
 				MaxTreeLevel = spatialOptions.MaxTreeLevel;
 				if (spatialOptions.Type == SpatialFieldType.Geography)
@@ -1092,6 +1156,12 @@ namespace Raven.Studio.Models
 
 			public void UpdatePrecision()
 			{
+				if (strategy == SpatialSearchStrategy.BoundingBox)
+				{
+					Precision = string.Empty;
+					return;
+				}
+
 				var x = maxX - minX;
 				var y = maxY - minY;
 				for (var i = 0; i < maxTreeLevel; i++)

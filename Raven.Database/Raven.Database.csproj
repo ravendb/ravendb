@@ -253,6 +253,7 @@
     <Compile Include="Indexing\PrefetchingBehavior.cs" />
     <Compile Include="Indexing\RavenIndexWriter.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
+    <Compile Include="Indexing\Spatial\BBoxStrategyThatSupportsAllShapes.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringReadWriter.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringConverter.cs" />
