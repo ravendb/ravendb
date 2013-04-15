@@ -79,6 +79,8 @@
           <RegistryValue Name="WEBSITE_ID" Type="string" Value="[WEBSITE_ID]"/>
           <RegistryValue Name="WEBSITE_VD" Type="string" Value="[WEBSITE_VD]"/>
           <RegistryValue Name="WEBSITE_PATH" Type="string" Value="[WEBSITE_PATH]"/>
+          <RegistryValue Name="WEBSITE_PORT" Type="string" Value="[WEBSITE_PORT]"/>
+          <RegistryValue Name="WEBSITE_HOSTNAME" Type="string" Value="[WEBSITE_HOSTNAME]"/>
         </RegistryKey>
       </Component>
     </DirectoryRef>
