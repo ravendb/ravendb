@@ -1,12 +1,14 @@
 ﻿<UserControl x:Class="Raven.Studio.Features.Settings.PeriodicBackupSettingsSectionView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:System="clr-namespace:System;assembly=mscorlib"
+             xmlns:models="clr-namespace:Raven.Studio.Models"
              mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="400">
+			 d:DesignHeight="300" d:DesignWidth="400"
+			 d:DataContext="{d:DesignInstance models:PeriodicBackupSettingsSectionModel}">
 
 	<Border x:Name="LayoutRoot" Style="{StaticResource Style_Border_SettingsSection}">
 		<Grid>
@@ -93,8 +95,16 @@
 					<PasswordBox Grid.Row="1" Grid.Column="1" Margin="5"  Password="{Binding AwsSecretKey, Mode=TwoWay}"  VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
 
 					<TextBlock Grid.Row="2" Text="Aws Region Endpoint: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Margin="5"  Text="{Binding PeriodicBackupSetup.AwsRegionEndpoint, Mode=TwoWay}" VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
-
+					<ComboBox Grid.Row="2" Grid.Column="1" Margin="5" SelectedValue="{Binding SelectedAwsRegionEndpoint, Mode=TwoWay}"
+							  Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }">
+						<ComboBoxItem Tag="us-east-1">US East (Virginia)</ComboBoxItem>
+						<ComboBoxItem Tag="us-west-1">US West (N. California)</ComboBoxItem>
+						<ComboBoxItem Tag="us-west-2">US West (Oregon)</ComboBoxItem>
+						<ComboBoxItem Tag="eu-west-1">EU West (Ireland)</ComboBoxItem>
+						<ComboBoxItem Tag="ap-northeast-1">Asia Pacific (Tokyo)</ComboBoxItem>
+						<ComboBoxItem Tag="ap-southeast-1">Asia Pacific (Singapore)</ComboBoxItem>
+						<ComboBoxItem Tag="sa-east-1">South America (Sao Paulo)</ComboBoxItem>
+					</ComboBox>
 				</Grid>
 			</Grid>
 			<Grid Visibility="{Binding ShowPeriodicBackup.Value, Converter={StaticResource BooleanToOppositeVisibility}}">
