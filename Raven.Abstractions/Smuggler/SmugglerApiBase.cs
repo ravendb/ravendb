@@ -220,23 +220,25 @@ namespace Raven.Abstractions.Smuggler
 			while (true)
 			{
 				var watch = Stopwatch.StartNew();
-				var documents = await GetDocuments(lastEtag);
-				watch.Stop();
-
-				while (await documents.MoveNextAsync())
+				using (var documents = await GetDocuments(lastEtag))
 				{
-					var document = documents.Current;
+					watch.Stop();
 
-					if (!options.MatchFilters(document))
-						continue;
+					while (await documents.MoveNextAsync())
+					{
+						var document = documents.Current;
 
-					if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
-						continue;
+						if (!options.MatchFilters(document))
+							continue;
 
-					document.WriteTo(jsonWriter);
-					totalCount++;
+						if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+							continue;
 
-					lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+						document.WriteTo(jsonWriter);
+						totalCount++;
+
+						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+					}
 				}
 
 				var databaseStatistics = await GetStats();
@@ -328,7 +330,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task EnsureDatabaseExists();
 
-		public virtual async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
+		public async virtual Task ImportData(Stream stream, SmugglerOptions options)
 		{
 			options = options ?? SmugglerOptions;
 			if (options == null)

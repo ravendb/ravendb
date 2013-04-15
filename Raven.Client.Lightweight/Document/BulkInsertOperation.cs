@@ -1,5 +1,6 @@
 ﻿#if !SILVERLIGHT && !NETFX_CORE
 using System;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 #if !SILVERLIGHT
 using Raven.Client.Connection;
@@ -50,6 +51,11 @@ namespace Raven.Client.Document
 #endif
 			operation = databaseCommands.GetBulkInsertOperation(options);
 			entityToJson = new EntityToJson(documentStore, listeners);
+		}
+
+		public Task DisposeAsync()
+		{
+			return operation.DisposeAsync();
 		}
 
 		public void Dispose()

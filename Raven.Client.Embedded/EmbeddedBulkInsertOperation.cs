@@ -2,9 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Database;
-using Raven.Database.Tasks;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
 
@@ -70,6 +70,16 @@ namespace Raven.Client.Embedded
 			var onReport = Report;
 			if (onReport != null)
 				onReport("Writing " + list.Count + " items");
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <returns></returns>
+		public Task DisposeAsync()
+		{
+			Dispose();
+			return new CompletedTask();
 		}
 
 		/// <summary>

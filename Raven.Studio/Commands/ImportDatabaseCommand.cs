@@ -111,7 +111,7 @@ namespace Raven.Studio.Commands
 				OperateOnTypes = operateOnTypes
 			};
 
-			smuggler.ImportData(stream, smugglerOptions, incremental: false)
+			smuggler.ImportData(stream, smugglerOptions)
 			        .Catch(exception => Infrastructure.Execute.OnTheUI(() => taskModel.ReportError(exception)))
 			        .Finally(() =>
 			        {
