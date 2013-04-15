@@ -82,6 +82,8 @@ namespace Raven.Database.Indexing
 					return new RecursivePrefixTreeStrategyThatSupportsWithin(new GeohashPrefixTree(context, opt.MaxTreeLevel), fieldName);
 				case SpatialSearchStrategy.QuadPrefixTree:
 					return new RecursivePrefixTreeStrategyThatSupportsWithin(new QuadPrefixTree(context, opt.MaxTreeLevel), fieldName);
+				case SpatialSearchStrategy.BoundingBox:
+					return new BBoxStrategyThatSupportsAllShapes(context, fieldName);
 			}
 			return null;
 		}
