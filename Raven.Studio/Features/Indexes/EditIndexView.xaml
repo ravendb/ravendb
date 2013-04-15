@@ -253,9 +253,17 @@
                                Grid.Row="4"
                                VerticalAlignment="Center"
                                Margin="0,0,4,0" />
-                    <ComboBox ItemsSource="{Binding Strategy, Converter={StaticResource enumerationFromValue}, Mode=OneTime}"
+                    <ComboBox ItemsSource="{Binding GeographyStrategies, Mode=OneTime}"
                               SelectedItem="{Binding Strategy, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
-							  IsEnabled="{Binding Type, Converter={StaticResource TrueWhenGeography}}"
+                              Visibility="{Binding IsGeographical, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
+                              Grid.Row="4"
+                              Grid.Column="1"
+                              Grid.ColumnSpan="3"
+                              VerticalAlignment="Center"
+                              Margin="0,0,4,0" />
+                    <ComboBox ItemsSource="{Binding CartesianStrategies, Mode=OneTime}"
+                              SelectedItem="{Binding Strategy, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
+                              Visibility="{Binding IsCartesian, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
                               Grid.Row="4"
                               Grid.Column="1"
                               Grid.ColumnSpan="3"
@@ -263,12 +271,14 @@
                               Margin="0,0,4,0" />
 
                     <TextBlock Text="Max Tree Level"
+                               Visibility="{Binding IsPrefixTreeIndex, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
                                Grid.Row="4"
                                Grid.Column="5"
                                Grid.ColumnSpan="2"
                                Margin="8,0,4,0"
                                VerticalAlignment="Center" />
                     <TextBox Text="{Binding MaxTreeLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 Visibility="{Binding IsPrefixTreeIndex, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
 										 Grid.Row="4"
 										 Grid.Column="7"
 										 MinWidth="40"

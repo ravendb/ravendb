@@ -72,15 +72,13 @@ namespace Raven.Bundles.Replication.Tasks
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 
-			var thread = new Thread(Execute)
-			{
-				IsBackground = true,
-				Name = "Replication Thread"
-			};
-			var disposableAction = new DisposableAction(thread.Join);
-			// make sure that the doc db waits for the replication thread shutdown
+            var task = new Task(Execute, TaskCreationOptions.LongRunning);
+			var disposableAction = new DisposableAction(task.Wait);
+			// make sure that the doc db waits for the replication task shutdown
 			docDb.ExtensionsState.GetOrAdd(Guid.NewGuid().ToString(), s => disposableAction);
-			thread.Start();
+			task.Start();
+            
+
 		}
 
 		private void Execute()
