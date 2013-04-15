@@ -10,6 +10,10 @@
                     DllEntry="OpenWebSiteDirectoryChooser" Execute="immediate"
                     Return="check" />
 
+    <CustomAction Id="SetApplicationPoolIdentityType" BinaryKey="Raven.Setup.CustomActions.CA.dll"
+                        DllEntry="SetApplicationPoolIdentityType" Execute="immediate"
+                        Return="check" />
+    
     <Property Id="CUSTOM_APPLICATION_POOL" Value="1" />
     <Property Id="WEBSITE" Value="1"/>
     <EnsureTable Id="ComboBox"/>

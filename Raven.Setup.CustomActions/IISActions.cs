@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.DirectoryServices;
 using System.Linq;
 using System.Security.Principal;
@@ -176,6 +177,55 @@ namespace Raven.Setup.CustomActions
 				LoggingHelper.Log(session, "Exception was thrown during GetAppPools execution: " + ex);
 				return ActionResult.Failure;
 			}
+		}
+
+		[CustomAction]
+		public static ActionResult SetApplicationPoolIdentityType(Session session)
+		{
+			try
+			{
+				var comboBoxView = session.Database.OpenView(GetComboContent);
+
+				var availableAppPoolIdentities = new Dictionary<string, string>();
+
+				if (IsIIS7Upwards)
+				{
+					availableAppPoolIdentities.Add("ApplicationPoolIdentity", "ApplicationPoolIdentity");
+
+					session["APPLICATION_POOL_IDENTITY_TYPE"] = "ApplicationPoolIdentity";
+				}
+				else
+				{
+					session["APPLICATION_POOL_IDENTITY_TYPE"] = "other";
+				}
+
+				availableAppPoolIdentities.Add("LocalService", "LocalService");
+				availableAppPoolIdentities.Add("LocalSystem", "LocalSystem");
+				availableAppPoolIdentities.Add("NetworkService", "NetworkService");
+				availableAppPoolIdentities.Add("Other", "other");
+
+				var order = 1;
+
+				foreach (var identityType in availableAppPoolIdentities)
+				{
+					var newComboRecord = new Record(4);
+					newComboRecord[1] = "APPLICATION_POOL_IDENTITY_TYPE";
+					newComboRecord[2] = order;
+					newComboRecord[3] = identityType.Value;
+					newComboRecord[4] = identityType.Key;
+
+					comboBoxView.Modify(ViewModifyMode.InsertTemporary, newComboRecord);
+
+					order++;
+				}
+			}
+			catch (Exception ex)
+			{
+				LoggingHelper.Log(session, "Failed to SetApplicationPoolIdentityType. Exception: " + ex.Message);
+				return ActionResult.Failure;
+			}
+
+			return ActionResult.Success;
 		}
 
 		[CustomAction]

@@ -11,7 +11,6 @@
                   Return="check" />
    
     <Property Id="APPLICATION_POOL_TYPE" Value="NEW" />
-    <Property Id="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity" />
 
     <Property Id="APPPOOL" Value="0"/>
     <EnsureTable Id="ComboBox"/>
@@ -54,13 +53,6 @@
           <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
         </Control>
         <Control Type="ComboBox" Property="APPLICATION_POOL_IDENTITY_TYPE" Id="IdentityComboBox" Width="224" Height="16" X="98" Y="112">
-          <ComboBox Property="APPLICATION_POOL_IDENTITY_TYPE">
-            <ListItem Text="ApplicationPoolIdentity" Value="ApplicationPoolIdentity" />
-            <ListItem Text="LocalService" Value="LocalService" />
-            <ListItem Text="LocalSystem" Value="LocalSystem" />
-            <ListItem Text="NetworkService" Value="NetworkService" />
-            <ListItem Text="Other" Value="other" />
-          </ComboBox>
           <Condition Action="show"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Condition>
           <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
         </Control>
