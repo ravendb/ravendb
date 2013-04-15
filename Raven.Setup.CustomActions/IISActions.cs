@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.DirectoryServices;
 using System.Linq;
 using System.Security.Principal;
@@ -54,7 +53,7 @@ namespace Raven.Setup.CustomActions
             }
             catch (Exception ex)
             {
-				LoggingHelper.Log(session, "Exception was thrown during GetWebSites execution: " + ex);
+				Log.Error(session, "Exception was thrown during GetWebSites execution: " + ex);
 	            return ActionResult.Failure;
             }
         }
@@ -67,7 +66,7 @@ namespace Raven.Setup.CustomActions
 				if (session["WEBSITE_TYPE"] == "EXISTING")
 				{
 					string selectedWebSiteId = session[WebSiteProperty];
-					session.Log("CA: Found web site id: " + selectedWebSiteId);
+					Log.Info(session, "Found web site id: " + selectedWebSiteId);
 
 					using (var availableWebSitesView = session.Database.OpenView(SpecificSite + selectedWebSiteId))
 					{
@@ -96,7 +95,7 @@ namespace Raven.Setup.CustomActions
             }
             catch (Exception ex)
             {
-				LoggingHelper.Log(session, "Exception was thrown during UpdateIISPropsWithSelectedWebSite execution" + ex);
+				Log.Error(session, "Exception was thrown during UpdateIISPropsWithSelectedWebSite execution" + ex);
 	            return ActionResult.Failure;
             }
         }
@@ -174,7 +173,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				LoggingHelper.Log(session, "Exception was thrown during GetAppPools execution: " + ex);
+				Log.Error(session, "Exception was thrown during GetAppPools execution: " + ex);
 				return ActionResult.Failure;
 			}
 		}
@@ -221,7 +220,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				LoggingHelper.Log(session, "Failed to SetApplicationPoolIdentityType. Exception: " + ex.Message);
+				Log.Error(session, "Failed to SetApplicationPoolIdentityType. Exception: " + ex.Message);
 				return ActionResult.Failure;
 			}
 
@@ -257,7 +256,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				LoggingHelper.Log(session, "Exception was thrown during UpdateIISPropsWithSelectedWebSite: " + ex);
+				Log.Error(session, "Exception was thrown during UpdateIISPropsWithSelectedWebSite: " + ex);
 				return ActionResult.Failure;
 			}
 		}
@@ -347,7 +346,7 @@ namespace Raven.Setup.CustomActions
 			}
 			catch (Exception ex)
 			{
-				LoggingHelper.Log(session, "Exception was thrown during SetupPerformanceCountersForIISUser:" + ex);
+				Log.Error(session, "Exception was thrown during SetupPerformanceCountersForIISUser:" + ex);
 
 				var sb =
 					new StringBuilder(
@@ -389,37 +388,54 @@ namespace Raven.Setup.CustomActions
 		[CustomAction]
 		public static ActionResult OpenWebSiteDirectoryChooser(Session session)
 		{
-			var task = new Thread(() =>
+			try
 			{
-				var fileDialog = new FolderBrowserDialog {ShowNewFolderButton = true};
-				if (fileDialog.ShowDialog() == DialogResult.OK)
+				var task = new Thread(() =>
 				{
-					session["WEBSITE_PATH"] = fileDialog.SelectedPath;
-				}
+					var fileDialog = new FolderBrowserDialog { ShowNewFolderButton = true };
+					if (fileDialog.ShowDialog() == DialogResult.OK)
+					{
+						session["WEBSITE_PATH"] = fileDialog.SelectedPath;
+					}
 
-				session.DoAction("SetNewWebSiteDirectory");
-			});
-			task.SetApartmentState(ApartmentState.STA);
-			task.Start();
-			task.Join();
+					session.DoAction("SetNewWebSiteDirectory");
+				});
+				task.SetApartmentState(ApartmentState.STA);
+				task.Start();
+				task.Join();
 
-			return ActionResult.Success;
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during OpenWebSiteDirectoryChooser. Exception: " + ex);
+				return ActionResult.Failure;
+			}
+			
 		}
 
 		[CustomAction]
 		public static ActionResult FindIdOfCreatedWebSite(Session session)
 		{
-			if (string.IsNullOrEmpty(session["WEBSITE_ID"]))
-				throw new ArgumentException("WEBSITE_ID cannot be null", "WEBSITE_ID");
+			try
+			{
+				if (string.IsNullOrEmpty(session["WEBSITE_ID"]))
+					throw new ArgumentException("WEBSITE_ID cannot be null", "WEBSITE_ID");
 
-			if (session["WEBSITE_ID"] != AsteriskSiteId) // id was set by selecting existing web site
+				if (session["WEBSITE_ID"] != AsteriskSiteId) // id was set by selecting existing web site
+					return ActionResult.Success;
+
+				var site = GetWebSites().First(x => x.Name == session["WEBSITE_DESCRIPTION"]);
+
+				session["WEBSITE_ID"] = site.Id;
+
 				return ActionResult.Success;
-
-			var site = GetWebSites().First(x => x.Name == session["WEBSITE_DESCRIPTION"]);
-
-			session["WEBSITE_ID"] = site.Id;
-
-			return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during FindIdOfCreatedWebSite. Exception: " + ex);
+				return ActionResult.Failure;
+			}
 		}
 	}
 }

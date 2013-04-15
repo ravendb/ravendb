@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -30,65 +29,70 @@ namespace Raven.Setup.CustomActions
 		[CustomAction]
 		public static ActionResult OpenLicenseFileChooser(Session session)
 		{
-			session.Log("Begin OpenLicenseFileChooser Custom Action");
-
-			var task = new Thread(() => GetFile(session));
-			task.SetApartmentState(ApartmentState.STA);
-			task.Start();
-			task.Join();
-
-			session.Log("End OpenLicenseFileChooser Custom Action");
-
-			return ActionResult.Success;
+			try
+			{
+				var task = new Thread(() => GetFile(session));
+				task.SetApartmentState(ApartmentState.STA);
+				task.Start();
+				task.Join();
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during OpenLicenseFileChooser. Exception: " + ex);
+				return ActionResult.Failure;
+			}
 		}
 
 		[CustomAction]
 		public static ActionResult LicenseFileExists(Session session)
 		{
-			session.Log("Begin LicenseFileExists Custom Action");
-
-			var task = new Thread(() =>
+			try
 			{
-				var licensePath = session["RAVEN_LICENSE_FILE_PATH"];
-
-				CleanUpLicenseInfo(session);
-
-				if (string.IsNullOrEmpty(licensePath))
+				var task = new Thread(() =>
 				{
-					session["RAVEN_LICENSE_VALID"] = "False";
-					return;
-				}
+					var licensePath = session["RAVEN_LICENSE_FILE_PATH"];
 
-				var licenseExists = File.Exists(licensePath);
+					CleanUpLicenseInfo(session);
 
-				if (licenseExists)
-				{
-					session.Log("Begin CheckLicense in LicenseFileExists");
-
-					using (var licenseStream = File.Open(licensePath, FileMode.Open))
+					if (string.IsNullOrEmpty(licensePath))
 					{
-						var license = new StreamReader(licenseStream).ReadToEnd();
-						if (CheckLicense(session, license))
-							session["RAVEN_LICENSE_VALID"] = "True";
-						else
-							session["RAVEN_LICENSE_VALID"] = "False";
+						session["RAVEN_LICENSE_VALID"] = "False";
+						return;
 					}
 
-					session.Log("EndCheckLicense in LicenseFileExists");
-				}
-				else
-				{
-					session["RAVEN_LICENSE_ERROR"] = "File does not exists under the specified path";
-					session["RAVEN_LICENSE_VALID"] = "False";
-				}
-			});
-			task.SetApartmentState(ApartmentState.STA);
-			task.Start();
-			task.Join();
+					var licenseExists = File.Exists(licensePath);
 
-			session.Log("End LicenseFileExists Custom Action");
+					if (licenseExists)
+					{
+						Log.Info(session, "Checking existing license file");
 
-			return ActionResult.Success;
+						using (var licenseStream = File.Open(licensePath, FileMode.Open))
+						{
+							var license = new StreamReader(licenseStream).ReadToEnd();
+							if (CheckLicense(session, license))
+								session["RAVEN_LICENSE_VALID"] = "True";
+							else
+								session["RAVEN_LICENSE_VALID"] = "False";
+						}
+					}
+					else
+					{
+						session["RAVEN_LICENSE_ERROR"] = "File does not exists under the specified path";
+						session["RAVEN_LICENSE_VALID"] = "False";
+					}
+				});
+				task.SetApartmentState(ApartmentState.STA);
+				task.Start();
+				task.Join();
+
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during OpenLicenseFileChooser. Exception: " + ex);
+				return ActionResult.Failure;
+			}
 		}
 
 		private static void GetFile(Session session)

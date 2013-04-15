@@ -7,12 +7,18 @@ using Microsoft.Deployment.WindowsInstaller;
 
 namespace Raven.Setup.CustomActions
 {
-	public class LoggingHelper
+	public class Log
 	{
-		public static void Log(Session session, string message)
+		public static void Info(Session session, string message)
 		{
 			session.Log(message);
-			session["INSTALLER_LOG"] = message;
+			session["RAVEN_INSTALLER_INFO"] = message;
+		}
+
+		public static void Error(Session session, string message)
+		{
+			session.Log(message);
+			session["RAVEN_INSTALLER_ERROR"] = message;
 		}
 	}
 }
