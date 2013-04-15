@@ -452,7 +452,10 @@ namespace Raven.Client.Linq
 				                                                                                result.Path)
 				                   : queryGenerator.Conventions.FindPropertyNameForIndex(typeof (T), indexName, CurrentPath,
 				                                                                         result.Path);
-			return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath);
+			return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath)
+			{
+                MaybeProperty = result.MaybeProperty
+			};
 		}
 
 		private static ParameterExpression GetParameterExpressionIncludingConvertions(Expression expression)
@@ -1156,11 +1159,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
 			var result = GetMemberDirect(expression.Body);
-			var fieldName = result.Path;
 
-		    if (requireOrderByToUseRange.Contains(result.Type))
+            var fieldType = result.Type;
+            var fieldName = result.Path;
+            if (result.MaybeProperty != null &&
+                this.queryGenerator.Conventions.FindIdentityProperty(result.MaybeProperty))
+            {
+                fieldName = Constants.DocumentIdFieldName;
+                fieldType = typeof (string);
+            }
+
+
+		    if (requireOrderByToUseRange.Contains(fieldType))
                 fieldName = fieldName + "_Range";
-			luceneQuery.AddOrder(fieldName, descending, result.Type);
+			luceneQuery.AddOrder(fieldName, descending, fieldType);
 		}
 
 		private bool insideSelect;
