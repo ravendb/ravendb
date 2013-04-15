@@ -90,10 +90,9 @@ namespace Raven.Database.Server.Responders.Admin
                                                                                      replicationDestination.Password,
                                                                                      replicationDestination.Domain ?? string.Empty);
                 }
-			    var request = requestFactory.Create(url + "/replication/info", "GET", ravenConnectionStringOptions);
+			    var request = requestFactory.Create(url + "/replication/info", "POST", ravenConnectionStringOptions);
 				try
 				{
-					request.Write(new RavenJObject());
 					using (request.WebRequest.GetResponse())
 					{
 					}
