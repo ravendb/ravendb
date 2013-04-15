@@ -47,6 +47,7 @@
       <ComponentRef Id='Raven.Web.Config.IIS_7_And_8' />
       <ComponentRef Id='Raven.Web.Config.IIS_6' />
       <ComponentRef Id="EnableASPNet4Extension" />
+      <ComponentRef Id="DisableWebDAVExtensionIIS6" />
       <ComponentGroupRef Id="IISConfigurationBasedOnExistingWebSite" />
       <ComponentGroupRef Id="IISConfigurationBasedOnNewRavenWebSite" />
       <ComponentRef Id="PersistWebSiteValues" />

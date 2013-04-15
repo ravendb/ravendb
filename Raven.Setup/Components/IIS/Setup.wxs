@@ -43,6 +43,13 @@
                                  File="[ASPNETISAPIDLL]" Description="ASP.NET v4.0.30319"
                                  UIDeletable="no"/>
       </Component>
+      <Component Id="DisableWebDAVExtensionIIS6" Permanent="no" Guid="{9088113E-517B-45DD-AF70-19E391108143}">
+        <Condition><![CDATA[IISMAJORVERSION < "#7"]]></Condition>
+        <CreateFolder />
+        <iis:WebServiceExtension Id="WebDavModule" Group="WebDAV" Allow="no"
+                                 File="[WindowsFolder]system32\inetsrv\httpext.dll" Description="WebDAV"
+                                 UIDeletable="no"/>
+      </Component>
     </DirectoryRef>
     
 	</Fragment>
