@@ -105,6 +105,9 @@
     <Content Include="Components\IIS\IISSettings.wxi" />
     <Content Include="Components\Service\ServiceSettings.wxi" />
     <Content Include="Conditions.wxi" />
+    <Content Include="CustomActions\General.wxi" />
+    <Content Include="CustomActions\IIS.wxi" />
+    <Content Include="CustomActions\Service.wxi" />
     <Content Include="Settings.wxi" />
     <Content Include="Images\banner.bmp" />
     <Content Include="Images\dialog.bmp" />
@@ -116,6 +119,7 @@
     <Folder Include="Components\Service" />
     <Folder Include="Images\" />
     <Folder Include="License" />
+    <Folder Include="CustomActions" />
     <Folder Include="UI" />
     <Folder Include="UI\IIS" />
     <Folder Include="UI\Service" />
