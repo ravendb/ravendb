@@ -35,6 +35,20 @@
     <SetProperty Id="ASPNETREGISTERED" Sequence="execute" Before="ConfigureIIs" Value="1" Action="SetASPNETREGISTERED64">
       <![CDATA[VersionNT64 AND ASPNETREGISTERED64]]>
     </SetProperty>
+
+    <Property Id="IIS_WIN_AUTH">
+      <RegistrySearch Id="CheckIISWinAuth" Root="HKLM" Key="SOFTWARE\Microsoft\InetStp\Components" Name="WindowsAuthentication" Type="raw" />
+    </Property>
+    <Property Id="IIS_WIN_AUTH_64">
+      <RegistrySearch Id="CheckIISWinAuth64" Root="HKLM" Key="SOFTWARE\Microsoft\InetStp\Components" Name="WindowsAuthentication" Type="raw"  Win64="yes"/>
+    </Property>
+
+    <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS32">
+      <![CDATA[NOT VersionNT64 AND (IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH <> "#1")]]>
+    </SetProperty>
+    <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS64">
+      <![CDATA[VersionNT64 AND (IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH_64 <> "#1")]]>
+    </SetProperty>
     
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="EnableASPNet4Extension" Permanent="yes" Guid="{6449C546-034B-444F-B544-2DC2F2CE16C5}">
