@@ -37,7 +37,7 @@ namespace Raven.Storage.Managed.Backup
 			this.databaseDocument = databaseDocument;
 		}
 
-		public void Execute(object ignored)
+		public void Execute()
 		{
 			try
 			{

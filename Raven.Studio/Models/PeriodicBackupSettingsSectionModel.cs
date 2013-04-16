@@ -1,4 +1,5 @@
-﻿using System.Windows.Input;
+﻿using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -73,12 +74,24 @@ namespace Raven.Studio.Models
 			});
 		}
 
-		public ICommand EnablePeriodicBackup{get{return new ActionCommand(() =>
+		public ICommand EnablePeriodicBackup
 		{
-			PeriodicBackupSetup = new PeriodicBackupSetup();
-			HasDocument = true;
-			OnPropertyChanged(() => HasDocument);
-			OnPropertyChanged(() => PeriodicBackupSetup);
-		});}}
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					PeriodicBackupSetup = new PeriodicBackupSetup();
+					HasDocument = true;
+					OnPropertyChanged(() => HasDocument);
+					OnPropertyChanged(() => PeriodicBackupSetup);
+				});
+			}
+		}
+
+		public ComboBoxItem SelectedAwsRegionEndpoint
+		{
+			get { return new ComboBoxItem(); }
+			set { PeriodicBackupSetup.AwsRegionEndpoint = value.Tag.ToString(); }
+		}
 	}
 }

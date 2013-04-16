@@ -589,6 +589,7 @@
     <Compile Include="Issues\RavenDB_868.cs" />
     <Compile Include="Issues\RavenDB_895.cs" />
     <Compile Include="Issues\RavenDB_967.cs" />
+    <Compile Include="Issues\RavenDB_993.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
     <Compile Include="LicenseProviderPluginTest.cs" />
@@ -726,6 +727,7 @@
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\SnapshotBug.cs" />
+    <Compile Include="MailingList\SortTest.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
@@ -758,6 +760,7 @@
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\GeoJsonConverterTests.cs" />
     <Compile Include="Spatial\GeoJsonTests.cs" />

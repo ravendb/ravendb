@@ -51,6 +51,16 @@ namespace Raven.Abstractions.Indexing
 			return GeohashPrefixTreeIndex(0, circleRadiusUnits);
 		}
 
+		public SpatialOptions BoundingBoxIndex(SpatialUnits circleRadiusUnits = SpatialUnits.Kilometers)
+		{
+			return new SpatialOptions
+			{
+				Type = SpatialFieldType.Geography,
+				Strategy = SpatialSearchStrategy.BoundingBox,
+				Units = circleRadiusUnits
+			};
+		}
+
 		public SpatialOptions GeohashPrefixTreeIndex(int maxTreeLevel, SpatialUnits circleRadiusUnits = SpatialUnits.Kilometers)
 		{
 			if (maxTreeLevel == 0)
@@ -82,6 +92,15 @@ namespace Raven.Abstractions.Indexing
 
 	public class CartesianSpatialOptionsFactory
 	{
+		public SpatialOptions BoundingBoxIndex()
+		{
+			return new SpatialOptions
+			{
+				Type = SpatialFieldType.Cartesian,
+				Strategy = SpatialSearchStrategy.BoundingBox
+			};
+		}
+
 		public SpatialOptions QuadPrefixTreeIndex(int maxTreeLevel, SpatialBounds bounds)
 		{
 			if (maxTreeLevel == 0)

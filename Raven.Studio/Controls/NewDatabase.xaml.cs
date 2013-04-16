@@ -81,35 +81,11 @@ namespace Raven.Studio.Controls
 			AdvancedSettings.Visibility = Visibility.Collapsed;
 		}
 
-		private void Toggle(object sender, RoutedEventArgs e)
-		{
-			var textblock = sender as TextBlock;
-			if (textblock == null)
-				return;
-
-			var checkbox = FindName("Show" + textblock.Text.Split(null)[0]) as CheckBox;
-			if (checkbox == null)
-				return;
-			checkbox.IsChecked = !checkbox.IsChecked;
-		}
-
 		private void DbName_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
 		{
 			if (e.Key == Key.Enter && !string.IsNullOrWhiteSpace(DbName.Text))
 				DialogResult = true;
 				
-		}
-
-		private void ToggleBundles(object sender, RoutedEventArgs e)
-		{
-			var textblock = sender as TextBlock;
-			if (textblock == null)
-				return;
-
-			var checkbox = FindName(textblock.Text.Split(null)[0]) as CheckBox;
-			if (checkbox == null || checkbox.IsEnabled == false)
-				return;
-			checkbox.IsChecked = !checkbox.IsChecked;
 		}
 
 		private void Checked(object sender, RoutedEventArgs e)
