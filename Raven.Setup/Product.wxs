@@ -97,6 +97,9 @@
 
     <Property Id="QtExecCmdLine" Value='"[ASPNETREGIIS]" -norestart -s "W3SVC/[WEBSITE_ID]/ROOT/[WEBSITE_VD]"' />
     <CustomAction Id="UpdateAspNetMapping" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="immediate" Return="check" />
+
+    <CustomAction Id="DisallowApplicationPoolOverlappingRotation" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="DisallowApplicationPoolOverlappingRotation"
+              Execute="immediate" Return="check" />
       
     <InstallExecuteSequence>
       <Custom Action="InstallRavenService_Cmd" After="CostFinalize">
@@ -125,6 +128,10 @@
       </Custom>
       <Custom Action="UpdateAspNetMapping" After="FindIdOfCreatedWebSite">
         <![CDATA[NOT Installed AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
+      </Custom>
+      
+      <Custom Action="DisallowApplicationPoolOverlappingRotation" After="InstallFinalize">
+        <![CDATA[NOT Installed AND (&IIS=3) AND NOT(!IIS=3)]]>
       </Custom>
 
       <Custom Action='SetupPerformanceCountersForIISUser' After='InstallFinalize'>

@@ -105,6 +105,18 @@ namespace Raven.Setup.CustomActions
 			return IsIIS7Upwards ? IIS7UpwardsManager.GetWebSitesViaWebAdministration() : IIS6Manager.GetWebSitesViaMetabase();
 		}
 
+		private static void DisallowOverlappingRotation(string applicationPoolName)
+		{
+			if (IsIIS7Upwards)
+			{
+				IIS7UpwardsManager.DisallowOverlappingRotation(applicationPoolName);
+			}
+			else
+			{
+				IIS6Manager.DisallowOverlappingRotation(applicationPoolName);
+			}
+		}
+
 		private static void StoreSiteDataInComboBoxTable(Session session, WebSite webSite, int order)
         {
 			var comboBoxTable = session.Database.OpenView(GetComboContent);
@@ -421,9 +433,6 @@ namespace Raven.Setup.CustomActions
 		{
 			try
 			{
-				if (string.IsNullOrEmpty(session["WEBSITE_ID"]))
-					throw new ArgumentException("WEBSITE_ID cannot be null", "WEBSITE_ID");
-
 				if (session["WEBSITE_ID"] != AsteriskSiteId) // id was set by selecting existing web site
 					return ActionResult.Success;
 
@@ -438,6 +447,23 @@ namespace Raven.Setup.CustomActions
 				Log.Error(session, "Error occurred during FindIdOfCreatedWebSite. Exception: " + ex);
 				return ActionResult.Failure;
 			}
+		}
+
+		[CustomAction]
+		public static ActionResult DisallowApplicationPoolOverlappingRotation(Session session)
+		{
+			try
+			{
+				DisallowOverlappingRotation(session["WEB_APP_POOL_NAME"]);
+
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during DisallowOverlappingRotation. Exception: " + ex);
+				return ActionResult.Failure;
+			}
+			
 		}
 	}
 }

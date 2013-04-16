@@ -60,6 +60,7 @@
       <ProgressText Action="InstallRavenService">Installing [SERVICE_NAME] service</ProgressText>
       <ProgressText Action="RegisterAspNet">ASP.NET is being registed on IIS (aspnet_regiis.exe -ir)</ProgressText>
       <ProgressText Action="UpdateAspNetMapping">ASP.NET mapping is being applied to the virtual directory (aspnet_regiis.exe -s)</ProgressText>
+      <ProgressText Action="DisallowApplicationPoolOverlappingRotation">Disallowing application pool overlapping rotation</ProgressText>
 
       <DialogRef Id="WebSiteSettingsDlg" />
 

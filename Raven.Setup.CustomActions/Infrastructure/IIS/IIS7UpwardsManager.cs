@@ -28,5 +28,21 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 				}
 			}
 		}
+
+		public static void DisallowOverlappingRotation(string applicationPoolName)
+		{
+			using (var iisManager = new ServerManager())
+			{
+				foreach (var appPool in iisManager.ApplicationPools)
+				{
+					if (appPool.Name != applicationPoolName) 
+						continue;
+					appPool.Recycling.DisallowOverlappingRotation = true;
+					iisManager.CommitChanges();
+
+					break;
+				}
+			}
+		}
 	}
 }

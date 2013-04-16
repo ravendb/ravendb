@@ -14,6 +14,7 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 		private const string IISEntry = "IIS://localhost/W3SVC";
 		private const string IISWebServer = "iiswebserver";
 		private const string ServerComment = "ServerComment";
+		private const string ApplicationPoolsEntry = "IIS://localhost/W3SVC/AppPools";
 
 		public static IEnumerable<WebSite> GetWebSitesViaMetabase()
 		{
@@ -33,6 +34,15 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 						yield return webSiteModel;
 					}
 				}
+			}
+		}
+
+		public static void DisallowOverlappingRotation(string applicationPoolName)
+		{
+			using (var applicationPool = new DirectoryEntry(string.Format("{0}/{1}", ApplicationPoolsEntry, applicationPoolName)))
+			{
+				applicationPool.Properties["DisallowOverlappingRotation"].Value = true;
+				applicationPool.CommitChanges();
 			}
 		}
 	}
