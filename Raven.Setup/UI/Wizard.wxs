@@ -106,20 +106,13 @@
       
       <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedAppPool" Order="1">1</Publish>
       <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISAppPoolUser" Order="2">1</Publish>
-      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3">
-        <!--<![CDATA[WEB_APP_POOL_NAME <> "" or WEB_APP_POOL_IDENTITY_DOMAIN <> 
-                          "" or WEB_APP_POOL_IDENTITY_NAME <> "" 
-                          or WEB_APP_POOL_IDENTITY_PWD <> ""]]>-->
-        1
-      </Publish>
+      <Publish Dialog="AppPoolSettingsDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3">1</Publish>
       <Publish Dialog="AppPoolSettingsDlg" Control="Back" Event="NewDialog" Value="WebSiteSettingsDlg">1</Publish>
       <Publish Dialog="AppPoolSettingsDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 
 
       
-      <Publish Dialog="PerformanceCounterDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">
-      1
-      </Publish>
+      <Publish Dialog="PerformanceCounterDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
       <Publish Dialog="PerformanceCounterDlg" Control="Back" Event="NewDialog" Value="AppPoolSettingsDlg"><![CDATA[CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="PerformanceCounterDlg" Control="Back" Event="NewDialog" Value="WebSiteSettingsDlg"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="PerformanceCounterDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>

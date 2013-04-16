@@ -17,6 +17,8 @@
     <?include Conditions.wxi ?>
     <?include Binaries.wxi ?>
 
+    
+    
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="INSTALLFOLDER" Name="RavenDB">
         <Directory Id="Bin" Name="bin">
