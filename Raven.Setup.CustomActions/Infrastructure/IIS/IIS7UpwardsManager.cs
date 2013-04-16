@@ -5,13 +5,14 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Microsoft.Web.Administration;
 
 namespace Raven.Setup.CustomActions.Infrastructure.IIS
 {
-	public static class IIS7UpwardsManager
+	public class IIS7UpwardsManager : IISManager
 	{
-		public static IEnumerable<WebSite> GetWebSitesViaWebAdministration()
+		public IEnumerable<WebSite> GetWebSites()
 		{
 			using (var iisManager = new ServerManager())
 			{
@@ -29,7 +30,19 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 			}
 		}
 
-		public static void DisallowOverlappingRotation(string applicationPoolName)
+		public IList<string> GetAppPools()
+		{
+			var pools = new List<string>();
+
+			using (var iisManager = new ServerManager())
+			{
+				pools.AddRange(iisManager.ApplicationPools.Where(p => p.ManagedPipelineMode == ManagedPipelineMode.Integrated && p.ManagedRuntimeVersion == "v4.0").Select(p => p.Name));
+			}
+
+			return pools;
+		}
+
+		public void DisallowOverlappingRotation(string applicationPoolName)
 		{
 			using (var iisManager = new ServerManager())
 			{

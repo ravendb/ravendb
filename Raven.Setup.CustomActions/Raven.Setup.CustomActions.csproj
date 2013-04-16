@@ -56,6 +56,7 @@
     </Compile>
     <Compile Include="Infrastructure\IIS\IIS6Manager.cs" />
     <Compile Include="Infrastructure\IIS\IIS7UpwardsManager.cs" />
+    <Compile Include="Infrastructure\IIS\IISManager.cs" />
     <Compile Include="LoggingActions.cs" />
     <Compile Include="IISActions.cs" />
     <Compile Include="IISExtensions.cs" />

@@ -5,14 +5,12 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.DirectoryServices;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Deployment.WindowsInstaller;
-using Microsoft.Web.Administration;
 using Microsoft.Win32;
 using Raven.Database.Util;
 using Raven.Setup.CustomActions.Infrastructure.IIS;
@@ -33,6 +31,21 @@ namespace Raven.Setup.CustomActions
 		private const string SpecificAppPool = "select * from AvailableApplicationPools where PoolID=";
 		private const string AsteriskSiteId = "*";
 
+		private static readonly IISManager iisManager;
+
+		static IISActions()
+		{
+			if (IsIIS7Upwards)
+			{
+				iisManager = new IIS7UpwardsManager();
+			}
+			else
+			{
+				iisManager = new IIS6Manager();
+			}
+		}
+
+
 		[CustomAction]
         public static ActionResult GetWebSites(Session session)
 		{
@@ -40,7 +53,7 @@ namespace Raven.Setup.CustomActions
 
             try
             {
-	            var webSites = GetWebSites();
+	            var webSites = iisManager.GetWebSites();
 
 	            var order = 1;
 	            foreach (var webSite in webSites)
@@ -100,23 +113,6 @@ namespace Raven.Setup.CustomActions
             }
         }
 
-		private static IEnumerable<WebSite> GetWebSites()
-		{
-			return IsIIS7Upwards ? IIS7UpwardsManager.GetWebSitesViaWebAdministration() : IIS6Manager.GetWebSitesViaMetabase();
-		}
-
-		private static void DisallowOverlappingRotation(string applicationPoolName)
-		{
-			if (IsIIS7Upwards)
-			{
-				IIS7UpwardsManager.DisallowOverlappingRotation(applicationPoolName);
-			}
-			else
-			{
-				IIS6Manager.DisallowOverlappingRotation(applicationPoolName);
-			}
-		}
-
 		private static void StoreSiteDataInComboBoxTable(Session session, WebSite webSite, int order)
         {
 			var comboBoxTable = session.Database.OpenView(GetComboContent);
@@ -154,16 +150,7 @@ namespace Raven.Setup.CustomActions
 				var comboBoxView = session.Database.OpenView(GetComboContent);
 				var availableApplicationPoolsView = session.Database.OpenView(AvailableAppPools);
 
-				IList<string> appPools;
-
-				if (IsIIS7Upwards)
-				{
-					appPools = GetIis7UpwardsAppPools();
-				}
-				else
-				{
-					appPools = GetIis6AppPools();
-				}
+				var appPools = iisManager.GetAppPools();
 
 				for (var i = 0; i < appPools.Count; i++)
 				{
@@ -273,31 +260,6 @@ namespace Raven.Setup.CustomActions
 				Log.Error(session, "Exception was thrown during UpdateIISPropsWithSelectedWebSite: " + ex);
 				return ActionResult.Failure;
 			}
-		}
-
-		public static IList<string> GetIis7UpwardsAppPools()
-		{
-			var pools = new List<string>();
-
-			using (var iisManager = new ServerManager())
-			{
-				pools.AddRange(iisManager.ApplicationPools.Where(p => p.ManagedPipelineMode == ManagedPipelineMode.Integrated && p.ManagedRuntimeVersion == "v4.0").Select(p => p.Name));
-			}
-
-			return pools;
-		}
-
-		private static IList<string> GetIis6AppPools()
-		{
-			var pools = new List<string>();
-			using (var poolRoot = new DirectoryEntry("IIS://localhost/W3SVC/AppPools"))
-			{
-				poolRoot.RefreshCache();
-
-				pools.AddRange(poolRoot.Children.Cast<DirectoryEntry>().Select(p => p.Name));
-			}
-
-			return pools;
 		}
 
 		[CustomAction]
@@ -436,7 +398,7 @@ namespace Raven.Setup.CustomActions
 				if (session["WEBSITE_ID"] != AsteriskSiteId) // id was set by selecting existing web site
 					return ActionResult.Success;
 
-				var site = GetWebSites().First(x => x.Name == session["WEBSITE_DESCRIPTION"]);
+				var site = iisManager.GetWebSites().First(x => x.Name == session["WEBSITE_DESCRIPTION"]);
 
 				session["WEBSITE_ID"] = site.Id;
 
@@ -454,7 +416,7 @@ namespace Raven.Setup.CustomActions
 		{
 			try
 			{
-				DisallowOverlappingRotation(session["WEB_APP_POOL_NAME"]);
+				iisManager.DisallowOverlappingRotation(session["WEB_APP_POOL_NAME"]);
 
 				return ActionResult.Success;
 			}

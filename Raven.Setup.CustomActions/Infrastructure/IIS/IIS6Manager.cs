@@ -6,17 +6,18 @@
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Globalization;
+using System.Linq;
 
 namespace Raven.Setup.CustomActions.Infrastructure.IIS
 {
-	public static class IIS6Manager
+	public class IIS6Manager : IISManager
 	{
 		private const string IISEntry = "IIS://localhost/W3SVC";
 		private const string IISWebServer = "iiswebserver";
 		private const string ServerComment = "ServerComment";
 		private const string ApplicationPoolsEntry = "IIS://localhost/W3SVC/AppPools";
 
-		public static IEnumerable<WebSite> GetWebSitesViaMetabase()
+		public IEnumerable<WebSite> GetWebSites()
 		{
 			using (var iisRoot = new DirectoryEntry(IISEntry))
 			{
@@ -37,7 +38,20 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 			}
 		}
 
-		public static void DisallowOverlappingRotation(string applicationPoolName)
+		public IList<string> GetAppPools()
+		{
+			var pools = new List<string>();
+			using (var poolRoot = new DirectoryEntry(ApplicationPoolsEntry))
+			{
+				poolRoot.RefreshCache();
+
+				pools.AddRange(poolRoot.Children.Cast<DirectoryEntry>().Select(p => p.Name));
+			}
+
+			return pools;
+		}
+
+		public void DisallowOverlappingRotation(string applicationPoolName)
 		{
 			using (var applicationPool = new DirectoryEntry(string.Format("{0}/{1}", ApplicationPoolsEntry, applicationPoolName)))
 			{
