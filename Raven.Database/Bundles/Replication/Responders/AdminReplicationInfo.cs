@@ -92,10 +92,8 @@ namespace Raven.Database.Server.Responders.Admin
                 }
 			    var request = requestFactory.Create(url + "/replication/info", "POST", ravenConnectionStringOptions);
 				try
-				{
-					using (request.WebRequest.GetResponse())
-					{
-					}
+				{	
+					request.ExecuteRequest();
 				}
 				catch (WebException e)
 				{
@@ -112,21 +110,18 @@ namespace Raven.Database.Server.Responders.Admin
 			if (response == null)
 			{
 				replicationInfoStatus.Status = e.Message;
-				replicationInfoStatus.Code = (int)e.Status;
+				replicationInfoStatus.Code = -1 * (int)e.Status;
 				return;
 			}
 
 			switch (response.StatusCode)
 			{
 				case HttpStatusCode.BadRequest:
-					using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
-					{
-					    var error = streamReader.ReadToEnd();
-					    replicationInfoStatus.Status = error.Contains("Could not figure out what to do")
+					string error = GetErrorStringFromException(e, response);
+					replicationInfoStatus.Status = error.Contains("Could not figure out what to do")
 					                                       ? "Replication Bundle not activated."
 					                                       : error;
 					    replicationInfoStatus.Code = (int) response.StatusCode;
-					}
 			        break;
                 case HttpStatusCode.PreconditionFailed:
 			        replicationInfoStatus.Status = "Could not authenticate using OAuth's API Key";
@@ -144,7 +139,26 @@ namespace Raven.Database.Server.Responders.Admin
 			}
 		}
 
-		private class ReplicationInfoStatus
+	    private static string GetErrorStringFromException(WebException webException, HttpWebResponse response)
+	    {
+		    var s = webException.Data["original-value"] as string;
+		    if (s != null)
+			    return s;
+		    using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
+		    {
+			    return streamReader.ReadToEnd();
+		    }
+	    }
+
+	    private static void GetValue(HttpWebResponse response)
+	    {
+		    using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
+		    {
+			    var error = streamReader.ReadToEnd();
+		    }
+	    }
+
+	    private class ReplicationInfoStatus
 		{
 			public string Url { get; set; }
 

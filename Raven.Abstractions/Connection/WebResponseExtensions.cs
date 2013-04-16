@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -42,6 +43,7 @@ namespace Raven.Abstractions.Connection
 		public static Stream GetResponseStreamWithHttpDecompression(this WebResponse response)
 		{
 			var stream = response.GetResponseStream();
+			Debug.Assert(stream != null, "stream != null");
 			var encoding = response.Headers["Content-Encoding"];
 			if (encoding != null && encoding.Contains("gzip"))
 				stream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
