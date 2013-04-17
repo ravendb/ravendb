@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var embeddableDocumentStore = NewDocumentStore())
 			{
-				Assert.Throws<InvalidOperationException>(() => new Posts_ByMonthPublished_Count_ShouldFail().Execute(embeddableDocumentStore));
+				Assert.Throws<IndexCompilationException>(() => new Posts_ByMonthPublished_Count_ShouldFail().Execute(embeddableDocumentStore));
 			}
 		}
 

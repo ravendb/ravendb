@@ -131,7 +131,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void IndexDefinitionBuilderShouldThrow()
 		{
-			var exception = Assert.Throws<IndexCompilationException>(
+			var exception = Assert.Throws<InvalidOperationException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
