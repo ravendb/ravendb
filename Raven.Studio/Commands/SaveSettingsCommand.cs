@@ -83,7 +83,7 @@ namespace Raven.Studio.Commands
 							document.Destinations.Add(destination);
 						}
 
-						CheckDestinations(document.Destinations);
+						CheckDestinations(document);
 						
 						session.Store(document);
 						session.SaveChangesAsync().Catch();
@@ -242,23 +242,14 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-		private async void CheckDestinations(List<ReplicationDestination> destinations)
+		private async void CheckDestinations(ReplicationDocument replicationDocument)
 		{
 			var badReplication = new List<string>();
-
-			foreach (var replicationDestination in destinations)
-			{
-				var destination = replicationDestination;
-				var response = await ApplicationModel.Current.Server.Value.SelectedDatabase.Value
-				                                     .AsyncDatabaseCommands
-				                                     .CreateRequest(string.Format(" /admin/replication/info").NoCache(), "GET")
-				                                     .ReadResponseJsonAsync();
-
-				if (response.SelectToken("Error") != null)
-				{
-					badReplication.Add(destination.Url + "databases/" + destination.Database + response.SelectToken("Error"));
-				}
-			}
+			var request = ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+			                                    .AsyncDatabaseCommands
+			                                    .CreateRequest(string.Format("/admin/replicationInfo").NoCache(), "POST");
+			await request.ExecuteWriteAsync(RavenJObject.FromObject(replicationDocument).ToString());
+			
 
 			var mesage = "Some of the replications could not be reached:" + Environment.NewLine +
 			             string.Join(Environment.NewLine, badReplication);
