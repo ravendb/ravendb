@@ -23,6 +23,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -436,6 +437,8 @@ namespace Raven.Client.Connection
 				return result;
 			}
 
+
+
 			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
 			{
 				var readToEnd = sr.ReadToEnd();
@@ -463,7 +466,14 @@ namespace Raven.Client.Connection
 				{
 					throw new InvalidOperationException(readToEnd, e);
 				}
-
+                if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
+                {
+                    throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
+                    {
+                        IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
+                        ProblematicText = ravenJObject.Value<string>("ProblematicText")
+                    };
+                }
 				if (ravenJObject.ContainsKey("Error"))
 				{
 					var sb = new StringBuilder();

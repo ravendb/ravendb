@@ -146,7 +146,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ServerShouldThrow()
 		{
-			var exception = Assert.Throws<InvalidOperationException>(
+			var exception = Assert.Throws<IndexCompilationException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
@@ -158,7 +158,7 @@ namespace Raven.Tests.Issues
 
 			Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.Message);
 
-			exception = Assert.Throws<InvalidOperationException>(
+            exception = Assert.Throws<IndexCompilationException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
