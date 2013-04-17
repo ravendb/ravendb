@@ -380,41 +380,39 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This is here as a marker only");
 		}
 
-		internal Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
-												   DocumentConvention documentConvention, Func<AsyncServerClient, string, Task> action)
+		internal async Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
+												   DocumentConvention documentConvention, 
+                                                    Func<AsyncServerClient, string, Task> action)
 		{
-			var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
-			if (asyncServerClient == null)
-				return new CompletedTask();
-			return asyncServerClient.GetAsync("Raven/Replication/Destinations").ContinueWith(doc =>
-			{
-				if (doc == null)
-					return new CompletedTask();
-				var replicationDocument =
-					documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.Result.DataAsJson));
-				if (replicationDocument == null)
-					return new CompletedTask();
-				var tasks = new List<Task>();
-				foreach (var replicationDestination in replicationDocument.Destinations)
-				{
-					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
-						continue;
-					tasks.Add(action(asyncServerClient, GetReplicationUrl(replicationDestination)));
-				}
-				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
-				{
-					foreach (var indexTask in indexingTask)
-					{
-						if (indexTask.IsFaulted)
-						{
-							Logger.WarnException("Could not put index in replication server", indexTask.Exception);
-						}
-					}
-				});
-			}).Unwrap();
+		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
+		    if (asyncServerClient == null)
+		        return;
+		    var doc = await asyncServerClient.GetAsync("Raven/Replication/Destinations");
+		    if (doc == null)
+		        return;
+		    var replicationDocument =
+		        documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
+            if (replicationDocument == null || replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
+		        return;
+		    var tasks = (
+                         from replicationDestination in replicationDocument.Destinations
+		                 where !replicationDestination.Disabled && !replicationDestination.IgnoredClient
+		                 select action(asyncServerClient, GetReplicationUrl(replicationDestination))
+                         )
+                         .ToArray();
+		    await Task.Factory.ContinueWhenAll(tasks, indexingTask =>
+		    {
+		        foreach (var indexTask in indexingTask)
+		        {
+		            if (indexTask.IsFaulted)
+		            {
+		                Logger.WarnException("Could not put index in replication server", indexTask.Exception);
+		            }
+		        }
+		    });
 		}
 
-		private string GetReplicationUrl(ReplicationDestination replicationDestination)
+	    private string GetReplicationUrl(ReplicationDestination replicationDestination)
 		{
 			var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
 			return string.IsNullOrWhiteSpace(replicationDestination.Database)
