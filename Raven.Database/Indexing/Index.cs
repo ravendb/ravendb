@@ -399,7 +399,14 @@ namespace Raven.Database.Indexing
 					LastIndexTime = SystemTime.UtcNow;
 				}
 
-				HandleCommitPoints(itemsInfo);
+				try
+				{
+					HandleCommitPoints(itemsInfo);
+				}
+				catch (Exception e)
+				{
+					logIndexing.WarnException("Could not handle commit point properly, ignoring", e);
+				}
 
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
