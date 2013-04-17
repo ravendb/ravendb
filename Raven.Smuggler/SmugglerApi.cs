@@ -64,23 +64,7 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
-		public override async Task ImportData(SmugglerOptions options, bool incremental = false)
-		{
-			using (store = CreateStore())
-			{
-				using (operation = store.BulkInsert(options: new BulkInsertOptions
-				{
-					CheckForUpdates = true
-				}))
-				{
-					operation.Report += text => ShowProgress(text);
-
-					await base.ImportData(options, incremental);
-				}
-			}
-		}
-
-		public override async Task ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
+		public override async Task ImportData(Stream stream, SmugglerOptions options)
 		{
 			SmugglerJintHelper.Initialize(options ?? SmugglerOptions);
 
@@ -88,15 +72,28 @@ namespace Raven.Smuggler
 
 			using (store = CreateStore())
 			{
-				using (operation = store.BulkInsert(options: new BulkInsertOptions
+				Task disposeTask = null;
+
+				try
 				{
-					BatchSize = batchSize,
-					CheckForUpdates = true
-				}))
-				{
+					operation = store.BulkInsert(options: new BulkInsertOptions
+					{
+						BatchSize = batchSize,
+						CheckForUpdates = true
+					});
+
 					operation.Report += text => ShowProgress(text);
 
-					await base.ImportData(stream, options, importIndexes);
+					await base.ImportData(stream, options);
+				}
+				finally
+				{
+					disposeTask = operation.DisposeAsync();
+				}
+
+				if (disposeTask != null)
+				{
+					await disposeTask;
 				}
 			}
 		}

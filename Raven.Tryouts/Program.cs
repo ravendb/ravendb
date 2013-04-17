@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using System.Linq;
 using Raven.Json.Linq;
+using Raven.Tests.Bugs;
 using Raven.Tests.Bundles.PeriodicBackups;
 using Raven.Tests.Bundles.Replication.Bugs;
 using Raven.Tests.Bundles.Versioning;
@@ -16,28 +17,16 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var masterdocs = new List<string>();
-
-			var store = new DocumentStore
+			for (int i = 0; i < 100; i++)
 			{
-				Url = "http://localhost:8080"
-			}.Initialize();
+				Console.Clear();
+				Console.WriteLine(i);
 
-			int i = 0;
-			using(var writer = new StreamWriter("master.txt"))
-			using (var streamDocs = store.DatabaseCommands.ForDatabase("TheMaster").StreamDocs())
-			{
-				while (streamDocs.MoveNext())
+				using (var x = new HiLoServerKeysNotExported())
 				{
-					var id = streamDocs.Current.Value<RavenJObject>("@metadata").Value<string>("@id");
-					if(i++ % 1000 == 0)
-						Console.WriteLine(id);
-					writer.WriteLine(id);
+					x.Export_And_Import_Incremental_Indexes();
 				}
-				writer.Flush();
 			}
-
-			
 		}
 	}
 }

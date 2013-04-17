@@ -1292,7 +1292,7 @@ namespace Raven.Database
             IndexingFunc transformFunc = null;
 
             // Check an explicitly declared one first
-            if (query.ResultsTransformer != null)
+            if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
             {
                 var transformGenerator = IndexDefinitionStorage.GetTransformer(query.ResultsTransformer);
 

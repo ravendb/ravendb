@@ -11,7 +11,8 @@
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
-             xmlns:controls="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
+             xmlns:controls="clr-namespace:Raven.Studio.Controls"
+             xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared" mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Models:IndexDefinitionModel}">
 	<UserControl.Resources>
 		<DataTemplate x:Key="IndexFieldTemplate">
@@ -625,9 +626,16 @@
 					<TextBox Grid.Column="1"
                              Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Margin="0,10,24,10"
-                             VerticalAlignment="Center" />
+                             VerticalAlignment="Center"
+                             Behaviors:SizeBindings.IsEnabled="True"
+                             x:Name="NameTextBox"/>
+                    <Border Grid.Column="1" BorderBrush="#DA000C" BorderThickness="1" 
+                                            Visibility="{Binding PropertyHasError[Name], Converter={StaticResource BooleanToVisibility}}"
+                                            Margin="0,10,24,10"
+                                            VerticalAlignment="Center"
+                                            Height="{Binding ElementName=NameTextBox, Path=(Behaviors:SizeBindings.ActualHeight)}"/>
 
-					<StackPanel Grid.Row="1"
+                    <StackPanel Grid.Row="1"
                                 Grid.Column="1"
                                 Orientation="Horizontal">
 					</StackPanel>
@@ -690,8 +698,11 @@
 										<ColumnDefinition Width="24" />
 									</Grid.ColumnDefinitions>
 
-									<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" Height="{Binding TextHeight}" MinHeight="100" />
 
+									<Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" Height="{Binding TextHeight}" MinHeight="100" />
+                                    <Border BorderBrush="#DA000C" BorderThickness="1" 
+                                            Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibility}}"/>
+                                    
 									<sdk:GridSplitter Grid.Row="1"
                                                       Grid.ColumnSpan="2"
                                                       Background="Transparent"
@@ -775,7 +786,10 @@
 							<ColumnDefinition Width="Auto" />
 						</Grid.ColumnDefinitions>
 						<Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}" Height="{Binding ReduceHeight}" />
-						<Button Grid.Column="1"
+                        <Border BorderBrush="#DA000C" BorderThickness="1" 
+                                            Visibility="{Binding PropertyHasError[Reduce], Converter={StaticResource BooleanToVisibility}}"
+                                            Height="{Binding ReduceHeight}"/>
+                        <Button Grid.Column="1"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Padding="4"
                                 Margin="2,0"
@@ -853,7 +867,10 @@
 							<ColumnDefinition Width="Auto" />
 						</Grid.ColumnDefinitions>
 						<Editors:LinqEditor Text="{Binding TransformResults, Mode=TwoWay}" Height="{Binding TransformHeight}"/>
-						<Button Grid.Column="1"
+                        <Border BorderBrush="#DA000C" BorderThickness="1" 
+                                            Visibility="{Binding PropertyHasError[TransformResults], Converter={StaticResource BooleanToVisibility}}"
+                                            Height="{Binding TransformHeight}"/>
+                        <Button Grid.Column="1"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Padding="4"
                                 Margin="2,0"
@@ -927,10 +944,27 @@
 						<HyperlinkButton Content="{Binding ErrorsCount, StringFormat='\{0\} errors encountered when processing index'}"
                                          Command="{StaticResource NavigateToCommand}"
                                          CommandParameter="{Binding Name, StringFormat=/indexes-errors/\{0\}}" 
-                                         Foreground="White" HorizontalAlignment="Center"/>
+                                         Foreground="White" VerticalAlignment="Center"/>
 					</StackPanel>
 				</Border>
-			</Grid>
+                <Border Visibility="{Binding DefinitionErrorMessage, Converter={StaticResource HiddenWhenStringEmptyOrNull}}">
+                    <Border.Background>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="#D67171"/>
+                            <GradientStop Color="#C25858" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <StackPanel Margin="5">
+                        <TextBlock Text="{Binding DefinitionErrorMessage}" 
+                                   Foreground="White"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   MaxHeight="200"
+                                   Behaviors:FadeTrimming.IsEnabled="True"
+                                   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 		</Grid>
 	</toolkit:HeaderedContentControl>
 </UserControl>

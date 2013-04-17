@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="StudioInformationResponder.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ReplicationInformationResponder.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -20,7 +20,7 @@ namespace Raven.Bundles.Replication.Responders
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof (AbstractRequestResponder))]
-	public class StudioInformationResponder : AbstractRequestResponder
+	public class ReplicationInformationResponder : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -29,7 +29,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET"}; }
+			get { return new[] {"GET","POST"}; }
 		}
 
 		public override void Respond(IHttpContext context)

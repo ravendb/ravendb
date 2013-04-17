@@ -175,7 +175,7 @@ namespace Raven.Tests.Issues
 			Assert.NotNull(result);
 			Assert.Equal(1, result.Length);
 			Assert.Equal("Unable to connect to the remote server", result[0].Value<string>("Status"));
-			Assert.Equal(2, result[0].Value<int>("Code"));
+			Assert.Equal(-2, result[0].Value<int>("Code"));
 		}
 
 		[Fact]
@@ -222,39 +222,8 @@ namespace Raven.Tests.Issues
 
 			Assert.NotNull(result);
 			Assert.Equal(1, result.Length);
-			Assert.Equal("Unknown destination.", result[0].Value<string>("Status"));
+			Assert.Equal("The remote name could not be resolved: 'unknown.url'", result[0].Value<string>("Status"));
 			Assert.Equal(-1, result[0].Value<int>("Code"));
-		}
-
-		[Fact]
-		public void SourceServerSystemDatabaseTest()
-		{
-			server1 = CreateServer(8111, "D1");
-
-			store1 = new DocumentStore
-			{
-				Url = "http://localhost:8111"
-			};
-
-			store1.Initialize();
-
-			var db1Url = store1.Url;
-
-			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
-																							db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, store1.Conventions));
-
-			request.Write(RavenJObject.FromObject(new ReplicationDocument()).ToString(Formatting.None));
-
-			try
-			{
-				request.ReadResponseJson();
-				Assert.False(true);
-			}
-			catch (InvalidOperationException e)
-			{
-				Assert.True(e.Message.Contains("`system` database"));
-			}
 		}
 
 		private RavenDbServer CreateServer(int port, string dataDirectory, bool removeDataDirectory = true)
