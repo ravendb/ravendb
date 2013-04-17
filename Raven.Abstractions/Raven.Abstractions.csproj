@@ -594,6 +594,7 @@
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
+    <Compile Include="Data\ReplicationInfoStatus.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
     <Compile Include="Data\AggregationOperation.cs" />
