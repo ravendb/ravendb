@@ -157,14 +157,5 @@ namespace Raven.Database.Server.Responders.Admin
 			    var error = streamReader.ReadToEnd();
 		    }
 	    }
-
-	    private class ReplicationInfoStatus
-		{
-			public string Url { get; set; }
-
-			public string Status { get; set; }
-
-			public int Code { get; set; }
-		}
 	}
 }

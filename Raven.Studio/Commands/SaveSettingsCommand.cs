@@ -248,13 +248,26 @@ namespace Raven.Studio.Commands
 			var request = ApplicationModel.Current.Server.Value.SelectedDatabase.Value
 			                                    .AsyncDatabaseCommands
 			                                    .CreateRequest(string.Format("/admin/replicationInfo").NoCache(), "POST");
-			await request.ExecuteWriteAsync(RavenJObject.FromObject(replicationDocument).ToString());
-			
+			await request.WriteAsync(RavenJObject.FromObject(replicationDocument).ToString());
+			var responseAsJson = await request.ReadResponseJsonAsync();
+			var replicationInfo = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
+												   .Deserialize<ReplicationInfoStatus[]>(new RavenJTokenReader(responseAsJson));
 
-			var mesage = "Some of the replications could not be reached:" + Environment.NewLine +
-			             string.Join(Environment.NewLine, badReplication);
+			foreach (var replicationInfoStatus in replicationInfo)
+			{
+				if (replicationInfoStatus.Status != "Valid")
+				{
+					badReplication.Add(replicationInfoStatus.Url + " - " + replicationInfoStatus.Code);
+				}
+			}
 
-			ApplicationModel.Current.Notifications.Add(new Notification(mesage, NotificationLevel.Warning));
+			if (badReplication.Count != 0)
+			{
+				var mesage = "Some of the replications could not be reached:" + Environment.NewLine +
+				             string.Join(Environment.NewLine, badReplication);
+
+				ApplicationModel.Current.Notifications.Add(new Notification(mesage, NotificationLevel.Warning));
+			}
 		}
 
 		private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
