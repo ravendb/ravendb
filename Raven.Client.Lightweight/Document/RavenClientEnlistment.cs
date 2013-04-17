@@ -58,12 +58,21 @@ namespace Raven.Client.Document
 					writer.Write(GetLocalOrDistributedTransactionId(transaction).ToString());
 					writer.Write(session.DatabaseName ?? "");
 					writer.Write(preparingEnlistment.RecoveryInformation());
-
 				});
 			}
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not prepare distributed transaction", e);
+			    try
+			    {
+                    session.Rollback(GetLocalOrDistributedTransactionId(transaction));
+                    DeleteFile();
+			    }
+			    catch (Exception e2)
+			    {
+			        logger.ErrorException("Could not roll back transaction after prepare failed", e2);
+			    }
+
 				preparingEnlistment.ForceRollback(e);
 				return;
 			}
