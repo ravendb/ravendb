@@ -33,10 +33,26 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-
 	public class MapReduceIndex : Index
 	{
 		readonly JsonSerializer jsonSerializer;
+
+		private class IgnoreFieldable : JsonConverter
+		{
+			public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+			{
+			}
+
+			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+			{
+				return null;
+			}
+
+			public override bool CanConvert(Type objectType)
+			{
+				return typeof (IFieldable).IsAssignableFrom(objectType);
+			}
+		}
 
 		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition,
 							  AbstractViewGenerator viewGenerator, WorkContext context)
@@ -47,6 +63,7 @@ namespace Raven.Database.Indexing
 			{
 				jsonSerializer.Converters.Add(jsonConverter);
 			}
+			jsonSerializer.Converters.Add(new IgnoreFieldable());
 		}
 
 		public override bool IsMapReduce
