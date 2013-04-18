@@ -1568,6 +1568,7 @@ namespace Raven.Client.Indexes
 					case "ElementAtOrDefault":
 					case "Min":
 					case "Max":
+					case "Union":
 						return true;
 				}
 			}
@@ -1596,7 +1597,6 @@ namespace Raven.Client.Indexes
 					case "OrderByDescending":
 					case "DefaultIfEmpty":
 					case "Reverse":
-					case "Union":
 						return true;
 				}
 				return false;

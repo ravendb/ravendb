@@ -259,7 +259,7 @@ namespace Raven.Database.Indexing
 			{
 				Score = score.Score,
 				Key = document.Get(Constants.DocumentIdFieldName),
-				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
+				Projection = (fieldsToFetch.IsProjection || fieldsToFetch.FetchAllStoredFields) ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
 		}
 
