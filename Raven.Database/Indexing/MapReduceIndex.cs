@@ -41,6 +41,7 @@ namespace Raven.Database.Indexing
 		{
 			public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 			{
+				writer.WriteValue("IgnoredLuceueField");
 			}
 
 			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
