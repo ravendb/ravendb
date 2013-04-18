@@ -54,10 +54,17 @@
     <Compile Include="..\Raven.Database\Util\PerformanceCountersUtils.cs">
       <Link>PerformanceCountersUtils.cs</Link>
     </Compile>
+    <Compile Include="Infrastructure\IIS\IIS6Manager.cs" />
+    <Compile Include="Infrastructure\IIS\IIS7UpwardsManager.cs" />
+    <Compile Include="Infrastructure\IIS\IISManager.cs" />
+    <Compile Include="LoggingActions.cs" />
     <Compile Include="IISActions.cs" />
     <Compile Include="IISExtensions.cs" />
     <Compile Include="LicenseActions.cs" />
+    <Compile Include="Log.cs" />
+    <Compile Include="Infrastructure\IIS\WebSite.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServiceActions.cs" />
     <Content Include="CustomAction.config" />
   </ItemGroup>
   <ItemGroup>

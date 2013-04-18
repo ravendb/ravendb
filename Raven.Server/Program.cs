@@ -46,18 +46,19 @@ namespace Raven.Server
 				}
 				catch (ReflectionTypeLoadException e)
 				{
-					var sb = new StringBuilder();
-					sb.AppendLine(e.ToString());
-					foreach (var loaderException in e.LoaderExceptions)
-					{
-						sb.AppendLine("- - - -").AppendLine();
-						sb.AppendLine(loaderException.ToString());
-					}
+					WaitForUserInputAndExitWithError(GetLoaderExceptions(e), args);
+				}
+				catch (InvalidOperationException e)
+				{
+					var refEx = e.InnerException.InnerException as ReflectionTypeLoadException;
 
-					WaitForUserInputAndExitWithError(sb.ToString(), args);
+					var errorMessage = refEx != null ? GetLoaderExceptions(refEx) : e.ToString();
+
+					WaitForUserInputAndExitWithError(errorMessage, args);
 				}
 				catch (Exception e)
 				{
+					
 					EmitWarningInRed();
 
 					WaitForUserInputAndExitWithError(e.ToString(), args);
@@ -68,6 +69,19 @@ namespace Raven.Server
 				// no try catch here, we want the exception to be logged by Windows
 				ServiceBase.Run(new RavenService());
 			}
+		}
+
+		private static string GetLoaderExceptions(ReflectionTypeLoadException exception)
+		{
+			var sb = new StringBuilder();
+			sb.AppendLine(exception.ToString());
+			foreach (var loaderException in exception.LoaderExceptions)
+			{
+				sb.AppendLine("- - - -").AppendLine();
+				sb.AppendLine(loaderException.ToString());
+			}
+
+			return sb.ToString();
 		}
 
 		private static bool RunningInInteractiveMode(string[] args)

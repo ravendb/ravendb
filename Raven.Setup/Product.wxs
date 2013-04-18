@@ -3,40 +3,28 @@
      xmlns:iis="http://schemas.microsoft.com/wix/IIsExtension"
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <Product Id="*" Name="RavenDB" Language="1033" Version="2.5.0.0" Manufacturer="Hibernating Rhinos LTD" UpgradeCode="79a41e9e-dc99-4df8-9820-1de16e63c655">
-    <Package InstallerVersion="200" Compressed="yes" />
+    <Package InstallerVersion="300" Compressed="yes" />
     
-    <!--InstallPrivileges="elevated" InstallScope="perMachine"-->
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' />
- 
+
+    <PropertyRef Id="IISMAJORVERSION"/>
+
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     
     <?include Settings.wxi ?>
     <?include Conditions.wxi ?>
     <?include Binaries.wxi ?>
 
+    
+    
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <!--<Directory Id="ProgramFilesFolder">
-        <Directory Id='HibernatingRhinos' Name='HibernatingRhinos'>-->
-          <Directory Id="INSTALLFOLDER" Name="RavenDB">
-            <Directory Id="Bin" Name="bin">
-            </Directory>
-          <!--</Directory>
-        </Directory>-->
-      </Directory>
-
-      <!--<Directory Id="ProgramMenuFolder" Name="Programs">
-        <Directory Id="ProgramMenuDir" Name="RavenDB">
-          <Component Id="ProgramMenuDir" Guid="ECB41950-1566-4EE1-93E9-5B8E23B77D80">
-            <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
-            <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]' Type='string' Value='' KeyPath='yes' />
-          </Component>
+      <Directory Id="INSTALLFOLDER" Name="RavenDB">
+        <Directory Id="Bin" Name="bin">
         </Directory>
-      </Directory>-->
-
-      <!--<Directory Id="DesktopFolder" Name="Desktop" />-->
-
+      </Directory>
+      <Directory Id="NEW_WEB_SITE_DIRECTORY" />
     </Directory>
 
     <Feature Id='Service' 
@@ -47,7 +35,7 @@
       <ComponentRef Id='Raven.Server' />
       <ComponentRef Id='Raven.Database.Service' />
       <ComponentRef Id='Raven.Abstractions.Service' />
-      <ComponentRef Id='Raven.Server.ProvidedServiceName' />
+      <ComponentRef Id='PersistServiceValues' />
     </Feature>
 
     <Feature Id='IIS'
@@ -58,10 +46,12 @@
       <ComponentRef Id='Raven.Web' />
       <ComponentRef Id='Raven.Database.Web' />
       <ComponentRef Id='Raven.Abstractions.Web' />
-      <ComponentRef Id='Raven.Web.Config'/>
-      
-      <!-- Include IIS Configuration. -->
-      <ComponentGroupRef Id="IssConfiguration" />
+      <ComponentRef Id='Raven.Web.Config.IIS_7_And_8' />
+      <ComponentRef Id='Raven.Web.Config.IIS_6' />
+      <ComponentRef Id="EnableASPNet4Extension" />
+      <ComponentRef Id="DisableWebDAVExtensionIIS6" />
+      <ComponentGroupRef Id="IISConfigurationBasedOnExistingWebSite" />
+      <ComponentGroupRef Id="IISConfigurationBasedOnNewRavenWebSite" />
       <ComponentRef Id="PersistWebSiteValues" />
     </Feature>
 
@@ -71,59 +61,16 @@
     <WixVariable Id="WixUIBannerBmp" Value="Images\banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="Images\dialog.bmp" />
 
-    <Property Id="SERVICE_NAME_FROM_REGISTRY">
-      <RegistrySearch Id="ServiceNaneFromRegistry"
-                      Root="HKLM"
-                      Key="SOFTWARE\[Manufacturer]\[ProductName]"
-                      Name="ServiceName"
-                      Type="raw" />
-    </Property>
-
-    <!-- Service custom actions -->
-    <CustomAction Id="InstallRavenService_Cmd" Property="InstallRavenService"
-              Value="&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME]&quot; /install" Execute="immediate"/>
-    <CustomAction Id="InstallRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
-
-    <CustomAction Id="UninstallRavenService_Cmd" Property="UninstallRavenService"
-              Value="&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME_FROM_REGISTRY]&quot; /uninstall" Execute="immediate"/>
-    <CustomAction Id="UninstallRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
+    <?include CustomActions/General.wxi ?>
+    <?include CustomActions/Service.wxi ?>
+    <?include CustomActions/IIS.wxi ?>
     
-    <!-- IIS custom actions -->
-    <CustomAction Id="GetIISWebSites" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="GetWebSites"
-                  Execute="immediate" Return="check" />
-
-    <CustomAction Id="GetAppPools" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="GetAppPools"
-                  Execute="immediate" Return="check" />
-
-    <CustomAction Id="SetIISInstallFolder" Directory="INSTALLFOLDER" Value="[WEBSITE_PATH]\[WEBSITE_VD]" />
-    
-    <CustomAction Id="SetupPerformanceCountersForIISUser" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetupPerformanceCountersForIISUser"
-                  Execute="immediate" Return="check" />
-
-    <InstallExecuteSequence>
-      <Custom Action="InstallRavenService_Cmd" After="CostFinalize">
-        <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
-      </Custom>
-      <Custom Action='InstallRavenService' Before='InstallFinalize'>
-        <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
-      </Custom>
-
-      <Custom Action="UninstallRavenService_Cmd" After="CostFinalize">
-        <![CDATA[(&Service=2) AND (!Service=3)]]>
-      </Custom>
-      <Custom Action='UninstallRavenService' Before="RemoveFiles">
-        <![CDATA[(&Service=2) AND (!Service=3)]]>
-      </Custom>
-
-      <Custom Action='SetupPerformanceCountersForIISUser' Before='InstallFinalize'>
-        <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
-      </Custom>
-    </InstallExecuteSequence>
-
     <InstallUISequence>
-      <Custom Action="GetIISWebSites" After="CostFinalize" Overridable="yes">NOT Installed</Custom>
-      <Custom Action="GetAppPools" After="CostFinalize" Overridable="yes">NOT Installed</Custom>
+      <Show Dialog="CustomFatalError" OnExit="error" Overridable="yes" />
     </InstallUISequence>
+    <AdminUISequence>
+      <Show Dialog="CustomFatalError" OnExit="error" Overridable="yes" />
+    </AdminUISequence>
     
   </Product>
 </Wix>
