@@ -123,6 +123,12 @@ namespace Raven.Database
             get { return indexingExecuter; }
         }
 
+	    private readonly DatabaseEtagSynchronizer etagSynchronizer;
+	    public DatabaseEtagSynchronizer EtagSynchronizer
+	    {
+			get { return etagSynchronizer; }
+	    }
+
         /// <summary>
         /// Requires to avoid having serialize writes to the same attachments
         /// </summary>
@@ -215,7 +221,8 @@ namespace Raven.Database
 
                     CompleteWorkContextSetup();
 
-                    indexingExecuter = new IndexingExecuter(workContext);
+					etagSynchronizer = new DatabaseEtagSynchronizer();
+                    indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer);
 
                     InitializeTriggersExceptIndexCodecs();
                     SecondStageInitialization();
@@ -562,7 +569,7 @@ namespace Raven.Database
                 indexingExecuter.Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
             reducingBackgroundTask = Task.Factory.StartNew(
-                new ReducingExecuter(workContext).Execute,
+                new ReducingExecuter(workContext, etagSynchronizer).Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
         }
 
@@ -578,7 +585,7 @@ namespace Raven.Database
                 indexingExecuter.Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
             reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-                new ReducingExecuter(workContext).Execute,
+                new ReducingExecuter(workContext, etagSynchronizer).Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
         }
 
@@ -736,7 +743,11 @@ namespace Raven.Database
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications);
+                        }, documents =>
+                        {
+							etagSynchronizer.UpdateSynchronizationState(documents);
+							indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(documents);
+                        });
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 

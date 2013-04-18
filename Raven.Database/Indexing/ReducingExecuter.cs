@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -17,8 +18,8 @@ namespace Raven.Database.Indexing
 
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
-		public ReducingExecuter(WorkContext context)
-			: base(context)
+		public ReducingExecuter(WorkContext context, DatabaseEtagSynchronizer etagSynchronizer)
+			: base(context, etagSynchronizer)
 		{
 			autoTuner = new ReduceBatchSizeAutoTuner(context);
 		}
@@ -307,8 +308,11 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
+		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
+			if (indexesStat.LastIndexedEtag.CompareTo(synchronizationEtag) > 0)
+				return true;
+
 			onlyFoundIdleWork.Value = false;
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
@@ -323,6 +327,11 @@ namespace Raven.Database.Indexing
 			context.IndexStorage.FlushReduceIndexes();
 		}
 
+		protected override Etag GetSynchronizationEtag()
+		{
+			return etagSynchronizer.GetSynchronizationEtagFor(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag);
+		}
+
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
@@ -332,7 +341,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn,
 				HandleReduceForIndex);
