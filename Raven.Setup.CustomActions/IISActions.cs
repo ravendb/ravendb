@@ -326,8 +326,8 @@ namespace Raven.Setup.CustomActions
 
 				var sb =
 					new StringBuilder(
-						string.Format("Warning: The access to performance counters has not been configured for the account '{0}\\{1}'. ",
-						              session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"]));
+						string.Format("Warning: The access to performance counters has not been configured for the account '{0}\\{1}'.{2}",
+						              session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"], Environment.NewLine));
 
 
 				if (ex is IdentityNotMappedException)
@@ -337,6 +337,11 @@ namespace Raven.Setup.CustomActions
 				else
 				{
 					sb.Append("Exception type: " + ex.GetType());
+				}
+
+				if (string.IsNullOrEmpty(session["LOG_FILE_PATH"]) == false)
+				{
+					sb.Append(string.Format("{0}For more details check the log file:{0}{1}", Environment.NewLine, session["LOG_FILE_PATH"]));
 				}
 
 				MessageBox.Show(sb.ToString(), "Failed to grant permissions", MessageBoxButtons.OK, MessageBoxIcon.Warning);
