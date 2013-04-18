@@ -48,9 +48,9 @@ namespace Raven.Studio.Models
             SelectedReplication = null;
         }
 
-        public override void LoadFor(DatabaseDocument database)
+        public override void LoadFor(DatabaseDocument _)
         {
-            ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(database.Id)
+            ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name)
                 .LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
                 .ContinueOnSuccessInTheUIThread(document =>
                 {
