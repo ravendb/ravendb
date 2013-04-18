@@ -728,6 +728,7 @@
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\SnapshotBug.cs" />
+    <Compile Include="MailingList\SortingOnMapReduce.cs" />
     <Compile Include="MailingList\SortTest.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
