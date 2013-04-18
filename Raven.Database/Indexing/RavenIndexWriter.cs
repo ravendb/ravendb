@@ -171,16 +171,21 @@ namespace Raven.Database.Indexing
 			indexWriter = null;
 		}
 
-		public IndexWriter CreateRamWriter()
+		public RavenIndexWriter CreateRamWriter()
 		{
 			var ramDirectory = new RAMDirectory();
-			return new IndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength);
+			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue);
 		}
 
-		public void AddIndexesNoOptimize(Directory anotherDirectory, int count)
+		public void AddIndexesNoOptimize(Directory[] directories, int count)
 		{
-			indexWriter.AddIndexesNoOptimize(anotherDirectory);
+			indexWriter.AddIndexesNoOptimize(directories);
 			currentNumberOfWrites += count;
+		}
+
+		public int NumDocs()
+		{
+			return indexWriter.NumDocs();
 		}
 	}
 }

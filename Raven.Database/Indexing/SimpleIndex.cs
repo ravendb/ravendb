@@ -86,6 +86,7 @@ namespace Raven.Database.Indexing
 						.ToList();
 
 					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+					var indexes = new ConcurrentQueue<RavenIndexWriter>();
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
 						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition, viewGenerator);
@@ -93,6 +94,8 @@ namespace Raven.Database.Indexing
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
 						                                Field.Index.NOT_ANALYZED_NO_NORMS);
 
+						var ravenIndexWriter = indexWriter.CreateRamWriter();
+						indexes.Enqueue(ravenIndexWriter);
 						using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 						{
 							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
@@ -125,13 +128,16 @@ namespace Raven.Database.Indexing
 										},
 										trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
 									LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
-									AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+									AddDocumentToIndex(ravenIndexWriter, luceneDoc, analyzer);
 								}
 
 								Interlocked.Increment(ref stats.IndexingSuccesses);
 							}
 						}
+						ravenIndexWriter.Commit();
 					});
+
+					indexWriter.AddIndexesNoOptimize(indexes.Select(x=>x.Directory).ToArray(), indexes.Sum(x=>x.NumDocs()));
 
 					IDictionary<string, HashSet<string>> result;
 					while (allReferencedDocs.TryDequeue(out result))
