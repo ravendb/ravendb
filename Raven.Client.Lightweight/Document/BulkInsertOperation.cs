@@ -54,7 +54,7 @@ namespace Raven.Client.Document
 
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).Result);
 #endif
-			operation = databaseCommands.GetBulkInsertOperation(options);
+			operation = DatabaseCommands.GetBulkInsertOperation(options);
 			entityToJson = new EntityToJson(documentStore, listeners);
 		}
 
