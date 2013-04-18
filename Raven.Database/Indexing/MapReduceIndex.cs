@@ -50,7 +50,8 @@ namespace Raven.Database.Indexing
 
 			public override bool CanConvert(Type objectType)
 			{
-				return typeof (IFieldable).IsAssignableFrom(objectType);
+				return typeof (IFieldable).IsAssignableFrom(objectType) ||
+				       typeof (IEnumerable<AbstractField>).IsAssignableFrom(objectType);
 			}
 		}
 
