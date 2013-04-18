@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				var ioe = Assert.Throws<InvalidOperationException>(() =>
+				var ioe = Assert.Throws<IndexCompilationException>(() =>
 				                                                   store.DatabaseCommands.PutIndex("test",
 				                                                                                   new IndexDefinition
 				                                                                                   {
@@ -31,7 +32,7 @@ select new { user.Name}"
 		{
 			using(var store = NewDocumentStore())
 			{
-				var ioe = Assert.Throws<InvalidOperationException>(() =>
+				var ioe = Assert.Throws<IndexCompilationException>(() =>
 				                                                                         store.DatabaseCommands.PutIndex("test",
 				                                                                                                         new IndexDefinition
 				                                                                                                         {

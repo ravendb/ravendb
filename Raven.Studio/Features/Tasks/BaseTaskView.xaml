@@ -59,15 +59,8 @@
                             <local:TaskUITemplateSelector.CheckBox>
                                 <DataTemplate>
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <CheckBox Grid.Column="0" IsChecked="{Binding Value, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"></CheckBox>
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}"
-									   Width="{Binding DataContext.LongestInput, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
-									   Padding="5"
-									   VerticalAlignment="Center" />
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding Value, Mode=TwoWay}" VerticalAlignment="Center" Margin="5"
+												  Content="{Binding Name}"/>
                                     </Grid>
                                 </DataTemplate>
                             </local:TaskUITemplateSelector.CheckBox>

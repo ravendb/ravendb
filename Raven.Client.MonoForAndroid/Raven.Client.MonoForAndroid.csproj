@@ -33,6 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Mono.Android" />
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -205,6 +206,7 @@
       <Link>Abstructions\Util\%(FileName)</Link>
     </Compile>
     <Compile Include="MissingFromMono\LazyOfTTMetadata.cs" />
+    <Compile Include="MissingFromMono\TaskEx.cs" />
     <Compile Include="MissingFromMono\TraceLevel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -175,7 +175,7 @@
     <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\ReplicationHeartbeat.cs" />
-    <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
+    <Compile Include="Bundles\Replication\Responders\ReplicationInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
@@ -253,6 +253,7 @@
     <Compile Include="Indexing\PrefetchingBehavior.cs" />
     <Compile Include="Indexing\RavenIndexWriter.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
+    <Compile Include="Indexing\Spatial\BBoxStrategyThatSupportsAllShapes.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringReadWriter.cs" />
     <Compile Include="Indexing\Spatial\ShapeStringConverter.cs" />
@@ -287,6 +288,7 @@
     <Compile Include="Server\Responders\Admin\AdminGc.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminOptimize.cs" />
+    <Compile Include="Bundles\Replication\Responders\AdminReplicationInfo.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
     <Compile Include="Server\Responders\Admin\AdminRestore.cs" />
     <Compile Include="Server\Responders\BulkInsert.cs" />

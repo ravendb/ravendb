@@ -239,7 +239,7 @@ namespace Raven.Abstractions.Data
                 path.Append("&skipTransformResults=true");
             }
 
-            if (ResultsTransformer != null)
+            if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
                 path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
             }

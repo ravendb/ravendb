@@ -368,9 +368,6 @@
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
     <Compile Include="Models\UserInfoModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
-    <Compile Include="Controls\BundlesSelect.xaml.cs">
-      <DependentUpon>BundlesSelect.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
@@ -966,10 +963,6 @@
     <Page Include="Assets\WatermarkedTextBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\BundlesSelect.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\BusynessIndicator.xaml">
       <Generator>MSBuild:Compile</Generator>

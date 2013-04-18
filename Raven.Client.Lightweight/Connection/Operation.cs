@@ -46,9 +46,9 @@ namespace Raven.Client.Connection
 					return null;
 				if (status.Value<bool>("Completed"))
 					return status.Value<RavenJToken>("State");
-#if !MONO
+
 				await TaskEx.Delay(500);
-#endif
+
 			}
 		}
 
