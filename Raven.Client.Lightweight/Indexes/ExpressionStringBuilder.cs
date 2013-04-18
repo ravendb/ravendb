@@ -1596,6 +1596,7 @@ namespace Raven.Client.Indexes
 					case "OrderByDescending":
 					case "DefaultIfEmpty":
 					case "Reverse":
+					case "Union":
 						return true;
 				}
 				return false;

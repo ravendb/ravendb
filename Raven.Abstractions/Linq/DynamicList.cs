@@ -204,6 +204,11 @@ namespace Raven.Abstractions.Linq
 			get { return inner.Count(); }
 		}
 
+		public IEnumerable<object> Union(IEnumerable<object> other)
+		{
+			return new DynamicList(inner.Union(other));
+		}
+
 		public IEnumerable<object> Select(Func<object, object> func)
 		{
 			return new DynamicList(parent, inner.Select(func));
