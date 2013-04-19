@@ -78,7 +78,7 @@ namespace Raven.Database.Impl
 		private void PersistSynchronizationContext()
 		{
 			var indexerEtag = GetEtagForPersistance(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag);
-			var reducerEtag = GetEtagForPersistance(x => x.ReducerEtag, x => x.ReducerEtag);
+			var reducerEtag = GetEtagForPersistance(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag);
 
 			transactionalStorage.Batch(actions => actions.Staleness.PutSynchronizationContext(indexerEtag, reducerEtag));
 		}
@@ -176,6 +176,14 @@ namespace Raven.Database.Impl
 
 	public class EtagSynchronizationContext
 	{
+		public EtagSynchronizationContext()
+		{
+			IndexerEtag = Etag.Empty;
+			LastIndexerSynchronizedEtag = Etag.Empty;
+			ReducerEtag = Etag.Empty;
+			LastReducerSynchronizedEtag = Etag.Empty;
+		}
+
 		public Etag IndexerEtag { get; set; }
 
 		public Etag LastIndexerSynchronizedEtag { get; set; }

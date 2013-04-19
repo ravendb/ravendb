@@ -202,7 +202,7 @@ namespace Raven.Database.Indexing
 
 		protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
 		{
-			var synchronizationEtag = GetSynchronizationEtag();
+			Etag synchronizationEtag = null;
 
 			var indexesToWorkOn = new List<IndexToWorkOn>();
 			var localFoundOnlyIdleWork = new Reference<bool>{Value = true};
@@ -218,6 +218,9 @@ namespace Raven.Database.Indexing
 									   failureRate.FailureRate);
 						continue;
 					}
+
+					synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
+
 					if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
 						continue;
 					var indexToWorkOn = GetIndexToWorkOn(indexesStat);

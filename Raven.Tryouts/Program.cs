@@ -10,6 +10,7 @@ using Raven.Client.Document;
 using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
+using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.PeriodicBackups;
 using Raven.Tests.Bundles.Replication.Bugs;
@@ -36,6 +37,8 @@ namespace Raven.Tryouts
 			}.Initialize();
 
 			//store.DatabaseCommands.EnsureDatabaseExists("DB9");
+
+			//new RavenDocumentsByEntityName().Execute(store.DatabaseCommands, new DocumentConvention());
 
 			var watch = Stopwatch.StartNew();
 
