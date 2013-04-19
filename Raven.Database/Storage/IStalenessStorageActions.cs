@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
+using Raven.Database.Impl;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -19,5 +21,7 @@ namespace Raven.Database.Storage
 		Etag GetMostRecentDocumentEtag();
 		Etag GetMostRecentAttachmentEtag();
 		int GetIndexTouchCount(string indexName);
+		EtagSynchronizationContext GetSynchronizationContext();
+		void PutSynchronizationContext(Etag indexerEtag, Etag reducerEtag);
 	}
 }

@@ -22,6 +22,8 @@ namespace Raven.Storage.Esent
 		public IDictionary<string, JET_COLUMNID> IndexesStatsReduceColumns { get; set; }
 
 		public IDictionary<string, JET_COLUMNID> IndexesEtagsColumns { get; set; }
+
+		public IDictionary<string, JET_COLUMNID> EtagSynchronizationColumns { get; set; }
 		
 		public IDictionary<string, JET_COLUMNID> MappedResultsColumns { get; set; }
 
@@ -43,7 +45,7 @@ namespace Raven.Storage.Esent
 
 		public IDictionary<string, JET_COLUMNID> IndexedDocumentsReferencesColumns { get; set; }
 
-	    public void InitColumDictionaries(JET_INSTANCE instance, string database)
+		public void InitColumDictionaries(JET_INSTANCE instance, string database)
 	    {
 	        using (var session = new Session(instance))
 	        {
@@ -83,6 +85,8 @@ namespace Raven.Storage.Esent
 						ReduceKeysCountsColumns = Api.GetColumnDictionary(session, reduceKeys);
 					using (var reduceKeys = new Table(session, dbid, "reduce_keys_status", OpenTableGrbit.None))
 						ReduceKeysStatusColumns = Api.GetColumnDictionary(session, reduceKeys);
+					using (var etagSynchronization = new Table(session, dbid, "etag_synchronization", OpenTableGrbit.None))
+						EtagSynchronizationColumns = Api.GetColumnDictionary(session, etagSynchronization);
 				}
 	            finally
 	            {

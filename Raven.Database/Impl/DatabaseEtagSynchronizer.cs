@@ -5,10 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
+using Raven.Database.Storage;
 
 namespace Raven.Database.Impl
 {
@@ -16,11 +16,14 @@ namespace Raven.Database.Impl
 	{
 		private readonly object locker = new object();
 
-		private readonly EtagSynchronizationContext context;
+		private EtagSynchronizationContext context;
 
-		public DatabaseEtagSynchronizer()
+		private readonly ITransactionalStorage transactionalStorage;
+
+		public DatabaseEtagSynchronizer(ITransactionalStorage transactionalStorage)
 		{
-			context = GetSynchronizationContext();
+			this.transactionalStorage = transactionalStorage;
+			GetSynchronizationContext();
 		}
 
 		public void UpdateSynchronizationState(JsonDocument[] docs)
@@ -74,11 +77,39 @@ namespace Raven.Database.Impl
 
 		private void PersistSynchronizationContext()
 		{
+			var indexerEtag = GetEtagForPersistance(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag);
+			var reducerEtag = GetEtagForPersistance(x => x.ReducerEtag, x => x.ReducerEtag);
+
+			transactionalStorage.Batch(actions => actions.Staleness.PutSynchronizationContext(indexerEtag, reducerEtag));
 		}
 
-		private EtagSynchronizationContext GetSynchronizationContext()
+		private Etag GetEtagForPersistance(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector,
+		                                   Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector)
 		{
-			return new EtagSynchronizationContext();
+			var etag = GetValue(propertySelector);
+			var synchronizationEtag = GetValue(synchronizationPropertySelector);
+
+			Etag result;
+			if (etag != null)
+			{
+				result = etag.CompareTo(synchronizationEtag) < 0
+								  ? etag
+								  : synchronizationEtag;
+			}
+			else
+			{
+				result = synchronizationEtag;
+			}
+
+			return result ?? Etag.Empty;
+		}
+
+		private void GetSynchronizationContext()
+		{
+			transactionalStorage.Batch(actions =>
+			{
+				context = actions.Staleness.GetSynchronizationContext() ?? new EtagSynchronizationContext();
+			});
 		}
 
 		private void UpdateSynchronizationContext(Etag lowestEtag)

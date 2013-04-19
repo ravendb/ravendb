@@ -708,6 +708,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />

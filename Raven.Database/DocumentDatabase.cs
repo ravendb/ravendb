@@ -221,7 +221,7 @@ namespace Raven.Database
 
                     CompleteWorkContextSetup();
 
-					etagSynchronizer = new DatabaseEtagSynchronizer();
+	                etagSynchronizer = new DatabaseEtagSynchronizer(TransactionalStorage);
                     indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer);
 
                     InitializeTriggersExceptIndexCodecs();

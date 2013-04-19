@@ -5,10 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -123,6 +125,29 @@ namespace Raven.Storage.Managed
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
 			return readResult.Key.Value<int>("touches");
+		}
+
+		public EtagSynchronizationContext GetSynchronizationContext()
+		{
+			var result = storage.EtagSynchronization.Read(Constants.RavenEtagSynchronization);
+
+			return new EtagSynchronizationContext
+			{
+				IndexerEtag = Etag.Parse(result.Key.Value<byte[]>("indexer_etag")),
+				LastIndexerSynchronizedEtag = Etag.Parse(result.Key.Value<byte[]>("indexer_etag")),
+				ReducerEtag = Etag.Parse(result.Key.Value<byte[]>("reducer_etag")),
+				LastReducerSynchronizedEtag = Etag.Parse(result.Key.Value<byte[]>("reducer_etag"))
+			};
+		}
+
+		public void PutSynchronizationContext(Etag indexerEtag, Etag reducerEtag)
+		{
+			storage.EtagSynchronization.UpdateKey(new RavenJObject
+			{
+				{"key", Constants.RavenEtagSynchronization},
+				{"indexer_etag", indexerEtag.ToByteArray()},
+				{"reducer_etag", indexerEtag.ToByteArray()}
+			});
 		}
 
 		public Etag GetMostRecentDocumentEtag()

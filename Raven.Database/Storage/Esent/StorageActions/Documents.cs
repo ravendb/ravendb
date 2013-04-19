@@ -16,6 +16,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 

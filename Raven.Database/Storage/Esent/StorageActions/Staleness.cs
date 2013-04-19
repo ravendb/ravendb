@@ -9,6 +9,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
@@ -163,6 +164,48 @@ namespace Raven.Storage.Esent.StorageActions
 				return -1;
 
 			return Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value;
+		}
+
+		public EtagSynchronizationContext GetSynchronizationContext()
+		{
+			Api.JetSetCurrentIndex(session, EtagSynchronization, "by_key");
+
+			Api.MakeKey(session, EtagSynchronization, Constants.RavenEtagSynchronization, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, EtagSynchronization, SeekGrbit.SeekEQ) == false)
+				return null;
+
+			var indexerEtag =
+				Etag.Parse(Api.RetrieveColumn(session, EtagSynchronization,
+											  tableColumnsCache.EtagSynchronizationColumns["indexer_etag"]));
+
+			var reducerEtag =
+				Etag.Parse(Api.RetrieveColumn(session, EtagSynchronization,
+											  tableColumnsCache.EtagSynchronizationColumns["reducer_etag"]));
+
+			return new EtagSynchronizationContext
+			{
+				IndexerEtag = indexerEtag,
+				LastIndexerSynchronizedEtag = indexerEtag,
+				ReducerEtag = reducerEtag,
+				LastReducerSynchronizedEtag = reducerEtag
+			};
+		}
+
+		public void PutSynchronizationContext(Etag indexerEtag, Etag reducerEtag)
+		{
+			Api.JetSetCurrentIndex(session, EtagSynchronization, "by_key");
+
+			Api.MakeKey(session, EtagSynchronization, Constants.RavenEtagSynchronization, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			var isUpdate = Api.TrySeek(session, EtagSynchronization, SeekGrbit.SeekEQ);
+
+			using (var update = new Update(session, EtagSynchronization, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+			{
+				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["key"], Constants.RavenEtagSynchronization, Encoding.Unicode);
+				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["indexer_etag"], indexerEtag.ToByteArray());
+				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["reducer_etag"], reducerEtag.ToByteArray());
+
+				update.Save();
+			}
 		}
 	}
 }

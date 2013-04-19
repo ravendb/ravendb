@@ -8,6 +8,8 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using System.Linq;
+using Raven.Client.Embedded;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.PeriodicBackups;
 using Raven.Tests.Bundles.Replication.Bugs;
@@ -26,11 +28,16 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var store = new DocumentStore
+			var store = new EmbeddableDocumentStore
 			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "DB9"
+				//Url = "http://localhost:8080",
+				//DefaultDatabase = "DB9",
+				//UseEmbeddedHttpServer = true
 			}.Initialize();
+
+			//store.DatabaseCommands.EnsureDatabaseExists("DB9");
+
+			var watch = Stopwatch.StartNew();
 
 			var tasks = new List<Task>();
 			for (var i = 1; i <= 20; i++)
@@ -40,6 +47,10 @@ namespace Raven.Tryouts
 			}
 
 			Task.WaitAll(tasks.ToArray());
+
+			store.Dispose();
+
+			Console.WriteLine("Elapsed: " + watch.Elapsed.TotalSeconds + " seconds");
 
 			Console.ReadLine();
 		}
