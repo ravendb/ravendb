@@ -7,9 +7,9 @@
                          xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats" 
                          mc:Ignorable="d"
                          Title="Statistics"
-                         Infrastructure:ModelAttacher.AttachObservableModel="StatisticsModel">
+                         Infrastructure:ModelAttacher.AttachObservableModel="StatisticsStatusSectionModel">
 
 	<Grid DataContext="{Binding Value}">
-		<Stats:StatisticsView />
+		<Stats:StatisticsStatusSectionView />
 	</Grid>
 </Infrastructure:PageView>

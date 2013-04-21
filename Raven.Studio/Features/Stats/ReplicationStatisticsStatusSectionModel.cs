@@ -4,16 +4,15 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection.Async;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Stats
 {
-    public class ReplicationStatisticsModel : ViewModel
+    public class ReplicationStatisticsStatusSectionModel : StatusSectionModel
     {
-        public ReplicationStatisticsModel()
+        public ReplicationStatisticsStatusSectionModel()
         {
+	        SectionName = "Replication Statistics";
 			Stats = new List<DestinationStats>();
             Name = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 

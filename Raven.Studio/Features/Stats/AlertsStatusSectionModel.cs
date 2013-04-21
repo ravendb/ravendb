@@ -4,16 +4,16 @@ using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Studio.Features.Alerts;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Data;
 using System.Linq;
 using Raven.Client.Connection;
 using Raven.Studio.Messages;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Stats
 {
-	public class AlertsModel : ViewModel
+	public class AlertsStatusSectionModel : StatusSectionModel
 	{
 		public ObservableCollection<AlertProxy> Alerts { get; set; }
 		public ObservableCollection<Alert> ServerAlerts { get; set; }
@@ -21,8 +21,9 @@ namespace Raven.Studio.Models
 		public ObservableCollection<AlertProxy> AlertsToSee { get; set; }
 		public Observable<bool> ShowObserved { get; set; }
 
-		public AlertsModel()
+		public AlertsStatusSectionModel()
 		{
+			SectionName = "Alerts";
 			Alerts = new ObservableCollection<AlertProxy>();
 			UnobservedAlerts = new ObservableCollection<AlertProxy>();
 			ServerAlerts = new ObservableCollection<Alert>();
@@ -100,18 +101,18 @@ namespace Raven.Studio.Models
 
 	public class SaveAlertsCommand : Command
 	{
-		private readonly AlertsModel alertsModel;
+		private readonly AlertsStatusSectionModel alertsStatusSectionModel;
 
-		public SaveAlertsCommand(AlertsModel alertsModel)
+		public SaveAlertsCommand(AlertsStatusSectionModel alertsStatusSectionModel)
 		{
-			this.alertsModel = alertsModel;
+			this.alertsStatusSectionModel = alertsStatusSectionModel;
 		}
 
 		public override void Execute(object parameter)
 		{
 			var alertsDocument = new AlertsDocument
 			{
-				Alerts = new List<Alert>(alertsModel.ServerAlerts)
+				Alerts = new List<Alert>(alertsStatusSectionModel.ServerAlerts)
 			};
 
 			ApplicationModel.DatabaseCommands
@@ -122,31 +123,31 @@ namespace Raven.Studio.Models
 
 	public class DeleteAllObservedCommand : Command
 	{
-		private readonly AlertsModel alertsModel;
+		private readonly AlertsStatusSectionModel alertsStatusSectionModel;
 
-		public DeleteAllObservedCommand(AlertsModel alertsModel)
+		public DeleteAllObservedCommand(AlertsStatusSectionModel alertsStatusSectionModel)
 		{
-			this.alertsModel = alertsModel;
+			this.alertsStatusSectionModel = alertsStatusSectionModel;
 		}
 
 		public override void Execute(object parameter)
 		{
-			var deleteList = alertsModel.AlertsToSee.Where(proxy => proxy.Observed.Value).ToList();
+			var deleteList = alertsStatusSectionModel.AlertsToSee.Where(proxy => proxy.Observed.Value).ToList();
 
 			foreach (var alertProxy in deleteList)
 			{
-				alertsModel.ServerAlerts.Remove(alertProxy.Alert);
+				alertsStatusSectionModel.ServerAlerts.Remove(alertProxy.Alert);
 			}	
 		}
 	}
 
 	public class DeleteAlertCommand : Command
 	{
-		private readonly AlertsModel alertsModel;
+		private readonly AlertsStatusSectionModel alertsStatusSectionModel;
 
-		public DeleteAlertCommand(AlertsModel alertsModel)
+		public DeleteAlertCommand(AlertsStatusSectionModel alertsStatusSectionModel)
 		{
-			this.alertsModel = alertsModel;
+			this.alertsStatusSectionModel = alertsStatusSectionModel;
 		}
 
 		public override bool CanExecute(object parameter)
@@ -158,24 +159,24 @@ namespace Raven.Studio.Models
 		{
 			var alert = parameter as AlertProxy;
 
-			alertsModel.ServerAlerts.Remove(alert.Alert);
+			alertsStatusSectionModel.ServerAlerts.Remove(alert.Alert);
 		}
 	}
 
 	public class MarkAllCommand : Command
 	{
-		private readonly AlertsModel alertsModel;
+		private readonly AlertsStatusSectionModel alertsStatusSectionModel;
 		private readonly bool markAs;
 
-		public MarkAllCommand(AlertsModel alertsModel, bool markAs)
+		public MarkAllCommand(AlertsStatusSectionModel alertsStatusSectionModel, bool markAs)
 		{
-			this.alertsModel = alertsModel;
+			this.alertsStatusSectionModel = alertsStatusSectionModel;
 			this.markAs = markAs;
 		}
 
 		public override void Execute(object parameter)
 		{
-			foreach (var alert in alertsModel.AlertsToSee)
+			foreach (var alert in alertsStatusSectionModel.AlertsToSee)
 			{
 				alert.Observed.Value = markAs;
 			}
@@ -184,17 +185,17 @@ namespace Raven.Studio.Models
 
 	public class ToggleViewCommand : Command
 	{
-		private readonly AlertsModel alertsModel;
+		private readonly AlertsStatusSectionModel alertsStatusSectionModel;
 
-		public ToggleViewCommand(AlertsModel alertsModel)
+		public ToggleViewCommand(AlertsStatusSectionModel alertsStatusSectionModel)
 		{
-			this.alertsModel = alertsModel;
+			this.alertsStatusSectionModel = alertsStatusSectionModel;
 		}
 
 		public override void Execute(object parameter)
 		{
-			alertsModel.ShowObserved.Value = !alertsModel.ShowObserved.Value;
-			alertsModel.UpdateUnobserved();
+			alertsStatusSectionModel.ShowObserved.Value = !alertsStatusSectionModel.ShowObserved.Value;
+			alertsStatusSectionModel.UpdateUnobserved();
 		}
 	}
 }

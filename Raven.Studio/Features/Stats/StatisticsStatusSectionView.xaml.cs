@@ -4,9 +4,9 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Stats
 {
-	public partial class StatisticsView : PageView
+	public partial class StatisticsStatusSectionView : PageView
 	{
-		public StatisticsView()
+		public StatisticsStatusSectionView()
 		{
 			InitializeComponent();
 		}

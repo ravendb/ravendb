@@ -2,7 +2,7 @@
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
 
-namespace Raven.Studio.Features.Alerts
+namespace Raven.Studio.Features.Stats
 {
 	public class AlertProxy
 	{

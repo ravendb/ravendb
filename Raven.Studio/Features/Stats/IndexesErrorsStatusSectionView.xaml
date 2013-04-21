@@ -1,5 +1,5 @@
 ﻿<Infrastructure:PageView x:Name="this" 
-                         x:Class="Raven.Studio.Features.Indexes.IndexesErrorsView"
+                         x:Class="Raven.Studio.Features.Stats.IndexesErrorsStatusSectionView"
                          xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"

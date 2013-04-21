@@ -1,21 +1,21 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Client.Connection;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Stats
 {
-	public class UserInfoModel : PageViewModel
+	public class UserInfoStatusSectionModel : StatusSectionModel
 	{
 		public UserInfo UserInfo { get; set; }
 		public Dictionary<string, string> UserData { get; set; }
 
-		public UserInfoModel()
+		public UserInfoStatusSectionModel()
 		{
-			ModelUrl = "/user-info";
+			SectionName = "User Info";
 			UserData = new Dictionary<string, string>();
 			ApplicationModel.Current.Server.Value.SelectedDatabase.Value
 			                .AsyncDatabaseCommands

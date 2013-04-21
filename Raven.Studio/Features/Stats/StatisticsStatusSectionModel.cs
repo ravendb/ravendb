@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="StatisticsModel.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="StatisticsStatusSectionModel.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -11,14 +11,15 @@ using System.Reflection;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Stats
 {
-	public class StatisticsModel : PageViewModel
+	public class StatisticsStatusSectionModel : StatusSectionModel
 	{
-		public StatisticsModel()
+		public StatisticsStatusSectionModel()
 		{
-			ModelUrl = "/statistics";
+			SectionName = "Statistics";
 			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 																	   "/stats";
@@ -32,7 +33,6 @@ namespace Raven.Studio.Models
 			UpdateStatistics();
 			ApplicationModel.Database.Value.Statistics.PropertyChanged +=
 				(sender, args) => UpdateStatistics();
-
 		}
 
 		protected override void OnViewLoaded()
@@ -150,7 +150,7 @@ namespace Raven.Studio.Models
 						continue;						
 					}
 
-					if ((list.First() is string == false) && (list.First() is IndexStats == false))
+					if ((list.First() is string == false) && (list.First() is Abstractions.Data.IndexStats == false))
 						continue;
 
 					var statInfo = new StatInfo
@@ -163,7 +163,7 @@ namespace Raven.Studio.Models
 					{
 						var statInfoItem = new StatInfoItem(item);
 
-						if (statInfoItem.ItemType == typeof(IndexStats))
+						if (statInfoItem.ItemType == typeof(Abstractions.Data.IndexStats))
 							AddIndexStat(statInfoItem);
 
 						statInfo.ListItems.Add(statInfoItem);

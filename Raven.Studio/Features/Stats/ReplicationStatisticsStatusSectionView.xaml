@@ -1,4 +1,4 @@
-﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Stats.ReplicationStatisticsView" 
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Stats.ReplicationStatisticsStatusSectionView" 
                          xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
                          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,7 +8,7 @@
                          xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                          xmlns:controls="clr-namespace:Raven.Studio.Controls" d:DesignWidth="640" d:DesignHeight="480"
-                         Title="ReplicationStatisticsView Page">
+                         Title="ReplicationStatisticsStatusSectionView Page">
 	<UserControl.Resources>
 		<DataTemplate x:Key="Replication_Statistics_Item_Tamplate">
 			<Grid Margin="4" x:Name="grid">

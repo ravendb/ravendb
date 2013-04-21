@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="LogsModel.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="LogsStatusSectionModel.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -15,16 +15,16 @@ using Raven.Studio.Infrastructure;
 using System.Linq;
 using Raven.Studio.Models;
 
-namespace Raven.Studio.Features.Logs
+namespace Raven.Studio.Features.Stats
 {
-	public class LogsModel : PageViewModel
+	public class LogsStatusSectionModel : StatusSectionModel
 	{
 		public BindableCollection<LogItem> Logs { get; private set; }
 		public BindableCollection<LogItem> DisplayedLogs { get; private set; }
 
-		public LogsModel()
+		public LogsStatusSectionModel()
 		{
-			ModelUrl = "/logs";
+			SectionName = "Logs";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
 
 			Logs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));

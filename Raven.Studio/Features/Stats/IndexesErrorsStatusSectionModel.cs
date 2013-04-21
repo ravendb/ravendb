@@ -1,10 +1,11 @@
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Stats
 {
-	public class IndexesErrorsModel : PageViewModel
+	public class IndexesErrorsStatusSectionModel : StatusSectionModel
 	{
 		private ServerError[] errors;
 		public ServerError[] Errors
@@ -34,9 +35,9 @@ namespace Raven.Studio.Models
 			get { return string.IsNullOrWhiteSpace(IndexName) == false; }
 		}
 
-		public IndexesErrorsModel()
+		public IndexesErrorsStatusSectionModel()
 		{
-			ModelUrl = "/indexes-errors";
+			SectionName = "Index Errors";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
 
 			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => Errors);

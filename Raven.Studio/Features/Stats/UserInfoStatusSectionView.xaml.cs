@@ -2,9 +2,9 @@
 
 namespace Raven.Studio.Features.Stats
 {
-	public partial class UserInfoView : PageView
+	public partial class UserInfoStatusSectionView : PageView
 	{
-		public UserInfoView()
+		public UserInfoStatusSectionView()
 		{
 			InitializeComponent();
 		}
