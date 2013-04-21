@@ -14,7 +14,7 @@
                          xmlns:stats="clr-namespace:Raven.Studio.Features.Stats"
                          mc:Ignorable="d" d:DataContext="{d:DesignInstance stats:LogsStatusSectionModel}">
 
-	<Grid Margin="{StaticResource Margin_ContentPage}">
+	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
@@ -29,13 +29,6 @@
 				<StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <Image Style="{StaticResource Style_Image_PageHeader}"
                            Source="{StaticResource Image_Logs_Small}"/>
-				<HyperlinkButton Content="Statistics"
-                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
-                                Command="{StaticResource NavigateToCommand}"
-                                CommandParameter="/statistics"
-                                VerticalAlignment="Center" VerticalContentAlignment="Center"
-                                Margin="6"/>
-				<controls:NavTriangle/>
 				<TextBlock Text="Logs"
 							   Style="{StaticResource Style_Text_Header}" />
 					<TextBlock Text="{Binding Path=DisplayedLogs.Count, StringFormat='(\{0\} Entries)'}"

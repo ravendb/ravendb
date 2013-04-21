@@ -54,40 +54,12 @@
 		</DataTemplate>
 	</UserControl.Resources>
 
-	<Grid x:Name="LayoutRoot"  Margin="{StaticResource Margin_ContentPage}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="*"/>
-		</Grid.RowDefinitions>
-
-		<Border Grid.Row="0"
-                Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0"
-                BorderBrush="{StaticResource Brush_HeaderBorder}"
-                BorderThickness="1">
-			<toolkit:DockPanel Margin="4" LastChildFill="False">
-				<StackPanel Orientation="Horizontal">
-					<HyperlinkButton Content="Statistics"
-                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
-                                Command="{StaticResource NavigateToCommand}"
-                                CommandParameter="/statistics"
-                                VerticalAlignment="Center" VerticalContentAlignment="Center"
-                                Margin="6"/>
-					<controls:NavTriangle/>
-					<TextBlock Text="Replication Statistics" Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center"/>
-				</StackPanel>
-				<StackPanel toolkit:DockPanel.Dock="Right" Orientation="Horizontal">
-
-				</StackPanel>
-			</toolkit:DockPanel>
-		</Border>
-
+	<Grid x:Name="LayoutRoot">
 		<ScrollViewer BorderThickness="1"
 					  BorderBrush="#FFEAE7E4"
                       Background="{StaticResource Brush_SubtleBackground2}"
                       VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      Grid.Row="1"
-                      Margin="0,10,0,0">
+                      HorizontalScrollBarVisibility="Disabled">
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>

@@ -168,7 +168,7 @@
 	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">
-		<toolkit:HeaderedContentControl Margin="0,15,0,0" Style="{StaticResource Style_HeaderedContentControl_Stretch}">
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
 			<toolkit:HeaderedContentControl.Header>
 				<Grid>
 					<Grid.RowDefinitions>
@@ -176,22 +176,6 @@
 						<RowDefinition Height="Auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-						<Image Style="{StaticResource Style_Image_DocumentsPageHeader}"/>
-						<HyperlinkButton Content="Statistics"
-                                Style="{StaticResource Style_Link_Breadcrumb_Header}"
-                                Command="{StaticResource NavigateToCommand}"
-                                CommandParameter="/statistics"
-                                VerticalAlignment="Center" VerticalContentAlignment="Center"
-                                Margin="6"/>
-						<controls:NavTriangle/>
-						<TextBlock x:Name="HeaderText"
-								   Style="{StaticResource Style_Text_Header}"
-								   Text="Alerts"
-								   toolkit:DockPanel.Dock="Left"
-								   VerticalAlignment="Center"
-								   Margin="6" />
-					</StackPanel>
 
 					<Border Grid.Row="1"
 							Background="{StaticResource Brush_ToolbarBackground}"

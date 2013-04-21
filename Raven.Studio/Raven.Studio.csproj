@@ -880,9 +880,6 @@
     <Compile Include="Views\Query.xaml.cs">
       <DependentUpon>Query.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\Statistics.xaml.cs">
-      <DependentUpon>Statistics.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Indexes.xaml.cs">
       <DependentUpon>Indexes.xaml</DependentUpon>
     </Compile>
@@ -1299,10 +1296,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Query.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\Statistics.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

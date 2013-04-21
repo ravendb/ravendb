@@ -9,8 +9,7 @@
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
                          xmlns:controls="clr-namespace:Raven.Studio.Controls">
 
-    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}"
-                                    Margin="{StaticResource Margin_ContentPage}">
+    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
         <toolkit:HeaderedContentControl.Header>
             <StackPanel Orientation="Horizontal">
                 <Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
