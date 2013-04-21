@@ -594,7 +594,6 @@
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
     <Compile Include="LicenseProviderPluginTest.cs" />
-    <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
@@ -658,6 +657,7 @@
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BulkInsertTest.cs" />
+    <Compile Include="MailingList\CanReduceAndTransform.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
     <Compile Include="MailingList\Chirea.cs" />
@@ -688,6 +688,7 @@
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="MailingList\InIssues.cs" />
     <Compile Include="MailingList\InQueries.cs" />
+    <Compile Include="MailingList\ItemsBySetIdIndexTests.cs" />
     <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\jbartruf.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
@@ -729,6 +730,7 @@
     <Compile Include="MailingList\Rudolph.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\SnapshotBug.cs" />
+    <Compile Include="MailingList\SortingOnMapReduce.cs" />
     <Compile Include="MailingList\SortTest.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />

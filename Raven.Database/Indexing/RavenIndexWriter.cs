@@ -66,24 +66,18 @@ namespace Raven.Database.Indexing
 
 		public void AddDocument(Document doc)
 		{
-			RecreateIfNecessary();
-
 			indexWriter.AddDocument(doc);
 			currentNumberOfWrites++;
 		}
 
 		public void AddDocument(Document doc, Analyzer a)
 		{
-			RecreateIfNecessary();
-
 			indexWriter.AddDocument(doc, a);
 			currentNumberOfWrites++;
 		}
 
 		public void DeleteDocuments(Term term)
 		{
-			RecreateIfNecessary();
-
 			indexWriter.DeleteDocuments(term);
 
 			currentNumberOfWrites += 2; // deletes are more expensive than additions
@@ -91,8 +85,6 @@ namespace Raven.Database.Indexing
 
 		public void DeleteDocuments(Term[] terms)
 		{
-			RecreateIfNecessary();
-
 			indexWriter.DeleteDocuments(terms);
 
 			currentNumberOfWrites += terms.Length*2; // deletes are more expensive than writes
@@ -106,6 +98,7 @@ namespace Raven.Database.Indexing
 		public void Commit()
 		{
 			indexWriter.Commit();
+			RecreateIfNecessary();
 		}
 
 		public void Optimize()
@@ -176,6 +169,23 @@ namespace Raven.Database.Indexing
 				indexWriter.Dispose(waitForMerges);
 
 			indexWriter = null;
+		}
+
+		public RavenIndexWriter CreateRamWriter()
+		{
+			var ramDirectory = new RAMDirectory();
+			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue);
+		}
+
+		public void AddIndexesNoOptimize(Directory[] directories, int count)
+		{
+			indexWriter.AddIndexesNoOptimize(directories);
+			currentNumberOfWrites += count;
+		}
+
+		public int NumDocs()
+		{
+			return indexWriter.NumDocs();
 		}
 	}
 }

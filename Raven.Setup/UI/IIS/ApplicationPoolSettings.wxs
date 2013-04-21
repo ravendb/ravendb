@@ -11,7 +11,6 @@
                   Return="check" />
    
     <Property Id="APPLICATION_POOL_TYPE" Value="NEW" />
-    <Property Id="APPLICATION_POOL_IDENTITY_TYPE" Value="ApplicationPoolIdentity" />
 
     <Property Id="APPPOOL" Value="0"/>
     <EnsureTable Id="ComboBox"/>
@@ -26,14 +25,14 @@
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>Please enter AppPool Configuration for IIS</Text>
+          <Text>Please configure application pool</Text>
         </Control>
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
           <Text>{\WixUI_Font_Title}Application Pool Settings</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
-        <Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="240" Height="31" X="15" Y="56">
+        <Control Type="RadioButtonGroup" Property="APPLICATION_POOL_TYPE" Id="PoolNewOrExisting" Width="240" Height="33" X="15" Y="56">
           <RadioButtonGroup Property="APPLICATION_POOL_TYPE">
             <RadioButton Text="Create a new one" Value="NEW" Height="17" Width="170" X="0" Y="0" />
             <RadioButton Text="Use an existing one (Integrated mode, .NET Framework v4.0)" Value="EXISTING" Height="17" Width="240" X="0" Y="15" />
@@ -54,13 +53,6 @@
           <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
         </Control>
         <Control Type="ComboBox" Property="APPLICATION_POOL_IDENTITY_TYPE" Id="IdentityComboBox" Width="224" Height="16" X="98" Y="112">
-          <ComboBox Property="APPLICATION_POOL_IDENTITY_TYPE">
-            <ListItem Text="ApplicationPoolIdentity" Value="ApplicationPoolIdentity" />
-            <ListItem Text="LocalService" Value="LocalService" />
-            <ListItem Text="LocalSystem" Value="LocalSystem" />
-            <ListItem Text="NetworkService" Value="NetworkService" />
-            <ListItem Text="Other" Value="other" />
-          </ComboBox>
           <Condition Action="show"><![CDATA[APPLICATION_POOL_TYPE = "NEW"]]></Condition>
           <Condition Action="hide"><![CDATA[APPLICATION_POOL_TYPE = "EXISTING"]]></Condition>
         </Control>

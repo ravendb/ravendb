@@ -466,7 +466,8 @@ namespace Raven.Database.Indexing
 			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
 
 			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
-					  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName));
+					  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
+					  overwrite: true);
 
 			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 

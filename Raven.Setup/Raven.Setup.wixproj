@@ -22,15 +22,19 @@
     <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Components\IIS\IISConfiguration.wxs" />
+    <Compile Include="Components\IIS\IISConfiguration_CreateWebSite.wxs" />
+    <Compile Include="Components\IIS\IISConfiguration_ExistingWebSite.wxs" />
+    <Compile Include="Components\IIS\Setup.wxs" />
     <Compile Include="Components\IIS\Raven.Web.wxs" />
     <Compile Include="Components\Raven.Abstractions.wxs" />
     <Compile Include="Components\Raven.Database.wxs" />
     <Compile Include="Components\Service\Raven.Server.wxs" />
     <Compile Include="Product.wxs" />
+    <Compile Include="UI\CustomFatalError.wxs" />
     <Compile Include="UI\IIS\ApplicationPoolSettings.wxs" />
+    <Compile Include="UI\IIS\MissingComponents.wxs" />
     <Compile Include="UI\IIS\PerformanceCounters.wxs" />
-    <Compile Include="UI\IIS\IISSetup.wxs" />
+    <Compile Include="UI\IIS\WebSiteSettings.wxs" />
     <Compile Include="UI\InstallationType.wxs" />
     <Compile Include="UI\LicenseFileChooser.wxs" />
     <Compile Include="UI\Service\Settings.wxs" />
@@ -101,6 +105,9 @@
     <Content Include="Components\IIS\IISSettings.wxi" />
     <Content Include="Components\Service\ServiceSettings.wxi" />
     <Content Include="Conditions.wxi" />
+    <Content Include="CustomActions\General.wxi" />
+    <Content Include="CustomActions\IIS.wxi" />
+    <Content Include="CustomActions\Service.wxi" />
     <Content Include="Settings.wxi" />
     <Content Include="Images\banner.bmp" />
     <Content Include="Images\dialog.bmp" />
@@ -112,6 +119,7 @@
     <Folder Include="Components\Service" />
     <Folder Include="Images\" />
     <Folder Include="License" />
+    <Folder Include="CustomActions" />
     <Folder Include="UI" />
     <Folder Include="UI\IIS" />
     <Folder Include="UI\Service" />
