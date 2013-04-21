@@ -6,8 +6,9 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
 	public class PeriodicBackupSettingsSectionModel : SettingsSectionModel
 	{

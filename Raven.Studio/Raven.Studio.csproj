@@ -339,8 +339,8 @@
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
-    <Compile Include="Models\BasicTaskSectionModel.cs" />
-    <Compile Include="Models\NoSettingsSectionModel.cs" />
+    <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
+    <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
     <Compile Include="Models\TaskPageModel.cs" />
     <Compile Include="Models\TaskSectionModel.cs" />
@@ -364,11 +364,11 @@
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\TaskUITemplateSelector.cs" />
     <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />
-    <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
-    <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\SqlReplicationSettingsSectionModel.cs" />
     <Compile Include="Models\UserInfoModel.cs" />
-    <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
@@ -602,15 +602,15 @@
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\AlertsModel.cs" />
-    <Compile Include="Models\ApiKeysSectionModel.cs" />
+    <Compile Include="Features\Settings\ApiKeysSectionModel.cs" />
     <Compile Include="Models\ApplicationState.cs" />
-    <Compile Include="Models\AuthorizationSettingsSectionModel.cs" />
-    <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
+    <Compile Include="Features\Settings\AuthorizationSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\DatabaseSettingsSectionViewModel.cs" />
     <Compile Include="Models\PatchModel.cs" />
-    <Compile Include="Models\QuotaSettingsSectionModel.cs" />
-    <Compile Include="Models\ReplicationSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\QuotaSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\ReplicationSettingsSectionModel.cs" />
     <Compile Include="Models\ReplicationStatisticsModel.cs" />
-    <Compile Include="Models\SettingsModel.cs" />
+    <Compile Include="Features\Settings\SettingsModel.cs" />
     <Compile Include="Models\CreateSettingsModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DatabaseSelectionModel.cs" />
@@ -627,7 +627,7 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
-    <Compile Include="Models\VersioningSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\VersioningSettingsSectionModel.cs" />
     <Compile Include="Views\Alerts.xaml.cs">
       <DependentUpon>Alerts.xaml</DependentUpon>
     </Compile>

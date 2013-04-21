@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Models
+﻿using Raven.Studio.Models;
+
+namespace Raven.Studio.Features.Settings
 {
 	public class NoSettingsSectionModel : SettingsSectionModel
 	{

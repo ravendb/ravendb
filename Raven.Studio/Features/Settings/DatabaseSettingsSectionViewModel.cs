@@ -4,8 +4,9 @@ using ActiproSoftware.Text.Implementation;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Studio.Features.JsonEditor;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
     public class DatabaseSettingsSectionViewModel : SettingsSectionModel
     {

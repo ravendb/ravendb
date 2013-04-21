@@ -4,8 +4,9 @@ using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
     public class ReplicationSettingsSectionModel : SettingsSectionModel
     {

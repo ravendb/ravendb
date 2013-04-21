@@ -1,6 +1,7 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
     public class QuotaSettingsSectionModel : SettingsSectionModel
     {

@@ -1,7 +1,8 @@
 ﻿using System.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Tasks
 {
 	public abstract class BasicTaskSectionModel : TaskSectionModel
 	{

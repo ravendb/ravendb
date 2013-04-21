@@ -8,8 +8,9 @@ using Raven.Abstractions.Data;
 using Raven.Bundles.Authorization.Model;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
 	public class AuthorizationSettingsSectionModel : SettingsSectionModel, IAutoCompleteSuggestionProvider
 	{

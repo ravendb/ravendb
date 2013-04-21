@@ -9,8 +9,9 @@ using Raven.Bundles.Versioning.Data;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
 	public class VersioningSettingsSectionModel : SettingsSectionModel, IAutoCompleteSuggestionProvider
     {

@@ -7,11 +7,11 @@ using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
-using Raven.Client.Changes;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
 	public class ApiKeysSectionModel : SettingsSectionModel, IAutoCompleteSuggestionProvider
 	{

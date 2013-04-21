@@ -2,8 +2,9 @@
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
 	public class SettingsModel : ViewModel
 	{

@@ -14,10 +14,10 @@ using Raven.Json.Linq;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Bundles;
-using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Settings
 {
 	public class SqlReplicationSettingsSectionModel : SettingsSectionModel, IAutoCompleteSuggestionProvider
 	{
