@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI>
+      <Dialog Id="MissingIISComponentsDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
+        <Control Id="Exit" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Cancel" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Please install the following IIS components:</Text>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}Missing IIS components</Text>
+        </Control>
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Type="Text" Id="MissingComponentsTextBox" Width="296" Height="14" X="41" Y="60">
+          <Text>- Windows Authentication</Text>
+        <Condition Action="hide"><![CDATA[IIS_WIN_AUTH_64 = "#1" OR IIS_WIN_AUTH = "#1"]]></Condition>
+        </Control>
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>

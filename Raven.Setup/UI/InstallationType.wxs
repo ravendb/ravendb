@@ -22,12 +22,15 @@
             <RadioButton Text="IIS application" Value="IIS" Height="17" Width="120" X="0" Y="0" />
             <RadioButton Text="Windows Service" Value="SERVICE" Height="17" Width="120" X="0" Y="25" />
           </RadioButtonGroup>
+          <Condition Action="hide"><![CDATA[NOT IISMAJORVERSION OR IISMAJORVERSION <= "#5"]]></Condition>
+        </Control>
+        <Control Type="Text" Id="noIISInfo" Width="280" Height="42" X="40" Y="120" Text="Installation as a service in only available because IIS is not installed." Hidden="yes">
+          <Condition Action="show"><![CDATA[NOT IISMAJORVERSION]]></Condition>
+        </Control>
+        <Control Type="Text" Id="noSupportedIISInfo" Width="280" Height="42" X="30" Y="120" Text="Installation as a service in only available because installed version of IIS is not supported." Hidden="yes">
+          <Condition Action="show"><![CDATA[IISMAJORVERSION AND IISMAJORVERSION <= "#5"]]></Condition>
         </Control>
       </Dialog>
-
-      <Publish Dialog="InstallationType" Control="Next" Event="AddLocal" Value="All" Order="1">1</Publish>
-      <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="Service" Order="2"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS"]]></Publish>
-      <Publish Dialog="InstallationType" Control="Next" Event="Remove" Value="IIS" Order="3"> <![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
     </UI>
 	</Fragment>
 </Wix>

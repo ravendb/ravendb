@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:iis="http://schemas.microsoft.com/wix/IIsExtension">
+	<Fragment>
+
+    <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR"/>
+    <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR64"/>
+
+    <SetProperty Id="NETFRAMEWORKROOT" Sequence="execute" After="CostFinalize" Value="[NETFRAMEWORK40FULLINSTALLROOTDIR]" Action="SetNETFRAMEWORKROOT_ARCHITECTURE32">
+      <![CDATA[NOT VersionNT64 AND NETFRAMEWORK40FULLINSTALLROOTDIR]]>
+    </SetProperty>
+
+    <SetProperty Id="NETFRAMEWORKROOT" Sequence="execute" After="SetNETFRAMEWORKROOT_ARCHITECTURE32" Value="[NETFRAMEWORK40FULLINSTALLROOTDIR64]" Action="SetNETFRAMEWORKROOT_ARCHITECTURE64">
+      <![CDATA[VersionNT64 AND NETFRAMEWORK40FULLINSTALLROOTDIR64]]>
+    </SetProperty>
+
+    <SetProperty Id="ASPNETISAPIDLL" Sequence="execute" After="SetNETFRAMEWORKROOT_ARCHITECTURE64"
+             Value="[NETFRAMEWORKROOT]aspnet_isapi.dll" />
+
+    <SetProperty Id="ASPNETREGIIS" Sequence="execute" After="SetNETFRAMEWORKROOT_ARCHITECTURE64"
+             Value="[NETFRAMEWORKROOT]aspnet_regiis.exe" />
+
+    <Property Id="ASPNETREGISTERED32">
+      <RegistrySearch Id="ASPNETREG32" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="Path" Type="raw" />
+    </Property>
+
+    <Property Id="ASPNETREGISTERED64">
+      <RegistrySearch Id="ASPNETREG64" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="Path" Type="raw" Win64="yes" />
+    </Property>
+
+    <SetProperty Id="ASPNETREGISTERED" Sequence="execute" Before="ConfigureIIs" Value="1" Action="SetASPNETREGISTERED32">
+      <![CDATA[NOT VersionNT64 AND ASPNETREGISTERED32]]>
+    </SetProperty>
+
+    <SetProperty Id="ASPNETREGISTERED" Sequence="execute" Before="ConfigureIIs" Value="1" Action="SetASPNETREGISTERED64">
+      <![CDATA[VersionNT64 AND ASPNETREGISTERED64]]>
+    </SetProperty>
+
+    <Property Id="IIS_WIN_AUTH">
+      <RegistrySearch Id="CheckIISWinAuth" Root="HKLM" Key="SOFTWARE\Microsoft\InetStp\Components" Name="WindowsAuthentication" Type="raw" />
+    </Property>
+    <Property Id="IIS_WIN_AUTH_64">
+      <RegistrySearch Id="CheckIISWinAuth64" Root="HKLM" Key="SOFTWARE\Microsoft\InetStp\Components" Name="WindowsAuthentication" Type="raw"  Win64="yes"/>
+    </Property>
+
+    <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS32">
+      <![CDATA[NOT VersionNT64 AND (IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH <> "#1")]]>
+    </SetProperty>
+    <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS64">
+      <![CDATA[VersionNT64 AND (IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH_64 <> "#1")]]>
+    </SetProperty>
+    
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="EnableASPNet4Extension" Permanent="yes" Guid="{6449C546-034B-444F-B544-2DC2F2CE16C5}">
+        <CreateFolder />
+        <iis:WebServiceExtension Id="ASPNet4Extension" Group="ASP.NET v4.0.30319" Allow="yes"
+                                 File="[ASPNETISAPIDLL]" Description="ASP.NET v4.0.30319"
+                                 UIDeletable="no"/>
+      </Component>
+      <Component Id="DisableWebDAVExtensionIIS6" Permanent="no" Guid="{9088113E-517B-45DD-AF70-19E391108143}">
+        <Condition><![CDATA[IISMAJORVERSION < "#7"]]></Condition>
+        <CreateFolder />
+        <iis:WebServiceExtension Id="WebDavModule" Group="WebDAV" Allow="no"
+                                 File="[WindowsFolder]system32\inetsrv\httpext.dll" Description="WebDAV"
+                                 UIDeletable="no"/>
+      </Component>
+    </DirectoryRef>
+    
+	</Fragment>
+</Wix>

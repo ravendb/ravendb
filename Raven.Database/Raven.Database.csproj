@@ -259,6 +259,7 @@
     <Compile Include="Indexing\Spatial\ShapeStringConverter.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\AbstractTransformer.cs" />
+    <Compile Include="Linq\Ast\TransformGroupByExtensionMethodTransformer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />

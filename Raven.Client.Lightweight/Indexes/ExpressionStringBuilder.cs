@@ -1568,6 +1568,7 @@ namespace Raven.Client.Indexes
 					case "ElementAtOrDefault":
 					case "Min":
 					case "Max":
+					case "Union":
 						return true;
 				}
 			}
