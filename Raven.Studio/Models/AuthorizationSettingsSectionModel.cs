@@ -214,9 +214,9 @@ namespace Raven.Studio.Models
 			SelectedUser = null;
 		}
 
-		public override void LoadFor(DatabaseDocument databaseDocument)
+		public override void LoadFor(DatabaseDocument _)
 		{
-			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseDocument.Id);
+			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
 			session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users").
 				ContinueOnSuccessInTheUIThread(data =>
 				{

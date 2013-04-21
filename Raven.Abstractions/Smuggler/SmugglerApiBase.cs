@@ -505,7 +505,7 @@ namespace Raven.Abstractions.Smuggler
 
 				count++;
 
-				if (count % 100 == 0)
+				if (count % options.BatchSize == 0)
 				{
 					ShowProgress("Read {0} documents", count);
 				}
