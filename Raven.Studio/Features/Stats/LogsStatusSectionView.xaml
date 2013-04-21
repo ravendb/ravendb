@@ -79,8 +79,7 @@
 				<HyperlinkButton x:Name="AllErrorsHyperlink"
 								 Grid.Column="1"
 									 Content="All Logs"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/logs"
+									 Command="{Binding ShowAll}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
                                      VerticalAlignment="Center">
 					<i:Interaction.Triggers>
@@ -99,8 +98,7 @@
 				<HyperlinkButton x:Name="ErrorsOnlyHyperlink"
 								 Grid.Column="2"
 									 Content="Errors Only"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/logs/error"
+									 Command="{Binding ErrorsOnly}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
 									 Margin="4,0,0,0"
                                      VerticalAlignment="Center">

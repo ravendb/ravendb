@@ -30,7 +30,11 @@ namespace Raven.Studio.Features.Stats
 			Logs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 			DisplayedLogs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 			Logs.CollectionChanged += (sender, args) => OnPropertyChanged(() => PendingLogs);
-			DisplayedLogs.CollectionChanged += (sender, args) => OnPropertyChanged(() => PendingLogs);
+			DisplayedLogs.CollectionChanged += (sender, args) =>
+			{
+				OnPropertyChanged(() => PendingLogs);
+				OnPropertyChanged(() => DisplayedLogs);
+			};
 		}
 
 		public string SearchValue
@@ -102,14 +106,38 @@ namespace Raven.Studio.Features.Stats
 				});
 			}
 		}
+		public ICommand ErrorsOnly
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					ShowErrorsOnly = true;
+					ReloadLogs();
+				});
+			}
+		}
+		public ICommand ShowAll
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					ShowErrorsOnly = false;
+					ReloadLogs();
+				});
+			}
+		}
 
 		private Task ReloadLogs()
         {
             return DatabaseCommands.GetLogsAsync(showErrorsOnly)
                 .ContinueOnSuccess(logs => Logs.Match(logs.OrderByDescending(x => x.TimeStamp).ToList(), () =>
                 {
+	                DisplayedLogs = Logs;
                     if (DisplayedLogs.Count == 0)
                         DisplayLatestLogs();
+					OnPropertyChanged(() => DisplayedLogs);
                 }));
         }
 
