@@ -7,6 +7,7 @@ using Raven.Client.Connection;
 #else
 using Raven.Client.Connection.Async;
 #endif
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -17,9 +18,9 @@ namespace Raven.Client.Document
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
 #if !SILVERLIGHT
-		private readonly IDatabaseCommands databaseCommands;
+		public IDatabaseCommands DatabaseCommands { get; private set; }
 #else
-		private readonly IAsyncDatabaseCommands databaseCommands;
+		public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
 #endif
 		private readonly EntityToJson entityToJson;
 
@@ -36,20 +37,24 @@ namespace Raven.Client.Document
 		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options)
 		{
 			this.documentStore = documentStore;
+
+			database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
+
 #if !SILVERLIGHT
-			databaseCommands = database == null
+			// Fitzchak: Should not be ever null because of the above code, please refactor this.
+			DatabaseCommands = database == null
 								   ? documentStore.DatabaseCommands.ForSystemDatabase()
 								   : documentStore.DatabaseCommands.ForDatabase(database);
 
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, databaseCommands, entity));
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, DatabaseCommands, entity));
 #else
-			databaseCommands = database == null
+			DatabaseCommands = database == null
 								   ? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
 								   : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, databaseCommands, entity).Result);
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).Result);
 #endif
-			operation = databaseCommands.GetBulkInsertOperation(options);
+			operation = DatabaseCommands.GetBulkInsertOperation(options);
 			entityToJson = new EntityToJson(documentStore, listeners);
 		}
 
