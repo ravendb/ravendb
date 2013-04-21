@@ -5,6 +5,7 @@ using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Client.Connection;
 using Raven.Studio.Models;
+using System.Linq;
 
 namespace Raven.Studio.Features.Stats
 {
@@ -60,6 +61,18 @@ namespace Raven.Studio.Features.Stats
 				return ((long)value).ToString("#,#");
 			if (value is float)
 				return ((float)value).ToString("#,#");
+			var enumerable = value as IEnumerable<string>;
+			if (enumerable != null)
+			{
+				var items = enumerable.ToList();
+				return items.Count == 0 ? null : string.Join(", ", items);
+			}
+			var databases = value as List<DatabaseInfo>;
+			if (databases != null)
+			{
+				var names = databases.Select(info => info.Database).ToList();
+				return names.Count == 0 ? null : string.Join(", ", names);
+			}
 
 			return value.ToString();
 		}
