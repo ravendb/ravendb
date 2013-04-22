@@ -85,7 +85,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void Execute()
 		{
-			using(LogContext.WithDatabase(docDb.Name))
+			using (LogContext.WithDatabase(docDb.Name))
 			{
 				var name = GetType().Name;
 
@@ -150,11 +150,11 @@ namespace Raven.Bundles.Replication.Tasks
 											if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted)
 												break;
 											activeTasks.TryDequeue(out task); // remove it from end
-								}
+										}
 									});
+								}
 							}
 						}
-					}
 					}
 					catch (Exception e)
 					{
@@ -221,33 +221,33 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
 		{
-			using(LogContext.WithDatabase(docDb.Name))
-			while (true)
-			{
-				RavenConnectionStringOptions connectionStringOptions;
-				try
+			using (LogContext.WithDatabase(docDb.Name))
+				while (true)
 				{
-					collection.TryTake(out connectionStringOptions, 15 * 1000, docDb.WorkContext.CancellationToken);
-					if (connectionStringOptions == null)
+					RavenConnectionStringOptions connectionStringOptions;
+					try
+					{
+						collection.TryTake(out connectionStringOptions, 15 * 1000, docDb.WorkContext.CancellationToken);
+						if (connectionStringOptions == null)
+							return;
+					}
+					catch (Exception e)
+					{
+						log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
 						return;
+					}
+					try
+					{
+						var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
+						var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+						request.WebRequest.ContentLength = 0;
+						request.ExecuteRequest();
+					}
+					catch (Exception e)
+					{
+						log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
+					}
 				}
-				catch (Exception e)
-				{
-					log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
-					return;
-				}
-				try
-				{
-					var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
-					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
-					request.WebRequest.ContentLength = 0;
-					request.ExecuteRequest();
-				}
-				catch (Exception e)
-				{
-					log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
-				}
-			}
 		}
 
 		private bool IsNotFailing(ReplicationStrategy dest, int currentReplicationAttempts)
@@ -367,7 +367,7 @@ namespace Raven.Bundles.Replication.Tasks
 						destination);
 					if (TryReplicationAttachments(destination, attachments, out lastError))// success on second fail
 					{
-						RecordSuccess(destination.ConnectionStringOptions.Url,lastReplicatedEtag: tuple.Item2);
+						RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2);
 						return true;
 					}
 				}
@@ -388,7 +388,7 @@ namespace Raven.Bundles.Replication.Tasks
 				if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
 				{
 					// we don't notify remote server about updates to system docs, see: RavenDB-715
-					if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments  == 0 || 
+					if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0 ||
 						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > 15)
 					{
 						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
@@ -475,7 +475,7 @@ namespace Raven.Bundles.Replication.Tasks
 			stats.LastEtagCheckedForReplication = lastEtagChecked;
 		}
 
-		private void RecordSuccess(string url, 
+		private void RecordSuccess(string url,
 			Etag lastReplicatedEtag = null, DateTime? lastReplicatedLastModified = null,
 			DateTime? lastHeartbeatReceived = null, string lastError = null)
 		{
@@ -497,7 +497,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (!string.IsNullOrWhiteSpace(lastError))
 				stats.LastError = lastError;
-			
+
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null, null);
 		}
 
@@ -512,7 +512,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" +
-				          UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
+						  UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
@@ -569,13 +569,13 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl()
-				          + "&dbid=" + docDb.TransactionalStorage.Id;
+						  + "&dbid=" + docDb.TransactionalStorage.Id;
 
 				var sp = Stopwatch.StartNew();
 
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
-				request.ExecuteRequest();	
+				request.ExecuteRequest();
 				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
 				lastError = "";
 				return true;
@@ -631,10 +631,19 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
+					var synchronizationEtag = docDb.EtagSynchronizer.GetSynchronizationEtagFor(x => x.ReplicatorEtag,
+																						   x => x.LastReplicatorSynchronizedEtag);
+
+					var lastEtag = docDb.EtagSynchronizer.CalculateSynchronizationEtagFor(x => x.ReplicatorEtag,
+																						  x => x.LastReplicatorSynchronizedEtag,
+																						  synchronizationEtag,
+																						  destinationsReplicationInformationForSource.LastDocumentEtag);
+
 					int docsSinceLastReplEtag = 0;
 					List<JsonDocument> docsToReplicate;
 					List<JsonDocument> filteredDocsToReplicate;
-					result.LastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+					result.LastEtag = lastEtag;
+
 					while (true)
 					{
 						docsToReplicate = GetDocsToReplicate(actions, result);
@@ -644,12 +653,12 @@ namespace Raven.Bundles.Replication.Tasks
 								.Where(document =>
 								{
 									var info = docDb.GetRecentTouchesFor(document.Key);
-									if(info != null)
+									if (info != null)
 									{
 										if (info.PreTouchEtag.CompareTo(result.LastEtag) <= 0)
 											return false;
 									}
-	
+
 									return destination.FilterDocuments(destinationId, document.Key, document.Metadata);
 								})
 								.ToList();
@@ -678,12 +687,12 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						if (docsSinceLastReplEtag == 0)
 							return string.Format("No documents to replicate to {0} - last replicated etag: {1}", destination,
-												 destinationsReplicationInformationForSource.LastDocumentEtag);
+												 lastEtag);
 
 						if (docsSinceLastReplEtag == filteredDocsToReplicate.Count)
 							return string.Format("Replicating {0} docs [>{1}] to {2}.",
 											 docsSinceLastReplEtag,
-											 destinationsReplicationInformationForSource.LastDocumentEtag,
+											 lastEtag,
 											 destination);
 
 						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
@@ -692,7 +701,7 @@ namespace Raven.Bundles.Replication.Tasks
 											 filteredDocsToReplicate.Count,
 											 destination,
 											 string.Join(", ", diff),
-											 destinationsReplicationInformationForSource.LastDocumentEtag);
+											 lastEtag);
 					});
 
 					result.Documents = new RavenJArray(filteredDocsToReplicate
@@ -713,20 +722,20 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private static List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
 		{
-			var docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024*1024*25).ToList();
+			var docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024 * 1024 * 25).ToList();
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
 			{
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
 			}
 			return docsToReplicate.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, lastEtag, 1024)
-					        .Select(x => new JsonDocument
-					        {
-						        Etag = x.Etag,
-						        Key = x.Key,
-						        Metadata = x.Data,
-						        DataAsJson = new RavenJObject()
-					        }))
+							.Select(x => new JsonDocument
+							{
+								Etag = x.Etag,
+								Key = x.Key,
+								Metadata = x.Data,
+								DataAsJson = new RavenJObject()
+							}))
 				.OrderBy(x => x.Etag)
 				.ToList();
 		}
@@ -814,7 +823,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag)
 		{
-			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024*1024*10).ToList();
+			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024 * 1024 * 10).ToList();
 
 			Etag lastEtag = null;
 			if (attachmentInformations.Count > 0)
@@ -822,13 +831,13 @@ namespace Raven.Bundles.Replication.Tasks
 
 			return attachmentInformations
 				.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, 100)
-					        .Select(x => new AttachmentInformation
-					        {
-						        Key = x.Key,
-						        Etag = x.Etag,
-						        Metadata = x.Data,
-						        Size = 0,
-					        }))
+							.Select(x => new AttachmentInformation
+							{
+								Key = x.Key,
+								Etag = x.Etag,
+								Metadata = x.Data,
+								Size = 0,
+							}))
 				.OrderBy(x => new ComparableByteArray(x.Etag))
 				.ToList();
 		}

@@ -4,17 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Impl;
-using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -139,17 +135,23 @@ namespace Raven.Storage.Managed
 				IndexerEtag = Etag.Parse(result.Key.Value<byte[]>("indexer_etag")),
 				LastIndexerSynchronizedEtag = Etag.Parse(result.Key.Value<byte[]>("indexer_etag")),
 				ReducerEtag = Etag.Parse(result.Key.Value<byte[]>("reducer_etag")),
-				LastReducerSynchronizedEtag = Etag.Parse(result.Key.Value<byte[]>("reducer_etag"))
+				LastReducerSynchronizedEtag = Etag.Parse(result.Key.Value<byte[]>("reducer_etag")),
+				ReplicatorEtag = Etag.Parse(result.Key.Value<byte[]>("replicator_etag")),
+				LastReplicatorSynchronizedEtag = Etag.Parse(result.Key.Value<byte[]>("replicator_etag")),
+				SqlReplicatorEtag = Etag.Parse(result.Key.Value<byte[]>("sql_replicator_etag")),
+				LastSqlReplicatorSynchronizedEtag = Etag.Parse(result.Key.Value<byte[]>("sql_replicator_etag")),
 			};
 		}
 
-		public void PutSynchronizationContext(Etag indexerEtag, Etag reducerEtag)
+		public void PutSynchronizationContext(Etag indexerEtag, Etag reducerEtag, Etag replicatorEtag, Etag sqlReplicatorEtag)
 		{
 			storage.EtagSynchronization.UpdateKey(new RavenJObject
 			{
 				{"key", Constants.RavenEtagSynchronization},
 				{"indexer_etag", indexerEtag.ToByteArray()},
-				{"reducer_etag", indexerEtag.ToByteArray()}
+				{"reducer_etag", reducerEtag.ToByteArray()},
+				{"replicator_etag", replicatorEtag.ToByteArray()},
+				{"sql_replicator_etag", sqlReplicatorEtag.ToByteArray()}
 			});
 		}
 

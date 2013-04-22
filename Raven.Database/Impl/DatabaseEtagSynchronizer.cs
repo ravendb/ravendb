@@ -36,10 +36,28 @@ namespace Raven.Database.Impl
 			UpdateSynchronizationContext(lowestEtag);
 		}
 
-		public Etag CalculateSynchronizationEtagFor(Etag currentEtag, Etag lastProcessedEtag)
+		public Etag CalculateSynchronizationEtagFor(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector, Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector, Etag currentEtag, Etag lastProcessedEtag)
 		{
 			if (currentEtag == null)
-				return lastProcessedEtag ?? Etag.Empty;
+			{
+				if (lastProcessedEtag != null)
+				{
+					lock (locker)
+					{
+						var etag = GetValue(propertySelector);
+						var synchronizationEtag = GetValue(synchronizationPropertySelector);
+						if (etag == null && lastProcessedEtag.CompareTo(synchronizationEtag) != 0)
+						{
+							SetValue(synchronizationPropertySelector, lastProcessedEtag);
+							PersistSynchronizationContext();
+						}
+					}
+
+					return lastProcessedEtag;
+				}
+
+				return Etag.Empty;
+			}
 
 			if (lastProcessedEtag == null)
 				return Etag.Empty;
@@ -76,8 +94,10 @@ namespace Raven.Database.Impl
 		{
 			var indexerEtag = GetEtagForPersistance(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag);
 			var reducerEtag = GetEtagForPersistance(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag);
+			var replicatorEtag = GetEtagForPersistance(x => x.ReplicatorEtag, x => x.LastReplicatorSynchronizedEtag);
+			var sqlReplicatorEtag = GetEtagForPersistance(x => x.SqlReplicatorEtag, x => x.LastSqlReplicatorSynchronizedEtag);
 
-			transactionalStorage.Batch(actions => actions.Staleness.PutSynchronizationContext(indexerEtag, reducerEtag));
+			transactionalStorage.Batch(actions => actions.Staleness.PutSynchronizationContext(indexerEtag, reducerEtag, replicatorEtag, sqlReplicatorEtag));
 		}
 
 		private Etag GetEtagForPersistance(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector,
@@ -116,6 +136,8 @@ namespace Raven.Database.Impl
 				var shouldPersist = false;
 				shouldPersist |= UpdateSynchronizationContextFor(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag, lowestEtag);
 				shouldPersist |= UpdateSynchronizationContextFor(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag, lowestEtag);
+				shouldPersist |= UpdateSynchronizationContextFor(x => x.ReplicatorEtag, x => x.LastReplicatorSynchronizedEtag, lowestEtag);
+				shouldPersist |= UpdateSynchronizationContextFor(x => x.SqlReplicatorEtag, x => x.LastSqlReplicatorSynchronizedEtag, lowestEtag);
 
 				if (shouldPersist)
 					PersistSynchronizationContext();
@@ -178,6 +200,10 @@ namespace Raven.Database.Impl
 			LastIndexerSynchronizedEtag = Etag.Empty;
 			ReducerEtag = Etag.Empty;
 			LastReducerSynchronizedEtag = Etag.Empty;
+			ReplicatorEtag = Etag.Empty;
+			LastReplicatorSynchronizedEtag = Etag.Empty;
+			SqlReplicatorEtag = Etag.Empty;
+			LastSqlReplicatorSynchronizedEtag = Etag.Empty;
 		}
 
 		public Etag IndexerEtag { get; set; }
@@ -187,5 +213,13 @@ namespace Raven.Database.Impl
 		public Etag ReducerEtag { get; set; }
 
 		public Etag LastReducerSynchronizedEtag { get; set; }
+
+		public Etag ReplicatorEtag { get; set; }
+
+		public Etag LastReplicatorSynchronizedEtag { get; set; }
+
+		public Etag SqlReplicatorEtag { get; set; }
+
+		public Etag LastSqlReplicatorSynchronizedEtag { get; set; }
 	}
 }

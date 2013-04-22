@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
@@ -200,6 +201,8 @@ namespace Raven.Database.Indexing
 
 		protected abstract Etag GetSynchronizationEtag();
 
+		protected abstract Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag);
+
 		protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
 		{
 			Etag synchronizationEtag = null;
@@ -242,7 +245,7 @@ namespace Raven.Database.Indexing
 			using (context.IndexDefinitionStorage.CurrentlyIndexing())
 			{
 				var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
-				var startEtag = etagSynchronizer.CalculateSynchronizationEtagFor(synchronizationEtag, lastIndexedGuidForAllIndexes);
+				var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
 
 				ExecuteIndexingWork(indexesToWorkOn, startEtag);
 			}

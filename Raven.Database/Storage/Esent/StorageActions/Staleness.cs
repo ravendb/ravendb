@@ -182,16 +182,28 @@ namespace Raven.Storage.Esent.StorageActions
 				Etag.Parse(Api.RetrieveColumn(session, EtagSynchronization,
 											  tableColumnsCache.EtagSynchronizationColumns["reducer_etag"]));
 
+			var replicatorEtag =
+				Etag.Parse(Api.RetrieveColumn(session, EtagSynchronization,
+											  tableColumnsCache.EtagSynchronizationColumns["replicator_etag"]));
+
+			var sqlReplicatorEtag =
+				Etag.Parse(Api.RetrieveColumn(session, EtagSynchronization,
+											  tableColumnsCache.EtagSynchronizationColumns["sql_replicator_etag"]));
+
 			return new EtagSynchronizationContext
 			{
 				IndexerEtag = indexerEtag,
 				LastIndexerSynchronizedEtag = indexerEtag,
 				ReducerEtag = reducerEtag,
-				LastReducerSynchronizedEtag = reducerEtag
+				LastReducerSynchronizedEtag = reducerEtag,
+				ReplicatorEtag = replicatorEtag,
+				LastReplicatorSynchronizedEtag = replicatorEtag,
+				SqlReplicatorEtag = sqlReplicatorEtag,
+				LastSqlReplicatorSynchronizedEtag = sqlReplicatorEtag
 			};
 		}
 
-		public void PutSynchronizationContext(Etag indexerEtag, Etag reducerEtag)
+		public void PutSynchronizationContext(Etag indexerEtag, Etag reducerEtag, Etag replicatorEtag, Etag sqlReplicatorEtag)
 		{
 			Api.JetSetCurrentIndex(session, EtagSynchronization, "by_key");
 
@@ -203,6 +215,8 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["key"], Constants.RavenEtagSynchronization, Encoding.Unicode);
 				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["indexer_etag"], indexerEtag.ToByteArray());
 				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["reducer_etag"], reducerEtag.ToByteArray());
+				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["replicator_etag"], replicatorEtag.ToByteArray());
+				Api.SetColumn(session, EtagSynchronization, tableColumnsCache.EtagSynchronizationColumns["sql_replicator_etag"], replicatorEtag.ToByteArray());
 
 				update.Save();
 			}

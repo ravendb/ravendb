@@ -51,9 +51,9 @@ namespace Raven.Tryouts
 				Task.WaitAll(tasks.ToArray());
 
 				Console.WriteLine("Elapsed: " + watch.Elapsed.TotalSeconds + " seconds");
-			}
 
-			Console.ReadLine();
+				Console.ReadLine();
+			}
 		}
 
 		private static void Save(IDocumentStore store, int j)
