@@ -196,13 +196,9 @@ namespace Raven.Database.Impl
 	{
 		public EtagSynchronizationContext()
 		{
-			IndexerEtag = Etag.Empty;
 			LastIndexerSynchronizedEtag = Etag.Empty;
-			ReducerEtag = Etag.Empty;
 			LastReducerSynchronizedEtag = Etag.Empty;
-			ReplicatorEtag = Etag.Empty;
 			LastReplicatorSynchronizedEtag = Etag.Empty;
-			SqlReplicatorEtag = Etag.Empty;
 			LastSqlReplicatorSynchronizedEtag = Etag.Empty;
 		}
 
