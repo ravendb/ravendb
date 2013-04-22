@@ -63,15 +63,15 @@ namespace Raven.Client.Document
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not prepare distributed transaction", e);
-			    try
-			    {
-                    session.Rollback(GetLocalOrDistributedTransactionId(transaction));
-                    DeleteFile();
-			    }
-			    catch (Exception e2)
-			    {
-			        logger.ErrorException("Could not roll back transaction after prepare failed", e2);
-			    }
+				try
+				{
+					session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+					DeleteFile();
+				}
+				catch (Exception e2)
+				{
+					logger.ErrorException("Could not roll back transaction after prepare failed", e2);
+				}
 
 				preparingEnlistment.ForceRollback(e);
 				return;
