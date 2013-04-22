@@ -1,4 +1,4 @@
-package raven.client.common.data;
+package raven.client.json;
 
 public class Guid {
   private String value;

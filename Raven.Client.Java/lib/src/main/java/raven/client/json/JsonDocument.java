@@ -1,6 +1,5 @@
-package raven.client.common.data;
+package raven.client.json;
 
-import raven.client.common.json.RavenJObject;
 
 /**
  * A document representation:

@@ -1,9 +1,10 @@
 package raven.client.connection;
 
-import raven.client.common.data.Guid;
-import raven.client.common.data.JsonDocument;
-import raven.client.common.data.PutResult;
-import raven.client.common.json.RavenJObject;
+import org.codehaus.jackson.JsonNode;
+
+import raven.client.json.Guid;
+import raven.client.json.JsonDocument;
+import raven.client.json.PutResult;
 
 public interface IDatabaseCommands {
   /**
@@ -21,7 +22,7 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    * @return PutResult
    */
-  public PutResult put(String key, Guid guid, RavenJObject document, RavenJObject metadata);
+  public PutResult put(String key, Guid guid, JsonNode document, JsonNode metadata);
 
   /**
    * Deletes the document with the specified key

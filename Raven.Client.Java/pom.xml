@@ -31,7 +31,6 @@
   </dependencies>
 
   <modules>
-    <module>common</module>
     <module>lib</module>
   </modules>
 </project>
