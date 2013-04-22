@@ -60,8 +60,8 @@ namespace Raven.Storage.Managed
 					return true;
 				}
 			}
-			
-			var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject{{"index", name}});
+
+			var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject { { "index", name } });
 			if (cutOff != null)
 				tasksAfterCutoffPoint = tasksAfterCutoffPoint
 					.Where(x => x.Value<DateTime>("time") <= cutOff.Value);
@@ -97,7 +97,7 @@ namespace Raven.Storage.Managed
 			return isStale;
 		}
 
-		public Tuple<DateTime,Etag> IndexLastUpdatedAt(string name)
+		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
 		{
 			var readResult = storage.IndexingStats.Read(name);
 
@@ -130,6 +130,9 @@ namespace Raven.Storage.Managed
 		public EtagSynchronizationContext GetSynchronizationContext()
 		{
 			var result = storage.EtagSynchronization.Read(Constants.RavenEtagSynchronization);
+
+			if (result == null)
+				return null;
 
 			return new EtagSynchronizationContext
 			{
@@ -165,7 +168,7 @@ namespace Raven.Storage.Managed
 			foreach (var doc in storage.Attachments["ByEtag"].SkipFromEnd(0))
 			{
 				var docEtag = doc.Value<byte[]>("etag");
-                return Etag.Parse(docEtag);
+				return Etag.Parse(docEtag);
 			}
 			return Etag.Empty;
 		}

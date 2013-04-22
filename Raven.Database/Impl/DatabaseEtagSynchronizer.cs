@@ -57,11 +57,11 @@ namespace Raven.Database.Impl
 				var etag = GetValue(propertySelector);
 
 				if (etag != null)
+				{
+					PersistSynchronizationContext();
 					SetValue(synchronizationPropertySelector, etag);
-
-				PersistSynchronizationContext();
-
-				ResetSynchronizationEtagFor(propertySelector);
+					ResetSynchronizationEtagFor(propertySelector);
+				}
 
 				return etag;
 			}
@@ -69,10 +69,7 @@ namespace Raven.Database.Impl
 
 		private void ResetSynchronizationEtagFor(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector)
 		{
-			lock (locker)
-			{
-				SetValue(propertySelector, null);
-			}
+			SetValue(propertySelector, null);
 		}
 
 		private void PersistSynchronizationContext()
@@ -84,7 +81,7 @@ namespace Raven.Database.Impl
 		}
 
 		private Etag GetEtagForPersistance(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector,
-		                                   Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector)
+										   Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector)
 		{
 			var etag = GetValue(propertySelector);
 			var synchronizationEtag = GetValue(synchronizationPropertySelector);
@@ -133,7 +130,6 @@ namespace Raven.Database.Impl
 			if (etag == null || lowestEtag.CompareTo(etag) < 0)
 			{
 				SetValue(propertySelector, lowestEtag);
-				return true;
 			}
 
 			if (lowestEtag.CompareTo(synchronizationEtag) < 0)

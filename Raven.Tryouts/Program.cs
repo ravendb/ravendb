@@ -29,31 +29,29 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var store = new EmbeddableDocumentStore
+			using (var store = new EmbeddableDocumentStore
 			{
 				//Url = "http://localhost:8080",
-				//DefaultDatabase = "DB9",
-				//UseEmbeddedHttpServer = true
-			}.Initialize();
-
-			//store.DatabaseCommands.EnsureDatabaseExists("DB9");
-
-			//new RavenDocumentsByEntityName().Execute(store.DatabaseCommands, new DocumentConvention());
-
-			var watch = Stopwatch.StartNew();
-
-			var tasks = new List<Task>();
-			for (var i = 1; i <= 20; i++)
+				//DefaultDatabase = "DB9"
+			}.Initialize())
 			{
-				var taskNumber = i;
-				tasks.Add(Task.Factory.StartNew(() => Save(store, taskNumber)));
+				//store.DatabaseCommands.EnsureDatabaseExists("DB9");
+
+				new RavenDocumentsByEntityName().Execute(store.DatabaseCommands, new DocumentConvention());
+
+				var watch = Stopwatch.StartNew();
+
+				var tasks = new List<Task>();
+				for (var i = 1; i <= 20; i++)
+				{
+					var taskNumber = i;
+					tasks.Add(Task.Factory.StartNew(() => Save(store, taskNumber)));
+				}
+
+				Task.WaitAll(tasks.ToArray());
+
+				Console.WriteLine("Elapsed: " + watch.Elapsed.TotalSeconds + " seconds");
 			}
-
-			Task.WaitAll(tasks.ToArray());
-
-			store.Dispose();
-
-			Console.WriteLine("Elapsed: " + watch.Elapsed.TotalSeconds + " seconds");
 
 			Console.ReadLine();
 		}
@@ -67,21 +65,6 @@ namespace Raven.Tryouts
 					FirstName = "FirstName" + i,
 					LastName = "LastName" + i
 				}), new RavenJObject());
-
-				//if (i % 5 == 0)
-				//	Thread.Sleep(30000);
-
-				//using (var session = store.OpenSession())
-				//{
-				//	session.Store(new Person
-				//	{
-				//		FirstName = "FirstName" + i,
-				//		LastName = "LastName" + i
-				//	});
-
-				//	if (i % 100 == 0)
-				//		session.SaveChanges();
-				//}
 			}
 		}
 	}
