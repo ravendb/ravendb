@@ -4,15 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Indexing;
+using Raven.Database.Impl;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -58,8 +57,8 @@ namespace Raven.Storage.Managed
 					return true;
 				}
 			}
-			
-			var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject{{"index", name}});
+
+			var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject { { "index", name } });
 			if (cutOff != null)
 				tasksAfterCutoffPoint = tasksAfterCutoffPoint
 					.Where(x => x.Value<DateTime>("time") <= cutOff.Value);
@@ -95,7 +94,7 @@ namespace Raven.Storage.Managed
 			return isStale;
 		}
 
-		public Tuple<DateTime,Etag> IndexLastUpdatedAt(string name)
+		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
 		{
 			var readResult = storage.IndexingStats.Read(name);
 
@@ -140,7 +139,7 @@ namespace Raven.Storage.Managed
 			foreach (var doc in storage.Attachments["ByEtag"].SkipFromEnd(0))
 			{
 				var docEtag = doc.Value<byte[]>("etag");
-                return Etag.Parse(docEtag);
+				return Etag.Parse(docEtag);
 			}
 			return Etag.Empty;
 		}

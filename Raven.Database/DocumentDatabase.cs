@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -123,10 +124,11 @@ namespace Raven.Database
             get { return indexingExecuter; }
         }
 
-        /// <summary>
-        /// This is required to ensure serial generation of etags during puts
-        /// </summary>
-        private readonly PutSerialLock putSerialLocker = new PutSerialLock();
+	    private readonly DatabaseEtagSynchronizer etagSynchronizer;
+	    public DatabaseEtagSynchronizer EtagSynchronizer
+	    {
+			get { return etagSynchronizer; }
+	    }
 
         /// <summary>
         /// Requires to avoid having serialize writes to the same attachments
@@ -220,7 +222,8 @@ namespace Raven.Database
 
                     CompleteWorkContextSetup();
 
-                    indexingExecuter = new IndexingExecuter(workContext);
+	                etagSynchronizer = new DatabaseEtagSynchronizer(TransactionalStorage);
+                    indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer);
 
                     InitializeTriggersExceptIndexCodecs();
                     SecondStageInitialization();
@@ -567,7 +570,7 @@ namespace Raven.Database
                 indexingExecuter.Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
             reducingBackgroundTask = Task.Factory.StartNew(
-                new ReducingExecuter(workContext).Execute,
+                new ReducingExecuter(workContext, etagSynchronizer).Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
         }
 
@@ -583,7 +586,7 @@ namespace Raven.Database
                 indexingExecuter.Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
             reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-                new ReducingExecuter(workContext).Execute,
+                new ReducingExecuter(workContext, etagSynchronizer).Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
         }
 
@@ -710,8 +713,7 @@ namespace Raven.Database
             RemoveReservedProperties(document);
             RemoveMetadataReservedProperties(metadata);
             Etag newEtag = Etag.Empty;
-            using (putSerialLocker.Lock())
-            {
+
                 TransactionalStorage.Batch(actions =>
                 {
                     if (key.EndsWith("/"))
@@ -742,7 +744,11 @@ namespace Raven.Database
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications);
+                        }, documents =>
+                        {
+							etagSynchronizer.UpdateSynchronizationState(documents);
+							indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(documents);
+                        });
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
@@ -767,7 +773,6 @@ namespace Raven.Database
                     }
                     workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                 });
-            }
 
             log.Debug("Put document {0} with etag {1}", key, newEtag);
             return new PutResult
@@ -923,8 +928,6 @@ namespace Raven.Database
                 throw new ArgumentNullException("key");
             key = key.Trim();
 
-            using (putSerialLocker.Lock())
-            {
                 var deleted = false;
                 log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
                 RavenJObject metadataVar = null;
@@ -998,7 +1001,6 @@ namespace Raven.Database
 
                 metadata = metadataVar;
                 return deleted;
-            }
         }
 
         public bool HasTransaction(Guid txId)
@@ -1010,8 +1012,6 @@ namespace Raven.Database
         {
             try
             {
-		        using (putSerialLocker.Lock())
-                {
                     try
                     {
             TransactionalStorage.Batch(actions =>
@@ -1035,7 +1035,6 @@ namespace Raven.Database
 			        {
 				        inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
 			        }
-                    }
                 }
                 catch (Exception e)
                 {
@@ -1821,8 +1820,6 @@ namespace Raven.Database
                 return result;
             }
 
-			using (putSerialLocker.Lock())
-            {
 	            BatchResult[] results = null;
                     TransactionalStorage.Batch(actions =>
                     {
@@ -1830,14 +1827,11 @@ namespace Raven.Database
                     });
 
 	            return results;
-                }
             }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
         {
             int retries = 128;
-            using (putSerialLocker.Lock())
-            {
                 while (true)
                 {
                     try
@@ -1855,7 +1849,6 @@ namespace Raven.Database
                         throw;
                     }
                 }
-            }
         }
 
         private BatchResult[] ProcessBatch(IList<ICommandData> commands)
@@ -2176,8 +2169,7 @@ namespace Raven.Database
                 foreach (var docs in docBatches)
                 {
                     WorkContext.CancellationToken.ThrowIfCancellationRequested();
-                    using (putSerialLocker.Lock())
-                    {
+
                         var inserts = 0;
                         var batch = 0;
                         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -2219,7 +2211,7 @@ namespace Raven.Database
                         workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
                         workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
                     }
-                }
+
                 RaiseNotifications(new DocumentChangeNotification
                 {
                     Type = DocumentChangeTypes.BulkInsertEnded

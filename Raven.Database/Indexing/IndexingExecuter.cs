@@ -15,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -28,15 +29,21 @@ namespace Raven.Database.Indexing
 	{
 		readonly PrefetchingBehavior prefetchingBehavior;
 
-		public IndexingExecuter(WorkContext context)
+		private readonly EtagSynchronizer etagSynchronizer;
+
+		public IndexingExecuter(WorkContext context, DatabaseEtagSynchronizer synchronizer)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
+			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Indexer);
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
+		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
+			if (indexesStat.LastIndexedEtag.CompareTo(synchronizationEtag) > 0)
+				return true;
+
 			var isStale = actions.Staleness.IsMapStale(indexesStat.Name);
 			var indexingPriority = indexesStat.Priority;
 			if (isStale == false)
@@ -80,6 +87,16 @@ namespace Raven.Database.Indexing
 			context.IndexStorage.FlushMapIndexes();
 		}
 
+		protected override Etag GetSynchronizationEtag()
+		{
+			return etagSynchronizer.GetSynchronizationEtag();
+		}
+
+		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
+		{
+			return etagSynchronizer.CalculateSynchronizationEtag(currentEtag, lastProcessedEtag);
+		}
+
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
@@ -89,11 +106,9 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
-
-			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
 
 			context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -103,12 +118,12 @@ namespace Raven.Database.Indexing
 			var lastEtag = Etag.Empty;
 			try
 			{
-				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedGuidForAllIndexes);
+				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
 
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-							  jsonDocs.Count, lastIndexedGuidForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+							  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
 				}
 
 				context.ReportIndexingActualBatchSize(jsonDocs.Count);
