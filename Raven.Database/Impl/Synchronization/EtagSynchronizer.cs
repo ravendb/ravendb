@@ -85,10 +85,7 @@ namespace Raven.Database.Impl.Synchronization
 				currentEtag = lowestEtag;
 			}
 
-			if (lowestEtag.CompareTo(synchronizationEtag) < 0)
-				return true;
-
-			return false;
+			return lowestEtag.CompareTo(synchronizationEtag) < 0;
 		}
 
 		private void PersistSynchronizationState()
@@ -120,18 +117,13 @@ namespace Raven.Database.Impl.Synchronization
 
 		private Etag GetEtagForPersistance()
 		{
-			Etag result;
+			var result = synchronizationEtag;
 			if (currentEtag != null)
 			{
 				result = currentEtag.CompareTo(synchronizationEtag) < 0
 					         ? currentEtag
 					         : synchronizationEtag;
 			}
-			else
-			{
-				result = synchronizationEtag;
-			}
-
 			return result ?? Etag.Empty;
 		}
 	}
