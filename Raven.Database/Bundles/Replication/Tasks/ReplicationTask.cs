@@ -29,6 +29,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Database.Extensions;
 
 namespace Raven.Bundles.Replication.Tasks
 {
@@ -895,6 +896,21 @@ namespace Raven.Bundles.Replication.Tasks
 				log.Warn("Cannot get replication destinations", e);
 				return new ReplicationStrategy[0];
 			}
+
+			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source) == false && jsonDeserialization.Source != docDb.Name)
+			{
+				docDb.AddAlert(new Alert
+				{
+					AlertLevel = AlertLevel.Error,
+					CreatedAt = SystemTime.UtcNow,
+					Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
+					Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.Name,
+					UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.Name
+				});
+
+				return new ReplicationStrategy[0];
+			}
+
 			return jsonDeserialization
 				.Destinations
 				.Where(x => !x.Disabled)

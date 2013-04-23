@@ -24,12 +24,26 @@ namespace Raven.Abstractions.Replication
 		public string Id { get; set; }
 
 		/// <summary>
+		/// Gets or sets the Source.
+		/// </summary>
+		/// <value>The Source.</value>
+		public string Source { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="ReplicationDocument"/> class.
 		/// </summary>
 		public ReplicationDocument()
 		{
 			Id = "Raven/Replication/Destinations";
 			Destinations = new List<ReplicationDestination>();
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ReplicationDocument"/> class.
+		/// </summary>
+		public ReplicationDocument(string source) : this()
+		{
+			Source = source;
 		}
 	}
 }

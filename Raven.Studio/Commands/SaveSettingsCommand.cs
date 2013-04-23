@@ -75,7 +75,7 @@ namespace Raven.Studio.Commands
 					.ContinueOnSuccessInTheUIThread(document =>
 					{
                         if (document == null)
-                            document = new ReplicationDocument();
+                            document = new ReplicationDocument(databaseName);
 
 						document.Destinations.Clear();
                         foreach (var destination in replicationSettings.ReplicationDestinations.Where(destination => !string.IsNullOrWhiteSpace(destination.Url)))
