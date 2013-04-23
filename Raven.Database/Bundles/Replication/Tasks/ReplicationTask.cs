@@ -24,6 +24,7 @@ using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Impl;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Storage;
@@ -63,8 +64,13 @@ namespace Raven.Bundles.Replication.Tasks
 		private int replicationAttempts;
 		private int workCounter;
 		private HttpRavenRequestFactory httpRavenRequestFactory;
+
+		private EtagSynchronizer etagSynchronizer;
+
 		public void Execute(DocumentDatabase database)
 		{
+			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.Replicator);
+
 			docDb = database;
 			var replicationRequestTimeoutInMs =
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
@@ -631,11 +637,11 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					var synchronizationEtag = docDb.EtagSynchronizer.GetSynchronizationEtagFor(EtagSynchronizationType.Replicator);
+					var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
 
-					var lastEtag = docDb.EtagSynchronizer.CalculateSynchronizationEtagFor(EtagSynchronizationType.Replicator,
-																						  synchronizationEtag,
-																						  destinationsReplicationInformationForSource.LastDocumentEtag);
+					var lastEtag = etagSynchronizer.CalculateSynchronizationEtag(
+						synchronizationEtag,
+						destinationsReplicationInformationForSource.LastDocumentEtag);
 
 					int docsSinceLastReplEtag = 0;
 					List<JsonDocument> docsToReplicate;

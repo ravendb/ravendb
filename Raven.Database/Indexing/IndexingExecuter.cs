@@ -15,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -28,11 +29,14 @@ namespace Raven.Database.Indexing
 	{
 		readonly PrefetchingBehavior prefetchingBehavior;
 
-		public IndexingExecuter(WorkContext context, DatabaseEtagSynchronizer etagSynchronizer)
-			: base(context, etagSynchronizer)
+		private readonly EtagSynchronizer etagSynchronizer;
+
+		public IndexingExecuter(WorkContext context, DatabaseEtagSynchronizer synchronizer)
+			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
+			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Indexer);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -85,12 +89,12 @@ namespace Raven.Database.Indexing
 
 		protected override Etag GetSynchronizationEtag()
 		{
-			return etagSynchronizer.GetSynchronizationEtagFor(EtagSynchronizationType.Indexer);
+			return etagSynchronizer.GetSynchronizationEtag();
 		}
 
 		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
 		{
-			return etagSynchronizer.CalculateSynchronizationEtagFor(EtagSynchronizationType.Indexer, currentEtag, lastProcessedEtag);
+			return etagSynchronizer.CalculateSynchronizationEtag(currentEtag, lastProcessedEtag);
 		}
 
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)

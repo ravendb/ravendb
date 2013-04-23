@@ -46,12 +46,6 @@ namespace Raven.Storage.Esent.StorageActions
 			get { return indexesStats ?? (indexesStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None)); }
 		}
 
-		private Table etagSynchronization;
-		protected Table EtagSynchronization
-		{
-			get { return etagSynchronization ?? (etagSynchronization = new Table(session, dbid, "etag_synchronization", OpenTableGrbit.None)); }
-		}
-
 		private Table indexesStatsReduce;
 		protected Table IndexesStatsReduce
 		{

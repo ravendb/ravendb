@@ -45,7 +45,6 @@ namespace Raven.Storage.Esent
 					CreateReduceKeysCountsTable(dbid);
 					CreateReduceKeysStatusTable(dbid);
 					CreateIndexedDocumentsReferencesTable(dbid);
-					CreateEtagSynchronizationTable(dbid);
 
 					tx.Commit(CommitTransactionGrbit.None);
 				}
@@ -82,56 +81,6 @@ namespace Raven.Storage.Esent
 			{
 				szKey = "+key\0\0",
 				szIndexName = "by_key",
-				grbit = CreateIndexGrbit.IndexPrimary
-			});
-		}
-
-		private void CreateEtagSynchronizationTable(JET_DBID dbid)
-		{
-			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "etag_synchronization", 1, 80, out tableid);
-			JET_COLUMNID columnid;
-
-			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
-			{
-				cbMax = 2048,
-				coltyp = JET_coltyp.LongText,
-				cp = JET_CP.Unicode,
-				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "indexer_etag", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Binary,
-				cbMax = 16,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "reducer_etag", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Binary,
-				cbMax = 16,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "replicator_etag", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Binary,
-				cbMax = 16,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "sql_replicator_etag", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Binary,
-				cbMax = 16,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
-			CreateIndexes(tableid, new JET_INDEXCREATE
-			{
-				szIndexName = "by_key",
-				szKey = "+key\0\0",
 				grbit = CreateIndexGrbit.IndexPrimary
 			});
 		}

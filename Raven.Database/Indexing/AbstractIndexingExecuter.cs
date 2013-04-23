@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Database.Impl;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using System.Linq;
@@ -25,14 +24,11 @@ namespace Raven.Database.Indexing
 		protected int lastFlushedWorkCounter;
 		protected BaseBatchSizeAutoTuner autoTuner;
 
-		protected readonly DatabaseEtagSynchronizer etagSynchronizer;
-
-		protected AbstractIndexingExecuter(WorkContext context, DatabaseEtagSynchronizer etagSynchronizer)
+		protected AbstractIndexingExecuter(WorkContext context)
 		{
 			this.transactionalStorage = context.TransactionalStorage;
 			this.context = context;
 			this.scheduler = context.TaskScheduler;
-			this.etagSynchronizer = etagSynchronizer;
 		}
 
 		public void Execute()
