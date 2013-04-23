@@ -748,6 +748,46 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
+		{
+
+			string facetsJson = JsonConvert.SerializeObject(facets);
+			var method = facetsJson.Length > 1024 ? "POST" : "GET";
+			return ExecuteWithReplication(method, operationUrl =>
+			{
+				var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
+																Uri.EscapeUriString(index),
+																query.GetMinimalQueryString(),
+																start,
+																pageSize);
+
+				if (method == "GET")
+					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
+
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
+						.AddOperationHeaders(OperationsHeaders))
+						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				if (method != "GET")
+					request.WriteAsync(facetsJson).Wait();
+
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var json = (RavenJObject)task.Result;
+						return json.JsonDeserialization<FacetResults>();
+					});
+			});
+		}
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
