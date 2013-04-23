@@ -14,7 +14,7 @@ namespace Raven.Database.Indexing
 {
 	public class IndexedTerms
 	{
-		public static void ReadEntriesForFields(IndexReader reader, HashSet<string> fieldsToRead, HashSet<int> docIds, Action<Term> onTermFound)
+		public static void ReadEntriesForFields(IndexReader reader, HashSet<string> fieldsToRead, HashSet<int> docIds, Action<Term, int> onTermFound)
 		{
 			using (var termDocs = reader.TermDocs())
 			{
@@ -39,7 +39,7 @@ namespace Raven.Database.Indexing
 									continue;
 								if (docIds.Contains(termDocs.Doc) == false)
 									continue;
-								onTermFound(termEnum.Term);
+								onTermFound(termEnum.Term, termDocs.Doc);
 							}
 						} while (termEnum.Next());
 					} 
