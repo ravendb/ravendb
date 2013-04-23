@@ -897,7 +897,12 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 
-			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source) == false && jsonDeserialization.Source != docDb.Name)
+			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source))
+			{
+				jsonDeserialization.Source = docDb.Name;
+			}
+
+			if (jsonDeserialization.Source != docDb.Name)
 			{
 				docDb.AddAlert(new Alert
 				{
