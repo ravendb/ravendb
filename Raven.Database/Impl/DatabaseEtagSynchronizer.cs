@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 
@@ -36,7 +34,7 @@ namespace Raven.Database.Impl
 			UpdateSynchronizationContext(lowestEtag);
 		}
 
-		public Etag CalculateSynchronizationEtagFor(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector, Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector, Etag currentEtag, Etag lastProcessedEtag)
+		public Etag CalculateSynchronizationEtagFor(EtagSynchronizationType type, Etag currentEtag, Etag lastProcessedEtag)
 		{
 			if (currentEtag == null)
 			{
@@ -44,11 +42,11 @@ namespace Raven.Database.Impl
 				{
 					lock (locker)
 					{
-						var etag = GetValue(propertySelector);
-						var synchronizationEtag = GetValue(synchronizationPropertySelector);
+						var etag = GetEtag(type);
+						var synchronizationEtag = GetSynchronizationEtag(type);
 						if (etag == null && lastProcessedEtag.CompareTo(synchronizationEtag) != 0)
 						{
-							SetValue(synchronizationPropertySelector, lastProcessedEtag);
+							SetSynchronizationEtag(type, lastProcessedEtag);
 							PersistSynchronizationContext();
 						}
 					}
@@ -68,43 +66,42 @@ namespace Raven.Database.Impl
 			return lastProcessedEtag;
 		}
 
-		public Etag GetSynchronizationEtagFor(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector, Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector)
+		public Etag GetSynchronizationEtagFor(EtagSynchronizationType type)
 		{
 			lock (locker)
 			{
-				var etag = GetValue(propertySelector);
+				var etag = GetEtag(type);
 
 				if (etag != null)
 				{
 					PersistSynchronizationContext();
-					SetValue(synchronizationPropertySelector, etag);
-					ResetSynchronizationEtagFor(propertySelector);
+					SetSynchronizationEtag(type, etag);
+					ResetSynchronizationEtagFor(type);
 				}
 
 				return etag;
 			}
 		}
 
-		private void ResetSynchronizationEtagFor(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector)
+		private void ResetSynchronizationEtagFor(EtagSynchronizationType type)
 		{
-			SetValue(propertySelector, null);
+			SetEtag(type, null);
 		}
 
 		private void PersistSynchronizationContext()
 		{
-			var indexerEtag = GetEtagForPersistance(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag);
-			var reducerEtag = GetEtagForPersistance(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag);
-			var replicatorEtag = GetEtagForPersistance(x => x.ReplicatorEtag, x => x.LastReplicatorSynchronizedEtag);
-			var sqlReplicatorEtag = GetEtagForPersistance(x => x.SqlReplicatorEtag, x => x.LastSqlReplicatorSynchronizedEtag);
+			var indexerEtag = GetEtagForPersistance(EtagSynchronizationType.Indexer);
+			var reducerEtag = GetEtagForPersistance(EtagSynchronizationType.Reducer);
+			var replicatorEtag = GetEtagForPersistance(EtagSynchronizationType.Replicator);
+			var sqlReplicatorEtag = GetEtagForPersistance(EtagSynchronizationType.SqlReplicator);
 
 			transactionalStorage.Batch(actions => actions.Staleness.PutSynchronizationContext(indexerEtag, reducerEtag, replicatorEtag, sqlReplicatorEtag));
 		}
 
-		private Etag GetEtagForPersistance(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector,
-										   Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector)
+		private Etag GetEtagForPersistance(EtagSynchronizationType type)
 		{
-			var etag = GetValue(propertySelector);
-			var synchronizationEtag = GetValue(synchronizationPropertySelector);
+			var etag = GetEtag(type);
+			var synchronizationEtag = GetSynchronizationEtag(type);
 
 			Etag result;
 			if (etag != null)
@@ -134,24 +131,24 @@ namespace Raven.Database.Impl
 			lock (locker)
 			{
 				var shouldPersist = false;
-				shouldPersist |= UpdateSynchronizationContextFor(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag, lowestEtag);
-				shouldPersist |= UpdateSynchronizationContextFor(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag, lowestEtag);
-				shouldPersist |= UpdateSynchronizationContextFor(x => x.ReplicatorEtag, x => x.LastReplicatorSynchronizedEtag, lowestEtag);
-				shouldPersist |= UpdateSynchronizationContextFor(x => x.SqlReplicatorEtag, x => x.LastSqlReplicatorSynchronizedEtag, lowestEtag);
+				shouldPersist |= UpdateSynchronizationContextFor(EtagSynchronizationType.Indexer, lowestEtag);
+				shouldPersist |= UpdateSynchronizationContextFor(EtagSynchronizationType.Reducer, lowestEtag);
+				shouldPersist |= UpdateSynchronizationContextFor(EtagSynchronizationType.Replicator, lowestEtag);
+				shouldPersist |= UpdateSynchronizationContextFor(EtagSynchronizationType.SqlReplicator, lowestEtag);
 
 				if (shouldPersist)
 					PersistSynchronizationContext();
 			}
 		}
 
-		private bool UpdateSynchronizationContextFor(Expression<Func<EtagSynchronizationContext, Etag>> propertySelector, Expression<Func<EtagSynchronizationContext, Etag>> synchronizationPropertySelector, Etag lowestEtag)
+		private bool UpdateSynchronizationContextFor(EtagSynchronizationType type, Etag lowestEtag)
 		{
-			var etag = GetValue(propertySelector);
-			var synchronizationEtag = GetValue(synchronizationPropertySelector);
+			var etag = GetEtag(type);
+			var synchronizationEtag = GetSynchronizationEtag(type);
 
 			if (etag == null || lowestEtag.CompareTo(etag) < 0)
 			{
-				SetValue(propertySelector, lowestEtag);
+				SetEtag(type, lowestEtag);
 			}
 
 			if (lowestEtag.CompareTo(synchronizationEtag) < 0)
@@ -160,16 +157,80 @@ namespace Raven.Database.Impl
 			return false;
 		}
 
-		private TType GetValue<TClass, TType>(Expression<Func<TClass, TType>> expression) where TType : class
+		private Etag GetEtag(EtagSynchronizationType type)
 		{
-			var prop = (PropertyInfo)((MemberExpression)expression.Body).Member;
-			return prop.GetValue(context, null) as TType;
+			switch (type)
+			{
+				case EtagSynchronizationType.Indexer:
+					return context.IndexerEtag;
+				case EtagSynchronizationType.Reducer:
+					return context.ReducerEtag;
+				case EtagSynchronizationType.Replicator:
+					return context.ReplicatorEtag;
+				case EtagSynchronizationType.SqlReplicator:
+					return context.SqlReplicatorEtag;
+				default:
+					throw new NotSupportedException("type");
+			}
 		}
 
-		private void SetValue<TClass, TType>(Expression<Func<TClass, TType>> expression, TType value) where TType : class
+		private Etag GetSynchronizationEtag(EtagSynchronizationType type)
 		{
-			var prop = (PropertyInfo)((MemberExpression)expression.Body).Member;
-			prop.SetValue(context, value, null);
+			switch (type)
+			{
+				case EtagSynchronizationType.Indexer:
+					return context.LastIndexerSynchronizedEtag;
+				case EtagSynchronizationType.Reducer:
+					return context.LastReducerSynchronizedEtag;
+				case EtagSynchronizationType.Replicator:
+					return context.LastReplicatorSynchronizedEtag;
+				case EtagSynchronizationType.SqlReplicator:
+					return context.LastSqlReplicatorSynchronizedEtag;
+				default:
+					throw new NotSupportedException("type");
+			}
+		}
+
+		private void SetEtag(EtagSynchronizationType type, Etag value)
+		{
+			switch (type)
+			{
+				case EtagSynchronizationType.Indexer:
+					context.IndexerEtag = value;
+					break;
+				case EtagSynchronizationType.Reducer:
+					context.ReducerEtag = value;
+					break;
+				case EtagSynchronizationType.Replicator:
+					context.ReplicatorEtag = value;
+					break;
+				case EtagSynchronizationType.SqlReplicator:
+					context.SqlReplicatorEtag = value;
+					break;
+				default:
+					throw new NotSupportedException("type");
+			}
+		}
+
+		private void SetSynchronizationEtag(EtagSynchronizationType type, Etag value)
+		{
+			switch (type)
+			{
+				case EtagSynchronizationType.Indexer:
+					context.LastIndexerSynchronizedEtag = value;
+					break;
+				case EtagSynchronizationType.Reducer:
+					context.LastReducerSynchronizedEtag = value;
+					break;
+				case EtagSynchronizationType.Replicator:
+					context.LastReplicatorSynchronizedEtag = value;
+					break;
+				case EtagSynchronizationType.SqlReplicator:
+					context.LastSqlReplicatorSynchronizedEtag = value;
+					break;
+				default:
+					throw new NotSupportedException("type");
+			}
 		}
 
 		private static Etag GetLowestEtag(IList<JsonDocument> documents)
@@ -190,6 +251,14 @@ namespace Raven.Database.Impl
 
 			return lowest;
 		}
+	}
+
+	public enum EtagSynchronizationType
+	{
+		Indexer = 1,
+		Reducer = 2,
+		Replicator = 3,
+		SqlReplicator = 4
 	}
 
 	public class EtagSynchronizationContext

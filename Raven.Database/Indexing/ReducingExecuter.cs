@@ -208,7 +208,7 @@ namespace Raven.Database.Indexing
 			var batchTimeWatcher = Stopwatch.StartNew();
 			var count = 0;
 			var size = 0;
-			var state = new ConcurrentQueue <Tuple<HashSet<string>, List<MappedResultInfo>>>();
+			var state = new ConcurrentQueue<Tuple<HashSet<string>, List<MappedResultInfo>>>();
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 			{
 				var localKeys = new HashSet<string>();
@@ -225,8 +225,8 @@ namespace Raven.Database.Indexing
 						Take = int.MaxValue// just get all, we do the rate limit when we load the number of keys to reduce, anyway
 					};
 					var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
-					
-					if (scheduledItems.Count == 0) 
+
+					if (scheduledItems.Count == 0)
 					{
 						if (Log.IsWarnEnabled)
 						{
@@ -286,18 +286,18 @@ namespace Raven.Database.Indexing
 				});
 			});
 
-			var reduceKeys = new HashSet<string>(state.SelectMany(x=>x.Item1));
+			var reduceKeys = new HashSet<string>(state.SelectMany(x => x.Item1));
 
-			var results = state.SelectMany(x=>x.Item2)
+			var results = state.SelectMany(x => x.Item2)
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
 			context.ReducedPerSecIncreaseBy(results.Length);
 
-			context.TransactionalStorage.Batch(actions => 
+			context.TransactionalStorage.Batch(actions =>
 				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys)
 				);
-			
+
 			autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
 
 			foreach (var reduceKey in needToMoveToSingleStep)
@@ -310,9 +310,6 @@ namespace Raven.Database.Indexing
 
 		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
-			if (indexesStat.LastIndexedEtag.CompareTo(synchronizationEtag) > 0)
-				return true;
-
 			onlyFoundIdleWork.Value = false;
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
@@ -329,13 +326,12 @@ namespace Raven.Database.Indexing
 
 		protected override Etag GetSynchronizationEtag()
 		{
-			return etagSynchronizer.GetSynchronizationEtagFor(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag);
+			return etagSynchronizer.GetSynchronizationEtagFor(EtagSynchronizationType.Reducer);
 		}
 
 		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
 		{
-			return etagSynchronizer.CalculateSynchronizationEtagFor(x => x.ReducerEtag, x => x.LastReducerSynchronizedEtag,
-			                                                        currentEtag, lastProcessedEtag);
+			return etagSynchronizer.CalculateSynchronizationEtagFor(EtagSynchronizationType.Reducer, currentEtag, lastProcessedEtag);
 		}
 
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)

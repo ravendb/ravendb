@@ -631,11 +631,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					var synchronizationEtag = docDb.EtagSynchronizer.GetSynchronizationEtagFor(x => x.ReplicatorEtag,
-																						   x => x.LastReplicatorSynchronizedEtag);
+					var synchronizationEtag = docDb.EtagSynchronizer.GetSynchronizationEtagFor(EtagSynchronizationType.Replicator);
 
-					var lastEtag = docDb.EtagSynchronizer.CalculateSynchronizationEtagFor(x => x.ReplicatorEtag,
-																						  x => x.LastReplicatorSynchronizedEtag,
+					var lastEtag = docDb.EtagSynchronizer.CalculateSynchronizationEtagFor(EtagSynchronizationType.Replicator,
 																						  synchronizationEtag,
 																						  destinationsReplicationInformationForSource.LastDocumentEtag);
 

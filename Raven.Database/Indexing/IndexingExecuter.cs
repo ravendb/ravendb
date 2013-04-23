@@ -85,12 +85,12 @@ namespace Raven.Database.Indexing
 
 		protected override Etag GetSynchronizationEtag()
 		{
-			return etagSynchronizer.GetSynchronizationEtagFor(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag);
+			return etagSynchronizer.GetSynchronizationEtagFor(EtagSynchronizationType.Indexer);
 		}
 
 		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
 		{
-			return etagSynchronizer.CalculateSynchronizationEtagFor(x => x.IndexerEtag, x => x.LastIndexerSynchronizedEtag, currentEtag, lastProcessedEtag);
+			return etagSynchronizer.CalculateSynchronizationEtagFor(EtagSynchronizationType.Indexer, currentEtag, lastProcessedEtag);
 		}
 
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)

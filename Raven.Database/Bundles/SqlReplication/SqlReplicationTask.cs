@@ -316,7 +316,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private Etag GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
-			var synchronizationEtag = Database.EtagSynchronizer.GetSynchronizationEtagFor(x => x.SqlReplicatorEtag, x => x.LastSqlReplicatorSynchronizedEtag);
+			var synchronizationEtag = Database.EtagSynchronizer.GetSynchronizationEtagFor(EtagSynchronizationType.SqlReplicator);
 			Etag leastReplicatedEtag = null;
 			foreach (var sqlReplicationConfig in config)
 			{
@@ -326,7 +326,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
-			return Database.EtagSynchronizer.CalculateSynchronizationEtagFor(x => x.SqlReplicatorEtag, x => x.LastSqlReplicatorSynchronizedEtag, synchronizationEtag, leastReplicatedEtag);
+			return Database.EtagSynchronizer.CalculateSynchronizationEtagFor(EtagSynchronizationType.SqlReplicator, synchronizationEtag, leastReplicatedEtag);
 		}
 
 		private bool ReplicateChangesToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
