@@ -48,7 +48,7 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
-		private const int MaxConcurrentRequests = 32 * 192;
+		private const int MaxConcurrentRequests = 10 * 1024;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
@@ -517,59 +517,6 @@ namespace Raven.Database.Server
 					onDatabaseCleanupOccured(db);
 			}
 		}
-
-		private void GetContext(IAsyncResult ar)
-		{
-			HttpListenerContextAdpater ctx;
-			try
-			{
-				HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
-				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration, bufferPool);
-				//setup waiting for the next request
-				listener.BeginGetContext(GetContext, null);
-			}
-			catch (Exception)
-			{
-				// can't get current request / end new one, probably
-				// listener shutdown
-				return;
-			}
-
-			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-			{
-				try
-				{
-					HandleTooBusyError(ctx);
-				}
-				catch (Exception e)
-				{
-					logger.WarnException("Could not send a too busy error to the client", e);
-				}
-				return;
-			}
-			try
-			{
-				Interlocked.Increment(ref physicalRequestsCount);
-#if DEBUG
-				recentRequests.Enqueue(ctx.Request.RawUrl);
-				while (recentRequests.Count > 50)
-				{
-					string _;
-					recentRequests.TryDequeue(out _);
-				}
-#endif
-
-				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleChangesRequest(ctx, () => { });
-				else
-					HandleActualRequest(ctx);
-			}
-			finally
-			{
-				concurrentRequestSemaphore.Release();
-			}
-		}
-
 
 		public Task HandleChangesRequest(IHttpContext context, Action onDisconnect)
 		{
