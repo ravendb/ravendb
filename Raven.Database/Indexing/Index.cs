@@ -259,7 +259,7 @@ namespace Raven.Database.Indexing
 			{
 				Score = score.Score,
 				Key = document.Get(Constants.DocumentIdFieldName),
-				Projection = fieldsToFetch.IsProjection ? CreateDocumentFromFields(document, fieldsToFetch) : null
+				Projection = (fieldsToFetch.IsProjection || fieldsToFetch.FetchAllStoredFields) ? CreateDocumentFromFields(document, fieldsToFetch) : null
 			};
 		}
 
@@ -399,7 +399,14 @@ namespace Raven.Database.Indexing
 					LastIndexTime = SystemTime.UtcNow;
 				}
 
-				HandleCommitPoints(itemsInfo);
+				try
+				{
+					HandleCommitPoints(itemsInfo);
+				}
+				catch (Exception e)
+				{
+					logIndexing.WarnException("Could not handle commit point properly, ignoring", e);
+				}
 
 				if (shouldRecreateSearcher)
 					RecreateSearcher();

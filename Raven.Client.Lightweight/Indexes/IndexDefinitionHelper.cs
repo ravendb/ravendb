@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Client.Util;
 
@@ -144,10 +145,10 @@ namespace Raven.Client.Indexes
 								continue;
 
 							if (ContainsMethodInGrouping(lambdaExpression, rootQuery, "Count"))
-								throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+								throw new IndexCompilationException("Reduce cannot contain Count() methods in grouping.");
 							
 							if (ContainsMethodInGrouping(lambdaExpression, rootQuery, "Average"))
-								throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
+                                throw new IndexCompilationException("Reduce cannot contain Average() methods in grouping.");
 						}
 					}
 					break;

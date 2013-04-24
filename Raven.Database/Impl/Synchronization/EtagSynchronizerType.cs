@@ -7,7 +7,7 @@ namespace Raven.Database.Impl.Synchronization
 {
 	public enum EtagSynchronizerType
 	{
-		 Indexer = 1,
+		Indexer = 1,
 		Reducer = 2,
 		Replicator = 3,
 		SqlReplicator = 4

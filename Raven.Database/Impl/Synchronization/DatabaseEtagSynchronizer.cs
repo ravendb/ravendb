@@ -11,22 +11,31 @@ namespace Raven.Database.Impl.Synchronization
 {
 	public class DatabaseEtagSynchronizer
 	{
-		private readonly IDictionary<EtagSynchronizerType, EtagSynchronizer> etagSynchronizers;
+		private readonly ITransactionalStorage transactionalStorage;
+		private IDictionary<EtagSynchronizerType, EtagSynchronizer> etagSynchronizers = new Dictionary<EtagSynchronizerType, EtagSynchronizer>();
 
 		public DatabaseEtagSynchronizer(ITransactionalStorage transactionalStorage)
 		{
-			etagSynchronizers = new Dictionary<EtagSynchronizerType, EtagSynchronizer>
-			{
-				{EtagSynchronizerType.Indexer, new EtagSynchronizer(EtagSynchronizerType.Indexer, transactionalStorage)},
-				{EtagSynchronizerType.Reducer, new EtagSynchronizer(EtagSynchronizerType.Reducer, transactionalStorage)},
-				{EtagSynchronizerType.Replicator, new EtagSynchronizer(EtagSynchronizerType.Replicator, transactionalStorage)},
-				{EtagSynchronizerType.SqlReplicator, new EtagSynchronizer(EtagSynchronizerType.SqlReplicator, transactionalStorage)}
-			};
+			this.transactionalStorage = transactionalStorage;
 		}
 
 		public EtagSynchronizer GetSynchronizer(EtagSynchronizerType type)
 		{
-			return etagSynchronizers[type];
+			EtagSynchronizer value;
+			if (etagSynchronizers.TryGetValue(type, out value))
+				return value;
+			lock (this)
+			{
+				if (etagSynchronizers.TryGetValue(type, out value))
+					return value;
+		
+				value = new EtagSynchronizer(type, transactionalStorage);
+				etagSynchronizers = new Dictionary<EtagSynchronizerType, EtagSynchronizer>(etagSynchronizers)
+				{
+					{type, value}
+				};
+				return value;
+			}
 		}
 
 		public void UpdateSynchronizationState(JsonDocument[] docs)
@@ -36,9 +45,9 @@ namespace Raven.Database.Impl.Synchronization
 
 			var lowestEtag = GetLowestEtag(docs);
 
-			foreach (var key in etagSynchronizers.Keys)
+			foreach (var key in etagSynchronizers)
 			{
-				etagSynchronizers[key].UpdateSynchronizationState(lowestEtag);
+				key.Value.UpdateSynchronizationState(lowestEtag);
 			}
 		}
 

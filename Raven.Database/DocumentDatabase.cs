@@ -1291,11 +1291,14 @@ namespace Raven.Database
             IndexingFunc transformFunc = null;
 
             // Check an explicitly declared one first
-            if (query.ResultsTransformer != null)
+            if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
             {
                 var transformGenerator = IndexDefinitionStorage.GetTransformer(query.ResultsTransformer);
+
                 if (transformGenerator != null && transformGenerator.TransformResultsDefinition != null)
                     transformFunc = transformGenerator.TransformResultsDefinition;
+                else
+                    throw new InvalidOperationException("The transformer " + query.ResultsTransformer + " was not found");
             }
             else if (query.SkipTransformResults == false && viewGenerator.TransformResultsDefinition != null)
             {
@@ -2127,6 +2130,8 @@ namespace Raven.Database
                 if (string.IsNullOrWhiteSpace(resultTransformer) == false)
                 {
                     var abstractTransformer = IndexDefinitionStorage.GetTransformer(resultTransformer);
+                    if(abstractTransformer == null)
+                            throw new InvalidOperationException("The result transformer: " + resultTransformer + " was not found");
                     list.AddRange(abstractTransformer.GetHashCodeBytes());
                 }
                 list.AddRange(lastDocEtag.ToByteArray());

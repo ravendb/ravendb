@@ -297,6 +297,7 @@ namespace Raven.Client.Connection.Async
 						var response = we.Response as HttpWebResponse;
 						if (response == null || response.StatusCode != HttpStatusCode.NotFound)
 							throw;
+                       
 					}
 
 					var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -306,7 +307,42 @@ namespace Raven.Client.Connection.Async
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 					return request.WriteAsync(serializeObject)
 						.ContinueWith(writeTask => request.ReadResponseJsonAsync()
-													.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("Index"); })).
+													.ContinueWith(readJsonTask =>
+													{
+													    try
+													    {
+													        return readJsonTask.Result.Value<string>("Index");
+													    }
+													    catch (AggregateException e)
+													    {
+                                                            var we = e.ExtractSingleInnerException() as WebException;
+                                                            if (we == null)
+                                                                throw;
+
+                                                            var response = we.Response as HttpWebResponse;
+
+                                                            if (response.StatusCode == HttpStatusCode.BadRequest)
+                                                            {
+                                                                var error = we.TryReadErrorResponseObject(
+                                                                    new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" });
+
+                                                                if (error == null)
+                                                                {
+                                                                    throw;
+                                                                }
+
+                                                                var compilationException = new IndexCompilationException(error.Message)
+                                                                {
+                                                                    IndexDefinitionProperty = error.IndexDefinitionProperty,
+                                                                    ProblematicText = error.ProblematicText
+                                                                };
+
+                                                                throw compilationException;
+                                                            }
+
+													        throw;
+													    }
+													})).
 						Unwrap();
 				}).Unwrap();
 		}
@@ -712,6 +748,46 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
+		{
+
+			string facetsJson = JsonConvert.SerializeObject(facets);
+			var method = facetsJson.Length > 1024 ? "POST" : "GET";
+			return ExecuteWithReplication(method, operationUrl =>
+			{
+				var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
+																Uri.EscapeUriString(index),
+																query.GetMinimalQueryString(),
+																start,
+																pageSize);
+
+				if (method == "GET")
+					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
+
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
+						.AddOperationHeaders(OperationsHeaders))
+						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				if (method != "GET")
+					request.WriteAsync(facetsJson).Wait();
+
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var json = (RavenJObject)task.Result;
+						return json.JsonDeserialization<FacetResults>();
+					});
+			});
+		}
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{

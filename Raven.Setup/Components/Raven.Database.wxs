@@ -21,7 +21,9 @@
         <File Id='Lucene.Net.Contrib.Spatial.NTS.dll.Service' Name='Lucene.Net.Contrib.Spatial.NTS.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\Lucene.Net.Contrib.Spatial.NTS.dll' />
         <File Id='Mono.Cecil.dll.Service' Name='Mono.Cecil.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\Mono.Cecil.dll' />
 
-        <!--<File Id='NetTopologySuite.dll' Name='NetTopologySuite.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\NetTopologySuite.dll' />-->
+        <File Id='NetTopologySuite.dll.Service' Name='NetTopologySuite.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\NetTopologySuite.dll' />
+
+        <File Id='PowerCollections.dll.Service' Name='PowerCollections.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\PowerCollections.dll' />
 
         <File Id='Spatial4n.Core.NTS.dll.Service' Name='Spatial4n.Core.NTS.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\Spatial4n.Core.NTS.dll' />
       </Component>
@@ -45,7 +47,9 @@
       <File Id='Lucene.Net.Contrib.Spatial.NTS.dll' Name='Lucene.Net.Contrib.Spatial.NTS.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\Lucene.Net.Contrib.Spatial.NTS.dll' />
       <File Id='Mono.Cecil.dll' Name='Mono.Cecil.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\Mono.Cecil.dll' />
 
-      <!--<File Id='NetTopologySuite.dll' Name='NetTopologySuite.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\NetTopologySuite.dll' />-->
+      <File Id='NetTopologySuite.dll' Name='NetTopologySuite.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\NetTopologySuite.dll' />
+
+      <File Id='PowerCollections.dll' Name='PowerCollections.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\PowerCollections.dll' />
 
       <File Id='Spatial4n.Core.NTS.dll' Name='Spatial4n.Core.NTS.dll' DiskId='1' Source='$(var.Raven.Database.TargetDir)\Spatial4n.Core.NTS.dll' />
     </Component>

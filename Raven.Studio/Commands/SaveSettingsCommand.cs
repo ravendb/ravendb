@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Json.Linq;
@@ -80,6 +82,8 @@ namespace Raven.Studio.Commands
 						{
 							document.Destinations.Add(destination);
 						}
+
+						CheckDestinations(document);
 						
 						session.Store(document);
 						session.SaveChangesAsync().Catch();
@@ -238,7 +242,35 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() => ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName)));
 		}
 
-        private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
+		private async void CheckDestinations(ReplicationDocument replicationDocument)
+		{
+			var badReplication = new List<string>();
+			var request = ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+			                                    .AsyncDatabaseCommands
+			                                    .CreateRequest(string.Format("/admin/replicationInfo").NoCache(), "POST");
+			await request.WriteAsync(RavenJObject.FromObject(replicationDocument).ToString());
+			var responseAsJson = await request.ReadResponseJsonAsync();
+			var replicationInfo = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
+												   .Deserialize<ReplicationInfoStatus[]>(new RavenJTokenReader(responseAsJson));
+
+			foreach (var replicationInfoStatus in replicationInfo)
+			{
+				if (replicationInfoStatus.Status != "Valid")
+				{
+					badReplication.Add(replicationInfoStatus.Url + " - " + replicationInfoStatus.Code);
+				}
+			}
+
+			if (badReplication.Count != 0)
+			{
+				var mesage = "Some of the replications could not be reached:" + Environment.NewLine +
+				             string.Join(Environment.NewLine, badReplication);
+
+				ApplicationModel.Current.Notifications.Add(new Notification(mesage, NotificationLevel.Warning));
+			}
+		}
+
+		private bool HasChanges(SqlReplicationConfigModel local, SqlReplicationConfig remote)
 		{
 			if (remote == null)
 				return false;

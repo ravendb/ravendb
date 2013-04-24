@@ -314,6 +314,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<FacetResults>( databaseCommands.GetFacets( index, query, facetSetupDoc, start, pageSize ) );
 		}
 
+		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
+		{
+			return new CompletedTask<FacetResults>(databaseCommands.GetFacets(index, query, facets, start, pageSize));
+		}
+
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
 			// No sync equivalent on IDatabaseCommands.

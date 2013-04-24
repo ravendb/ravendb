@@ -318,7 +318,17 @@
     <Compile Include="Features\Stats\UserInfoView.xaml.cs">
       <DependentUpon>UserInfoView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Tasks\StartRestoreTask.cs" />
+    <Compile Include="Features\Tasks\SmugglerTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\SmugglerTaskSectionView.xaml.cs">
+      <DependentUpon>SmugglerTaskSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Tasks\StartRestoreTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\TasksPageView.xaml.cs">
+      <DependentUpon>TasksPageView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Tasks\TaskView.xaml.cs">
+      <DependentUpon>TaskView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Transformers\EditTransformerView.xaml.cs">
       <DependentUpon>EditTransformerView.xaml</DependentUpon>
     </Compile>
@@ -329,7 +339,11 @@
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
+    <Compile Include="Models\BasicTaskSectionModel.cs" />
+    <Compile Include="Models\NoSettingsSectionModel.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
+    <Compile Include="Models\TaskPageModel.cs" />
+    <Compile Include="Models\TaskSectionModel.cs" />
     <Compile Include="Models\TransformerDefinitionModel.cs" />
     <Compile Include="Models\TransformersModel.cs" />
     <Compile Include="Impl\AsyncDatabaseCommandExtensions.cs" />
@@ -355,9 +369,6 @@
     <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
     <Compile Include="Models\UserInfoModel.cs" />
     <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
-    <Compile Include="Controls\BundlesSelect.xaml.cs">
-      <DependentUpon>BundlesSelect.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
@@ -492,7 +503,7 @@
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
     <Compile Include="Features\Query\QueryHistoryManager.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
-    <Compile Include="Features\Tasks\CsvImportTask.cs" />
+    <Compile Include="Features\Tasks\CsvImportTaskSectionModel.cs" />
     <Compile Include="Features\Query\QueryState.cs" />
     <Compile Include="Features\Query\RecentQueriesDropDownView.xaml.cs">
       <DependentUpon>RecentQueriesDropDownView.xaml</DependentUpon>
@@ -508,11 +519,11 @@
     <Compile Include="Features\Stats\ReplicationStatisticsView.xaml.cs">
       <DependentUpon>ReplicationStatisticsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Tasks\IndexingTask.cs" />
-    <Compile Include="Features\Tasks\SampleDataTask.cs" />
-    <Compile Include="Features\Tasks\StartBackupTask.cs" />
-    <Compile Include="Features\Tasks\TaskView.xaml.cs">
-      <DependentUpon>TaskView.xaml</DependentUpon>
+    <Compile Include="Features\Tasks\IndexingTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\SampleDataTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\StartBackupTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\BaseTaskView.xaml.cs">
+      <DependentUpon>BaseTaskView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
@@ -653,6 +664,9 @@
     <Compile Include="Views\IndexStats.xaml.cs">
       <DependentUpon>IndexStats.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Tasks.xaml.cs">
+      <DependentUpon>Tasks.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
     </Compile>
@@ -762,8 +776,8 @@
     <Compile Include="Features\Stats\StatisticsView.xaml.cs">
       <DependentUpon>StatisticsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Tasks\ExportTask.cs" />
-    <Compile Include="Features\Tasks\ImportTask.cs" />
+    <Compile Include="Features\Tasks\ExportTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\ImportTaskSectionModel.cs" />
     <Compile Include="Features\Logs\LogsView.xaml.cs">
       <DependentUpon>LogsView.xaml</DependentUpon>
     </Compile>
@@ -951,10 +965,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Controls\BundlesSelect.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Controls\BusynessIndicator.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -1119,6 +1129,18 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Tasks\BaseTaskView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\SmugglerTaskSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\TasksPageView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Tasks\TaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1188,6 +1210,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\IndexStats.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Tasks.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

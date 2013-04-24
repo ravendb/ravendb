@@ -51,6 +51,9 @@ namespace Raven.Client.Extensions
 
 		public static string GetDatabaseName(string url)
 		{
+			if (url == null)
+				return null;
+
 			var databaseUrl = url;
 			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases != -1)

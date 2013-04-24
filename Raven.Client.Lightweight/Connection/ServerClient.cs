@@ -940,43 +940,95 @@ namespace Raven.Client.Connection
 			return responseJson.Value<string>("Transformer");
 		}
 
-		public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
-		{
-			string requestUri = operationUrl + "/indexes/" + name;
+	    public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
+	    {
+	        string requestUri = operationUrl + "/indexes/" + name;
 
-			var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			try
-			{
-				// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
-				checkIndexExists.ExecuteRequest();
-				if (!overwrite)
-					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-					throw;
-			}
-
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
+	        var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(
+	            new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
+	                .AddOperationHeaders(OperationsHeaders))
+	                                                 .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
+	                                                                              convention.FailoverBehavior,
+	                                                                              HandleReplicationStatusChanges);
 
 
-			var responseJson = (RavenJObject)request.ReadResponseJson();
-			return responseJson.Value<string>("Index");
-		}
+	        try
+	        {
+	            // If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
+	            checkIndexExists.ExecuteRequest();
+	            if (!overwrite)
+	                throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+	        }
+	        catch (WebException e)
+	        {
+	            var httpWebResponse = e.Response as HttpWebResponse;
+	            if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+	                throw;
 
-		/// <summary>
+	            if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+	            {
+	                var error = e.TryReadErrorResponseObject(
+	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+	                if (error == null)
+	                {
+	                    throw;
+	                }
+
+	                var compilationException = new IndexCompilationException(error.Message)
+	                {
+	                    IndexDefinitionProperty = error.IndexDefinitionProperty,
+	                    ProblematicText = error.ProblematicText
+	                };
+
+	                throw compilationException;
+	            }
+	        }
+
+	        var request = jsonRequestFactory.CreateHttpJsonRequest(
+	            new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+	                .AddOperationHeaders(OperationsHeaders))
+	                                        .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
+	                                                                     convention.FailoverBehavior,
+	                                                                     HandleReplicationStatusChanges);
+
+	        request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
+
+	        try
+	        {
+	            var responseJson = (RavenJObject) request.ReadResponseJson();
+	            return responseJson.Value<string>("Index");
+	        }
+	        catch (WebException e)
+	        {
+	            var httpWebResponse = e.Response as HttpWebResponse;
+	            if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+	                throw;
+
+	            if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+	            {
+	                var error = e.TryReadErrorResponseObject(
+	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+	                if (error == null)
+	                {
+	                    throw;
+	                }
+
+	                var compilationException = new IndexCompilationException(error.Message)
+	                {
+	                    IndexDefinitionProperty = error.IndexDefinitionProperty,
+	                    ProblematicText = error.ProblematicText
+	                };
+
+	                throw compilationException;
+	            }
+
+	            throw;
+	        }
+	    }
+
+	    /// <summary>
 		/// Puts the index definition for the specified name
 		/// </summary>
 		/// <typeparam name="TDocument">The type of the document.</typeparam>
@@ -1429,6 +1481,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
+			if (database == Constants.SystemDatabase)
+				return ForSystemDatabase();
+
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "/databases/" + database;
 			if (databaseUrl == Url)
@@ -1456,10 +1511,7 @@ namespace Raven.Client.Connection
 		/// <value>The URL.</value>
 		public string Url
 		{
-			get
-			{
-				return url;
-			}
+			get { return url; }
 		}
 
 		/// <summary>

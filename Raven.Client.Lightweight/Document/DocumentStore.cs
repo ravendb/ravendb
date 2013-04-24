@@ -557,7 +557,9 @@ namespace Raven.Client.Document
 					AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse);
 					return null;
 				}
-				oauthSource = Url + "/OAuth/API-Key";
+
+				if (string.IsNullOrEmpty(oauthSource))
+					oauthSource = this.Url + "/OAuth/API-Key";
 
 				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource);
 			};
@@ -772,7 +774,10 @@ namespace Raven.Client.Document
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId);
+				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
+				{
+				    DatabaseName = dbName ?? DefaultDatabase
+				};
 				AfterSessionCreated(session);
 				return session;
 			}
@@ -805,7 +810,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>

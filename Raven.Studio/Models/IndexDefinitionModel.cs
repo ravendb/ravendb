@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -6,6 +7,8 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using DrWPF.Windows.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -13,7 +16,9 @@ using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Infrastructure.Converters;
 using Raven.Studio.Messages;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -55,6 +60,11 @@ namespace Raven.Studio.Models
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => ErrorsCount);
+
+            propertyHasError = new ObservableDictionary<string, bool>();
+		    propertyHasError["TransformResults"] = false;
+		    propertyHasError["Name"] = false;
+		    propertyHasError["Reduce"] = false;
 		}
 
 		private void HandleChildCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -358,7 +368,10 @@ namespace Raven.Studio.Models
 		}
 
 		private bool showTransformResults;
-		public bool ShowTransformResults
+	    private string definitionErrorMessage;
+	    private ObservableDictionary<string, bool> propertyHasError;
+
+	    public bool ShowTransformResults
 		{
 			get { return showTransformResults; }
 			set
@@ -400,9 +413,51 @@ namespace Raven.Studio.Models
 			get
 			{
 				var databaseStatistics = statistics.Value;
-				return databaseStatistics == null ? 0 : databaseStatistics.Errors.Count();
+				return databaseStatistics == null ? 0 : databaseStatistics.Errors.Count(e => e.Index == Name);
 			}
 		}
+
+	    public string DefinitionErrorMessage
+	    {
+            get { return definitionErrorMessage; }
+	        private set
+	        {
+	            definitionErrorMessage = value;
+	            OnPropertyChanged(() => DefinitionErrorMessage);
+	        }
+	    }
+
+        private void ClearDefinitionErrors()
+        {
+            DefinitionErrorMessage = "";
+
+            foreach (var mapItem in Maps)
+            {
+                mapItem.HasError = false;
+            }
+
+            ClearPropertyErrors();
+        }
+
+        private void ReportDefinitionError(string message, string property, string problematicText = "")
+        {
+            DefinitionErrorMessage = message;
+
+            if (property == "Maps")
+            {
+                foreach (var mapItem in Maps)
+                {
+                    if (mapItem.Text.Equals(problematicText, StringComparison.Ordinal))
+                    {
+                        mapItem.HasError = true;
+                    }
+                }
+            }
+            else
+            {
+                PropertyHasError[property] = true;
+            }
+        }
 
 		#region Commands
 
@@ -550,14 +605,17 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
+                index.ClearDefinitionErrors();
+
 				if (string.IsNullOrWhiteSpace(index.Name))
 				{
-					ApplicationModel.Current.AddNotification(new Notification("Index must have a name!", NotificationLevel.Error));
+					index.ReportDefinitionError("Index must have a name!", "Name");
 					return;
 				}
+
 				if (index.Maps.All(item => string.IsNullOrWhiteSpace(item.Text)))
 				{
-					ApplicationModel.Current.AddNotification(new Notification("Index must have at least one map with data!", NotificationLevel.Error));
+					index.ReportDefinitionError("Index must have at least one map with data!", "Map");
 					return;
 				}
 
@@ -596,7 +654,16 @@ namespace Raven.Studio.Models
 											   index.hasUnsavedChanges = false;
 											   PutIndexNameInUrl(index.Name);
 										   })
-					.Catch();
+					.Catch(ex =>
+					{
+                        var indexException = ex.ExtractSingleInnerException() as IndexCompilationException;
+                        if (indexException != null)
+                        {
+                            index.ReportDefinitionError(indexException.Message, indexException.IndexDefinitionProperty, indexException.ProblematicText);
+                            return true;
+                        }
+					    return false;
+					});
 			}
 
 			private void SavePriority(IndexDefinitionModel indexDefinitionModel)
@@ -699,8 +766,9 @@ namespace Raven.Studio.Models
 				text = string.Empty;
 			}
 			private string text;
+		    private bool hasError;
 
-			public string Text
+		    public string Text
 			{
 				get { return text; }
 				set
@@ -713,6 +781,16 @@ namespace Raven.Studio.Models
 					}
 				}
 			}
+
+		    public bool HasError
+		    {
+		        get { return hasError; }
+		        set
+		        {
+		            hasError = value;
+		            OnPropertyChanged(() => HasError);
+		        }
+		    }
 
 			public double TextHeight
 			{
@@ -885,14 +963,16 @@ namespace Raven.Studio.Models
 				get { return type; }
 				set
 				{
-					IsGeographical = value == SpatialFieldType.Geography;
 					if (type != value)
 					{
 						type = value;
 						OnPropertyChanged(() => Type);
-						ResetToDefaults(type);
+						ResetToDefaults();
 						UpdatePrecision();
 					}
+
+					IsGeographical = value == SpatialFieldType.Geography;
+					IsCartesian = value == SpatialFieldType.Cartesian;
 				}
 			}
 
@@ -906,6 +986,7 @@ namespace Raven.Studio.Models
 					{
 						strategy = value;
 						OnPropertyChanged(() => Strategy);
+
 						if (type == SpatialFieldType.Geography)
 						{
 							if (strategy == SpatialSearchStrategy.GeohashPrefixTree)
@@ -913,7 +994,18 @@ namespace Raven.Studio.Models
 							if (strategy == SpatialSearchStrategy.QuadPrefixTree)
 								MaxTreeLevel = SpatialOptions.DefaultQuadTreeLevel;
 						}
+
 						UpdatePrecision();
+					}
+
+					if (strategy == SpatialSearchStrategy.BoundingBox)
+					{
+						MaxTreeLevel = 0;
+						IsPrefixTreeIndex = false;
+					}
+					else
+					{
+						IsPrefixTreeIndex = true;
 					}
 				}
 			}
@@ -1034,7 +1126,56 @@ namespace Raven.Studio.Models
 				}
 			}
 
-			private void ResetToDefaults(SpatialFieldType type)
+			private bool isCartesian;
+			public bool IsCartesian
+			{
+				get { return isCartesian; }
+				set
+				{
+					if (isCartesian == value) return;
+					isCartesian = value;
+					OnPropertyChanged(() => IsCartesian);
+				}
+			}
+
+			private bool isPrefixTreeIndex;
+			public bool IsPrefixTreeIndex
+			{
+				get { return isPrefixTreeIndex; }
+				set
+				{
+					if (isPrefixTreeIndex == value) return;
+					isPrefixTreeIndex = value;
+					OnPropertyChanged(() => IsPrefixTreeIndex);
+				}
+			}
+
+			public List<object> CartesianStrategies
+			{
+				get
+				{
+					return typeof(SpatialSearchStrategy).GetFields()
+						.Where(field => field.IsLiteral)
+						.Select(field => field.GetValue(Strategy))
+						.Cast<SpatialSearchStrategy>()
+						.Where(field => field != SpatialSearchStrategy.GeohashPrefixTree)
+						.Cast<object>()
+						.ToList();
+				}
+			}
+
+			public List<object> GeographyStrategies
+			{
+				get
+				{
+					return typeof(SpatialSearchStrategy).GetFields()
+						.Where(field => field.IsLiteral)
+						.Select(field => field.GetValue(Strategy))
+						.ToList();
+				}
+			}
+
+			private void ResetToDefaults()
 			{
 				if (type == SpatialFieldType.Geography)
 				{
@@ -1057,7 +1198,7 @@ namespace Raven.Studio.Models
 			public SpatialFieldProperties() : base()
 			{
 				Type = SpatialFieldType.Geography;
-				ResetToDefaults(SpatialFieldType.Geography);
+				ResetToDefaults();
 			}
 
 			public SpatialFieldProperties(KeyValuePair<string, SpatialOptions> spatialOptions) : base()
@@ -1069,7 +1210,7 @@ namespace Raven.Studio.Models
 			public void UpdateFromSpatialOptions(SpatialOptions spatialOptions)
 			{
 				Type = spatialOptions.Type;
-				ResetToDefaults(spatialOptions.Type);
+				ResetToDefaults();
 				Strategy = spatialOptions.Strategy;
 				MaxTreeLevel = spatialOptions.MaxTreeLevel;
 				if (spatialOptions.Type == SpatialFieldType.Geography)
@@ -1092,6 +1233,12 @@ namespace Raven.Studio.Models
 
 			public void UpdatePrecision()
 			{
+				if (strategy == SpatialSearchStrategy.BoundingBox)
+				{
+					Precision = string.Empty;
+					return;
+				}
+
 				var x = maxX - minX;
 				var y = maxY - minY;
 				for (var i = 0; i < maxTreeLevel; i++)
@@ -1168,5 +1315,30 @@ namespace Raven.Studio.Models
 			};
 			return TaskEx.FromResult<IList<object>>(list);
 		}
+
+	    public IEnumerable GetErrors(string propertyName)
+	    {
+	        if (PropertyHasError.ContainsKey(propertyName))
+	        {
+	            yield return PropertyHasError[propertyName];
+	        }
+	        else
+	        {
+	            yield break;
+	        }
+	    }
+
+	    public ObservableDictionary<string, bool> PropertyHasError
+	    {
+	        get { return propertyHasError; }
+	    }
+
+        protected void ClearPropertyErrors()
+        {
+            foreach (var property in propertyHasError.Keys)
+            {
+                PropertyHasError[property] = false;
+            }
+        }
 	}
 }

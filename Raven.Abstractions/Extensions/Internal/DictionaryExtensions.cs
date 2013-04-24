@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.Abstractions.Extensions 
 {
 	public static class DictionaryExtensions
 	{

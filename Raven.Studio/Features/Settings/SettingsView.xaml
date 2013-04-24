@@ -37,6 +37,8 @@
 		<DataTemplate DataType="Models:PeriodicBackupSettingsSectionModel">
 			<Settings:PeriodicBackupSettingsSectionView/>
 		</DataTemplate>
+		<DataTemplate DataType="Models:NoSettingsSectionModel">
+		</DataTemplate>
 	</UserControl.Resources>
 
 	<Grid x:Name="LayoutRoot">

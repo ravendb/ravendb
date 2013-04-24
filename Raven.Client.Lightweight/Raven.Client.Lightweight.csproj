@@ -74,6 +74,7 @@
     <Compile Include="Document\DTC\LocalDirectoryTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
+    <Compile Include="Linq\FacetQuery.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
     <Compile Include="Util\AsyncCountdownEvent.cs" />

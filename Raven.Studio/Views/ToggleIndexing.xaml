@@ -10,6 +10,6 @@
                          d:DesignWidth="640" d:DesignHeight="480"
 						 Title="Import Page">
 	<Grid x:Name="LayoutRoot">
-		<tasks:TaskView/>
+		<tasks:BaseTaskView/>
 	</Grid>
 </infrastructure:PageView>

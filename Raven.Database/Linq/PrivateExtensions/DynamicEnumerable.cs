@@ -7,6 +7,11 @@ namespace Raven.Database.Linq.PrivateExtensions
 {
 	public static class DynamicEnumerable
 	{
+		public static IEnumerable<dynamic> Union(object source, object other)
+		{
+			return new DynamicList(((IEnumerable<object>)source).Union((IEnumerable<object>)other));
+		}
+
 		public static dynamic First<TSource>(IEnumerable<TSource> source)
 		{
 			return FirstOrDefault(source);

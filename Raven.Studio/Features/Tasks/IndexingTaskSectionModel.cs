@@ -5,9 +5,9 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class IndexingTask : TaskModel
+	public class IndexingTaskSectionModel : BasicTaskSectionModel
 	{
-		public IndexingTask()
+		public IndexingTaskSectionModel()
 		{
 			Name = "Toggle Indexing";
 			Description = "Enable and disable indexing";

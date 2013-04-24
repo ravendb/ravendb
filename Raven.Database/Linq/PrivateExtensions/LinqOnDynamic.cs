@@ -42,6 +42,11 @@ namespace Raven.Database.Linq.PrivateExtensions
 			return Enumerable.GroupBy(source, keySelector).Select(inner => new WrapperGrouping(inner));
 		}
 
+		public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> resultSelector)
+		{
+			return Enumerable.GroupBy(source, keySelector, resultSelector).Select(inner => new WrapperGrouping(inner));
+		}
+
 		private static IEnumerable<dynamic> Select(this object self)
 		{
 			if (self == null || self is DynamicNullObject)
@@ -59,6 +64,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 		{
 			return self.DefaultIfEmpty<dynamic>(new DynamicNullObject());
 		}
+
 
 		public static IEnumerable<dynamic> SelectMany(this object source,
 													  Func<dynamic, int, IEnumerable<dynamic>> collectionSelector,

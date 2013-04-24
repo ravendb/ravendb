@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Xunit;
 
@@ -11,7 +12,7 @@ namespace Raven.Tests.Bugs.MultiMap
 		{
 			using(var store = NewDocumentStore())
 			{
-				var exception = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test",
+				var exception = Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("test",
 				                                                                                                               new IndexDefinition
 				                                                                                                               {
 				                                                                                                               	Maps =
@@ -37,7 +38,7 @@ Additional fields	: Title", exception.Message);
 		{
 			using (var store = NewDocumentStore())
 			{
-				var exception = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test",
+				var exception = Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("test",
 				                                                                                               new IndexDefinition
 				                                                                                               {
 				                                                                                               	Maps =

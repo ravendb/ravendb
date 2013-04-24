@@ -20,8 +20,10 @@ namespace Raven.Database.Util
 			var machineCtx = new PrincipalContext(ContextType.Machine);
 			Principal userPrincipal;
 
-			if (userName.StartsWith("IIS")) // if IIS user then current principal is GroupPrincipal
+			if (userName.StartsWith("IIS", StringComparison.OrdinalIgnoreCase) || userName.StartsWith("NT AUTHORITY", StringComparison.OrdinalIgnoreCase))
 			{
+				// if IIS or NT AUTHORITY user then current principal is GroupPrincipal
+
 				var acc = new NTAccount(userName);
 				var sid = acc.Translate(typeof(SecurityIdentifier));
 				userPrincipal = GroupPrincipal.FindByIdentity(machineCtx, IdentityType.Sid, sid.Value);

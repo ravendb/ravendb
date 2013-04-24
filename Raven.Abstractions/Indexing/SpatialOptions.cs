@@ -95,6 +95,7 @@
 	{
 		GeohashPrefixTree,
 		QuadPrefixTree,
+		BoundingBox
 	}
 
 	public enum SpatialRelation

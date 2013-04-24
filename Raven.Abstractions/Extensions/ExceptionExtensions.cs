@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
@@ -96,5 +97,40 @@ namespace Raven.Abstractions.Extensions
                 return string.Empty;
             }
         }
+
+        public static T TryReadErrorResponseObject<T>(this Exception ex, T protoTypeObject = null) where T : class
+        {
+            var response = TryReadResponseIfWebException(ex);
+            if (string.IsNullOrEmpty(response))
+            {
+                return null;
+            }
+
+            return JsonConvert.DeserializeObject<T>(response);
+        }
+
+        /// <remarks>Code from http://stackoverflow.com/questions/1886611/c-overriding-tostring-method-for-custom-exceptions </remarks>
+	    public static string ExceptionToString(
+	        this Exception ex,
+	        Action<StringBuilder> customFieldsFormatterAction)
+	    {
+	        var description = new StringBuilder();
+	        description.AppendFormat("{0}: {1}", ex.GetType().Name, ex.Message);
+
+	        if (customFieldsFormatterAction != null)
+	            customFieldsFormatterAction(description);
+
+	        if (ex.InnerException != null)
+	        {
+	            description.AppendFormat(" ---> {0}", ex.InnerException);
+	            description.AppendFormat(
+	                "{0}   --- End of inner exception stack trace ---{0}",
+	                Environment.NewLine);
+	        }
+
+	        description.Append(ex.StackTrace);
+
+	        return description.ToString();
+	    }
 	}
 }

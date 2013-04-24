@@ -279,6 +279,7 @@
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
+    <Compile Include="Imports\DrWpf\ObservableDictionary.cs" />
     <Compile Include="MissingFromSilverlight\BlockingCollection.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />

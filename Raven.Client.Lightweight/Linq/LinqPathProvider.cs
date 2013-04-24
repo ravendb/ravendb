@@ -20,6 +20,7 @@ namespace Raven.Client.Linq
 			public Type MemberType;
 			public string Path;
 			public bool IsNestedPath;
+		    public PropertyInfo MaybeProperty;
 		}
 
 		private readonly DocumentConvention conventions;
@@ -94,7 +95,8 @@ namespace Raven.Client.Linq
 			{
 				Path = memberExpression.ToString(),
 				IsNestedPath = memberExpression.Expression is MemberExpression,
-				MemberType = memberExpression.Member.GetMemberType()
+				MemberType = memberExpression.Member.GetMemberType(),
+                MaybeProperty = memberExpression.Member as PropertyInfo
 			};
 
 			result.Path = HandlePropertyRenames(memberExpression.Member, result.Path);

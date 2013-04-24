@@ -9,11 +9,9 @@
         <File Id='Nlog.dll_Service' Name='Nlog.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\Nlog.dll' />
         <File Id='Raven.Server.exe.config' Name='Raven.Server.exe.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\RavenDb.exe.config' />
         <File Id="Raven.Server" Name='$(var.Raven.Server.ProjectName).exe' DiskId='1' Source='$(var.Raven.Server.TargetPath)' KeyPath='yes'>
-          <!--<Shortcut Id="RavenStartMenu" Directory="ProgramMenuDir" Name="RavenDB Service"
-                      WorkingDirectory='INSTALLDIR' Icon="Raven.ico"  Advertise="yes"/>
-                <Shortcut Id="RavenDesktop" Directory="DesktopFolder" Name="RavenDB Service"
-                  WorkingDirectory='INSTALLDIR' Icon="Raven.ico" Advertise="yes" />-->
         </File>
+        <File Id='System.Net.Http.dll' Name='System.Net.Http.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\System.Net.Http.dll' />
+        <File Id='System.Net.Http.Primitives.dll' Name='System.Net.Http.Primitives.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\System.Net.Http.Primitives.dll' />
         <util:XmlFile Id="ModifyPort"
                  Action="setValue"
                  Permanent="yes"
@@ -50,9 +48,9 @@
                  SelectionLanguage="XSLPattern"
                  Sequence="4" />
       </Component>
-      <Component Id="Raven.Server.ProvidedServiceName" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
+      <Component Id="PersistServiceValues" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
         <RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]" >
-          <RegistryValue Type="string" Name="ServiceName" Value="[SERVICE_NAME]"  />
+          <RegistryValue Type="string" Name="SERVICE_NAME" Value="[SERVICE_NAME]"  />
         </RegistryKey>
       </Component>
     </DirectoryRef>

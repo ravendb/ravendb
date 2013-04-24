@@ -34,6 +34,21 @@
   <Property Id="WEB_APP_POOL_NAME" Value="RavenApplicationPool" />
   <Property Id="WEB_APP_POOL_IDENTITY_PWD" Hidden="yes" />
 
+  <Property Id="WEBSITE_PORT" Value="80">
+    <RegistrySearch Id="WebsitePortFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_PORT"
+                     Type="raw" />
+  </Property>
+  <Property Id="WEBSITE_HOSTNAME">
+    <RegistrySearch Id="WebsiteHostNameFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_HOSTNAME"
+                     Type="raw" />
+  </Property>
+  
   <SetProperty Id="WEB_APP_POOL_IDENTITY_DOMAIN" Value="[%USERDOMAIN]" Before="CostFinalize" Sequence="ui"/>
   <SetProperty Id="WEB_APP_POOL_IDENTITY_NAME" Value="[%USERNAME]" Before="CostFinalize" Sequence="ui"/>
 

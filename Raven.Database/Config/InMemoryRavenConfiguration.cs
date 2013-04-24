@@ -235,6 +235,19 @@ namespace Raven.Database.Config
 			var exportedValues = Container.GetExportedValues<IStartupTask>().ToArray();
 		}
 
+		public List<string> ActiveBundles
+		{
+			get
+			{
+				var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
+
+				return activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
+				                    .Select(x => x.Trim())
+				                    .ToList();
+
+			}
+		} 
+
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
 			if (catalogs.Count != 1)
