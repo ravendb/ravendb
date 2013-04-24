@@ -86,14 +86,15 @@ namespace Raven.Abstractions.Util
 
 		private int CalculateEtagIndex(Etag etag)
 		{
-			for (var i = innerList.Count; i > 0; i--)
+			int i;
+			for (i = innerList.Count; i > 0; i--)
 			{
 				var elementEtag = innerList[i - 1].Etag;
 				if (elementEtag.CompareTo(etag) < 0)
 					return i;
 			}
 
-			return innerList.Count;
+			return i;
 		}
 	}
 }
