@@ -7,7 +7,11 @@
                          xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-                         xmlns:controls="clr-namespace:Raven.Studio.Controls">
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                         d:DataContext="{d:DesignInstance models:IndexesErrorsModel}">
 
     <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}"
                                     Margin="{StaticResource Margin_ContentPage}">
@@ -51,6 +55,7 @@
             </i:Interaction.Behaviors>
             <sdk:DataGrid.Columns>
                 <sdk:DataGridTextColumn Binding="{Binding Index}" Header="Index"/>
+                <sdk:DataGridTextColumn Binding="{Binding Action}" CanUserSort="True" Header="Action" />
                 <sdk:DataGridTextColumn Binding="{Binding Error}" CanUserSort="True" Header="Error"/>
               <sdk:DataGridTextColumn Binding="{Binding Document}" CanUserSort="True" Header="Document"/>
               <sdk:DataGridTextColumn Binding="{Binding Timestamp}" CanUserSort="True" Header="Timestamp"/>
