@@ -340,6 +340,7 @@
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Models\BasicTaskSectionModel.cs" />
+    <Compile Include="Models\NoSettingsSectionModel.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
     <Compile Include="Models\TaskPageModel.cs" />
     <Compile Include="Models\TaskSectionModel.cs" />

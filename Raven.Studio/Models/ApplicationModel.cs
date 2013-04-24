@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -98,6 +99,11 @@ namespace Raven.Studio.Models
 		public static IAsyncDatabaseCommands DatabaseCommands
 		{
 			get { return Database.Value.AsyncDatabaseCommands; }
+		}
+
+		public static JsonSerializer CreateSerializer()
+		{
+			return Current.Server.Value.DocumentStore.Conventions.CreateSerializer();
 		}
 
 		public Observable<ServerModel> Server { get; set; }

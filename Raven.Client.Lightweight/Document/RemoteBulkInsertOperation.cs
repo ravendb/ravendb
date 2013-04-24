@@ -81,7 +81,10 @@ namespace Raven.Client.Document
 			{
 				expect100Continue.Dispose();
 			}
-			catch { }
+			catch
+			{
+				
+			}
 #endif
 
 			WriteQueueToServer(stream, options);
