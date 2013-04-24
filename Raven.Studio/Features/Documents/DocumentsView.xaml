@@ -154,6 +154,7 @@
                                                      ClipboardContentBinding="{Binding Item.Document.Key}">
                             <sdk:DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
+                                    <Documents:QuickDocumentViewPopup DocumentId="{Binding Item.Document.Key}">
                                     <Grid>
                                         <Rectangle Margin="0"
                                                    HorizontalAlignment="Left"
@@ -173,10 +174,11 @@
 
                                         <TextBlock Text="{Binding Item.Document.Key}" 
                                                    Behaviors:FadeTrimming.IsEnabled="True" 
-                                                   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                                   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="False"
                                                    VerticalAlignment="Center" 
                                                    Margin="10,0,0,0"/>
                                     </Grid>
+                                    </Documents:QuickDocumentViewPopup>
                                 </DataTemplate>
                             </sdk:DataGridTemplateColumn.CellTemplate>
                         </sdk:DataGridTemplateColumn>

@@ -300,6 +300,7 @@
     </Compile>
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Documents\QuickDocumentViewPopup.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
     <Compile Include="Features\JsonEditor\QuickDocumentView.xaml.cs">
@@ -1162,6 +1163,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Impl\SplitButton\Themes\generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
