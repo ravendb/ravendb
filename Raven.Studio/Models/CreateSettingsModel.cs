@@ -1,4 +1,6 @@
-﻿namespace Raven.Studio.Models
+﻿using Raven.Studio.Features.Settings;
+
+namespace Raven.Studio.Models
 {
 	public sealed class CreateSettingsModel : SettingsModel
 	{

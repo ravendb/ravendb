@@ -201,10 +201,13 @@
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-                
-                <Delay:SplitHyperlinkButtonPopup Content="Status"
+				<HyperlinkButton Content="Status"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/statistics">
+								 CommandParameter="/status"
+								 Style="{StaticResource Style_Text_HeaderLink}" />
+				<!--<Delay:SplitHyperlinkButtonPopup Content="Status"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/status">
                     <Behaviors:LinkHighlighter.AlternativeUris>
                         <Behaviors:StringCollection>
 							<System:String>/statistics</System:String>
@@ -246,7 +249,7 @@
 							</StackPanel>
                         </Border>
                     </Delay:SplitHyperlinkButtonPopup.PopupContent>
-                </Delay:SplitHyperlinkButtonPopup>
+                </Delay:SplitHyperlinkButtonPopup>-->
 
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
                 

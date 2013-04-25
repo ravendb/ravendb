@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
@@ -12,6 +11,7 @@ using Raven.Json.Linq;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Bundles;
 using Raven.Studio.Features.Input;
+using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;

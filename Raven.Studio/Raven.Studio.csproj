@@ -315,8 +315,14 @@
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Smuggler\SmugglerApi.cs" />
-    <Compile Include="Features\Stats\UserInfoView.xaml.cs">
-      <DependentUpon>UserInfoView.xaml</DependentUpon>
+    <Compile Include="Features\Stats\StatusPageView.xaml.cs">
+      <DependentUpon>StatusPageView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Stats\StatusView.xaml.cs">
+      <DependentUpon>StatusView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Stats\UserInfoStatusSectionView.xaml.cs">
+      <DependentUpon>UserInfoStatusSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\SmugglerTaskSectionModel.cs" />
     <Compile Include="Features\Tasks\SmugglerTaskSectionView.xaml.cs">
@@ -339,9 +345,12 @@
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
-    <Compile Include="Models\BasicTaskSectionModel.cs" />
-    <Compile Include="Models\NoSettingsSectionModel.cs" />
+    <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
+    <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
+    <Compile Include="Models\StatusModel.cs" />
+    <Compile Include="Models\StatusPageModel.cs" />
+    <Compile Include="Models\StatusSectionModel.cs" />
     <Compile Include="Models\TaskPageModel.cs" />
     <Compile Include="Models\TaskSectionModel.cs" />
     <Compile Include="Models\TransformerDefinitionModel.cs" />
@@ -364,11 +373,11 @@
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\TaskUITemplateSelector.cs" />
     <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />
-    <Compile Include="Models\PeriodicBackupSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
-    <Compile Include="Models\SqlReplicationSettingsSectionModel.cs" />
-    <Compile Include="Models\UserInfoModel.cs" />
-    <Compile Include="Models\WindowsAuthSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\SqlReplicationSettingsSectionModel.cs" />
+    <Compile Include="Features\Stats\UserInfoStatusSectionModel.cs" />
+    <Compile Include="Features\Settings\WindowsAuthSettingsSectionModel.cs" />
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
@@ -406,9 +415,9 @@
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
-    <Compile Include="Features\Alerts\AlertProxy.cs" />
-    <Compile Include="Features\Alerts\AlertsView.xaml.cs">
-      <DependentUpon>AlertsView.xaml</DependentUpon>
+    <Compile Include="Features\Stats\AlertProxy.cs" />
+    <Compile Include="Features\Stats\AlertsStatusSectionView.xaml.cs">
+      <DependentUpon>AlertsStatusSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Input\InputModelWithSuggestion.cs" />
     <Compile Include="Features\Input\InputWindowWithSuggestion.xaml.cs">
@@ -516,8 +525,8 @@
     <Compile Include="Features\Settings\WindowsAuthSettingSectionView.xaml.cs">
       <DependentUpon>WindowsAuthSettingSectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Stats\ReplicationStatisticsView.xaml.cs">
-      <DependentUpon>ReplicationStatisticsView.xaml</DependentUpon>
+    <Compile Include="Features\Stats\ReplicationStatisticsStatusSectionView.xaml.cs">
+      <DependentUpon>ReplicationStatisticsStatusSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\IndexingTaskSectionModel.cs" />
     <Compile Include="Features\Tasks\SampleDataTaskSectionModel.cs" />
@@ -601,16 +610,16 @@
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
-    <Compile Include="Models\AlertsModel.cs" />
-    <Compile Include="Models\ApiKeysSectionModel.cs" />
+    <Compile Include="Features\Stats\AlertsStatusSectionModel.cs" />
+    <Compile Include="Features\Settings\ApiKeysSectionModel.cs" />
     <Compile Include="Models\ApplicationState.cs" />
-    <Compile Include="Models\AuthorizationSettingsSectionModel.cs" />
-    <Compile Include="Models\DatabaseSettingsSectionViewModel.cs" />
+    <Compile Include="Features\Settings\AuthorizationSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\DatabaseSettingsSectionViewModel.cs" />
     <Compile Include="Models\PatchModel.cs" />
-    <Compile Include="Models\QuotaSettingsSectionModel.cs" />
-    <Compile Include="Models\ReplicationSettingsSectionModel.cs" />
-    <Compile Include="Models\ReplicationStatisticsModel.cs" />
-    <Compile Include="Models\SettingsModel.cs" />
+    <Compile Include="Features\Settings\QuotaSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\ReplicationSettingsSectionModel.cs" />
+    <Compile Include="Features\Stats\ReplicationStatisticsStatusSectionModel.cs" />
+    <Compile Include="Features\Settings\SettingsModel.cs" />
     <Compile Include="Models\CreateSettingsModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DatabaseSelectionModel.cs" />
@@ -627,10 +636,7 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
-    <Compile Include="Models\VersioningSettingsSectionModel.cs" />
-    <Compile Include="Views\Alerts.xaml.cs">
-      <DependentUpon>Alerts.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="Features\Settings\VersioningSettingsSectionModel.cs" />
     <Compile Include="Views\Backup.xaml.cs">
       <DependentUpon>Backup.xaml</DependentUpon>
     </Compile>
@@ -649,9 +655,6 @@
     <Compile Include="Views\Patch.xaml.cs">
       <DependentUpon>Patch.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\ReplicationStatistics.xaml.cs">
-      <DependentUpon>ReplicationStatistics.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Restore.xaml.cs">
       <DependentUpon>Restore.xaml</DependentUpon>
     </Compile>
@@ -663,6 +666,9 @@
     </Compile>
     <Compile Include="Views\IndexStats.xaml.cs">
       <DependentUpon>IndexStats.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Status.xaml.cs">
+      <DependentUpon>Status.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Tasks.xaml.cs">
       <DependentUpon>Tasks.xaml</DependentUpon>
@@ -678,9 +684,6 @@
     </Compile>
     <Compile Include="Views\Transformers.xaml.cs">
       <DependentUpon>Transformers.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\User-Info.xaml.cs">
-      <DependentUpon>User-Info.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
@@ -765,23 +768,23 @@
     <Compile Include="Features\Indexes\EditIndexView.xaml.cs">
       <DependentUpon>EditIndexView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Indexes\IndexesErrorsView.xaml.cs">
-      <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
+    <Compile Include="Features\Stats\IndexesErrorsStatusSectionView.xaml.cs">
+      <DependentUpon>IndexesErrorsStatusSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Query\QueryIntelliPromptProvider.cs" />
     <Compile Include="Features\Query\ExecuteQueryCommand.cs" />
     <Compile Include="Features\Query\QueryView.xaml.cs">
       <DependentUpon>QueryView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Stats\StatisticsView.xaml.cs">
-      <DependentUpon>StatisticsView.xaml</DependentUpon>
+    <Compile Include="Features\Stats\StatisticsStatusSectionView.xaml.cs">
+      <DependentUpon>StatisticsStatusSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\ExportTaskSectionModel.cs" />
     <Compile Include="Features\Tasks\ImportTaskSectionModel.cs" />
-    <Compile Include="Features\Logs\LogsView.xaml.cs">
-      <DependentUpon>LogsView.xaml</DependentUpon>
+    <Compile Include="Features\Stats\LogsStatusSectionView.xaml.cs">
+      <DependentUpon>LogsStatusSectionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Logs\LogsModel.cs" />
+    <Compile Include="Features\Stats\LogsStatusSectionModel.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToOppositeVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\TargetedDataTemplateCollection.cs" />
@@ -816,7 +819,7 @@
     <Compile Include="Infrastructure\Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Models\CollectionModel.cs" />
     <Compile Include="Models\CollectionsModel.cs" />
-    <Compile Include="Models\IndexesErrorsModel.cs" />
+    <Compile Include="Features\Stats\IndexesErrorsStatusSectionModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />
     <Compile Include="Models\IndexListItem.cs" />
     <Compile Include="Models\LinkModel.cs" />
@@ -866,7 +869,7 @@
     <Compile Include="Models\PagerModel.cs" />
     <Compile Include="Models\QueryModel.cs" />
     <Compile Include="Models\ServerModel.cs" />
-    <Compile Include="Models\StatisticsModel.cs" />
+    <Compile Include="Features\Stats\StatisticsStatusSectionModel.cs" />
     <Compile Include="Models\TaskModel.cs" />
     <Compile Include="Views\Collections.xaml.cs">
       <DependentUpon>Collections.xaml</DependentUpon>
@@ -876,15 +879,6 @@
     </Compile>
     <Compile Include="Views\Query.xaml.cs">
       <DependentUpon>Query.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\IndexesErrors.xaml.cs">
-      <DependentUpon>IndexesErrors.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Statistics.xaml.cs">
-      <DependentUpon>Statistics.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Logs.xaml.cs">
-      <DependentUpon>Logs.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Indexes.xaml.cs">
       <DependentUpon>Indexes.xaml</DependentUpon>
@@ -1029,7 +1023,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Alerts\AlertsView.xaml">
+    <Page Include="Features\Stats\AlertsStatusSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1121,11 +1115,19 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Stats\ReplicationStatisticsView.xaml">
+    <Page Include="Features\Stats\ReplicationStatisticsStatusSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Stats\UserInfoView.xaml">
+    <Page Include="Features\Stats\StatusPageView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Stats\StatusView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Stats\UserInfoStatusSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1165,10 +1167,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\Alerts.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Views\Backup.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1193,10 +1191,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\ReplicationStatistics.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Views\Restore.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1210,6 +1204,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\IndexStats.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Status.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1230,10 +1228,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Transformers.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\User-Info.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1281,7 +1275,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Indexes\IndexesErrorsView.xaml">
+    <Page Include="Features\Stats\IndexesErrorsStatusSectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -1289,7 +1283,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Stats\StatisticsView.xaml">
+    <Page Include="Features\Stats\StatisticsStatusSectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -1305,23 +1299,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\IndexesErrors.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\Statistics.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="Views\Documents.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Logs\LogsView.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\Logs.xaml">
+    <Page Include="Features\Stats\LogsStatusSectionView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

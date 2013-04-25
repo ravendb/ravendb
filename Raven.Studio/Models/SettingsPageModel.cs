@@ -3,6 +3,7 @@ using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 
