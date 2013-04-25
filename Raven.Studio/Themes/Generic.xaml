@@ -1,28 +1,6 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:Raven.Studio" xmlns:documents="clr-namespace:Raven.Studio.Features.Documents"
-    xmlns:behaviors="clr-namespace:Boogaart.Silverlight.Behaviors">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
 
-    <Style TargetType="documents:QuickDocumentViewPopup">
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="documents:QuickDocumentViewPopup">
-                    <Grid Background="Transparent">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <ContentPresenter/>
-                        <Popup x:Name="PART_Popup" Grid.Row="1" behaviors:Popup.StaysOpen="False">
-                            <Border x:Name="PART_ContentHost" Background="#E6E7EB" BorderBrush="#CBCDDA" BorderThickness="1">
-                                
-                            </Border>
-                        </Popup>
-                    </Grid>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 </ResourceDictionary>

@@ -1013,33 +1013,37 @@
                                         </DataTemplate>
                                     </sdk:DataGridTemplateColumn.CellTemplate>
                                 </sdk:DataGridTemplateColumn>
-                                <sdk:DataGridTemplateColumn Header="Stage">
+                                <sdk:DataGridTemplateColumn Header="Stage" Width="75">
                                     <sdk:DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="Models:IndexDefinitionError">
-                                            <TextBlock Text="{Binding Stage}" Margin="2" VerticalAlignment="Top"/>
+                                            <TextBlock Text="{Binding Stage}" Margin="2" VerticalAlignment="Top" Behaviors:FadeTrimming.IsEnabled="True" />
                                         </DataTemplate>
                                     </sdk:DataGridTemplateColumn.CellTemplate>
                                 </sdk:DataGridTemplateColumn>
                                 <sdk:DataGridTemplateColumn Header="Section">
                                     <sdk:DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="Models:IndexDefinitionError">
-                                            <TextBlock Text="{Binding Section}" Margin="2" VerticalAlignment="Top"/>
+                                            <TextBlock Text="{Binding Section}" Margin="2" VerticalAlignment="Top" Behaviors:FadeTrimming.IsEnabled="True" />
                                         </DataTemplate>
                                     </sdk:DataGridTemplateColumn.CellTemplate>
                                 </sdk:DataGridTemplateColumn>
                                 <sdk:DataGridTemplateColumn Header="Description" Width="*">
                                     <sdk:DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="Models:IndexDefinitionError">
-                                            <TextBlock Text="{Binding Message}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
-                                                       VerticalAlignment="Top" Margin="2"/>
+                                            <TextBlock Text="{Binding Message}" VerticalAlignment="Top" Margin="2"/>
                                         </DataTemplate>
                                     </sdk:DataGridTemplateColumn.CellTemplate>
                                 </sdk:DataGridTemplateColumn>
                                 <sdk:DataGridTemplateColumn Header="Document Id">
                                     <sdk:DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="Models:IndexDefinitionError">
-                                            <TextBlock Text="{Binding DocumentId}"
-                                                       VerticalAlignment="Center" Margin="2"/>
+                                            <Border>
+                                                <i:Interaction.Behaviors>
+                                                    <Behaviors:ShowQuickDocumentPopupBehavior DocumentId="{Binding DocumentId}"/>
+                                                </i:Interaction.Behaviors>
+                                                <TextBlock Text="{Binding DocumentId}"
+                                                       VerticalAlignment="Center" Margin="2" Behaviors:FadeTrimming.IsEnabled="True"/>
+                                            </Border>
                                         </DataTemplate>
                                     </sdk:DataGridTemplateColumn.CellTemplate>
                                 </sdk:DataGridTemplateColumn>

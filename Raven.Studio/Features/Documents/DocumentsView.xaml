@@ -154,8 +154,10 @@
                                                      ClipboardContentBinding="{Binding Item.Document.Key}">
                             <sdk:DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Documents:QuickDocumentViewPopup DocumentId="{Binding Item.Document.Key}">
                                     <Grid>
+                                        <i:Interaction.Behaviors>
+                                                <Behaviors:ShowQuickDocumentPopupBehavior DocumentId="{Binding Item.Document.Key}"/>
+                                        </i:Interaction.Behaviors>
                                         <Rectangle Margin="0"
                                                    HorizontalAlignment="Left"
                                                    Fill="#06000000"
@@ -178,7 +180,6 @@
                                                    VerticalAlignment="Center" 
                                                    Margin="10,0,0,0"/>
                                     </Grid>
-                                    </Documents:QuickDocumentViewPopup>
                                 </DataTemplate>
                             </sdk:DataGridTemplateColumn.CellTemplate>
                         </sdk:DataGridTemplateColumn>

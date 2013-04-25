@@ -24,6 +24,14 @@ namespace Raven.Studio.Features.JsonEditor
             set { SetValue(DocumentIdProperty, value); }
         }
 
+        public event EventHandler<EventArgs> DocumentShown;
+
+        protected virtual void OnDocumentShown()
+        {
+            var handler = DocumentShown;
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
         public static readonly DependencyProperty DocumentIdProperty =
             DependencyProperty.Register("DocumentId", typeof(string), typeof(QuickDocumentView), new PropertyMetadata(""));
 
@@ -73,6 +81,8 @@ namespace Raven.Studio.Features.JsonEditor
 
                 _documentLoaded = true;
                 StatusMessage.Visibility = Visibility.Collapsed;
+
+                OnDocumentShown();
             }
             catch (Exception ex)
             {
