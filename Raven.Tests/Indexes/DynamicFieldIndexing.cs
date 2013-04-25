@@ -58,5 +58,38 @@ namespace Raven.Tests.Indexes
 				}
 			}
 		}
+
+		[Fact]
+		public void CanSearchDynamicFieldWithSpaces()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new WithDynamicIndex().Execute(store);
+
+				using (var s = store.OpenSession())
+				{
+					s.Store(new Item
+					{
+						Values = new Dictionary<string, string>
+					        	         {
+					        	         	{"First Name", "Fitzchak"},
+					        	         	{"User", "Admin"}
+					        	         }
+					});
+
+					s.SaveChanges();
+				}
+
+				using (var s = store.OpenSession())
+				{
+					var items = s.Advanced.LuceneQuery<Item, WithDynamicIndex>()
+						.WaitForNonStaleResults()
+						.WhereEquals("First Name", "Fitzchak")
+						.ToList();
+
+					Assert.NotEmpty(items);
+				}
+			}
+		}
 	}
 }
