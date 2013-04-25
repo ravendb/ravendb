@@ -59,7 +59,7 @@ namespace Raven.Database.Impl.Synchronization
 				return Etag.Empty;
 
 			if (etag.CompareTo(lastProcessedEtag) < 0)
-				return EtagUtil.Increment(lastProcessedEtag, -1);
+				return EtagUtil.Increment(etag, -1);
 
 			return lastProcessedEtag;
 		}
@@ -68,14 +68,15 @@ namespace Raven.Database.Impl.Synchronization
 		{
 			lock (locker)
 			{
-				if (currentEtag != null)
+				var etag = currentEtag;
+				if (etag != null)
 				{
 					PersistSynchronizationState();
 					synchronizationEtag = currentEtag;
 					currentEtag = null;
 				}
 
-				return currentEtag;
+				return etag;
 			}
 		}
 

@@ -7,7 +7,6 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Database.Impl.Synchronization;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -17,13 +16,10 @@ namespace Raven.Database.Indexing
 {
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
-		private readonly EtagSynchronizer etagSynchronizer;
-
-		public ReducingExecuter(WorkContext context, DatabaseEtagSynchronizer synchronizer)
+		public ReducingExecuter(WorkContext context)
 			: base(context)
 		{
 			autoTuner = new ReduceBatchSizeAutoTuner(context);
-			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Reducer);
 		}
 
 		protected void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
@@ -328,12 +324,12 @@ namespace Raven.Database.Indexing
 
 		protected override Etag GetSynchronizationEtag()
 		{
-			return etagSynchronizer.GetSynchronizationEtag();
+			return Etag.Empty;
 		}
 
 		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
 		{
-			return etagSynchronizer.CalculateSynchronizationEtag(currentEtag, lastProcessedEtag);
+			return lastProcessedEtag;
 		}
 
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)

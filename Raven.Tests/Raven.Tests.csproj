@@ -1106,6 +1106,8 @@
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
+    <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
+    <Compile Include="Synchronization\EtagSynchronizerTests.cs" />
     <Compile Include="Synchronization\IndexationTests.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
