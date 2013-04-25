@@ -899,10 +899,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source))
 			{
-				jsonDeserialization.Source = docDb.Name;
+				jsonDeserialization.Source = docDb.TransactionalStorage.Id.ToString();
 			}
 
-			if (jsonDeserialization.Source != docDb.Name)
+			if (jsonDeserialization.Source != docDb.TransactionalStorage.Id.ToString())
 			{
 				docDb.AddAlert(new Alert
 				{
@@ -910,7 +910,7 @@ namespace Raven.Bundles.Replication.Tasks
 					CreatedAt = SystemTime.UtcNow,
 					Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
 					Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.Name,
-					UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.Name
+					UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.TransactionalStorage.Id.ToString()
 				});
 
 				return new ReplicationStrategy[0];

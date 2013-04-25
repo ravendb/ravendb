@@ -186,7 +186,7 @@ namespace Raven.Studio.Commands
 			var replicationSection = settingsModel.GetSection<ReplicationSettingsSectionModel>();
 			if (replicationSection != null)
 			{
-				var replicationDocument = new ReplicationDocument(databaseName);
+				var replicationDocument = new ReplicationDocument();
 				foreach (var replicationDestination in replicationSection.ReplicationDestinations
 					.Where(replicationDestination => !string.IsNullOrWhiteSpace(replicationDestination.Url) || !string.IsNullOrWhiteSpace(replicationDestination.ClientVisibleUrl)))
 				{

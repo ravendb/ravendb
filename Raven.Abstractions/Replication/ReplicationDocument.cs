@@ -37,13 +37,5 @@ namespace Raven.Abstractions.Replication
 			Id = "Raven/Replication/Destinations";
 			Destinations = new List<ReplicationDestination>();
 		}
-
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ReplicationDocument"/> class.
-		/// </summary>
-		public ReplicationDocument(string source) : this()
-		{
-			Source = source;
-		}
 	}
 }
