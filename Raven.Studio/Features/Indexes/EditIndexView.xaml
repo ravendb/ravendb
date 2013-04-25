@@ -964,7 +964,7 @@
             </ScrollViewer>
 
             <Grid Grid.Row="2">
-                <Border x:Name="ErrorArea" Height="24" Grid.Row="3" Margin="5,0,10,10">
+                <Border x:Name="ErrorArea" Height="24" Grid.Row="3" Margin="10,0,10,10">
                     <i:Interaction.Triggers>
                         <ei:DataTrigger Binding="{Binding Errors.Count}" Value="0" Comparison="GreaterThan">
                             <media:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource HighlightErrorArea}"/>
