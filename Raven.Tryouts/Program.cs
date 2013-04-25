@@ -29,15 +29,15 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			using (var store = new EmbeddableDocumentStore
+			using (var store = new DocumentStore
 			{
-				//Url = "http://localhost:8080",
-				//DefaultDatabase = "DB9"
+				Url = "http://localhost:8080",
+				DefaultDatabase = "DB9"
 			}.Initialize())
 			{
 				//store.DatabaseCommands.EnsureDatabaseExists("DB9");
 
-				new RavenDocumentsByEntityName().Execute(store.DatabaseCommands, new DocumentConvention());
+				//new RavenDocumentsByEntityName().Execute(store.DatabaseCommands, new DocumentConvention());
 
 				var watch = Stopwatch.StartNew();
 
@@ -58,9 +58,11 @@ namespace Raven.Tryouts
 
 		private static void Save(IDocumentStore store, int j)
 		{
+			var random = new Random();
+
 			for (var i = 1; i <= 1000; i++)
 			{
-				store.DatabaseCommands.Put(string.Format("people/{0}/{1}", j, i), null, RavenJObject.FromObject(new Person
+				store.DatabaseCommands.Put(string.Format("people/{0}/{1}/{2}", j, i, random.Next(10000)), null, RavenJObject.FromObject(new Person
 				{
 					FirstName = "FirstName" + i,
 					LastName = "LastName" + i
