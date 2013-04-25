@@ -1,5 +1,10 @@
 package raven.client.json;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+
+import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import raven.client.common.extensions.JsonExtensions;
@@ -27,6 +32,11 @@ public class RavenJObject extends RavenJToken {
     return (RavenJObject)token;
   }
 
+  public int getCount() {
+    ///TODO: impl me
+    return 0;
+  }
+
   public void set(String key, RavenJToken value) {
     //TODO: impl me
   }
@@ -52,6 +62,22 @@ public class RavenJObject extends RavenJToken {
   public RavenJToken createSnapshot() {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  public Set<Map.Entry<String, RavenJToken>> getProperties() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public Tuple<Boolean, RavenJToken> tryGetValue(String key) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void writeTo(JsonGenerator writer) {
+    // TODO Auto-generated method stub
+
   }
 
 }

@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import org.codehaus.jackson.JsonGenerator;
+
 /**
  * Represents a JSON array.
  *
@@ -154,6 +156,12 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
       throw new IllegalStateException("Cannot create snapshot without previously calling EnsureSnapShot");
 
     return new RavenJArray(items);
+  }
+
+  @Override
+  public void writeTo(JsonGenerator writer) {
+    // TODO Auto-generated method stub
+    
   }
 
 

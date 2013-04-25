@@ -5,6 +5,8 @@ import java.math.BigInteger;
 import java.net.URI;
 import java.util.Date;
 
+import org.codehaus.jackson.JsonGenerator;
+
 public class RavenJValue extends RavenJToken {
 
 
@@ -227,6 +229,12 @@ public class RavenJValue extends RavenJToken {
 
   public static RavenJValue getNull() {
     return new RavenJValue(null, JTokenType.NULL);
+  }
+
+  @Override
+  public void writeTo(JsonGenerator writer) {
+    // TODO Auto-generated method stub
+    
   }
 
 
