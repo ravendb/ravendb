@@ -224,6 +224,7 @@
     <Compile Include="Bugs\DanTurner.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
+    <Compile Include="Bugs\DTC\Embedded.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
     <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
     <Compile Include="Bugs\Embedded\EmbeddedThrowsErrorsForMultiDatabaseCommands.cs" />
