@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.Text;
 
 namespace Raven.Abstractions.Util
@@ -17,7 +18,7 @@ namespace Raven.Abstractions.Util
 		/// </summary>
 		public static string Escape(string term)
 		{
-			return Escape(term, false, true, false);
+			return Escape(term, false, true);
 		}
 
 		/// <summary>
@@ -27,7 +28,7 @@ namespace Raven.Abstractions.Util
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		public static string Escape(string term, bool allowWildcards, bool makePhrase, bool escapeWhitespace)
+		public static string Escape(string term, bool allowWildcards, bool makePhrase)
 		{
 			// method doesn't allocate a StringBuilder unless the string requires escaping
 			// also this copies chunks of the original string into the StringBuilder which
@@ -106,10 +107,6 @@ namespace Raven.Abstractions.Util
 								buffer.Insert(0, "\"");
 								isPhrase = true;
 							}
-							else if (escapeWhitespace)
-							{
-								goto case ':'; // escape using \
-							}
 							break;
 						}
 				}
@@ -147,5 +144,93 @@ namespace Raven.Abstractions.Util
 
 			return buffer.ToString();
 		}
+
+		private static readonly HashSet<char> fieldChars = new HashSet<char>
+		{
+			'*',
+			'?',
+			'+',
+			'&',
+			'|',
+			'!',
+			'(',
+			')',
+			'{',
+			'}',
+			'[',
+			']',
+			'^',
+			'"',
+			'~',
+			'\\',
+			':',
+			' ',
+			'\t'
+		};
+		/// <summary>
+		/// Escapes Lucene field
+		/// </summary>
+		public static string EscapeField(string field)
+		{
+			// method doesn't allocate a StringBuilder unless the string requires escaping
+			// also this copies chunks of the original string into the StringBuilder which
+			// is far more efficient than copying character by character because StringBuilder
+			// can access the underlying string data directly
+
+			if (string.IsNullOrEmpty(field))
+			{
+				return "\"\"";
+			}
+
+			int start = 0;
+			int length = field.Length;
+			StringBuilder buffer = null;
+
+			for (int i = start; i < length; i++)
+			{
+				char ch = field[i];
+
+				if (ch == '\\')
+				{
+					if (i + 1 < length && fieldChars.Contains(field[i + 1]))
+					{
+						i++; // skip next, since it was escaped
+						continue;
+					}
+				}
+				else if (!fieldChars.Contains(ch))
+					continue;
+
+				if (buffer == null)
+				{
+					// allocate builder with headroom
+					buffer = new StringBuilder(length * 2);
+				}
+
+				if (i > start)
+				{
+					// append any leading substring
+					buffer.Append(field, start, i - start);
+				}
+
+				buffer.Append('\\').Append(ch);
+				start = i + 1;
+			}
+
+			if (buffer == null)
+				return field;
+
+			if (length > start)
+			{
+				// append any trailing substring
+				buffer.Append(field, start, length - start);
+			}
+
+
+
+			return buffer.ToString();
+		}
 	}
+
+
 }

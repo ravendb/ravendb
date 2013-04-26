@@ -1073,7 +1073,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			queryText.Append(RavenQuery.Escape(whereParams.FieldName, allowWildcards: false, makePhrase: false, escapeWhitespace:true));
+			queryText.Append(RavenQuery.EscapeField(whereParams.FieldName));
 			queryText.Append(":");
 			queryText.Append(transformToEqualValue);
 		}
@@ -1229,7 +1229,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			queryText.Append(RavenQuery.Escape(fieldName, allowWildcards: false, makePhrase: false, escapeWhitespace:true)).Append(":{");
+			queryText.Append(RavenQuery.EscapeField(fieldName)).Append(":{");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
@@ -1256,7 +1256,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			queryText.Append(RavenQuery.Escape(fieldName, allowWildcards: false, makePhrase: false, escapeWhitespace: true)).Append(":[");
+			queryText.Append(RavenQuery.EscapeField(fieldName)).Append(":[");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
@@ -1798,14 +1798,14 @@ If you really want to do in memory filtering on the data returned from the query
 			switch (escapeQueryOptions)
 			{
 				case EscapeQueryOptions.EscapeAll:
-					searchTerms = RavenQuery.Escape(searchTerms, false, false, false);
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
 					break;
 				case EscapeQueryOptions.AllowPostfixWildcard:
-					searchTerms = RavenQuery.Escape(searchTerms, false, false, false);
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
 					searchTerms = espacePostfixWildcard.Replace(searchTerms, "*");
 					break;
 				case EscapeQueryOptions.AllowAllWildcards:
-					searchTerms = RavenQuery.Escape(searchTerms, false, false, false);
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
 					searchTerms = searchTerms.Replace("\\*", "*");
 					break;
 				case EscapeQueryOptions.RawQuery:
@@ -1851,12 +1851,12 @@ If you really want to do in memory filtering on the data returned from the query
 			
 			if(type == typeof(decimal))
 			{
-				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false, false);
+				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
 			}
 
 			if (type == typeof(double))
 			{
-				return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false, false);
+				return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
 			}
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
@@ -1867,7 +1867,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (strValue != null)
 			{
 				strValue = RavenQuery.Escape(strValue, 
-						whereParams.AllowWildcards && whereParams.IsAnalyzed, true, false);
+						whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
 				return whereParams.IsAnalyzed ? strValue : String.Concat("[[", strValue, "]]");
 			}
@@ -1878,7 +1878,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (whereParams.Value is ValueType)
 			{
 				var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-												whereParams.AllowWildcards && whereParams.IsAnalyzed, true, false);
+												whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
 				return escaped;
 			}
@@ -1886,7 +1886,7 @@ If you really want to do in memory filtering on the data returned from the query
 			var result = GetImplicitStringConvertion(whereParams.Value.GetType());
 			if(result != null)
 			{
-				return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true, false);
+				return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 			}
 
 			var jsonSerializer = conventions.CreateSerializer();
@@ -1901,10 +1901,10 @@ If you really want to do in memory filtering on the data returned from the query
 			{
 				case JTokenType.Object:
 				case JTokenType.Array:
-					return "[[" + RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, false, false) + "]]";
+					return "[[" + RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, false) + "]]";
 		
 				default:
-					return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true, false);
+					return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 			}
 		}
 
@@ -1975,7 +1975,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
 			if(whereParams.Value is string)
-				return RavenQuery.Escape(whereParams.Value.ToString(), false, true, false);
+				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
 
 			string strVal;
 			if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Range,
@@ -1984,7 +1984,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if(whereParams.Value is ValueType)
 				return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-										 false, true, false);
+										 false, true);
 
 			var stringWriter = new StringWriter();
 			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
@@ -1996,7 +1996,7 @@ If you really want to do in memory filtering on the data returned from the query
 				sb.Remove(0, 1);
 			}
 		
-			return RavenQuery.Escape(sb.ToString(), false, true, false);
+			return RavenQuery.Escape(sb.ToString(), false, true);
 		}
 
 		/// <summary>
