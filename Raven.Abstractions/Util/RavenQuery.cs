@@ -106,6 +106,10 @@ namespace Raven.Abstractions.Util
 								buffer.Insert(0, "\"");
 								isPhrase = true;
 							}
+							if (makePhrase == false)
+							{
+								goto case ':'; // escape using \
+							}
 							break;
 						}
 				}
@@ -113,6 +117,8 @@ namespace Raven.Abstractions.Util
 
 			if (buffer == null)
 			{
+				if (makePhrase == false)
+					return term;
 				// no changes required
 				switch (term)
 				{

@@ -1073,7 +1073,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			queryText.Append(whereParams.FieldName);
+			queryText.Append(RavenQuery.Escape(whereParams.FieldName, allowWildcards: false, makePhrase: false));
 			queryText.Append(":");
 			queryText.Append(transformToEqualValue);
 		}
