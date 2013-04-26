@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Util
 		/// </summary>
 		public static string Escape(string term)
 		{
-			return Escape(term, false, true);
+			return Escape(term, false, true, false);
 		}
 
 		/// <summary>
@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Util
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		public static string Escape(string term, bool allowWildcards, bool makePhrase)
+		public static string Escape(string term, bool allowWildcards, bool makePhrase, bool escapeWhitespace)
 		{
 			// method doesn't allocate a StringBuilder unless the string requires escaping
 			// also this copies chunks of the original string into the StringBuilder which
@@ -106,7 +106,7 @@ namespace Raven.Abstractions.Util
 								buffer.Insert(0, "\"");
 								isPhrase = true;
 							}
-							if (makePhrase == false)
+							else if (escapeWhitespace)
 							{
 								goto case ':'; // escape using \
 							}
