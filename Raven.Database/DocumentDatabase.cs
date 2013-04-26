@@ -1723,7 +1723,7 @@ namespace Raven.Database
         {
             var scriptedJsonPatcher = new ScriptedJsonPatcher(this);
             var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-                (jsonDoc, size) => scriptedJsonPatcher.Apply(jsonDoc, patch, size), () => scriptedJsonPatcher.CreatedDocs, debugMode);
+                (jsonDoc, size) => scriptedJsonPatcher.Apply(jsonDoc, patch, size, docId), () => scriptedJsonPatcher.CreatedDocs, debugMode);
             return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
         }
 
