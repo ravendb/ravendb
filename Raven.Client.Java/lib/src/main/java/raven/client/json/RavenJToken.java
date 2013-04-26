@@ -1,13 +1,11 @@
 package raven.client.json;
 
 import java.io.IOException;
-import java.io.StringReader;
-import java.text.ParseException;
+import java.io.StringWriter;
 import java.util.Map;
 import java.util.Stack;
 
 import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -20,23 +18,22 @@ import raven.client.json.lang.JsonWriterException;
  */
 public abstract class RavenJToken {
 
+  public static boolean deepEquals(RavenJToken t1, RavenJToken t2) {
+    return (t1 == t2 || t1 != null && t2 != null && t1.deepEquals(t2));
+  }
+
+  public static int deepHashCode(RavenJToken t) {
+    return (t == null) ? 0 : t.deepHashCode();
+  }
+
   /**
-   * Gets the node type for this {@link RavenJToken}
+   * Creates a {@link RavenJToken} from an object.
+   * @param o object
    * @return
    */
-  public abstract JTokenType getType();
-
-  /**
-   * Clones this object
-   * @return Cloned {@link RavenJToken}
-   */
-  public abstract RavenJToken cloneToken();
-
-  public abstract boolean isSnapshot();
-
-  public abstract void ensureCannotBeChangeAndEnableShapshotting();
-
-  public abstract RavenJToken createSnapshot();
+  public static RavenJToken fromObject(Object o) {
+    return fromObjectInternal(o, JsonExtensions.getDefaultObjectMapper());
+  }
 
   protected static RavenJToken fromObjectInternal(Object o, ObjectMapper objectMapper) {
     if (o instanceof RavenJToken) {
@@ -52,23 +49,23 @@ public abstract class RavenJToken {
     return ravenJTokenWriter.getToken();
   }
 
+  public static RavenJToken load(JsonParser parser) {
+    return readFrom(parser);
+  }
+
   /**
-   * Creates a {@link RavenJToken} from an object.
-   * @param o object
+   * Load a {@link RavenJToken} from a string that contains JSON.
+   * @param json
    * @return
    */
-  public static RavenJToken fromObject(Object o) {
-    return fromObjectInternal(o, JsonExtensions.getDefaultObjectMapper());
+  public static RavenJToken parse(String json) throws JsonReaderException {
+    try {
+      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      return load(jsonParser);
+    } catch (IOException e) {
+      throw new JsonReaderException(e.getMessage(), e);
+    }
   }
-
-  protected RavenJToken cloneTokenImpl(RavenJToken ravenJArray) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  //TODO :public override string ToString()
-
-  public abstract void writeTo(JsonGenerator writer);
 
   public static RavenJToken readFrom(JsonParser parser) {
     try {
@@ -101,35 +98,83 @@ public abstract class RavenJToken {
     throw new JsonReaderException("Error reading RavenJToeken from JsonParser");
   }
 
+  protected abstract void addForCloning(String key, RavenJToken token);
+
   /**
-   * Load a {@link RavenJToken} from a string that contains JSON.
-   * @param json
-   * @return
+   * Clones this object
+   * @return Cloned {@link RavenJToken}
    */
-  public static RavenJToken parse(String json) throws JsonReaderException {
+  public abstract RavenJToken cloneToken();
+
+  @Override
+  public String toString() {
     try {
-      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
-      return load(jsonParser);
+      StringWriter stringWriter = new StringWriter();
+      JsonGenerator jsonGenerator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(stringWriter);
+      writeTo(jsonGenerator);
+      jsonGenerator.close();
+      return stringWriter.toString();
     } catch (IOException e) {
-      throw new JsonReaderException(e.getMessage(), e);
+      throw new JsonWriterException(e.getMessage(), e);
     }
   }
 
-  //TODO: public static RavenJToken TryLoad(Stream stream)
+  protected RavenJToken cloneTokenImpl(RavenJToken newObject) {
+    Stack<RavenJToken> readingStack = new Stack<>();
+    Stack<RavenJToken> writingStack = new Stack<>();
 
-  public static RavenJToken load(JsonParser parser) {
-    return readFrom(parser);
+    writingStack.push(newObject);
+    readingStack.push(this);
+
+    while (!readingStack.isEmpty()) {
+      RavenJToken curReader = readingStack.pop();
+      RavenJToken curObject = writingStack.pop();
+
+      if (curReader instanceof RavenJObject) {
+        RavenJObject ravenJObject = (RavenJObject) curObject;
+        for (Map.Entry<String, RavenJToken> entry: ravenJObject.getProperties()) {
+          if (entry.getValue() == null || entry.getValue().getType() == JTokenType.NULL) {
+            curObject.addForCloning(entry.getKey(), null);
+            continue;
+          }
+          if (entry.getValue() instanceof RavenJValue) {
+            curObject.addForCloning(entry.getKey(), entry.getValue().cloneToken());
+            continue;
+          }
+
+          RavenJToken newVal = (entry.getValue() instanceof RavenJArray) ? new RavenJArray() : new RavenJObject();
+          curObject.addForCloning(entry.getKey(), newVal);
+
+          writingStack.push(newVal);
+          readingStack.push(entry.getValue());
+        }
+      } else if (curObject instanceof RavenJArray) {
+        RavenJArray ravenJArray = (RavenJArray) curObject;
+        for (RavenJToken token: ravenJArray.getItems()) {
+          if (token == null || token.getType() == JTokenType.NULL) {
+            curObject.addForCloning(null, null);
+            continue;
+          }
+          if (token instanceof RavenJValue) {
+            curObject.addForCloning(null, token.cloneToken());
+            continue;
+          }
+          RavenJToken newVal = (token instanceof RavenJArray) ? new RavenJArray() : new RavenJObject();
+          curObject.addForCloning(null, newVal);
+
+          writingStack.push(newVal);
+          readingStack.push(token);
+        }
+      } else {
+        throw new IllegalStateException("Unexpected token type:" + curReader.getType());
+      }
+
+    }
+
+    return newObject;
   }
 
-  //TODO: public virtual T Value<T>(string key) - not supported
-
-  public static boolean DeepEquals(RavenJToken t1, RavenJToken t2) {
-    return (t1 == t2 || t1 != null && t2 != null && t1.deepEquals(t2));
-  }
-
-  public static int deepHashCode(RavenJToken t) {
-    return (t == null) ? 0 : t.deepHashCode();
-  }
+  public abstract RavenJToken createSnapshot();
 
   public boolean deepEquals(RavenJToken other) {
     if (other == null)
@@ -241,6 +286,8 @@ public abstract class RavenJToken {
     return true;
   }
 
+  //TODO: public static RavenJToken TryLoad(Stream stream)
+
   public int deepHashCode() {
     Stack<Tuple<Integer, RavenJToken>> stack = new Stack<>();
     int ret = 0;
@@ -265,4 +312,18 @@ public abstract class RavenJToken {
 
     return ret;
   }
+
+  //TODO: public virtual T Value<T>(string key) - not supported
+
+  public abstract void ensureCannotBeChangeAndEnableShapshotting();
+
+  /**
+   * Gets the node type for this {@link RavenJToken}
+   * @return
+   */
+  public abstract JTokenType getType();
+
+  public abstract boolean isSnapshot();
+
+  public abstract void writeTo(JsonGenerator writer);
 }

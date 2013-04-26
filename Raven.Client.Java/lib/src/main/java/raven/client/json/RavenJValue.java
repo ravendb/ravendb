@@ -1,11 +1,16 @@
 package raven.client.json;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.util.Date;
 
 import org.codehaus.jackson.JsonGenerator;
+import org.codehaus.jackson.JsonParser;
+
+import raven.client.json.lang.JsonReaderException;
+import raven.client.json.lang.JsonWriterException;
 
 public class RavenJValue extends RavenJToken {
 
@@ -231,11 +236,109 @@ public class RavenJValue extends RavenJToken {
     return new RavenJValue(null, JTokenType.NULL);
   }
 
-  @Override
-  public void writeTo(JsonGenerator writer) {
-    // TODO Auto-generated method stub
-    
+  public static RavenJValue load(JsonParser parser) {
+    try {
+      switch (parser.getCurrentToken()) {
+      case VALUE_STRING:
+        return new RavenJValue(parser.getText(), JTokenType.STRING);
+      case VALUE_NUMBER_FLOAT:
+        return new RavenJValue(parser.getFloatValue());
+      case VALUE_NUMBER_INT:
+        return new RavenJValue(parser.getIntValue());
+      case VALUE_FALSE:
+        return new RavenJValue(false);
+      case VALUE_TRUE:
+        return new RavenJValue(true);
+      case VALUE_NULL:
+        return RavenJValue.getNull();
+      default:
+        throw new JsonReaderException("Unexpected token type: " + parser.getCurrentToken());
+      }
+
+    } catch (IOException e) {
+      throw new JsonReaderException(e.getMessage(),e);
+    }
   }
 
+  @Override
+  public void writeTo(JsonGenerator writer) {
+    try {
+      if (value == null) {
+        writer.writeNull();
+        return;
+      }
+      switch (valueType) {
+      case RAW:
+        writer.writeRaw(value.toString());
+        return;
+      case NULL:
+        writer.writeNull();
+        return;
+      case BOOLEAN:
+        writer.writeBoolean((Boolean)value);
+        return;
+      case BYTES:
+        writer.writeBinary((byte[]) value);
+        return;
+      case DATE:
+        //TODO:
+        return;
+      case FLOAT:
+        writer.writeNumber((Float)value);
+        return ;
+      case INTEGER:
+        writer.writeNumber((Integer)value);
+        return;
+      case STRING:
+        writer.writeString((String) value);
+        return;
+        //TODO finish me!
+      default:
+        throw new JsonWriterException("Unexpected token:" + valueType);
+      }
+    } catch (IOException e) {
+      throw new JsonWriterException(e.getMessage(), e);
+    }
+
+  }
+
+  @Override
+  public String toString() {
+    if (value == null){
+      return "";
+    }
+    return value.toString();
+  }
+
+  @Override
+  protected void addForCloning(String key, RavenJToken token) {
+    // TODO Auto-generated method stub
+
+  }
+
+  /* (non-Javadoc)
+   * @see raven.client.json.RavenJToken#deepEquals(raven.client.json.RavenJToken)
+   */
+  @Override
+  public boolean deepEquals(RavenJToken other) {
+    // TODO Auto-generated method stub
+    return super.deepEquals(other);
+  }
+
+  /* (non-Javadoc)
+   * @see raven.client.json.RavenJToken#deepHashCode()
+   */
+  @Override
+  public int deepHashCode() {
+    // TODO Auto-generated method stub
+    return super.deepHashCode();
+  }
+
+
+
+
+
+  //TODO: private static bool ValuesEquals(RavenJValue v1, RavenJValue v2)
+  //TODO: comparator
 
 }

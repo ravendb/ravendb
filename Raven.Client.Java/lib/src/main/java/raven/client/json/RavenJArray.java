@@ -1,5 +1,6 @@
 package raven.client.json;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -7,10 +8,15 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.codehaus.jackson.JsonGenerator;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonToken;
+
+import raven.client.common.extensions.JsonExtensions;
+import raven.client.json.lang.JsonReaderException;
+import raven.client.json.lang.JsonWriterException;
 
 /**
  * Represents a JSON array.
- *
  */
 public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   private boolean snapshot;
@@ -36,7 +42,11 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     items.addAll(content);
   }
 
-  public RavenJArray(RavenJToken[] content) {
+  /**
+   * Initializes a new instance of the {@link RavenJArray} class with the specified content.
+   * @param content The contents of the array;
+   */
+  public RavenJArray(RavenJToken... content) {
     this(Arrays.asList(content));
   }
 
@@ -56,6 +66,11 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     return items.get(index);
   }
 
+  /**
+   * Sets the {@link RavenJToken} at the specified index.
+   * @param index
+   * @param value
+   */
   public void set(int index, RavenJToken value) {
     checkSnapshot();
     items.set(index, value);
@@ -96,6 +111,63 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     this.items = items;
   }
 
+  public static RavenJArray load(JsonParser parser) {
+    try {
+      JsonToken currentToken = parser.getCurrentToken();
+      if (currentToken == null) {
+        if (parser.nextToken() == null) {
+          throw new JsonReaderException("Error reading RavenJToeken from JsonParser");
+        }
+      }
+      if (currentToken != JsonToken.START_ARRAY) {
+        throw new JsonReaderException("Error reading RavenJArray from JsonParser. Current JsonReader item is not an array: " + parser.getCurrentToken());
+      }
+      if (parser.nextToken() == null) {
+        throw new JsonReaderException("Unexpected end of json array");
+      }
+      RavenJArray ar = new RavenJArray();
+      RavenJToken val = null;
+      do {
+        switch (parser.getCurrentToken()) {
+        case END_ARRAY:
+          return ar;
+        case START_OBJECT:
+          val = RavenJObject.load(parser);
+          ar.getItems().add(val);
+          break;
+        case START_ARRAY:
+          val = RavenJArray.load(parser);
+          ar.getItems().add(val);
+          break;
+        default:
+          val = RavenJValue.load(parser);
+          ar.getItems().add(val);
+          break;
+        }
+      } while (parser.nextToken() != null);
+
+      throw new JsonReaderException("Error reading RavenJArray from JsonReader.");
+
+    } catch (IOException e){
+      throw new JsonReaderException(e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Load a {@link RavenJArray} from a string that contains JSON.
+   * @param json A {@link String} that contains JSON.
+   * @return A {@link RavenJArray} populated from the string that contains JSON.
+   */
+  public static RavenJArray parse(String json) {
+    try {
+      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      return load(jsonParser);
+    } catch (IOException e) {
+      throw new JsonReaderException(e.getMessage(), e);
+    }
+  }
+
+
   /* (non-Javadoc)
    * @see java.lang.Iterable#iterator()
    */
@@ -103,16 +175,6 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   public Iterator<RavenJToken> iterator() {
     return items.iterator();
   }
-
-
-
-
-
-  //TODO: public new static RavenJArray Load(JsonReader reader)
-
-  //TODO:  public new static RavenJArray Parse(string json)
-
-  //TODO: public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
 
   public void add(RavenJToken token) {
     checkSnapshot();
@@ -160,11 +222,25 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
 
   @Override
   public void writeTo(JsonGenerator writer) {
-    // TODO Auto-generated method stub
-    
+    try {
+      writer.writeStartArray();
+
+      if (items != null) {
+        for (RavenJToken token: items) {
+          token.writeTo(writer);
+        }
+      }
+
+      writer.writeEndArray();
+    } catch (IOException e) {
+      throw new JsonWriterException(e.getMessage(), e);
+    }
   }
 
-
+  @Override
+  protected void addForCloning(String key, RavenJToken token) {
+    add(token);
+  }
 
 }
 
