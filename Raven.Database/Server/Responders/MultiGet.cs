@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
 using System.Linq;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -259,14 +258,13 @@ namespace Raven.Database.Server.Responders
 		public class MultiGetHttpResponse : IHttpResponse
 		{
 			private readonly GetResponse getResponse;
-			private bool bufferOutput;
 
 			public MultiGetHttpResponse(GetResponse getResponse, IHttpResponse response)
 			{
 				this.getResponse = getResponse;
 				RedirectionPrefix = response.RedirectionPrefix;
 				OutputStream = new MemoryStream();
-				bufferOutput = true;
+				BufferOutput = true;
 			}
 
 			public string RedirectionPrefix
@@ -305,11 +303,7 @@ namespace Raven.Database.Server.Responders
 				get;
 				set;
 			}
-
-			public bool BufferOutput
-			{
-				get { return bufferOutput; }
-			}
+			public bool BufferOutput { get; set; }
 
 			public void Redirect(string url)
 			{
@@ -337,12 +331,6 @@ namespace Raven.Database.Server.Responders
 			public NameValueCollection GetHeaders()
 			{
 				throw new NotSupportedException();
-			}
-
-			public IDisposable Streaming()
-			{
-				bufferOutput = false;
-				return new DisposableAction(() => bufferOutput = true);
 			}
 
 			public Task WriteAsync(string data)

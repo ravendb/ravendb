@@ -33,39 +33,37 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			using (context.Response.Streaming())
+			context.Response.BufferOutput = false;
+			context.Response.ContentType = "application/json; charset=utf-8";
+
+			var match = urlMatcher.Match(context.GetRequestUrl());
+			var index = match.Groups[1].Value;
+
+			var query = context.GetIndexQueryFromHttpContext(int.MaxValue);
+			if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
+				query.PageSize = int.MaxValue;
+			var isHeadRequest = context.Request.HttpMethod == "HEAD";
+			if (isHeadRequest)
+				query.PageSize = 0;
+
+			using (var writer = GetOutputWriter(context))
 			{
-				context.Response.ContentType = "application/json; charset=utf-8";
-
-				var match = urlMatcher.Match(context.GetRequestUrl());
-				var index = match.Groups[1].Value;
-
-				var query = context.GetIndexQueryFromHttpContext(int.MaxValue);
-				if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
-					query.PageSize = int.MaxValue;
-				var isHeadRequest = context.Request.HttpMethod == "HEAD";
-				if (isHeadRequest)
-					query.PageSize = 0;
-
-				using (var writer = GetOutputWriter(context))
+				Database.Query(index, query, information =>
 				{
-					Database.Query(index, query, information =>
-					{
-						context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
-						context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
-						context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
-						context.Response.AddHeader("Raven-Index", information.Index);
-						context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
-						context.Response.AddHeader("Raven-Index-Timestamp",
-												   information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-																					   CultureInfo.InvariantCulture));
+					context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
+					context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
+					context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
+					context.Response.AddHeader("Raven-Index", information.Index);
+					context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
+					context.Response.AddHeader("Raven-Index-Timestamp",
+											   information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+																				   CultureInfo.InvariantCulture));
 
-						if (isHeadRequest)
-							return;
-						writer.WriteHeader();
+					if (isHeadRequest)
+						return;
+					writer.WriteHeader();
 
-					}, writer.Write);
-				}
+				}, writer.Write);
 			}
 		}
 

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
@@ -19,13 +18,12 @@ namespace Raven.Database.Server.Abstractions
 		int StatusCode { get; set; }
 		string StatusDescription { get; set; }
 		string ContentType { get; set; }
-		bool BufferOutput { get; }
+		bool BufferOutput { get; set; }
 		void Redirect(string url);
 		void Close();
 		void SetPublicCacheability();
 		void WriteFile(string path);
 		NameValueCollection GetHeaders();
-		IDisposable Streaming();
 
 		Task WriteAsync(string data);
 		void SetCookie(string name, string val);

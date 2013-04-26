@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.Abstractions
@@ -67,6 +66,7 @@ namespace Raven.Database.Server.Abstractions
 		public bool BufferOutput
 		{
 			get { return response.BufferOutput; }
+			set { response.BufferOutput = value; }
 		}
 
 		public void Redirect(string url)
@@ -92,12 +92,6 @@ namespace Raven.Database.Server.Abstractions
 		public NameValueCollection GetHeaders()
 		{
 			return response.Headers;
-		}
-
-		public IDisposable Streaming()
-		{
-			response.BufferOutput = false;
-			return new DisposableAction(() => response.BufferOutput = true);
 		}
 
 		public string ContentType
