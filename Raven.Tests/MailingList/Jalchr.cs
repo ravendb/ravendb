@@ -268,7 +268,8 @@ namespace Raven.Tests.MailingList
 
                     var streamQuery = query
                                     .OrderBy(x => x.CreatedDate)
-                                    .As<User>();
+                                    .As<User>()
+									.Take(10*1000);
 
                     var enumerator = session.Advanced.Stream(streamQuery);
                     var index = 0;
