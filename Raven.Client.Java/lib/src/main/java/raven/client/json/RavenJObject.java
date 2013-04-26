@@ -85,7 +85,7 @@ public class RavenJObject extends RavenJToken   {
           break;
           default:
             if (StringUtils.isNotNullOrEmpty(propName)) {
-              RavenJValue val = RavenJValue.load(parser);
+              RavenJValue val = (RavenJValue) RavenJToken.load(parser);
               o.set(propName, val);
               propName = null;
             } else {
@@ -144,8 +144,8 @@ public class RavenJObject extends RavenJToken   {
   }
 
   @Override
-  public RavenJToken cloneToken() {
-    return cloneTokenImpl(new RavenJObject());
+  public RavenJObject cloneToken() {
+    return (RavenJObject) cloneTokenImpl(new RavenJObject());
   }
 
   public boolean containsKey(String key) {

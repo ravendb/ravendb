@@ -83,8 +83,8 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   }
 
   @Override
-  public RavenJToken cloneToken() {
-    return cloneTokenImpl(new RavenJArray());
+  public RavenJArray cloneToken() {
+    return (RavenJArray) cloneTokenImpl(new RavenJArray());
   }
 
 
@@ -93,33 +93,18 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     return snapshot;
   }
 
-  public int getLength() {
+  public int size() {
     return items.size();
-  }
-
-  /**
-   * @return the items
-   */
-  public List<RavenJToken> getItems() {
-    return items;
-  }
-
-  /**
-   * @param items the items to set
-   */
-  public void setItems(List<RavenJToken> items) {
-    this.items = items;
   }
 
   public static RavenJArray load(JsonParser parser) {
     try {
-      JsonToken currentToken = parser.getCurrentToken();
-      if (currentToken == null) {
+      if (parser.getCurrentToken() == null) {
         if (parser.nextToken() == null) {
           throw new JsonReaderException("Error reading RavenJToeken from JsonParser");
         }
       }
-      if (currentToken != JsonToken.START_ARRAY) {
+      if (parser.getCurrentToken() != JsonToken.START_ARRAY) {
         throw new JsonReaderException("Error reading RavenJArray from JsonParser. Current JsonReader item is not an array: " + parser.getCurrentToken());
       }
       if (parser.nextToken() == null) {
@@ -133,15 +118,15 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
           return ar;
         case START_OBJECT:
           val = RavenJObject.load(parser);
-          ar.getItems().add(val);
+          ar.add(val);
           break;
         case START_ARRAY:
           val = RavenJArray.load(parser);
-          ar.getItems().add(val);
+          ar.add(val);
           break;
         default:
           val = RavenJValue.load(parser);
-          ar.getItems().add(val);
+          ar.add(val);
           break;
         }
       } while (parser.nextToken() != null);
@@ -213,7 +198,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
    * @see raven.client.json.RavenJToken#createSnapshot()
    */
   @Override
-  public RavenJToken createSnapshot() {
+  public RavenJArray createSnapshot() {
     if (snapshot == false)
       throw new IllegalStateException("Cannot create snapshot without previously calling EnsureSnapShot");
 

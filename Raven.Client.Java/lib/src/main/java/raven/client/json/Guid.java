@@ -3,6 +3,12 @@ package raven.client.json;
 public class Guid {
   private String value;
 
+
+  public Guid(String value) {
+    super();
+    this.value = value;
+  }
+
   /**
    * @return the value
    */

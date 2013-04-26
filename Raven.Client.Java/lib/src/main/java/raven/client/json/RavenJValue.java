@@ -7,9 +7,7 @@ import java.net.URI;
 import java.util.Date;
 
 import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.JsonParser;
 
-import raven.client.json.lang.JsonReaderException;
 import raven.client.json.lang.JsonWriterException;
 
 public class RavenJValue extends RavenJToken {
@@ -34,6 +32,12 @@ public class RavenJValue extends RavenJToken {
     return value;
   }
 
+  /**
+   * Sets new value and type of {@link RavenJValue}.
+   * @param value
+   * @throws IllegalStateException if instance is snapshot
+   * @throws IllegalArgumentException if <code>value</code> class is not supported.
+   */
   public void setValue(Object value) {
     if (snapshot) {
       throw new IllegalStateException("Cannot modify a snapshot, this is probably a bug");
@@ -42,7 +46,7 @@ public class RavenJValue extends RavenJToken {
     Class<?> currentClass = (this.value != null) ? this.value.getClass() : null;
     Class<?> newClass = (value != null) ? value.getClass() : null;
 
-    if (currentClass != newClass) {
+    if (currentClass == null || !currentClass.equals(newClass)) {
       valueType =  getValueType(valueType, value);
     }
 
@@ -56,7 +60,7 @@ public class RavenJValue extends RavenJToken {
   }
 
   @Override
-  public RavenJToken cloneToken() {
+  public RavenJValue cloneToken() {
     return new RavenJValue(value, valueType);
   }
 
@@ -164,6 +168,8 @@ public class RavenJValue extends RavenJToken {
       return JTokenType.BOOLEAN;
     } else if (value instanceof URI) {
       return JTokenType.URI;
+    } else if (value instanceof Guid) {
+      return JTokenType.GUID;
     }
 
     throw new IllegalArgumentException("Could not determine JSON object type for class " + value.getClass().getCanonicalName());
@@ -190,6 +196,7 @@ public class RavenJValue extends RavenJToken {
    */
   @Override
   public int hashCode() {
+    //TODO: correct impl!
     final int prime = 31;
     int result = 1;
     result = prime * result + ((value == null) ? 0 : value.hashCode());
@@ -202,6 +209,8 @@ public class RavenJValue extends RavenJToken {
    */
   @Override
   public boolean equals(Object obj) {
+
+    //TODO: correct impl!
     if (this == obj)
       return true;
     if (obj == null)
@@ -225,39 +234,15 @@ public class RavenJValue extends RavenJToken {
   }
 
   @Override
-  public RavenJToken createSnapshot() {
+  public RavenJValue createSnapshot() {
     if (!snapshot) {
       throw new IllegalStateException("Cannot create snapshot without previously calling EnsureSnapShot");
     }
-    return new RavenJValue(value);
+    return new RavenJValue(value, valueType);
   }
 
   public static RavenJValue getNull() {
     return new RavenJValue(null, JTokenType.NULL);
-  }
-
-  public static RavenJValue load(JsonParser parser) {
-    try {
-      switch (parser.getCurrentToken()) {
-      case VALUE_STRING:
-        return new RavenJValue(parser.getText(), JTokenType.STRING);
-      case VALUE_NUMBER_FLOAT:
-        return new RavenJValue(parser.getFloatValue());
-      case VALUE_NUMBER_INT:
-        return new RavenJValue(parser.getIntValue());
-      case VALUE_FALSE:
-        return new RavenJValue(false);
-      case VALUE_TRUE:
-        return new RavenJValue(true);
-      case VALUE_NULL:
-        return RavenJValue.getNull();
-      default:
-        throw new JsonReaderException("Unexpected token type: " + parser.getCurrentToken());
-      }
-
-    } catch (IOException e) {
-      throw new JsonReaderException(e.getMessage(),e);
-    }
   }
 
   @Override
@@ -284,10 +269,17 @@ public class RavenJValue extends RavenJToken {
         //TODO:
         return;
       case FLOAT:
-        writer.writeNumber((Float)value);
+        writer.writeNumber((Double)value);
         return ;
       case INTEGER:
-        writer.writeNumber((Integer)value);
+        if (value instanceof Long) {
+        writer.writeNumber((Long)value);
+        } else if (value instanceof Integer) {
+          writer.writeNumber((Integer)value);
+        } else  {
+          throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
+        }
+
         return;
       case STRING:
         writer.writeString((String) value);
@@ -310,11 +302,6 @@ public class RavenJValue extends RavenJToken {
     return value.toString();
   }
 
-  @Override
-  protected void addForCloning(String key, RavenJToken token) {
-    // TODO Auto-generated method stub
-
-  }
 
   /* (non-Javadoc)
    * @see raven.client.json.RavenJToken#deepEquals(raven.client.json.RavenJToken)
