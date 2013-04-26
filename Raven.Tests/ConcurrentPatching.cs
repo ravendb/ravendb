@@ -13,7 +13,7 @@ namespace Raven.Tests
 		[Fact]
 		public void CanConcurrentlyUpdateSameDocument()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				using (var s = store.OpenSession())
 				{
