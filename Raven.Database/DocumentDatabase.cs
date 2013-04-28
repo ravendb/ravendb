@@ -570,7 +570,7 @@ namespace Raven.Database
                 indexingExecuter.Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
             reducingBackgroundTask = Task.Factory.StartNew(
-                new ReducingExecuter(workContext, etagSynchronizer).Execute,
+                new ReducingExecuter(workContext).Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
         }
 
@@ -586,7 +586,7 @@ namespace Raven.Database
                 indexingExecuter.Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
             reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-                new ReducingExecuter(workContext, etagSynchronizer).Execute,
+                new ReducingExecuter(workContext).Execute,
                 CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
         }
 
