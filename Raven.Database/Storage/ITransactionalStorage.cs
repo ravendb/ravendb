@@ -18,6 +18,9 @@ namespace Raven.Database.Storage
 		/// This is used mostly for replication
 		/// </summary>
 		Guid Id { get; }
+
+	    IDisposable WriteLock();
+
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);

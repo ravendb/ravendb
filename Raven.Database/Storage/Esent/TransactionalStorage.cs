@@ -525,7 +525,12 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+	    public IDisposable WriteLock()
+	    {
+	        return null; // Esent doesn't need this
+	    }
+
+	    [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		[CLSCompliant(false)]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
