@@ -759,6 +759,7 @@
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
+    <Compile Include="RavenDB_1033.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
