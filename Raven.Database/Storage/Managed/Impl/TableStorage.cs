@@ -121,6 +121,8 @@ namespace Raven.Storage.Managed.Impl
 				{"ByRef", x=> x.Value<string>("ref")},
 				{"ByViewAndKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("key"))},
 			});
+
+			EtagSynchronization = Add(new Table(x => x.Value<string>("key"), "EtagSynchronization"));
 		}
 
 		public Table Lists { get; private set; }
@@ -152,5 +154,7 @@ namespace Raven.Storage.Managed.Impl
 		public Table ReduceKeys { get; private set; }
 
 		public Table DocumentReferences { get; private set; }
+
+		public Table EtagSynchronization { get; private set; }
 	}
 }

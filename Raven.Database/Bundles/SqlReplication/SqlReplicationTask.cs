@@ -16,6 +16,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -43,8 +44,12 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private PrefetchingBehavior prefetchingBehavior;
 
+		private EtagSynchronizer etagSynchronizer;
+
 		public void Execute(DocumentDatabase database)
 		{
+			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.SqlReplicator);
+
 			Database = database;
 			Database.OnDocumentChange += (sender, notification, metadata) =>
 			{
@@ -162,15 +167,15 @@ namespace Raven.Database.Bundles.SqlReplication
 					Database.TransactionalStorage.Batch(accessor =>
 					{
 						deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
-														  GetLastEtagFor(localReplicationStatus, cfg), 
-														  latestEtag, 
+														  GetLastEtagFor(localReplicationStatus, cfg),
+														  latestEtag,
 														  1024)
 											  .ToList();
 					});
 				}
 
 				// No documents AND there aren't any deletes to replicate
-				if (documents.Count == 0 && deletedDocsByConfig.Sum(x => x.Value.Count) == 0)  
+				if (documents.Count == 0 && deletedDocsByConfig.Sum(x => x.Value.Count) == 0)
 				{
 					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
 					continue;
@@ -266,7 +271,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					docsToReplicate.RemoveAt(change);
 				}
 				else
-				{	
+				{
 					// the delete came BEFORE the doc, so we can remove the delte and just replicate the change
 					deletedDocs.RemoveAt(index);
 					index--;
@@ -316,6 +321,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private Etag GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
+			var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
 			Etag leastReplicatedEtag = null;
 			foreach (var sqlReplicationConfig in config)
 			{
@@ -325,7 +331,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
-			return leastReplicatedEtag;
+			return etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
 		}
 
 		private bool ReplicateChangesToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)

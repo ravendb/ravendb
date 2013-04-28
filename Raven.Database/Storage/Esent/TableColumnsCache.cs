@@ -43,7 +43,7 @@ namespace Raven.Storage.Esent
 
 		public IDictionary<string, JET_COLUMNID> IndexedDocumentsReferencesColumns { get; set; }
 
-	    public void InitColumDictionaries(JET_INSTANCE instance, string database)
+		public void InitColumDictionaries(JET_INSTANCE instance, string database)
 	    {
 	        using (var session = new Session(instance))
 	        {

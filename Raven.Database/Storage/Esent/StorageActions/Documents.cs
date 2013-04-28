@@ -16,6 +16,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -111,7 +112,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MoveAfterLast(session, Documents);
 			if (TryMoveTableRecords(Documents, start, backward: true))
 				return Enumerable.Empty<JsonDocument>();
-			if (take < 1024*4)
+			if (take < 1024 * 4)
 			{
 				var optimizer = new OptimizedIndexReader();
 				while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
@@ -321,71 +322,82 @@ namespace Raven.Storage.Esent.StorageActions
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 2048)
 				throw new ArgumentException(string.Format("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters, key is: '{0}'", key), "key");
 
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
-			if (isUpdate)
+			try
 			{
-				EnsureDocumentEtagMatch(key, etag, "PUT");
 
-			}
-			else
-			{
-				if (etag != null && etag != Etag.Empty) // expected something to be there.
-					throw new ConcurrencyException("PUT attempted on document '" + key +
-												   "' using a non current etag (document deleted)")
-					{
-						ExpectedETag = etag
-					};
-				if (Api.TryMoveFirst(session, Details))
-					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
-			}
-			Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-
-
-			DateTime savedAt;
-			using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				Api.JetSetCurrentIndex(session, Documents, "by_key");
+				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+				if (isUpdate)
 				{
-					if (isUpdate)
-						columnStream.SetLength(0); // empty the existing value, since we are going to overwrite the entire thing
-					using (Stream stream = new BufferedStream(columnStream))
-					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
-					{
-						data.WriteTo(finalStream);
-						finalStream.Flush();
-					}
-				}
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				savedAt = SystemTime.UtcNow;
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+					EnsureDocumentEtagMatch(key, etag, "PUT");
 
-				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
+				}
+				else
 				{
-					if (isUpdate)
-						columnStream.SetLength(0);
-					using (Stream stream = new BufferedStream(columnStream))
+					if (etag != null && etag != Etag.Empty) // expected something to be there.
+						throw new ConcurrencyException("PUT attempted on document '" + key +
+													   "' using a non current etag (document deleted)")
+						{
+							ExpectedETag = etag
+						};
+					if (Api.TryMoveFirst(session, Details))
+						Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
+				}
+				Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+
+
+				DateTime savedAt;
+				using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+				{
+					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+					using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
 					{
-						metadata.WriteTo(stream);
-						stream.Flush();
+						if (isUpdate)
+							columnStream.SetLength(0); // empty the existing value, since we are going to overwrite the entire thing
+						using (Stream stream = new BufferedStream(columnStream))
+						using (
+							var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current))
+							)
+						{
+							data.WriteTo(finalStream);
+							finalStream.Flush();
+						}
 					}
+					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
+								  newEtag.TransformToValueForEsentSorting());
+					savedAt = SystemTime.UtcNow;
+					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+
+					using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
+					{
+						if (isUpdate)
+							columnStream.SetLength(0);
+						using (Stream stream = new BufferedStream(columnStream))
+						{
+							metadata.WriteTo(stream);
+							stream.Flush();
+						}
+					}
+
+					update.Save();
 				}
 
-				update.Save();
-			}
-
-			logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
+				logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
 							   key, isUpdate);
 
-			cacher.RemoveCachedDocument(key, newEtag);
-			return new AddDocumentResult
+				cacher.RemoveCachedDocument(key, newEtag);
+				return new AddDocumentResult
+				{
+					Etag = newEtag,
+					SavedAt = savedAt,
+					Updated = isUpdate
+				};
+			}
+			catch (EsentKeyDuplicateException e)
 			{
-				Etag = newEtag,
-				SavedAt = savedAt,
-				Updated = isUpdate
-			};
+				throw new ConcurrencyException("Illegal duplicate key " + key, e);
+			}
 		}
 
 		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
