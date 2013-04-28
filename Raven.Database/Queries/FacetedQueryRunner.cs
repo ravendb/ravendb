@@ -372,7 +372,7 @@ namespace Raven.Database.Queries
 					switch (facet.TermSortMode)
 					{
 						case FacetTermSortMode.ValueAsc:
-							allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value.Value).Select(x => x.Key));
+							allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value.Hits).Select(x => x.Key));
 							break;
 						case FacetTermSortMode.ValueDesc:
 							allTerms = new List<string>(groups.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Hits).Select(x => x.Key));

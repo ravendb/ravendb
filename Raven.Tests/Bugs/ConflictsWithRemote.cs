@@ -16,6 +16,12 @@ namespace Raven.Tests.Bugs
 			public int StatusId { get; set; }
 		}
 
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        {
+            configuration.DefaultStorageTypeName = "esent";
+            configuration.RunInMemory = false;
+        }
+
 		[Fact]
 		public void MultiThreadedInsert()
 		{
