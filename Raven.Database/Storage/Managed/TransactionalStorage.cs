@@ -31,7 +31,6 @@ namespace Raven.Storage.Managed
 		private TableStorage tableStorage;
 
 		private OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
-
 		public TableStorage TableStorage
 		{
 			get { return tableStorage; }
@@ -90,7 +89,7 @@ namespace Raven.Storage.Managed
 		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
-			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
+			if (disposerLock.IsWriteLockHeld) // we are currently in a nested Batch call
 			{
 				if (current.Value != null) // check again, just to be sure
 				{
@@ -99,7 +98,7 @@ namespace Raven.Storage.Managed
 				}
 			}
 			StorageActionsAccessor result;
-			disposerLock.EnterReadLock();
+			disposerLock.EnterWriteLock();
 			try
 			{
 				if (disposed)
@@ -112,7 +111,7 @@ namespace Raven.Storage.Managed
 			}
 			finally
 			{
-				disposerLock.ExitReadLock();
+				disposerLock.ExitWriteLock();
 				if (disposed == false)
 					current.Value = null;
 			}
