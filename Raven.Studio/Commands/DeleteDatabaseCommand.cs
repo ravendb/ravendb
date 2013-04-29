@@ -19,27 +19,36 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			new DeleteDatabase().ShowAsync()
-				.ContinueOnSuccessInTheUIThread(deleteDatabase => {
-					if (deleteDatabase.DialogResult == true)
-					{
-						var asyncDatabaseCommands = ApplicationModel.Current.Server.Value.DocumentStore
-							.AsyncDatabaseCommands
-							.ForSystemDatabase();
-						var relativeUrl = "/admin/databases/" + databasesModel.SelectedDatabase.Name;
-						if (deleteDatabase.hardDelete.IsChecked == true)
-							relativeUrl += "?hard-delete=true";
-						var httpJsonRequest = asyncDatabaseCommands.CreateRequest(relativeUrl, "DELETE");
-						httpJsonRequest.ExecuteRequestAsync()
-							.ContinueOnSuccessInTheUIThread(() =>
-							{
-								var database =
-									ApplicationModel.Current.Server.Value.Databases.FirstOrDefault(
-										s => s != Constants.SystemDatabase && s != databasesModel.SelectedDatabase.Name) ??
-									Constants.SystemDatabase;
-								ExecuteCommand(new ChangeDatabaseCommand(), database);
-							});
-					}
-				});
+			                    .ContinueOnSuccessInTheUIThread(deleteDatabase =>
+			                    {
+									if(deleteDatabase == null)
+										return;
+				                    
+				                    if (deleteDatabase.DialogResult != true)
+					                    return;
+
+				                    var asyncDatabaseCommands = ApplicationModel.Current.Server.Value.DocumentStore
+				                                                                .AsyncDatabaseCommands
+				                                                                .ForSystemDatabase();
+
+				                    var relativeUrl = "/admin/databases/" + databasesModel.SelectedDatabase.Name;
+
+				                    if (deleteDatabase.hardDelete.IsChecked == true)
+					                    relativeUrl += "?hard-delete=true";
+
+				                    var httpJsonRequest = asyncDatabaseCommands.CreateRequest(relativeUrl, "DELETE");
+				                    httpJsonRequest.ExecuteRequestAsync()
+				                                   .ContinueOnSuccessInTheUIThread(() =>
+				                                   {
+					                                   var database = ApplicationModel.Current.Server
+					                                                                  .Value.Databases
+					                                                                  .FirstOrDefault(s =>
+						                                                                  s != Constants.SystemDatabase &&
+						                                                                  s != databasesModel.SelectedDatabase.Name) ??
+					                                                  Constants.SystemDatabase;
+					                                   ExecuteCommand(new ChangeDatabaseCommand(), database);
+				                                   });
+			                    });
 		}
 	}
 }
