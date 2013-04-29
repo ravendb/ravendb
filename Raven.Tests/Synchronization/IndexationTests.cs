@@ -64,7 +64,7 @@ namespace Raven.Tests.Synchronization
 				for (var i = 1; i <= 20; i++)
 				{
 					var taskNumber = i;
-					tasks.Add(Task.Factory.StartNew(async () => await Save(store, taskNumber)));
+					tasks.Add(Save(store, taskNumber));
 				}
 
 				Task.WaitAll(tasks.ToArray());
@@ -98,7 +98,7 @@ namespace Raven.Tests.Synchronization
 				for (var i = 1; i <= 20; i++)
 				{
 					var taskNumber = i;
-					tasks.Add(Task.Factory.StartNew(async () => await Save(store, taskNumber)));
+					tasks.Add(Save(store, taskNumber));
 				}
 
 				Task.WaitAll(tasks.ToArray());
