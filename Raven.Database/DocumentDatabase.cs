@@ -1748,7 +1748,7 @@ namespace Raven.Database
                         return null;
                     return scriptedJsonPatcher.CreatedDocs;
                 }, debugMode);
-            return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
+            return Tuple.Create(applyPatchInternal,scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
         }
 
         public PatchResultData ApplyPatch(string docId, Etag etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation, bool debugMode = false)
