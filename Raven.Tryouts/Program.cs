@@ -65,6 +65,7 @@ namespace Raven.Tryouts
 
 				sw.Start();
 				var r = session.Query<Order>("Orders/All")
+                        .Where(x=>x.Total > 750)
 					   .AggregateBy(order => order.Product)
 						  .SumOn(order => order.Total)
 					   .AndAggregateOn(order => order.Currency)
@@ -78,6 +79,7 @@ namespace Raven.Tryouts
 				Console.WriteLine("test 1 took {0:#,#} ms", sw.ElapsedMilliseconds);
 				sw.Restart();
 				r = session.Query<Order>("Orders/All")
+                    .Where(x => x.Total > 750)
 				       .AggregateBy(x => x.Product)
 						 .SumOn(x => x.Total)
 				       .AndAggregateOn(x => x.Total)
@@ -92,6 +94,7 @@ namespace Raven.Tryouts
 				Console.WriteLine("test 2 took {0:#,#} ms", sw.ElapsedMilliseconds);
 				sw.Restart();
 				r = session.Query<Order>("Orders/All")
+                    .Where(x => x.Total > 750)
 				       .AggregateBy(x => x.Product)
 						 .SumOn(x => x.Total)
 				       .AndAggregateOn(x => x.Product)
