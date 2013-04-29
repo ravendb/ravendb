@@ -1,55 +1,123 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Document;
+using System.Globalization;
 using System.Linq;
-using Raven.Client.Embedded;
-using Raven.Client.Extensions;
+using Raven.Client.Document;
+using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bundles.PeriodicBackups;
-using Raven.Tests.Bundles.Replication.Bugs;
-using Raven.Tests.Bundles.Versioning;
 
 namespace Raven.Tryouts
 {
-	public class Person
+	public class Order
 	{
-		public string FirstName { get; set; }
+		public string Product { get; set; }
+		public decimal Total { get; set; }
+		public Currency Currency { get; set; }
+	}
 
-		public string LastName { get; set; }
+	public enum Currency
+	{
+		USD,
+		EUR,
+		NIS
 	}
 
 	class Program
 	{
 		static void Main(string[] args)
 		{
-		    for (int i = 0; i < 100; i++)
-		    {
-		        using (var x = new ConflictsWithRemote())
-		        {
-		            x.InnefficientMultiThreadedInsert();
-		        }
-		        Console.WriteLine(i);
-		    }
+			Console.WriteLine("Open Server and press any key");
+			Console.ReadLine();
+			//CreateData();
+
+			Test();
+
 		}
 
-		private static void Save(IDocumentStore store, int j)
+		private static void Test()
 		{
-			for (var i = 1; i <= 1000; i++)
+			using (var store = new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "AggregateQuerySample"}.Initialize())
+			using(var session = store.OpenSession())
 			{
-				store.DatabaseCommands.Put(string.Format("people/{0}/{1}", j, i), null, RavenJObject.FromObject(new Person
+				//store.DatabaseCommands.PutIndex("Orders/All",
+				//						new IndexDefinitionBuilder<Order>
+				//						{
+				//							Map = orders => from order in orders
+				//										   select new { order.Currency, order.Product, order.Total }
+				//						});
+				var sw = new Stopwatch();
+
+				sw.Start();
+				session.Query<Order>("Orders/All")
+					   .AggregateBy(order => order.Product)
+						  .SumOn(order => order.Total)
+					   .AndAggregateOn(order => order.Currency)
+						   .SumOn(order => order.Total)
+					   .ToList();
+
+				Console.WriteLine("test 1 took {0:#,#} ms", sw.ElapsedMilliseconds);
+				sw.Restart();
+				session.Query<Order>("Orders/All")
+				       .AggregateBy(x => x.Product)
+						 .SumOn(x => x.Total)
+				       .AndAggregateOn(x => x.Total)
+						   .AddRanges(x => x.Total < 100,
+									  x => x.Total >= 100 && x.Total < 500,
+									  x => x.Total >= 500 && x.Total < 1500,
+									  x => x.Total >= 1500)
+				       .SumOn(x => x.Total)
+				       .ToList();
+
+				Console.WriteLine("test 2 took {0:#,#} ms", sw.ElapsedMilliseconds);
+				sw.Restart();
+				session.Query<Order>("Orders/All")
+				       .AggregateBy(x => x.Product)
+						 .SumOn(x => x.Total)
+				       .AndAggregateOn(x => x.Product)
+					     .AverageOn(x => x.Total)
+				       .ToList();
+
+				Console.WriteLine("test 3 took {0:#,#} ms", sw.ElapsedMilliseconds);
+			}
+
+		}
+
+		public static void CreateData()
+		{
+			using(var store = new DocumentStore{Url = "http://localhost:8080", DefaultDatabase = "AggregateQuerySample"}.Initialize())
+			{
+				var data = GenerateData();
+
+				var bulk = store.BulkInsert();
+
+				foreach (var order in data)
 				{
-					FirstName = "FirstName" + i,
-					LastName = "LastName" + i
-				}), new RavenJObject());
+					bulk.Store(order);
+				}
 			}
 		}
+
+		private static List<Order> GenerateData()
+		{
+			var random = new Random();
+			var values = Enum.GetValues(typeof(Currency));
+			var products = new List<string> {"RavenDB", "RavenFS", "UberProf", "NHibernate"};
+			var list = new List<Order>();
+
+			for (int i = 0; i < 1000000; i++)
+			{
+				list.Add(new Order
+				{
+					Currency = (Currency)values.GetValue(random.Next(values.Length)),
+					Product = products[random.Next(products.Count)],
+					Total = (decimal)Math.Round((random.NextDouble() * (1000 - 500) + 500), 2)
+				});
+			}
+
+			return list;
+		}
+
+
 	}
 }
