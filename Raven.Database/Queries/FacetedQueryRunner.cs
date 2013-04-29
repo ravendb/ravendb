@@ -31,7 +31,7 @@ namespace Raven.Database.Queries
 			foreach (var facet in facets)
 			{
                 defaultFacets[facet.Name] = facet;
-                if (facet.Aggregation != FacetAggregation.Count)
+                if (facet.Aggregation != FacetAggregation.Count && facet.Aggregation != FacetAggregation.None)
                 {
                     if (string.IsNullOrEmpty(facet.AggregationField))
                         throw new InvalidOperationException("Facet " + facet.Name + " cannot have aggregation set to " +
@@ -136,10 +136,10 @@ namespace Raven.Database.Queries
 			{
 				case '[':
 				case ']':
-                    return false;
+                    return true;
 				case '{':
 				case '}':
-			        return true;
+			        return false;
 				default:
 					throw new ArgumentException("Could not understand range prefix: " + ch);
 			}
