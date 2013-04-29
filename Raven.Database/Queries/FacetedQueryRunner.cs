@@ -183,7 +183,7 @@ namespace Raven.Database.Queries
 
 		private class QueryForFacets
 		{
-		    private readonly Dictionary<FacetValue, HashSet<int>> matches = new Dictionary<FacetValue, HashSet<int>>();
+            private readonly Dictionary<FacetValue, FacetValueState> matches = new Dictionary<FacetValue, FacetValueState>();
 		    private readonly IndexDefinition indexDefinition;
 
 		    public QueryForFacets(
@@ -250,7 +250,7 @@ namespace Raven.Database.Queries
 						                existing = new FacetValue{Range = term.Text};
 						                facetValues[term.Text] = existing;
 						            }
-						            UpdateValue(existing, value, doc);
+						            ApplyFacetValueHit(existing, value, doc, null);
 						            break;
 						        case FacetMode.Ranges:
                                     List<ParsedRange> list;
@@ -262,7 +262,7 @@ namespace Raven.Database.Queries
 									        if (parsedRange.IsMatch(term.Text)) 
 									        {
 									            var facetValue = Results.Results[term.Field].Values[i];
-                                                UpdateValue(facetValue, value, doc);
+                                                ApplyFacetValueHit(facetValue, value, doc, parsedRange);
 									        }
 								        }
 							        }
@@ -319,37 +319,25 @@ namespace Raven.Database.Queries
 		            .GroupBy(x => x.Value.AggregationField)
 		            .ToDictionary(x => x.Key, y => y.Select(x=>x.Value).ToList());
 
-		        var allDocs = new HashSet<int>(matches.Values.SelectMany(x => x));
+		        var allDocs = new HashSet<int>(matches.Values.SelectMany(x => x.Docs));
 
                 IndexedTerms.ReadEntriesForFields(currentIndexSearcher.IndexReader, fieldsToRead, allDocs, (term, docId) =>
                 {
-                    foreach (var facet in aggregationFieldToFacetFields[term.Field])
+                    foreach (var match in matches)
                     {
-                        var facetResult = Results.Results[facet.Name];
+                        if(match.Value.Docs.Contains(docId) == false)
+                            continue;
+                        var facet = match.Value.Facet;
                         var currentVal = GetValueFromIndex(facet, term);
                         switch (facet.Mode)
                         {
                             case FacetMode.Default:
-                                foreach (var facetValue in facetResult.Values)
-                                {
-                                    ApplyAggregation(facet, facetValue, currentVal, docId);
-                                }
+                                ApplyAggregation(facet, match.Key, currentVal);
                                 break;
                             case FacetMode.Ranges:
-                                List<ParsedRange> list;
-                                if (!Ranges.TryGetValue(term.Field, out list))
-                                {
-                                    return;
-                                }
-                                for (int i = 0; i < list.Count; i++)
-                                {
-                                    var parsedRange = list[i];
-                                    if (!parsedRange.IsMatch(term.Text))
+                                if (!match.Value.Range.IsMatch(term.Text))
                                         continue;
-
-                                    var facetValue = Results.Results[term.Field].Values[i];
-                                    ApplyAggregation(facet, facetValue, currentVal, docId);
-                                }
+                                ApplyAggregation(facet, match.Key, currentVal);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -358,15 +346,8 @@ namespace Raven.Database.Queries
                 });
 		    }
 
-		    private void ApplyAggregation(Facet facet, FacetValue value, double currentVal, int docId)
+		    private void ApplyAggregation(Facet facet, FacetValue value, double currentVal)
 		    {
-		        HashSet<int> set;
-		        if (matches.TryGetValue(value, out set) == false)
-		            return;
-
-		        if (set.Contains(docId) == false)
-		            return;
-
 		        if (facet.Aggregation.HasFlag(FacetAggregation.Max))
 		        {
 		            value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
@@ -436,19 +417,31 @@ namespace Raven.Database.Queries
 		        return value;
 		    }
 
-		    private void UpdateValue(FacetValue facetValue, Facet value, int docId)
+		    private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange)
 		    {
 		        facetValue.Hits++;
 		        if (value.Aggregation == FacetAggregation.Count)
 		        {
 		            return;
 		        }
-		        HashSet<int> set;
+                FacetValueState set;
 		        if (matches.TryGetValue(facetValue, out set) == false)
 		        {
-		            matches[facetValue] = set = new HashSet<int>();
+		            matches[facetValue] = set = new FacetValueState
+		            {
+                        Docs = new HashSet<int>(),
+                        Facet = value,
+                        Range = parsedRange
+		            };
 		        }
-		        set.Add(docId);
+		        set.Docs.Add(docId);
+		    }
+
+		    private class FacetValueState
+		    {
+		        public HashSet<int> Docs;
+		        public Facet Facet;
+		        public ParsedRange Range;
 		    }
 
 
