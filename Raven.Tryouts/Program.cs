@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client;
@@ -30,13 +31,32 @@ namespace Raven.Tryouts
 		{
 			Console.WriteLine("Open Server and press any key");
 			Console.ReadLine();
-			CreateData();
+			//CreateData();
 
-			//Test();
+           // CreateIndex();
+
+		    Test();
 
 		}
 
-		private static void Test()
+	    private static void CreateIndex()
+	    {
+	        using (
+	            var store =
+	                new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "AggregateQuerySample"}.Initialize())
+	        {
+	            store.DatabaseCommands.PutIndex("Orders/All",
+	                                            new IndexDefinitionBuilder<Order>
+	                                            {
+	                                                Map = orders => from order in orders
+	                                                                select
+	                                                                    new {order.Currency, order.Product, order.Total},
+	                                                SortOptions = {{x => x.Total, SortOptions.Double}}
+	                                            }, true);
+	        }
+	    }
+
+	    private static void Test()
 		{
 			using (var store = new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "AggregateQuerySample"}.Initialize())
 			using(var session = store.OpenSession())
@@ -51,16 +71,20 @@ namespace Raven.Tryouts
 				var sw = new Stopwatch();
 
 				sw.Start();
-				session.Query<Order>("Orders/All")
+				var r = session.Query<Order>("Orders/All")
 					   .AggregateBy(order => order.Product)
 						  .SumOn(order => order.Total)
 					   .AndAggregateOn(order => order.Currency)
 						   .SumOn(order => order.Total)
 					   .ToList();
 
+
+			    Output(r);
+
+
 				Console.WriteLine("test 1 took {0:#,#} ms", sw.ElapsedMilliseconds);
 				sw.Restart();
-				session.Query<Order>("Orders/All")
+				r = session.Query<Order>("Orders/All")
 				       .AggregateBy(x => x.Product)
 						 .SumOn(x => x.Total)
 				       .AndAggregateOn(x => x.Total)
@@ -70,54 +94,67 @@ namespace Raven.Tryouts
 									  x => x.Total >= 1500)
 				       .SumOn(x => x.Total)
 				       .ToList();
+                Output(r);
 
 				Console.WriteLine("test 2 took {0:#,#} ms", sw.ElapsedMilliseconds);
 				sw.Restart();
-				session.Query<Order>("Orders/All")
+				r = session.Query<Order>("Orders/All")
 				       .AggregateBy(x => x.Product)
 						 .SumOn(x => x.Total)
 				       .AndAggregateOn(x => x.Product)
 					     .AverageOn(x => x.Total)
 				       .ToList();
+                Output(r);
 
 				Console.WriteLine("test 3 took {0:#,#} ms", sw.ElapsedMilliseconds);
 			}
 
 		}
 
-		public static void CreateData()
+	    private static void Output(FacetResults r)
+	    {
+	        foreach (var facetResult in r.Results)
+	        {
+	            Console.WriteLine(facetResult.Key);
+	            foreach (var v in facetResult.Value.Values)
+	            {
+	                Console.WriteLine("\t" + v.Range + ": " + v.Value);
+	            }
+	        }
+	    }
+
+	    public static void CreateData()
 		{
 			using(var store = new DocumentStore{Url = "http://localhost:8080", DefaultDatabase = "AggregateQuerySample"}.Initialize())
 			{
 				var data = GenerateData();
 
-				var bulk = store.BulkInsert();
+			    using (var bulk = store.BulkInsert())
+			    {
 
-				foreach (var order in data)
-				{
-					bulk.Store(order);
-				}
+			        foreach (var order in data)
+			        {
+			            bulk.Store(order);
+			        }
+			    }
 			}
 		}
 
-		private static List<Order> GenerateData()
+		private static IEnumerable<Order> GenerateData()
 		{
 			var random = new Random();
 			var values = Enum.GetValues(typeof(Currency));
 			var products = new List<string> {"RavenDB", "RavenFS", "UberProf", "NHibernate"};
-			var list = new List<Order>();
 
-			for (int i = 0; i < 1000000; i++)
+			for (int i = 0; i < 20703; i++)
 			{
-				list.Add(new Order
-				{
-					Currency = (Currency)values.GetValue(random.Next(values.Length)),
-					Product = products[random.Next(products.Count)],
-					Total = (decimal)Math.Round((random.NextDouble() * (1000 - 500) + 500), 2)
-				});
+			    yield return (new Order
+                 {
+                     Currency = (Currency)values.GetValue(random.Next(values.Length)),
+                     Product = products[random.Next(products.Count)],
+                     Total = (decimal)Math.Round((random.NextDouble() * (1000 - 500) + 500), 2)
+                 });
 			}
-
-			return list;
 		}
 
 

@@ -21,21 +21,47 @@ namespace Raven.Client.Linq
 
 		private readonly IQueryable<T> queryable;
 		private readonly List<AggregationQuery> facets;
+        private readonly Dictionary<string,string> renames = new Dictionary<string, string>();
 
-		public DynamicAggregationQuery(IQueryable<T> queryable, string name)
+        public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path)
 		{
-			facets = new List<AggregationQuery> {new AggregationQuery {Name = name}};
+			facets = new List<AggregationQuery>();
 			this.queryable = queryable;
+            AndAggregateOn(path);
 		}
 
 		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path)
 		{
-			facets.Add(new AggregationQuery {Name = path.ToPropertyPath()});
+		    var propertyPath = path.ToPropertyPath();
+            if (IsNumeric(path))
+            {
+                var tmp = propertyPath + "_Range";
+                renames[propertyPath] = tmp;
+                propertyPath = tmp;
+            }
+		    facets.Add(new AggregationQuery { Name = propertyPath });
 
 			return this;
 		}
 
-		public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)
+	    private bool IsNumeric(Expression<Func<T, object>> path)
+	    {
+	        var unaryExpression = path.Body as UnaryExpression;
+	        if (unaryExpression == null)
+	            return false;
+	        if (unaryExpression.NodeType != ExpressionType.Convert &&
+	            unaryExpression.NodeType != ExpressionType.ConvertChecked)
+	            return false;
+	        var type = unaryExpression.Operand.Type;
+	        return type == typeof (int) ||
+	               type == typeof (long) ||
+	               type == typeof (short) ||
+	               type == typeof (decimal) ||
+	               type == typeof (double) ||
+	               type == typeof (float);
+	    }
+
+	    public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)
 		{
 			var last = GetLast();
 			last.Ranges = new List<Expression<Func<T, bool>>>();
@@ -103,21 +129,34 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		public FacetResults ToList()
 		{
-			return queryable.ToFacets(GetFacets());
+			return HandlRenames(queryable.ToFacets(GetFacets()));
 		}
 
 		public Lazy<FacetResults> ToListLazy()
 		{
-			return queryable.ToFacetsLazy(GetFacets());
+		    var facetsLazy = queryable.ToFacetsLazy(GetFacets());
+			return new Lazy<FacetResults>(() => HandlRenames(facetsLazy.Value));
 		}
 #endif
 
-		public Task<FacetResults> ToListAsync()
+		public async Task<FacetResults> ToListAsync()
 		{
-			return queryable.ToFacetsAsync(GetFacets());
+			return HandlRenames(await queryable.ToFacetsAsync(GetFacets()));
 		}
 
-		private IEnumerable<Facet> GetFacets()
+	    private FacetResults HandlRenames(FacetResults facetResults)
+	    {
+	        foreach (var rename in renames)
+	        {
+	            FacetResult value;
+	            if (facetResults.Results.TryGetValue(rename.Value, out value) &&
+	                facetResults.Results.ContainsKey(rename.Key) == false)
+	                facetResults.Results[rename.Key] = value;
+	        }
+	        return facetResults;
+	    }
+
+	    private IEnumerable<Facet> GetFacets()
 		{
 			var facetsList = new List<Facet>();
 

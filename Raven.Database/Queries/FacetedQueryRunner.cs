@@ -136,10 +136,10 @@ namespace Raven.Database.Queries
 			{
 				case '[':
 				case ']':
-					return true;
+                    return false;
 				case '{':
 				case '}':
-					return false;
+			        return true;
 				default:
 					throw new ArgumentException("Could not understand range prefix: " + ch);
 			}
@@ -183,6 +183,9 @@ namespace Raven.Database.Queries
 
 		private class QueryForFacets
 		{
+            Dictionary<FacetValue, HashSet<int>> matches = new Dictionary<FacetValue, HashSet<int>>();
+		    private IndexDefinition indexDefinition;
+
 		    public QueryForFacets(
 				DocumentDatabase database,
 				string index,
@@ -201,6 +204,7 @@ namespace Raven.Database.Queries
 				Results = results;
 				Start = start;
 				PageSize = pageSize;
+		        indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(this.Index);
 			}
 
 			DocumentDatabase Database { get; set; }
@@ -246,7 +250,7 @@ namespace Raven.Database.Queries
 						                existing = new FacetValue{Range = term.Text};
 						                facetValues[term.Text] = existing;
 						            }
-						            UpdateValue(existing, value, doc, currentIndexSearcher.IndexReader);
+						            UpdateValue(existing, value, doc);
 						            break;
 						        case FacetMode.Ranges:
                                     List<ParsedRange> list;
@@ -258,7 +262,7 @@ namespace Raven.Database.Queries
 									        if (parsedRange.IsMatch(term.Text)) 
 									        {
 									            var facetValue = Results.Results[term.Field].Values[i];
-                                                UpdateValue(facetValue, value, doc, currentIndexSearcher.IndexReader);
+                                                UpdateValue(facetValue, value, doc);
 									        }
 								        }
 							        }
@@ -267,24 +271,52 @@ namespace Raven.Database.Queries
 						            throw new ArgumentOutOfRangeException();
 						    }
 						});
-				}
-				UpdateFacetResults(facetsByName);
+                    UpdateFacetResults(facetsByName);
 
-                foreach (var result in Results.Results)
-			    {
-                    CompleteSingleFacetCalc(result.Value.Values, Facets[result.Key]);
-			    }
+                    foreach (var result in Results.Results)
+                    {
+                        CompleteSingleFacetCalc(result.Value.Values, Facets[result.Key], currentIndexSearcher.IndexReader);
+                    }
+				}
 			}
 
-		    private static void CompleteSingleFacetCalc(IEnumerable<FacetValue> valueCollection, Facet facet)
+		    private void CompleteSingleFacetCalc(IEnumerable<FacetValue> valueCollection, Facet facet, IndexReader indexReader)
 		    {
-		        foreach (var facetValue in valueCollection)
+		        var fieldsToRead = new HashSet<string> {facet.AggregationField};
+                foreach (var facetValue in valueCollection)
 		        {
+		            HashSet<int> set;
+		            if(matches.TryGetValue(facetValue, out set) == false)
+                        continue;
+		            var val = GetDefaultValue(facet);
+		            IndexedTerms.ReadEntriesForFields(indexReader, fieldsToRead, set, (term, i) =>
+		            {
+		                var currentVal = GetValueFromIndex(facet, term);
+		                switch (facet.Aggregation)
+		                {
+		                    case FacetAggregation.Count:
+		                        val++;
+		                        break;
+		                    case FacetAggregation.Max:
+		                        val = Math.Max(val, currentVal);
+		                        break;
+		                    case FacetAggregation.Min:
+                                val = Math.Min(val, currentVal);
+		                        break;
+		                    case FacetAggregation.Average:
+		                    case FacetAggregation.Sum:
+		                        val += currentVal;
+		                        break;
+		                    default:
+		                        throw new ArgumentOutOfRangeException();
+		                }
+		            });
+					
 		            switch (facet.Aggregation)
 		            {
 		                case FacetAggregation.Average:
 		                    if (facetValue.Hits != 0)
-		                        facetValue.Value = facetValue.Value/facetValue.Hits;
+		                        facetValue.Value = val/facetValue.Hits;
 		                    else
 		                        facetValue.Value = double.NaN;
 		                    break;
@@ -293,6 +325,7 @@ namespace Raven.Database.Queries
 		                case FacetAggregation.Max:
 		                case FacetAggregation.Min:
 		                case FacetAggregation.Sum:
+		                    facetValue.Value = val;
 		                    break;
 		                default:
 		                    throw new ArgumentOutOfRangeException();
@@ -300,7 +333,77 @@ namespace Raven.Database.Queries
 		        }
 		    }
 
-		    private static void UpdateValue(FacetValue facetValue, Facet value, int docId, IndexReader indexReader)
+            private double GetValueFromIndex(Facet facet,Term term)
+            {
+                switch (GetSortOptionsForFacet(facet))
+                {
+                    case SortOptions.String:
+                    case SortOptions.StringVal:
+                    case SortOptions.Byte:
+                    case SortOptions.Short:
+                    case SortOptions.Custom:
+                        throw new InvalidOperationException("Cannot translate value with sort option: String");
+                    case SortOptions.None:
+                    case SortOptions.Int:
+                        return NumericUtils.PrefixCodedToInt(term.Text);
+                    case SortOptions.Float:
+                        return NumericUtils.PrefixCodedToFloat(term.Text);
+                    case SortOptions.Long:
+                        return NumericUtils.PrefixCodedToLong(term.Text);
+                    case SortOptions.Double:
+                        return NumericUtils.PrefixCodedToDouble(term.Text);
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+		    private readonly Dictionary<string, SortOptions> cache = new Dictionary<string, SortOptions>();
+		    private SortOptions GetSortOptionsForFacet(Facet facet)
+		    {
+		        SortOptions value;
+		        if (cache.TryGetValue(facet.AggregationField, out value))
+		            return value;
+
+		        if (indexDefinition.SortOptions.TryGetValue(facet.AggregationField, out value) == false)
+		        {
+		            if (facet.AggregationField.EndsWith("_Range"))
+		            {
+		                var fieldWithNoRange = facet.AggregationField.Substring(0, facet.AggregationField.Length - "_Range".Length);
+		                if (indexDefinition.SortOptions.TryGetValue(fieldWithNoRange, out value) == false)
+		                    value = SortOptions.None;
+		            }
+		            else
+		            {
+		                value = SortOptions.None;
+		            }
+		        }
+		        cache[facet.AggregationField] = value;
+		        return value;
+		    }
+
+		    private static double GetDefaultValue(Facet facet)
+		    {
+		        double val;
+		        switch (facet.Aggregation)
+		        {
+		            case FacetAggregation.Average:
+		            case FacetAggregation.Sum:
+		            case FacetAggregation.Count:
+		                val = 0;
+		                break;
+		            case FacetAggregation.Max:
+		                val = double.MinValue;
+		                break;
+		            case FacetAggregation.Min:
+		                val = double.MaxValue;
+		                break;
+		            default:
+		                throw new ArgumentOutOfRangeException();
+		        }
+		        return val;
+		    }
+
+		    private void UpdateValue(FacetValue facetValue, Facet value, int docId)
 		    {
 		        facetValue.Hits++;
 		        if (value.Aggregation == FacetAggregation.Count)
@@ -308,48 +411,12 @@ namespace Raven.Database.Queries
 		            facetValue.Value = facetValue.Hits;
 		            return;
 		        }
-
-		        var doc = indexReader.Document(docId);
-		        if (doc == null)
-		            return;
-
-		        var fieldables = doc.GetFieldables(value.AggregationField);
-		        if (fieldables.Length == 0)
-                    throw new InvalidOperationException("Cannot compute " + value.Aggregation + " on " +
-                                                      value.AggregationField + " because the field is not stored");
-                 
-		        facetValue.Hits += fieldables.Length - 1;
-
-		        foreach (var field in fieldables)
+		        HashSet<int> set;
+		        if (matches.TryGetValue(facetValue, out set) == false)
 		        {
-		            double numericValue;
-		            if (double.TryParse(field.StringValue, NumberStyles.Number, CultureInfo.InvariantCulture, out numericValue) == false)
-		                throw new InvalidOperationException("Cannot compute " + value.Aggregation + " on " +
-		                                                    value.AggregationField + " because the field value could not be converted to a number: " +
-		                                                    field.StringValue);
-
-		            switch (value.Aggregation)
-		            {
-		                case FacetAggregation.Max:
-				            if (facetValue.Value == null)
-					            facetValue.Value = 0;
-		                    facetValue.Value = Math.Max(facetValue.Value.Value, numericValue);
-		                    break;
-		                case FacetAggregation.Min:
-				            if (facetValue.Value == null)
-					            facetValue.Value = double.MaxValue;
-                            facetValue.Value = Math.Min(facetValue.Value.Value, numericValue);
-		                    break;
-                        case FacetAggregation.Average:
-		                case FacetAggregation.Sum:
-				            if (facetValue.Value == null)
-					            facetValue.Value = 0;
-		                    facetValue.Value += numericValue;
-		                    break;
-		                default:
-		                    throw new ArgumentOutOfRangeException();
-		            }
+		            matches[facetValue] = set = new HashSet<int>();
 		        }
+		        set.Add(docId);
 		    }
 
 
@@ -390,12 +457,7 @@ namespace Raven.Database.Queries
 					foreach (var term in allTerms.Skip(Start).TakeWhile(term => values.Count < maxResults))
 					{
 					    var facetValue = groups.GetOrDefault(term);
-					    values.Add(new FacetValue
-						{
-							Hits = facetValue == null ? 0 : facetValue.Hits,
-							Value = facetValue == null ? 0 : facetValue.Value,
-							Range = term
-						});
+					    values.Add(facetValue ?? new FacetValue{Range = term});
 					}
 
 				    var previousHits = allTerms.Take(Start).Sum(allTerm =>

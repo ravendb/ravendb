@@ -55,9 +55,7 @@ namespace Raven.Client
 		/// </summary>
 		public static DynamicAggregationQuery<T> AggregateBy<T>(this IQueryable<T> queryable, Expression<Func<T, object>> path)
 		{
-			var propertyPath = path.ToPropertyPath();
-
-			return new DynamicAggregationQuery<T>(queryable, propertyPath);
+			return new DynamicAggregationQuery<T>(queryable, path);
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE
