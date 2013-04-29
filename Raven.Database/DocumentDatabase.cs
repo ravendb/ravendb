@@ -1736,9 +1736,18 @@ namespace Raven.Database
 
         public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch, TransactionInformation transactionInformation, bool debugMode = false)
         {
-            var scriptedJsonPatcher = new ScriptedJsonPatcher(this);
+            ScriptedJsonPatcher scriptedJsonPatcher = null;
             var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-                (jsonDoc, size) => scriptedJsonPatcher.Apply(jsonDoc, patch, size, docId), () => scriptedJsonPatcher.CreatedDocs, debugMode);
+                (jsonDoc, size) =>
+                {
+                    scriptedJsonPatcher = new ScriptedJsonPatcher(this);
+                    return scriptedJsonPatcher.Apply(jsonDoc, patch, size, docId);
+                }, () =>
+                {
+                    if (scriptedJsonPatcher == null)
+                        return null;
+                    return scriptedJsonPatcher.CreatedDocs;
+                }, debugMode);
             return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
         }
 
@@ -1806,6 +1815,8 @@ namespace Raven.Database
                             }
                             catch (ConcurrencyException)
                             {
+                                if (actions.IsNested)
+                                    throw;
                                 if (retries[0]-- > 0)
                                 {
                                     shouldRetry = true;

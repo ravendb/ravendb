@@ -538,7 +538,9 @@ namespace Raven.Storage.Esent
 			{
 				if (current.Value != null) // check again, just to be sure
 				{
+				    current.Value.IsNested = true;
 					action(current.Value);
+				    current.Value.IsNested = false;
 					return;
 				}
 			}

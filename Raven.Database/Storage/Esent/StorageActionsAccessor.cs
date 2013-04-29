@@ -77,7 +77,9 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
-		public event Action OnStorageCommit
+        public bool IsNested { get; set; }
+
+	    public event Action OnStorageCommit
 		{
 			add { inner.OnStorageCommit += value; }
 			remove { inner.OnStorageCommit -= value; }

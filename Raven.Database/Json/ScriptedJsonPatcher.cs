@@ -96,40 +96,46 @@ namespace Raven.Database.Json
 			loadDocumentStatic = loadDocument;
 			try
 			{
-				CustomizeEngine(jintEngine);
-				jintEngine.SetParameter("__document_id", docId);
-				foreach (var kvp in patch.Values)
-				{
-				    var token = kvp.Value as RavenJToken;
-				    if (token != null)
-					{
-						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
-					}
-					else
-					{
-						var rjt = RavenJToken.FromObject(kvp.Value);
-						var jsInstance = ToJsInstance(jintEngine.Global, rjt);
-						jintEngine.SetParameter(kvp.Key, jsInstance);
-					}
-				}
+			    CustomizeEngine(jintEngine);
+                CreatedDocs = new List<JsonDocument>();
+			    jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>) (PutDocument)));
+			    jintEngine.SetParameter("__document_id", docId);
+			    foreach (var kvp in patch.Values)
+			    {
+			        var token = kvp.Value as RavenJToken;
+			        if (token != null)
+			        {
+			            jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
+			        }
+			        else
+			        {
+			            var rjt = RavenJToken.FromObject(kvp.Value);
+			            var jsInstance = ToJsInstance(jintEngine.Global, rjt);
+			            jintEngine.SetParameter(kvp.Key, jsInstance);
+			        }
+			    }
 			    var jsObject = ToJsObject(jintEngine.Global, doc);
-				jintEngine.ResetSteps();
-				if (size != 0)
-				{
-					jintEngine.SetMaxSteps(maxSteps + (size* additionalStepsPerSize));
-				}
-				jintEngine.CallFunction("ExecutePatchScript", jsObject);
-				foreach (var kvp in patch.Values)
-				{
-					jintEngine.RemoveParameter(kvp.Key);
-				}
-				jintEngine.RemoveParameter("__document_id");
-				RemoveEngineCustomizations(jintEngine);
-				OutputLog(jintEngine);
+			    jintEngine.ResetSteps();
+			    if (size != 0)
+			    {
+			        jintEngine.SetMaxSteps(maxSteps + (size*additionalStepsPerSize));
+			    }
+			    jintEngine.CallFunction("ExecutePatchScript", jsObject);
+			    foreach (var kvp in patch.Values)
+			    {
+			        jintEngine.RemoveParameter(kvp.Key);
+			    }
+			    jintEngine.RemoveParameter("__document_id");
+			    RemoveEngineCustomizations(jintEngine);
+			    OutputLog(jintEngine);
 
-				scriptsCache.CheckinScript(patch, jintEngine);
+			    scriptsCache.CheckinScript(patch, jintEngine);
 
-				return ConvertReturnValue(jsObject);
+			    return ConvertReturnValue(jsObject);
+			}
+			catch (ConcurrencyException)
+			{
+			    throw;
 			}
 			catch (Exception errorEx)
 			{
@@ -323,11 +329,7 @@ function ExecutePatchScript(docInner){{
 				return ToJsObject(jintEngine.Global, loadedDoc);
 			})));
 
-			CreatedDocs = new List<JsonDocument>();
-
-			jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>)(PutDocument)));
-
-			jintEngine.Run(wrapperScript);
+            jintEngine.Run(wrapperScript);
 
 			return jintEngine;
 		}
