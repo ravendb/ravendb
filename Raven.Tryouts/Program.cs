@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -29,9 +30,9 @@ namespace Raven.Tryouts
 		{
 			Console.WriteLine("Open Server and press any key");
 			Console.ReadLine();
-			//CreateData();
+			CreateData();
 
-			Test();
+			//Test();
 
 		}
 
@@ -40,12 +41,13 @@ namespace Raven.Tryouts
 			using (var store = new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "AggregateQuerySample"}.Initialize())
 			using(var session = store.OpenSession())
 			{
-				//store.DatabaseCommands.PutIndex("Orders/All",
-				//						new IndexDefinitionBuilder<Order>
-				//						{
-				//							Map = orders => from order in orders
-				//										   select new { order.Currency, order.Product, order.Total }
-				//						});
+			    store.DatabaseCommands.PutIndex("Orders/All",
+			                                    new IndexDefinitionBuilder<Order>
+			                                    {
+			                                        Map = orders => from order in orders
+			                                                        select new {order.Currency, order.Product, order.Total},
+			                                        Stores = {{x => x.Total, FieldStorage.Yes}}
+			                                    }, true);
 				var sw = new Stopwatch();
 
 				sw.Start();
