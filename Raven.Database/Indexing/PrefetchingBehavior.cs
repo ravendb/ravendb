@@ -30,8 +30,7 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches =
 			new ConcurrentDictionary<Etag, FutureIndexBatch>();
 
-		private readonly ConcurrentQueue<JsonDocument> inMemoryDocs =
-			new ConcurrentQueue<JsonDocument>();
+		private readonly ConcurrentJsonDocumentSortedList inMemoryDocs = new ConcurrentJsonDocumentSortedList();
 
 		private int currentIndexingAge;
 
@@ -382,7 +381,7 @@ namespace Raven.Database.Indexing
 			foreach (var jsonDocument in docs)
 			{
 				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
-				inMemoryDocs.Enqueue(jsonDocument);
+				inMemoryDocs.Add(jsonDocument);
 			}
 		}
 

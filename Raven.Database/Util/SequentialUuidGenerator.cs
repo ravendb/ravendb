@@ -17,6 +17,7 @@ namespace Raven.Database.Util
 		private long sequentialUuidCounterTasks;
 		private long sequentialUuidCounterScheduledReductions;
 		private long sequentialUuidCounterIndexing;
+		private long sequentialUuidEtagSynchronization;
 
 		public long EtagBase
 		{
@@ -59,6 +60,9 @@ namespace Raven.Database.Util
 					break;
 				case UuidType.Indexing:
 					increment = Interlocked.Increment(ref sequentialUuidCounterIndexing);
+					break;
+				case UuidType.EtagSynchronization:
+					increment = Interlocked.Increment(ref sequentialUuidEtagSynchronization);
 					break;
 				default:
 					throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);

@@ -20,41 +20,43 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.Response.BufferOutput = false;
-			context.Response.ContentType = "application/json; charset=utf-8";
-		
-			using (var writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream)))
+			using (context.Response.Streaming())
 			{
-				writer.WriteStartObject();
-				writer.WritePropertyName("Results");
-				writer.WriteStartArray();
+				context.Response.ContentType = "application/json; charset=utf-8";
 
-				Database.TransactionalStorage.Batch(accessor =>
+				using (var writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream)))
 				{
-					var startsWith = context.Request.QueryString["startsWith"];
-					int pageSize = context.GetPageSize(int.MaxValue);
-					if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
-						pageSize = int.MaxValue;
+					writer.WriteStartObject();
+					writer.WritePropertyName("Results");
+					writer.WriteStartArray();
 
-					if (string.IsNullOrEmpty(startsWith))
+					Database.TransactionalStorage.Batch(accessor =>
 					{
-						Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(), 
-							doc => doc.WriteTo(writer));
-					}
-					else
-					{
-						Database.GetDocumentsWithIdStartingWith(
-							startsWith,
-							context.Request.QueryString["matches"],
-							context.GetStart(),
-							pageSize,
-							doc => doc.WriteTo(writer));
-					}
-				});
+						var startsWith = context.Request.QueryString["startsWith"];
+						int pageSize = context.GetPageSize(int.MaxValue);
+						if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
+							pageSize = int.MaxValue;
 
-				writer.WriteEndArray();
-				writer.WriteEndObject();
-				writer.Flush();
+						if (string.IsNullOrEmpty(startsWith))
+						{
+							Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(),
+							                      doc => doc.WriteTo(writer));
+						}
+						else
+						{
+							Database.GetDocumentsWithIdStartingWith(
+								startsWith,
+								context.Request.QueryString["matches"],
+								context.GetStart(),
+								pageSize,
+								doc => doc.WriteTo(writer));
+						}
+					});
+
+					writer.WriteEndArray();
+					writer.WriteEndObject();
+					writer.Flush();
+				}
 			}
 		}
 	}

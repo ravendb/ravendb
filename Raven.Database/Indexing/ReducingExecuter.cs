@@ -14,7 +14,6 @@ using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
-
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
 		public ReducingExecuter(WorkContext context)
@@ -207,7 +206,7 @@ namespace Raven.Database.Indexing
 			var batchTimeWatcher = Stopwatch.StartNew();
 			var count = 0;
 			var size = 0;
-			var state = new ConcurrentQueue <Tuple<HashSet<string>, List<MappedResultInfo>>>();
+			var state = new ConcurrentQueue<Tuple<HashSet<string>, List<MappedResultInfo>>>();
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 			{
 				var localKeys = new HashSet<string>();
@@ -224,8 +223,8 @@ namespace Raven.Database.Indexing
 						Take = int.MaxValue// just get all, we do the rate limit when we load the number of keys to reduce, anyway
 					};
 					var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
-					
-					if (scheduledItems.Count == 0) 
+
+					if (scheduledItems.Count == 0)
 					{
 						if (Log.IsWarnEnabled)
 						{
@@ -285,18 +284,18 @@ namespace Raven.Database.Indexing
 				});
 			});
 
-			var reduceKeys = new HashSet<string>(state.SelectMany(x=>x.Item1));
+			var reduceKeys = new HashSet<string>(state.SelectMany(x => x.Item1));
 
-			var results = state.SelectMany(x=>x.Item2)
+			var results = state.SelectMany(x => x.Item2)
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
 			context.ReducedPerSecIncreaseBy(results.Length);
 
-			context.TransactionalStorage.Batch(actions => 
+			context.TransactionalStorage.Batch(actions =>
 				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys)
 				);
-			
+
 			autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
 
 			foreach (var reduceKey in needToMoveToSingleStep)
@@ -307,7 +306,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
+		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
 			onlyFoundIdleWork.Value = false;
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
@@ -323,6 +322,16 @@ namespace Raven.Database.Indexing
 			context.IndexStorage.FlushReduceIndexes();
 		}
 
+		protected override Etag GetSynchronizationEtag()
+		{
+			return Etag.Empty;
+		}
+
+		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
+		{
+			return lastProcessedEtag;
+		}
+
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
@@ -332,7 +341,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn,
 				HandleReduceForIndex);

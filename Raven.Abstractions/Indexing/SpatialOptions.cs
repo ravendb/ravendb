@@ -34,22 +34,27 @@
 
 		protected bool Equals(SpatialOptions other)
 		{
-			var result = Type == other.Type
-			             && Strategy == other.Strategy
-			             && MaxTreeLevel == other.MaxTreeLevel;
+			var result = Type == other.Type && Strategy == other.Strategy;
 
 			if (Type == SpatialFieldType.Geography)
 			{
-				return result && Units == other.Units;
+				result = result && Units == other.Units;
 			}
-			else
+
+			if (Strategy != SpatialSearchStrategy.BoundingBox)
 			{
-				return result
-					&& MinX.Equals(other.MinX)
-					&& MaxX.Equals(other.MaxX)
-					&& MinY.Equals(other.MinY)
-					&& MaxY.Equals(other.MaxY);
+				result = result && MaxTreeLevel == other.MaxTreeLevel;
+
+				if (Type == SpatialFieldType.Cartesian)
+				{
+					result = result
+						&& MinX.Equals(other.MinX)
+						&& MaxX.Equals(other.MaxX)
+						&& MinY.Equals(other.MinY)
+						&& MaxY.Equals(other.MaxY);
+				}
 			}
+			return result;
 		}
 
 		public override bool Equals(object obj)
@@ -66,18 +71,23 @@
 			{
 				int hashCode = (int)Type;
 				hashCode = (hashCode * 397) ^ (int)Strategy;
-				hashCode = (hashCode * 397) ^ MaxTreeLevel;
 
 				if (Type == SpatialFieldType.Geography)
 				{
 					hashCode = (hashCode * 397) ^ Units.GetHashCode();
 				}
-				else
+
+				if (Strategy != SpatialSearchStrategy.BoundingBox)
 				{
-					hashCode = (hashCode * 397) ^ MinX.GetHashCode();
-					hashCode = (hashCode * 397) ^ MaxX.GetHashCode();
-					hashCode = (hashCode * 397) ^ MinY.GetHashCode();
-					hashCode = (hashCode * 397) ^ MaxY.GetHashCode();
+					hashCode = (hashCode * 397) ^ MaxTreeLevel;
+
+					if (Type == SpatialFieldType.Cartesian)
+					{
+						hashCode = (hashCode * 397) ^ MinX.GetHashCode();
+						hashCode = (hashCode * 397) ^ MaxX.GetHashCode();
+						hashCode = (hashCode * 397) ^ MinY.GetHashCode();
+						hashCode = (hashCode * 397) ^ MaxY.GetHashCode();
+					}
 				}
 
 				return hashCode;

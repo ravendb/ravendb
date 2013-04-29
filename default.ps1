@@ -74,6 +74,7 @@ task Verify40 {
 task Clean {
 	Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
 	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
+	git checkout Raven.Database/Server/WebUI/Raven.Studio.xap
 }
 
 task Init -depends Verify40, Clean {

@@ -13,6 +13,8 @@ namespace Raven.Abstractions.Data
 	public class Facet
 	{
 		public FacetMode Mode { get; set; }
+        public FacetAggregation Aggregation { get; set; }
+        public string AggregationField { get; set; }
 		public string Name { get; set; }
 		public List<string> Ranges { get; set; }
 		public int? MaxResults { get; set; }

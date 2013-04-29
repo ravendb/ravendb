@@ -4,16 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Threading;
 using Raven.Client.Embedded;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
-using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
 using Raven.Database.Tasks;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
@@ -238,67 +234,6 @@ namespace Raven.Tests.Storage
 				Assert.Equal("c", documents[1]);
 				Assert.Equal("a", documents[2]);
 			});
-		}
-
-		[Fact]
-		public void GetDocumentAfterAnEtagWhileAddingDocsFromMultipleThreadsEnumeratesAllDocs()
-		{
-			var numberOfDocsAdded = 0;
-			var threads = new List<Thread>();
-			try
-			{
-				for (var i = 0; i < 10; i++)
-				{
-					var thread = new Thread(() =>
-					{
-						var cmds = new List<ICommandData>();
-						for (var k = 0; k < 100; k++)
-						{
-							var newId = Interlocked.Increment(ref numberOfDocsAdded);
-							cmds.Add(new PutCommandData
-							{
-								Document = new RavenJObject(),
-								Metadata = new RavenJObject(),
-								Key = newId.ToString()
-							});
-						};
-						db.Batch(cmds);
-					});
-					threads.Add(thread);
-					thread.Start();
-				}
-
-				var docs = new List<string>();
-				var lastEtag = Etag.Empty;
-				var total = 0;
-				var stop = false;
-				do
-				{
-					var etag = lastEtag;
-					var jsonDocuments = new JsonDocument[0];
-					db.TransactionalStorage.Batch(actions =>
-					{
-						jsonDocuments = actions.Documents.GetDocumentsAfter(etag, 1000).Where(x => x != null).ToArray();
-					});
-					docs.AddRange(jsonDocuments.Select(x => x.Key));
-					total += jsonDocuments.Length;
-					if (jsonDocuments.Length > 0)
-						lastEtag = jsonDocuments.Last().Etag;
-					if (stop)
-						break;
-					if (threads.All(x => !x.IsAlive))
-						stop = true;
-				} while (true);
-
-				Assert.Equal(numberOfDocsAdded, total);
-			}
-			finally
-			{
-				foreach (var thread in threads)
-				{
-					thread.Join();
-				}
-			}
 		}
 
 		[Fact]

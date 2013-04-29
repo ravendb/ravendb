@@ -48,7 +48,7 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
-		private const int MaxConcurrentRequests = 192;
+		private const int MaxConcurrentRequests = 10 * 1024;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
@@ -207,7 +207,7 @@ namespace Raven.Database.Server
 					Name = x.Key,
 					Database = x.Value.Result
 				});
-				var allDbs = activeDatabases.Concat(new[] {new {Name = Constants.SystemDatabase, Database = SystemDatabase}}).ToArray();
+				var allDbs = activeDatabases.Concat(new[] { new { Name = Constants.SystemDatabase, Database = SystemDatabase } }).ToArray();
 				return new AdminStatistics
 				{
 					ServerName = currentConfiguration.Value.ServerName,
@@ -358,8 +358,67 @@ namespace Raven.Database.Server
 			Init();
 			listener.Start();
 
+			Task.Factory.StartNew(async () =>
+			{
+				while (listener.IsListening)
+				{
+					HttpListenerContext context = null;
+					try
+					{
+						context = await listener.GetContextAsync();
+					}
+					catch (Exception)
+					{
+					}
 
-			listener.BeginGetContext(GetContext, null);
+					ProcessRequest(context);
+				}
+			}, TaskCreationOptions.LongRunning);
+		}
+
+		private void ProcessRequest(HttpListenerContext context)
+		{
+			if (context == null)
+				return;
+
+			Task.Factory.StartNew(() =>
+			{
+				var ctx = new HttpListenerContextAdpater(context, SystemConfiguration, bufferPool);
+
+				if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+				{
+					try
+					{
+						HandleTooBusyError(ctx);
+					}
+					catch (Exception e)
+					{
+						logger.WarnException("Could not send a too busy error to the client", e);
+					}
+					return;
+				}
+				try
+				{
+					Interlocked.Increment(ref physicalRequestsCount);
+#if DEBUG
+					recentRequests.Enqueue(ctx.Request.RawUrl);
+					while (recentRequests.Count > 50)
+					{
+						string _;
+						recentRequests.TryDequeue(out _);
+					}
+#endif
+
+					if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
+						HandleChangesRequest(ctx, () => { });
+					else
+						HandleActualRequest(ctx);
+				}
+				finally
+				{
+					concurrentRequestSemaphore.Release();
+				}
+			});
 		}
 
 		public void Init()
@@ -458,59 +517,6 @@ namespace Raven.Database.Server
 					onDatabaseCleanupOccured(db);
 			}
 		}
-
-		private void GetContext(IAsyncResult ar)
-		{
-			HttpListenerContextAdpater ctx;
-			try
-			{
-				HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
-				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration, bufferPool);
-				//setup waiting for the next request
-				listener.BeginGetContext(GetContext, null);
-			}
-			catch (Exception)
-			{
-				// can't get current request / end new one, probably
-				// listener shutdown
-				return;
-			}
-
-			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-			{
-				try
-				{
-					HandleTooBusyError(ctx);
-				}
-				catch (Exception e)
-				{
-					logger.WarnException("Could not send a too busy error to the client", e);
-				}
-				return;
-			}
-			try
-			{
-				Interlocked.Increment(ref physicalRequestsCount);
-#if DEBUG
-				recentRequests.Enqueue(ctx.Request.RawUrl);
-				while (recentRequests.Count > 50)
-				{
-					string _;
-					recentRequests.TryDequeue(out _);
-				}
-#endif
-
-				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleChangesRequest(ctx, () => { });
-				else
-					HandleActualRequest(ctx);
-			}
-			finally
-			{
-				concurrentRequestSemaphore.Release();
-			}
-		}
-
 
 		public Task HandleChangesRequest(IHttpContext context, Action onDisconnect)
 		{
@@ -693,7 +699,7 @@ namespace Raven.Database.Server
 		{
 			if (logger.IsDebugEnabled == false)
 				return;
-			
+
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
@@ -1220,7 +1226,7 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
-				if(prop.Value == null)
+				if (prop.Value == null)
 					continue;
 				var bytes = Encoding.UTF8.GetBytes(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
@@ -1239,7 +1245,7 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
-				if(prop.Value == null)
+				if (prop.Value == null)
 					continue;
 				var bytes = Convert.FromBase64String(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
@@ -1250,7 +1256,7 @@ namespace Raven.Database.Server
 				}
 				catch (Exception e)
 				{
-					logger.WarnException("Could not unprotect secured db data " + prop.Key +" setting the value to '<data could not be decrypted>'", e);
+					logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
 					databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
 				}
 			}
@@ -1258,7 +1264,7 @@ namespace Raven.Database.Server
 
 
 		static class ExceptionHandler
-		{			
+		{
 			private static readonly Dictionary<Type, Action<IHttpContext, Exception>> handlers =
 				new Dictionary<Type, Action<IHttpContext, Exception>>
 			{
@@ -1297,7 +1303,7 @@ namespace Raven.Database.Server
 			}
 
 			public static void SerializeError(IHttpContext ctx, object error)
-			{				
+			{
 				var sw = new StreamWriter(ctx.Response.OutputStream);
 				JsonExtensions.CreateDefaultJsonSerializer().Serialize(new JsonTextWriter(sw)
 				{
