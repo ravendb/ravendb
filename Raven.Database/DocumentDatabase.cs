@@ -1861,8 +1861,9 @@ namespace Raven.Database
                 }
                 catch (ConcurrencyException)
                 {
-                    if (retries-- > 128)
+                    if (retries-- >= 0)
                     {
+                        Thread.Sleep(Math.Min(1, retries / 3));
                         continue;
                     }
                     throw;
