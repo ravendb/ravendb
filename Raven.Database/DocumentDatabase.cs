@@ -1018,12 +1018,12 @@ namespace Raven.Database
             }
         }
 
-        public bool HasTransaction(Guid txId)
+        public bool HasTransaction(string txId)
         {
             return inFlightTransactionalState.HasTransaction(txId);
         }
 
-        public void Commit(Guid txId)
+        public void Commit(string txId)
         {
             try
             {
@@ -1060,7 +1060,7 @@ namespace Raven.Database
         }
 
 
-        public void Rollback(Guid txId)
+        public void Rollback(string txId)
         {
             inFlightTransactionalState.Rollback(txId);
         }

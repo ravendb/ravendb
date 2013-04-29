@@ -29,8 +29,8 @@ namespace Raven.Tests.Issues
             {
                 store.DatabaseCommands.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { {"Raven/DataDir", @"~\Databases\Mine"} }, });
 
-                var tx1 = new TransactionInformation {Id = Guid.NewGuid()};
-                var tx2 = new TransactionInformation {Id = Guid.NewGuid()};
+                var tx1 = new TransactionInformation {Id = Guid.NewGuid().ToString()};
+                var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
 
                 var tenantDatabaseDocument = store.DatabaseCommands.Get("Raven/Databases/" + TenantName);
                 server.Database.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
                 tenantDb.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
                 tenantDb.Commit(tx2.Id);
 
-                var fooDoc = tenantDb.Get("Foo/1", new TransactionInformation {Id = Guid.NewGuid()});
+                var fooDoc = tenantDb.Get("Foo/1", new TransactionInformation {Id = Guid.NewGuid().ToString()});
                 Assert.NotNull(fooDoc);
             }
         }
@@ -56,8 +56,8 @@ namespace Raven.Tests.Issues
             {
                 store.DatabaseCommands.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
-                var tx1 = new TransactionInformation { Id = Guid.NewGuid() };
-                var tx2 = new TransactionInformation { Id = Guid.NewGuid() };
+                var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
+                var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
 
                 var tenantDatabaseDocument = store.DatabaseCommands.Get("Raven/Databases/" + TenantName);
                 server.Database.Put("Raven/Databases/mydb", null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
@@ -70,7 +70,7 @@ namespace Raven.Tests.Issues
                 tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
                 tenantDb.Commit(tx2.Id);
 
-                var fooDoc = tenantDb.Get("Foo/1", new TransactionInformation { Id = Guid.NewGuid() });
+                var fooDoc = tenantDb.Get("Foo/1", new TransactionInformation { Id = Guid.NewGuid().ToString() });
                 Assert.NotNull(fooDoc);
             }
         }
@@ -86,8 +86,8 @@ namespace Raven.Tests.Issues
             {
                 store.DatabaseCommands.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
-                var tx1 = new TransactionInformation { Id = Guid.NewGuid() };
-                var tx2 = new TransactionInformation { Id = Guid.NewGuid() };
+                var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
+                var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
 
 				var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
 				tenantDb.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);

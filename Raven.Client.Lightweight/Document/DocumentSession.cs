@@ -655,22 +655,22 @@ namespace Raven.Client.Document
 			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
 		}
 
-		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public override void Commit(Guid txId)
+	    /// <summary>
+	    /// Commits the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public override void Commit(string txId)
 		{
 			IncrementRequestCount();
 			DatabaseCommands.Commit(txId);
 			ClearEnlistment();
 		}
 
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public override void Rollback(Guid txId)
+	    /// <summary>
+	    /// Rollbacks the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public override void Rollback(string txId)
 		{
 			IncrementRequestCount();
 			DatabaseCommands.Rollback(txId);

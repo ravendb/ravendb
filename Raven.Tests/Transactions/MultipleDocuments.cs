@@ -34,7 +34,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutTwoDocumentsAndThenCommit()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
@@ -47,9 +47,9 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void CommittingWillOnlyCommitSingleTransaction()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) });
+            db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) });
 
 			db.Commit(transactionInformation.Id);
 
@@ -60,7 +60,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutTwoDocumentsAndThenCommitReversedOrder()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
@@ -73,7 +73,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileUpdatingSeveralDocumentsCannotAccessAnyOfThem()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.True(db.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 			Assert.Null(db.Get("ayende2", null)); 

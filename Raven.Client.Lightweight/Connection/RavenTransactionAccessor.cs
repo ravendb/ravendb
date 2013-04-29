@@ -49,7 +49,7 @@ namespace Raven.Client.Connection
 		{
 			CurrentRavenTransactions.Push(new TransactionInformation
 			{
-				Id = Guid.NewGuid(),
+				Id = Guid.NewGuid().ToString(),
 				Timeout = timeout
 			});
 			return new DisposableAction(() => CurrentRavenTransactions.Pop());
@@ -69,7 +69,7 @@ namespace Raven.Client.Connection
 				return null;
 			return new TransactionInformation
 			{
-				Id = RavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
+                Id = Transaction.Current.TransactionInformation.LocalIdentifier,
 				Timeout = DefaultTimeout ?? TransactionManager.DefaultTimeout
 			};
 		}

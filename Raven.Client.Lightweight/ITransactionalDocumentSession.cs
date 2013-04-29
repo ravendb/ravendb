@@ -23,16 +23,16 @@ namespace Raven.Client
 		/// </summary>
 		string DatabaseName { get; }
 
-		/// <summary>
-		/// Commits the transaction specified.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void Commit(Guid txId);
+	    /// <summary>
+	    /// Commits the transaction specified.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    void Commit(string txId);
 
-		/// <summary>
-		/// Rollbacks the transaction specified.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void Rollback(Guid txId);
+	    /// <summary>
+	    /// Rollbacks the transaction specified.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    void Rollback(string txId);
 	}
 }

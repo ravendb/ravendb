@@ -28,15 +28,15 @@ namespace Raven.Database.Impl
 
 		private class ChangedDoc
 		{
-			public Guid transactionId;
+			public string transactionId;
 			public Etag currentEtag;
 			public Etag committedEtag;
 		}
 
 		readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>();
 
-		private readonly ConcurrentDictionary<Guid, TransactionState> transactionStates =
-			new ConcurrentDictionary<Guid, TransactionState>();
+		private readonly ConcurrentDictionary<string, TransactionState> transactionStates =
+            new ConcurrentDictionary<string, TransactionState>();
 
 		public Etag AddDocumentInTransaction(
 			string key,
@@ -81,7 +81,7 @@ namespace Raven.Database.Impl
 		public bool IsModified(string key)
 		{
 			var value = currentlyCommittingTransaction.Value;
-			if (value == Guid.Empty)
+			if (string.IsNullOrEmpty(value))
 				return changedInTransaction.ContainsKey(key);
 			ChangedDoc doc;
 			if (changedInTransaction.TryGetValue(key, out doc) == false)
@@ -121,7 +121,7 @@ namespace Raven.Database.Impl
 			};
 		}
 
-		public void Rollback(Guid id)
+        public void Rollback(string id)
 		{
 			TransactionState value;
 			if (transactionStates.TryGetValue(id, out value) == false)
@@ -138,9 +138,9 @@ namespace Raven.Database.Impl
 			transactionStates.TryRemove(id, out value);
 		}
 
-		private readonly ThreadLocal<Guid> currentlyCommittingTransaction = new ThreadLocal<Guid>();
+        private readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
 
-		public void Commit(Guid id, Action<DocumentInTransactionData> action)
+        public void Commit(string id, Action<DocumentInTransactionData> action)
 		{
 			TransactionState value;
 			if (transactionStates.TryGetValue(id, out value) == false)
@@ -166,7 +166,7 @@ namespace Raven.Database.Impl
 				}
 				finally
 				{
-					currentlyCommittingTransaction.Value = Guid.Empty;
+				    currentlyCommittingTransaction.Value = null;
 				}
 			}
 		}
@@ -297,7 +297,7 @@ namespace Raven.Database.Impl
 			return true;
 		}
 
-		public bool HasTransaction(Guid txId)
+        public bool HasTransaction(string txId)
 		{
 			return transactionStates.ContainsKey(txId);
 		}

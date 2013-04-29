@@ -192,12 +192,12 @@ namespace Raven.Client.Shard
 
 		#region Transaction methods (not supported)
 
-		public override void Commit(Guid txId)
+		public override void Commit(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-		public override void Rollback(Guid txId)
+		public override void Rollback(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
