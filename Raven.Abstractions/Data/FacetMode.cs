@@ -1,3 +1,5 @@
+using System;
+
 namespace Raven.Abstractions.Data
 {
     public enum FacetMode
@@ -6,12 +8,14 @@ namespace Raven.Abstractions.Data
         Ranges,
     }
 
+    [Flags]
     public enum FacetAggregation 
     {
-        Count,
-        Max,
-        Min,
-        Average,
-        Sum
+        None = 0,
+        Count = 1,
+        Max = 2,
+        Min = 4,
+        Average = 8,
+        Sum = 16
     }
 }

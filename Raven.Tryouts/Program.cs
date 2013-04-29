@@ -33,7 +33,7 @@ namespace Raven.Tryouts
 			Console.ReadLine();
 			//CreateData();
 
-           // CreateIndex();
+          //  CreateIndex();
 
 		    Test();
 
@@ -61,13 +61,6 @@ namespace Raven.Tryouts
 			using (var store = new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "AggregateQuerySample"}.Initialize())
 			using(var session = store.OpenSession())
 			{
-			    store.DatabaseCommands.PutIndex("Orders/All",
-			                                    new IndexDefinitionBuilder<Order>
-			                                    {
-			                                        Map = orders => from order in orders
-			                                                        select new {order.Currency, order.Product, order.Total},
-			                                        Stores = {{x => x.Total, FieldStorage.Yes}}
-			                                    }, true);
 				var sw = new Stopwatch();
 
 				sw.Start();
@@ -118,7 +111,7 @@ namespace Raven.Tryouts
 	            Console.WriteLine(facetResult.Key);
 	            foreach (var v in facetResult.Value.Values)
 	            {
-	                Console.WriteLine("\t" + v.Range + ": " + v.Value);
+	                Console.WriteLine("\t" + v.Range + ": " + v);
 	            }
 	        }
 	    }

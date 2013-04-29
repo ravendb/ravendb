@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
@@ -64,8 +65,8 @@ namespace Raven.Tests.Faceted
                     var facetResult = r.Results["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Value);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Value);
+                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Sum);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Sum);
 
                 }
             }
@@ -98,14 +99,14 @@ namespace Raven.Tests.Faceted
                     var facetResult = r.Results["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Value);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Value);
+                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Sum);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Sum);
 
                     facetResult = r.Results["Currency"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(3336, facetResult.Values.First(x => x.Range == "eur").Value);
-                    Assert.Equal(9, facetResult.Values.First(x => x.Range == "nis").Value);
+                    Assert.Equal(3336, facetResult.Values.First(x => x.Range == "eur").Sum);
+                    Assert.Equal(9, facetResult.Values.First(x => x.Range == "nis").Sum);
 
 
                 }
@@ -113,7 +114,7 @@ namespace Raven.Tests.Faceted
         }
 
         [Fact]
-        public void CanCorrectlyAggregate_WithAverage()
+        public void CanCorrectlyAggregate_MultipleAggregations()
         {
             using (var store = NewDocumentStore())
             {
@@ -132,24 +133,17 @@ namespace Raven.Tests.Faceted
                     var r = session.Query<Order>("Orders/All")
                        .AggregateBy(x => x.Product)
                          .MaxOn(x => x.Total)
-                       .AndAggregateOn(x => x.Product)
                          .MinOn(x => x.Total)
-                       .AndAggregateOn(x => x.Product)
-                         .AverageOn(x => x.Total)
                        .ToList();
 
                     var facetResult = r.Results["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Value);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Value);
+                    Assert.Equal(9, facetResult.Values.First(x=>x.Range == "milk").Max);
+                    Assert.Equal(3, facetResult.Values.First(x => x.Range == "milk").Min);
 
-                    facetResult = r.Results["Currency"];
-                    Assert.Equal(2, facetResult.Values.Count);
-
-                    Assert.Equal(3336, facetResult.Values.First(x => x.Range == "eur").Value);
-                    Assert.Equal(9, facetResult.Values.First(x => x.Range == "nis").Value);
-
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Max);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Min);
 
                 }
             }
@@ -186,14 +180,14 @@ namespace Raven.Tests.Faceted
                     var facetResult = r.Results["Product"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Value);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Value);
+                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "milk").Sum);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Sum);
 
                     facetResult = r.Results["Total"];
                     Assert.Equal(4, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "[NULL TO Dx100]").Value);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "{Dx1500 TO NULL]").Value);
+                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "[NULL TO Dx100]").Sum);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "{Dx1500 TO NULL]").Sum);
 
 
                 }

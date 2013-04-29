@@ -365,10 +365,15 @@ namespace Raven.Database.Server
 					HttpListenerContext context = null;
 					try
 					{
-						context = await listener.GetContextAsync();
+					    context = await listener.GetContextAsync();
+					}
+					catch (ObjectDisposedException)
+					{
+					    break;
 					}
 					catch (Exception)
 					{
+                        continue;
 					}
 
 					ProcessRequest(context);

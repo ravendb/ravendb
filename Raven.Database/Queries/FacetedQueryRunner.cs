@@ -183,8 +183,8 @@ namespace Raven.Database.Queries
 
 		private class QueryForFacets
 		{
-            Dictionary<FacetValue, HashSet<int>> matches = new Dictionary<FacetValue, HashSet<int>>();
-		    private IndexDefinition indexDefinition;
+		    private readonly Dictionary<FacetValue, HashSet<int>> matches = new Dictionary<FacetValue, HashSet<int>>();
+		    private readonly IndexDefinition indexDefinition;
 
 		    public QueryForFacets(
 				DocumentDatabase database,
@@ -273,67 +273,122 @@ namespace Raven.Database.Queries
 						});
                     UpdateFacetResults(facetsByName);
 
-                    foreach (var result in Results.Results)
-                    {
-                        CompleteSingleFacetCalc(result.Value.Values, Facets[result.Key], currentIndexSearcher.IndexReader);
-                    }
+                    CompleteFacetCalculationsStage1(currentIndexSearcher);
+				    CompleteFacetCalculationsStage2();
 				}
 			}
 
-		    private void CompleteSingleFacetCalc(IEnumerable<FacetValue> valueCollection, Facet facet, IndexReader indexReader)
+		    private void CompleteFacetCalculationsStage2()
 		    {
-		        var fieldsToRead = new HashSet<string> {facet.AggregationField};
-                foreach (var facetValue in valueCollection)
+                foreach (var facetResult in Results.Results)
+                {
+                    var facet = Facets[facetResult.Key];
+                    if (facet.Aggregation.HasFlag(FacetAggregation.Count))
+                    {
+                        foreach (var facetValue in facetResult.Value.Values)
+                        {
+                            facetValue.Count = facetValue.Hits;
+                        }
+                    }
+
+                    if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                    {
+                        foreach (var facetValue in facetResult.Value.Values)
+                        {
+                            if (facetValue.Hits == 0)
+                                facetValue.Average = double.NaN;
+                            else
+                                facetValue.Average = facetValue.Average/facetValue.Hits;
+                        }
+                    }
+                }
+		    }
+
+		    private void CompleteFacetCalculationsStage1(IndexSearcher currentIndexSearcher)
+		    {
+                var fieldsToRead = new HashSet<string>(Facets
+                        .Where(x => x.Value.Aggregation != FacetAggregation.None && x.Value.Aggregation != FacetAggregation.Count)
+                        .Select(x => x.Value.AggregationField)
+                        .Where(x => x != null));
+
+		        if (fieldsToRead.Count == 0)
+		            return;
+
+		        var aggregationFieldToFacetFields = Facets
+		            .Where(x => x.Value.Aggregation != FacetAggregation.None && x.Value.Aggregation != FacetAggregation.Count)
+		            .GroupBy(x => x.Value.AggregationField)
+		            .ToDictionary(x => x.Key, y => y.Select(x=>x.Value).ToList());
+
+		        var allDocs = new HashSet<int>(matches.Values.SelectMany(x => x));
+
+                IndexedTerms.ReadEntriesForFields(currentIndexSearcher.IndexReader, fieldsToRead, allDocs, (term, docId) =>
+                {
+                    foreach (var facet in aggregationFieldToFacetFields[term.Field])
+                    {
+                        var facetResult = Results.Results[facet.Name];
+                        var currentVal = GetValueFromIndex(facet, term);
+                        switch (facet.Mode)
+                        {
+                            case FacetMode.Default:
+                                foreach (var facetValue in facetResult.Values)
+                                {
+                                    ApplyAggregation(facet, facetValue, currentVal, docId);
+                                }
+                                break;
+                            case FacetMode.Ranges:
+                                List<ParsedRange> list;
+                                if (!Ranges.TryGetValue(term.Field, out list))
+                                {
+                                    return;
+                                }
+                                for (int i = 0; i < list.Count; i++)
+                                {
+                                    var parsedRange = list[i];
+                                    if (!parsedRange.IsMatch(term.Text))
+                                        continue;
+
+                                    var facetValue = Results.Results[term.Field].Values[i];
+                                    ApplyAggregation(facet, facetValue, currentVal, docId);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                });
+		    }
+
+		    private void ApplyAggregation(Facet facet, FacetValue value, double currentVal, int docId)
+		    {
+		        HashSet<int> set;
+		        if (matches.TryGetValue(value, out set) == false)
+		            return;
+
+		        if (set.Contains(docId) == false)
+		            return;
+
+		        if (facet.Aggregation.HasFlag(FacetAggregation.Max))
 		        {
-		            HashSet<int> set;
-		            if(matches.TryGetValue(facetValue, out set) == false)
-                        continue;
-		            var val = GetDefaultValue(facet);
-		            IndexedTerms.ReadEntriesForFields(indexReader, fieldsToRead, set, (term, i) =>
-		            {
-		                var currentVal = GetValueFromIndex(facet, term);
-		                switch (facet.Aggregation)
-		                {
-		                    case FacetAggregation.Count:
-		                        val++;
-		                        break;
-		                    case FacetAggregation.Max:
-		                        val = Math.Max(val, currentVal);
-		                        break;
-		                    case FacetAggregation.Min:
-                                val = Math.Min(val, currentVal);
-		                        break;
-		                    case FacetAggregation.Average:
-		                    case FacetAggregation.Sum:
-		                        val += currentVal;
-		                        break;
-		                    default:
-		                        throw new ArgumentOutOfRangeException();
-		                }
-		            });
-					
-		            switch (facet.Aggregation)
-		            {
-		                case FacetAggregation.Average:
-		                    if (facetValue.Hits != 0)
-		                        facetValue.Value = val/facetValue.Hits;
-		                    else
-		                        facetValue.Value = double.NaN;
-		                    break;
-		                    //nothing to do here
-		                case FacetAggregation.Count:
-		                case FacetAggregation.Max:
-		                case FacetAggregation.Min:
-		                case FacetAggregation.Sum:
-		                    facetValue.Value = val;
-		                    break;
-		                default:
-		                    throw new ArgumentOutOfRangeException();
-		            }
+		            value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+		        }
+
+		        if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+		        {
+		            value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+		        }
+
+		        if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+		        {
+		            value.Sum = currentVal + (value.Sum ?? 0d);
+		        }
+
+		        if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+		        {
+		            value.Average = currentVal + (value.Average ?? 0d);
 		        }
 		    }
 
-            private double GetValueFromIndex(Facet facet,Term term)
+		    private double GetValueFromIndex(Facet facet,Term term)
             {
                 switch (GetSortOptionsForFacet(facet))
                 {
@@ -381,34 +436,11 @@ namespace Raven.Database.Queries
 		        return value;
 		    }
 
-		    private static double GetDefaultValue(Facet facet)
-		    {
-		        double val;
-		        switch (facet.Aggregation)
-		        {
-		            case FacetAggregation.Average:
-		            case FacetAggregation.Sum:
-		            case FacetAggregation.Count:
-		                val = 0;
-		                break;
-		            case FacetAggregation.Max:
-		                val = double.MinValue;
-		                break;
-		            case FacetAggregation.Min:
-		                val = double.MaxValue;
-		                break;
-		            default:
-		                throw new ArgumentOutOfRangeException();
-		        }
-		        return val;
-		    }
-
 		    private void UpdateValue(FacetValue facetValue, Facet value, int docId)
 		    {
 		        facetValue.Hits++;
 		        if (value.Aggregation == FacetAggregation.Count)
 		        {
-		            facetValue.Value = facetValue.Hits;
 		            return;
 		        }
 		        HashSet<int> set;

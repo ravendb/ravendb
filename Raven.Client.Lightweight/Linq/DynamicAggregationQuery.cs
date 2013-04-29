@@ -15,7 +15,7 @@ namespace Raven.Client.Linq
 		{
 			public string Name { get; set; }
 			public string AggregationField { get; set; }
-			public FacetAggregation? Aggregation { get; set; }
+			public FacetAggregation Aggregation { get; set; }
 			public List<Expression<Func<T, bool>>> Ranges { get; set; }
 		}
 
@@ -63,8 +63,8 @@ namespace Raven.Client.Linq
 
 	    public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)
 		{
-			var last = GetLast();
-			last.Ranges = new List<Expression<Func<T, bool>>>();
+			var last = facets.Last();
+			last.Ranges = last.Ranges ?? new List<Expression<Func<T, bool>>>();
 
 			foreach (var func in paths)
 			{
@@ -74,21 +74,11 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-		private AggregationQuery GetLast()
+	    private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
 		{
 			var last = facets.Last();
-
-			if (last.AggregationField != null)
-				throw new InvalidOperationException("Can not set multipule Facet aggregation on a single facet");
-
-			return last;
-		}
-
-		private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
-		{
-			var last = GetLast();
 			last.AggregationField = path.ToPropertyPath();
-			last.Aggregation = facetAggregation;
+			last.Aggregation |= facetAggregation;
 		}
 
 		public DynamicAggregationQuery<T> MaxOn(Expression<Func<T, object>> path)
@@ -162,7 +152,7 @@ namespace Raven.Client.Linq
 
 			foreach (var aggregationQuery in facets)
 			{
-				if (aggregationQuery.Aggregation == null)
+				if (aggregationQuery.Aggregation == FacetAggregation.None)
 					throw new InvalidOperationException("All aggregations must have a type");
 
 				var shouldUseRanges = aggregationQuery.Ranges != null && aggregationQuery.Ranges.Count > 0;
