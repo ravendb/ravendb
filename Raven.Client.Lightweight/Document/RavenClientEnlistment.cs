@@ -188,8 +188,6 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static Guid GetLocalOrDistributedTransactionId(TransactionInformation transactionInformation)
 		{
-			if (transactionInformation.DistributedIdentifier != Guid.Empty)
-				return transactionInformation.DistributedIdentifier;
 			string[] parts = transactionInformation.LocalIdentifier.Split(':');
 			if (parts.Length != 2)
 				throw new InvalidOperationException("Could not parse TransactionInformation.LocalIdentifier: " + transactionInformation.LocalIdentifier);
