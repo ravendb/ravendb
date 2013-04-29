@@ -355,7 +355,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 
 		private void ValidateMapReduceFields(List<string> mapFields)
 		{
-			mapFields.Remove("__document_id");
+			mapFields.Remove(Constants.DocumentIdFieldName);
 			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
 			if (reduceFields.SetEquals(mapFields) == false)
 			{
@@ -425,12 +425,24 @@ Reduce only fields: {2}
 					return false;
 
 				var initializers = objectCreateExpression.Initializers;
-
-				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters.First().Name);
-
 				if (initializers.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 					return false;
 
+				var parameter = lambdaExpression.Parameters.First();
+				var identifier = parameter.Name;
+
+				// Support getting the __document_id from IGrouping parameter
+				var castExpression = parameter.Parent.Parent.Parent as CastExpression;
+				if (castExpression != null)
+				{
+					var simpleType = castExpression.Type as SimpleType;
+					if (simpleType != null && simpleType.Identifier == "Func<IGrouping<dynamic,dynamic>, dynamic>")
+					{
+						identifier += ".Key";
+					}
+				}
+
+				var identifierExpression = new IdentifierExpression(identifier);
 				objectCreateExpression.Initializers.Add(new NamedExpression
 				{
 					Name = Constants.DocumentIdFieldName,

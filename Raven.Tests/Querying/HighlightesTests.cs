@@ -30,7 +30,7 @@ namespace Raven.Tests.Querying
 			public string Slug { get; set; }
 			public string Content { get; set; }
 		}
-
+		
 		public class SearchResults
 		{
 			public ISearchable Result { get; set; }

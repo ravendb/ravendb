@@ -29,6 +29,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Helpers
 {
@@ -355,6 +356,24 @@ namespace Raven.Tests.Helpers
 			}
 			else
 				Console.WriteLine("No server errors");
+		}
+
+		protected void AssertNoIndexErrors(IDocumentStore documentStore)
+		{
+			var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
+			var errors = embeddableDocumentStore != null
+									   ? embeddableDocumentStore.DocumentDatabase.Statistics.Errors
+									   : documentStore.DatabaseCommands.GetStatistics().Errors;
+
+			try
+			{
+				Assert.Empty(errors);
+			}
+			catch (EmptyException)
+			{
+				Console.WriteLine(errors.First().Error);
+				throw;
+			}
 		}
 	}
 }

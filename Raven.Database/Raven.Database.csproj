@@ -238,6 +238,7 @@
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
+    <Compile Include="Linq\Ast\TransformGroupByExtensionMethodTransformer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
