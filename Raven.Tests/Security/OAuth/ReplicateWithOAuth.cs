@@ -41,8 +41,8 @@ namespace Raven.Tests.Security.OAuth
 		[Fact]
 		public void Can_Replicate_With_OAuth()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore(anonymousUserAccessMode: AnonymousUserAccessMode.None);
+			var store1 = CreateStore(enableAuthorization: true);
+			var store2 = CreateStore(anonymousUserAccessMode: AnonymousUserAccessMode.None, enableAuthorization: true);
 			
 			TellFirstInstanceToReplicateToSecondInstance(apiKey);
 

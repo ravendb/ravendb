@@ -45,12 +45,12 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			{
 				store.ApiKey = apikey;
 				store.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
-			});
+			},enableAuthorization: true);
 			var store2 = CreateStore(configureStore: store =>
 			{
 				store.ApiKey = apikey;
 				store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-			});
+			}, enableAuthorization: true);
 
 
 			store1.DatabaseCommands.CreateDatabase(new DatabaseDocument

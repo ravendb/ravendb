@@ -184,6 +184,8 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
+    <Compile Include="Server\Security\Authentication.cs" />
+    <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
@@ -437,6 +439,7 @@
     <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
+    <Compile Include="Server\Security\Triggers\OAuthPutTrigger.cs" />
     <Compile Include="Server\Security\Triggers\WindowsAuthDeleteTrigger.cs" />
     <Compile Include="Server\Security\Triggers\WindowsAuthPutTrigger.cs" />
     <Compile Include="Server\Security\Windows\WindowsAuthDocument.cs" />

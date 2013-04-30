@@ -26,6 +26,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -54,7 +55,8 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
 			bool deleteDirectory = true,
-			bool deleteDirectoryOnDispose = true)
+			bool deleteDirectoryOnDispose = true,
+			bool enableAuthentication = false)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenTestBase)).CodeBase);
 			path = Path.Combine(path, DataDir).Substring(6);
@@ -85,6 +87,12 @@ namespace Raven.Tests.Helpers
 
 				documentStore.Initialize();
 
+				if (enableAuthentication)
+				{
+					EnableAuthentication(documentStore.DocumentDatabase);
+					ModifyConfiguration(documentStore.Configuration);
+				}
+
 				CreateDefaultIndexes(documentStore);
 
 				if (deleteDirectoryOnDispose)
@@ -104,12 +112,23 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
+		public static void EnableAuthentication(DocumentDatabase database)
+		{
+			var license = GetLicenseByReflection(database);
+			license.Error = false;
+			license.Status = "Commercial";
+
+			// rerun this startup task
+			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+		}
+
 		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
 			 bool deleteDirectoryAfter = true, 
 			 bool deleteDirectoryBefore = true,
-			 bool runInMemory = true)
+			 bool runInMemory = true,
+			 bool enableAuthentication = false)
 		{
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
@@ -149,7 +168,11 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data", bool runInMemory = true, bool deleteDirectory = true)
+		protected RavenDbServer GetNewServer(int port = 8079, 
+			string dataDirectory = "Data", 
+			bool runInMemory = true, 
+			bool deleteDirectory = true, 
+			bool enableAuthentication = false)
 		{
 			var ravenConfiguration = new RavenConfiguration
 			{
@@ -188,6 +211,13 @@ namespace Raven.Tests.Helpers
 				ravenDbServer.Dispose();
 				throw;
 			}
+
+			if (enableAuthentication)
+			{
+				EnableAuthentication(ravenDbServer.Database);
+				ModifyConfiguration(ravenConfiguration);
+			}
+
 			return ravenDbServer;
 		}
 
@@ -384,6 +414,18 @@ namespace Raven.Tests.Helpers
 				Console.WriteLine(errors.First().Error);
 				throw;
 			}
+		}
+
+		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
+		{
+			var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			Assert.NotNull(field);
+			var validateLicense = field.GetValue(database);
+
+			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
+			Assert.NotNull(currentLicenseProp);
+
+			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
 	}
 }

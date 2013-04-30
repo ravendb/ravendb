@@ -68,7 +68,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanBulkInsertWithApiKey()
 		{
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(enableAuthentication: true))
 			{
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(),
 															  (ServerClient)store.DatabaseCommands))

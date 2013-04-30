@@ -19,6 +19,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Helpers;
 using Xunit;
 using System.Linq;
 
@@ -32,10 +33,10 @@ namespace Raven.Tests.Bundles.Replication
 		protected int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
-		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
+		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, bool enableAuthorization = false)
 		{
 			var port = PortRangeStart - stores.Count;
-			return CreateStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
+			return CreateStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode, enableAuthorization);
 		}
 
 		public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
@@ -44,7 +45,7 @@ namespace Raven.Tests.Bundles.Replication
 			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
 		}
 
-		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
+		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, bool enableAuthorization = false)
 		{
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
@@ -66,6 +67,12 @@ namespace Raven.Tests.Bundles.Replication
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			servers.Add(ravenDbServer);
+
+			if (enableAuthorization)
+			{
+				RavenTestBase.EnableAuthentication(ravenDbServer.Database);
+				ConfigureServer(serverConfiguration);
+			}
 
 			var documentStore = new DocumentStore { Url = ravenDbServer.Database.Configuration.ServerUrl };
 			ConfigureStore(documentStore);
@@ -187,7 +194,7 @@ namespace Raven.Tests.Bundles.Replication
 			servers[index] = ravenDbServer;
 		}
 
-		public IDocumentStore ResetDatabase(int index)
+		public IDocumentStore ResetDatabase(int index, bool enableAuthentication = false)
 		{
 			stores[index].Dispose();
 
@@ -195,7 +202,7 @@ namespace Raven.Tests.Bundles.Replication
 			previousServer.Dispose();
 			IOExtensions.DeleteDirectory(previousServer.Database.Configuration.DataDirectory);
 
-			return CreateStoreAtPort(previousServer.Database.Configuration.Port);
+			return CreateStoreAtPort(previousServer.Database.Configuration.Port, enableAuthentication);
 		}
 
 		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null)

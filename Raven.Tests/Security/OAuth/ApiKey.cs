@@ -50,7 +50,7 @@ namespace Raven.Tests.Security.OAuth
 			const string id = "test/1";
 			const string name = "My name";
 
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(enableAuthentication: true))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -68,7 +68,7 @@ namespace Raven.Tests.Security.OAuth
 		[Fact]
 		public void CanAuthAsAdminAgainstTenantDb()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication: true))
 			{
 
 				server.Database.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
