@@ -30,7 +30,9 @@ namespace Raven.Database.Queries
 
 			foreach (var facet in facets)
 			{
-                defaultFacets[facet.Name] = facet;
+				var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
+
+                defaultFacets[key] = facet;
                 if (facet.Aggregation != FacetAggregation.Count && facet.Aggregation != FacetAggregation.None)
                 {
                     if (string.IsNullOrEmpty(facet.AggregationField))
@@ -40,14 +42,16 @@ namespace Raven.Database.Queries
                     if (facet.AggregationField.EndsWith("_Range") == false)
                         facet.AggregationField = facet.AggregationField + "_Range";
                 }
+
+
                 switch (facet.Mode)
-				{
+                {
 					case FacetMode.Default:
-						results.Results[facet.Name] = new FacetResult();
+						results.Results[key] = new FacetResult();
 				        break;
 					case FacetMode.Ranges:
-						rangeFacets[facet.Name] = facet.Ranges.Select(range => ParseRange(facet.Name, range)).ToList();
-						results.Results[facet.Name] = new FacetResult
+						rangeFacets[key] = facet.Ranges.Select(range => ParseRange(facet.Name, range)).ToList();
+						results.Results[key] = new FacetResult
 						{
 							Values = facet.Ranges.Select(range => new FacetValue
 							{
@@ -236,40 +240,44 @@ namespace Raven.Database.Queries
 						allCollector.Documents,
 						(term, doc) =>
 						{
-                            Facet value;
-						    if (Facets.TryGetValue(term.Field, out value) == false)
-						        return;
-
-						    switch (value.Mode)
-						    {
-						        case FacetMode.Default:
-                                    var facetValues = facetsByName.GetOrAdd(term.Field);
-						            FacetValue existing;
-						            if (facetValues.TryGetValue(term.Text, out existing) == false)
-						            {
-						                existing = new FacetValue{Range = term.Text};
-						                facetValues[term.Text] = existing;
-						            }
-						            ApplyFacetValueHit(existing, value, doc, null);
-						            break;
-						        case FacetMode.Ranges:
-                                    List<ParsedRange> list;
-							        if (Ranges.TryGetValue(term.Field, out list))
-							        {
-								        for (int i = 0; i < list.Count; i++)
-								        {
-									        var parsedRange = list[i];
-									        if (parsedRange.IsMatch(term.Text)) 
-									        {
-									            var facetValue = Results.Results[term.Field].Values[i];
-                                                ApplyFacetValueHit(facetValue, value, doc, parsedRange);
-									        }
-								        }
-							        }
-						            break;
-						        default:
-						            throw new ArgumentOutOfRangeException();
-						    }
+							var facets = Facets.Values.Where(facet => facet.Name == term.Field);
+							//Facet value;
+							//if (Facets.TryGetValue(term.Field, out value) == false)
+							//	return;
+							foreach (var facet in facets)
+							{
+								switch (facet.Mode)
+								{
+									case FacetMode.Default:
+										var facetValues = facetsByName.GetOrAdd(term.Field);
+										FacetValue existing;
+										if (facetValues.TryGetValue(term.Text, out existing) == false)
+										{
+											existing = new FacetValue { Range = term.Text };
+											facetValues[term.Text] = existing;
+										}
+										ApplyFacetValueHit(existing, facet, doc, null);
+										break;
+									case FacetMode.Ranges:
+										List<ParsedRange> list;
+										if (Ranges.TryGetValue(term.Field, out list))
+										{
+											for (int i = 0; i < list.Count; i++)
+											{
+												var parsedRange = list[i];
+												if (parsedRange.IsMatch(term.Text))
+												{
+													var facetValue = Results.Results[term.Field].Values[i];
+													ApplyFacetValueHit(facetValue, facet, doc, parsedRange);
+												}
+											}
+										}
+										break;
+									default:
+										throw new ArgumentOutOfRangeException();
+								}
+							}
+						    
 						});
                     UpdateFacetResults(facetsByName);
 
@@ -282,7 +290,7 @@ namespace Raven.Database.Queries
 		    {
                 foreach (var facetResult in Results.Results)
                 {
-                    var facet = Facets[facetResult.Key];
+                    var facet = Facets.Values.First(facet1 => facet1.DisplayName == facetResult.Key);
                     if (facet.Aggregation.HasFlag(FacetAggregation.Count))
                     {
                         foreach (var facetValue in facetResult.Value.Values)
@@ -444,7 +452,6 @@ namespace Raven.Database.Queries
 		        public ParsedRange Range;
 		    }
 
-
 		    private void UpdateFacetResults(Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
 			{
 				foreach (var facet in Facets.Values)
@@ -490,7 +497,10 @@ namespace Raven.Database.Queries
 					    var facetValue = groups.GetOrDefault(allTerm);
 					    return facetValue == null ? 0 : facetValue.Hits;
 					});
-					Results.Results[facet.Name] = new FacetResult
+
+					var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
+
+					Results.Results[key] = new FacetResult
 					{
 						Values = values,
 						RemainingTermsCount = allTerms.Count - (Start + values.Count),
@@ -498,11 +508,9 @@ namespace Raven.Database.Queries
 					};
 
 					if (facet.IncludeRemainingTerms)
-						Results.Results[facet.Name].RemainingTerms = allTerms.Skip(Start + values.Count).ToList();
+						Results.Results[key].RemainingTerms = allTerms.Skip(Start + values.Count).ToList();
 				}
 			}
 		}
 	}
-
-
 }

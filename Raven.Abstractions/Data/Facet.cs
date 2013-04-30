@@ -14,6 +14,7 @@ namespace Raven.Abstractions.Data
         public FacetAggregation Aggregation { get; set; }
         public string AggregationField { get; set; }
 		public string Name { get; set; }
+		public string DisplayName { get; set; }
 		public List<string> Ranges { get; set; }
 		public int? MaxResults { get; set; }
 		public FacetTermSortMode TermSortMode { get; set; }

@@ -51,11 +51,19 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Query the facets results for this query using aggregat`ion
+		/// Query the facets results for this query using aggregation
 		/// </summary>
 		public static DynamicAggregationQuery<T> AggregateBy<T>(this IQueryable<T> queryable, Expression<Func<T, object>> path)
 		{
 			return new DynamicAggregationQuery<T>(queryable, path);
+		}
+
+		/// <summary>
+		/// Query the facets results for this query using aggregation with a specific display name
+		/// </summary>
+		public static DynamicAggregationQuery<T> AggregateBy<T>(this IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName)
+		{
+			return new DynamicAggregationQuery<T>(queryable, path, displayName);
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE

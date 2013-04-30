@@ -149,6 +149,42 @@ namespace Raven.Tests.Faceted
             }
         }
 
+		[Fact]
+		public void CanCorrectlyAggregate_DisplayName()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new Orders_All().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Order { Currency = Currency.EUR, Product = "Milk", Total = 3 });
+					session.Store(new Order { Currency = Currency.NIS, Product = "Milk", Total = 9 });
+					session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333 });
+					session.SaveChanges();
+				}
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+					var r = session.Query<Order>("Orders/All")
+					   .AggregateBy(x => x.Product, "ProductMax")
+						 .MaxOn(x => x.Total)
+						 .AndAggregateOn(x => x.Product, "ProductMin")
+						 .CountOn(x => x.Currency)
+					   .ToList();
+
+					Assert.Equal(2, r.Results.Count);
+
+					Assert.NotNull(r.Results["ProductMax"]);
+					Assert.NotNull(r.Results["ProductMin"]);
+
+					Assert.Equal(3333, r.Results["ProductMax"].Values.First().Max);
+					Assert.Equal(2, r.Results["ProductMin"].Values.First().Count);
+
+				}
+			}
+		}
+
         [Fact]
         public void CanCorrectlyAggregate_Ranges()
         {

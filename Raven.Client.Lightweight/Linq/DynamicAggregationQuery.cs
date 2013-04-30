@@ -14,6 +14,7 @@ namespace Raven.Client.Linq
 		private class AggregationQuery
 		{
 			public string Name { get; set; }
+			public string DisplayName { get; set; }
 			public string AggregationField { get; set; }
 			public FacetAggregation Aggregation { get; set; }
 			public List<Expression<Func<T, bool>>> Ranges { get; set; }
@@ -30,6 +31,13 @@ namespace Raven.Client.Linq
             AndAggregateOn(path);
 		}
 
+		public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName)
+		{
+			facets = new List<AggregationQuery>();
+			this.queryable = queryable;
+			AndAggregateOn(path, displayName);
+		}
+
 		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path)
 		{
 		    var propertyPath = path.ToPropertyPath();
@@ -39,7 +47,21 @@ namespace Raven.Client.Linq
                 renames[propertyPath] = tmp;
                 propertyPath = tmp;
             }
-		    facets.Add(new AggregationQuery { Name = propertyPath });
+		    facets.Add(new AggregationQuery { Name = propertyPath, DisplayName = propertyPath});
+
+			return this;
+		}
+
+		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName)
+		{
+			var propertyPath = path.ToPropertyPath();
+			if (IsNumeric(path))
+			{
+				var tmp = propertyPath + "_Range";
+				renames[propertyPath] = tmp;
+				propertyPath = tmp;
+			}
+			facets.Add(new AggregationQuery { Name = propertyPath, DisplayName = displayName});
 
 			return this;
 		}
@@ -165,6 +187,7 @@ namespace Raven.Client.Linq
 				facetsList.Add(new Facet
 				{
 					Name = aggregationQuery.Name,
+					DisplayName = aggregationQuery.DisplayName,
 					Aggregation = (FacetAggregation) aggregationQuery.Aggregation,
 					AggregationField = aggregationQuery.AggregationField,
 					Ranges = ranges,
