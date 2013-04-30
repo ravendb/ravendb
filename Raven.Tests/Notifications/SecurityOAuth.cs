@@ -32,7 +32,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthOnSystemDatabase()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
@@ -78,7 +78,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthWrongKeyFails()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
@@ -113,7 +113,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthOnSpecificDatabase()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{
@@ -170,7 +170,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthOnSpecificDatabaseWontWorkForAnother()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/Databases/OAuthTest1", null, RavenJObject.FromObject(new DatabaseDocument
 				{
@@ -226,7 +226,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthWithStarWorksForAnyDatabaseOtherThenSystem()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{

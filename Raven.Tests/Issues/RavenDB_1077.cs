@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
 			{
 				var database = documentStore.DocumentDatabase;
 
-				var status = GetLicenseByReflection(documentStore);
+				var status = GetLicenseByReflection(database);
 
 				Assert.False(status.ValidCommercialLicenseSeen);
 
@@ -44,7 +44,7 @@ namespace Raven.Tests.Issues
 			{
 				var database = documentStore.DocumentDatabase;
 
-				var status = GetLicenseByReflection(documentStore);
+				var status = GetLicenseByReflection(database);
 
 				status.Error = false;
 				status.Status = "Commercial";
@@ -64,16 +64,16 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldDetectThatValidLicenseWasProvidedInThePast()
 		{
-			using (var documentStore = NewDocumentStore(commercialLicenseMock: true)) // / this will store info in database
+			using (var documentStore = NewDocumentStore(enableAuthentication: true)) // / this will store info in database
 			{
-				var status = GetLicenseByReflection(documentStore);
+				var database = documentStore.DocumentDatabase;
+				var status = GetLicenseByReflection(database);
 
 				// reset license info - mark it as invalid
 				status.Error = true;
 				status.Status = "";
 				status.ValidCommercialLicenseSeen = false;
 
-				var database = documentStore.DocumentDatabase;
 				var task = database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First();
 
 				task.Execute(database); // this should notice that in the database there is a valid license marker under "Raven/License/Commercial"
@@ -113,7 +113,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldAllowToSetupWindowsAuth_WhenValidCommercialLicenseProvided()
 		{
-			using (var documentStore = NewDocumentStore(commercialLicenseMock: true))
+			using (var documentStore = NewDocumentStore(enableAuthentication: true))
 			{
 				Assert.DoesNotThrow(() =>
 				{
@@ -125,7 +125,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldAllowToSetupOAuth_WhenValidCommercialLicensePrivided()
 		{
-			using (var documentStore = NewDocumentStore(commercialLicenseMock: true))
+			using (var documentStore = NewDocumentStore(enableAuthentication: true))
 			{
 				Assert.DoesNotThrow(() =>
 				{
