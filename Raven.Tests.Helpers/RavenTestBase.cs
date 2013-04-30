@@ -26,6 +26,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -54,7 +55,8 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
 			bool deleteDirectory = true,
-			bool deleteDirectoryOnDispose = true)
+			bool deleteDirectoryOnDispose = true,
+			bool commercialLicenseMock = false)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenTestBase)).CodeBase);
 			path = Path.Combine(path, DataDir).Substring(6);
@@ -84,6 +86,17 @@ namespace Raven.Tests.Helpers
 					IOExtensions.DeleteDirectory(path);
 
 				documentStore.Initialize();
+
+				if (commercialLicenseMock)
+				{
+					var license = GetLicenseByReflection(documentStore);
+					license.Error = false;
+					license.Status = "Commercial";
+
+					// rerun this startup task
+					var database = documentStore.DocumentDatabase;
+					database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+				}
 
 				CreateDefaultIndexes(documentStore);
 
@@ -384,6 +397,20 @@ namespace Raven.Tests.Helpers
 				Console.WriteLine(errors.First().Error);
 				throw;
 			}
+		}
+
+		protected LicensingStatus GetLicenseByReflection(EmbeddableDocumentStore documentStore)
+		{
+			var database = documentStore.DocumentDatabase;
+
+			var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			Assert.NotNull(field);
+			var validateLicense = field.GetValue(database);
+
+			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
+			Assert.NotNull(currentLicenseProp);
+
+			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
 	}
 }
