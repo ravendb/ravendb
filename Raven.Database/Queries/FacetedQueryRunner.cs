@@ -290,25 +290,27 @@ namespace Raven.Database.Queries
 		    {
                 foreach (var facetResult in Results.Results)
                 {
-                    var facet = Facets.Values.First(facet1 => facet1.DisplayName == facetResult.Key);
-                    if (facet.Aggregation.HasFlag(FacetAggregation.Count))
-                    {
-                        foreach (var facetValue in facetResult.Value.Values)
-                        {
-                            facetValue.Count = facetValue.Hits;
-                        }
-                    }
+	                foreach (var facet in Facets.Values.Where(f => f.Name == facetResult.Key))
+	                {
+		                if (facet.Aggregation.HasFlag(FacetAggregation.Count))
+		                {
+			                foreach (var facetValue in facetResult.Value.Values)
+			                {
+				                facetValue.Count = facetValue.Hits;
+			                }
+		                }
 
-                    if (facet.Aggregation.HasFlag(FacetAggregation.Average))
-                    {
-                        foreach (var facetValue in facetResult.Value.Values)
-                        {
-                            if (facetValue.Hits == 0)
-                                facetValue.Average = double.NaN;
-                            else
-                                facetValue.Average = facetValue.Average/facetValue.Hits;
-                        }
-                    }
+		                if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+		                {
+			                foreach (var facetValue in facetResult.Value.Values)
+			                {
+				                if (facetValue.Hits == 0)
+					                facetValue.Average = double.NaN;
+				                else
+					                facetValue.Average = facetValue.Average/facetValue.Hits;
+			                }
+		                }
+	                }
                 }
 		    }
 
