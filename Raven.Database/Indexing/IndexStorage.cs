@@ -855,6 +855,11 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		internal IndexSearcherHolder.IndexSearcherHoldingState GetCurrentStateHolder(string indexName)
+		{
+			return GetIndexByName(indexName).GetCurrentStateHolder();
+		}
+
 		public IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
 		{
 			return GetIndexByName(indexName).GetSearcher(out searcher);

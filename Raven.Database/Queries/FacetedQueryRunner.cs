@@ -227,23 +227,22 @@ namespace Raven.Database.Queries
 				var allCollector = new GatherAllCollector();
                 var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
-				IndexSearcher currentIndexSearcher;
-				using (Database.IndexStorage.GetCurrentIndexSearcher(Index, out currentIndexSearcher))
+				
+				using (var currentState = Database.IndexStorage.GetCurrentStateHolder(Index))
 				{
+					var currentIndexSearcher = currentState.IndexSearcher;
+
 					var baseQuery = Database.IndexStorage.GetLuceneQuery(Index, IndexQuery, Database.IndexQueryTriggers);
 					currentIndexSearcher.Search(baseQuery, allCollector);
 					var fields = Facets.Values.Select(x => x.Name)
 							.Concat(Ranges.Select(x => x.Key));
 					var fieldsToRead = new HashSet<string>(fields);
-					IndexedTerms.ReadEntriesForFields(currentIndexSearcher.IndexReader,
+					IndexedTerms.ReadEntriesForFields(currentState,
 						fieldsToRead,
 						allCollector.Documents,
 						(term, doc) =>
 						{
 							var facets = Facets.Values.Where(facet => facet.Name == term.Field);
-							//Facet value;
-							//if (Facets.TryGetValue(term.Field, out value) == false)
-							//	return;
 							foreach (var facet in facets)
 							{
 								switch (facet.Mode)
@@ -281,7 +280,7 @@ namespace Raven.Database.Queries
 						});
                     UpdateFacetResults(facetsByName);
 
-                    CompleteFacetCalculationsStage1(currentIndexSearcher);
+                    CompleteFacetCalculationsStage1(currentState);
 				    CompleteFacetCalculationsStage2();
 				}
 			}
@@ -290,7 +289,8 @@ namespace Raven.Database.Queries
 		    {
                 foreach (var facetResult in Results.Results)
                 {
-	                foreach (var facet in Facets.Values.Where(f => f.Name == facetResult.Key))
+	                var key = facetResult.Key;
+	                foreach (var facet in Facets.Values.Where(f => f.DisplayName == key))
 	                {
 		                if (facet.Aggregation.HasFlag(FacetAggregation.Count))
 		                {
@@ -314,7 +314,7 @@ namespace Raven.Database.Queries
                 }
 		    }
 
-		    private void CompleteFacetCalculationsStage1(IndexSearcher currentIndexSearcher)
+		    private void CompleteFacetCalculationsStage1(IndexSearcherHolder.IndexSearcherHoldingState state)
 		    {
                 var fieldsToRead = new HashSet<string>(Facets
                         .Where(x => x.Value.Aggregation != FacetAggregation.None && x.Value.Aggregation != FacetAggregation.Count)
@@ -324,14 +324,9 @@ namespace Raven.Database.Queries
 		        if (fieldsToRead.Count == 0)
 		            return;
 
-		        var aggregationFieldToFacetFields = Facets
-		            .Where(x => x.Value.Aggregation != FacetAggregation.None && x.Value.Aggregation != FacetAggregation.Count)
-		            .GroupBy(x => x.Value.AggregationField)
-		            .ToDictionary(x => x.Key, y => y.Select(x=>x.Value).ToList());
-
 		        var allDocs = new HashSet<int>(matches.Values.SelectMany(x => x.Docs));
 
-                IndexedTerms.ReadEntriesForFields(currentIndexSearcher.IndexReader, fieldsToRead, allDocs, (term, docId) =>
+                IndexedTerms.ReadEntriesForFields(state, fieldsToRead, allDocs, (term, docId) =>
                 {
                     foreach (var match in matches)
                     {

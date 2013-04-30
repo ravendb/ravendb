@@ -1,9 +1,14 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -24,7 +29,7 @@ namespace Raven.Database.Indexing
 			Interlocked.Increment(ref old.Usage);
 			using (old)
 			{
-				if(wait)
+				if (wait)
 					return old.MarkForDisposalWithWait();
 				old.MarkForDisposal();
 				return null;
@@ -63,7 +68,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private IndexSearcherHoldingState GetCurrentStateHolder()
+		internal IndexSearcherHoldingState GetCurrentStateHolder()
 		{
 			while (true)
 			{
@@ -80,7 +85,7 @@ namespace Raven.Database.Indexing
 		}
 
 
-		private class IndexSearcherHoldingState : IDisposable
+		public class IndexSearcherHoldingState : IDisposable
 		{
 			public readonly IndexSearcher IndexSearcher;
 
@@ -88,6 +93,47 @@ namespace Raven.Database.Indexing
 			public int Usage;
 			private RavenJObject[] readEntriesFromIndex;
 			private readonly Lazy<ManualResetEvent> disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
+
+
+			private readonly Dictionary<string, Dictionary<int, List<Term>>> cache =
+				new Dictionary<string, Dictionary<int, List<Term>>>();
+
+			private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
+
+			public IEnumerable<Term> GetFromCache(string field, int doc)
+			{
+				rwls.EnterReadLock();
+				try
+				{
+					Dictionary<int, List<Term>> value;
+					if (cache.TryGetValue(field, out value) == false)
+						yield break;
+					List<Term> list;
+					if (value.TryGetValue(doc, out list) == false)
+						yield break;
+					foreach (var item in list)
+					{
+						yield return item;
+					}
+				}
+				finally
+				{
+					rwls.ExitReadLock();
+				}
+			}
+
+			public void SetInCache(string field, int doc, Term val)
+			{
+				rwls.EnterWriteLock();
+				try
+				{
+					cache.GetOrAdd(field).GetOrAdd(doc).Add(val);
+				}
+				finally
+				{
+					rwls.ExitWriteLock();
+				}
+			}
 
 			public IndexSearcherHoldingState(IndexSearcher indexSearcher)
 			{
@@ -120,9 +166,9 @@ namespace Raven.Database.Indexing
 				if (IndexSearcher != null)
 				{
 					using (IndexSearcher)
-					using (IndexSearcher.IndexReader){}
+					using (IndexSearcher.IndexReader) { }
 				}
-				if(disposed.IsValueCreated)
+				if (disposed.IsValueCreated)
 					disposed.Value.Set();
 			}
 

@@ -31,11 +31,12 @@ namespace Raven.Tryouts
 		{
 			Console.WriteLine("Open Server and press any key");
 			Console.ReadLine();
+
 			//CreateData();
 
-          //  CreateIndex();
+			//CreateIndex();
 
-		    Test();
+			Test();
 
 		}
 
@@ -127,7 +128,6 @@ namespace Raven.Tryouts
 
 			    using (var bulk = store.BulkInsert())
 			    {
-
 			        foreach (var order in data)
 			        {
 			            bulk.Store(order);
@@ -142,7 +142,7 @@ namespace Raven.Tryouts
 			var values = Enum.GetValues(typeof(Currency));
 			var products = new List<string> {"RavenDB", "RavenFS", "UberProf", "NHibernate"};
 
-			for (int i = 0; i < 20703; i++)
+			for (int i = 0; i < (1000 * 1000) - 20703; i++)
 			{
 			    yield return (new Order
                  {

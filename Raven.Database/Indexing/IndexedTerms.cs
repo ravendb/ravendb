@@ -14,12 +14,42 @@ namespace Raven.Database.Indexing
 {
 	public class IndexedTerms
 	{
-		public static void ReadEntriesForFields(IndexReader reader, HashSet<string> fieldsToRead, HashSet<int> docIds, Action<Term, int> onTermFound)
+		public static void ReadEntriesForFields(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, HashSet<int> docIds, Action<Term, int> onTermFound)
 		{
+			var reader = state.IndexSearcher.IndexReader;
+
+			var readFromCache = new Dictionary<string, HashSet<int>>();
+
+			foreach (var field in fieldsToRead)
+			{
+				var read = new HashSet<int>();
+				readFromCache[field] = read;
+				foreach (var docId in docIds)
+				{
+					foreach (var o in state.GetFromCache(field, docId))
+					{
+						read.Add(docId);
+						onTermFound(o, docId);
+					}
+				}
+			}
+
+			foreach (var kvp in readFromCache)
+			{
+				if (kvp.Value.Count == docIds.Count)
+				{
+					fieldsToRead.Remove(kvp.Key); // already read all of it
+				}
+			}
+
+			if (fieldsToRead.Count == 0)
+				return;
+
 			using (var termDocs = reader.TermDocs())
 			{
 				foreach (var field in fieldsToRead)
 				{
+					var read = readFromCache[field];
 					using (var termEnum = reader.Terms(new Term(field)))
 					{
 						do
@@ -35,10 +65,13 @@ namespace Raven.Database.Indexing
 							while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
 							{
 								totalDocCountIncludedDeletes -= 1;
+								if (read.Contains(termDocs.Doc))
+									continue; 
 								if (reader.IsDeleted(termDocs.Doc))
 									continue;
 								if (docIds.Contains(termDocs.Doc) == false)
 									continue;
+								state.SetInCache(field, termDocs.Doc, termEnum.Term);
 								onTermFound(termEnum.Term, termDocs.Doc);
 							}
 						} while (termEnum.Next());
