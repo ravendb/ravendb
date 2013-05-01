@@ -1,4 +1,7 @@
-﻿using System.Windows.Input;
+﻿using System.Collections.ObjectModel;
+using System.Windows.Input;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -14,9 +17,22 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/transformers/";
 			Transformer = new TransformerDefinition();
+            Errors = new ObservableCollection<TransformerDefinitionError>();
 		}
 
-		public ICommand SaveTransformer
+	    public ObservableCollection<TransformerDefinitionError> Errors { get; private set; }
+
+        public bool IsShowingErrors
+        {
+            get { return isShowingErrors; }
+            set
+            {
+                isShowingErrors = value;
+                OnPropertyChanged(() => IsShowingErrors);
+            }
+        }
+
+	    public ICommand SaveTransformer
 		{
 			get { return new SaveTransformerCommand(this); }
 		}
@@ -30,7 +46,9 @@ namespace Raven.Studio.Models
 		public bool IsNewTransformer { get; private set; }
 
 		private string header;
-		public string Header
+	    private bool isShowingErrors;
+
+	    public string Header
 		{
 			get { return header; }
 			private set
@@ -39,6 +57,19 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => Header);
 			}
 		}
+
+        private void ReportDefinitionError(string message)
+        {
+            Errors.Add(new TransformerDefinitionError() { Message = message });
+
+            IsShowingErrors = true;
+        }
+
+        private void ClearDefinitionErrors()
+        {
+            Errors.Clear();
+        }
+
 
 		public override void LoadModelParameters(string parameters)
 		{
@@ -109,11 +140,19 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
+			    transformer.ClearDefinitionErrors();
+
 				if (string.IsNullOrWhiteSpace(transformer.Transformer.Name))
 				{
-					ApplicationModel.Current.AddNotification(new Notification("Transformer must have a name!", NotificationLevel.Error));
+					transformer.ReportDefinitionError("Transformer must have a name");
 					return;
 				}
+
+                if (string.IsNullOrWhiteSpace(transformer.Transformer.TransformResults))
+                {
+                    transformer.ReportDefinitionError("Transform must contain a C# LINQ query or Query expression");
+                    return;
+                }
 
 				if (transformer.IsNewTransformer == false && transformer.OriginalName != transformer.Transformer.Name)
 				{
@@ -132,8 +171,19 @@ namespace Raven.Studio.Models
 						ApplicationModel.Current.AddNotification(
 							new Notification("transformer " + transformer.Transformer.Name + " saved"));
 						PutTransformerNameInUrl(transformer.Transformer.Name);
+
+					    transformer.IsShowingErrors = false;
 					})
-					.Catch();
+                    .Catch(ex =>
+                    {
+                        var indexException = ex.ExtractSingleInnerException() as TransformCompilationException;
+                        if (indexException != null)
+                        {
+                            transformer.ReportDefinitionError(indexException.Message);
+                            return true;
+                        }
+                        return false;
+                    }); ;
 			}
 
 			private void PutTransformerNameInUrl(string name)
@@ -143,7 +193,9 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private class DeleteTransformerCommand : Command
+
+
+	    private class DeleteTransformerCommand : Command
 		{
 			private readonly TransformerDefinitionModel model;
 
@@ -178,5 +230,8 @@ namespace Raven.Studio.Models
 		}
 	}
 
-	
+	public class TransformerDefinitionError
+	{
+        public string Message { get; set; }
+	}
 }
