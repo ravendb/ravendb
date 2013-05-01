@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Client.Extensions;
@@ -20,7 +21,10 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-		}
+
+
+            Authentication.EnableOnce();
+        }
 
 		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
 		{

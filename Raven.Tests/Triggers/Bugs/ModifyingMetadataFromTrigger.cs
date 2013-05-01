@@ -26,7 +26,7 @@ namespace Raven.Tests.Triggers.Bugs
 			                                  	{
 			                                  		Port = 8079,
 			                                  		DataDirectory = path,
-			                                  		AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+                                                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
 			                                  		Catalog =
 			                                  			{
 			                                  				Catalogs = {new TypeCatalog(typeof (AuditTrigger))}

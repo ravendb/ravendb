@@ -11,6 +11,7 @@ using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -21,6 +22,7 @@ namespace Raven.Tests.Notifications
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            Authentication.EnableOnce();
 			configuration.PostInit();
 		}
 

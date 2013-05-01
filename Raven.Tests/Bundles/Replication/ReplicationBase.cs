@@ -33,19 +33,19 @@ namespace Raven.Tests.Bundles.Replication
 		protected int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
-		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, bool enableAuthorization = false)
+		public IDocumentStore CreateStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false)
 		{
 			var port = PortRangeStart - stores.Count;
 			return CreateStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode, enableAuthorization);
 		}
 
-		public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
+        public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
 		{
 			var port = PortRangeStart - stores.Count;
 			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
 		}
 
-		private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, bool enableAuthorization = false)
+        private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false)
 		{
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
@@ -179,7 +179,7 @@ namespace Raven.Tests.Bundles.Replication
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
 			{
 				Settings = { { "Raven/ActiveBundles", "replication" } },
-				AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
+                AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.Admin,
 				DataDirectory = previousServer.Database.Configuration.DataDirectory,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = previousServer.Database.Configuration.RunInMemory,

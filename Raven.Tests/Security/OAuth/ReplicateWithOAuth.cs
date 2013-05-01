@@ -3,6 +3,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Document;
@@ -42,7 +43,8 @@ namespace Raven.Tests.Security.OAuth
 		public void Can_Replicate_With_OAuth()
 		{
 			var store1 = CreateStore(enableAuthorization: true);
-			var store2 = CreateStore(anonymousUserAccessMode: AnonymousUserAccessMode.None, enableAuthorization: true);
+            Authentication.EnableOnce();
+            var store2 = CreateStore(anonymousUserAccessMode: AnonymousUserAccessMode.None, enableAuthorization: true);
 			
 			TellFirstInstanceToReplicateToSecondInstance(apiKey);
 
