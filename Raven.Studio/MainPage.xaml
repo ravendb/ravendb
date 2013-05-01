@@ -205,52 +205,7 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/status"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<!--<Delay:SplitHyperlinkButtonPopup Content="Status"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/status">
-                    <Behaviors:LinkHighlighter.AlternativeUris>
-                        <Behaviors:StringCollection>
-							<System:String>/statistics</System:String>
-							<System:String>/logs</System:String>
-							<System:String>/logs/error</System:String>
-                            <System:String>/alerts</System:String>
-                            <System:String>/indexes-errors</System:String>
-							<System:String>/replicationStatistics</System:String>
-							<System:String>/user-info</System:String>
-						</Behaviors:StringCollection>
-                    </Behaviors:LinkHighlighter.AlternativeUris>
-                    <Delay:SplitHyperlinkButtonPopup.PopupContent>
-                        <Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
-                            <StackPanel>
-								<HyperlinkButton Content="Statistics"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/statistics"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Logs"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/logs"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="{Binding AlertsTitle}"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/alerts"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="Index Errors"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/indexes-errors"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="Replication Statistics"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/replicationStatistics"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="User Info"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/user-info"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-							</StackPanel>
-                        </Border>
-                    </Delay:SplitHyperlinkButtonPopup.PopupContent>
-                </Delay:SplitHyperlinkButtonPopup>-->
-
+				
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
                 
                 <Delay:SplitButton Command="{StaticResource NavigateToCommand}"
@@ -401,7 +356,7 @@
                                  Content="Replication Statistics" 
                                  Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"
                                  Command="{StaticResource NavigateToCommand}"
-                                 CommandParameter="/replicationStatistics"
+                                 CommandParameter="/status?id=replication"
                                  Style="{StaticResource HyperlinkButton_FooterLinks}"/>
 
 					<HyperlinkButton toolkit:DockPanel.Dock="Left"

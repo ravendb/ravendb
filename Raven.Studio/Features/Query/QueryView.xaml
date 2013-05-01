@@ -133,7 +133,7 @@
                         VerticalAlignment="Center"
                         Margin="0,0,6,0"
                         Command="{StaticResource NavigateToCommand}"
-                        CommandParameter="{Binding IndexName, StringFormat='/statistics?index=\{0\}'}"
+                        CommandParameter="{Binding IndexName, StringFormat='/status?index=\{0\}'}"
                         Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"
                         VerticalContentAlignment="Center">
 					<Button.Content>

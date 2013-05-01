@@ -534,7 +534,7 @@
 					<Button x:Name="Stats"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
                             Command="{StaticResource NavigateToCommand}"
-                            CommandParameter="{Binding Name, StringFormat='/statistics?index=\{0\}'}"
+                            CommandParameter="{Binding Name, StringFormat='/status?index=\{0\}'}"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Left"
                             Margin="0"
