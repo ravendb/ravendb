@@ -118,7 +118,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				if (string.IsNullOrWhiteSpace(value))
-					NavigateToIndexesList();
+					return;
 
                 if (HasIndexChanged(value))
                 {
@@ -537,18 +537,13 @@ namespace Raven.Studio.Models
             IsDynamicQuery = false;
             var newIndexName = urlParser.Path.Trim('/');
 
-            if (string.IsNullOrEmpty(newIndexName) || !AvailableIndexes.Contains(newIndexName))
+            if (string.IsNullOrEmpty(newIndexName))
             {
                 if (AvailableIndexes.Any())
                 {
                     NavigateToIndexQuery(AvailableIndexes.FirstOrDefault());
+                    return;
                 }
-                else
-                {
-                    NavigateToIndexesList();
-                }
-
-                return;
             }
 
             IndexName = newIndexName;
@@ -558,9 +553,18 @@ namespace Raven.Studio.Models
                 {
                     if (task.IsFaulted || task.Result == null)
                     {
-                        IndexDefinitionModel.HandleIndexNotFound(IndexName);
+                        if (AvailableIndexes.Any())
+                        {
+
+                            NavigateToIndexQuery(AvailableIndexes.FirstOrDefault());
+                        }
+                        else
+                        {
+                            NavigateToIndexesList();
+                        }
                         return;
                     }
+
                     var fields = task.Result.Fields;
                     QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
 
