@@ -259,6 +259,22 @@ namespace Raven.Studio.Models
 			get { return new RemoveSortByCommand(this); }
 		}
 
+	    public ICommand AddTransformer
+	    {
+	        get { return (addTransformer ?? (addTransformer = new ActionCommand(() => UseTransformer = true))); }
+	    }
+
+	    public ICommand RemoveTransformer
+	    {
+	        get
+	        {
+	            return (removeTransformer ?? (removeTransformer = new ActionCommand(() =>
+	            {
+	                UseTransformer = false;
+	                SelectedTransformer.Value = "None";
+	            })));
+	        }
+	    }
 		private class RemoveSortByCommand : Command
 		{
 			private string field;
@@ -371,12 +387,12 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/query";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+            SelectedTransformer = new Observable<string> { Value = "None" };
+            SelectedTransformer.PropertyChanged += (sender, args) => Requery();
 
 		    ApplicationModel.DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
 		    {
-				SelectedTransformer = new Observable<string>{Value = "None"};
-			    SelectedTransformer.PropertyChanged += (sender, args) => Requery();
-				Transformers = new List<string>{"None"};
+                Transformers = new List<string>{"None"};
 			    Transformers.AddRange(transformers.Select(definition => definition.Name));
 			    
 			    OnPropertyChanged(() => Transformers);
@@ -429,6 +445,8 @@ namespace Raven.Studio.Models
 
 	    Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
 	    private ICommand deleteMatchingResultsCommand;
+	    private ICommand addTransformer;
+	    private ICommand removeTransformer;
 
 	    private void HandleQueryError(Exception exception)
 		{
