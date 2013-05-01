@@ -115,12 +115,18 @@ namespace Raven.Studio.Models
 			{
 				return indexName;
 			}
-			private set
+			set
 			{
 				if (string.IsNullOrWhiteSpace(value))
-					UrlUtil.Navigate("/indexes");
+					NavigateToIndexesList();
 
-				indexName = value;
+                if (HasIndexChanged(value))
+                {
+                    NavigateToIndexQuery(value);
+                    return;
+                }
+
+			    indexName = value;
 				DocumentsResult.Context = "Index/" + indexName;
 				ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
@@ -132,8 +138,29 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		
-		private QueryOperator defaultOperator;
+	    private static void NavigateToIndexesList()
+	    {
+	        UrlUtil.Navigate("/indexes");
+	    }
+
+	    private static void NavigateToIndexQuery(string indexName)
+	    {
+	        UrlUtil.Navigate("/query/" + indexName);
+	    }
+
+	    private bool HasIndexChanged(string newIndexName)
+	    {
+            if (newIndexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+	        var currentIndex = new UrlParser(UrlUtil.Url.Substring(ModelUrl.Length)).Path.Trim('/');
+            return !newIndexName.Equals(currentIndex, StringComparison.OrdinalIgnoreCase);
+	    }
+
+
+	    private QueryOperator defaultOperator;
 		public QueryOperator DefaultOperator
 		{
 			get { return defaultOperator; }
@@ -393,11 +420,14 @@ namespace Raven.Studio.Models
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
+	        AvailableIndexes = new BindableCollection<string>(x => x);
 
 		    SpatialQuery = new SpatialQueryModel {IndexName = indexName};
 		}
 
-		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
+	    public BindableCollection<string> AvailableIndexes { get; private set; }
+
+	    Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
 	    private ICommand deleteMatchingResultsCommand;
 
 	    private void HandleQueryError(Exception exception)
@@ -459,6 +489,7 @@ namespace Raven.Studio.Models
         {
             var urlParser = new UrlParser(parameters);
 
+            UpdateAvailableIndexes();
             ClearCurrentQuery();
 
             if (urlParser.GetQueryParam("mode") == "dynamic")
@@ -486,7 +517,23 @@ namespace Raven.Studio.Models
             }
 
             IsDynamicQuery = false;
-            IndexName = urlParser.Path.Trim('/');
+            var newIndexName = urlParser.Path.Trim('/');
+
+            if (string.IsNullOrEmpty(newIndexName) || !AvailableIndexes.Contains(newIndexName))
+            {
+                if (AvailableIndexes.Any())
+                {
+                    NavigateToIndexQuery(AvailableIndexes.FirstOrDefault());
+                }
+                else
+                {
+                    NavigateToIndexesList();
+                }
+
+                return;
+            }
+
+            IndexName = newIndexName;
 
             DatabaseCommands.GetIndexAsync(IndexName)
                 .ContinueOnUIThread(task =>
@@ -545,13 +592,28 @@ namespace Raven.Studio.Models
                     SetSortByOptions(fields);
                     RestoreHistory();
                 }).Catch();
+
+
         }
+
+	    private void UpdateAvailableIndexes()
+	    {
+            if (Database.Value == null || Database.Value.Statistics.Value == null)
+            {
+                return;
+            }
+
+	        AvailableIndexes.Match(Database.Value.Statistics.Value.Indexes.Select(i => i.Name).ToArray());
+	    }
 
 	    private void ClearCurrentQuery()
 	    {
 	        Query = string.Empty;
             SortBy.Clear();
 			SpatialQuery.Clear();
+            ClearQueryError();
+            Suggestions.Clear();
+	        CollectionSource.Clear();
 	    }
 
 	    public bool HasTransform
@@ -795,6 +857,25 @@ namespace Raven.Studio.Models
                                 () => ApplicationModel.Current.AddInfoNotification("Documents successfully deleted"))
                             .Catch();
                     });
+        }
+
+        protected override void OnViewLoaded()
+        {
+            base.OnViewLoaded();
+
+            Database.ObservePropertyChanged()
+                            .TakeUntil(Unloaded)
+                            .Subscribe(_ =>
+                            {
+                                UpdateAvailableIndexes();
+
+                                Database.Value.Statistics.ObservePropertyChanged()
+                                        .TakeUntil(
+                                            Database.ObservePropertyChanged().Select(__ => Unit.Default).Amb(Unloaded))
+                                        .Subscribe(__ => UpdateAvailableIndexes());
+                            });
+
+            UpdateAvailableIndexes();
         }
 
 		private class RepairTermInQueryCommand : Command

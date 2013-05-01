@@ -302,6 +302,7 @@
     </Compile>
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
     <Compile Include="Features\JsonEditor\QuickDocumentView.xaml.cs">
@@ -1172,10 +1173,6 @@
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\Alerts.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Backup.xaml">
       <SubType>Designer</SubType>

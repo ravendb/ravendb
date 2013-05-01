@@ -63,13 +63,10 @@
 
 				<StackPanel Orientation="Horizontal"
                             Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
-					<HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
-                                     ToolTipService.ToolTip="{Binding IndexName}"
-                                     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-                                     Command="{StaticResource NavigateToCommand}"
-                                     CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
-                                     VerticalAlignment="Center" />
-				</StackPanel>
+                <ComboBox ItemsSource="{Binding AvailableIndexes}"
+                              SelectedItem="{Binding IndexName, Mode=TwoWay}"
+                              Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
+            </StackPanel>
 
 			<Controls1:NavTriangle/>
 			<TextBlock Text="Query"
@@ -149,6 +146,28 @@
 					</Button.Content>
 				</Button>
 
+                <Button x:Name="EditIndex"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Edit Index"
+                        VerticalAlignment="Center"
+                        Margin="0,0,6,0"
+                        Command="{StaticResource NavigateToCommand}"
+                        CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+                        Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"
+                        VerticalContentAlignment="Center">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_Edit_Small}"
+                                   Stretch="None"
+                                   VerticalAlignment="Center" />
+                            <TextBlock Text="Edit Index"
+                                       VerticalAlignment="Center"
+                                       Margin="2,0,0,0" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+                
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}" Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"/>
                 
                 <Button Command="{Binding DeleteMatchingResults}"
