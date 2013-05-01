@@ -19,32 +19,34 @@ namespace Raven.Database.Server.Security
 
 		public void Execute(DocumentDatabase database)
 		{
-			if (database.Configuration.IsSystemDatabase())
-			{
-				if (ValidateLicense.CurrentLicense.IsCommercial && ValidateLicense.CurrentLicense.Error == false)
-				{
-					SetValidCommercialLicenseMarker(database);
+		    if (database.Configuration.IsSystemDatabase() == false)
+		        return;
 
-					ValidateLicense.CurrentLicense.ValidCommercialLicenseSeen = true;
-				}
-				else
-				{
-					var marker = GetLastSeenValidCommercialLicenseMarker(database);
+		    if (ValidateLicense.CurrentLicense.IsCommercial && ValidateLicense.CurrentLicense.Error == false)
+		    {
+		        SetValidCommercialLicenseMarker(database);
 
-					if (marker != null)
-					{
-						ValidateLicense.CurrentLicense.ValidCommercialLicenseSeen = true;
-					}
-				}
-			}
+		        ValidateLicense.CurrentLicense.ValidCommercialLicenseSeen = true;
+		    }
+		    else
+		    {
+		        var marker = GetLastSeenValidCommercialLicenseMarker(database);
 
-			if (Authentication.IsEnabled == false)
-			{
-				database.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
-			}
+		        if (marker != null)
+		        {
+		            ValidateLicense.CurrentLicense.ValidCommercialLicenseSeen = true;
+		        }
+		    }
+
+		    if (Authentication.IsEnabled == false && database.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+		    {
+                throw new InvalidOperationException("Cannot set Raven/AnonymousAccess to '" + database.Configuration.AnonymousUserAccessMode+"' without a valid license.\r\n" +
+                                                    "This RavenDB instance doesn't have a license, and the only valid Raven/AnonymousAccess setting is: Admin\r\n" +
+                                                    "Please change to Raven/AnonymousAccess to Admin, or install a valid license.");
+		    }
 		}
 
-		private ListItem GetLastSeenValidCommercialLicenseMarker(DocumentDatabase database)
+	    private ListItem GetLastSeenValidCommercialLicenseMarker(DocumentDatabase database)
 		{
 			ListItem lastSeenValidCommercialLicense = null;
 
