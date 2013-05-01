@@ -46,7 +46,7 @@ namespace Raven.Studio.Models
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
 				IsNewTransformer = true;
-				Header = "New Index";
+				Header = "New Transformer";
 
 				UpdateFromTransformer(new TransformerDefinition());
 

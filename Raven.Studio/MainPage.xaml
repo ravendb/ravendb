@@ -255,10 +255,9 @@
 								<Image Source="{StaticResource Image_AddIndex_Tiny}"/>
 							</ContextMenu:MenuItem.Icon>
 						</ContextMenu:MenuItem>
-						<ContextMenu:Separator/>
-						<ContextMenu:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/query?mode=dynamic">
+						<ContextMenu:MenuItem Header="New Transformer" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/transformers/new?mode=new">
 							<ContextMenu:MenuItem.Icon>
-								<Image Source="{StaticResource Image_Query_Small}"/>
+								<Image Source="{StaticResource Image_Transformer_Add_Tiny}"/>
 							</ContextMenu:MenuItem.Icon>
 						</ContextMenu:MenuItem>
 					</Delay:SplitButton.ButtonMenuItemsSource>
