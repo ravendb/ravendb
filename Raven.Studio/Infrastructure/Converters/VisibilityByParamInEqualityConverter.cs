@@ -5,7 +5,7 @@ using System.Windows.Data;
 
 namespace Raven.Studio.Infrastructure.Converters
 {
-	public class VisibilityByParamInEqualityConverter : IValueConverter
+    public class VisibilityByParamInEqualityConverter : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{

@@ -18,6 +18,8 @@ namespace Raven.Abstractions.Data
 
 		public string LocalFolderName { get; set; }
 
+	    public string AzureStorageContainer { get; set; }
+
 		public int IntervalMilliseconds { get; set; }
 	}
 
