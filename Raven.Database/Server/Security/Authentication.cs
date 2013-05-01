@@ -9,12 +9,25 @@ namespace Raven.Database.Server.Security
 {
 	public static class Authentication
 	{
+	    private static bool isEnabled;
+
+        public static void EnableOnce()
+        {
+            isEnabled = true;
+        }
+
 		public static bool IsEnabled
 		{
 			get
 			{
-				return ValidateLicense.CurrentLicense.IsCommercial ||
-				       ValidateLicense.CurrentLicense.ValidCommercialLicenseSeen;
+                if (isEnabled)
+                {
+                    isEnabled = false;
+                    return true;
+                }
+
+			    return ValidateLicense.CurrentLicense.IsCommercial ||
+			           ValidateLicense.CurrentLicense.ValidCommercialLicenseSeen;
 			}
 		}
 	}
