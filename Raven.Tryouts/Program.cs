@@ -33,7 +33,7 @@ namespace Raven.Tryouts
 			Console.ReadLine();
 			//CreateData();
 
-          //  CreateIndex();
+           // CreateIndex();
 
 		    Test();
 
@@ -142,7 +142,7 @@ namespace Raven.Tryouts
 			var values = Enum.GetValues(typeof(Currency));
 			var products = new List<string> {"RavenDB", "RavenFS", "UberProf", "NHibernate"};
 
-			for (int i = 0; i < 20703; i++)
+			for (int i = 0; i < 1000000; i++)
 			{
 			    yield return (new Order
                  {
