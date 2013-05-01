@@ -58,6 +58,7 @@
                                Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
 					<ComboBox ItemsSource="{Binding DynamicOptions}"
                               SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}"
+                              MaxWidth="400"
                               Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
 				</StackPanel>
 
@@ -65,6 +66,7 @@
                             Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
                 <ComboBox ItemsSource="{Binding AvailableIndexes}"
                               SelectedItem="{Binding IndexName, Mode=TwoWay}"
+                          MaxWidth="400"
                               Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
             </StackPanel>
 
