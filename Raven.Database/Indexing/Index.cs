@@ -606,6 +606,11 @@ namespace Raven.Database.Indexing
 
 		public abstract void Remove(string[] keys, WorkContext context);
 
+		internal IndexSearcherHolder.IndexSearcherHoldingState GetCurrentStateHolder()
+		{
+			return currentIndexSearcherHolder.GetCurrentStateHolder();
+		}
+
 		internal IDisposable GetSearcher(out IndexSearcher searcher)
 		{
 			return currentIndexSearcherHolder.GetSearcher(out searcher);

@@ -10,11 +10,16 @@ namespace Raven.Abstractions.Data
 {
 	public class Facet
 	{
+		private string displayName;
 		public FacetMode Mode { get; set; }
         public FacetAggregation Aggregation { get; set; }
         public string AggregationField { get; set; }
 		public string Name { get; set; }
-		public string DisplayName { get; set; }
+		public string DisplayName
+		{
+			get { return displayName ?? Name; }
+			set { displayName = value; }
+		}
 		public List<string> Ranges { get; set; }
 		public int? MaxResults { get; set; }
 		public FacetTermSortMode TermSortMode { get; set; }

@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Database.Server.Security;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Client;
 using Raven.Database.Config;
@@ -32,6 +33,7 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            Authentication.EnableOnce();
 		}
 
 		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
@@ -98,7 +100,6 @@ namespace Raven.Tests.Security.OAuth
 		[Fact]
 		public void RequestsWithAnInvalidAccessTokenShouldBeRejected()
 		{
-
 			using (var server = GetNewServer())
 			{
 				var token = GetAccessToken(server, valid: false);

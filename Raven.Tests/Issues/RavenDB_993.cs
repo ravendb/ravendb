@@ -233,7 +233,7 @@ namespace Raven.Tests.Issues
 			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
 			{
 				Settings = { { "Raven/ActiveBundles", "replication" } },
-				AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
+                AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.Admin,
 				DataDirectory = dataDirectory,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = false,
