@@ -169,6 +169,7 @@
 								 CommandParameter="/indexes">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
+                            <System:String>/transformers</System:String>
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
                     <Delay:SplitHyperlinkButtonPopup.PopupContent>
