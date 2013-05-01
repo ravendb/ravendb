@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs.DTC
 
 				var transactionInformation = new TransactionInformation
 				{
-					Id = Guid.NewGuid()
+					Id = Guid.NewGuid().ToString()
 				};
 
 				store.DocumentDatabase.Put(documentKey, null, new RavenJObject(),
@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs.DTC
 
 				var deleteTx = new TransactionInformation
 				{
-					Id = Guid.NewGuid()
+                    Id = Guid.NewGuid().ToString()
 				};
 				store.DocumentDatabase.Delete(documentKey, null, deleteTx);
 

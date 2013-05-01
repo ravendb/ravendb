@@ -1398,11 +1398,11 @@ namespace Raven.Client.Connection
 			return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 		}
 
-		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void Commit(Guid txId)
+	    /// <summary>
+	    /// Commits the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public void Commit(string txId)
 		{
 			ExecuteWithReplication<object>("POST", u =>
 			{
@@ -1411,7 +1411,7 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		private void DirectCommit(Guid txId, string operationUrl)
+		private void DirectCommit(string txId, string operationUrl)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention)
@@ -1422,11 +1422,11 @@ namespace Raven.Client.Connection
 			httpJsonRequest.ReadResponseJson();
 		}
 
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void Rollback(Guid txId)
+	    /// <summary>
+	    /// Rollbacks the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public void Rollback(string txId)
 		{
 			ExecuteWithReplication<object>("POST", u =>
 			{
@@ -1436,7 +1436,7 @@ namespace Raven.Client.Connection
 		}
 
 
-		private void DirectRollback(Guid txId, string operationUrl)
+		private void DirectRollback(string txId, string operationUrl)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)

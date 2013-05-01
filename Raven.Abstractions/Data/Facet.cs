@@ -2,10 +2,8 @@
 using System.Linq.Expressions;
 using System.Linq;
 using System;
-using System.Globalization;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util;
 
 namespace Raven.Abstractions.Data
@@ -13,6 +11,8 @@ namespace Raven.Abstractions.Data
 	public class Facet
 	{
 		public FacetMode Mode { get; set; }
+        public FacetAggregation Aggregation { get; set; }
+        public string AggregationField { get; set; }
 		public string Name { get; set; }
 		public List<string> Ranges { get; set; }
 		public int? MaxResults { get; set; }
@@ -93,13 +93,15 @@ namespace Raven.Abstractions.Data
 
 				var leftMember = left.Left as MemberExpression;
 				var rightMember = right.Left as MemberExpression;
-				var validOperators = (left.NodeType == ExpressionType.LessThan && right.NodeType == ExpressionType.GreaterThan) ||
-									(left.NodeType == ExpressionType.GreaterThan && right.NodeType == ExpressionType.LessThan);
+				var validOperators = ((left.NodeType == ExpressionType.LessThan || left.NodeType == ExpressionType.LessThanOrEqual) 
+					&& (right.NodeType == ExpressionType.GreaterThan) || right.NodeType == ExpressionType.GreaterThanOrEqual) ||
+					((left.NodeType == ExpressionType.GreaterThan || left.NodeType == ExpressionType.GreaterThanOrEqual) 
+					&& (right.NodeType == ExpressionType.LessThan || right.NodeType == ExpressionType.LessThanOrEqual));
 				var validMemberNames = leftMember != null && rightMember != null && 
 										GetFieldName(leftMember) == GetFieldName(rightMember);
 				if (validOperators && validMemberNames)
 				{
-					return GetStringRepresentation(right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
+					return GetStringRepresentation(left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
 				}
 			}
 			throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
@@ -169,17 +171,30 @@ namespace Raven.Abstractions.Data
 				return String.Format("[NULL TO {0}]", valueAsStr);
 			if (op == ExpressionType.GreaterThan)
 				return String.Format("[{0} TO NULL]", valueAsStr);
+			if (op == ExpressionType.LessThanOrEqual)
+				return String.Format("[NULL TO {0}}}", valueAsStr);
+			if (op == ExpressionType.GreaterThanOrEqual)
+				return String.Format("{{{0} TO NULL]", valueAsStr);
 			throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
 		}
 
-		private static string GetStringRepresentation(ExpressionType op, object lValue, object rValue)
+		private static string GetStringRepresentation(ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
 		{
 			var lValueAsStr = GetStringValue(lValue);
 			var rValueAsStr = GetStringValue(rValue);
 			if (lValueAsStr != null && rValueAsStr != null)
-				return String.Format("[{0} TO {1}]",lValueAsStr, rValueAsStr);            
-			throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
+				return String.Format("{0}{1} TO {2}{3}",CalculateBraces(leftOp, true), lValueAsStr, rValueAsStr, CalculateBraces(rightOp, false));
+			throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
 		}
+
+		private static string CalculateBraces(ExpressionType op, bool isLeft)
+		{
+			if (op == ExpressionType.GreaterThanOrEqual || op == ExpressionType.LessThanOrEqual)
+				return isLeft ? "{" : "}";
+
+			return isLeft ? "[" : "]";
+		}
+
 
 		private static string GetStringValue(object value)
 		{

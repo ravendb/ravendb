@@ -270,6 +270,16 @@ namespace Raven.Client.Connection.Async
 		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
 		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize);
+
+		/// <summary>
 		/// Gets the Logs
 		/// </summary>
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
@@ -344,7 +354,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
 #endif
-	
+
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands

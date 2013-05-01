@@ -55,7 +55,7 @@ namespace Raven.Client.Document
 				{
 					var writer = new BinaryWriter(stream);
 					writer.Write(session.ResourceManagerId.ToString());
-					writer.Write(GetLocalOrDistributedTransactionId(transaction).ToString());
+					writer.Write(transaction.LocalIdentifier);
 					writer.Write(session.DatabaseName ?? "");
 					writer.Write(preparingEnlistment.RecoveryInformation());
 				});
@@ -65,7 +65,7 @@ namespace Raven.Client.Document
 				logger.ErrorException("Could not prepare distributed transaction", e);
 			    try
 			    {
-                    session.Rollback(GetLocalOrDistributedTransactionId(transaction));
+                    session.Rollback(transaction.LocalIdentifier);
                     DeleteFile();
 			    }
 			    catch (Exception e2)
@@ -90,7 +90,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Commit(GetLocalOrDistributedTransactionId(transaction));
+                session.Commit(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -112,7 +112,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Rollback(GetLocalOrDistributedTransactionId(transaction));
+                session.Rollback(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -138,7 +138,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Rollback(GetLocalOrDistributedTransactionId(transaction));
+                session.Rollback(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -166,7 +166,7 @@ namespace Raven.Client.Document
 			onTxComplete();
 			try
 			{
-				session.Rollback(GetLocalOrDistributedTransactionId(transaction));
+                session.Rollback(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -178,31 +178,6 @@ namespace Raven.Client.Document
 			}
 			singlePhaseEnlistment.Aborted();
 			ctx.Dispose();
-		}
-
-
-		/// <summary>
-		/// Gets the local or distributed transaction id.
-		/// </summary>
-		/// <param name="transactionInformation">The transaction information.</param>
-		/// <returns></returns>
-		public static Guid GetLocalOrDistributedTransactionId(TransactionInformation transactionInformation)
-		{
-			if (transactionInformation.DistributedIdentifier != Guid.Empty)
-				return transactionInformation.DistributedIdentifier;
-			string[] parts = transactionInformation.LocalIdentifier.Split(':');
-			if (parts.Length != 2)
-				throw new InvalidOperationException("Could not parse TransactionInformation.LocalIdentifier: " + transactionInformation.LocalIdentifier);
-
-			var localOrDistributedTransactionId = new Guid(parts[0]);
-			var num = BitConverter.GetBytes(int.Parse(parts[1]));
-			byte[] txId = localOrDistributedTransactionId.ToByteArray();
-			for (int i = 0; i < num.Length; i++)
-			{
-				txId[txId.Length - 1 - i] ^= num[i];
-			}
-			var transactionId = new Guid(txId);
-			return transactionId;
 		}
 	}
 }

@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -240,9 +241,19 @@ namespace Raven.Tests.Helpers
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
+			WaitForBackup(key => db.Get(key, null), checkError);
+		}
+
+		protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
+		{
+			WaitForBackup(commands.Get, checkError);
+		}
+
+		private void WaitForBackup(Func<string, JsonDocument> getDocument, bool checkError)
+		{
 			var done = SpinWait.SpinUntil(() =>
 			{
-				var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+				var jsonDocument = getDocument(BackupStatus.RavenBackupStatusDocumentKey);
 				if (jsonDocument == null)
 					return true;
 

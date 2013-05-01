@@ -433,7 +433,7 @@ namespace Raven.Client.Document.Async
 		/// Commits the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public override void Commit(Guid txId)
+		public override void Commit(string txId)
 		{
 			throw new NotImplementedException();
 		}
@@ -442,7 +442,7 @@ namespace Raven.Client.Document.Async
 		/// Rollbacks the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public override void Rollback(Guid txId)
+        public override void Rollback(string txId)
 		{
 			throw new NotImplementedException();
 		}

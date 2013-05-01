@@ -1374,12 +1374,25 @@ namespace Raven.Database.Indexing
 
 						if (existingFiles.Contains(fileName) == false)
 						{
-							File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
+							var destFileName = Path.Combine(saveToFolder, fileName);
+							try
+							{
+								File.Copy(fullPath, destFileName);
+							}
+							catch (Exception e)
+							{
+								logIndexing.WarnException(
+									"Could not backup index " + name +
+									" because failed to copy file : " + fullPath + ". Skipping the index, will force index reset on restore", e);
+								neededFilesWriter.Dispose();
+								TryDelete(neededFilePath); 
+								return;
+
+							}
 							allFilesWriter.WriteLine(fileName);
 						}
 						neededFilesWriter.WriteLine(fileName);
 					}
-
 					allFilesWriter.Flush();
 					neededFilesWriter.Flush();
 				}

@@ -5,39 +5,38 @@
                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                      mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
                      xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-                     xmlns:Models="clr-namespace:Raven.Studio.Models"
                      xmlns:Settings="clr-namespace:Raven.Studio.Features.Settings" 
-                     d:DataContext="{d:DesignInstance Models:SettingsModel}">
+                     d:DataContext="{d:DesignInstance Settings:SettingsModel}">
 
 	<UserControl.Resources>
-        <DataTemplate DataType="Models:QuotaSettingsSectionModel">
+        <DataTemplate DataType="Settings:QuotaSettingsSectionModel">
             <Settings:QuotasSettingsSectionView/>
         </DataTemplate>
-        <DataTemplate DataType="Models:DatabaseSettingsSectionViewModel">
+        <DataTemplate DataType="Settings:DatabaseSettingsSectionViewModel">
             <Settings:DatabaseSettingsSectionView/>
         </DataTemplate>
-        <DataTemplate DataType="Models:ReplicationSettingsSectionModel">
+        <DataTemplate DataType="Settings:ReplicationSettingsSectionModel">
             <Settings:ReplicationsSettingsSectionView/>
         </DataTemplate>
-		<DataTemplate DataType="Models:SqlReplicationSettingsSectionModel">
+		<DataTemplate DataType="Settings:SqlReplicationSettingsSectionModel">
 			<Settings:SqlReplicationsSettingsSectionView/>
 		</DataTemplate>
-		<DataTemplate DataType="Models:VersioningSettingsSectionModel">
+		<DataTemplate DataType="Settings:VersioningSettingsSectionModel">
             <Settings:VersioningSettingsView/>
         </DataTemplate>
-        <DataTemplate DataType="Models:AuthorizationSettingsSectionModel">
+        <DataTemplate DataType="Settings:AuthorizationSettingsSectionModel">
             <Settings:AuthorizationSettingSectionView/>
         </DataTemplate>
-		<DataTemplate DataType="Models:ApiKeysSectionModel">
+		<DataTemplate DataType="Settings:ApiKeysSectionModel">
 			<Settings:ApiKeysSettingSectionView/>
 		</DataTemplate>
-		<DataTemplate DataType="Models:WindowsAuthSettingsSectionModel">
+		<DataTemplate DataType="Settings:WindowsAuthSettingsSectionModel">
 			<Settings:WindowsAuthSettingSectionView/>
 		</DataTemplate>
-		<DataTemplate DataType="Models:PeriodicBackupSettingsSectionModel">
+		<DataTemplate DataType="Settings:PeriodicBackupSettingsSectionModel">
 			<Settings:PeriodicBackupSettingsSectionView/>
 		</DataTemplate>
-		<DataTemplate DataType="Models:NoSettingsSectionModel">
+		<DataTemplate DataType="Settings:NoSettingsSectionModel">
 		</DataTemplate>
 	</UserControl.Resources>
 

@@ -124,7 +124,7 @@ namespace Raven.Storage.Managed
 			var resultInTx = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			if (transactionInformation != null && resultInTx != null)
 			{
-				if (new Guid(resultInTx.Key.Value<byte[]>("txId")) == transactionInformation.Id)
+				if (resultInTx.Key.Value<string>("txId") == transactionInformation.Id)
 				{
 					if (resultInTx.Key.Value<bool>("deleted"))
 						return null;
@@ -174,7 +174,7 @@ namespace Raven.Storage.Managed
 		{
 			if (resultInTx == null)
 				return false;
-			var txId = resultInTx.Key.Value<byte[]>("txId");
+			var txId = resultInTx.Key.Value<string>("txId");
 			var tx = storage.Transactions.Read(new RavenJObject
 			{
 				{"txId", txId}

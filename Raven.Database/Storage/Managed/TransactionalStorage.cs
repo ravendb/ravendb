@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
@@ -31,7 +32,6 @@ namespace Raven.Storage.Managed
 		private TableStorage tableStorage;
 
 		private OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
-
 		public TableStorage TableStorage
 		{
 			get { return tableStorage; }
@@ -44,8 +44,9 @@ namespace Raven.Storage.Managed
 		private long lastUsageTime;
 		private IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher documentCacher;
+	    private DisposableAction exitLockDisposable;
 
-		public IPersistentSource PersistenceSource
+	    public IPersistentSource PersistenceSource
 		{
 			get { return persistenceSource; }
 		}
@@ -55,6 +56,7 @@ namespace Raven.Storage.Managed
 			this.configuration = configuration;
 			this.onCommit = onCommit;
 			documentCacher = new DocumentCacher(configuration);
+		    exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
 		}
 
 		public void Dispose()
@@ -87,14 +89,22 @@ namespace Raven.Storage.Managed
 			private set;
 		}
 
-		[DebuggerNonUserCode]
+	    public IDisposable WriteLock()
+	    {
+	        Monitor.Enter(this);
+            return exitLockDisposable;
+	    }
+
+	    [DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
 			{
 				if (current.Value != null) // check again, just to be sure
 				{
+				    current.Value.IsNested = true;
 					action(current.Value);
+				    current.Value.IsNested = false;
 					return;
 				}
 			}

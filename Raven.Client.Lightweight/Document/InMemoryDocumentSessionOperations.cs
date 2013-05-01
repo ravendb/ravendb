@@ -1072,12 +1072,12 @@ more responsive application.
 		/// Commits the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public abstract void Commit(Guid txId);
+		public abstract void Commit(string txId);
 		/// <summary>
 		/// Rollbacks the specified tx id.
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
-		public abstract void Rollback(Guid txId);
+		public abstract void Rollback(string txId);
 
 #if !SILVERLIGHT
 		/// <summary>

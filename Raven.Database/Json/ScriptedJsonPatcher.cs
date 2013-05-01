@@ -59,7 +59,7 @@ namespace Raven.Database.Json
 			}
 		}
 
-		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0)
+		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
 		{
 			if (document == null)
 				return null;
@@ -67,13 +67,13 @@ namespace Raven.Database.Json
 			if (String.IsNullOrEmpty(patch.Script))
 				throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-			var resultDocument = ApplySingleScript(document, patch, size);
+			var resultDocument = ApplySingleScript(document, patch, size, docId);
 			if (resultDocument != null)
 				document = resultDocument;
 			return document;
 		}
 
-		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size)
+		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size, string docId)
 		{
 			JintEngine jintEngine;
 			try
@@ -96,39 +96,46 @@ namespace Raven.Database.Json
 			loadDocumentStatic = loadDocument;
 			try
 			{
-				CustomizeEngine(jintEngine);
-				
-				foreach (var kvp in patch.Values)
-				{
-				    var token = kvp.Value as RavenJToken;
-				    if (token != null)
-					{
-						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
-					}
-					else
-					{
-						var rjt = RavenJToken.FromObject(kvp.Value);
-						var jsInstance = ToJsInstance(jintEngine.Global, rjt);
-						jintEngine.SetParameter(kvp.Key, jsInstance);
-					}
-				}
+			    CustomizeEngine(jintEngine);
+                CreatedDocs = new List<JsonDocument>();
+			    jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>) (PutDocument)));
+			    jintEngine.SetParameter("__document_id", docId);
+			    foreach (var kvp in patch.Values)
+			    {
+			        var token = kvp.Value as RavenJToken;
+			        if (token != null)
+			        {
+			            jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
+			        }
+			        else
+			        {
+			            var rjt = RavenJToken.FromObject(kvp.Value);
+			            var jsInstance = ToJsInstance(jintEngine.Global, rjt);
+			            jintEngine.SetParameter(kvp.Key, jsInstance);
+			        }
+			    }
 			    var jsObject = ToJsObject(jintEngine.Global, doc);
-				jintEngine.ResetSteps();
-				if (size != 0)
-				{
-					jintEngine.SetMaxSteps(maxSteps + (size* additionalStepsPerSize));
-				}
-				jintEngine.CallFunction("ExecutePatchScript", jsObject);
-				foreach (var kvp in patch.Values)
-				{
-					jintEngine.RemoveParameter(kvp.Key);
-				}
-				RemoveEngineCustomizations(jintEngine);
-				OutputLog(jintEngine);
+			    jintEngine.ResetSteps();
+			    if (size != 0)
+			    {
+			        jintEngine.SetMaxSteps(maxSteps + (size*additionalStepsPerSize));
+			    }
+			    jintEngine.CallFunction("ExecutePatchScript", jsObject);
+			    foreach (var kvp in patch.Values)
+			    {
+			        jintEngine.RemoveParameter(kvp.Key);
+			    }
+			    jintEngine.RemoveParameter("__document_id");
+			    RemoveEngineCustomizations(jintEngine);
+			    OutputLog(jintEngine);
 
-				scriptsCache.CheckinScript(patch, jintEngine);
+			    scriptsCache.CheckinScript(patch, jintEngine);
 
-				return ConvertReturnValue(jsObject);
+			    return ConvertReturnValue(jsObject);
+			}
+			catch (ConcurrencyException)
+			{
+			    throw;
 			}
 			catch (Exception errorEx)
 			{
@@ -322,11 +329,7 @@ function ExecutePatchScript(docInner){{
 				return ToJsObject(jintEngine.Global, loadedDoc);
 			})));
 
-			CreatedDocs = new List<JsonDocument>();
-
-			jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>)(PutDocument)));
-
-			jintEngine.Run(wrapperScript);
+            jintEngine.Run(wrapperScript);
 
 			return jintEngine;
 		}

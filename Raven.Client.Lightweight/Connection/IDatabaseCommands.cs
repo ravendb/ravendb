@@ -237,17 +237,17 @@ namespace Raven.Client.Connection
 		/// <param name="commandDatas">The command data.</param> 
 		BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
-		/// <summary>
-		/// Commits the specified tx id
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void Commit(Guid txId);
+	    /// <summary>
+	    /// Commits the specified tx id
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    void Commit(string txId);
 
-		/// <summary>
-		/// Rollbacks the specified tx id
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void Rollback(Guid txId);
+	    /// <summary>
+	    /// Rollbacks the specified tx id
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    void Rollback(string txId);
 
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials

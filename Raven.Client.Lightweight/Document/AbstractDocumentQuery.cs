@@ -1073,7 +1073,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			queryText.Append(whereParams.FieldName);
+			queryText.Append(RavenQuery.EscapeField(whereParams.FieldName));
 			queryText.Append(":");
 			queryText.Append(transformToEqualValue);
 		}
@@ -1229,7 +1229,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			queryText.Append(fieldName).Append(":{");
+			queryText.Append(RavenQuery.EscapeField(fieldName)).Append(":{");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
@@ -1256,7 +1256,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			queryText.Append(fieldName).Append(":[");
+			queryText.Append(RavenQuery.EscapeField(fieldName)).Append(":[");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
@@ -1723,6 +1723,9 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if(isSpatialQuery)
 			{
+				if (indexName == "dynamic" || indexName.StartsWith("dynamic/"))
+					throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
+
 				return new SpatialIndexQuery
 				{
 					GroupBy = groupByFields,

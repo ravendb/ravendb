@@ -14,6 +14,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client
 {
@@ -47,6 +48,14 @@ namespace Raven.Client
 		{
 			source.Customize(x => x.Include<TResult, TInclude>(path));
 			return source;
+		}
+
+		/// <summary>
+		/// Query the facets results for this query using aggregat`ion
+		/// </summary>
+		public static DynamicAggregationQuery<T> AggregateBy<T>(this IQueryable<T> queryable, Expression<Func<T, object>> path)
+		{
+			return new DynamicAggregationQuery<T>(queryable, path);
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE
@@ -205,6 +214,25 @@ namespace Raven.Client
 			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
 
 			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync( ravenQueryInspector.AsyncIndexQueried, query, facetSetupDoc, start, pageSize );
+		}
+
+		/// <summary>
+		/// Async Query the facets results for this query using the specified list of facets with the given start and pageSize
+		/// </summary>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+		{
+			var facetsList = facets.ToList();
+
+			if (!facetsList.Any())
+				throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
+			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
+
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, query, facetsList, start, pageSize);
 		}
 
 		/// <summary>

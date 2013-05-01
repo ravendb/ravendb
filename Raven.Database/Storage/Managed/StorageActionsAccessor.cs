@@ -57,7 +57,9 @@ namespace Raven.Storage.Managed
 
 		public IMappedResultsStorageAction MapReduce { get; private set; }
 
-		public event Action OnStorageCommit;
+	    public bool IsNested { get; set; }
+
+	    public event Action OnStorageCommit;
 
 		public bool IsWriteConflict(Exception exception)
 		{

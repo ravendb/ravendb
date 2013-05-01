@@ -674,21 +674,21 @@ namespace Raven.Client.Embedded
 			return batchResults;
 		}
 
-		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void Commit(Guid txId)
+	    /// <summary>
+	    /// Commits the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public void Commit(string txId)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.Commit(txId);
 		}
 
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void Rollback(Guid txId)
+	    /// <summary>
+	    /// Rollbacks the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public void Rollback(string txId)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.Rollback(txId);

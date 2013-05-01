@@ -504,7 +504,7 @@ PutDocument(
                     Script = @"PutDocument(
 'Items/1', 
 { 'Property':'Value'},
-{'@etag': '01000000-0000-0001-0000-000000000010'} );",
+{'@etag': '01000000-0000-0003-0000-0000000000A0'} );",
 				}));
 
 				Assert.Contains("PUT attempted on document 'Items/1' using a non current etag", x.Message);

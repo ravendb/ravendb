@@ -34,7 +34,7 @@ namespace Raven.Client.Document.DTC
 			{
 				foreach (var file in ctx.GetFileNames("*.recovery-information"))
 				{
-					var txId = Guid.Empty;
+				    var txId = string.Empty;
 					try
 					{
 						Stream stream;
@@ -57,7 +57,7 @@ namespace Raven.Client.Document.DTC
 							if (myResourceManagerId != resourceManagerId)
 								continue; // it doesn't belong to us, ignore
 							filesToDelete.Add(file);
-							txId = new Guid(reader.ReadString());
+							txId = reader.ReadString();
 
 							var db = reader.ReadString();
 
@@ -108,9 +108,9 @@ namespace Raven.Client.Document.DTC
 		public class InternalEnlistment : IEnlistmentNotification
 		{
 			private readonly IDatabaseCommands database;
-			private readonly Guid txId;
+			private readonly string txId;
 
-			public InternalEnlistment(IDatabaseCommands database, Guid txId)
+			public InternalEnlistment(IDatabaseCommands database, string txId)
 			{
 				this.database = database;
 				this.txId = txId;
