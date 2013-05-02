@@ -310,6 +310,9 @@
     </Compile>
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
+    <Compile Include="Features\Reporting\ReportingView.xaml.cs">
+      <DependentUpon>ReportingView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
       <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
     </Compile>
@@ -350,6 +353,7 @@
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
     <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
+    <Compile Include="Models\ReportingModel.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
     <Compile Include="Models\StatusModel.cs" />
     <Compile Include="Models\StatusPageModel.cs" />
@@ -657,6 +661,9 @@
     </Compile>
     <Compile Include="Views\Patch.xaml.cs">
       <DependentUpon>Patch.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Reporting.xaml.cs">
+      <DependentUpon>Reporting.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Restore.xaml.cs">
       <DependentUpon>Restore.xaml</DependentUpon>
@@ -1026,6 +1033,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Reporting\ReportingView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Stats\AlertsStatusSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1195,6 +1206,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Patch.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Reporting.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

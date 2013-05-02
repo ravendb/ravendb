@@ -338,6 +338,8 @@
 											  MappedUri="/Views/Transformer.xaml" />
 						<sdk:UriMapping Uri="/query/{indexName}"
 											  MappedUri="/Views/Query.xaml" />
+						<sdk:UriMapping Uri="/reporting/{indexName}"
+											  MappedUri="/Views/Reporting.xaml" />
 						<sdk:UriMapping Uri="/logs/{errors}"
 											  MappedUri="/Views/Logs.xaml" />
 						<sdk:UriMapping Uri="/terms/{indexName}"

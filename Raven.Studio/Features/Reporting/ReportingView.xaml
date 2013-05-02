@@ -1,0 +1,95 @@
+﻿<infrastructure:PageView x:Class="Raven.Studio.Features.Reporting.ReportingView"
+						 x:Name="this"
+						 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+						 mc:Ignorable="d"
+						 xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+						 xmlns:infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:sdk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+                         xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
+                         xmlns:ContextMenu="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
+                         xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                         xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+                         xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions"
+                         xmlns:media="clr-namespace:Microsoft.Expression.Interactivity.Media;assembly=Microsoft.Expression.Interactions"
+                         xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input"
+                         xmlns:toolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         d:DesignWidth="640" d:DesignHeight="480"
+						 d:DataContext="{d:DesignInstance Models:ReportingModel}"
+						 Title="ReportingView Page">
+
+	<Grid Margin="{StaticResource Margin_ContentPage}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		<Border Background="{StaticResource Brush_HeaderBackground}"
+				BorderBrush="{StaticResource Brush_HeaderBorder}"
+				Margin="0,0,0,0"
+				CornerRadius="4,4,0,0"
+				BorderThickness="1,1,1,0"
+				Grid.Row="0"/>
+		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+			<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
+			<HyperlinkButton Content="Indexes"
+                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="/Indexes"
+                                 VerticalAlignment="Center" />
+			<Controls1:NavTriangle/>
+
+			<StackPanel Orientation="Horizontal">
+				<ComboBox ItemsSource="{Binding AvailableIndexes}"
+                              SelectedItem="{Binding IndexName, Mode=TwoWay}"
+                          Width="300"
+                              Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
+			</StackPanel>
+
+			<Controls1:NavTriangle/>
+			<TextBlock Text="Reporting"
+                           Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                           VerticalAlignment="Center" />
+		</StackPanel>
+
+		<Border Background="{StaticResource Brush_ToolbarBackground}"
+                Grid.Row="1">
+			<StackPanel Orientation="Horizontal"
+						Margin="0,4,4,4"
+						VerticalAlignment="Center">
+
+				<Button Command="{Binding Execute}"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Show the Results of the Query (Ctrl+Enter)">
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image Source="{StaticResource Image_ExecuteQuery_Small}"
+                                   Stretch="None"
+								   />
+							<TextBlock Text="Execute" Margin="2,0,0,0" />
+						</StackPanel>
+					</Button.Content>
+				</Button>
+			</StackPanel>
+		</Border>
+
+		<Grid Grid.Row="2">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<StackPanel Orientation="Horizontal">
+					<TextBlock Text="Collection to report on: "/>
+					<ComboBox ItemsSource="{Binding AvailableCollections}"
+						  SelectedItem="{Binding SelectedCollection, Mode=TwoWay}"/>
+				</StackPanel>
+			</Grid>
+		</Grid>
+	</Grid>
+</infrastructure:PageView>
