@@ -521,7 +521,7 @@ namespace Raven.Database.Indexing
 								ex =>
 								{
 									logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-									Context.AddError(name, null, ex.Message);
+									Context.AddError(name, null, ex.Message, "AnErrorOccured Trigger");
 								},
 								x => x.AnErrorOccured(e));
 						}
@@ -535,7 +535,7 @@ namespace Raven.Database.Indexing
 								e =>
 								{
 									logIndexing.WarnException("Failed to dispose on index update trigger", e);
-									Context.AddError(name, null, e.Message);
+									Context.AddError(name, null, e.Message, "Dispose Trigger");
 								},
 								x => x.Dispose());
 						}
@@ -580,7 +580,7 @@ namespace Raven.Database.Indexing
 							string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
 										  name, reduceKeyAsString),
 							exception);
-						Context.AddError(name, reduceKeyAsString, exception.Message);
+						Context.AddError(name, reduceKeyAsString, exception.Message, "OnIndexEntryCreated Trigger");
 					},
 					trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 
@@ -602,7 +602,7 @@ namespace Raven.Database.Indexing
 								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
 											  name, entryKey),
 								exception);
-							Context.AddError(name, entryKey, exception.Message);
+							Context.AddError(name, entryKey, exception.Message, "OnIndexEntryDeleted Trigger");
 						},
 						trigger => trigger.OnIndexEntryDeleted(entryKey));
 				}

@@ -238,6 +238,7 @@
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\MouseHoverTrigger.cs" />
     <Compile Include="Behaviors\ResizeDragBehavior.cs" />
+    <Compile Include="Behaviors\ShowQuickDocumentPopupBehavior.cs" />
     <Compile Include="Behaviors\SizeBindings.cs" />
     <Compile Include="Behaviors\StudioDataTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
@@ -288,6 +289,7 @@
     <Compile Include="Controls\ResetReplication.xaml.cs">
       <DependentUpon>ResetReplication.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Extensions\RectExtensions.cs" />
     <Compile Include="Features\Bundles\SqlReplicationConfigModel.cs" />
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
     <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
@@ -300,6 +302,7 @@
     </Compile>
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
     <Compile Include="Features\JsonEditor\QuickDocumentView.xaml.cs">
@@ -1164,6 +1167,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Impl\SplitButton\Themes\generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

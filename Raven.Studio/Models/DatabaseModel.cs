@@ -82,7 +82,7 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => StatusImage);
 		}
 
-		public void UpdateDatabaseDocument()
+		public void Update()
 		{
 			if (ApplicationModel.Current != null)
 				ApplicationModel.Current.Server.Value.DocumentStore
@@ -100,6 +100,8 @@ namespace Raven.Studio.Models
 						};
 						OnPropertyChanged(() => HasReplication);
 					});
+
+            RefreshStatistics();
 		}
 
 		public bool HasReplication

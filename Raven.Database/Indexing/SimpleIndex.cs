@@ -72,7 +72,8 @@ namespace Raven.Database.Indexing
 									exception);
 								context.AddError(name,
 								                 documentId,
-								                 exception.Message
+								                 exception.Message,
+                                                 "OnIndexEntryDeleted Trigger"
 									);
 							},
 							trigger => trigger.OnIndexEntryDeleted(documentId));
@@ -121,7 +122,8 @@ namespace Raven.Database.Indexing
 												exception);
 											context.AddError(name,
 															 indexingResult.NewDocId,
-															 exception.Message
+															 exception.Message,
+                                                             "OnIndexEntryCreated Trigger"
 												);
 										},
 										trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
@@ -150,7 +152,7 @@ namespace Raven.Database.Indexing
 						ex =>
 						{
 							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-							context.AddError(name, null, ex.Message);
+							context.AddError(name, null, ex.Message, "AnErrorOccured Trigger");
 						},
 						x => x.AnErrorOccured(e));
 					throw;
@@ -161,7 +163,7 @@ namespace Raven.Database.Indexing
 						e =>
 						{
 							logIndexing.WarnException("Failed to dispose on index update trigger", e);
-							context.AddError(name, null, e.Message);
+							context.AddError(name, null, e.Message, "Dispose Trigger");
 						},
 						x => x.Dispose());
 				}
@@ -318,7 +320,7 @@ namespace Raven.Database.Indexing
 								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
 								              name, key),
 								exception);
-							context.AddError(name, key, exception.Message);
+							context.AddError(name, key, exception.Message, "OnIndexEntryDeleted Trigger");
 						},
 						trigger => trigger.OnIndexEntryDeleted(key)));
 				writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
@@ -326,7 +328,7 @@ namespace Raven.Database.Indexing
 					e =>
 					{
 						logIndexing.WarnException("Failed to dispose on index update trigger", e);
-						context.AddError(name, null, e.Message);
+						context.AddError(name, null, e.Message, "Dispose Trigger");
 					},
 					batcher => batcher.Dispose());
 

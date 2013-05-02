@@ -41,13 +41,27 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"
+                            <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Center" Grid.Row="0" Grid.Column="0"
                                        Margin="0,0,4,0"/>
-                            <TextBlock Text="{Binding IndexName}"
-                                       Behaviors:FadeTrimming.IsEnabled="True" 
+                            <toolkit:DockPanel LastChildFill="False" 
                                        Grid.Row="0" 
                                        Grid.Column="1" 
-                                       VerticalAlignment="Top"/>
+                                       VerticalAlignment="Center">
+                            <TextBlock Text="{Binding IndexName}"
+                                       Behaviors:FadeTrimming.IsEnabled="True" 
+                                       toolkit:DockPanel.Dock="Left"
+                                       VerticalAlignment="Center"
+                                       MaxWidth="400"/>
+                                <Image Source="{StaticResource Image_Transformer_Tiny}" VerticalAlignment="Center"
+                                       toolkit:DockPanel.Dock="Left"
+                                       Height="10" Width="10"
+                                       Margin="12,0,0,0" Visibility="{Binding UseTransformer, Converter={StaticResource BooleanToVisibility}}"/>
+                                <TextBlock Text="{Binding Transformer}" Visibility="{Binding UseTransformer, Converter={StaticResource BooleanToVisibility}}"
+                                           Foreground="#656565"
+                                       Behaviors:FadeTrimming.IsEnabled="True" 
+                                       toolkit:DockPanel.Dock="Left"
+                                           Margin="4,0,0,0"/>
+                            </toolkit:DockPanel>
                             <Editors:QuerySyntaxTextBlock Text="{Binding Query, Converter={StaticResource StringToSingleLine}}"  Grid.Row="1" Grid.Column="1" Margin="0,2,0,0" 
                                                           Visibility="{Binding Query, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,2,0,0" 

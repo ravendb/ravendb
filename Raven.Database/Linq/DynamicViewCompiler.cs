@@ -265,8 +265,26 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		            reduceDefinition = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce,
 		                                                                                    RequiresSelectNewAnonymousType);
 		            var queryExpression = ((QueryExpression) reduceDefinition.Initializer);
-		            var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().First();
-		            var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryGroupClause>().First();
+		            var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().FirstOrDefault();
+                    if (queryContinuationClause == null)
+                    {
+                        throw new IndexCompilationException("Reduce query must contain a 'group ... into ...' clause")
+                        {
+                            ProblematicText = indexDefinition.Reduce,
+                            IndexDefinitionProperty = "Reduce",
+                        };
+                    }
+
+		            var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryGroupClause>().FirstOrDefault();
+                    if (queryGroupClause == null)
+                    {
+                        throw new IndexCompilationException("Reduce query must contain a 'group ... into ...' clause")
+                        {
+                            ProblematicText = indexDefinition.Reduce,
+                            IndexDefinitionProperty = "Reduce",
+                        };
+                    }
+
 		            groupByIdentifier = queryContinuationClause.Identifier;
 		            groupBySource = queryGroupClause.Key;
 		            groupByParameter =
@@ -281,6 +299,16 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		            var target = (MemberReferenceExpression) invocation.Target;
 		            while (target.MemberName != "GroupBy")
 		            {
+                        if (!(target.Target is InvocationExpression))
+                        {
+                            // we've reached the initial results variable without encountering a GroupBy call
+                            throw new IndexCompilationException("Reduce expression must contain a call to GroupBy")
+                            {
+                                ProblematicText = indexDefinition.Reduce,
+                                IndexDefinitionProperty = "Reduce",
+                            };
+                        }
+
 		                invocation = (InvocationExpression) target.Target;
 		                target = (MemberReferenceExpression) invocation.Target;
 		            }

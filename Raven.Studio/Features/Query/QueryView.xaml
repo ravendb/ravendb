@@ -58,18 +58,17 @@
                                Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
 					<ComboBox ItemsSource="{Binding DynamicOptions}"
                               SelectedItem="{Binding DynamicSelectedOption, Mode=TwoWay}"
+                              Width="300"
                               Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal"
                             Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
-					<HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
-                                     ToolTipService.ToolTip="{Binding IndexName}"
-                                     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-                                     Command="{StaticResource NavigateToCommand}"
-                                     CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
-                                     VerticalAlignment="Center" />
-				</StackPanel>
+                <ComboBox ItemsSource="{Binding AvailableIndexes}"
+                              SelectedItem="{Binding IndexName, Mode=TwoWay}"
+                          Width="300"
+                              Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
+            </StackPanel>
 
 			<Controls1:NavTriangle/>
 			<TextBlock Text="Query"
@@ -123,6 +122,27 @@
 					</Button.Content>
 				</Button>
 
+                <Button x:Name="AddTransformer"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Add Transformer to this query"
+                        VerticalAlignment="Center"
+                        Margin="0,0,6,0"
+                        Command="{Binding AddTransformer}"
+                        IsEnabled="{Binding UseTransformer, Converter={StaticResource NegatingBool}}"
+                        VerticalContentAlignment="Center">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_Add_Tiny}"
+                                   Stretch="None"
+                                   VerticalAlignment="Center" />
+                            <TextBlock Text="Add Transformer"
+                                       VerticalAlignment="Center"
+                                       Margin="2,0,0,0" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+
                 <Controls1:QueryOptionsButton/>
 
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}" Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"/>
@@ -149,6 +169,28 @@
 					</Button.Content>
 				</Button>
 
+                <Button x:Name="EditIndex"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Edit Index"
+                        VerticalAlignment="Center"
+                        Margin="0,0,6,0"
+                        Command="{StaticResource NavigateToCommand}"
+                        CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+                        Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"
+                        VerticalContentAlignment="Center">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_Edit_Small}"
+                                   Stretch="None"
+                                   VerticalAlignment="Center" />
+                            <TextBlock Text="Edit Index"
+                                       VerticalAlignment="Center"
+                                       Margin="2,0,0,0" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+                
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}" Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}"/>
                 
                 <Button Command="{Binding DeleteMatchingResults}"
@@ -168,15 +210,16 @@
 		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="*"
-							   MinHeight="100" />
+							   MinHeight="200" />
 				<RowDefinition Height="Auto" />
-				<RowDefinition Height="3.5*" />
+				<RowDefinition Height="3*" />
 			</Grid.RowDefinitions>
 
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
@@ -394,6 +437,33 @@
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>
 				</StackPanel>
+                
+                <StackPanel Visibility="{Binding UseTransformer, Converter={StaticResource BooleanToVisibility}}"
+                                   Margin="0,5"
+                                   Grid.Row="4">
+                    <TextBlock Text="Transformer"
+							   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
+
+
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox SelectedValue="{Binding SelectedTransformer.Value, Mode=TwoWay}"
+							      ItemsSource="{Binding Transformers}"
+                                  Width="400"
+							      Margin="0,4"/>
+                    
+                        <Button Command="{Binding RemoveTransformer}" 
+							      HorizontalAlignment="Left"
+							      ToolTipService.ToolTip="Remove Transformer"
+							      Margin="4"
+                                Style="{StaticResource Style_Button_MouseOverChrome}">
+                            <Image Source="{StaticResource Image_Delete_Tiny}"  Stretch="Fill"
+												       VerticalAlignment="Center"
+												       Width="12"
+												       Height="12" />
+                        </Button>
+                    </StackPanel>
+                    
+                </StackPanel>
 			</Grid>
 
 			<sdk:GridSplitter Grid.Row="1"
