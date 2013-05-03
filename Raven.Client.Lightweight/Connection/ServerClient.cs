@@ -1281,7 +1281,7 @@ namespace Raven.Client.Connection
 			HttpJsonRequest request;
 			if (uniqueIds.Sum(x => x.Length) < 1024)
 			{
-				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + x).ToArray());
+				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(
 						new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
 							.AddOperationHeaders(OperationsHeaders))

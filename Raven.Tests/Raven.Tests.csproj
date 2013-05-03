@@ -577,7 +577,6 @@
     <Compile Include="Issues\RavenDB982.cs" />
     <Compile Include="Issues\RavenDB_1018.cs" />
     <Compile Include="Issues\RavenDB_1041.cs" />
-    <Compile Include="Issues\RavenDB_1077.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -694,6 +693,7 @@
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="MailingList\InIssues.cs" />
     <Compile Include="MailingList\InQueries.cs" />
+    <Compile Include="MailingList\IssueTest.cs" />
     <Compile Include="MailingList\ItemsBySetIdIndexTests.cs" />
     <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\jbartruf.cs" />

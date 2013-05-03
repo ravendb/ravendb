@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Abstractions
 	    public HttpListenerRequestAdapter(HttpListenerRequest request)
 		{
 			this.request = request;
-		    this.queryString = System.Web.HttpUtility.ParseQueryString(Uri.UnescapeDataString(request.Url.Query));
+		    this.queryString = System.Web.HttpUtility.ParseQueryString(request.Url.Query);
 	        Url = this.request.Url;
 	        RawUrl = this.request.RawUrl;
 			
