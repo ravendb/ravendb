@@ -13,16 +13,14 @@ namespace Raven.Database.Server.Abstractions
 	public class HttpListenerRequestAdapter : IHttpRequest
 	{
 		private readonly HttpListenerRequest request;
-
-	    private NameValueCollection queryString;
+	    private readonly NameValueCollection queryString;
 
 	    public HttpListenerRequestAdapter(HttpListenerRequest request)
 		{
 			this.request = request;
-		    this.queryString = System.Web.HttpUtility.ParseQueryString(request.Url.Query);
-	        Url = this.request.Url;
+		    Url = this.request.Url;
 	        RawUrl = this.request.RawUrl;
-			
+		    queryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(request.Headers["Raven-Client-Version"], request.Url.Query);
 		}
 
 		public bool IsLocal

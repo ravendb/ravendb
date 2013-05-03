@@ -23,4 +23,16 @@ namespace Raven.Database.Server.Abstractions
 		bool HasCookie(string name);
 		string GetCookie(string name);
 	}
+
+	internal class HttpRequestHelper
+	{
+		public static NameValueCollection ParseQueryStringWithLegacySupport(string ravenClientVersion, string query)
+		{
+			if (ravenClientVersion == null || ravenClientVersion.StartsWith("1.0") || ravenClientVersion.StartsWith("2.0"))
+			{
+				query = Uri.EscapeDataString(query);
+			}
+			return System.Web.HttpUtility.ParseQueryString(query);
+		}
+	}
 }

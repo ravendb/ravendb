@@ -278,7 +278,7 @@ namespace Raven.Abstractions.Data
 			if (string.IsNullOrEmpty(Query) == false)
 			{
 				path.Append("&query=")
-				    .Append(Uri.EscapeUriString(Uri.EscapeDataString(Query)));
+				    .Append(Uri.EscapeDataString(Query));
 			}
 			
 			if (string.IsNullOrEmpty(DefaultField) == false)
