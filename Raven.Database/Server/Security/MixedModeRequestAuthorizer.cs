@@ -19,9 +19,33 @@ namespace Raven.Database.Server.Security
 
 		private class OneTimeToken
 		{
+			private IPrincipal user;
+			private IntPtr? windowsUserToken;
 			public DocumentDatabase Database { get; set; }
 			public DateTime GeneratedAt { get; set; }
-			public IPrincipal User { get; set; }
+			public IPrincipal User
+			{
+				get
+				{
+					if (windowsUserToken != null)
+					{
+						return new WindowsPrincipal(new WindowsIdentity(windowsUserToken.Value));
+					}
+					return user;
+				}
+				set
+				{
+					var windowsPrincipal = value as WindowsPrincipal;
+					if (windowsPrincipal != null)
+					{
+						user = null;
+						windowsUserToken = ((WindowsIdentity)windowsPrincipal.Identity).Token;
+						return;
+					}
+					windowsUserToken = null;
+					user = value;
+				}
+			}
 		}
 
 		protected override void Initialize()
