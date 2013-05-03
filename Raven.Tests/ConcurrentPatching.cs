@@ -21,7 +21,7 @@ namespace Raven.Tests
 					s.SaveChanges();
 				}
 
-				int numberOfComments = 128;
+				int numberOfComments = 50;
 				var patches = Enumerable.Range(0, numberOfComments).Select(x =>
 				                                                           new PatchRequest
 				                                                           {
