@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Web;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -30,9 +31,9 @@ namespace Raven.Database.Server.Abstractions
 		{
 			if (ravenClientVersion == null || ravenClientVersion.StartsWith("1.0") || ravenClientVersion.StartsWith("2.0"))
 			{
-				query = Uri.EscapeDataString(query);
+				query = Uri.UnescapeDataString(query);
 			}
-			return System.Web.HttpUtility.ParseQueryString(query);
+			return HttpUtility.ParseQueryString(query);
 		}
 	}
 }
