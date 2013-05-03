@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
+using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -19,6 +20,7 @@ namespace Raven.Server
 {
 	public class RavenDbServer : IDisposable
 	{
+		private static ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly DocumentDatabase database;
 		private readonly HttpServer server;
 		private ClusterDiscoveryHost discoveryHost;
@@ -70,16 +72,23 @@ namespace Raven.Server
 							{"Url", settings.ServerUrl},
 							{"ClusterName", settings.ClusterName},
 						};
-						var result = await httpClient.PostAsync(args.ClusterManagerUrl, new FormUrlEncodedContent(values));
-						// result.EnsureSuccessStatusCode();
+						try
+						{
+							var result = await httpClient.PostAsync(args.ClusterManagerUrl, new FormUrlEncodedContent(values));
+							result.EnsureSuccessStatusCode();
+						}
+						catch (Exception e)
+						{
+							logger.ErrorException("Cannot post notification for cluster discovert to: " + settings.ServerUrl, e);
+						}
 					};
 				}
-				catch (Exception)
+				catch (Exception e)
 				{
 					discoveryHost.Dispose();
 					discoveryHost = null;
 
-					throw;
+					logger.ErrorException("Cannot setup cluster discovery" , e);
 				}
 			}
 		}
