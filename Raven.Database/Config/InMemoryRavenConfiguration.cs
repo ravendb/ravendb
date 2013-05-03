@@ -538,7 +538,11 @@ namespace Raven.Database.Config
 		/// Allowed values: All, Get, None
 		/// Default: Get
 		/// </summary>
-		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
+		public AnonymousUserAccessMode AnonymousUserAccessMode
+		{
+			get { return anonymousUserAccessMode; }
+			set { anonymousUserAccessMode = value; }
+		}
 
 		/// <summary>
 		/// If set local request don't require authentication
@@ -682,6 +686,7 @@ namespace Raven.Database.Config
 		private string indexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
+		private AnonymousUserAccessMode anonymousUserAccessMode;
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>

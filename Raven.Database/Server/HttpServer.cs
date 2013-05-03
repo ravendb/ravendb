@@ -153,7 +153,7 @@ namespace Raven.Database.Server
 
 			requestAuthorizer = new MixedModeRequestAuthorizer();
 
-			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+			requestAuthorizer.Initialize(SystemDatabase, SystemConfiguration, () => currentTenantId.Value, this);
 
 			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
 			{

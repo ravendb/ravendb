@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Security.Windows
 		public bool Authorize(IHttpContext ctx)
 		{
 			Action onRejectingRequest;
-			var databaseName = database().Name ?? Constants.SystemDatabase;
+			var databaseName = TenantId ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
@@ -212,7 +212,7 @@ namespace Raven.Database.Server.Security.Windows
 		public IPrincipal GetUser(IHttpContext ctx)
 		{
 			Action onRejectingRequest;
-			var databaseName = database().Name ?? Constants.SystemDatabase;
+			var databaseName = TenantId ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
 			return userCreated ? ctx.User : null;
 		}
