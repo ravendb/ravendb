@@ -39,7 +39,7 @@ namespace Raven.Tests.Util
 				throw new Exception("Could not find Raven.server.exe");
 			}
 
-			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox");
+			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox --set=Ravne/AnonymousAccess==Admin");
 
 			Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 

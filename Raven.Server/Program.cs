@@ -50,8 +50,11 @@ namespace Raven.Server
 				}
 				catch (InvalidOperationException e)
 				{
-					var refEx = e.InnerException.InnerException as ReflectionTypeLoadException;
-
+					ReflectionTypeLoadException refEx = null;
+					if (e.InnerException != null)
+					{
+						refEx = e.InnerException.InnerException as ReflectionTypeLoadException;
+					}
 					var errorMessage = refEx != null ? GetLoaderExceptions(refEx) : e.ToString();
 
 					WaitForUserInputAndExitWithError(errorMessage, args);
@@ -157,7 +160,7 @@ namespace Raven.Server
 				{
 					ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
 					ravenConfiguration.RunInMemory = true;
-					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, ravenConfiguration, launchBrowser, noLog);		
+					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);		
 				}},
 				{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog)},
 				{"browser|launchbrowser", "After the server starts, launches the browser", key => launchBrowser = true},
