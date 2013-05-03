@@ -729,7 +729,7 @@ namespace Raven.Client.Connection.Async
 				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}&facetStart={3}&facetPageSize={4}",
 				Uri.EscapeUriString(index),
 				Uri.EscapeDataString(facetSetupDoc),
-				Uri.EscapeUriString(Uri.EscapeDataString(query.Query)),
+				Uri.EscapeDataString(query.Query),
 				start,
 				pageSize);
 

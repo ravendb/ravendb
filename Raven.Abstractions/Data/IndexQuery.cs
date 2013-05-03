@@ -254,8 +254,7 @@ namespace Raven.Abstractions.Data
 
 			if (Cutoff != null)
 			{
-				var cutOffAsString =
-					Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
+				var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
 				path.Append("&cutOff=").Append(cutOffAsString);
 			}
 			if (CutoffEtag != null)
