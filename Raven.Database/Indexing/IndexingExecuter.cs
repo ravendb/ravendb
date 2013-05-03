@@ -216,6 +216,12 @@ namespace Raven.Database.Indexing
 
 						return done;
 					}
+					catch (ObjectDisposedException)
+					{
+						// nothing to do here, this may happen if the database is disposed
+						// while we have a long running task that didn't complete in time
+						return new CompletedTask();
+					}
 					finally
 					{
 						if (indexingSemaphore != null)
@@ -225,8 +231,16 @@ namespace Raven.Database.Indexing
 						if (Thread.VolatileRead(ref isSlowIndex) != 0)
 						{
 							// we now need to notify the engine that the slow index(es) is done, and we need to resume its indexing
-							context.ShouldNotifyAboutWork(() => "Slow Index Completed Indexing Batch");
-							context.NotifyAboutWork();
+							try
+							{
+								context.ShouldNotifyAboutWork(() => "Slow Index Completed Indexing Batch");
+								context.NotifyAboutWork();
+							}
+							catch (ObjectDisposedException)
+							{
+								// nothing to do here, this may happen if the database is disposed
+								// while we have a long running task
+							}
 						}
 					}
 				}).Unwrap();
