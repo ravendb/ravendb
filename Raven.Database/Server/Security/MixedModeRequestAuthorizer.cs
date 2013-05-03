@@ -2,12 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Security.Principal;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
 using System.Linq;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.Security
 {
@@ -21,7 +23,7 @@ namespace Raven.Database.Server.Security
 		{
 			private IPrincipal user;
 			private IntPtr? windowsUserToken;
-			public DocumentDatabase Database { get; set; }
+			public string DatabaseName { get; set; }
 			public DateTime GeneratedAt { get; set; }
 			public IPrincipal User
 			{
@@ -82,11 +84,32 @@ namespace Raven.Database.Server.Security
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
+			{
+				context.SetStatusToForbidden();
+				context.WriteJson(new
+				{
+					Error = "Unknown single use token, maybe it was already used?"
+				});
 				return false;
-			if (ReferenceEquals(value.Database, Database) == false)
+			}
+			if (string.Equals(value.DatabaseName, TenantId, StringComparison.InvariantCultureIgnoreCase) == false)
+			{
+				context.SetStatusToForbidden();
+				context.WriteJson(new
+				{
+					Error = "This single use token cannot be used for this database"
+				}); 
 				return false;
+			}
 			if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
+			{
+				context.SetStatusToForbidden();
+				context.WriteJson(new
+				{
+					Error = "This single use token has expired"
+				}); 
 				return false;
+			}
 
 			if (value.User != null)
 			{
@@ -131,7 +154,7 @@ namespace Raven.Database.Server.Security
 		{
 			var token = new OneTimeToken
 			{
-				Database = db,
+				DatabaseName = TenantId,
 				GeneratedAt = SystemTime.UtcNow,
 				User = user
 			};
