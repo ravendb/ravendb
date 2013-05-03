@@ -336,7 +336,7 @@ namespace Raven.Client.Changes
             });
             var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
                 counter,
-				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
+				notification => notification.Id != null && notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
