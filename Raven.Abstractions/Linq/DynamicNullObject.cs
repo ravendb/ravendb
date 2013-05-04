@@ -104,6 +104,26 @@ namespace Raven.Abstractions.Linq
 			return GetEnumerator();
 		}
 
+		public static bool operator >=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator >(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
 		public static bool operator ==(DynamicNullObject left, object right)
 		{
 			return right == null || right is DynamicNullObject;
