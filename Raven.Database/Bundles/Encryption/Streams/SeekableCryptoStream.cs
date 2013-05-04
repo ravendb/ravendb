@@ -91,7 +91,7 @@ namespace Raven.Bundles.Encryption.Streams
 					currentReadingBlock = underlyingStream.ReadBlock(startingBlock);
 				}
 
-				int blockRead = (int)Math.Min(currentReadingBlock.TotalStreamLength - Position, currentBlockSize - bufferOffset);
+				int blockRead = (int)Math.Min(currentReadingBlock.TotalStreamLength - Position, currentBlockSize - blockOffset);
 				int actualRead = Math.Min(count, blockRead);
 				Array.Copy(currentReadingBlock.Data, blockOffset, buffer, bufferOffset, actualRead);
 				// We use the fact that a stream doesn't have to read all data in one go to avoid a loop here.
@@ -118,51 +118,50 @@ namespace Raven.Bundles.Encryption.Streams
 
 			lock (locker)
 			{
-			writeStart:
-
-				long startingBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Position);
-				long endingBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Position + count - 1);
-
-				long blockOffset = underlyingStream.Header.GetBlockOffsetFromLogicalPosition(Position);
-
-				if (currentWritingBlock == null || currentWritingBlock.BlockNumber != startingBlock)
-				// If we're writing into a different block than the one that's currently in memory
+				while (true)
 				{
-					WriteAnyUnwrittenData();
+					long startingBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Position);
+					long endingBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Position + count - 1);
 
-					if (blockOffset != 0 || count < currentBlockSize)
+					long blockOffset = underlyingStream.Header.GetBlockOffsetFromLogicalPosition(Position);
+
+					if (currentWritingBlock == null || currentWritingBlock.BlockNumber != startingBlock)
+						// If we're writing into a different block than the one that's currently in memory
 					{
-						// Read the existing block from the underlying stream, as we're only changing part of it
-						currentWritingBlock = underlyingStream.ReadBlock(startingBlock);
-					}
-					else
-					{
-						// We're writing the entire block in one go
-						currentWritingBlock = new EncryptedFile.Block
+						WriteAnyUnwrittenData();
+
+						if (blockOffset != 0 || count < currentBlockSize)
 						{
-							BlockNumber = startingBlock,
-							Data = new byte[currentBlockSize],
-							TotalStreamLength = underlyingStream.Footer.TotalLength
-						};
+							// Read the existing block from the underlying stream, as we're only changing part of it
+							currentWritingBlock = underlyingStream.ReadBlock(startingBlock);
+						}
+						else
+						{
+							// We're writing the entire block in one go
+							currentWritingBlock = new EncryptedFile.Block
+							{
+								BlockNumber = startingBlock,
+								Data = new byte[currentBlockSize],
+								TotalStreamLength = underlyingStream.Footer.TotalLength
+							};
+						}
 					}
-				}
 
-				if (startingBlock == endingBlock)
-				// If the entire write is done to the same block
-				{
-					Array.Copy(buffer, bufferOffset, currentWritingBlock.Data, blockOffset, count);
-					Position += count;
-				}
-				else
-				{
-					var countInCurrentBlock = currentBlockSize - bufferOffset;
+					if (startingBlock == endingBlock)
+						// If the entire write is done to the same block
+					{
+						Array.Copy(buffer, bufferOffset, currentWritingBlock.Data, blockOffset, count);
+						Position += count;
+						break;
+					}
+					
+					var countInCurrentBlock = currentBlockSize - (int) blockOffset;
 					Array.Copy(buffer, bufferOffset, currentWritingBlock.Data, blockOffset, countInCurrentBlock);
 					Position += countInCurrentBlock;
 
 					// Write the next block from the same buffer
 					bufferOffset += countInCurrentBlock;
 					count -= countInCurrentBlock;
-					goto writeStart;
 				}
 			}
 		}
@@ -250,7 +249,8 @@ namespace Raven.Bundles.Encryption.Streams
 
 		public override void SetLength(long value)
 		{
-			throw new NotSupportedException();
+			// usually this is done as an optimization, and we can't really 
+			// support it here, so we ignore it.
 		}
 	}
 }
