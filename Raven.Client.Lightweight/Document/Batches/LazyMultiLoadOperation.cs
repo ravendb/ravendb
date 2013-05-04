@@ -34,7 +34,7 @@ namespace Raven.Client.Document.Batches
 			{
 				query += string.Join("&", includes.Select(x => "include=" + x.Key).ToArray());
 			}
-			query += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
+			query += "&" + string.Join("&", ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
 			return new GetRequest
 			{
 				Url = "/queries/",
