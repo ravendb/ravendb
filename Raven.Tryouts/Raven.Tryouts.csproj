@@ -129,6 +129,10 @@
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
+      <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
+      <Name>Raven.Tests</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
