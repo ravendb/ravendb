@@ -116,6 +116,18 @@ namespace Raven.Abstractions.Linq
 
 		public static implicit operator double(DynamicNullObject o) { return double.NaN; }
 		public static implicit operator double?(DynamicNullObject o) { return null; }
+
+		public static implicit operator int(DynamicNullObject o) { return 0; }
+		public static implicit operator int?(DynamicNullObject o) { return null; }
+
+		public static implicit operator long(DynamicNullObject o) { return 0; }
+		public static implicit operator long?(DynamicNullObject o) { return null; }
+
+		public static implicit operator decimal(DynamicNullObject o) { return 0; }
+		public static implicit operator decimal?(DynamicNullObject o) { return null; }
+
+		public static implicit operator float(DynamicNullObject o) { return float.NaN; }
+		public static implicit operator float?(DynamicNullObject o) { return null; }
 	
 		public override bool Equals(object obj)
 		{
