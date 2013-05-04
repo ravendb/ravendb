@@ -545,6 +545,7 @@
     <Compile Include="Issues\RavenDB_868.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
+    <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
     <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
@@ -692,6 +693,7 @@
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
+    <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Spatial\Nick.cs" />
     <Compile Include="Spatial\RavenDB_423.cs" />
