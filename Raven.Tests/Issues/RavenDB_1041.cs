@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			((DocumentStore)store1).Replication.WaitAsync(timeout:TimeSpan.FromSeconds(20));
+			((DocumentStore)store1).Replication.WaitAsync(timeout:TimeSpan.FromSeconds(20)).Wait();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}
