@@ -437,7 +437,18 @@ namespace Raven.Database.Linq
 			{
 				compilerParameters.ReferencedAssemblies.Add(assembly);
 			}
-			var compileAssemblyFromFile = provider.CompileAssemblyFromSource(compilerParameters, source);
+
+			CompilerResults compileAssemblyFromFile;
+			if (indexFilePath != null)
+			{
+				var sourceFileName = indexFilePath + ".cs";
+				File.WriteAllText(sourceFileName, source);
+				compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, sourceFileName);
+			}	
+			else
+			{
+				compileAssemblyFromFile = provider.CompileAssemblyFromSource(compilerParameters, source);
+			}
 			var results = compileAssemblyFromFile;
 
 			if (results.Errors.HasErrors)
