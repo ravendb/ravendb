@@ -42,6 +42,8 @@ namespace Raven.Studio.Models
 		public PeriodicBackupSetup PeriodicBackupSetup { get; set; }
 		public string AwsAccessKey { get; set; }
 		public string AwsSecretKey { get; set; }
+        public string AzureStorageAccount { get; set; }
+        public string AzureStorageKey { get; set; }
 		public Observable<int> SelectedOption { get; set; }
 		public bool HasDocument { get; set; }
 
@@ -55,6 +57,12 @@ namespace Raven.Studio.Models
 				AwsAccessKey = document.Settings["Raven/AWSAccessKey"];
 				AwsSecretKey = document.SecuredSettings["Raven/AWSSecretKey"];
 			}
+            
+            if (document.Settings.ContainsKey("Raven/AzureStorageAccount") && document.SecuredSettings.ContainsKey("Raven/AzureStorageKey"))
+            {
+                AzureStorageAccount = document.Settings["Raven/AzureStorageAccount"];
+                AzureStorageKey = document.SecuredSettings["Raven/AzureStorageKey"];
+            }
 
 			session.LoadAsync<PeriodicBackupSetup>(PeriodicBackupSetup.RavenDocumentKey).ContinueWith(task =>
 			{
@@ -68,6 +76,8 @@ namespace Raven.Studio.Models
 					SelectedOption.Value = 1;
 				else if (string.IsNullOrWhiteSpace(PeriodicBackupSetup.S3BucketName) == false)
 					SelectedOption.Value = 2;
+                else if (string.IsNullOrWhiteSpace(PeriodicBackupSetup.AzureStorageContainer) == false)
+                    SelectedOption.Value = 3;
 				OnPropertyChanged(() => HasDocument);
 				OnPropertyChanged(() => PeriodicBackupSetup);
 			});
