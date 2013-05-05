@@ -18,6 +18,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Ionic.Zlib;
 using System.IO;
 
@@ -397,8 +398,7 @@ namespace Ionic.Zlib
 
 		private void _KickoffWriter()
 		{
-			if (!ThreadPool.QueueUserWorkItem(new WaitCallback(this._PerpetualWriterMethod)))
-				throw new Exception("Cannot enqueue writer thread.");
+		    Task.Factory.StartNew(this._PerpetualWriterMethod);
 		}
 
 
@@ -503,8 +503,8 @@ namespace Ionic.Zlib
 										   _nextToFill
 										   );
 
-							if (!ThreadPool.QueueUserWorkItem( _DeflateOne, workitem ))
-								throw new Exception("Cannot enqueue workitem");
+                            Task.Factory.StartNew(() => _DeflateOne(workitem));
+								
 						}
 
 					}
@@ -579,8 +579,8 @@ namespace Ionic.Zlib
 								   "Flush    filled   wi({0})  iba({1}) nf({2}) nomore({3})",
 								   workitem.index, workitem.inputBytesAvailable, _nextToFill, _noMoreInputForThisSegment);
 
-					if (!ThreadPool.QueueUserWorkItem( _DeflateOne, workitem ))
-						throw new Exception("Cannot enqueue workitem");
+                    Task.Factory.StartNew(() => _DeflateOne(workitem));
+						
 
 					//Monitor.Pulse(workitem);
 				}
@@ -764,7 +764,7 @@ namespace Ionic.Zlib
 
 
 
-		private void _PerpetualWriterMethod(object state)
+		private void _PerpetualWriterMethod()
 		{
 			TraceOutput(TraceBits.WriterThread, "_PerpetualWriterMethod START");
 
