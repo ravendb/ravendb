@@ -5,9 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Net;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Client;
 using Raven.Client.Document;
@@ -45,6 +47,7 @@ namespace Raven.Tests.Bugs
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            Authentication.EnableOnce();
 		}
 
 		[Fact]

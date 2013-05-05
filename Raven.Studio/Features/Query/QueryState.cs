@@ -89,8 +89,7 @@ namespace Raven.Studio.Features.Query
 	    public static string CreateQueryStateHash(QueryState state)
 	    {
 			var spatialString = state.IsSpatialQuery ? string.Format("{0}{1}{2}{3}", state.SpatialFieldName, state.Latitude, state.Longitude, state.Radius) : "";
-		    var optionString = string.Format("{0}{1}{2}{3}{4}{5}", state.DefaultOperator, state.ShowFields, state.ShowEntries,
-		                                     state.UseTransformer, state.SkipTransform, state.Transformer);
+		    var optionString = string.Format("{0}{1}", state.UseTransformer, state.Transformer);
 			return MD5Core.GetHashString(state.IndexName + state.Query + spatialString + optionString);
 	    }
     }

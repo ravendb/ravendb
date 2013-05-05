@@ -43,7 +43,7 @@ namespace Raven.VisualHost
 					Port = port,
 					//DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Server-" + port, "Data"),
 					RunInMemory = true,
-					AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
 					ServerName = "DB-" + (i + 1).ToString("X2"),
 					ClusterName = "Visual Host Servers",
 				});

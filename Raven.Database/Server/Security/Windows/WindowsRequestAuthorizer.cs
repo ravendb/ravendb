@@ -92,11 +92,14 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.None:
 					if (userCreated)
 					{
-						if (user.AdminDatabases.Contains(databaseName))
+						if (user.AdminDatabases.Contains(databaseName) ||
+							user.AdminDatabases.Contains("*"))
 							return true;
-						if (user.ReadWriteDatabases.Contains(databaseName))
+						if (user.ReadWriteDatabases.Contains(databaseName) ||
+							user.ReadWriteDatabases.Contains("*"))
 							return true;
-						if (isGetRequest && user.ReadOnlyDatabases.Contains(databaseName))
+						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
+							user.ReadOnlyDatabases.Contains("*")))
 							return true;
 					}
 

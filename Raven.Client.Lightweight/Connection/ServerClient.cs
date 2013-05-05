@@ -936,8 +936,34 @@ namespace Raven.Client.Connection
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 
-			var responseJson = (RavenJObject)request.ReadResponseJson();
-			return responseJson.Value<string>("Transformer");
+            try
+            {
+			    var responseJson = (RavenJObject)request.ReadResponseJson();
+			    return responseJson.Value<string>("Transformer");
+            }
+            catch (WebException e)
+            {
+                var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+                    throw;
+
+                if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    var error = e.TryReadErrorResponseObject(
+                        new { Error = "", Message = "" });
+
+                    if (error == null)
+                    {
+                        throw;
+                    }
+
+                    var compilationException = new TransformCompilationException(error.Message);
+
+                    throw compilationException;
+                }
+
+                throw;
+            }
 		}
 
 	    public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)

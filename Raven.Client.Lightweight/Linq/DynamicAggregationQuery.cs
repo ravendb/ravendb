@@ -24,35 +24,15 @@ namespace Raven.Client.Linq
 		private readonly List<AggregationQuery> facets;
         private readonly Dictionary<string,string> renames = new Dictionary<string, string>();
 
-        public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path)
-		{
-			facets = new List<AggregationQuery>();
-			this.queryable = queryable;
-            AndAggregateOn(path);
-		}
-
-		public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName)
+		public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName = null)
 		{
 			facets = new List<AggregationQuery>();
 			this.queryable = queryable;
 			AndAggregateOn(path, displayName);
 		}
 
-		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path)
-		{
-		    var propertyPath = path.ToPropertyPath();
-            if (IsNumeric(path))
-            {
-                var tmp = propertyPath + "_Range";
-                renames[propertyPath] = tmp;
-                propertyPath = tmp;
-            }
-		    facets.Add(new AggregationQuery { Name = propertyPath, DisplayName = propertyPath});
 
-			return this;
-		}
-
-		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName)
+		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName = null)
 		{
 			var propertyPath = path.ToPropertyPath();
 			if (IsNumeric(path))
@@ -188,7 +168,7 @@ namespace Raven.Client.Linq
 				{
 					Name = aggregationQuery.Name,
 					DisplayName = aggregationQuery.DisplayName,
-					Aggregation = (FacetAggregation) aggregationQuery.Aggregation,
+					Aggregation = aggregationQuery.Aggregation,
 					AggregationField = aggregationQuery.AggregationField,
 					Ranges = ranges,
 					Mode = mode

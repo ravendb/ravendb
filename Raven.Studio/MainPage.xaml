@@ -169,7 +169,7 @@
 								 CommandParameter="/indexes">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
-							<System:String>/query</System:String>
+                            <System:String>/transformers</System:String>
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
                     <Delay:SplitHyperlinkButtonPopup.PopupContent>
@@ -189,7 +189,37 @@
                 </Delay:SplitHyperlinkButtonPopup>
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
 
-				<HyperlinkButton Content="Tasks"
+                <Delay:SplitHyperlinkButtonPopup Content="Query"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/query">
+                    <Behaviors:LinkHighlighter.AlternativeUris>
+                        <Behaviors:StringCollection>
+                            <System:String>/query</System:String>
+                            <System:String>/reporting</System:String>
+                        </Behaviors:StringCollection>
+                    </Behaviors:LinkHighlighter.AlternativeUris>
+                    <Delay:SplitHyperlinkButtonPopup.PopupContent>
+                        <Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
+                            <StackPanel>
+                                <HyperlinkButton Content="Query"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/query"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Dynamic Query"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/query?mode=dynamic"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                                <HyperlinkButton Content="Reporting"
+								 Command="{StaticResource NavigateToCommand}"
+								 CommandParameter="/reporting"
+								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+                            </StackPanel>
+                        </Border>
+                    </Delay:SplitHyperlinkButtonPopup.PopupContent>
+                </Delay:SplitHyperlinkButtonPopup>
+                <ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}"/>
+                
+                <HyperlinkButton Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/tasks"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
@@ -205,51 +235,7 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/status"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
-				<!--<Delay:SplitHyperlinkButtonPopup Content="Status"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/status">
-                    <Behaviors:LinkHighlighter.AlternativeUris>
-                        <Behaviors:StringCollection>
-							<System:String>/statistics</System:String>
-							<System:String>/logs</System:String>
-							<System:String>/logs/error</System:String>
-                            <System:String>/alerts</System:String>
-                            <System:String>/indexes-errors</System:String>
-							<System:String>/replicationStatistics</System:String>
-							<System:String>/user-info</System:String>
-						</Behaviors:StringCollection>
-                    </Behaviors:LinkHighlighter.AlternativeUris>
-                    <Delay:SplitHyperlinkButtonPopup.PopupContent>
-                        <Border Style="{StaticResource Style_Border_HyperlinkPopupDropdown}">
-                            <StackPanel>
-								<HyperlinkButton Content="Statistics"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/statistics"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="Logs"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/logs"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="{Binding AlertsTitle}"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/alerts"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="Index Errors"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/indexes-errors"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="Replication Statistics"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/replicationStatistics"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-								<HyperlinkButton Content="User Info"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/user-info"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-							</StackPanel>
-                        </Border>
-                    </Delay:SplitHyperlinkButtonPopup.PopupContent>
-                </Delay:SplitHyperlinkButtonPopup>-->
+				
 
                 <ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
                 
@@ -269,10 +255,9 @@
 								<Image Source="{StaticResource Image_AddIndex_Tiny}"/>
 							</ContextMenu:MenuItem.Icon>
 						</ContextMenu:MenuItem>
-						<ContextMenu:Separator/>
-						<ContextMenu:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/query?mode=dynamic">
+						<ContextMenu:MenuItem Header="New Transformer" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/transformers/new?mode=new">
 							<ContextMenu:MenuItem.Icon>
-								<Image Source="{StaticResource Image_Query_Small}"/>
+								<Image Source="{StaticResource Image_Transformer_Add_Tiny}"/>
 							</ContextMenu:MenuItem.Icon>
 						</ContextMenu:MenuItem>
 					</Delay:SplitButton.ButtonMenuItemsSource>
@@ -353,6 +338,8 @@
 											  MappedUri="/Views/Transformer.xaml" />
 						<sdk:UriMapping Uri="/query/{indexName}"
 											  MappedUri="/Views/Query.xaml" />
+						<sdk:UriMapping Uri="/reporting/{indexName}"
+											  MappedUri="/Views/Reporting.xaml" />
 						<sdk:UriMapping Uri="/logs/{errors}"
 											  MappedUri="/Views/Logs.xaml" />
 						<sdk:UriMapping Uri="/terms/{indexName}"

@@ -2210,7 +2210,7 @@
 														<VisualState x:Name="Unfocused" />
 													</VisualStateGroup>
 												</VisualStateManager.VisualStateGroups>
-												<Rectangle x:Name="Background" RadiusX="3" RadiusY="3" Fill="{TemplateBinding Background}" StrokeThickness="{TemplateBinding BorderThickness}" Stroke="{TemplateBinding BorderBrush}"/>
+												<Rectangle x:Name="Background" RadiusX="0" RadiusY="0" Fill="{TemplateBinding Background}" StrokeThickness="{TemplateBinding BorderThickness}" Stroke="{TemplateBinding BorderBrush}"/>
 												<ContentPresenter
 													  x:Name="contentPresenter"
 													  Content="{TemplateBinding Content}"

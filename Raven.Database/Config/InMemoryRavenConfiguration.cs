@@ -789,7 +789,7 @@ namespace Raven.Database.Config
 				var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
 				return (AnonymousUserAccessMode)val;
 			}
-			return AnonymousUserAccessMode.Get;
+			return AnonymousUserAccessMode.Admin;
 		}
 
 		public string GetFullUrl(string baseUrl)

@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs
 											Port = 8079,
 											DataDirectory = "HiLoData",
 											RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-											AnonymousUserAccessMode = AnonymousUserAccessMode.All
+											AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 										});
 
 		}

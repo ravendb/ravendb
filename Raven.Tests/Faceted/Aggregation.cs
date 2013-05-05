@@ -169,7 +169,7 @@ namespace Raven.Tests.Faceted
 					var r = session.Query<Order>("Orders/All")
 					   .AggregateBy(x => x.Product, "ProductMax")
 						 .MaxOn(x => x.Total)
-						 .AndAggregateOn(x => x.Product, "ProductMin")
+					   .AndAggregateOn(x => x.Product, "ProductMin")
 						 .CountOn(x => x.Currency)
 					   .ToList();
 

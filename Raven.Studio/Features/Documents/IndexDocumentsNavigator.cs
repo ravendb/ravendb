@@ -156,6 +156,7 @@ namespace Raven.Studio.Features.Documents
 		        new PathSegment {Name = "Indexes", Url = "/Indexes"},
 		        new PathSegment {Name = indexName, Url = "/indexes/" + indexName},
 		        new PathSegment {Name = "Query", Url = "/query/" + indexName},
+		        new PathSegment {Name = "Reporting", Url = "/reporting/" + indexName},
 	        };
         }
 
