@@ -1,17 +1,9 @@
-﻿using System;
-using Raven.Tests.Issues;
+﻿using Raven.Tests.MailingList;
 
 class Program
 {
 	static void Main(string[] args)
 	{
-		for (int i = 0; i < 100; i++)
-		{
-			Console.WriteLine(i);
-			using (var n = new RavenDB_1041())
-			{
-				n.CanSpecifyTimeoutWhenWaitingForReplication();
-			}
-		}
-	}
+		new FailingBulkInsertTest().CanBulkInsert();
+	} 
 }
