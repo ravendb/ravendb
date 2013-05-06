@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
-using Raven.Json.Linq;
+using Raven.Client.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
@@ -18,10 +19,12 @@ namespace Raven.Studio.Models
 
 		public ReportingModel()
 		{
+			PageTitle = "Reporting";
 			ModelUrl = "/reporting";
 			AvailableIndexes = new BindableCollection<string>(x => x);
 			AvailableCollections = new BindableCollection<string>(s => s);
 			ParamsForSelectedCollection = new ObservableCollection<string>();
+			Aggregations = new BindableCollection<AggregationData>(data => data);
 		}
 
 		private string selectedCollection;
@@ -36,7 +39,8 @@ namespace Raven.Studio.Models
 
 				selectedCollection = value;
 				UpdateProperties();
-
+				Aggregations.Clear();
+				OnPropertyChanged(() => Aggregations);
 				OnPropertyChanged(() => SelectedCollection);
 			}
 		}
@@ -159,39 +163,53 @@ namespace Raven.Studio.Models
 			});	
 		}
 
-		public BindableCollection<string> AvailableCollections { get; set; }
-		public ObservableCollection<string> ParamsForSelectedCollection { get; set; }
-		public BindableCollection<AggregationData> Aggregations { get; set; } 
-	}
+		public ICommand DeleteAggregationCommand{get{return new ActionCommand(DeleteAggregation);}}
 
-	public class AggregationData
-	{
-		public string AggregateOn { get; set; }
-		public FacetAggregation FacetAggregation
+		private void DeleteAggregation(object parameter)
 		{
-			get
-			{
-				var result = FacetAggregation.None;
+			var data = parameter as AggregationData;
+			Aggregations.Remove(data);
 
-				if(Max)
-					result |= FacetAggregation.Max;
-				if(Min)
-					result |= FacetAggregation.Min;
-				if (Average)
-					result |= FacetAggregation.Average;
-				if (Count)
-					result |= FacetAggregation.Count; 
-				if (Sum)
-					result |= FacetAggregation.Sum;
-
-				return result;
-			}
+			OnPropertyChanged(() => Aggregations);
 		}
 
-		public bool Max { get; set; }
-		public bool Min { get; set; }
-		public bool Count { get; set; }
-		public bool Average { get; set; }
-		public bool Sum { get; set; }
+		public ICommand ExecuteReportCommand{get{return new ActionCommand(ExecuteReport);}}
+
+		private void ExecuteReport()
+		{
+			var data = Aggregations.Where(aggregationData => aggregationData.HasData()).ToList();
+			if (data.Count == 0)
+			{
+				ApplicationModel.Current.Notifications.Add(new Notification("No Aggregation with valid data found"));
+				return;
+			}
+
+			var facets = new List<AggregationQuery>();
+
+			foreach (var aggregationData in data)
+			{
+				facets.Add(new AggregationQuery
+				{
+					Name = aggregationData.AggregateOn,
+					AggregationField = aggregationData.CalculateOn,
+					Aggregation = aggregationData.FacetAggregation
+				});
+			}
+
+			DatabaseCommands.GetFacetsAsync(IndexName, new IndexQuery(), AggregationQuery.GetFacets(facets), 0, 512)
+			                .ContinueOnSuccessInTheUIThread(task
+			                                                =>
+			                {
+
+			                });
+		}
+
+		public BindableCollection<string> AvailableCollections { get; set; }
+		public ObservableCollection<string> ParamsForSelectedCollection { get; set; }
+		public BindableCollection<AggregationData> Aggregations { get; set; }
+		public ICommand AddAggregation
+		{
+			get { return new ActionCommand(() => Aggregations.Add(new AggregationData()));}
+		}
 	}
 }

@@ -11,26 +11,16 @@ namespace Raven.Client.Linq
 
 	public class DynamicAggregationQuery<T>
 	{
-		private class AggregationQuery
-		{
-			public string Name { get; set; }
-			public string DisplayName { get; set; }
-			public string AggregationField { get; set; }
-			public FacetAggregation Aggregation { get; set; }
-			public List<Expression<Func<T, bool>>> Ranges { get; set; }
-		}
-
 		private readonly IQueryable<T> queryable;
-		private readonly List<AggregationQuery> facets;
+		private readonly List<AggregationQuery<T>> facets;
         private readonly Dictionary<string,string> renames = new Dictionary<string, string>();
 
 		public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName = null)
 		{
-			facets = new List<AggregationQuery>();
+			facets = new List<AggregationQuery<T>>();
 			this.queryable = queryable;
 			AndAggregateOn(path, displayName);
 		}
-
 
 		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName = null)
 		{
@@ -41,7 +31,8 @@ namespace Raven.Client.Linq
 				renames[propertyPath] = tmp;
 				propertyPath = tmp;
 			}
-			facets.Add(new AggregationQuery { Name = propertyPath, DisplayName = displayName});
+
+			facets.Add(new AggregationQuery<T> { Name = propertyPath, DisplayName = displayName});
 
 			return this;
 		}
@@ -66,6 +57,7 @@ namespace Raven.Client.Linq
 	    public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)
 		{
 			var last = facets.Last();
+			
 			last.Ranges = last.Ranges ?? new List<Expression<Func<T, bool>>>();
 
 			foreach (var func in paths)
@@ -121,19 +113,19 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		public FacetResults ToList()
 		{
-			return HandlRenames(queryable.ToFacets(GetFacets()));
+			return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
 		}
 
 		public Lazy<FacetResults> ToListLazy()
 		{
-		    var facetsLazy = queryable.ToFacetsLazy(GetFacets());
+			var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
 			return new Lazy<FacetResults>(() => HandlRenames(facetsLazy.Value));
 		}
 #endif
 
 		public async Task<FacetResults> ToListAsync()
 		{
-			return HandlRenames(await queryable.ToFacetsAsync(GetFacets()));
+			return HandlRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)));
 		}
 
 	    private FacetResults HandlRenames(FacetResults facetResults)
@@ -147,34 +139,5 @@ namespace Raven.Client.Linq
 	        }
 	        return facetResults;
 	    }
-
-	    private IEnumerable<Facet> GetFacets()
-		{
-			var facetsList = new List<Facet>();
-
-			foreach (var aggregationQuery in facets)
-			{
-				if (aggregationQuery.Aggregation == FacetAggregation.None)
-					throw new InvalidOperationException("All aggregations must have a type");
-
-				var shouldUseRanges = aggregationQuery.Ranges != null && aggregationQuery.Ranges.Count > 0;
-
-				List<string> ranges = null;
-				if (shouldUseRanges)
-					ranges = aggregationQuery.Ranges.Select(Facet<T>.Parse).ToList();
-
-				var mode = shouldUseRanges ? FacetMode.Ranges : FacetMode.Default;
-				facetsList.Add(new Facet
-				{
-					Name = aggregationQuery.Name,
-					DisplayName = aggregationQuery.DisplayName,
-					Aggregation = aggregationQuery.Aggregation,
-					AggregationField = aggregationQuery.AggregationField,
-					Ranges = ranges,
-					Mode = mode
-				});
-			}
-			return facetsList;
-		}
 	}
 }
