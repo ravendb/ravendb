@@ -97,7 +97,7 @@ task Init -depends Verify40, Clean {
 }
 
 task Compile -depends Init {
-	throw "d"
+	
 	"Dummy file so msbuild knows there is one here before embedding as resource." | Out-File "$base_dir\Raven.Database\Server\WebUI\Raven.Studio.xap"
 	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
