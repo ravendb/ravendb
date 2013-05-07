@@ -112,7 +112,9 @@ namespace Raven.Studio.Features.Settings
 	{
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
-			return TaskEx.FromResult<IList<object>>(ApplicationModel.Current.Server.Value.Databases.Cast<object>().ToList());
+			var list = ApplicationModel.Current.Server.Value.Databases.Cast<object>().ToList();
+			list.Add("*");
+			return TaskEx.FromResult<IList<object>>(list);
 		}
 	}
 
