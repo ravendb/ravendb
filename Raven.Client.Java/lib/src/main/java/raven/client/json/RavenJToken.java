@@ -134,21 +134,22 @@ public abstract class RavenJToken {
 
       if (curReader instanceof RavenJObject) {
         RavenJObject ravenJObject = (RavenJObject) curObject;
-        for (Map.Entry<String, RavenJToken> entry: ravenJObject.getProperties()) {
-          if (entry.getValue() == null || entry.getValue().getType() == JTokenType.NULL) {
-            curObject.addForCloning(entry.getKey(), null);
+        for (String key: ravenJObject.getProperties().keySet()) {
+          RavenJToken value = ravenJObject.get(key);
+          if (value == null || value.getType() == JTokenType.NULL) {
+            curObject.addForCloning(key, null);
             continue;
           }
-          if (entry.getValue() instanceof RavenJValue) {
-            curObject.addForCloning(entry.getKey(), entry.getValue().cloneToken());
+          if (value instanceof RavenJValue) {
+            curObject.addForCloning(key, value.cloneToken());
             continue;
           }
 
-          RavenJToken newVal = (entry.getValue() instanceof RavenJArray) ? new RavenJArray() : new RavenJObject();
-          curObject.addForCloning(entry.getKey(), newVal);
+          RavenJToken newVal = (value instanceof RavenJArray) ? new RavenJArray() : new RavenJObject();
+          curObject.addForCloning(key, newVal);
 
           writingStack.push(newVal);
-          readingStack.push(entry.getValue());
+          readingStack.push(value);
         }
       } else if (curObject instanceof RavenJArray) {
         RavenJArray ravenJArray = (RavenJArray) curReader;
@@ -221,18 +222,19 @@ public abstract class RavenJToken {
           if (selfObj.getCount() != otherObj.getCount()) {
             return false;
           }
-          for (Map.Entry<String, RavenJToken> kvp : selfObj.getProperties()) {
+          for (String key : selfObj.getProperties().keySet()) {
+            RavenJToken value = selfObj.get(key);
             RavenJToken token;
-            Tuple<Boolean, RavenJToken> returnedValue = otherObj.tryGetValue(kvp.getKey());
+            Tuple<Boolean, RavenJToken> returnedValue = otherObj.tryGetValue(key);
             if (!returnedValue.getItem1()) {
               return false;
             }
             token = returnedValue.getItem2();
-            switch (kvp.getValue().getType()) {
+            switch (value.getType()) {
             case ARRAY:
             case OBJECT:
               otherStack.push(token);
-              thisStack.push(kvp.getValue());
+              thisStack.push(value);
               break;
             case BYTES:
               /* TODO:
@@ -253,7 +255,7 @@ public abstract class RavenJToken {
                */
               break;
             default:
-              if (!kvp.getValue().deepEquals(token)) {
+              if (!value.deepEquals(token)) {
                 return false;
               }
               break;
@@ -304,8 +306,9 @@ public abstract class RavenJToken {
         }
       } else if (cur.getItem2().getType() == JTokenType.OBJECT) {
         RavenJObject selfObj = (RavenJObject) cur.getItem2();
-        for (Map.Entry<String, RavenJToken> kvp : selfObj.getProperties()) {
-          stack.push(Tuple.create(cur.getItem1() ^ (397 * kvp.getKey().hashCode()), kvp.getValue()));
+        for (String key : selfObj.getProperties().keySet()) {
+          RavenJToken value = selfObj.get(key);
+          stack.push(Tuple.create(cur.getItem1() ^ (397 * value.hashCode()), value));
         }
       } else {
         ret ^= cur.getItem1() ^ (cur.getItem2().deepHashCode() * 397);

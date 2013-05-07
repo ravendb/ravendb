@@ -1,37 +1,248 @@
 package raven.client.json;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
-public class MapWithParentSnapshot extends HashMap<String, RavenJToken> implements Iterable<Map.Entry<String, RavenJToken>> {
-  //TODO:
+public class MapWithParentSnapshot implements Map<String, RavenJToken> {
 
+  private static final RavenJToken DELETED_MARKER = new RavenJValue("*DeletedMarker*", JTokenType.NULL);
+
+  private final MapWithParentSnapshot parentSnapshot;
+  private int count;
+  private Map<String, RavenJToken> localChanges = new HashMap<>();
+  private String snapshotMsg;
+  private boolean snapshot;
+
+  public Map<String, RavenJToken> getLocalChanges() {
+    return localChanges;
+  }
+
+  public MapWithParentSnapshot() {
+    this(null);
+  }
+
+  public MapWithParentSnapshot(MapWithParentSnapshot previous) {
+    this.parentSnapshot = previous;
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.HashMap#put(java.lang.Object, java.lang.Object)
+   */
+  @Override
+  public RavenJToken put(String key, RavenJToken value) {
+    if (isSnapshot()) {
+      throw new IllegalStateException(snapshotMsg != null ? snapshotMsg : "Cannot modify a snapshot, this is probably a bug");
+    }
+    if (containsKey(key)) {
+      throw new IllegalArgumentException("An item with the same key has already been added: " + key);
+    }
+    count++;
+    localChanges.put(key, value);
+    return value;
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.Map#containsKey(java.lang.Object)
+   */
+  @Override
+  public boolean containsKey(Object keyObject) {
+    String key = (String)keyObject;
+    RavenJToken token;
+    if (localChanges.containsKey(key)) {
+      token = localChanges.get(key);
+      if (token == DELETED_MARKER) {
+        return false;
+      }
+      return true;
+    }
+    return (parentSnapshot != null && parentSnapshot.containsKey(key) && parentSnapshot.get(key) != DELETED_MARKER);
+  }
+
+
+
+
+  /* (non-Javadoc)
+   * @see java.util.Map#keySet()
+   */
+  @Override
+  public Set<String> keySet() {
+    if (localChanges.isEmpty()) {
+      if (parentSnapshot != null) {
+        return parentSnapshot.keySet();
+      }
+      return new HashSet<>();
+    }
+
+    Set<String> ret = new HashSet<>();
+    if (parentSnapshot != null) {
+      for (String key : parentSnapshot.keySet()) {
+        if (!localChanges.containsKey(key)) {
+          ret.add(key);
+        }
+      }
+    }
+    for(String key: localChanges.keySet()) {
+      if (localChanges.containsKey(key) && localChanges.get(key) != DELETED_MARKER) {
+        ret.add(key);
+      }
+    }
+
+    return ret;
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.Map#remove(java.lang.Object)
+   */
+  @Override
+  public RavenJToken remove(Object keyObject) {
+    String key = (String) keyObject;
+    if (isSnapshot()) {
+      throw new IllegalStateException("Cannot modify a snapshot, this is probably a bug");
+    }
+    boolean parentHasIt = false;
+    RavenJToken parentToken = null;
+
+    if (parentSnapshot != null) {
+      parentToken = parentSnapshot.get(key);
+      if (parentToken != null) {
+        parentHasIt = true;
+      }
+    }
+
+    if (!localChanges.containsKey(key)) {
+      if (parentHasIt && parentToken != DELETED_MARKER) {
+        localChanges.put(key, DELETED_MARKER);
+        count--;
+        return parentToken;
+      }
+      return null;
+    }
+    RavenJToken token = localChanges.get(key);
+    if (token == DELETED_MARKER) {
+      return null;
+    }
+    count--;
+    localChanges.put(key, DELETED_MARKER);
+    return token;
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.Map#get(java.lang.Object)
+   */
+  @Override
+  public RavenJToken get(Object keyObject) {
+    String key = (String) keyObject;
+    if (localChanges.containsKey(key)) {
+      RavenJToken unsafeVal = localChanges.get(key);
+      if (unsafeVal == DELETED_MARKER) {
+        return null;
+      }
+      return unsafeVal;
+    }
+    if (parentSnapshot == null || !parentSnapshot.containsKey(key) || parentSnapshot.get(key) == DELETED_MARKER) {
+      return null;
+    }
+    RavenJToken unsafeVal = parentSnapshot.get(key);
+    if (!isSnapshot() && unsafeVal != null) {
+      if (!unsafeVal.isSnapshot() && unsafeVal.getType() != JTokenType.OBJECT) {
+        unsafeVal.ensureCannotBeChangeAndEnableShapshotting();
+      }
+    }
+    return unsafeVal;
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.Map#values()
+   */
+  @Override
+  public Collection<RavenJToken> values() {
+    Collection<RavenJToken> tokens =new ArrayList<>();
+    for(String key: keySet()) {
+      tokens.add(get(key));
+    }
+    return tokens;
+  }
 
   public boolean isSnapshot() {
-    //TODO implemenent me
-    return false;
+    return snapshot;
   }
 
   public MapWithParentSnapshot createSnapshot() {
-    // TODO Auto-generated method stub
-    return null;
+    if (!isSnapshot()) {
+      throw new IllegalStateException("Cannot create snapshot without previously calling EnsureSnapshot");
+    }
+    return new MapWithParentSnapshot(this);
   }
 
 
-  public void ensureSnapshot() {
-    // TODO Auto-generated method stub
+  /* (non-Javadoc)
+   * @see java.util.Map#clear()
+   */
+  @Override
+  public void clear() {
+    for(String key: keySet()) {
+      remove(key);
+    }
+  }
 
+  /* (non-Javadoc)
+   * @see java.util.Map#isEmpty()
+   */
+  @Override
+  public boolean isEmpty() {
+    return size() == 0;
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.Map#putAll(java.util.Map)
+   */
+  @Override
+  public void putAll(Map< ? extends String, ? extends RavenJToken> m) {
+    for (String key: m.keySet()) {
+      put(key, m.get(key));
+    }
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.Map#containsValue(java.lang.Object)
+   */
+  @Override
+  public boolean containsValue(Object value) {
+    throw new IllegalStateException("Not implemeneted");
+  }
+
+
+
+  /* (non-Javadoc)
+   * @see java.util.Map#entrySet()
+   */
+  @Override
+  public Set<Entry<String, RavenJToken>> entrySet() {
+    throw new IllegalStateException("Not implemeneted. Use keySet instead.");
+  }
+
+  /* (non-Javadoc)
+   * @see java.util.Map#size()
+   */
+  @Override
+  public int size() {
+    if (parentSnapshot != null) {
+      return count + parentSnapshot.size();
+    }
+    return count;
+  }
+
+  public void ensureSnapshot() {
+    ensureSnapshot(null);
   }
 
   public void ensureSnapshot(String msg) {
-    // TODO Auto-generated method stub
-
+    snapshot = true;
+    snapshotMsg = msg;
   }
 
-  @Override
-  public Iterator<java.util.Map.Entry<String, RavenJToken>> iterator() {
-    return entrySet().iterator();
-    //TODO:
-  }
 }
