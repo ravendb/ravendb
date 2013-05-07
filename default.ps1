@@ -321,7 +321,7 @@ task CreateDocs {
 	}
 	 
 	# we expliclty allows this to fail
-	# exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
 }
 
 task CopyRootFiles -depends CreateDocs {
