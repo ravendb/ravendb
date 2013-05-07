@@ -2,7 +2,6 @@ package raven.client.json;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.Map;
 import java.util.Stack;
 
 import org.codehaus.jackson.JsonGenerator;
@@ -225,11 +224,11 @@ public abstract class RavenJToken {
           for (String key : selfObj.getProperties().keySet()) {
             RavenJToken value = selfObj.get(key);
             RavenJToken token;
-            Tuple<Boolean, RavenJToken> returnedValue = otherObj.tryGetValue(key);
-            if (!returnedValue.getItem1()) {
+             RavenJToken returnedValue = otherObj.get(key);
+            if (returnedValue == null) {
               return false;
             }
-            token = returnedValue.getItem2();
+            token = returnedValue;
             switch (value.getType()) {
             case ARRAY:
             case OBJECT:

@@ -36,10 +36,9 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
    */
   public RavenJArray(Collection<RavenJToken> content) {
     items =new ArrayList<>();
-    if (content == null) {
-      return ;
+    if (content != null) {
+      items.addAll(content);
     }
-    items.addAll(content);
   }
 
   /**
@@ -77,7 +76,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   }
 
   private void checkSnapshot() {
-    if(snapshot) {
+    if (snapshot) {
       throw new IllegalArgumentException("Cannot modify a snapshot, this is probably a bug.");
     }
   }
@@ -185,6 +184,8 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     checkSnapshot();
     items.add(index, item);
   }
+
+
 
   /* (non-Javadoc)
    * @see raven.client.json.RavenJToken#ensureCannotBeChangeAndEnableShapshotting()

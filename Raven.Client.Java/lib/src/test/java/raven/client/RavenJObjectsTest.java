@@ -271,6 +271,21 @@ public class RavenJObjectsTest {
   }
 
   @Test
+  public void testBasicArrayOps() {
+    RavenJArray array = RavenJArray.parse("[ {\"t\": 5 }]");
+    assertEquals(1, array.size());
+    RavenJObject ravenJObject = RavenJObject.parse("{\"t\": 5 }");
+    array.remove(ravenJObject);
+    assertTrue(array.size() == 0);
+
+    array.insert(0, RavenJValue.fromObject("test"));
+    assertEquals(1, array.size());
+    array.removeAt(0);
+    assertTrue(array.size() == 0);
+
+  }
+
+  @Test
   public void testArrayClone() {
     RavenJArray array = new RavenJArray(new RavenJArray(new RavenJValue(5l), new RavenJValue(7l), new RavenJValue(false)));
     RavenJArray clonedToken = array.cloneToken();

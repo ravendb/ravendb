@@ -273,7 +273,7 @@ public class RavenJValue extends RavenJToken {
         return ;
       case INTEGER:
         if (value instanceof Long) {
-        writer.writeNumber((Long)value);
+          writer.writeNumber((Long)value);
         } else if (value instanceof Integer) {
           writer.writeNumber((Integer)value);
         } else  {
@@ -307,18 +307,27 @@ public class RavenJValue extends RavenJToken {
    * @see raven.client.json.RavenJToken#deepEquals(raven.client.json.RavenJToken)
    */
   @Override
-  public boolean deepEquals(RavenJToken other) {
-    // TODO Auto-generated method stub
-    return super.deepEquals(other);
+  public boolean deepEquals(RavenJToken node) {
+    if (getType() == JTokenType.NULL && (node == null || node.getType() == JTokenType.NULL)) {
+      return true;
+    }
+    RavenJValue other = (RavenJValue) node;
+    if (other ==null) {
+      return false;
+    }
+    if (this == other) {
+      return true;
+    }
+    return valuesEquals(this, other);
   }
 
-  /* (non-Javadoc)
-   * @see raven.client.json.RavenJToken#deepHashCode()
-   */
-  @Override
-  public int deepHashCode() {
-    // TODO Auto-generated method stub
-    return super.deepHashCode();
+  private boolean valuesEquals(RavenJValue v1, RavenJValue v2) {
+    if (v1.getType() == v2.getType() && v1.getValue() != null && v1.getValue().equals(v2.getValue())) {
+      return true;
+    }
+
+    //TODO: implement me
+    return false;
   }
 
 

@@ -42,13 +42,12 @@ public class RavenJObject extends RavenJToken   {
 
   public static RavenJObject load(JsonParser parser) {
     try {
-      JsonToken currentToken = parser.getCurrentToken();
-      if (currentToken == null) {
+      if (parser.getCurrentToken() == null) {
         if (parser.nextToken() == null) {
           throw new JsonReaderException("Error reading RavenJToken from JsonParser");
         }
       }
-      if (currentToken != JsonToken.START_OBJECT) {
+      if (parser.getCurrentToken() != JsonToken.START_OBJECT) {
         throw new JsonReaderException("Error reading RavenJObject from JsonParser. Current JsonReader item is not an object: " + parser.getCurrentToken());
       }
       if (parser.nextToken() == null) {
@@ -192,9 +191,6 @@ public class RavenJObject extends RavenJToken   {
     return properties;
   }
 
-  /* (non-Javadoc)
-   * @see raven.client.json.RavenJToken#getType()
-   */
   @Override
   public JTokenType getType() {
     return JTokenType.OBJECT;
@@ -221,9 +217,19 @@ public class RavenJObject extends RavenJToken   {
     this.properties = properties;
   }
 
-  public Tuple<Boolean, RavenJToken> tryGetValue(String key) {
-    // TODO Auto-generated method stub
-    return null;
+
+
+  @Override
+  public int hashCode() {
+    return deepHashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (!(other instanceof RavenJObject)) {
+      return false;
+    }
+    return super.deepEquals((RavenJToken) other);
   }
 
   /**
