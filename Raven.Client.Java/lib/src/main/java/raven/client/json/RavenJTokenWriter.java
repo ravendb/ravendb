@@ -151,7 +151,7 @@ public class RavenJTokenWriter extends JsonGenerator {
     if (text == null) {
       addValue(new RavenJValue(null, JTokenType.NULL), JTokenType.NULL);
     } else {
-      addValue(value, JTokenType.STRING);
+      addValue(text, JTokenType.STRING);
     }
   }
 

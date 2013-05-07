@@ -1,7 +1,5 @@
 package raven.client.json.lang;
 
-import java.io.IOException;
-
 public class JsonReaderException extends RuntimeException {
 
   public JsonReaderException() {

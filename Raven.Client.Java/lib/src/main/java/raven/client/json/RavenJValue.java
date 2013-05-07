@@ -191,12 +191,15 @@ public class RavenJValue extends RavenJToken {
     }
   }
 
-  /* (non-Javadoc)
-   * @see java.lang.Object#hashCode()
-   */
   @Override
   public int hashCode() {
-    //TODO: correct impl!
+    return deepHashCode();
+  }
+
+
+
+  @Override
+  public int deepHashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result + ((value == null) ? 0 : value.hashCode());
@@ -204,13 +207,8 @@ public class RavenJValue extends RavenJToken {
     return result;
   }
 
-  /* (non-Javadoc)
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
   @Override
   public boolean equals(Object obj) {
-
-    //TODO: correct impl!
     if (this == obj)
       return true;
     if (obj == null)
@@ -218,14 +216,7 @@ public class RavenJValue extends RavenJToken {
     if (getClass() != obj.getClass())
       return false;
     RavenJValue other = (RavenJValue) obj;
-    if (value == null) {
-      if (other.value != null)
-        return false;
-    } else if (!value.equals(other.value))
-      return false;
-    if (valueType != other.valueType)
-      return false;
-    return true;
+    return deepEquals(other);
   }
 
   @Override

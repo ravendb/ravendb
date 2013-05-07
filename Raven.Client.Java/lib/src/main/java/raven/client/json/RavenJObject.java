@@ -152,15 +152,8 @@ public class RavenJObject extends RavenJToken   {
   }
 
   @Override
-  public RavenJToken createSnapshot() {
+  public RavenJObject createSnapshot() {
     return new RavenJObject(properties.createSnapshot());
-  }
-
-  public boolean deepEquals(RavenJToken other) {
-    if (!(other instanceof RavenJObject)) {
-      return false;
-    }
-    return super.deepEquals(other);
   }
 
   @Override
@@ -210,27 +203,6 @@ public class RavenJObject extends RavenJToken   {
     properties.put(propertyName, value);
   }
 
-  /**
-   * @param properties the properties to set
-   */
-  public void setProperties(MapWithParentSnapshot properties) {
-    this.properties = properties;
-  }
-
-
-
-  @Override
-  public int hashCode() {
-    return deepHashCode();
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    if (!(other instanceof RavenJObject)) {
-      return false;
-    }
-    return super.deepEquals((RavenJToken) other);
-  }
 
   /**
    * Writes this token to a {@link JsonGenerator}

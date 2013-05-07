@@ -35,6 +35,9 @@ public abstract class RavenJToken {
   }
 
   protected static RavenJToken fromObjectInternal(Object o, ObjectMapper objectMapper) {
+    if (o == null) {
+      return RavenJValue.getNull();
+    }
     if (o instanceof RavenJToken) {
       return (RavenJToken) o;
     }
@@ -132,11 +135,11 @@ public abstract class RavenJToken {
       RavenJToken curObject = writingStack.pop();
 
       if (curReader instanceof RavenJObject) {
-        RavenJObject ravenJObject = (RavenJObject) curObject;
+        RavenJObject ravenJObject = (RavenJObject) curReader;
         for (String key: ravenJObject.getProperties().keySet()) {
           RavenJToken value = ravenJObject.get(key);
           if (value == null || value.getType() == JTokenType.NULL) {
-            curObject.addForCloning(key, null);
+            curObject.addForCloning(key, RavenJValue.getNull());
             continue;
           }
           if (value instanceof RavenJValue) {
@@ -176,11 +179,34 @@ public abstract class RavenJToken {
     return newObject;
   }
 
+  @Override
+  public int hashCode() {
+    return deepHashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (this == obj) {
+      return true;
+    }
+    if (!this.getClass().equals(obj.getClass())) {
+      return false;
+    }
+    return deepEquals((RavenJToken)obj);
+  }
+
   public abstract RavenJToken createSnapshot();
 
   public boolean deepEquals(RavenJToken other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
+    if (this == other) {
+      return true;
+    }
 
     if (!getClass().equals(other.getClass())) {
       return false;

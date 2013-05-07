@@ -2,21 +2,32 @@ package raven.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParseException;
 import org.junit.Test;
 
+import raven.client.common.extensions.JsonExtensions;
 import raven.client.json.Guid;
 import raven.client.json.JTokenType;
 import raven.client.json.RavenJArray;
@@ -24,6 +35,7 @@ import raven.client.json.RavenJObject;
 import raven.client.json.RavenJToken;
 import raven.client.json.RavenJValue;
 import raven.client.json.lang.JsonWriterException;
+import raven.client.utils.StringUtils;
 
 public class RavenJObjectsTest {
 
@@ -117,7 +129,14 @@ public class RavenJObjectsTest {
 
   @Test
   public void testHashCodeAndEqual() throws Exception {
-    //TODO implemenent me
+    RavenJArray array1 = RavenJArray.parse("[1,2,3,4]");
+    RavenJArray array2 = RavenJArray.parse("[1,2,3]");
+    assertNotEquals(array1, array2);
+    assertNotEquals(array1.hashCode(), array2.hashCode());
+    array2.add(RavenJToken.fromObject(4));
+    assertEquals(array1, array2);
+    assertEquals(array1.hashCode(), array2.hashCode());
+
   }
 
   @Test
@@ -135,6 +154,15 @@ public class RavenJObjectsTest {
     assertFalse(value1.isSnapshot());
     value1.ensureCannotBeChangeAndEnableShapshotting();
     assertTrue(value1.isSnapshot());
+
+    RavenJObject object = RavenJObject.parse("{ \"a\" : [ 1,2,3] } ");
+    assertFalse(object.isSnapshot());
+    object.ensureCannotBeChangeAndEnableShapshotting();
+    assertTrue(object.isSnapshot());
+    RavenJObject snapshot = object.createSnapshot();
+    assertFalse(snapshot.isSnapshot());
+    snapshot.ensureSnapshot("snap1");
+    assertTrue(snapshot.isSnapshot());
   }
 
   @Test(expected = IllegalStateException.class)
@@ -142,6 +170,13 @@ public class RavenJObjectsTest {
     RavenJValue value1=  new RavenJValue("test");
     value1.ensureCannotBeChangeAndEnableShapshotting();
     value1.setValue("aa");
+  }
+
+
+  @Test(expected = IllegalStateException.class)
+  public void testCreateSnapshotOnInvalidObject() {
+    RavenJArray array = RavenJArray.parse("[1,2,3,4]");
+    array.createSnapshot();
   }
 
   @Test
@@ -195,7 +230,74 @@ public class RavenJObjectsTest {
     innerTestParseRavenJValue("\"ala\"", JTokenType.STRING, "ala");
     innerTestParseRavenJValue("12", JTokenType.INTEGER, 12);
     innerTestParseRavenJValue("12.5", JTokenType.FLOAT, Double.valueOf(12.5f));
+
+    RavenJToken testObj = RavenJValue.fromObject("testing");
+    assertEquals(JTokenType.STRING, testObj.getType());
+    try {
+      RavenJObject.fromObject("a");
+      fail("Cannot parse array as object!");
+    } catch (IllegalArgumentException e)  { /* ok */ }
+
+    try {
+      RavenJObject.parse("{");
+      fail("Cannot parse invalid object");
+    } catch (JsonWriterException e) { /* ok */ }
+
+    try {
+      RavenJObject.parse("{ 5");
+      fail("Cannot parse invalid object");
+    } catch (JsonWriterException e) { /* ok */ }
+
+    RavenJObject complexObject = RavenJObject.parse("{ \"a\" : 5, \"b\" : [1,2,3], \"c\" : { \"d\" : null} , \"d\" : null, \"e\": false, \"f\" : \"string\"}");
+    assertEquals(6, complexObject.getCount());
+    Set<String> props = complexObject.getKeys();
+    Set<String> expectedProps = new HashSet<>(Arrays.asList("a", "b", "c", "d", "e", "f"));
+    assertEquals(expectedProps, props);
+    assertEquals(RavenJToken.parse("5"), complexObject.get("a"));
+    assertEquals(JTokenType.INTEGER, complexObject.get("a").getType());
+    assertEquals(JTokenType.ARRAY, complexObject.get("b").getType());
+    assertEquals(JTokenType.OBJECT, complexObject.get("c").getType());
+    assertEquals(JTokenType.NULL, complexObject.get("d").getType());
+    assertEquals(JTokenType.BOOLEAN, complexObject.get("e").getType());
+    assertEquals(JTokenType.STRING, complexObject.get("f").getType());
+
+    RavenJObject cloneToken = complexObject.cloneToken();
+
+    assertEquals(6, cloneToken.getCount());
+    assertEquals(JTokenType.INTEGER, cloneToken.get("a").getType());
+    assertEquals(JTokenType.ARRAY, cloneToken.get("b").getType());
+    assertEquals(3, ((RavenJArray)cloneToken.get("b")).size());
+    assertEquals(JTokenType.OBJECT, cloneToken.get("c").getType());
+    assertEquals(JTokenType.NULL, cloneToken.get("d").getType());
+    assertEquals(JTokenType.BOOLEAN, cloneToken.get("e").getType());
+    assertEquals(JTokenType.STRING, cloneToken.get("f").getType());
+
+    assertTrue(cloneToken.containsKey("d"));
+    cloneToken.add("x", RavenJValue.fromObject(null));
+    assertEquals(JTokenType.NULL, cloneToken.get("x").getType());
+
+    cloneToken.remove("x");
+    assertFalse(cloneToken.containsKey("x"));
+
+
+    try {
+      RavenJObject.parse("{ : 5}");
+      fail("Cannot parse invalid object");
+    } catch (JsonWriterException e) { /* ok */ }
+
   }
+
+  @Test
+  public void testObjectWrite() throws IOException {
+    RavenJObject object = RavenJObject.parse("{\"a\": [1,2,3,4]}");
+
+    ByteArrayOutputStream baos =new ByteArrayOutputStream();
+    try (JsonGenerator jsonGenerator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(baos)) {
+      object.writeTo(jsonGenerator);
+    }
+    assertEquals("{\"a\":[1,2,3,4]}",baos.toString());
+  }
+
 
   @Test
   public void testInitializeRavenJArray() {
@@ -214,6 +316,28 @@ public class RavenJObjectsTest {
     assertEquals(0, emptyArray.size());
 
     array.set(3, new RavenJValue(true));
+
+  }
+
+
+
+  @Test(expected = JsonWriterException.class)
+  public void testWriteArrayToCustomReader() throws IOException {
+
+    String longString = StringUtils.repeat("a", 10000);
+    RavenJArray jArray = RavenJArray.parse("[1,2,3, \"" + longString + "\"]");
+
+    try (JsonGenerator generator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(new ByteArrayOutputStream())) {
+      jArray.writeTo(generator);
+    }
+
+    jArray = RavenJArray.parse("[1,2,3, \"" + longString + "\"]");
+    OutputStream outputStream = mock(OutputStream.class);
+    doThrow(new IOException()).when(outputStream).write(any(byte[].class),anyInt(),anyInt());
+
+    try (JsonGenerator generator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(outputStream)) {
+      jArray.writeTo(generator);
+    }
 
   }
 
@@ -249,7 +373,20 @@ public class RavenJObjectsTest {
     } catch (Exception e) { /* ok */ }
 
     try {
+      RavenJArray.parse("[");
+      fail("it was invalid array!");
+    } catch (Exception e) { /* ok */ }
+
+    try {
       RavenJArray.parse("1");
+      fail("it wasn't array!");
+    } catch (Exception e) { /* ok */ }
+    try {
+      RavenJArray.parse("");
+      fail("it wasn't array!");
+    } catch (Exception e) { /* ok */ }
+    try {
+      RavenJArray.parse(null);
       fail("it wasn't array!");
     } catch (Exception e) { /* ok */ }
   }
@@ -333,7 +470,6 @@ public class RavenJObjectsTest {
 
     RavenJObject ravenJObject = RavenJObject.fromObject(person1);
     assertNotNull(ravenJObject);
-    System.err.println(ravenJObject);
 
   }
 }

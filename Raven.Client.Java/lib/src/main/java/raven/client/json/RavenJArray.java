@@ -100,15 +100,15 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     try {
       if (parser.getCurrentToken() == null) {
         if (parser.nextToken() == null) {
-          throw new JsonReaderException("Error reading RavenJToeken from JsonParser");
+          throw new JsonReaderException("Error reading RavenJToken from JsonParser");
         }
       }
       if (parser.getCurrentToken() != JsonToken.START_ARRAY) {
         throw new JsonReaderException("Error reading RavenJArray from JsonParser. Current JsonReader item is not an array: " + parser.getCurrentToken());
       }
-      if (parser.nextToken() == null) {
-        throw new JsonReaderException("Unexpected end of json array");
-      }
+      // advance to next token
+      parser.nextToken();
+
       RavenJArray ar = new RavenJArray();
       RavenJToken val = null;
       do {

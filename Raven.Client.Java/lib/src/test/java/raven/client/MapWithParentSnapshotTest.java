@@ -6,12 +6,19 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
 
 import raven.client.json.JTokenType;
 import raven.client.json.MapWithParentSnapshot;
+import raven.client.json.RavenJArray;
 import raven.client.json.RavenJToken;
 import raven.client.json.RavenJValue;
 
@@ -54,10 +61,65 @@ public class MapWithParentSnapshotTest {
     assertTrue(map.isEmpty());
   }
 
+  @Test(expected = IllegalStateException.class)
+  public void testCannotModifySnapshot() {
+    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    map.ensureSnapshot();
+    map.put("key", RavenJToken.fromObject("a"));
+  }
+
+  @Test
+  public void testValues() {
+    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    map.put("name1", RavenJValue.parse("5"));
+    map.put("test", RavenJValue.parse("null"));
+    map.put("@id", RavenJValue.fromObject("c"));
+    map.remove("@id");
+    map.ensureSnapshot("snap!");
+
+    MapWithParentSnapshot snapshot = map.createSnapshot();
+    snapshot.remove("name1");
+    Collection<RavenJToken> collection = snapshot.values();
+    assertEquals(1, collection.size());
+    assertEquals(JTokenType.NULL, collection.iterator().next().getType());
+  }
+
+  @Test(expected =  IllegalStateException.class)
+  public void testContainsValue() {
+    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    map.containsValue("any");
+  }
+
+  @Test(expected =  IllegalStateException.class)
+  public void testEntrySet() {
+    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    map.entrySet();
+  }
+
+  @Test
+  public void testPutAll() {
+    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    Map<String, RavenJToken> toInsert = new HashMap<>();
+    toInsert.put("#id", RavenJValue.parse("null"));
+    map.putAll(toInsert);
+    assertEquals(1, map.size());
+  }
+
+  @Test
+  public void testEmptyKeyset() {
+    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    assertTrue(map.keySet().isEmpty());
+    map.ensureSnapshot();
+    MapWithParentSnapshot snapshot = map.createSnapshot();
+    assertTrue(snapshot.keySet().isEmpty());
+  }
+
   @Test
   public void testWithParents() {
     MapWithParentSnapshot map = new MapWithParentSnapshot();
     map.put("name1", RavenJValue.parse("5"));
+    map.put("@id", RavenJValue.fromObject("c"));
+    map.remove("@id");
     map.ensureSnapshot("snap!");
 
     MapWithParentSnapshot snapshot = map.createSnapshot();
@@ -88,6 +150,9 @@ public class MapWithParentSnapshotTest {
     assertNull(snapshot.get("name1"));
     assertFalse(snapshot.containsKey("name2"));
     assertNull(snapshot.get("name2"));
+
+    assertFalse(map.containsKey("@id"));
+
 
 
   }
