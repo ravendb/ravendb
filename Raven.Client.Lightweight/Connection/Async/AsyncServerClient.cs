@@ -361,8 +361,40 @@ namespace Raven.Client.Connection.Async
 			var serializeObject = JsonConvert.SerializeObject(transformerDefinition, Default.Converters);
 			return request.WriteAsync(serializeObject)
 				.ContinueWith(writeTask => request.ReadResponseJsonAsync()
-											.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("Transformer"); })).
-				Unwrap();
+											.ContinueWith(readJsonTask =>
+											{
+                                                try
+                                                {
+                                                    return readJsonTask.Result.Value<string>("Transformer");
+                                                }
+                                                catch (AggregateException e)
+                                                {
+                                                    var we = e.ExtractSingleInnerException() as WebException;
+                                                    if (we == null)
+                                                        throw;
+
+                                                    var response = we.Response as HttpWebResponse;
+
+                                                    if (response.StatusCode == HttpStatusCode.BadRequest)
+                                                    {
+                                                        var error = we.TryReadErrorResponseObject(
+                                                            new { Error = "", Message = "" });
+
+                                                        if (error == null)
+                                                        {
+                                                            throw;
+                                                        }
+
+                                                        var compilationException = new TransformCompilationException(error.Message);
+
+                                                        throw compilationException;
+                                                    }
+
+                                                    throw;
+                                                }
+
+											}))
+				.Unwrap();
 		}
 
 		/// <summary>

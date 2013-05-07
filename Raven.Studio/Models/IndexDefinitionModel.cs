@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
@@ -34,8 +35,9 @@ namespace Raven.Studio.Models
 		public bool PriorityChanged = false;
 		public Observable<string> IndexingPriority { get; set; }
 		public IndexingPriority Priority { get; set; }
-		public List<string> Priorities { get; set; } 
+		public List<string> Priorities { get; set; }
 
+        public ObservableCollection<IndexDefinitionError> Errors { get; private set; }
 		public IndexDefinitionModel()
 		{
 			ModelUrl = "/indexes/";
@@ -59,15 +61,64 @@ namespace Raven.Studio.Models
 			SpatialFields.CollectionChanged += HandleChildCollectionChanged;
 
 			statistics = Database.Value.Statistics;
-			statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => ErrorsCount);
+			statistics.PropertyChanged += (sender, args) => UpdateErrors();
 
             propertyHasError = new ObservableDictionary<string, bool>();
 		    propertyHasError["TransformResults"] = false;
 		    propertyHasError["Name"] = false;
 		    propertyHasError["Reduce"] = false;
+
+            Errors = new ObservableCollection<IndexDefinitionError>();
 		}
 
-		private void HandleChildCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+	    private void UpdateErrors()
+	    {
+	        bool hadIndexingErrors = Errors.Any(e => e.Stage == "Indexing");
+
+	        var serverErrors = Database.Value.Statistics.Value.Errors.Where(s => s.Index == Name).Select(se => new IndexDefinitionError()
+	        {
+	            DocumentId = se.Document,
+                Message = se.Error,
+                Section = se.Action,
+                Stage = "Indexing"
+	        }).ToList();
+
+            if (hadIndexingErrors || serverErrors.Any())
+            {
+                ClearErrorsForStage("Indexing");
+            }
+
+            Errors.AddRange(serverErrors);
+
+            if (serverErrors.Any(se => se.Section == "Map"))
+            {
+                foreach (var mapItem in Maps)
+                {
+                    mapItem.HasError = true;
+                }
+            }
+            
+
+            if (serverErrors.Any(se => se.Section == "Reduce"))
+            {
+                propertyHasError["Reduce"] = true;
+            }
+
+	        IsShowingErrors = Errors.Any();
+	    }
+
+	    private void ClearErrorsForStage(string stage)
+	    {
+	        for (int i = Errors.Count - 1; i >= 0; i--)
+	        {
+	            if (Errors[i].Stage == stage)
+	            {
+	                Errors.RemoveAt(i);
+	            }
+	        }
+	    }
+
+	    private void HandleChildCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			MarkAsDirty();
 
@@ -119,6 +170,8 @@ namespace Raven.Studio.Models
 
 
 			RestoreDefaults(index);
+
+            UpdateErrors();
 
 			hasUnsavedChanges = false;
 
@@ -183,6 +236,8 @@ namespace Raven.Studio.Models
 			OriginalName = name;
 			IsNewIndex = false;
 
+            ClearDefinitionErrors();
+
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnUIThread(task =>
 										{
@@ -201,6 +256,16 @@ namespace Raven.Studio.Models
 		    return !hasUnsavedChanges || AskUser.Confirmation("Edit Index",
 		                                                      "There are unsaved changes to this index. Are you sure you want to continue?");
 		}
+
+        public bool IsShowingErrors
+        {
+            get { return isShowingErrors; }
+            set
+            {
+                isShowingErrors = value;
+                OnPropertyChanged(() => IsShowingErrors);
+            }
+        }
 
 	    public static void HandleIndexNotFound(string name)
 		{
@@ -370,6 +435,7 @@ namespace Raven.Studio.Models
 		private bool showTransformResults;
 	    private string definitionErrorMessage;
 	    private ObservableDictionary<string, bool> propertyHasError;
+	    private bool isShowingErrors;
 
 	    public bool ShowTransformResults
 		{
@@ -429,19 +495,25 @@ namespace Raven.Studio.Models
 
         private void ClearDefinitionErrors()
         {
-            DefinitionErrorMessage = "";
+            ClearErrorsForStage("Compilation");
 
             foreach (var mapItem in Maps)
             {
                 mapItem.HasError = false;
             }
 
+
             ClearPropertyErrors();
         }
 
         private void ReportDefinitionError(string message, string property, string problematicText = "")
         {
-            DefinitionErrorMessage = message;
+           Errors.Add(new IndexDefinitionError()
+           {
+               Message = message,
+               Section = property,
+               Stage = "Compilation",
+           });
 
             if (property == "Maps")
             {
@@ -457,6 +529,8 @@ namespace Raven.Studio.Models
             {
                 PropertyHasError[property] = true;
             }
+
+            IsShowingErrors = true;
         }
 
 		#region Commands
@@ -1316,18 +1390,6 @@ namespace Raven.Studio.Models
 			return TaskEx.FromResult<IList<object>>(list);
 		}
 
-	    public IEnumerable GetErrors(string propertyName)
-	    {
-	        if (PropertyHasError.ContainsKey(propertyName))
-	        {
-	            yield return PropertyHasError[propertyName];
-	        }
-	        else
-	        {
-	            yield break;
-	        }
-	    }
-
 	    public ObservableDictionary<string, bool> PropertyHasError
 	    {
 	        get { return propertyHasError; }
@@ -1341,4 +1403,15 @@ namespace Raven.Studio.Models
             }
         }
 	}
+
+    public class IndexDefinitionError
+    {
+        public string Stage { get; set; }
+
+        public string Section { get; set; }
+
+        public string Message { get; set; }
+
+        public string DocumentId { get; set; }
+    }
 }

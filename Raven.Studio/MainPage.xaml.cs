@@ -50,7 +50,12 @@ namespace Raven.Studio
 
 		private static bool HyperlinkMatchesUri(string uri, HyperlinkButton link)
 		{
-		    var queryStart = uri.IndexOf('?');
+		    var queryStart = uri.IndexOf('/',1);
+            if (queryStart < 0)
+            {
+                queryStart = uri.IndexOf('?');
+            }
+
             if (queryStart > 0)
             {
                 uri = uri.Substring(0, queryStart);

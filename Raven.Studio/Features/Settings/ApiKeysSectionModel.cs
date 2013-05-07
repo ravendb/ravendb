@@ -41,7 +41,14 @@ namespace Raven.Studio.Features.Settings
 
 		public ICommand AddApiKeyCommand
 		{
-			get { return new ActionCommand(() => ApiKeys.Add(new ApiKeyDefinition())); }
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					ApiKeys.Add(new ApiKeyDefinition {Enabled = true});
+					OnPropertyChanged(() => ApiKeys);
+				});
+			}
 		}
 
 		public ICommand DeleteApiKey

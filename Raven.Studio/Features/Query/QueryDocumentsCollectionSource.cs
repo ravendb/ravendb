@@ -162,6 +162,12 @@ namespace Raven.Studio.Features.Query
                 indexName = _indexName;
             }
 
+            if (templateQuery == null)
+            {
+                totalResults.Value = 0;
+                return (IAsyncEnumerator<JsonDocument>)(new EmptyAsyncEnumerator<JsonDocument>());
+            }
+
             var query = templateQuery.Clone();
             query.Start = 0;
             query.PageSize = int.MaxValue;
@@ -173,6 +179,17 @@ namespace Raven.Studio.Features.Query
             totalResults.Value = reference.Value.TotalResults;
 
             return new ConvertingEnumerator<JsonDocument, RavenJObject>(enumerator, doc => doc.ToJsonDocument());
+        }
+
+        public void Clear()
+        {
+            lock (_lockObject)
+            {
+                _templateQuery = null;
+            }
+
+            Refresh(RefreshMode.ClearStaleData);
+            SetCount(0);
         }
     }
 

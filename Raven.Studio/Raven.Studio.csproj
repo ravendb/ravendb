@@ -238,6 +238,7 @@
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\MouseHoverTrigger.cs" />
     <Compile Include="Behaviors\ResizeDragBehavior.cs" />
+    <Compile Include="Behaviors\ShowQuickDocumentPopupBehavior.cs" />
     <Compile Include="Behaviors\SizeBindings.cs" />
     <Compile Include="Behaviors\StudioDataTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
@@ -288,6 +289,7 @@
     <Compile Include="Controls\ResetReplication.xaml.cs">
       <DependentUpon>ResetReplication.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Extensions\RectExtensions.cs" />
     <Compile Include="Features\Bundles\SqlReplicationConfigModel.cs" />
     <Compile Include="Features\Documents\ColumnModelBindingExtensions.cs" />
     <Compile Include="Features\Documents\ConflictDocumentsCollectionSource.cs" />
@@ -300,6 +302,7 @@
     </Compile>
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
     <Compile Include="Features\JsonEditor\QuickDocumentView.xaml.cs">
@@ -307,6 +310,9 @@
     </Compile>
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
+    <Compile Include="Features\Reporting\ReportingView.xaml.cs">
+      <DependentUpon>ReportingView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
       <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
     </Compile>
@@ -347,6 +353,7 @@
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
     <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
+    <Compile Include="Models\ReportingModel.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
     <Compile Include="Models\StatusModel.cs" />
     <Compile Include="Models\StatusPageModel.cs" />
@@ -637,6 +644,7 @@
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Features\Settings\VersioningSettingsSectionModel.cs" />
+    <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Views\Backup.xaml.cs">
       <DependentUpon>Backup.xaml</DependentUpon>
     </Compile>
@@ -654,6 +662,9 @@
     </Compile>
     <Compile Include="Views\Patch.xaml.cs">
       <DependentUpon>Patch.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Reporting.xaml.cs">
+      <DependentUpon>Reporting.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Restore.xaml.cs">
       <DependentUpon>Restore.xaml</DependentUpon>
@@ -1023,6 +1034,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Reporting\ReportingView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Stats\AlertsStatusSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1167,6 +1182,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Themes\Generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\Backup.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1188,6 +1207,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Patch.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Reporting.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
