@@ -47,6 +47,7 @@ namespace Raven.Studio.Features.Query
 				                   let content = storage.ReadEntireFile(path + "/" + fileName)
 				                   let lastWriteTime = storage.GetLastWriteTime(path + "/" + fileName)
 				                   let query = JsonConvert.DeserializeObject<SavedQuery>(content)
+                                   where !string.IsNullOrEmpty(query.IndexName)
 				                   orderby lastWriteTime descending
 				                   select query)
 					    .ToList();

@@ -6,6 +6,7 @@ using ActiproSoftware.Compatibility;
 using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Studio.Extensions;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.JsonEditor
@@ -94,7 +95,7 @@ namespace Raven.Studio.Features.JsonEditor
             {
                 try
                 {
-                    var inflatedBounds = Inflate(state.Session.Bounds.Value, 40);
+                    var inflatedBounds = state.Session.Bounds.Value.Inflate(40);
                     if (!inflatedBounds.Contains(state.LastMousePosition))
                     {
                         state.Session.Close(true);
@@ -105,11 +106,6 @@ namespace Raven.Studio.Features.JsonEditor
                     
                 }
             }
-        }
-
-        private Rect Inflate(Rect value, int inflateBy)
-        {
-            return new Rect(new Point(value.Left - inflateBy, value.Top - inflateBy), new Size(value.Width + inflateBy * 2, value.Height + inflateBy * 2));
         }
 
         public void NotifyMouseUp(IEditorView view, MouseButtonEventArgs e)

@@ -44,7 +44,7 @@ namespace Raven.Studio.Models
 
 			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) =>
 			{
-				Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
+				Server.Value.SelectedDatabase.Value.Update();
 				RegisterToAlerts();
 			};
 

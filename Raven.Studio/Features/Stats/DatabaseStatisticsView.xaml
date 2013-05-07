@@ -10,7 +10,7 @@
 						 Margin="0,0,6,0"
 						 Foreground="Black"
 						 Command="{StaticResource NavigateToCommand}"
-						 CommandParameter="/statistics" />
+						 CommandParameter="/status" />
 
 		<StackPanel Orientation="Horizontal">
 			<StackPanel.Resources>
@@ -25,16 +25,16 @@
 							 CommandParameter="/indexes" />
 			<HyperlinkButton Content="{Binding Path=StaleIndexes.Length, StringFormat='\{0:#,#;;0\} stale'}"
 							 Command="{StaticResource NavigateToCommand}"
-							 CommandParameter="/statistics" />
+							 CommandParameter="/status" />
 			<HyperlinkButton Content="{Binding Path=Errors.Length, StringFormat='\{0:#,#;;0\} errors'}"
 							 Command="{StaticResource NavigateToCommand}"
-							 CommandParameter="/indexes-errors" />
+							 CommandParameter="/status?id=indexes-errors" />
 			<HyperlinkButton Content="{Binding Path=Triggers.Length, StringFormat='\{0:#,#;;0\} triggers'}"
 							 Command="{StaticResource NavigateToCommand}"
-							 CommandParameter="/statistics" />
+							 CommandParameter="/status" />
 			<HyperlinkButton Content="{Binding ApproximateTaskCount, StringFormat='\{0:#,#;;0\} tasks'}"
 							 Command="{StaticResource NavigateToCommand}"
-							 CommandParameter="/statistics" />
+							 CommandParameter="/status" />
 		</StackPanel>
 
 	</StackPanel>

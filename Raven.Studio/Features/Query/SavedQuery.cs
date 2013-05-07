@@ -1,11 +1,20 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Studio.Features.Query
 {
     public class SavedQuery
     {
+        [JsonConstructor]
+        public SavedQuery(string indexName, string query)
+        {
+            IndexName = indexName;
+            Query = query;
+            SortOptions = new List<string>();
+        }
+
 		public SavedQuery(QueryState state)
 		{
 			if (state == null)

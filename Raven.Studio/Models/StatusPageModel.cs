@@ -24,7 +24,27 @@ namespace Raven.Studio.Models
 			Status.Sections.Add(new IndexesErrorsStatusSectionModel());
 			Status.Sections.Add(new ReplicationStatisticsStatusSectionModel());
 			Status.Sections.Add(new UserInfoStatusSectionModel());
-		    Status.SelectedSection.Value = Status.Sections[0];
+
+			var url = new UrlParser(UrlUtil.Url);
+
+			var id = url.GetQueryParam("id");
+			if (string.IsNullOrWhiteSpace(id) == false)
+			{
+				switch (id)
+				{
+					case "indexes-errors":
+						Status.SelectedSection.Value = Status.Sections[3];
+						break;
+					case "replication":
+						Status.SelectedSection.Value = Status.Sections[4];
+						break;
+					default:
+						Status.SelectedSection.Value = Status.Sections[0];
+						break;
+				}
+			}
+			else
+				Status.SelectedSection.Value = Status.Sections[0];
 	    }
 
 	    public StatusModel Status { get; private set; }
