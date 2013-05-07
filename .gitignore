@@ -45,5 +45,5 @@ Raven.Web/NLog.config
 *.*crunch*
 Testresults
 /Raven.Client.MvcIntegration/Content/ravendb-profiler.min.js
-
+/*.shfbproj_Fitzchak
 Raven.Studio/Settings.dat
