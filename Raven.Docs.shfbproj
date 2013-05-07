@@ -83,6 +83,13 @@
     <CopyrightText>Copyright &amp;#169%3b 2010 - 2013 Hibernating Rhinos. All rights reserved.</CopyrightText>
     <HeaderText>RavenDB API Documentation</HeaderText>
     <PresentationStyle>vs2010</PresentationStyle>
+    <BuildAssemblerVerbosity>OnlyWarningsAndErrors</BuildAssemblerVerbosity>
+    <HelpFileFormat>HtmlHelp1</HelpFileFormat>
+    <FrameworkVersion>.NET Framework 4.5</FrameworkVersion>
+    <KeepLogFile>True</KeepLogFile>
+    <DisableCodeBlockComponent>False</DisableCodeBlockComponent>
+    <CppCommentsFixup>False</CppCommentsFixup>
+    <CleanIntermediates>True</CleanIntermediates>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in
        order for Visual Studio to perform the build.  The others are optional
