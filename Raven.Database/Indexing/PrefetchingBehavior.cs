@@ -74,10 +74,10 @@ namespace Raven.Database.Indexing
 
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
 		{
-			var inMemResults = new List<JsonDocument>();
+			//var inMemResults = new List<JsonDocument>();
 			var nextDocEtag = GetNextDocEtag(etag);
-			if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
-				return inMemResults;
+			//if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
+			//	return inMemResults;
 
 			var results =
 				GetFutureJsonDocuments(nextDocEtag) ??
@@ -86,6 +86,8 @@ namespace Raven.Database.Indexing
 			return MergeWithOtherFutureResults(results);
 		}
 
+
+		// TODO we cannot relay on the nextDocEtag here and should ignore it
 		private bool TryGetInMemoryJsonDocuments(Etag nextDocEtag, List<JsonDocument> items)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
