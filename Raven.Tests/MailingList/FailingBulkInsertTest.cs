@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Database;
-using Raven.Database.Tasks;
 using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using Xunit;
-using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Tests.MailingList
 {
@@ -19,8 +15,8 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanBulkInsert()
 		{
-			var bulkInsertSize = 20000;
-			using (var store = NewDocumentStore())
+			var bulkInsertSize = 50000;
+			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
 				new SampleData_Index().Execute(store);
 				using (var bulkInsert = store.BulkInsert())
@@ -47,7 +43,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanBulkInsert_LowLevel()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
 				store.DocumentDatabase.BulkInsert(new BulkInsertOptions(), YieldDocumentBatch(store));
 
@@ -55,7 +51,7 @@ namespace Raven.Tests.MailingList
 
 				var queryResultWithIncludes = store.DocumentDatabase.Query("Raven/DocumentsByEntityName", new IndexQuery());
 
-				Assert.Equal(15, queryResultWithIncludes.TotalResults);
+				Assert.Equal(12, queryResultWithIncludes.TotalResults);
 			}
 		}
 
@@ -74,7 +70,10 @@ namespace Raven.Tests.MailingList
 				{
 					store.DocumentDatabase.Put("test/" + i, null, new RavenJObject(), new RavenJObject { { "Raven-Entity-Name", "Test" } }, null);
 				}).Wait();
-				WaitForIndexing(store);
+
+				// note this is called inside bulk insert batch - make sure that this will be run in a separate thread to avoid batch nesting 
+				// what would reuse an esent session and return invalid information about index staleness
+				Task.Factory.StartNew(() => WaitForIndexing(store), TaskCreationOptions.LongRunning).Wait(); 
 			}
 		}
 
