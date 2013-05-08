@@ -644,6 +644,7 @@
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Features\Settings\VersioningSettingsSectionModel.cs" />
+    <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Views\Backup.xaml.cs">
       <DependentUpon>Backup.xaml</DependentUpon>
     </Compile>
