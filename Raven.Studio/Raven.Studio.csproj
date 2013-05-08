@@ -354,6 +354,7 @@
     <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
     <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
     <Compile Include="Models\ReportingModel.cs" />
+    <Compile Include="Infrastructure\SamplingInvoker.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
     <Compile Include="Models\StatusModel.cs" />
     <Compile Include="Models\StatusPageModel.cs" />
