@@ -391,10 +391,6 @@ namespace Raven.Database.Indexing
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
-				var indexLastIndexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
-				if (indexLastIndexEtag.CompareTo(lastIndexedEtag) >= 0)
-					return;
-
 				var indexName = indexToWorkOn.IndexName;
 				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexName);
 				if (viewGenerator == null)
@@ -411,10 +407,6 @@ namespace Raven.Database.Indexing
 					var etag = item.Doc.Etag;
 					if (etag == null)
 						continue;
-
-					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.ToByteArray())) >= 0)
-						continue;
-
 
 					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
