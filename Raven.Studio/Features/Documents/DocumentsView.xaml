@@ -13,6 +13,9 @@
                      xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
                      xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
                      xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+                     xmlns:Delay="clr-namespace:Delay"
+                     xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                     xmlns:behaviors="clr-namespace:RavenFS.Studio.Behaviors"
                      mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400" 
                      d:DataContext="{d:DesignInstance Models:DocumentsModel}">
 
@@ -52,7 +55,7 @@
                                     <Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
                                 </ContextMenu:MenuItem.Icon>
                             </ContextMenu:MenuItem>
-                          <ContextMenu:MenuItem Header="Delete"
+                            <ContextMenu:MenuItem Header="Delete"
                                                 Command="{Binding DeleteSelectedDocuments}">
                                 <ContextMenu:MenuItem.Icon>
                                     <Image Source="{StaticResource Image_Delete_Tiny}"/>
@@ -107,7 +110,7 @@
                     <i:Interaction.Behaviors>
                         <Behaviors:SelectRowOnRightClickBehavior />
                         <Infrastructure:ProvideVisibleItemRangeFromDataGridBehavior/>
-                        <Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/> 
+                        <Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
                         <Behaviors:BindColumnsToColumnSetBehavior Columns="{Binding Columns}" 
                                                                   InvalidBindingHeaderStyle="{StaticResource InvalidBindingColumnHeaderStyle}"/>
                         <Behaviors:DataGridRowDoubleClickCommandBehavior Command="{Binding EditDocument}"/>
@@ -156,7 +159,7 @@
                                 <DataTemplate>
                                     <Grid>
                                         <i:Interaction.Behaviors>
-                                                <Behaviors:ShowQuickDocumentPopupBehavior DocumentId="{Binding Item.Document.Key}"/>
+                                            <Behaviors:ShowQuickDocumentPopupBehavior DocumentId="{Binding Item.Document.Key}"/>
                                         </i:Interaction.Behaviors>
                                         <Rectangle Margin="0"
                                                    HorizontalAlignment="Left"
@@ -164,7 +167,7 @@
                                                    Width="8"
                                                    RadiusX="1"
                                                    RadiusY="1"/>
-                                        
+
                                         <Rectangle HorizontalAlignment="Left"
                                                    Width="4"
                                                    Fill="{Binding Path=Item.Fill}"
@@ -194,6 +197,13 @@
                     <Converters:StringValueConversion When="IdOnly" Then="{StaticResource DataTemplate_List_CardView}"/>
                 </Converters:StringValueToObjectConverter.Conversions>
             </Converters:StringValueToObjectConverter>
+            
+            <Storyboard x:Name="ShowRefreshPanel">
+                <DoubleAnimation Storyboard.TargetName="RefreshPanel" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.25"/>
+            </Storyboard>
+            <Storyboard x:Name="HideRefreshPanel">
+                <DoubleAnimation Storyboard.TargetName="RefreshPanel" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/>
+            </Storyboard>
         </Grid.Resources>
 
         <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
@@ -215,7 +225,27 @@
 								   VerticalAlignment="Center"
 								   Margin="6" />
                     </StackPanel>
-                    
+
+                    <Border x:Name="RefreshPanel"
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            Margin="10,0" 
+                            Opacity="0"
+                            Background="#FFC8CDEC" BorderBrush="#FFCCCFDC" CornerRadius="2" BorderThickness="1">
+                        <i:Interaction.Triggers>
+                            <behaviors:StudioDataTrigger Binding="{Binding HasChanges}" Value="True" Comparison="Equal">
+                                <ei:ControlStoryboardAction Storyboard="{StaticResource ShowRefreshPanel}" ControlStoryboardOption="Play"/>
+                            </behaviors:StudioDataTrigger>
+                            <behaviors:StudioDataTrigger Binding="{Binding HasChanges}" Value="False" Comparison="Equal">
+                                <ei:ControlStoryboardAction Storyboard="{StaticResource HideRefreshPanel}" ControlStoryboardOption="Play"/>
+                            </behaviors:StudioDataTrigger>
+                        </i:Interaction.Triggers>
+                        <StackPanel Orientation="Horizontal" Margin="8,4" >
+                            <TextBlock Text="Documents have changed" FontWeight="Bold" Margin="0,0,8,0"/>
+                            <HyperlinkButton Content="Refresh" Command="{Binding RefreshView}" Foreground="White"/>
+                        </StackPanel>
+                    </Border>
+
                     <StackPanel Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Margin="0,0,4,0"
@@ -226,6 +256,33 @@
 								   Stretch="None"/>
                         </Button>
                         <Controls1:ViewSizeControl ViewSize="{Binding Path=Current.IndicatorPosition, Source={StaticResource DocumentSize}, Mode=TwoWay}" />
+                        <Delay:PopupButton  ToolTipService.ToolTip="Settings" 
+                                PopupAlignment="Right">
+                            <Delay:PopupButton.Content>
+                                <Image Source="{StaticResource Image_Settings_Tiny}"
+						   Stretch="None"
+						   VerticalAlignment="Center" />
+                            </Delay:PopupButton.Content>
+                            <Delay:PopupButton.PopupContent>
+                                <Border Background="#EFEFEF"
+                        BorderThickness="1"
+                        BorderBrush="Gray"
+                        Margin="0,20,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect Opacity="0.4" />
+                                    </Border.Effect>
+                                    <Grid Margin="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <CheckBox IsChecked="{Binding AutoRefresh, Mode=TwoWay}" Content="Auto Refresh"/>
+
+                                    </Grid>
+                                </Border>
+                            </Delay:PopupButton.PopupContent>
+                        </Delay:PopupButton>
                     </StackPanel>
                 </Grid>
 

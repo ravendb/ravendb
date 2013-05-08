@@ -48,6 +48,9 @@ namespace Raven.Studio.Models
         private IDisposable changesSubscription;
         private ICommand exportDetailsCommand;
         private SamplingInvoker updateColumnsSamplingInvoker;
+        private bool autoRefresh;
+        private bool hasChanges;
+        private ICommand refreshViewCommand;
 
         public event EventHandler<EventArgs> RecentDocumentsChanged;
 
@@ -62,6 +65,7 @@ namespace Raven.Studio.Models
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified, v => v.MetadataOnly));
             Documents.PropertyChanged += HandleDocumentsPropertyChanged;
 
+            collectionSource.CollectionChanged += delegate { HandleCollectionRefreshed(); };
             updateColumnsSamplingInvoker = new SamplingInvoker(TimeSpan.FromSeconds(1));
             Documents.RealizedItemRetrievedEventArgs += (sender, e) => HandleItemRetrieved(e.Index, e.Item as ViewableDocument);
 
@@ -69,6 +73,11 @@ namespace Raven.Studio.Models
             DocumentsHaveId = true;
 
             Context = "Default";
+        }
+
+        private void HandleCollectionRefreshed()
+        {
+            HasChanges = false;
         }
 
         private void HandleItemRetrieved(int index, ViewableDocument document)
@@ -95,6 +104,19 @@ namespace Raven.Studio.Models
         public bool HideItemContextMenu { get; set; }
 
         public bool MinimalHeader { get; set; }
+
+        public bool AutoRefresh
+        {
+            get
+            {
+                return Settings.Instance.AutoRefreshDocumentLists;
+            }
+            set
+            {
+                Settings.Instance.AutoRefreshDocumentLists = value;
+                OnPropertyChanged(() => AutoRefresh);
+            }
+        }
 
         private void UpdateColumns()
         {
@@ -302,8 +324,43 @@ namespace Raven.Studio.Models
                     observable
                     .SampleResponsive(TimeSpan.FromSeconds(1))
                     .ObserveOnDispatcher()
-                    .Subscribe(_ => Documents.Refresh(RefreshMode.PermitStaleDataWhilstRefreshing));
+                    .Subscribe(_ => HandleSourceChanged());
             }
+        }
+
+        private void HandleSourceChanged()
+        {
+            if (AutoRefresh)
+            {
+                Refresh();
+            }
+            else
+            {
+                HasChanges = true;
+            }
+        }
+
+        public bool HasChanges
+        {
+            get { return hasChanges; }
+            set
+            {
+                if (hasChanges != value)
+                {
+                    hasChanges = value;
+                    OnPropertyChanged(() => HasChanges);
+                }
+            }
+        }
+
+        public ICommand RefreshView
+        {
+            get { return refreshViewCommand ?? (refreshViewCommand = new ActionCommand(Refresh)); }
+        }
+
+        private void Refresh()
+        {
+            Documents.Refresh(RefreshMode.PermitStaleDataWhilstRefreshing);
         }
 
         private void StopListeningForChanges()
