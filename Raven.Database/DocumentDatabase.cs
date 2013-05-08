@@ -2204,7 +2204,10 @@ namespace Raven.Database
                     var inserts = 0;
                     var batch = 0;
                     var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var doc in docs)
+	                
+					var docsToInsert = docs.ToArray();
+
+					foreach (var doc in docsToInsert)
                     {
                         RemoveReservedProperties(doc.DataAsJson);
                         RemoveMetadataReservedProperties(doc.Metadata);
@@ -2221,6 +2224,8 @@ namespace Raven.Database
                         var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
                         if (result.Updated == false)
                             inserts++;
+
+	                    doc.Etag = result.Etag;
 
                         doc.Metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
                         doc.DataAsJson.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
@@ -2239,6 +2244,8 @@ namespace Raven.Database
                     }
                     accessor.Documents.IncrementDocumentCount(inserts);
                     accessor.General.PulseTransaction();
+					etagSynchronizer.UpdateSynchronizationState(docsToInsert);
+					
                     workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
                     workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
                 }
