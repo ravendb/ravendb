@@ -10,6 +10,10 @@
                          xmlns:models="clr-namespace:Raven.Studio.Models"
 						 xmlns:contextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
                          xmlns:data="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                         xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+                         xmlns:behaviors="clr-namespace:Raven.Studio.Behaviors"
+                         xmlns:reporting="clr-namespace:Raven.Studio.Features.Reporting"
                          d:DesignWidth="640" d:DesignHeight="480"
 						 d:DataContext="{d:DesignInstance models:ReportingModel}"
 						 Title="ReportingView Page">
@@ -181,6 +185,16 @@
 							  Margin="0,10,24,10"
 							  ItemTemplate="{StaticResource AggregationTemplate}">
 				</ListBox>
+                
+                <sdk:DataGrid ItemsSource="{Binding Results}" AutoGenerateColumns="False" Grid.Row="2">
+                    <i:Interaction.Behaviors>
+                        <behaviors:BindColumnsToColumnSetBehavior Columns="{Binding ResultColumns}">
+                            <behaviors:BindColumnsToColumnSetBehavior.ColumnGenerator>
+                                <reporting:ReportColumnsGenerator/>
+                            </behaviors:BindColumnsToColumnSetBehavior.ColumnGenerator>
+                        </behaviors:BindColumnsToColumnSetBehavior>
+                    </i:Interaction.Behaviors>
+                </sdk:DataGrid>
 			</Grid>
 		</Grid>
 	</Grid>
