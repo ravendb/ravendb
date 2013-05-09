@@ -180,8 +180,19 @@ public class RavenJValue extends RavenJToken {
   public int deepHashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((value == null) ? 0 : value.hashCode());
-    result = prime * result + ((valueType == null) ? 0 : valueType.hashCode());
+
+    if (valueType != null && valueType == JTokenType.BYTES) {
+      result = prime * result + ((valueType == null) ? 0 : valueType.hashCode());
+      if (value != null) {
+        byte[] bytes = (byte[]) value;
+        for (int i = 0; i < bytes.length; i++) {
+          result = prime * result + bytes[i];
+        }
+      }
+    } else {
+      result = prime * result + ((value == null) ? 0 : value.hashCode());
+      result = prime * result + ((valueType == null) ? 0 : valueType.hashCode());
+    }
     return result;
   }
 
@@ -255,7 +266,6 @@ public class RavenJValue extends RavenJToken {
       case STRING:
         writer.writeString((String) value);
         return;
-        //TODO finish me!
       default:
         throw new JsonWriterException("Unexpected token:" + valueType);
       }

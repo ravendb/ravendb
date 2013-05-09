@@ -284,6 +284,10 @@ public class RavenJObjectsTest {
     assertNotEquals(RavenJValue.fromObject(0L), RavenJValue.fromObject((short)1));
     innerEqCheck(new RavenJValue(5) , new RavenJValue(5L));
 
+    innerEqCheck(new RavenJValue((short)5) , new RavenJValue((short)5));
+    innerEqCheck(new RavenJValue((float)5.1) , new RavenJValue((float)5.1));
+    innerEqCheck(new RavenJValue((float)5.1) , new RavenJValue((float)5.10000001));
+
     innerEqCheck(RavenJValue.parse("123456789012345678901234567890"), RavenJValue.parse("123456789012345678901234567890"));
     assertNotEquals(RavenJValue.parse("123456789012345678901234567890"), RavenJValue.parse("23.5"));
 
