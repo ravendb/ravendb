@@ -207,7 +207,7 @@ public class RavenJTokenWriter extends JsonGenerator {
 
   @Override
   public void writeBinary(Base64Variant b64variant, byte[] data, int offset, int len) throws IOException, JsonGenerationException {
-    throw new UnsupportedOperationException("Operation not supported");
+    addValue(Arrays.copyOfRange(data, offset, offset + len) , JTokenType.BYTES);
   }
 
   @Override

@@ -85,9 +85,9 @@ public abstract class RavenJToken {
       case VALUE_STRING:
         return new RavenJValue(parser.getText(), JTokenType.STRING);
       case VALUE_NUMBER_FLOAT:
-        return new RavenJValue(parser.getDoubleValue(), JTokenType.FLOAT);
+        return new RavenJValue(parser.getNumberValue(), JTokenType.FLOAT);
       case VALUE_NUMBER_INT:
-        return new RavenJValue(parser.getIntValue(), JTokenType.INTEGER);
+        return new RavenJValue(parser.getNumberValue(), JTokenType.INTEGER);
       case VALUE_FALSE:
       case VALUE_TRUE:
         return new RavenJValue(parser.getBooleanValue(), JTokenType.BOOLEAN);
@@ -95,7 +95,7 @@ public abstract class RavenJToken {
         return new RavenJValue(null, JTokenType.NULL);
       }
     } catch (IOException e) {
-      throw new JsonReaderException("Error reading RavenJToken from JsonParser");
+      throw new JsonReaderException("Error reading RavenJToken from JsonParser" + e.getMessage(), e);
     }
     throw new JsonReaderException("Error reading RavenJToken from JsonParser");
   }
@@ -315,8 +315,6 @@ public abstract class RavenJToken {
     return true;
   }
 
-  //TODO: public static RavenJToken TryLoad(Stream stream)
-
   public int deepHashCode() {
     Stack<Tuple<Integer, RavenJToken>> stack = new Stack<>();
     int ret = 0;
@@ -342,8 +340,6 @@ public abstract class RavenJToken {
 
     return ret;
   }
-
-  //TODO: public virtual T Value<T>(string key) - not supported
 
   public abstract void ensureCannotBeChangeAndEnableShapshotting();
 

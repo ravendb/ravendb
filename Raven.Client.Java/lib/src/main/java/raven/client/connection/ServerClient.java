@@ -1,10 +1,10 @@
 package raven.client.connection;
 
+import java.util.UUID;
+
 import org.apache.commons.httpclient.HttpClient;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParser;
 
-import raven.client.json.Guid;
 import raven.client.json.JsonDocument;
 import raven.client.json.PutResult;
 
@@ -23,7 +23,7 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   @Override
-  public void delete(String key, Guid etag) {
+  public void delete(String key, UUID etag) {
   }
 
   @Override
@@ -58,7 +58,7 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   @Override
-  public PutResult put(String key, Guid guid, JsonNode document, JsonNode metadata) {
+  public PutResult put(String key, UUID uuid, JsonNode document, JsonNode metadata) {
     // TODO Auto-generated method stub
     return null;
   }

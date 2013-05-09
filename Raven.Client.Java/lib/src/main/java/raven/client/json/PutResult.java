@@ -1,8 +1,10 @@
 package raven.client.json;
 
+import java.util.UUID;
+
 public class PutResult {
   private String key;
-  private Guid eTag;
+  private UUID etag;
   /**
    * @return the key
    */
@@ -18,14 +20,14 @@ public class PutResult {
   /**
    * @return the eTag
    */
-  public Guid geteTag() {
-    return eTag;
+  public UUID geteTag() {
+    return etag;
   }
   /**
    * @param eTag the eTag to set
    */
-  public void seteTag(Guid eTag) {
-    this.eTag = eTag;
+  public void seteTag(UUID eTag) {
+    this.etag = eTag;
   }
 
 

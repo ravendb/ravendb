@@ -1,8 +1,9 @@
 package raven.client.connection;
 
+import java.util.UUID;
+
 import org.codehaus.jackson.JsonNode;
 
-import raven.client.json.Guid;
 import raven.client.json.JsonDocument;
 import raven.client.json.PutResult;
 
@@ -22,12 +23,12 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    * @return PutResult
    */
-  public PutResult put(String key, Guid guid, JsonNode document, JsonNode metadata);
+  public PutResult put(String key, UUID guid, JsonNode document, JsonNode metadata);
 
   /**
    * Deletes the document with the specified key
    * @param key The key.
    * @param etag The etag.
    */
-  public void delete(String key, Guid etag);
+  public void delete(String key, UUID etag);
 }

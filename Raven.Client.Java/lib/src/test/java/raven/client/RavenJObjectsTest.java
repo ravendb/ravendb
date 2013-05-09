@@ -15,20 +15,29 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Currency;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
+import org.apache.commons.codec.binary.Base64;
+import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.junit.Test;
 
 import raven.client.common.extensions.JsonExtensions;
-import raven.client.json.Guid;
 import raven.client.json.JTokenType;
 import raven.client.json.RavenJArray;
 import raven.client.json.RavenJObject;
@@ -55,6 +64,102 @@ public class RavenJObjectsTest {
     public void setEmployees(List<Person> employees) {
       this.employees = employees;
     }
+  }
+
+  static class ComplexObject {
+    private byte[] bytes;
+    private BigDecimal bigDecimal;
+    private BigInteger bigInteger;
+    private String string;
+    private long longObj;
+    private int intObj;
+    private Date date;
+    private Boolean bool;
+    private char[] chars;
+    private int[] ints;
+    private UUID uuid;
+    private URL url;
+    private Currency currency;
+
+    public URL getUrl() {
+      return url;
+    }
+    public void setUrl(URL url) {
+      this.url = url;
+    }
+    public Currency getCurrency() {
+      return currency;
+    }
+    public void setCurrency(Currency currency) {
+      this.currency = currency;
+    }
+    public UUID getUuid() {
+      return uuid;
+    }
+    public void setUuid(UUID uuid) {
+      this.uuid = uuid;
+    }
+    public int[] getInts() {
+      return ints;
+    }
+    public void setInts(int[] ints) {
+      this.ints = ints;
+    }
+    public byte[] getBytes() {
+      return bytes;
+    }
+    public void setBytes(byte[] bytes) {
+      this.bytes = bytes;
+    }
+    public BigDecimal getBigDecimal() {
+      return bigDecimal;
+    }
+    public void setBigDecimal(BigDecimal bigDecimal) {
+      this.bigDecimal = bigDecimal;
+    }
+    public BigInteger getBigInteger() {
+      return bigInteger;
+    }
+    public void setBigInteger(BigInteger bigInteger) {
+      this.bigInteger = bigInteger;
+    }
+    public String getString() {
+      return string;
+    }
+    public void setString(String string) {
+      this.string = string;
+    }
+    public long getLongObj() {
+      return longObj;
+    }
+    public void setLongObj(long longObj) {
+      this.longObj = longObj;
+    }
+    public int getIntObj() {
+      return intObj;
+    }
+    public void setIntObj(int intObj) {
+      this.intObj = intObj;
+    }
+    public Date getDate() {
+      return date;
+    }
+    public void setDate(Date date) {
+      this.date = date;
+    }
+    public Boolean getBool() {
+      return bool;
+    }
+    public void setBool(Boolean bool) {
+      this.bool = bool;
+    }
+    public char[] getChars() {
+      return chars;
+    }
+    public void setChars(char[] chars) {
+      this.chars = chars;
+    }
+
   }
 
   static class Person {
@@ -119,16 +224,16 @@ public class RavenJObjectsTest {
     assertEquals(JTokenType.INTEGER, new RavenJValue(JTokenType.BOOLEAN).getType());
     assertEquals(JTokenType.FLOAT, new RavenJValue(Float.valueOf(12.34f)).getType());
     assertEquals(JTokenType.FLOAT, new RavenJValue(Double.valueOf(12.34f)).getType());
-    assertEquals(JTokenType.DATE, new RavenJValue(new Date()).getType());
+    assertEquals(JTokenType.INTEGER, new RavenJValue(new Date()).getType());
     assertEquals(JTokenType.BOOLEAN, new RavenJValue(Boolean.FALSE).getType());
     assertEquals(JTokenType.STRING, new RavenJValue(new URI("http://ravendb.net")).getType());
-    assertEquals(JTokenType.STRING, new RavenJValue(new Guid("123")).getType());
     assertEquals(JTokenType.BYTES, new RavenJValue("test".getBytes()).getType());
-    assertEquals(JTokenType.DATE, new RavenJValue(new Date()).getType());
+    assertEquals(JTokenType.INTEGER, new RavenJValue(new Date()).getType());
   }
 
   @Test
   public void testHashCodeAndEqual() throws Exception {
+
     RavenJArray array1 = RavenJArray.parse("[1,2,3,4]");
     RavenJArray array2 = RavenJArray.parse("[1,2,3]");
     assertNotEquals(array1, array2);
@@ -137,6 +242,51 @@ public class RavenJObjectsTest {
     assertEquals(array1, array2);
     assertEquals(array1.hashCode(), array2.hashCode());
 
+    assertTrue(RavenJToken.deepEquals(null, null));
+    assertFalse(RavenJToken.deepEquals(array1, null));
+    assertFalse(RavenJToken.deepEquals(null, array2));
+
+    assertEquals(0, RavenJToken.deepHashCode(null));
+
+    assertEquals(array1, RavenJToken.fromObject(array1));
+
+    RavenJObject complexObject = RavenJObject.parse("{ \"a\" : 5, \"b\" : [1,2,3], \"c\" : { \"d\" : null} , \"d\" : null, \"e\": false, \"f\" : \"string\"}");
+    RavenJObject complexObject2 = RavenJObject.parse("{ \"a\" : 5, \"b\" : [1,2,3], \"e\": false, \"c\" : { \"d\" : null} , \"d\" : null,  \"f\" : \"string\"}");
+    assertEquals(complexObject, complexObject2);
+    assertEquals(complexObject.hashCode(), complexObject2.hashCode());
+
+  }
+
+  @Test
+  public void testEquality() throws URISyntaxException {
+    innerEqCheck(RavenJValue.fromObject(new byte[] { 1,2,3}), RavenJValue.fromObject(new byte[] {1,2,3}));
+    innerEqCheck(RavenJValue.fromObject(Base64.encodeBase64String( new byte[] { 1,2,3})), RavenJValue.fromObject(new byte[] {1,2,3}));
+
+    assertNotEquals(RavenJValue.fromObject("AA="), RavenJValue.fromObject(new byte[] {1,2,3}));
+
+
+    innerEqCheck(RavenJValue.fromObject(new URI("http://ravendb.net")), RavenJValue.fromObject("http://ravendb.net"));
+    assertNotEquals(RavenJValue.fromObject(new URI("http://ravendb.net")), RavenJValue.fromObject("invalid_value"));
+
+    innerEqCheck(RavenJValue.getNull(), RavenJValue.getNull());
+    innerEqCheck(RavenJValue.fromObject(5), RavenJValue.fromObject(5L));
+    innerEqCheck(RavenJValue.fromObject(5), RavenJValue.fromObject((short)5));
+    innerEqCheck(RavenJValue.fromObject(BigInteger.TEN), RavenJValue.fromObject((short)10));
+    assertNotEquals(RavenJValue.fromObject(0), RavenJValue.fromObject((short)1));
+    assertNotEquals(RavenJValue.fromObject(0L), RavenJValue.fromObject((short)1));
+    innerEqCheck(new RavenJValue(5) , new RavenJValue(5L));
+
+    innerEqCheck(RavenJValue.parse("123456789012345678901234567890"), RavenJValue.parse("123456789012345678901234567890"));
+    assertNotEquals(RavenJValue.parse("123456789012345678901234567890"), RavenJValue.parse("23.5"));
+
+    innerEqCheck(RavenJValue.fromObject(2.3f), RavenJValue.parse("2.3"));
+    innerEqCheck(RavenJValue.fromObject(2.3), RavenJValue.parse("2.3"));
+
+  }
+
+  private void innerEqCheck(RavenJToken t1, RavenJToken t2) {
+    assertEquals(t1, t2);
+    assertEquals(t2, t1);
   }
 
   @Test
@@ -191,11 +341,8 @@ public class RavenJObjectsTest {
     value1.setValue("test");
     assertEquals(JTokenType.STRING, value1.getType());
 
-    value1.setValue(new Guid("1234-1234-00"));
-    assertEquals(JTokenType.GUID, value1.getType());
-
     value1.setValue(new Date());
-    assertEquals(JTokenType.DATE, value1.getType());
+    assertEquals(JTokenType.INTEGER, value1.getType());
 
     value1.setValue(12.2f);
     assertEquals(JTokenType.FLOAT, value1.getType());
@@ -230,6 +377,9 @@ public class RavenJObjectsTest {
     innerTestParseRavenJValue("\"ala\"", JTokenType.STRING, "ala");
     innerTestParseRavenJValue("12", JTokenType.INTEGER, 12);
     innerTestParseRavenJValue("12.5", JTokenType.FLOAT, Double.valueOf(12.5f));
+
+    assertEquals(JTokenType.ARRAY, RavenJToken.parse("[12,34]").getType());
+    assertEquals(JTokenType.OBJECT, RavenJToken.parse("{  \"f\" : \"string\"}").getType());
 
     RavenJToken testObj = RavenJValue.fromObject("testing");
     assertEquals(JTokenType.STRING, testObj.getType());
@@ -296,6 +446,8 @@ public class RavenJObjectsTest {
       object.writeTo(jsonGenerator);
     }
     assertEquals("{\"a\":[1,2,3,4]}",baos.toString());
+    assertEquals("{\"a\":[1,2,3,4]}",object.toString());
+
   }
 
 
@@ -450,14 +602,52 @@ public class RavenJObjectsTest {
 
   }
 
+  private ComplexObject getComplexObject() throws MalformedURLException {
+    ComplexObject complexObject = new ComplexObject();
+    complexObject.setBigDecimal(new BigDecimal("1234567890.123456"));
+    complexObject.setBigInteger(new BigInteger("1234567890"));
+    complexObject.setBool(Boolean.TRUE);
+    complexObject.setBytes("testing".getBytes());
+    complexObject.setChars("testing".toCharArray());
+    complexObject.setDate(new Date());
+    complexObject.setIntObj(1234);
+    complexObject.setLongObj(12345L);
+    complexObject.setString("test");
+    complexObject.setInts(new int[] { 1,2,3});
+    complexObject.setUuid(UUID.randomUUID());
+    complexObject.setCurrency(Currency.getInstance("USD"));
+    complexObject.setUrl(new URL("http://ravendb.net"));
+
+    return complexObject;
+  }
+
+  @Test
+  public void testFromComplexObject() throws JsonGenerationException, JsonMappingException, IOException {
+    RavenJObject ravenJObject = RavenJObject.fromObject(getComplexObject());
+
+    RavenJObject nullComplexObject = RavenJObject.fromObject(new ComplexObject());
+
+    RavenJObject complexObjectClone = ravenJObject.cloneToken();
+    assertEquals(complexObjectClone.getCount(), ravenJObject.getCount());
+    for (String key: complexObjectClone.getKeys()) {
+      RavenJToken token1 = ravenJObject.get(key);
+      RavenJToken token2 = complexObjectClone.get(key);
+      RavenJToken nullToken = nullComplexObject.get(key);
+      assertEquals(key, token1.getType(), token2.getType());
+      assertTrue(RavenJToken.deepEquals(token1, token2));
+      assertFalse(RavenJToken.deepEquals(token1, nullToken));
+      assertEquals(token1.deepHashCode(), token2.deepHashCode());
+    }
+
+    String complexToString = ravenJObject.toString();
+    RavenJObject parsedComplex = RavenJObject.parse(complexToString);
+    assertEquals(parsedComplex, ravenJObject);
+
+  }
+
 
   @Test
   public void testToString() {
-    Date date = mock(Date.class);
-    when(date.toString()).thenReturn("1234");
-    RavenJValue value = new RavenJValue(date);
-    assertEquals("1234", value.toString());
-
     assertEquals("", RavenJValue.getNull().toString());
   }
 

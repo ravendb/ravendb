@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.Date;
 
+import org.apache.commons.codec.binary.Base64;
 import org.codehaus.jackson.JsonGenerator;
 
 import raven.client.json.lang.JsonWriterException;
@@ -106,7 +109,7 @@ public class RavenJValue extends RavenJToken {
    * @param value
    */
   public RavenJValue(Date value) {
-    this(value, JTokenType.DATE);
+    this(value.getTime(), JTokenType.INTEGER);
   }
 
   /**
@@ -122,14 +125,6 @@ public class RavenJValue extends RavenJToken {
    * @param value
    */
   public RavenJValue(String value) {
-    this(value, JTokenType.STRING);
-  }
-
-  /**
-   * Initializes a new instance of the {@link RavenJValue} class with the given value.
-   * @param value
-   */
-  public RavenJValue(Guid value) {
     this(value, JTokenType.STRING);
   }
 
@@ -153,7 +148,7 @@ public class RavenJValue extends RavenJToken {
     if (value == null) {
       return JTokenType.NULL;
     } else if (value instanceof String) {
-      return getStringValueType(current);
+      return JTokenType.STRING;
     } else if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte || value instanceof BigInteger) {
       return JTokenType.INTEGER;
     } else if (value instanceof Enum) {
@@ -161,34 +156,18 @@ public class RavenJValue extends RavenJToken {
     } else if (value instanceof Double || value instanceof Float || value instanceof BigDecimal) {
       return JTokenType.FLOAT;
     } else if (value instanceof Date) {
-      return JTokenType.DATE;
+      return JTokenType.INTEGER;
     } else if (value instanceof byte[]) {
       return JTokenType.BYTES;
     } else if (value instanceof Boolean) {
       return JTokenType.BOOLEAN;
     } else if (value instanceof URI) {
-      return JTokenType.URI;
-    } else if (value instanceof Guid) {
-      return JTokenType.GUID;
+      return JTokenType.STRING;
     }
 
     throw new IllegalArgumentException("Could not determine JSON object type for class " + value.getClass().getCanonicalName());
 
 
-  }
-
-  private static JTokenType getStringValueType(JTokenType current) {
-    if (current == null) {
-      return JTokenType.STRING;
-    }
-    switch (current) {
-    case COMMENT:
-    case STRING:
-    case RAW:
-      return current;
-    default:
-      return JTokenType.STRING;
-    }
   }
 
   @Override
@@ -244,9 +223,6 @@ public class RavenJValue extends RavenJToken {
         return;
       }
       switch (valueType) {
-      case RAW:
-        writer.writeRaw(value.toString());
-        return;
       case NULL:
         writer.writeNull();
         return;
@@ -256,17 +232,22 @@ public class RavenJValue extends RavenJToken {
       case BYTES:
         writer.writeBinary((byte[]) value);
         return;
-      case DATE:
-        //TODO:
-        return;
       case FLOAT:
-        writer.writeNumber((Double)value);
+        if (value instanceof Double) {
+          writer.writeNumber((Double)value);
+        } else if (value instanceof BigDecimal) {
+          writer.writeNumber((BigDecimal)value);
+        } else {
+          throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
+        }
         return ;
       case INTEGER:
         if (value instanceof Long) {
           writer.writeNumber((Long)value);
         } else if (value instanceof Integer) {
           writer.writeNumber((Integer)value);
+        } else if (value instanceof BigInteger) {
+          writer.writeNumber((BigInteger)value);
         } else  {
           throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
         }
@@ -312,20 +293,150 @@ public class RavenJValue extends RavenJToken {
     return valuesEquals(this, other);
   }
 
-  private boolean valuesEquals(RavenJValue v1, RavenJValue v2) {
-    if (v1.getType() == v2.getType() && v1.getValue() != null && v1.getValue().equals(v2.getValue())) {
+  private static boolean valuesEquals(RavenJValue v1, RavenJValue v2) {
+    if (v1.getType() == v2.getType() && v1.getType() != JTokenType.BYTES && v1.getValue() != null && v1.getValue().equals(v2.getValue())) {
       return true;
     }
+    if (v1.getType() == JTokenType.NULL || v2.getType() == JTokenType.NULL) {
+      // if both are null we return true
+      return false;
+    }
 
-    //TODO: implement me
+    // please note that already check for equality when items has the same type
+    // the only change to return true left in different types
+    switch (v1.getType()) {
+    case INTEGER:
+    case FLOAT:
+      if (v2.getType() != JTokenType.INTEGER && v2.getType() != JTokenType.FLOAT) {
+        return false;
+      }
+      return compareNumbers(v1,v2);
+
+    case STRING:
+      if (v2.getType() == JTokenType.BYTES) {
+        return compareBytes(v1,v2);
+      } else {
+        return false;
+      }
+    case BYTES:
+      if (v2.getType() != JTokenType.STRING && v2.getType() != JTokenType.BYTES) {
+        return false;
+      }
+      return compareBytes(v1,v2);
+    }
+
     return false;
   }
 
+  private static boolean compareBytes(RavenJValue v1, RavenJValue v2) {
+    byte[] arr1 = v1.asBytesArray();
+    byte[] arr2 = v2.asBytesArray();
+
+    return arr1 != null && arr2 != null && Arrays.equals(arr1, arr2);
+  }
 
 
+  private byte[] asBytesArray() {
+    if (getType() == JTokenType.BYTES) {
+      if (getValue() != null && getValue() instanceof byte[]) {
+        return (byte[]) getValue();
+      }
+    }
+    if (getType() == JTokenType.STRING) {
+      if (getValue() != null && getValue() instanceof String) {
+        String stringValue = (String) getValue();
+        if (Base64.isBase64(stringValue)) {
+          return Base64.decodeBase64(stringValue);
+        }
+      }
+    }
+    return null;
+  }
 
+  private static boolean compareNumbers(RavenJValue v1, RavenJValue v2) {
+    if (v1.getType() == JTokenType.FLOAT || v2.getType() == JTokenType.FLOAT) {
+      return compareFloats(v1,v2);
+    }
+    // compare as integers
+    Number ov1 = (Number) v1.getValue();
+    Number ov2 = (Number) v2.getValue();
+    if (ov1 == null || ov2 == null) {
+      return false;
+    }
 
-  //TODO: private static bool ValuesEquals(RavenJValue v1, RavenJValue v2)
-  //TODO: comparator
+    if (ov1 instanceof BigInteger || ov2 instanceof BigInteger) {
+      return v1.asBigInteger().compareTo(v2.asBigInteger()) == 0;
+    } else if (ov1 instanceof Long || ov2 instanceof Long) {
+      return ov1.longValue() == ov2.longValue();
+    } else if (ov1 instanceof Integer || ov2 instanceof Integer) {
+      return ov1.intValue() == ov2.intValue();
+    } else if (ov1 instanceof Short || ov2 instanceof Short) {
+      return ov1.shortValue() == ov2.shortValue();
+    } else {
+      throw new IllegalStateException("Cannot find common numeric class for " + ov1.getClass() + " and" + ov2.getClass());
+    }
+  }
+
+  private BigInteger asBigInteger() {
+    if (getType() != JTokenType.INTEGER) {
+      return null;
+    }
+    if (value instanceof BigInteger) {
+      return (BigInteger) value;
+    } else if (value instanceof Long || value instanceof Integer || value instanceof Short) {
+      Number number  = (Number) value;
+      return BigInteger.valueOf(number.longValue());
+    }
+    return null;
+  }
+
+  private static boolean compareFloats(RavenJValue v1, RavenJValue v2) {
+    Number ov1 = (Number) v1.getValue();
+    Number ov2 = (Number) v2.getValue();
+    if (ov1 == null || ov2 == null) {
+      return false;
+    }
+
+    // make sure both numbers are float
+    if (ov1 instanceof BigDecimal) {
+      // do nothing
+    } else if (ov1 instanceof BigInteger) {
+      ov1 = new BigDecimal((BigInteger)ov1);
+    } else {
+      ov1 = ov1.doubleValue();
+    }
+
+    if (ov2 instanceof BigDecimal) {
+      // do nothing
+    } else if (ov2 instanceof BigInteger) {
+      ov2 = new BigDecimal((BigInteger)ov2);
+    } else {
+      ov2 = ov2.doubleValue();
+    }
+
+    if (ov1 instanceof BigDecimal || ov2 instanceof BigDecimal) {
+      return v1.asBigDecimal().compareTo(v2.asBigDecimal()) == 0;
+    } else if (ov1 instanceof Double || ov2 instanceof Double) {
+      return Math.abs(ov1.doubleValue() - ov2.doubleValue()) < 0.000001;
+    } else if (ov1 instanceof Float || ov2 instanceof Float) {
+      return ov1.floatValue() == ov2.floatValue();
+    } else {
+      throw new IllegalStateException("Cannot find common numeric class for " + ov1.getClass() + " and" + ov2.getClass());
+    }
+  }
+
+  private BigDecimal asBigDecimal() {
+    Number number = (Number) value;
+    if (value instanceof BigDecimal) {
+      return (BigDecimal) value;
+    } else if (value instanceof Double) {
+      return new BigDecimal((double)value);
+    } else if (value instanceof Float) {
+      return new BigDecimal(number.doubleValue());
+    } else {
+      return new BigDecimal(asBigInteger());
+    }
+  }
+
 
 }
