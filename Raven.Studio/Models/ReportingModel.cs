@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Linq;
+using Raven.Studio.Controls;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -203,9 +205,18 @@ namespace Raven.Studio.Models
 
             Results.Clear();
 
+
+            var progressWindow = new ProgressWindow() { Title = "Preparing Report", IsIndeterminate = true, CanCancel = false};
+            progressWindow.Show();
+
 	        var facetResults =
 	            await
 	            DatabaseCommands.GetFacetsAsync(IndexName, new IndexQuery(), AggregationQuery.GetFacets(facets), 0, 512);
+
+            // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
+            // disabled; so delay closing the window by a few milliseconds
+            TaskEx.Delay(TimeSpan.FromMilliseconds(350))
+                  .ContinueOnSuccessInTheUIThread(progressWindow.Close);
 
             if (facetResults.Results.Count < 1)
             {
