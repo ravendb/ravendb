@@ -381,7 +381,12 @@ namespace Raven.Database
                     result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
                     result.CountOfDocuments = actions.Documents.GetDocumentsCount();
                     result.StaleIndexes = IndexStorage.Indexes
-                        .Where(s => actions.Staleness.IsIndexStale(s, null, null)).ToArray();
+                        .Where(s =>
+                        {
+							var indexInstance = IndexStorage.GetIndexInstance(s);
+	                        return (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning) ||
+	                               actions.Staleness.IsIndexStale(s, null, null);
+                        }).ToArray();
                     result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
                 });
 
@@ -1220,7 +1225,13 @@ namespace Raven.Database
 
                     resultEtag = GetIndexEtag(index, null, query.ResultsTransformer);
 
-                    stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
+	                stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
+
+					if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
+					{
+						var indexInstance = IndexStorage.GetIndexInstance(index);
+						stale = stale || (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning);
+					}
 
                     indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
                     var indexFailureInformation = actions.Indexing.GetFailureRate(index);
@@ -1345,9 +1356,16 @@ namespace Raven.Database
             TransactionalStorage.Batch(
                 actions =>
                 {
-                    isStale = actions.Staleness.IsIndexStale(index, query.Cutoff, null);
-                    var indexFailureInformation = actions.Indexing.GetFailureRate(index)
-;
+	                isStale = actions.Staleness.IsIndexStale(index, query.Cutoff, null);
+
+	                if (isStale == false && query.Cutoff == null)
+	                {
+						var indexInstance = IndexStorage.GetIndexInstance(index);
+		                isStale = isStale || (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning);
+	                }
+
+                    var indexFailureInformation = actions.Indexing.GetFailureRate(index);
+
                     if (indexFailureInformation.IsInvalidIndex)
                     {
                         throw new IndexDisabledException(indexFailureInformation);
@@ -2139,7 +2157,9 @@ namespace Raven.Database
             int touchCount = 0;
             TransactionalStorage.Batch(accessor =>
             {
-                isStale = accessor.Staleness.IsIndexStale(indexName, null, null);
+				var indexInstance = IndexStorage.GetIndexInstance(indexName);
+	            isStale = (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning) ||
+	                      accessor.Staleness.IsIndexStale(indexName, null, null);
                 lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
                 var indexStats = accessor.Indexing.GetIndexStats(indexName);
                 if (indexStats != null)

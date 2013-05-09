@@ -122,6 +122,14 @@ namespace Raven.Database.Indexing
 			get { return directory is RAMDirectory; }
 		}
 
+		public bool IsCurrentMapIndexingTaskRunning
+		{
+			get
+			{
+				return CurrentMapIndexingTask != null;
+			}
+		}
+
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
@@ -454,7 +462,7 @@ namespace Raven.Database.Indexing
 
 			context.Database.TransactionalStorage.Batch(accessor =>
 			{
-				stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
+				stale = IsCurrentMapIndexingTaskRunning || accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
 			});
 
 			if (forceWriteToDisk || toobig || !stale)
