@@ -83,7 +83,7 @@ namespace Raven.Database.Indexing
 				GetFutureJsonDocuments(nextDocEtag) ??
 				GetJsonDocsFromDisk(etag); // here we _intentionally_ using the current etag, not the next one
 
-			return MergeWithOtherFutureResults(results);
+			return results; //MergeWithOtherFutureResults(results);
 		}
 
 
