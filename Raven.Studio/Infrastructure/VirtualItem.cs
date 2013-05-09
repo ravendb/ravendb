@@ -24,8 +24,6 @@ namespace Raven.Studio.Infrastructure
             {
                 if (!IsRealized && !DataFetchError)
                     _parent.RealizeItemRequested(Index);
-                else
-                    _parent.NotifyRealizedItemSupplied(Index, _item);
 
                 return _item;
             }

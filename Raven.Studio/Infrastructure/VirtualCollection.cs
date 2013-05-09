@@ -28,7 +28,6 @@ namespace Raven.Studio.Infrastructure
         public event PropertyChangedEventHandler PropertyChanged;
         public event EventHandler<QueryItemVisibilityEventArgs> QueryItemVisibility;
         public event EventHandler<ItemsRealizedEventArgs> ItemsRealized;
-        public event EventHandler<RealizedItemRetrievedEventArgs> RealizedItemRetrievedEventArgs;
 
         public event CurrentChangingEventHandler CurrentChanging;
         public event EventHandler CurrentChanged;
@@ -620,12 +619,6 @@ namespace Raven.Studio.Infrastructure
             if (handler != null) handler(this, e);
         }
 
-        protected virtual void OnRealizedItemSuppliedEventArgs(RealizedItemRetrievedEventArgs e)
-        {
-            EventHandler<RealizedItemRetrievedEventArgs> handler = RealizedItemRetrievedEventArgs;
-            if (handler != null) handler(this, e);
-        }
-
         protected void OnQueryItemVisibility(QueryItemVisibilityEventArgs e)
         {
             var handler = QueryItemVisibility;
@@ -721,23 +714,6 @@ namespace Raven.Studio.Infrastructure
                 Page = page;
                 StateWhenRequested = state;
             }
-        }
-
-        internal void NotifyRealizedItemSupplied(int index, object item)
-        {
-            OnRealizedItemSuppliedEventArgs(new RealizedItemRetrievedEventArgs(index, item));
-        }
-    }
-
-    public class RealizedItemRetrievedEventArgs : EventArgs
-    {
-        public int Index { get; private set; }
-        public object Item { get; private set; }
-
-        public RealizedItemRetrievedEventArgs(int index, object item)
-        {
-            Index = index;
-            Item = item;
         }
     }
 }

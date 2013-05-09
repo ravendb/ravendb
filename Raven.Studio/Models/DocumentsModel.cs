@@ -67,12 +67,27 @@ namespace Raven.Studio.Models
 
             collectionSource.CollectionChanged += delegate { HandleCollectionRefreshed(); };
             updateColumnsSamplingInvoker = new SamplingInvoker(TimeSpan.FromSeconds(1));
-            Documents.RealizedItemRetrievedEventArgs += (sender, e) => HandleItemRetrieved(e.Index, e.Item as ViewableDocument);
+            Documents.ItemsRealized += (sender, e) => HandleItemsRealized(e.StartingIndex, e.Count);
 
             ItemSelection = new ItemSelection<VirtualItem<ViewableDocument>>();
             DocumentsHaveId = true;
 
             Context = "Default";
+        }
+
+        private void HandleItemsRealized(int startingIndex, int count)
+        {
+            var item = Documents[startingIndex];
+            DocumentsHaveId = !string.IsNullOrEmpty(item.Item.Id);
+
+            for (int i = startingIndex; i < startingIndex + count; i++)
+            {
+                mostRecentDocuments.Add(new IndexedItem { Document = Documents[i].Item, Index = i });
+            }
+
+            updateColumnsSamplingInvoker.TryInvoke(UpdateColumns);
+
+            OnRecentDocumentsChanged(EventArgs.Empty);
         }
 
         private void HandleCollectionRefreshed()
