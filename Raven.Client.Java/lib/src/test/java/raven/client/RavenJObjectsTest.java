@@ -10,7 +10,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -258,12 +257,21 @@ public class RavenJObjectsTest {
   }
 
   @Test
-  public void testEquality() throws URISyntaxException {
+  public void testEquality() throws URISyntaxException, MalformedURLException {
     innerEqCheck(RavenJValue.fromObject(new byte[] { 1,2,3}), RavenJValue.fromObject(new byte[] {1,2,3}));
     innerEqCheck(RavenJValue.fromObject(Base64.encodeBase64String( new byte[] { 1,2,3})), RavenJValue.fromObject(new byte[] {1,2,3}));
 
     assertNotEquals(RavenJValue.fromObject("AA="), RavenJValue.fromObject(new byte[] {1,2,3}));
+    assertNotEquals(RavenJValue.fromObject(new byte[] {1,2,3, 4}), RavenJValue.fromObject(new byte[] {1,2,3}));
 
+    ComplexObject complexObject1 = getComplexObject();
+    ComplexObject complexObject2 = getComplexObject();
+    complexObject2.setBytes("aa".getBytes());
+    assertNotEquals(RavenJObject.fromObject(complexObject1), RavenJObject.fromObject(complexObject2));
+    complexObject1.setBytes("aa".getBytes());
+    assertNotEquals(RavenJObject.fromObject(complexObject1), RavenJObject.fromObject(complexObject2));
+
+    innerEqCheck(RavenJValue.fromObject(new byte[] { 1,2,3}), RavenJValue.fromObject(new byte[] {1,2,3}));
 
     innerEqCheck(RavenJValue.fromObject(new URI("http://ravendb.net")), RavenJValue.fromObject("http://ravendb.net"));
     assertNotEquals(RavenJValue.fromObject(new URI("http://ravendb.net")), RavenJValue.fromObject("invalid_value"));
@@ -278,6 +286,9 @@ public class RavenJObjectsTest {
 
     innerEqCheck(RavenJValue.parse("123456789012345678901234567890"), RavenJValue.parse("123456789012345678901234567890"));
     assertNotEquals(RavenJValue.parse("123456789012345678901234567890"), RavenJValue.parse("23.5"));
+
+    assertNotEquals(RavenJValue.fromObject(new BigDecimal("12345.12345")), RavenJValue.fromObject(12345.126));
+    innerEqCheck(RavenJValue.fromObject(new BigDecimal("12345.1234561")), RavenJValue.fromObject(12345.1234562)); // numbers are really close to each other
 
     innerEqCheck(RavenJValue.fromObject(2.3f), RavenJValue.parse("2.3"));
     innerEqCheck(RavenJValue.fromObject(2.3), RavenJValue.parse("2.3"));
@@ -377,6 +388,10 @@ public class RavenJObjectsTest {
     innerTestParseRavenJValue("\"ala\"", JTokenType.STRING, "ala");
     innerTestParseRavenJValue("12", JTokenType.INTEGER, 12);
     innerTestParseRavenJValue("12.5", JTokenType.FLOAT, Double.valueOf(12.5f));
+    innerTestParseRavenJValue("123456789012345678901234567890", JTokenType.INTEGER, new BigInteger("123456789012345678901234567890"));
+    RavenJValue jToken = (RavenJValue) RavenJValue.parse("123456789012345678901234567890.123456");
+    assertEquals(Double.class, jToken.getValue().getClass());
+
 
     assertEquals(JTokenType.ARRAY, RavenJToken.parse("[12,34]").getType());
     assertEquals(JTokenType.OBJECT, RavenJToken.parse("{  \"f\" : \"string\"}").getType());
@@ -604,7 +619,7 @@ public class RavenJObjectsTest {
 
   private ComplexObject getComplexObject() throws MalformedURLException {
     ComplexObject complexObject = new ComplexObject();
-    complexObject.setBigDecimal(new BigDecimal("1234567890.123456"));
+    complexObject.setBigDecimal(new BigDecimal("120.123456"));
     complexObject.setBigInteger(new BigInteger("1234567890"));
     complexObject.setBool(Boolean.TRUE);
     complexObject.setBytes("testing".getBytes());
@@ -641,7 +656,7 @@ public class RavenJObjectsTest {
 
     String complexToString = ravenJObject.toString();
     RavenJObject parsedComplex = RavenJObject.parse(complexToString);
-    assertEquals(parsedComplex, ravenJObject);
+    assertEquals(ravenJObject, parsedComplex);
 
   }
 

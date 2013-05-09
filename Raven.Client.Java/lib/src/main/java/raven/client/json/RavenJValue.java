@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -415,7 +414,7 @@ public class RavenJValue extends RavenJToken {
     }
 
     if (ov1 instanceof BigDecimal || ov2 instanceof BigDecimal) {
-      return v1.asBigDecimal().compareTo(v2.asBigDecimal()) == 0;
+      return v1.asBigDecimal().subtract(v2.asBigDecimal()).abs().compareTo(new BigDecimal("0.000001")) < 0;
     } else if (ov1 instanceof Double || ov2 instanceof Double) {
       return Math.abs(ov1.doubleValue() - ov2.doubleValue()) < 0.000001;
     } else if (ov1 instanceof Float || ov2 instanceof Float) {

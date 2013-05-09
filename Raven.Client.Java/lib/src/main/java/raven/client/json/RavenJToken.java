@@ -241,7 +241,7 @@ public abstract class RavenJToken {
           }
           break;
         case OBJECT:
-          RavenJObject selfObj = (RavenJObject) curOtherReader;
+          RavenJObject selfObj = (RavenJObject) curThisReader;
           RavenJObject otherObj = (RavenJObject) curOtherReader;
 
           if (selfObj.getCount() != otherObj.getCount()) {
@@ -261,24 +261,6 @@ public abstract class RavenJToken {
               otherStack.push(token);
               thisStack.push(value);
               break;
-            case BYTES:
-              /* TODO:
-               * var bytes = kvp.Value.Value<byte[]>();
-                  byte[] tokenBytes = token.Type == JTokenType.String
-                              ? Convert.FromBase64String(token.Value<string>())
-                              : token.Value<byte[]>();
-                      if (tokenBytes == null)
-                          return false;
-                  if (bytes.Length != tokenBytes.Length)
-                    return false;
-
-                  if (tokenBytes.Where((t, i) => t != bytes[i]).Any())
-                  {
-                    return false;
-                  }
-
-               */
-              break;
             default:
               if (!value.deepEquals(token)) {
                 return false;
@@ -292,22 +274,6 @@ public abstract class RavenJToken {
             return false;
           }
           break;
-
-          /* TODO
-        switch (curThisReader.Type)
-        {
-        case JTokenType.Guid:
-          if (curOtherReader.Type != JTokenType.String)
-            return false;
-
-          if (curThisReader.Value<string>() != curOtherReader.Value<string>())
-            return false;
-
-          break;
-        default:
-          return false;
-        }
-        }*/
         }
       }
     }
