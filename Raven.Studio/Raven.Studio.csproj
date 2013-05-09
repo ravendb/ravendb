@@ -235,6 +235,7 @@
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
+    <Compile Include="Behaviors\DataGridColumnGenerator.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\MouseHoverTrigger.cs" />
     <Compile Include="Behaviors\ResizeDragBehavior.cs" />
@@ -302,6 +303,7 @@
     </Compile>
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Documents\DocumentDetailsColumnGenerator.cs" />
     <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
@@ -466,7 +468,6 @@
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ColumnDefinition.cs" />
     <Compile Include="Features\Documents\ColumnEditorViewModel.cs" />
-    <Compile Include="Features\Documents\ColumnModel.cs" />
     <Compile Include="Features\Documents\ColumnsEditorDialog.xaml.cs">
       <DependentUpon>ColumnsEditorDialog.xaml</DependentUpon>
     </Compile>

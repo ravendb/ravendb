@@ -111,8 +111,12 @@
                         <Behaviors:SelectRowOnRightClickBehavior />
                         <Infrastructure:ProvideVisibleItemRangeFromDataGridBehavior/>
                         <Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
-                        <Behaviors:BindColumnsToColumnSetBehavior Columns="{Binding Columns}" 
-                                                                  InvalidBindingHeaderStyle="{StaticResource InvalidBindingColumnHeaderStyle}"/>
+                        <Behaviors:BindColumnsToColumnSetBehavior Columns="{Binding Columns}">
+                            <Behaviors:BindColumnsToColumnSetBehavior.ColumnGenerator>
+                                <Documents:DocumentDetailsColumnGenerator
+                                    InvalidBindingHeaderStyle="{StaticResource InvalidBindingColumnHeaderStyle}"/>
+                            </Behaviors:BindColumnsToColumnSetBehavior.ColumnGenerator>
+                        </Behaviors:BindColumnsToColumnSetBehavior>
                         <Behaviors:DataGridRowDoubleClickCommandBehavior Command="{Binding EditDocument}"/>
                         <Behaviors:ColumnHeaderContextMenu>
                             <Behaviors:ColumnHeaderContextMenu.ContextMenu>
