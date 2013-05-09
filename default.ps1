@@ -74,7 +74,6 @@ task Verify40 {
 task Clean {
 	Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
 	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
-	git checkout Raven.Database/Server/WebUI/Raven.Studio.xap
 }
 
 task Init -depends Verify40, Clean {
@@ -91,8 +90,6 @@ task Init -depends Verify40, Clean {
 		Foreach-Object { $_ -replace ".13", ".$($env:buildlabel)" } |
 		Foreach-Object { $_ -replace "{commit}", $commit } |
 		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
-	
-	Exec { git update-index --assume-unchanged Raven.Database\Server\WebUI\Raven.Studio.xap }
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
