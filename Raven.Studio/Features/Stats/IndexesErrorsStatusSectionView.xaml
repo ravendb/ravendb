@@ -12,8 +12,7 @@
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:models="clr-namespace:Raven.Studio.Models"
                          xmlns:Models="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight"
-                         mc:Ignorable="d"
-                         d:DataContext="{d:DesignInstance models:IndexesErrorsModel}">
+                         mc:Ignorable="d">
 
     <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
         <toolkit:HeaderedContentControl.Header>
