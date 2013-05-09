@@ -525,6 +525,7 @@
     <Compile Include="Bugs\MapRedue\VersionedDocument.cs" />
     <Compile Include="Bugs\Smuggler.cs" />
     <Compile Include="Bugs\TimeSpanIndexing.cs" />
+    <Compile Include="Bugs\WhereInShouldBeBoostedCorrectly.cs" />
     <Compile Include="Bundles\IndexedProperties\Alexander.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
