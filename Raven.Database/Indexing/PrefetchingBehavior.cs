@@ -74,29 +74,31 @@ namespace Raven.Database.Indexing
 
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
 		{
-			//var inMemResults = new List<JsonDocument>();
+			var inMemResults = new List<JsonDocument>();
 			var nextDocEtag = GetNextDocEtag(etag);
-			//if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
-			//	return inMemResults;
+
+			if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
+				return inMemResults;
 
 			var results =
 				GetFutureJsonDocuments(nextDocEtag) ??
 				GetJsonDocsFromDisk(etag); // here we _intentionally_ using the current etag, not the next one
 
-			return results; //MergeWithOtherFutureResults(results);
+			return MergeWithOtherFutureResults(results);
 		}
 
-
-		// TODO we cannot relay on the nextDocEtag here and should ignore it
 		private bool TryGetInMemoryJsonDocuments(Etag nextDocEtag, List<JsonDocument> items)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
 				return false;
 
+			var nextEtagInMemory = GetNextEtagInMemory();
+			if (nextDocEtag != nextEtagInMemory)
+				return false;
+
 			JsonDocument result;
 			bool hasDocs = false;
-			while (inMemoryDocs.TryPeek(out result)  &&
-				ComparableByteArray.CompareTo(nextDocEtag.ToByteArray(),result.Etag.ToByteArray()) >= 0)
+			while (inMemoryDocs.TryPeek(out result) && nextDocEtag.CompareTo(result.Etag) >= 0)
 			{
 				// safe to do peek then dequeue because we are the only one doing the dequeues
 				// and here we are single threaded
