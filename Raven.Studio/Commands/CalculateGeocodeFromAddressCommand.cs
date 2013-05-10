@@ -23,7 +23,8 @@ namespace Raven.Studio.Commands
 			if (string.IsNullOrWhiteSpace(queryModel.Address))
 				return;
 
-			var url = "http://where.yahooapis.com/geocode?flags=JC&q=" + queryModel.Address;
+			var url = "http://dev.virtualearth.net/REST/v1/Locations?q=" + Uri.EscapeUriString(queryModel.Address) +
+					  "&key=Anlj2YMQu676uXmSj1QTSni66f8DjuBGToZ21t5z9E__lL8IHRhFP8LtF7umitL6";
 			var webRequest = WebRequest.Create(new Uri(url, UriKind.Absolute));
 			webRequest.GetResponseAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
@@ -33,12 +34,21 @@ namespace Raven.Studio.Commands
 				using (var jsonReader = new JsonTextReader(reader))
 					jsonData = RavenJObject.Load(jsonReader);
 
-				var result = jsonData["ResultSet"].SelectToken("Results").Values().FirstOrDefault();
+				var set = jsonData["resourceSets"];
+
+				var item = set.Values().First().Values().ToList()[1].Values().ToList();
+				if (item.Count == 0)
+				{
+					ApplicationModel.Current.AddInfoNotification("Could not calculate the given address");
+					return;
+				}
+
+				var result = item.First().SelectToken("point").SelectToken("coordinates").Values().ToList();
 
 				if (result != null)
 				{
-					var latitude = double.Parse(result.Value<string>("latitude"));
-					var longitude = double.Parse(result.Value<string>("longitude"));
+					var latitude = double.Parse(result[0].ToString());
+					var longitude = double.Parse(result[1].ToString();
 					var addressData = new AddressData { Address = queryModel.Address, Latitude = latitude, Longitude = longitude };
 					queryModel.UpdateResultsFromCalculate(addressData);
 				}

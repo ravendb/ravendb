@@ -69,7 +69,19 @@ namespace Raven.Client.Document
 	        return this;
 	    }
 
-        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+		public IDocumentQuery<T> OrderByScore()
+		{
+			AddOrder(Constants.TemporaryScoreValue, false);
+			return this;
+		}
+
+		public IDocumentQuery<T> OrderByScoreDescending()
+		{
+			AddOrder(Constants.TemporaryScoreValue, true);
+			return this;
+		}
+
+		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
 	        this.queryInputs = queryInputs;
 	    }
