@@ -25,8 +25,8 @@
                 </i:Interaction.Triggers>
             </Button>
             <StackPanel  Margin="5,0,0,0" >
-                <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=jsonEditor:QuickDocumentView}, Path=DocumentId, StringFormat='Document {0}'}" Grid.Column="1" VerticalAlignment="Center"/>
-            <TextBlock Text="Shift + Click to go to document"/>
+                <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=jsonEditor:QuickDocumentView}, Path=DocumentId, StringFormat='Document {0}'}" Grid.Column="1" VerticalAlignment="Center" FontSize="10"/>
+                <TextBlock Text="Shift + Click to go to document" FontSize="10"/>
             </StackPanel>
         </StackPanel>
         <Grid x:Name="EditorGrid" Grid.Row="1" Visibility="Collapsed" Margin="-3,3,-3,-3">

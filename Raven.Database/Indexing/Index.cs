@@ -347,7 +347,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-						context.AddError(name, "Creating Analyzer", e.ToString());
+						context.AddError(name, "Creating Analyzer", e.ToString(), "Analyzer");
 						throw;
 					}
 
@@ -378,7 +378,7 @@ namespace Raven.Database.Indexing
 						}
 						catch (Exception e)
 						{
-							context.AddError(name, null, e.ToString());
+							context.AddError(name, null, e.ToString(), "Write");
 							throw;
 						}
 
@@ -541,7 +541,8 @@ namespace Raven.Database.Indexing
 				{
 					context.AddError(name,
 									TryGetDocKey(o),
-									exception.Message
+									exception.Message, 
+                                    "Map"
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
@@ -566,7 +567,8 @@ namespace Raven.Database.Indexing
 				{
 					context.AddError(name,
 									TryGetDocKey(o),
-									exception.Message
+									exception.Message,
+                                    "Reduce"
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
@@ -591,7 +593,8 @@ namespace Raven.Database.Indexing
 				{
 					context.AddError(name,
 									TryGetDocKey(o),
-									exception.Message
+									exception.Message,
+                                    "Reduce"
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,

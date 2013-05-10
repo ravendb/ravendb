@@ -155,6 +155,9 @@
                             <sdk:DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>
+                                        <i:Interaction.Behaviors>
+                                                <Behaviors:ShowQuickDocumentPopupBehavior DocumentId="{Binding Item.Document.Key}"/>
+                                        </i:Interaction.Behaviors>
                                         <Rectangle Margin="0"
                                                    HorizontalAlignment="Left"
                                                    Fill="#06000000"
@@ -173,7 +176,7 @@
 
                                         <TextBlock Text="{Binding Item.Document.Key}" 
                                                    Behaviors:FadeTrimming.IsEnabled="True" 
-                                                   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                                   Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="False"
                                                    VerticalAlignment="Center" 
                                                    Margin="10,0,0,0"/>
                                     </Grid>
