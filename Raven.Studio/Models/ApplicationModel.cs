@@ -164,7 +164,7 @@ namespace Raven.Studio.Models
 							}
 						}
 						if(message == null)
-							message = httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
+							message = (int)httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
 						var stream = httpWebResponse.GetResponseStream();
 						if (stream != null)
 						{
