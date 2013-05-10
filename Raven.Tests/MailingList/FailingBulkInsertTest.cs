@@ -16,7 +16,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanBulkInsert()
 		{
-			var bulkInsertSize = 100000;
+			var bulkInsertSize = 20000;
 			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
 				new SampleData_Index().Execute(store);
