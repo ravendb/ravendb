@@ -41,12 +41,16 @@ namespace Raven.Studio.Models
         private bool documentsHaveId;
         private ICommand deleteSelectedDocuments;
         private ICommand copyIdsToClipboard;
-        private MostRecentUsedList<VirtualItem<ViewableDocument>> mostRecentDocuments = new MostRecentUsedList<VirtualItem<ViewableDocument>>(60);
+        private MostRecentUsedList<IndexedItem> mostRecentDocuments = new MostRecentUsedList<IndexedItem>(60);
         private ICommand copyDocumentTextToClipboard;
         private List<PriorityColumn> priorityColumns;
         private Func<DatabaseModel, IObservable<Unit>> observableGenerator;
         private IDisposable changesSubscription;
         private ICommand exportDetailsCommand;
+        private SamplingInvoker updateColumnsSamplingInvoker;
+        private bool autoRefresh;
+        private bool hasChanges;
+        private ICommand refreshViewCommand;
 
         public event EventHandler<EventArgs> RecentDocumentsChanged;
 
@@ -61,21 +65,53 @@ namespace Raven.Studio.Models
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified, v => v.MetadataOnly));
             Documents.PropertyChanged += HandleDocumentsPropertyChanged;
 
-            Observable.FromEventPattern<ItemsRealizedEventArgs>(h => Documents.ItemsRealized += h,
-                                                                h => Documents.ItemsRealized -= h)
-                .SampleResponsive(TimeSpan.FromSeconds(1))
-                .ObserveOnDispatcher()
-                .Subscribe(e => HandleItemsRealized(e.Sender, e.EventArgs));
+            collectionSource.CollectionChanged += delegate { HandleCollectionRefreshed(); };
+            updateColumnsSamplingInvoker = new SamplingInvoker(TimeSpan.FromSeconds(1));
+            Documents.ItemsRealized += (sender, e) => HandleItemsRealized(e.StartingIndex, e.Count);
 
             ItemSelection = new ItemSelection<VirtualItem<ViewableDocument>>();
+            DocumentsHaveId = true;
 
             Context = "Default";
+        }
+
+        private void HandleItemsRealized(int startingIndex, int count)
+        {
+            var item = Documents[startingIndex];
+            DocumentsHaveId = !string.IsNullOrEmpty(item.Item.Id);
+
+            for (int i = startingIndex; i < startingIndex + count; i++)
+            {
+                mostRecentDocuments.Add(new IndexedItem { Document = Documents[i].Item, Index = i });
+            }
+
+            updateColumnsSamplingInvoker.TryInvoke(UpdateColumns);
+
+            OnRecentDocumentsChanged(EventArgs.Empty);
+        }
+
+        private void HandleCollectionRefreshed()
+        {
+            HasChanges = false;
+        }
+
+        private void HandleItemRetrieved(int index, ViewableDocument document)
+        {
+            DocumentsHaveId = !string.IsNullOrEmpty(document.Id);
+
+            mostRecentDocuments.Add(new IndexedItem {Document = document, Index = index});
+
+            updateColumnsSamplingInvoker.TryInvoke(UpdateColumns);
+
+            OnRecentDocumentsChanged(EventArgs.Empty);
         }
 
         private void HandleDocumentsPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "Count" && Documents.Count == 0)
                 mostRecentDocuments.Clear();
+
+            updateColumnsSamplingInvoker.ResetInterval();
         }
 
         public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
@@ -84,24 +120,21 @@ namespace Raven.Studio.Models
 
         public bool MinimalHeader { get; set; }
 
-        private void HandleItemsRealized(object sender, ItemsRealizedEventArgs e)
+        public bool AutoRefresh
         {
-            if (e.StartingIndex >= Documents.Count)
+            get
             {
-                // the collection must have been reset since the event was raised
-                return;
+                return Settings.Instance.AutoRefreshDocumentLists;
             }
+            set
+            {
+                Settings.Instance.AutoRefreshDocumentLists = value;
+                OnPropertyChanged(() => AutoRefresh);
+            }
+        }
 
-            var viewableDocument = Documents[e.StartingIndex].Item;
-            
-            // collection may have been reset (and hence the item cleared) since the event was raised, thus the null check
-            if (viewableDocument != null)
-                DocumentsHaveId = !string.IsNullOrEmpty(viewableDocument.Id);
-
-            // When a view is refreshed, items can be realized in different orders (depending on the order the query responses come back from the db)
-            // So to stabilize the column set, we keep a list of 60 most recently used documents, and then sort them in index order. 
-            mostRecentDocuments.AddRange(Enumerable.Range(e.StartingIndex, e.Count).Select(i => Documents[i]));
-
+        private void UpdateColumns()
+        {
             if (Columns.Source == ColumnsSource.Automatic)
             {
                 var newColumns = GetCurrentColumnsSuggestion();
@@ -109,8 +142,6 @@ namespace Raven.Studio.Models
                 if (!Columns.Columns.Select(c => c.Binding).SequenceEqual(newColumns.Select(c => c.Binding)))
                     Columns.LoadFromColumnDefinitions(newColumns);
             }
-
-            OnRecentDocumentsChanged(EventArgs.Empty);
         }
 
         private IList<ColumnDefinition> GetCurrentColumnsSuggestion()
@@ -135,9 +166,8 @@ namespace Raven.Studio.Models
         public IEnumerable<ViewableDocument> GetMostRecentDocuments()
         {
             return mostRecentDocuments
-                .Where(i => i.IsRealized)
                 .OrderBy(i => i.Index)
-                .Select(i => i.Item);
+                .Select(i => i.Document);
         }
 
         public string Context
@@ -309,8 +339,43 @@ namespace Raven.Studio.Models
                     observable
                     .SampleResponsive(TimeSpan.FromSeconds(1))
                     .ObserveOnDispatcher()
-                    .Subscribe(_ => Documents.Refresh(RefreshMode.PermitStaleDataWhilstRefreshing));
+                    .Subscribe(_ => HandleSourceChanged());
             }
+        }
+
+        private void HandleSourceChanged()
+        {
+            if (AutoRefresh)
+            {
+                Refresh();
+            }
+            else
+            {
+                HasChanges = true;
+            }
+        }
+
+        public bool HasChanges
+        {
+            get { return hasChanges; }
+            set
+            {
+                if (hasChanges != value)
+                {
+                    hasChanges = value;
+                    OnPropertyChanged(() => HasChanges);
+                }
+            }
+        }
+
+        public ICommand RefreshView
+        {
+            get { return refreshViewCommand ?? (refreshViewCommand = new ActionCommand(Refresh)); }
+        }
+
+        private void Refresh()
+        {
+            Documents.Refresh(RefreshMode.PermitStaleDataWhilstRefreshing);
         }
 
         private void StopListeningForChanges()
@@ -404,6 +469,12 @@ namespace Raven.Studio.Models
                 Context, 
                 () => new ColumnSuggester().AllSuggestions(GetMostRecentDocuments()),
                 GetCurrentColumnsSuggestion);
+        }
+
+        private struct IndexedItem
+        {
+            public int Index;
+            public ViewableDocument Document;
         }
     }
 }
