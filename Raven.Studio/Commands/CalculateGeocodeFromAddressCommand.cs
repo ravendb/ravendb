@@ -48,7 +48,7 @@ namespace Raven.Studio.Commands
 				if (result != null)
 				{
 					var latitude = double.Parse(result[0].ToString());
-					var longitude = double.Parse(result[1].ToString();
+					var longitude = double.Parse(result[1].ToString());
 					var addressData = new AddressData { Address = queryModel.Address, Latitude = latitude, Longitude = longitude };
 					queryModel.UpdateResultsFromCalculate(addressData);
 				}
