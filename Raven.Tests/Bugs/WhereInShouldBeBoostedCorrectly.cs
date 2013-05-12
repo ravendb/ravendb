@@ -44,7 +44,51 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanBeBoosted()
+		public void WhenUsingWhereBoostWorksFine()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new SampleDataIndex().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var mark = new SampleData {Id = "sample/mark"};
+					mark.FirstName["en"] = new OneLevelDeeper {ProfessionalTranslation = "Mark"};
+
+					var bob1 = new SampleData {Id = "sample/bob1"};
+					bob1.LastName["en"] = new OneLevelDeeper {ProfessionalTranslation = "Bob"};
+
+					var bob2 = new SampleData {Id = "sample/bob2"};
+					bob2.FirstName["en"] = new OneLevelDeeper {ProfessionalTranslation = "Bob"};
+
+					session.Store(mark);
+					session.Store(bob1);
+					session.Store(bob2);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					//Removing this list and using .WhereEquals("FirstName_en", "Bob") works.
+
+					var results = session.Advanced.LuceneQuery<SampleData>(typeof (SampleDataIndex).Name)
+					                     .WaitForNonStaleResults()
+					                     .WhereEquals("FirstName_en", "Bob")
+					                     .OrElse()
+					                     .WhereEquals("LastName_en", "Bob")
+					                     .ToList();
+
+					//Bob2 should be returned as he has "Bob" in FirstName(boosted) whereas others do not.
+					Assert.Equal(2, results.Count);
+					Assert.Equal(results[0].Id, "sample/bob2");
+					Assert.Equal(results[1].Id, "sample/bob1");
+				}
+			}
+		}
+
+
+		[Fact]
+		public void WhenUsingWhereInBoostShouldAlsoTakePlace()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -73,17 +117,17 @@ namespace Raven.Tests.Bugs
 
 					//Removing this list and using .WhereEquals("FirstName_en", "Bob") works.
 
-					var luceneQuery = session.Advanced.LuceneQuery<SampleData>(typeof (SampleDataIndex).Name)
-					                         .WaitForNonStaleResults()
-					                         .WhereIn("FirstName_en", list)
-					                         .OrElse()
-					                         .WhereIn("LastName_en", list);
-					var results = luceneQuery.ToList();
+					var results = session.Advanced.LuceneQuery<SampleData>(typeof (SampleDataIndex).Name)
+					                     .WaitForNonStaleResults()
+					                     .WhereIn("FirstName_en", list)
+					                     .OrElse()
+					                     .WhereIn("LastName_en", list)
+					                     .ToList();
 
 					//Bob2 should be returned as he has "Bob" in FirstName(boosted) whereas others do not.
+					Assert.Equal(2, results.Count);
 					Assert.Equal(results[0].Id, "sample/bob2");
 					Assert.Equal(results[1].Id, "sample/bob1");
-					Assert.Equal(2, results.Count);
 				}
 			}
 		}
