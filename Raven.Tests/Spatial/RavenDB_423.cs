@@ -17,7 +17,7 @@ namespace Raven.Tests.Spatial
 		{
 			using(var store = NewDocumentStore())
 			{
-				Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				Assert.Throws<TransformCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new {}",
 					TransformResults = "from result in results select new { _= SpatialIndex.Generate(result.x, result.Y)}"
@@ -30,7 +30,7 @@ namespace Raven.Tests.Spatial
 		{
 			using (var store = NewDocumentStore())
 			{
-				Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				Assert.Throws<TransformCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new {}",
 					TransformResults = "from result in results select new { _= CreateField(result.x, result.Y)}"

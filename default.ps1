@@ -74,7 +74,6 @@ task Verify40 {
 task Clean {
 	Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
 	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
-	git checkout Raven.Database/Server/WebUI/Raven.Studio.xap
 }
 
 task Init -depends Verify40, Clean {
@@ -91,8 +90,6 @@ task Init -depends Verify40, Clean {
 		Foreach-Object { $_ -replace ".13", ".$($env:buildlabel)" } |
 		Foreach-Object { $_ -replace "{commit}", $commit } |
 		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
-	
-	Exec { git update-index --assume-unchanged Raven.Database\Server\WebUI\Raven.Studio.xap }
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
@@ -538,7 +535,7 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net40 -Type directory | Out-Null
 	@("Raven.Web.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.AspNetHost\lib\net40 }
 	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
+	Copy-Item $base_dir\DefaultConfigs\NuGet.AspNetHost.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
 	New-Item $nuget_dir\RavenDB.AspNetHost\tools -Type directory | Out-Null
 	
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\lib\net40 -Type directory | Out-Null

@@ -24,6 +24,12 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
+	    public bool AutoRefreshDocumentLists
+	    {
+	        get { return GetSettingAsBool("AutoRefreshDocumentLists", true); }
+            set { currentSettings["AutoRefreshDocumentLists"] = value; }
+	    }
+
 		public int DocumentSize
 		{
 			get { return GetSettingAsInt("DocumentSize"); }
@@ -57,5 +63,10 @@ namespace Raven.Studio.Infrastructure
 	    {
 	        return currentSettings.ContainsKey(key) ? Convert.ToInt32(currentSettings[key]) : 0;
 	    }
+
+        private bool GetSettingAsBool(string key, bool defaultValue = false)
+        {
+            return currentSettings.ContainsKey(key) ? Convert.ToBoolean(currentSettings[key]) : defaultValue;
+        }
 	}
 }
