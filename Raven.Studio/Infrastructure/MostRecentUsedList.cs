@@ -9,7 +9,8 @@ namespace Raven.Studio.Infrastructure
         public event EventHandler<ItemEvictedEventArgs<T>> ItemEvicted;
 
         private int _size;
-        private LinkedList<T> _list = new LinkedList<T>();
+        private readonly LinkedList<T> _list = new LinkedList<T>();
+        private readonly HashSet<T> _fastLookup = new HashSet<T>();
  
         public MostRecentUsedList(int size)
         {
@@ -28,11 +29,15 @@ namespace Raven.Studio.Infrastructure
 
         public void Add(T item)
         {
-            if (_list.Contains(item))
+            if (_fastLookup.Contains(item))
             {
                 _list.Remove(item);
             }
-
+            else
+            {
+                _fastLookup.Add(item);
+            }
+            
             _list.AddFirst(item);
 
             Trim();
@@ -44,6 +49,8 @@ namespace Raven.Studio.Infrastructure
             {
                 var item = _list.Last;
                 _list.RemoveLast();
+                _fastLookup.Remove(item.Value);
+
                 OnItemEvicted(new ItemEvictedEventArgs<T>(item.Value));
             }
         }
@@ -61,6 +68,7 @@ namespace Raven.Studio.Infrastructure
         public void Clear()
         {
             _list.Clear();
+            _fastLookup.Clear();
         }
 
         protected void OnItemEvicted(ItemEvictedEventArgs<T> e)

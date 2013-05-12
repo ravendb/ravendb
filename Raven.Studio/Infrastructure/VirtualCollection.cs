@@ -28,6 +28,7 @@ namespace Raven.Studio.Infrastructure
         public event PropertyChangedEventHandler PropertyChanged;
         public event EventHandler<QueryItemVisibilityEventArgs> QueryItemVisibility;
         public event EventHandler<ItemsRealizedEventArgs> ItemsRealized;
+
         public event CurrentChangingEventHandler CurrentChanging;
         public event EventHandler CurrentChanged;
         private readonly IVirtualCollectionSource<T> _source;
@@ -306,14 +307,19 @@ namespace Raven.Studio.Infrastructure
                 _source.GetPageAsync(request.Page*_pageSize, _pageSize, _sortDescriptions).ContinueWith(
                     t =>
                     {
-                        if (!t.IsFaulted)
-                            UpdatePage(request.Page, t.Result, request.StateWhenRequested);
-                        else
-                            MarkPageAsError(request.Page, request.StateWhenRequested);
-
-                        // fire off any further requests
-                        _inProcessPageRequests--;
-                        ProcessPageRequests();
+                        try
+                        {
+                            if (!t.IsFaulted)
+                                UpdatePage(request.Page, t.Result, request.StateWhenRequested);
+                            else
+                                MarkPageAsError(request.Page, request.StateWhenRequested);
+                        }
+                        finally
+                        {
+                            // fire off any further requests
+                            _inProcessPageRequests--;
+                            ProcessPageRequests();
+                        }
                     },
                     _synchronizationContextScheduler);
             }
@@ -362,6 +368,7 @@ namespace Raven.Studio.Infrastructure
 
             // guard against rogue collection sources returning too many results
             var count = Math.Min(results.Count, _pageSize);
+            count = Math.Min(count, _itemCount - startIndex);
 
             for (int i = 0; i < count; i++)
             {
