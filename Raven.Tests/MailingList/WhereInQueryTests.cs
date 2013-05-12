@@ -1,24 +1,21 @@
-using Raven.Tests;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client;
+using Raven.Client.Embedded;
+using Raven.Client.Indexes;
+using Xunit;
 
-namespace ContainsQueryFail
+namespace Raven.Tests.MailingList
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
-	using Raven.Client;
-	using Raven.Client.Embedded;
-	using Raven.Client.Indexes;
-	using Xunit;
-
 	public class WhereInQueryTests : RavenTest
 	{
-		private readonly EmbeddableDocumentStore _documentStore;
+		private readonly EmbeddableDocumentStore documentStore;
 
 		public WhereInQueryTests()
 		{
-			_documentStore = NewDocumentStore();
+			documentStore = NewDocumentStore();
 
-			using (IDocumentSession session = _documentStore.OpenSession())
+			using (IDocumentSession session = documentStore.OpenSession())
 			{
 				session.Store(new TestDocument
 							  {
@@ -41,19 +38,19 @@ namespace ContainsQueryFail
 				session.SaveChanges();
 			}
 
-			new TestIndex().Execute(_documentStore);
+			new TestIndex().Execute(documentStore);
 		}
 
 		public override void Dispose()
 		{
-			_documentStore.Dispose();
+			documentStore.Dispose();
 			base.Dispose();
 		}
 
 		[Fact]
 		public void Query_should_return_2_results()
 		{
-			using (IDocumentSession session = _documentStore.OpenSession())
+			using (IDocumentSession session = documentStore.OpenSession())
 			{
 				List<TestDocument> results = session
 					.Advanced
@@ -71,7 +68,7 @@ namespace ContainsQueryFail
 		[Fact]
 		public void Query_using_WhereIn_should_return_2_results()
 		{
-			using (IDocumentSession session = _documentStore.OpenSession())
+			using (IDocumentSession session = documentStore.OpenSession())
 			{
 				List<TestDocument> results = session
 					.Advanced
