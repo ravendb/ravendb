@@ -13,6 +13,7 @@ namespace Raven.Abstractions.Data
 		public DocumentChangeTypes Type { get; set; }
 		public string Id { get; set; }
 		public Etag Etag { get; set; }
+		public string Message { get; set; }
 
 		public override string ToString()
 		{
@@ -29,6 +30,7 @@ namespace Raven.Abstractions.Data
 		Delete = 2,
 		BulkInsertStarted = 4,
 		BulkInsertEnded = 8,
+		BulkInsertError = 16,
 
 		Common = Put | Delete
 	}
