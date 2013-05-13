@@ -186,7 +186,9 @@ namespace Raven.Database.Bundles.SqlReplication
 						}
 						else
 						{
-							sb.Append(SanitizeSqlValue(identifiers[j]));
+							sb.Append("'" + SanitizeSqlValue(identifiers[j]) + "'");
+							if (i != j)
+								sb.Append(", ");
 						}
 					}
 					sb.Append(")");
