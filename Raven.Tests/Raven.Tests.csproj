@@ -666,6 +666,7 @@
     <Compile Include="MailingList\BulkInsertTest.cs" />
     <Compile Include="MailingList\BulkInsertWithChanges.cs" />
     <Compile Include="MailingList\CanExcludeNullItems.cs" />
+    <Compile Include="MailingList\CanFacetOnList.cs" />
     <Compile Include="MailingList\CanReduceAndTransform.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
