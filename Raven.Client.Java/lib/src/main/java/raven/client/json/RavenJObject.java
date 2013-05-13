@@ -3,6 +3,7 @@ package raven.client.json;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
@@ -231,6 +232,37 @@ public class RavenJObject extends RavenJToken   {
 
 
   }
+
+  /* (non-Javadoc)
+   * @see raven.client.json.RavenJToken#value(java.lang.Class, java.lang.String)
+   */
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> T value(Class<T> clazz, String key) {
+    //TODO: finish me!
+    // externalize converter
+
+    if (!containsKey(key)) {
+      throw new IllegalArgumentException("Object does not contain key: " + key);
+    }
+    RavenJToken ravenJToken = get(key);
+    if (ravenJToken != null) {
+      switch (ravenJToken.getType()) {
+      case STRING:
+        RavenJValue ravenValue = (RavenJValue) ravenJToken;
+        if (String.class.isAssignableFrom(clazz)) {
+          return (T) ((RavenJValue)ravenJToken).getValue();
+        } else if (UUID.class.isAssignableFrom(clazz)) {
+          return (T) UUID.fromString((String) ravenValue.getValue());
+        }
+        break;
+
+      }
+    }
+    throw new IllegalArgumentException("Unsupported conversion. From:" + ravenJToken.getType() + " to " + clazz.getCanonicalName());
+  }
+
+
 
 
 }

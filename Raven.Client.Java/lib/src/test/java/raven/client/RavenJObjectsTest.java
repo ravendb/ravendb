@@ -557,7 +557,7 @@ public class RavenJObjectsTest {
       fail("it wasn't array!");
     } catch (Exception e) { /* ok */ }
     try {
-      RavenJArray.parse(null);
+      RavenJArray.parse((String)null);
       fail("it wasn't array!");
     } catch (Exception e) { /* ok */ }
   }

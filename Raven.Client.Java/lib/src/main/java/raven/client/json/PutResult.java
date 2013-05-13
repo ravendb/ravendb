@@ -5,6 +5,13 @@ import java.util.UUID;
 public class PutResult {
   private String key;
   private UUID etag;
+
+
+  public PutResult(String key, UUID etag) {
+    super();
+    this.key = key;
+    this.etag = etag;
+  }
   /**
    * @return the key
    */
@@ -12,22 +19,17 @@ public class PutResult {
     return key;
   }
   /**
-   * @param key the key to set
-   */
-  public void setKey(String key) {
-    this.key = key;
-  }
-  /**
    * @return the eTag
    */
   public UUID geteTag() {
     return etag;
   }
-  /**
-   * @param eTag the eTag to set
+  /* (non-Javadoc)
+   * @see java.lang.Object#toString()
    */
-  public void seteTag(UUID eTag) {
-    this.etag = eTag;
+  @Override
+  public String toString() {
+    return "PutResult [key=" + key + ", etag=" + etag + "]";
   }
 
 

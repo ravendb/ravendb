@@ -1,0 +1,21 @@
+package raven.client.json.lang;
+
+public class ServerClientException extends Exception {
+
+  public ServerClientException() {
+    super();
+  }
+
+  public ServerClientException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
+  public ServerClientException(String message) {
+    super(message);
+  }
+
+  public ServerClientException(Throwable cause) {
+    super(cause);
+  }
+
+}

@@ -2,10 +2,10 @@ package raven.client.connection;
 
 import java.util.UUID;
 
-import org.codehaus.jackson.JsonNode;
-
 import raven.client.json.JsonDocument;
 import raven.client.json.PutResult;
+import raven.client.json.RavenJObject;
+import raven.client.json.lang.ServerClientException;
 
 public interface IDatabaseCommands {
   /**
@@ -13,7 +13,7 @@ public interface IDatabaseCommands {
    * @param key The key
    * @return
    */
-  public JsonDocument get(String key);
+  public JsonDocument get(String key) throws ServerClientException;
 
   /**
    * Puts the document in the database with the specified key
@@ -23,7 +23,7 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    * @return PutResult
    */
-  public PutResult put(String key, UUID guid, JsonNode document, JsonNode metadata);
+  public PutResult put(String key, UUID guid, RavenJObject document, RavenJObject metadata) throws ServerClientException;
 
   /**
    * Deletes the document with the specified key

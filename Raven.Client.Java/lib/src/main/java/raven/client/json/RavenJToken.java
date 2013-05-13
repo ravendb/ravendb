@@ -1,6 +1,7 @@
 package raven.client.json;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.util.Stack;
 
@@ -68,6 +69,21 @@ public abstract class RavenJToken {
       throw new JsonReaderException(e.getMessage(), e);
     }
   }
+
+  /**
+   * Load a {@link RavenJToken} from a string that contains JSON.
+   * @param json
+   * @return
+   */
+  public static RavenJToken parse(InputStream json) throws JsonReaderException {
+    try {
+      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      return load(jsonParser);
+    } catch (IOException e) {
+      throw new JsonReaderException(e.getMessage(), e);
+    }
+  }
+
 
   public static RavenJToken readFrom(JsonParser parser) {
     try {
@@ -318,4 +334,8 @@ public abstract class RavenJToken {
   public abstract boolean isSnapshot();
 
   public abstract void writeTo(JsonGenerator writer);
+
+  public <T> T value(Class<T> clazz, String key) {
+    throw new IllegalStateException("Unsupported operation!");
+  }
 }
