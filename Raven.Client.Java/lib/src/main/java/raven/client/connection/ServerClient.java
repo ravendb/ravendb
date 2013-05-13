@@ -41,7 +41,23 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   @Override
-  public void delete(String key, UUID etag) {
+  public void delete(String key, UUID etag) throws ServerClientException {
+    //TODO: support for replication
+    directDelete(url, key, etag);
+  }
+
+  private void directDelete(String serverUrl, String key, UUID etag) throws ServerClientException{
+    RavenJObject metadata = new RavenJObject();
+    if (etag != null) {
+      metadata.add("ETag", RavenJToken.fromObject(etag.toString()));
+    }
+    try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + UrlUtils.escapeDataString(key), "DELETE"))) {
+      jsonRequest.executeDeleteRequest();
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+
   }
 
   @Override

@@ -3,6 +3,7 @@ package raven.client.connection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
@@ -51,10 +52,11 @@ public class HttpJsonRequest implements AutoCloseable {
     return methodBase.getResponseHeaders();
   }
 
-  public RavenJToken getResponseAsJson(int expectedStatus) throws HttpException, IOException {
+  public RavenJToken getResponseAsJson(Integer... expectedStatus) throws IOException {
     respCode = httpClient.executeMethod(methodBase);
 
-    if (expectedStatus != respCode && HttpStatus.SC_UNAUTHORIZED != respCode
+
+    if (!Arrays.asList(expectedStatus).contains(respCode) && HttpStatus.SC_UNAUTHORIZED != respCode
         && HttpStatus.SC_FORBIDDEN != respCode && HttpStatus.SC_PRECONDITION_FAILED != respCode) {
       throw new HttpOperationException(respCode);
     }
@@ -93,11 +95,19 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public void write(String string) throws UnsupportedEncodingException {
+    if (methodBase.isRequestSent()) {
+      throw new IllegalStateException("Request was already sent!");
+    }
     //TODO: check cast
     EntityEnclosingMethod postMethod = (EntityEnclosingMethod) methodBase;
     postMethod.setRequestEntity(new StringRequestEntity(string, "application/json", "utf-8"));
-    // TODO Auto-generated method stub
+  }
 
+  public void executeDeleteRequest() throws HttpException, IOException {
+    respCode = httpClient.executeMethod(methodBase);
+    if (respCode != HttpStatus.SC_OK && respCode != HttpStatus.SC_NO_CONTENT) {
+      throw new HttpOperationException(respCode);
+    }
   }
 
 }

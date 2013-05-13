@@ -30,5 +30,5 @@ public interface IDatabaseCommands {
    * @param key The key.
    * @param etag The etag.
    */
-  public void delete(String key, UUID etag);
+  public void delete(String key, UUID etag) throws ServerClientException;
 }

@@ -1,6 +1,7 @@
 package raven.client.connection;
 
 import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
@@ -18,6 +19,9 @@ public class HttpJsonRequestFactory  {
     case "PUT":
       PutMethod putMethod = new PutMethod(params.getUrl());
       return new HttpJsonRequest(httpClient, putMethod);
+    case "DELETE":
+      DeleteMethod deleteMethod = new DeleteMethod(params.getUrl());
+      return new HttpJsonRequest(httpClient, deleteMethod);
 
     default:
       throw new IllegalArgumentException("Unknown method: " + params.getMethod());
