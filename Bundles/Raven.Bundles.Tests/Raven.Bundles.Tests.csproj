@@ -83,7 +83,6 @@
     <Compile Include="CascadeDelete\CascadeDelete.cs" />
     <Compile Include="Company.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
-    <Compile Include="IndexedProperties\IndexedProperties.cs" />
     <Compile Include="IndexReplication\Bugs\Micro.cs" />
     <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />

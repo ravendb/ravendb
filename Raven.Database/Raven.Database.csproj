@@ -164,7 +164,6 @@
     <Compile Include="Bundles\Encryption\Streams\StructConverter.cs" />
     <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
-    <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
@@ -179,6 +178,7 @@
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsIndexTrigger.cs" />
     <Compile Include="Bundles\SqlReplication\ConversionScriptResult.cs" />
     <Compile Include="Bundles\SqlReplication\ItemToReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
