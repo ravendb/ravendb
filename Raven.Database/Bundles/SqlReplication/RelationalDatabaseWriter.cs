@@ -173,23 +173,21 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
 					{
-						if (!doNotParameterize)
+						if (i != j)
+							sb.Append(", ");
+						if (doNotParameterize == false)
 						{
 							var dbParameter = cmd.CreateParameter();
 							dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, "p" + j);
 							dbParameter.Value = identifiers[j];
 							cmd.Parameters.Add(dbParameter);
-							if (i != j)
-								sb.Append(", ");
-
 							sb.Append(dbParameter.ParameterName);
 						}
 						else
 						{
-							sb.Append("'" + SanitizeSqlValue(identifiers[j]) + "'");
-							if (i != j)
-								sb.Append(", ");
+							sb.Append("'").Append(SanitizeSqlValue(identifiers[j])).Append("'");
 						}
+						
 					}
 					sb.Append(")");
 
