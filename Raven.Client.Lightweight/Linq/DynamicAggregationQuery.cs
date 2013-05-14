@@ -110,7 +110,7 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public FacetResults ToList()
 		{
 			return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));

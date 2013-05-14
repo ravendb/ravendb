@@ -10,6 +10,10 @@
                          xmlns:models="clr-namespace:Raven.Studio.Models"
 						 xmlns:contextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
                          xmlns:data="clr-namespace:Raven.Abstractions.Data;assembly=Raven.Client.Silverlight"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                         xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+                         xmlns:behaviors="clr-namespace:Raven.Studio.Behaviors"
+                         xmlns:reporting="clr-namespace:Raven.Studio.Features.Reporting"
                          d:DesignWidth="640" d:DesignHeight="480"
 						 d:DataContext="{d:DesignInstance models:ReportingModel}"
 						 Title="ReportingView Page">
@@ -35,7 +39,6 @@
 					<Grid>
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="Auto"/>
 							<ColumnDefinition Width="*"/>
 							<ColumnDefinition Width="Auto"/>
 						</Grid.ColumnDefinitions>
@@ -44,27 +47,18 @@
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 
-						<TextBlock Text="Aggregate on: " VerticalAlignment="Center"/>
-							<ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.ParamsForSelectedCollection, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
+						<TextBlock Text="Aggregate on: " VerticalAlignment="Center" />
+							<ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.IndexFields, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
 									  SelectedItem="{Binding AggregateOn, Mode=TwoWay}"
 									  Margin="5"/>
 
 							<TextBlock Grid.Row="1" Text="Calculate on: " VerticalAlignment="Center"/>
 							<ComboBox Grid.Row="1"
 								  Grid.Column="1" 
-								  ItemsSource="{Binding DataContext.ParamsForSelectedCollection, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
+								  ItemsSource="{Binding DataContext.IndexFields, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
 								  SelectedItem="{Binding CalculateOn, Mode=TwoWay}"
 									  Margin="5"/>
 
-						<Button Grid.Column="3" 
-								Style="{StaticResource Style_Button_MouseOverChrome}"
-								HorizontalAlignment="Right" 
-								Command="{Binding DataContext.DeleteAggregationCommand, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}" 
-								CommandParameter="{Binding}"  
-								VerticalAlignment="Center" 
-								ToolTipService.ToolTip="Remove this aggregation">
-							<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-						</Button>
 					</Grid>
 				
 					<StackPanel Grid.Row="2">
@@ -136,27 +130,7 @@
 						</StackPanel>
 					</Button.Content>
 				</Button>
-				
-				<Button x:Name="AddAggregationBy"
-                        Style="{StaticResource Style_Button_MouseOverChrome}"
-                        ToolTipService.ToolTip="Add aggrigation for the report"
-						Visibility="{Binding SelectedCollection, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"
-                        VerticalAlignment="Center"
-                        Margin="0,0,6,0"
-                        Command="{Binding AddAggregation}"
-                        VerticalContentAlignment="Center">
-					<Button.Content>
-						<StackPanel Orientation="Horizontal"
-                                    VerticalAlignment="Center">
-							<Image Source="{StaticResource Image_Add_Tiny}"
-                                   Stretch="None"
-                                   VerticalAlignment="Center" />
-							<TextBlock Text="Add Aggrigation"
-                                       VerticalAlignment="Center"
-                                       Margin="2,0,0,0" />
-						</StackPanel>
-					</Button.Content>
-				</Button>
+
 			</StackPanel>
 		</Border>
 
@@ -164,23 +138,26 @@
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
-
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="Collection to report on: " VerticalAlignment="Center"/>
-					<ComboBox ItemsSource="{Binding AvailableCollections}"
-							  SelectedItem="{Binding SelectedCollection, Mode=TwoWay}"/>
-				</StackPanel>
 
 				<ListBox ItemsSource="{Binding Aggregations}"
 							  Visibility="{Binding Aggregations.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							  Style="{StaticResource Style_ItemsControl_IndexFields}"
-							  Grid.Row="1"
+							  Grid.Row="0"
 							  Margin="0,10,24,10"
 							  ItemTemplate="{StaticResource AggregationTemplate}">
 				</ListBox>
+                
+                <sdk:DataGrid ItemsSource="{Binding Results}" AutoGenerateColumns="False" Grid.Row="1">
+                    <i:Interaction.Behaviors>
+                        <behaviors:BindColumnsToColumnSetBehavior Columns="{Binding ResultColumns}">
+                            <behaviors:BindColumnsToColumnSetBehavior.ColumnGenerator>
+                                <reporting:ReportColumnsGenerator/>
+                            </behaviors:BindColumnsToColumnSetBehavior.ColumnGenerator>
+                        </behaviors:BindColumnsToColumnSetBehavior>
+                    </i:Interaction.Behaviors>
+                </sdk:DataGrid>
 			</Grid>
 		</Grid>
 	</Grid>

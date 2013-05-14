@@ -6,6 +6,7 @@ using Raven.Studio.Commands;
 using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Client.Connection;
 
 namespace Raven.Studio.Models
 {
@@ -35,7 +36,7 @@ namespace Raven.Studio.Models
 			    return;
 		    }
 
-		    var debug = await ApplicationModel.DatabaseCommands.CreateRequest("/debug/config", "GET").ReadResponseJsonAsync();
+		    var debug = await ApplicationModel.DatabaseCommands.CreateRequest("/debug/config".NoCache(), "GET").ReadResponseJsonAsync();
 		    var bundles = ApplicationModel.CreateSerializer()
 		                                  .Deserialize<List<string>>(
 			                                  new RavenJTokenReader(debug.SelectToken("ActiveBundles")));

@@ -979,18 +979,18 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name = "whereClause">The where clause.</param>
 		public void Where(string whereClause)
 		{
-			AppendSpaceIfRequired();
+			AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
 			queryText.Append(whereClause);
 		}
 
-		private void AppendSpaceIfRequired()
+		private void AppendSpaceIfNeeded(bool shouldAppendSpace)
 		{
-			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
+			if (shouldAppendSpace)
 			{
 				queryText.Append(" ");
 			}
 		}
-
+			
 		/// <summary>
 		///   Matches exact value
 		/// </summary>
@@ -1031,7 +1031,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void OpenSubclause()
 		{
 			currentClauseDepth++;
-			AppendSpaceIfRequired();
+			AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
 			NegateIfNeeded();
 			queryText.Append("(");
 		}
@@ -1066,11 +1066,8 @@ If you really want to do in memory filtering on the data returned from the query
 			EnsureValidFieldName(whereParams);
 			var transformToEqualValue = TransformToEqualValue(whereParams);
 			lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
-			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
-			{
-				queryText.Append(" ");
-			}
 
+			AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
 			NegateIfNeeded();
 
 			queryText.Append(RavenQuery.EscapeField(whereParams.FieldName));
@@ -1118,9 +1115,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
 		{
-			if (queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false)
-				queryText.Append(" ");
-
+			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
 			NegateIfNeeded();
 
 			var list = values.ToList();
@@ -1217,10 +1212,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetween(string fieldName, object start, object end)
 		{
-			if (queryText.Length > 0)
-			{
-				queryText.Append(" ");
-			}
+			AppendSpaceIfNeeded(queryText.Length > 0);
 
 			if ((start ?? end) != null)
 				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
@@ -1245,10 +1237,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
-			if (queryText.Length > 0)
-			{
-				queryText.Append(" ");
-			}
+			AppendSpaceIfNeeded(queryText.Length > 0);
 			if ((start ?? end) != null)
 				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
 

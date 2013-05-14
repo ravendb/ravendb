@@ -235,6 +235,7 @@
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\ComboBoxExt.cs" />
     <Compile Include="Behaviors\CopyValueToClipboardAction.cs" />
+    <Compile Include="Behaviors\DataGridColumnGenerator.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\MouseHoverTrigger.cs" />
     <Compile Include="Behaviors\ResizeDragBehavior.cs" />
@@ -302,6 +303,7 @@
     </Compile>
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
+    <Compile Include="Features\Documents\DocumentDetailsColumnGenerator.cs" />
     <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
@@ -310,6 +312,7 @@
     </Compile>
     <Compile Include="Features\Patch\AutoCompletionTrigger.cs" />
     <Compile Include="Features\Patch\PatchScriptIntelliPromptProvider.cs" />
+    <Compile Include="Features\Reporting\ReportColumnsGenerator.cs" />
     <Compile Include="Features\Reporting\ReportingView.xaml.cs">
       <DependentUpon>ReportingView.xaml</DependentUpon>
     </Compile>
@@ -347,6 +350,7 @@
     <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
       <DependentUpon>TransformersListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\AsyncCommand.cs" />
     <Compile Include="Infrastructure\Converters\BreakToLinesConverter.cs" />
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
@@ -354,6 +358,7 @@
     <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
     <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
     <Compile Include="Models\ReportingModel.cs" />
+    <Compile Include="Infrastructure\SamplingInvoker.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
     <Compile Include="Models\StatusModel.cs" />
     <Compile Include="Models\StatusPageModel.cs" />
@@ -465,7 +470,6 @@
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ColumnDefinition.cs" />
     <Compile Include="Features\Documents\ColumnEditorViewModel.cs" />
-    <Compile Include="Features\Documents\ColumnModel.cs" />
     <Compile Include="Features\Documents\ColumnsEditorDialog.xaml.cs">
       <DependentUpon>ColumnsEditorDialog.xaml</DependentUpon>
     </Compile>

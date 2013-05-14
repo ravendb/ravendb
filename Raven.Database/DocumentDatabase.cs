@@ -2229,31 +2229,43 @@ namespace Raven.Database
 
 					foreach (var doc in docsToInsert)
                     {
-                        RemoveReservedProperties(doc.DataAsJson);
-                        RemoveMetadataReservedProperties(doc.Metadata);
+	                    try
+	                    {
+							RemoveReservedProperties(doc.DataAsJson);
+							RemoveMetadataReservedProperties(doc.Metadata);
 
-                        if (options.CheckReferencesInIndexes)
-                            keys.Add(doc.Key);
-                        documents++;
-                        batch++;
-                        AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
-                        foreach (var trigger in PutTriggers)
-                        {
-                            trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
-                        }
-                        var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
-                        if (result.Updated == false)
-                            inserts++;
+							if (options.CheckReferencesInIndexes)
+								keys.Add(doc.Key);
+							documents++;
+							batch++;
+							AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
+							foreach (var trigger in PutTriggers)
+							{
+								trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
+							}
+							var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
+							if (result.Updated == false)
+								inserts++;
 
-	                    doc.Etag = result.Etag;
+							doc.Etag = result.Etag;
 
-                        doc.Metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-                        doc.DataAsJson.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							foreach (var trigger in PutTriggers)
+							{
+								trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
+							}
+	                    }
+						catch (Exception e)
+						{
+							RaiseNotifications(new DocumentChangeNotification
+							{
+								Message = e.Message,
+								Etag = doc.Etag,
+								Id = doc.Key,
+								Type = DocumentChangeTypes.BulkInsertError
+							}, null);
 
-                        foreach (var trigger in PutTriggers)
-                        {
-                            trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
-                        }
+							throw;
+						}
                     }
                     if (options.CheckReferencesInIndexes)
                     {
