@@ -65,14 +65,14 @@ namespace Raven.Database.Server.Responders
 				{"Documents", 0},
 				{"Completed", false}
 			};
-
+			
 			int documents = 0;
 			var mre = new ManualResetEventSlim(false);
 
 			var currentDatbase = Database;
 			var task = Task.Factory.StartNew(() =>
 			{
-				documents = currentDatbase.BulkInsert(options, YieldBatches(context, mre));
+				currentDatbase.BulkInsert(options, YieldBatches(context, mre, batchSize => documents += batchSize));
 				status["Documents"] = documents;
 				status["Completed"] = true;
 			});
@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Responders
 			});
 		}
 
-		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context, ManualResetEventSlim mre)
+		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context, ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
 		{
 			try
 			{
@@ -110,7 +110,7 @@ namespace Raven.Database.Server.Responders
 						}
 						using (var stream = new PartialStream(inputStream, size))
 						{
-							yield return YieldDocumentsInBatch(stream);
+							yield return YieldDocumentsInBatch(stream, increaseDocumentsCount);
 						}
 					}
 				}
@@ -121,12 +121,13 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
-		private static IEnumerable<JsonDocument> YieldDocumentsInBatch(Stream partialStream)
+		private static IEnumerable<JsonDocument> YieldDocumentsInBatch(Stream partialStream, Action<int> increaseDocumentsCount)
 		{
 			using(var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen:true))
 			{
 				var reader = new BinaryReader(stream);
 				var count = reader.ReadInt32();
+
 				for (int i = 0; i < count; i++)
 				{
 					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader));
@@ -149,6 +150,8 @@ namespace Raven.Database.Server.Responders
 						Metadata = metadata
 					};
 				}
+
+				increaseDocumentsCount(count);
 			}
 		}
 	}
