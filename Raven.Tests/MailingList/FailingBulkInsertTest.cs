@@ -44,7 +44,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanBulkInsertConcurrently()
 		{
-			var bulkInsertSize = 20000;
+			var bulkInsertSize = 10000;
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				new SampleData_Index().Execute(store);
@@ -81,7 +81,7 @@ namespace Raven.Tests.MailingList
 				var t3 = Task.Factory.StartNew(() =>
 				{
 					var index = bulkInsertSize;
-					for (int i = 0; i < 100; i++)
+					for (int i = 0; i < 50; i++)
 					{
 						using (var session = store.OpenSession())
 						{
