@@ -4,10 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
+	public class BulkInsertChangeNotification : DocumentChangeNotification
+	{
+		public Guid OperationId { get; set; }
+	}
+
 	public class DocumentChangeNotification : EventArgs
 	{
 		public DocumentChangeTypes Type { get; set; }

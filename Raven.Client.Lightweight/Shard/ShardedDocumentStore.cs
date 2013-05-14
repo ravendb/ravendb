@@ -273,7 +273,7 @@ namespace Raven.Client.Shard
 #if !SILVERLIGHT && !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
+			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions(), Changes(database));
 		}
 #endif
 

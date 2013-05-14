@@ -11,6 +11,7 @@ using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -434,7 +435,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
-		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 #endif
 		/// <summary>
 		/// Gets the transformers from the server

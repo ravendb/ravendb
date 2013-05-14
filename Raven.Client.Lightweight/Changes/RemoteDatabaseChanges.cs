@@ -26,6 +26,7 @@ namespace Raven.Client.Changes
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
         private bool watchAllDocs;
         private bool watchAllIndexes;
 
@@ -130,6 +131,8 @@ namespace Raven.Client.Changes
                                     prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
 
                                     prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
+
+									prev = watchedBulkInserts.Aggregate(prev, (cur, bulkInsert) => cur.ContinueWith(task1 => Send("watch-bulk-operation", bulkInsert)));
 
                                     return prev;
                                 })
@@ -286,6 +289,38 @@ namespace Raven.Client.Changes
             return taskedObservable;
         }
 
+		public IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid operationId)
+		{
+			var id = operationId.ToString();
+
+			var counter = counters.GetOrAdd("bulk-operations/" + id, s =>
+			{
+				var documentSubscriptionTask = AfterConnection(() =>
+				{
+					watchedBulkInserts.TryAdd(id);
+					return Send("watch-bulk-operation", id);
+				});
+
+				return new LocalConnectionState(
+					() =>
+					{
+						watchedBulkInserts.TryRemove(id);
+						Send("unwatch-bulk-operation", id);
+						counters.Remove("bulk-operations/" + operationId);
+					},
+					documentSubscriptionTask);
+			});
+
+			var taskedObservable = new TaskedObservable<BulkInsertChangeNotification>(counter,
+			                                                                          notification =>
+			                                                                          notification.OperationId == operationId);
+
+			counter.OnBulkInsertChangeNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
+
         public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
         {
             var counter = counters.GetOrAdd("all-indexes", s =>
@@ -373,7 +408,7 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
-		public void WaitForAllPendingSubscriptions()
+	    public void WaitForAllPendingSubscriptions()
 		{
 			foreach (var kvp in counters)
 			{
@@ -431,6 +466,14 @@ namespace Raven.Client.Changes
                         counter.Value.Send(documentChangeNotification);
                     }
                     break;
+
+				case "BulkInsertChangeNotification":
+					var bulkInsertChangeNotification = value.JsonDeserialization<BulkInsertChangeNotification>();
+					foreach (var counter in counters)
+					{
+						counter.Value.Send(bulkInsertChangeNotification);
+					}
+					break;
 
                 case "IndexChangeNotification":
                     var indexChangeNotification = value.JsonDeserialization<IndexChangeNotification>();

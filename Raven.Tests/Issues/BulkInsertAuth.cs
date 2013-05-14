@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-            Authentication.EnableOnce();
+			Authentication.EnableOnce();
 		}
 
 		[Fact]
@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(),
-				                                              (ServerClient) store.DatabaseCommands))
+															  (ServerClient)store.DatabaseCommands, store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}
@@ -41,25 +41,25 @@ namespace Raven.Tests.Issues
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-            Authentication.EnableOnce();
+			Authentication.EnableOnce();
 		}
 
 		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
 		{
 			var id = "Raven/ApiKeys/test";
 			ravenDbServer.Database.Put(id, null,
-			                           RavenJObject.FromObject(new ApiKeyDefinition
-			                           {
-				                           Id = id,
-				                           Name = "test",
-				                           Secret = "test",
+									   RavenJObject.FromObject(new ApiKeyDefinition
+									   {
+										   Id = id,
+										   Name = "test",
+										   Secret = "test",
 										   Enabled = true,
-				                           Databases =
+										   Databases =
 				                           {
 					                           new DatabaseAccess {Admin = true, TenantId = "*"},
 					                           new DatabaseAccess {Admin = true, TenantId = "<system>"}
 				                           }
-			                           }), new RavenJObject(), null);
+									   }), new RavenJObject(), null);
 		}
 
 		protected override void ModifyStore(DocumentStore documentStore)
@@ -74,7 +74,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore(enableAuthentication: true))
 			{
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(),
-															  (ServerClient)store.DatabaseCommands))
+															  (ServerClient)store.DatabaseCommands, store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}
