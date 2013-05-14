@@ -89,6 +89,14 @@ namespace Raven.Database.Server.Responders
 			{
 				connectionState.UnwatchAllReplicationConflicts();
 			}
+			else if (Match(cmd, "watch-bulk-operation"))
+			{
+				connectionState.WatchBulkInsert(name);
+			}
+			else if (Match(cmd, "unwatch-bulk-operation"))
+			{
+				connectionState.UnwatchBulkInsert(name);
+			}
 			else
 			{
 				context.SetStatusToBadRequest();

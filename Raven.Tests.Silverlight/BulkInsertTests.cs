@@ -21,7 +21,7 @@ namespace Raven.Tests.Silverlight
 		{
 			using (var store = new DocumentStore { Url = Url + Port }.Initialize())
 			{
-				using (var op = store.AsyncDatabaseCommands.GetBulkInsertOperation(new BulkInsertOptions()))
+				using (var op = store.AsyncDatabaseCommands.GetBulkInsertOperation(new BulkInsertOptions(), store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}

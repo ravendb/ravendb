@@ -25,16 +25,6 @@ namespace Raven.Tests.Issues
 
 			using (var store = NewDocumentStore())
 			{
-				store.Changes()
-					.ForAllDocuments()
-					 .Subscribe(change =>
-					 {
-						 if (change.Type == DocumentChangeTypes.BulkInsertError)
-						 {
-							 errored = true;
-						 }
-					 });
-
 				using (var bulk = store.BulkInsert())
 				{
 					for (int i = 0; i < 1000; i++)
@@ -51,6 +41,16 @@ namespace Raven.Tests.Issues
 				{
 					using (var bulk = store.BulkInsert())
 					{
+						store.Changes()
+							 .ForBulkInsert(bulk.OperationId)
+							 .Subscribe(change =>
+							 {
+								 if (change.Type == DocumentChangeTypes.BulkInsertError)
+								 {
+									 errored = true;
+								 }
+							 });
+
 						for (int i = 0; i < 1000; i++)
 						{
 							bulk.Store(new Person
@@ -60,10 +60,57 @@ namespace Raven.Tests.Issues
 							}, i.ToString());
 						}
 					}
+
+					Assert.True(false);
 				}
-				catch (AggregateException e)
+				catch (Exception e)
 				{
-					Assert.Equal("Cannot insert document 0 because it already exists", e.GetBaseException().Message);
+					Assert.True(e.GetBaseException().Message.StartsWith("Cannot insert"));
+				}
+			}
+
+			Assert.True(errored);
+		}
+
+		[Fact]
+		public void BulkInsertErrorNotificationRemoteTest()
+		{
+			var errored = false;
+
+			using (var store = NewRemoteDocumentStore())
+			{
+				using (var bulk = store.BulkInsert())
+				{
+					for (int i = 0; i < 1000; i++)
+					{
+						bulk.Store(new Person
+						{
+							Id = i,
+							FirstName = "FName" + i
+						}, i.ToString());
+					}
+				}
+
+				using (var bulk = store.BulkInsert())
+				{
+					store.Changes()
+						 .ForBulkInsert(bulk.OperationId)
+						 .Subscribe(change =>
+						 {
+							 if (change.Type == DocumentChangeTypes.BulkInsertError)
+							 {
+								 errored = true;
+							 }
+						 });
+
+					for (int i = 0; i < 1000; i++)
+					{
+						bulk.Store(new Person
+						{
+							Id = i,
+							FirstName = "FName" + i
+						}, i.ToString());
+					}
 				}
 			}
 

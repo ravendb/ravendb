@@ -58,6 +58,7 @@ namespace Raven.Database.Server.Responders
 				CheckReferencesInIndexes = context.GetCheckReferencesInIndexes()
 			};
 
+			var operationId = ExtractOperationId(context);
 			var sp = Stopwatch.StartNew();
 
 			var status = new RavenJObject
@@ -72,7 +73,7 @@ namespace Raven.Database.Server.Responders
 			var currentDatbase = Database;
 			var task = Task.Factory.StartNew(() =>
 			{
-				documents = currentDatbase.BulkInsert(options, YieldBatches(context, mre));
+				documents = currentDatbase.BulkInsert(options, YieldBatches(context, mre), operationId);
 				status["Documents"] = documents;
 				status["Completed"] = true;
 			});
@@ -88,6 +89,13 @@ namespace Raven.Database.Server.Responders
 			{
 				OperationId = id
 			});
+		}
+
+		private static Guid ExtractOperationId(IHttpContext context)
+		{
+			Guid result;
+			Guid.TryParse(context.Request.QueryString["operationId"], out result);
+			return result;
 		}
 
 		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context, ManualResetEventSlim mre)

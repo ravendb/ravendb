@@ -18,6 +18,7 @@ namespace Raven.Client.Embedded.Changes
 		private readonly Func<string, Etag, string[], bool> tryResolveConflictByUsingRegisteredConflictListeners;
 		private readonly EmbeddableObservableWithTask<IndexChangeNotification> indexesObservable;
 		private readonly EmbeddableObservableWithTask<DocumentChangeNotification> documentsObservable;
+		private readonly EmbeddableObservableWithTask<BulkInsertChangeNotification> bulkInsertObservable;
 		private readonly EmbeddableObservableWithTask<ReplicationConflictNotification> replicationConflictsObservable;
 
 		private readonly BlockingCollection<Action> enqueuedActions = new BlockingCollection<Action>();
@@ -30,15 +31,22 @@ namespace Raven.Client.Embedded.Changes
 			Task = new CompletedTask<IDatabaseChanges>(this);
 			indexesObservable = new EmbeddableObservableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObservableWithTask<DocumentChangeNotification>();
+			bulkInsertObservable = new EmbeddableObservableWithTask<BulkInsertChangeNotification>();
 			replicationConflictsObservable = new EmbeddableObservableWithTask<ReplicationConflictNotification>();
 
-			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) => 
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnIndexChangeNotification += (o, notification) =>
 				enqueuedActions.Add(() => indexesObservable.Notify(o, notification));
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnDocumentChangeNotification += (o, notification) =>
 				 enqueuedActions.Add(() => documentsObservable.Notify(o, notification));
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnReplicationConflictNotification += (o, notification) =>
 				 enqueuedActions.Add(() => replicationConflictsObservable.Notify(o, notification));
 			embeddableDocumentStore.DocumentDatabase.TransportState.OnReplicationConflictNotification += TryResolveConflict;
+			embeddableDocumentStore.DocumentDatabase.TransportState.OnBulkInsertChangeNotification += (o, notification) =>
+			                                                                                          enqueuedActions.Add(() =>
+			                                                                                          {
+				                                                                                          bulkInsertObservable.Notify(o, notification);
+																										  documentsObservable.Notify(o, notification);
+			                                                                                          });
 
 			enqueuedTask = System.Threading.Tasks.Task.Factory.StartNew(() =>
 			{
@@ -73,8 +81,8 @@ namespace Raven.Client.Embedded.Changes
 		}
 
 		public bool Connected { get; private set; }
-		public event EventHandler ConnectionStatusChanged = delegate {  };
-		public Task<IDatabaseChanges>  Task { get; private set; }
+		public event EventHandler ConnectionStatusChanged = delegate { };
+		public Task<IDatabaseChanges> Task { get; private set; }
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
@@ -111,7 +119,13 @@ namespace Raven.Client.Embedded.Changes
 		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
 		{
 			return new FilteringObservableWithTask<ReplicationConflictNotification>(replicationConflictsObservable,
-			                                                                        notification => true);
+																					notification => true);
+		}
+
+		public IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid operationId)
+		{
+			return new FilteringObservableWithTask<BulkInsertChangeNotification>(bulkInsertObservable,
+				notification => notification.OperationId == operationId);
 		}
 
 		public void WaitForAllPendingSubscriptions()

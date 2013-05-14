@@ -19,6 +19,7 @@ using Raven.Client.Silverlight.Connection;
 #elif NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
+using Raven.Client.Changes;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -352,7 +353,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
-		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 #endif
 
 	}

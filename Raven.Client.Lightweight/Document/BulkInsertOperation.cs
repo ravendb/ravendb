@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 #if !SILVERLIGHT
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 #else
 using Raven.Client.Connection.Async;
@@ -14,6 +15,14 @@ namespace Raven.Client.Document
 {
 	public class BulkInsertOperation : IDisposable
 	{
+		public Guid OperationId
+		{
+			get
+			{
+				return operation.OperationId;
+			}
+		}
+
 		private readonly IDocumentStore documentStore;
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
@@ -34,7 +43,7 @@ namespace Raven.Client.Document
 			remove { operation.Report -= value; }
 		}
 
-		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options)
+		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes)
 		{
 			this.documentStore = documentStore;
 
@@ -54,7 +63,7 @@ namespace Raven.Client.Document
 
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).Result);
 #endif
-			operation = DatabaseCommands.GetBulkInsertOperation(options);
+			operation = DatabaseCommands.GetBulkInsertOperation(options, changes);
 			entityToJson = new EntityToJson(documentStore, listeners);
 		}
 

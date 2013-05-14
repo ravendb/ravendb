@@ -13,6 +13,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Json;
+using Raven.Client.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Listeners;
 using Raven.Database.Data;
@@ -716,9 +717,9 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
-		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
-			return new EmbeddedBulkInsertOperation(database, options);
+			return new EmbeddedBulkInsertOperation(database, options, changes);
 		}
 
 		/// <summary>
