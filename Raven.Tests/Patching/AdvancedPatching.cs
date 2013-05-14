@@ -111,7 +111,7 @@ this.Parts = this.Email.split('@');";
 		{
 			const string email = "somebody@somewhere.com";
 			var doc = RavenJObject.Parse("{\"Contact\":null}");
-			const string script = "this.Contact = contact;";
+			const string script = "this.Contact = contact.Email;";
 			var patch = new ScriptedPatchRequest()
 			{
 				Script = script,
@@ -160,11 +160,11 @@ this.Parts = this.Email.split('@');";
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-																							{
-																								Script = @"
+			{
+				Script = @"
 this.Comments.Remove('two');
 "
-																							});
+			});
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
 			Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
@@ -191,10 +191,10 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-																							{
-																								Script = "this.TheName = Name",
-																								Values = { { "Name", "ayende" } }
-																							});
+			{
+				Script = "this.TheName = Name",
+				Values = { { "Name", "ayende" } }
+			});
 			Assert.Equal("ayende", resultJson.Value<string>("TheName"));
 		}
 
@@ -223,9 +223,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
 			advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-																			{
-																				Script = "output(this.Id)"
-																			});
+			{
+				Script = "output(this.Id)"
+			});
 
 			Assert.Equal("someId", advancedJsonPatcher.Debug[0]);
 		}
@@ -301,13 +301,13 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 				}
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
-																{
-																	Script = @"
+				{
+					Script = @"
 var another = LoadDocument(anotherId);
 this.Value = another.Value;
 ",
-																	Values = { { "anotherId", "CustomTypes/2" } }
-																});
+					Values = { { "anotherId", "CustomTypes/2" } }
+				});
 
 				var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
 				var resultJson = resultDoc.DataAsJson;
@@ -316,6 +316,35 @@ this.Value = another.Value;
 				Assert.Equal(1, result.Value);
 			}
 		}
+
+        public void CanPatchMetadata()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new CustomType { Value = 2 });
+                    s.Store(new CustomType { Value = 1 });
+                    s.SaveChanges();
+                }
+
+                store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+                {
+                    Script = @"
+this.Owner = this['@metadata']['Raven-Clr-Type'];
+this['@metadata']['Raven-Entity-Name'] = 'New-Entity';
+",                   
+                });
+
+                var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
+                var resultJson = resultDoc.DataAsJson;
+                var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+                var metadata = resultDoc.Metadata;
+
+                Assert.Equal(metadata["Raven-Clr-Type"], result.Owner);
+                Assert.Equal("New-Entity", metadata["Raven-Entity-Name"]);
+            }
+        }
 
 		[Fact]
 		public void CanUpdateOnMissingProperty()
@@ -328,13 +357,11 @@ this.Value = another.Value;
 					s.SaveChanges();
 				}
 
-
 				store.DatabaseCommands.Patch("products/1",
-														 new ScriptedPatchRequest
-														 {
-															 Script = "this.Test = 'a';"
-														 });
-
+				new ScriptedPatchRequest
+				{
+					Script = "this.Test = 'a';"
+				});
 
 				var resultDoc = store.DatabaseCommands.Get("products/1");
 
@@ -349,11 +376,10 @@ this.Value = another.Value;
 			using (var store = NewDocumentStore())
 			{
 				store.DatabaseCommands.Patch("products/1",
-														 new ScriptedPatchRequest
-														 {
-															 Script = "this.Test = 'a';"
-														 });
-
+				new ScriptedPatchRequest
+				{
+					Script = "this.Test = 'a';"
+				});
 			}
 		}
 
@@ -679,13 +705,12 @@ PutDocument(
 			Assert.Equal("seven", item2Result.Comments[2]);
 		}
 
-
 		class CustomType
 		{
 			public string Id { get; set; }
 			public string Owner { get; set; }
 			public int Value { get; set; }
 			public List<string> Comments { get; set; }
-		}
-	}
+		}        
+    }
 }

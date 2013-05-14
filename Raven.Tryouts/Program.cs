@@ -1,17 +1,13 @@
 ﻿using System;
+using Raven.Database;
+using Raven.Database.Config;
 using Raven.Tests.Issues;
 
 class Program
 {
 	static void Main(string[] args)
 	{
-		for (int i = 0; i < 100; i++)
-		{
-			Console.WriteLine(i);
-			using (var n = new RavenDB_1041())
-			{
-				n.CanSpecifyTimeoutWhenWaitingForReplication();
-			}
-		}
+		DocumentDatabase.Restore(new RavenConfiguration(), @"C:\Users\Ayende\AppData\Local\Temp\2013-04-01\2013-04-01", 
+			@"C:\Users\Ayende\AppData\Local\Temp\2013-04-01\2013-04-01.restored", Console.WriteLine, false);
 	}
 }

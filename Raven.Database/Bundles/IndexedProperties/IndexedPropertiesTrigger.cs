@@ -12,6 +12,9 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 using Document = Lucene.Net.Documents.Document;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Json;
+using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace Raven.Bundles.IndexedProperties
 {
@@ -24,58 +27,44 @@ namespace Raven.Bundles.IndexedProperties
 		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
 		{
 			//Only apply the trigger if there is a setup doc for this particular index
-			var jsonSetupDoc = Database.Get("Raven/IndexedProperties/" + indexName, null);
+            var jsonSetupDoc = Database.Get(IndexedPropertiesSetupDoc.IdPrefix + indexName, null);
 			if (jsonSetupDoc == null)
 				return null;
 			var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
-			var setupDoc = jsonSetupDoc.DataAsJson.JsonDeserialization<IndexedPropertiesSetupDoc>();
-			return new IndexPropertyBatcher(Database, setupDoc, indexName, abstractViewGenerator);
+			return new IndexPropertyBatcher(Database, jsonSetupDoc, indexName, abstractViewGenerator);
 		}
 
 		public class IndexPropertyBatcher : AbstractIndexUpdateTriggerBatcher
 		{
 			private readonly DocumentDatabase database;
+            private readonly JsonDocument rawSetupDoc;
 			private readonly IndexedPropertiesSetupDoc setupDoc;
-			private readonly string index;
+			private readonly string indexName;
 			private readonly AbstractViewGenerator viewGenerator;
 			private readonly ConcurrentSet<string> itemsToRemove = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-			public IndexPropertyBatcher(DocumentDatabase database, IndexedPropertiesSetupDoc setupDoc, string index, AbstractViewGenerator viewGenerator)
+            private readonly ConcurrentSet<string> itemsToRemove =
+                new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+            public IndexPropertyBatcher(DocumentDatabase database, JsonDocument rawSetupDoc, string indexName, AbstractViewGenerator viewGenerator)
 			{
 				this.database = database;
-				this.setupDoc = setupDoc;
-				this.index = index;
+				this.rawSetupDoc = rawSetupDoc;
+				this.indexName = indexName;
 				this.viewGenerator = viewGenerator;
+                if (rawSetupDoc != null && rawSetupDoc.DataAsJson != null)
+                    this.setupDoc = this.rawSetupDoc.DataAsJson.JsonDeserialization<IndexedPropertiesSetupDoc>();
 			}
 
 			public override void OnIndexEntryDeleted(string entryKey)
 			{
-				//Want to handle this scenario:
-				// - Customer/1 has 2 orders (order/3 & order/5)
-				// - Map/Reduce runs and AvgOrderCost in "customer/1" is set to the average cost of "order/3" and "order/5" (8.56 for example)
-				// - "order/3" and "order/5" are deleted (so customer/1 will no longer be included in the results of the Map/Reduce
-				// - I think we need to write back to the "customer/1" doc and delete the AvgOrderCost field in the Json (otherwise it'll still have the last value of 8.56)
-
-				RavenJObject entry;
-				try
+                if (String.IsNullOrEmpty(entryKey))
 				{
-					entry = RavenJObject.Parse(entryKey);
-				}
-				catch (Exception e)
-				{
-					log.WarnException("Could not properly parse entry key for index: " + index,e);
-					return;
-
-				}
-				var documentId = entry.Value<string>(setupDoc.DocumentKey);
-				if(documentId == null)
-				{
-					log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", setupDoc.DocumentKey, entryKey, index);
+                    log.Warn("Null or empty \"entryKey\" provided, '{0}' for index '{1}'", setupDoc.DocumentKey, indexName);
 					return;
 				}
 
-				itemsToRemove.Add(documentId);
-
+				itemsToRemove.Add(entryKey);
 			}
 
 			public override void OnIndexEntryCreated(string entryKey, Document document)
@@ -83,38 +72,82 @@ namespace Raven.Bundles.IndexedProperties
 				var resultDocId = document.GetField(setupDoc.DocumentKey);
 				if (resultDocId == null)
 				{
-					log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", setupDoc.DocumentKey, entryKey, index);
+					log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", setupDoc.DocumentKey, entryKey, indexName);
 					return;
 				}
 
 				var documentId = resultDocId.StringValue;
-
 				itemsToRemove.TryRemove(documentId);
 
 				var resultDoc = database.Get(documentId, null);
 				if (resultDoc == null)
 				{
-					log.Warn("Could not find a document with the id '{0}' for index '{1}'", documentId, index);
+					log.Warn("Could not find a document with the id '{0}' for index '{1}'", documentId, indexName);
 					return;
 				}
 
 				var entityName = resultDoc.Metadata.Value<string>(Constants.RavenEntityName);
-				if(entityName != null && viewGenerator.ForEntityNames.Contains(entityName))
+				if (entityName != null && viewGenerator.ForEntityNames.Contains(entityName))
 				{
 					log.Warn(
 						"Rejected update for a potentially recursive update on document '{0}' because the index '{1}' includes documents with entity name of '{2}'",
-						documentId, index, entityName);
+						documentId, indexName, entityName);
 					return;
 				}
-				if(viewGenerator.ForEntityNames.Count == 0)
+				if (viewGenerator.ForEntityNames.Count == 0)
 				{
 					log.Warn(
 						"Rejected update for a potentially recursive update on document '{0}' because the index '{1}' includes all documents",
-						documentId, index);
+						documentId, indexName);
 					return;
 				}
 
-				var changesMade = false;
+                if (setupDoc.Type == IndexedPropertiesType.FieldMapping)
+                {
+                    var changesMade = ApplySimpleFieldMappings(document, resultDoc);
+                    if (changesMade)
+                        database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+                }
+                else if (setupDoc.Type == IndexedPropertiesType.Scripted)
+                {
+                    // We don't store any docs here, it's upto the script to use Put if it wants to
+                    ApplyScript(document, resultDoc);
+                }                                
+			}
+
+            private void ApplyScript(Document document, JsonDocument resultDoc)
+            {                                                
+                // Make all the fields from inside the Lucene doc, available as variables inside the script
+                var fields = new Dictionary<string, object>();
+                foreach (var field in document.GetFields()
+                    .Where(f => f.Name.EndsWith("_Range") == false && f.Name != Constants.ReduceKeyFieldName))
+                {
+                    // It seems like all the fields from the Map/Reduce results come out as strings
+                    // Try and confirm this, if so we don't need to worry about NumericField, StringField etc
+                    fields.Add(field.Name, field.StringValue);
+                }
+                
+                var scriptedJsonPatcher = new ScriptedJsonPatcher(database);
+                
+                var values = new Dictionary<string, object> {
+                    { "result", fields },
+                    { "metadata", resultDoc.Metadata }
+                };
+                var patchRequest = new ScriptedPatchRequest { Script = setupDoc.Script, Values = values };                                
+                try
+                {                                                            
+                    var result = scriptedJsonPatcher.Apply(resultDoc.DataAsJson, patchRequest);                    
+                    resultDoc.DataAsJson = RavenJObject.FromObject(result);                    
+                }
+                catch (Exception e)
+                {
+                    log.WarnException("Could not process Indexed Properties script for " + resultDoc.Key + ", skipping this document", e);
+                }               
+            }
+
+            private bool ApplySimpleFieldMappings(Document document, JsonDocument resultDoc)
+            {
+                bool changesMade = false;
 				foreach (var mapping in setupDoc.FieldNameMappings)
 				{
 					var field = 
@@ -135,14 +168,13 @@ namespace Raven.Bundles.IndexedProperties
 							resultDoc.DataAsJson[mapping.Value] = RavenJToken.Parse(stringValue);
 						}
 						catch
-						{
+					{
 							resultDoc.DataAsJson[mapping.Value] = stringValue;
 						}
 					}
 					changesMade = true;
 				}
-				if (changesMade)
-					database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+                return changesMade;
 			}
 
 			private static string GetStringValue(IFieldable field)
@@ -165,10 +197,13 @@ namespace Raven.Bundles.IndexedProperties
 					var resultDoc = database.Get(documentId, null);
 					if (resultDoc == null)
 					{
-						log.Warn("Could not find a document with the id '{0}' for index '{1}", documentId, index);
+						log.Warn("Could not find a document with the id '{0}' for index '{1}", documentId, indexName);
 						return;
 					}
+
 					var changesMade = false;
+                    if (setupDoc.Type == IndexedPropertiesType.FieldMapping)
+                    {
 					foreach (var mapping in from mapping in setupDoc.FieldNameMappings
 											where resultDoc.DataAsJson.ContainsKey(mapping.Value)
 											select mapping)
@@ -176,9 +211,29 @@ namespace Raven.Bundles.IndexedProperties
 						resultDoc.DataAsJson.Remove(mapping.Value);
 						changesMade = true;
 					}
+                    }
+                    else if (setupDoc.Type == IndexedPropertiesType.Scripted)
+                    {                        
+                        if (setupDoc.CleanupScript == null)
+                            continue;
+
+                        var scriptedJsonPatcher = new ScriptedJsonPatcher(database);
+
+                        var values = new Dictionary<string, object> { { "deleteDocId", documentId } };
+                        var patchRequest = new ScriptedPatchRequest { Script = setupDoc.CleanupScript, Values = values };
+                        try
+                        {                            
+                            var result = scriptedJsonPatcher.Apply(resultDoc.DataAsJson, patchRequest);
+                            resultDoc.DataAsJson = RavenJObject.FromObject(result);                         
+                        }
+                        catch (Exception e)
+                        {
+                            log.WarnException("Could not process Indexed Properties script for " + resultDoc.Key + ", skipping this document", e);
+                        }         
+                    }
+
 					if (changesMade)
 						database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
-		
 				}
 
 				base.Dispose();
