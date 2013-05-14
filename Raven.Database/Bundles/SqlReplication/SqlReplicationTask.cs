@@ -306,7 +306,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
 				{
-					writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, identifiers);
+					writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled, identifiers);
 				}
 				writer.Commit();
 			}
