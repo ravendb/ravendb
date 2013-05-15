@@ -14,68 +14,38 @@
                          xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
                          xmlns:behaviors="clr-namespace:Raven.Studio.Behaviors"
                          xmlns:reporting="clr-namespace:Raven.Studio.Features.Reporting"
+                         xmlns:delay="clr-namespace:Delay"
                          d:DesignWidth="640" d:DesignHeight="480"
 						 d:DataContext="{d:DesignInstance models:ReportingModel}"
 						 Title="ReportingView Page">
 <UserControl.Resources>
-		<DataTemplate x:Key="AggregationTemplate" DataType="data:AggregationData">
-			<Border BorderBrush="#FFE9E9E9"
-                    BorderThickness="1,1,1,1"
-                    CornerRadius="4"
-                    Margin="10"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center">
-				<Border.Resources>
-					<Style TargetType="ComboBox" BasedOn="{StaticResource Style_ComboBox_DefaultStyle}">
-						<Setter Property="MinHeight" Value="26"/>
-					</Style>
-				</Border.Resources>
-				<Grid Margin="4,4,4,4">
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-					</Grid.RowDefinitions>
+		<DataTemplate x:Key="ValueCalculationTemplate" DataType="models:ValueCalculation">
+				<Grid Margin="4,2,4,2">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="100"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
 
-					<Grid>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="*"/>
-							<ColumnDefinition Width="Auto"/>
-						</Grid.ColumnDefinitions>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-						</Grid.RowDefinitions>
+					<TextBlock Grid.Column="0" Text="{Binding Field}" behaviors:FadeTrimming.IsEnabled="True" behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                               VerticalAlignment="Center"
+                               FontWeight="Black"/>
+					<TextBlock Grid.Column="1" Text="summarize by"
+                               VerticalAlignment="Center"/>
 
-						<TextBlock Text="Aggregate on: " VerticalAlignment="Center" />
-							<ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.IndexFields, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
-									  SelectedItem="{Binding AggregateOn, Mode=TwoWay}"
-									  Margin="5"/>
+					<ComboBox Grid.Column="2" ItemsSource="{Binding DataContext.SummaryModes, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
+								SelectedItem="{Binding SummaryMode, Mode=TwoWay}"
+								Margin="5"
+                              Width="75"
+                              VerticalAlignment="Center"/>
 
-							<TextBlock Grid.Row="1" Text="Calculate on: " VerticalAlignment="Center"/>
-							<ComboBox Grid.Row="1"
-								  Grid.Column="1" 
-								  ItemsSource="{Binding DataContext.IndexFields, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
-								  SelectedItem="{Binding CalculateOn, Mode=TwoWay}"
-									  Margin="5"/>
-
-					</Grid>
-				
-					<StackPanel Grid.Row="2">
-						<TextBlock Text="Required Data: "/>
-						<StackPanel Orientation="Horizontal">
-							<CheckBox Content="Max" IsChecked="{Binding Max, Mode=TwoWay}" Margin="5"/>
-							<contextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
-							<CheckBox Content="Min" IsChecked="{Binding Min, Mode=TwoWay}" Margin="5"/>
-							<contextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
-							<CheckBox Content="Count" IsChecked="{Binding Count, Mode=TwoWay}" Margin="5"/>
-							<contextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
-							<CheckBox Content="Sum" IsChecked="{Binding Sum, Mode=TwoWay}" Margin="5"/>
-							<CheckBox Content="Average" IsChecked="{Binding Average, Mode=TwoWay}" Margin="5"/>
-						</StackPanel>
-					</StackPanel>
+                    <Button Grid.Column="3" Style="{StaticResource Style_Button_MouseOverChrome}" 
+                            Command="{Binding DataContext.DeleteValueCalculation, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
+                            CommandParameter="{Binding}" VerticalAlignment="Center">
+                        <Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+                    </Button>
 				</Grid>
-			</Border>
 		</DataTemplate>
 	</UserControl.Resources>
 	
@@ -138,18 +108,67 @@
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
-				<ListBox ItemsSource="{Binding Aggregations}"
-							  Visibility="{Binding Aggregations.Count, Converter={StaticResource HiddenWhenEmpty}}"
-							  Style="{StaticResource Style_ItemsControl_IndexFields}"
-							  Grid.Row="0"
-							  Margin="0,10,24,10"
-							  ItemTemplate="{StaticResource AggregationTemplate}">
-				</ListBox>
+                <StackPanel Orientation="Horizontal" Margin="0,5">
+                    <TextBlock Text ="Group By" Style="{StaticResource Style_TextBlock_PagePartHeader}"
+                               VerticalAlignment="Center"/>
+                    <ComboBox SelectedItem="{Binding GroupByField.Value, Mode=TwoWay}" ItemsSource="{Binding IndexFields}" Margin="5,0,0,0"
+                              VerticalAlignment="Center" Width="150"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,5">
+                    <TextBlock Text ="Values" Style="{StaticResource Style_TextBlock_PagePartHeader}"
+                               VerticalAlignment="Center"/>
+                   <delay:PopupButton x:Name="AddFieldPopupButton" Content="Add Field" PopupAlignment="Right" VerticalAlignment="Center"
+                                      Margin="10,0,0,0">
+                       <delay:PopupButton.PopupContent>
+                            <Border x:Name="PopupBorder"  BorderThickness="1" BorderBrush="#BBAFB2" CornerRadius="0">
+                                <Border.Background>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                                        <GradientStop Color="#FFFEFEFE" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <i:Interaction.Triggers>
+                                    <behaviors:HandledMouseLeftButtonUpTrigger>
+                                        <behaviors:CloseSplitButtonPopupAction TargetName="AddFieldPopupButton"/>
+                                    </behaviors:HandledMouseLeftButtonUpTrigger>
+                                </i:Interaction.Triggers>
+                                <ItemsControl ItemsSource="{Binding IndexFields}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding}" Command="{Binding DataContext.AddValueCalculation, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource Style_Button_MouseOverChrome}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                    <ItemsControl.Template>
+                                        <ControlTemplate TargetType="ItemsControl">
+                                            <ScrollViewer x:Name="ScrollViewer" BorderThickness="0" Padding="0" VerticalScrollBarVisibility="Auto" >
+                                                <ItemsPresenter/>
+                                            </ScrollViewer>
+                                        </ControlTemplate>
+                                    </ItemsControl.Template>
+                                </ItemsControl>
+                            </Border>
+                        </delay:PopupButton.PopupContent>
+                   </delay:PopupButton>
+                </StackPanel>
                 
-                <sdk:DataGrid ItemsSource="{Binding Results}" AutoGenerateColumns="False" Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding ValueCalculations}"
+							  Visibility="{Binding ValueCalculations.Count, Converter={StaticResource HiddenWhenEmpty}}"
+							  Background="Transparent"
+                              BorderThickness="0"
+							  Grid.Row="2"
+							  Margin="5,0,5,5"
+							  ItemTemplate="{StaticResource ValueCalculationTemplate}">
+                </ItemsControl>
+                
+                <sdk:DataGrid ItemsSource="{Binding Results}" AutoGenerateColumns="False" Grid.Row="3">
                     <i:Interaction.Behaviors>
                         <behaviors:BindColumnsToColumnSetBehavior Columns="{Binding ResultColumns}">
                             <behaviors:BindColumnsToColumnSetBehavior.ColumnGenerator>

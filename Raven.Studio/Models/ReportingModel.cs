@@ -23,8 +23,14 @@ namespace Raven.Studio.Models
 {
 	public class ReportingModel : PageViewModel, IHasPageTitle
 	{
+        private static readonly FacetAggregation[] AllSummaryModes = new[]
+	                            {
+	                                FacetAggregation.Count, FacetAggregation.Min, FacetAggregation.Max,
+	                                FacetAggregation.Sum,
+	                                FacetAggregation.Average
+	                            };
+
 		public string PageTitle { get; private set; }
-		private const string CollectionsIndex = "Raven/DocumentsByEntityName";
 
 		public ReportingModel()
 		{
@@ -32,13 +38,14 @@ namespace Raven.Studio.Models
 			ModelUrl = "/reporting";
 			AvailableIndexes = new BindableCollection<string>(x => x);
 			IndexFields = new BindableCollection<string>(x => x);
-            DocumentProperties = new BindableCollection<string>(x => x);
-			Aggregations = new BindableCollection<AggregationData>(data => data);
             Results = new ObservableCollection<ReportRow>();
+            GroupByField = new Observable<string>();
+            ValueCalculations = new ObservableCollection<ValueCalculation>();
 		}
 
 		private string indexName;
 	    private ColumnsModel resultColumns;
+	    private ICommand deleteValueCalculation;
 	    public string IndexName
 		{
 			get
@@ -64,6 +71,7 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => IndexName);
 			}
 		}
+
 
 		private static void NavigateToIndexesList()
 		{
@@ -102,8 +110,8 @@ namespace Raven.Studio.Models
 		{
 			var urlParser = new UrlParser(parameters);
 
-            Aggregations.Clear();
-            Aggregations.Add(new AggregationData());
+            GroupByField.Value = "";
+            ValueCalculations.Clear();
 
 			UpdateAvailableIndexes();
 
@@ -139,17 +147,6 @@ namespace Raven.Studio.Models
 
                     IndexFields.Match(task.Result.Fields);
 				}).Catch();
-
-		    DatabaseCommands.QueryAsync(IndexName, new IndexQuery() { Start = 0, PageSize = 5}, null)
-		                    .ContinueOnSuccessInTheUIThread(result =>
-		                    {
-		                        var properties = DocumentHelpers.GetPropertiesFromJObjects(result.Results,
-		                                                                                   includeNestedProperties: false,
-		                                                                                   includeMetadata: false)
-                                                                                           .ToList();
-		                        DocumentProperties.Match(properties);
-		                    }
-		        ).CatchIgnore();
 		}
 
         protected override void OnViewLoaded()
@@ -171,85 +168,98 @@ namespace Raven.Studio.Models
             UpdateAvailableIndexes();
         }
 
-		public ICommand DeleteAggregationCommand{get{return new ActionCommand(DeleteAggregation);}}
-
-		private void DeleteAggregation(object parameter)
-		{
-			var data = parameter as AggregationData;
-			Aggregations.Remove(data);
-
-			OnPropertyChanged(() => Aggregations);
-		}
-
 		public ICommand ExecuteReportCommand{get{return new AsyncActionCommand(ExecuteReport);}}
 
 	    private async Task ExecuteReport()
 	    {
-	        var data = Aggregations.Where(aggregationData => aggregationData.HasData()).ToList();
-	        if (data.Count == 0)
+	        if (string.IsNullOrEmpty(GroupByField.Value))
 	        {
-	            ApplicationModel.Current.Notifications.Add(new Notification("No Aggregation with valid data found"));
+	            ApplicationModel.Current.Notifications.Add(new Notification("You must select a field to group by"));
 	            return;
 	        }
 
 	        var facets = new List<AggregationQuery>();
 
-	        foreach (var aggregationData in data)
-	        {
-	            facets.Add(new AggregationQuery
-	            {
-	                Name = aggregationData.AggregateOn,
-	                AggregationField = aggregationData.CalculateOn,
-	                Aggregation = aggregationData.FacetAggregation
-	            });
-	        }
+            foreach (var value in ValueCalculations)
+            {
+                var facetForField = facets.FirstOrDefault(f => f.AggregationField == value.Field);
+                if (facetForField != null)
+                {
+                    facetForField.Aggregation |= value.SummaryMode;
+                }
+                else
+                {
+                    facets.Add(new AggregationQuery
+                    {
+                        Name = GroupByField.Value,
+                        AggregationField = value.Field,
+                        Aggregation = value.SummaryMode
+                    });
+                }
+            }
 
+            ResultColumns = null;
 	        Results.Clear();
 
+	        var cancelationTokenSource = new CancellationTokenSource();
 
 	        var progressWindow = new ProgressWindow()
 	        {
 	            Title = "Preparing Report",
 	            IsIndeterminate = true,
-	            CanCancel = false
+	            CanCancel = true
 	        };
+
+	        progressWindow.Closed += delegate { cancelationTokenSource.Cancel(); };
 	        progressWindow.Show();
 
 	        try
 	        {
-	            var facetResults =
-	                await
-	                DatabaseCommands.GetFacetsAsync(IndexName, new IndexQuery(), AggregationQuery.GetFacets(facets), 0, 512);
+	            var queryFacetsTask = DatabaseCommands.GetFacetsAsync(IndexName, new IndexQuery(),
+	                                                                  AggregationQuery.GetFacets(facets), 0, 512);
 
+	            await TaskEx.WhenAny(
+	                queryFacetsTask,
+	                TaskEx.Delay(int.MaxValue, cancelationTokenSource.Token));
+
+                if (cancelationTokenSource.IsCancellationRequested)
+                {
+                    return;
+                }
+
+	            var facetResults = await queryFacetsTask;
 
 	            if (facetResults.Results.Count < 1)
 	            {
 	                return;
 	            }
 
-	            var facetResult = facetResults.Results.FirstOrDefault().Value;
-	            var aggregation = data[0];
+	            var rowsByKey = new Dictionary<string, ReportRow>();
 
-	            foreach (var facetValue in facetResult.Values)
+	            foreach (var facetResult in facetResults.Results)
 	            {
-	                var result = new ReportRow {Key = facetValue.Range};
-
-	                foreach (
-	                    var facetAggregation in
-	                        new[]
-	                        {
-	                            FacetAggregation.Count, FacetAggregation.Min, FacetAggregation.Max, FacetAggregation.Sum,
-	                            FacetAggregation.Average
-	                        })
+	                foreach (var facetValue in facetResult.Value.Values)
 	                {
-	                    if ((aggregation.FacetAggregation & facetAggregation) == facetAggregation)
+	                    ReportRow result;
+	                    if (!rowsByKey.TryGetValue(facetValue.Range, out result))
 	                    {
-	                        result.Values.Add(facetAggregation.ToString().ToUpper() + " of " + aggregation.CalculateOn,
-	                                          facetValue.GetAggregation(facetAggregation) ?? 0);
+	                        result = new ReportRow {Key = facetValue.Range};
+                            rowsByKey.Add(result.Key, result);
+                            Results.Add(result);
 	                    }
-	                }
 
-	                Results.Add(result);
+	                    foreach (
+	                        var facetAggregation in AllSummaryModes)
+	                    {
+                            var value = facetValue.GetAggregation(facetAggregation);
+	                        if (value.HasValue)
+	                        {
+	                            result.Values.Add(facetAggregation.ToString().ToUpper() + " of " + facetResult.Key,
+	                                              value.Value);
+	                        }
+	                    }
+
+	                }
 	            }
 
 	            var keys = Results.SelectMany(r => r.Values.Keys).Distinct();
@@ -267,6 +277,9 @@ namespace Raven.Studio.Models
 
 	            ResultColumns = columns;
 	        }
+	        catch (TaskCanceledException)
+	        {
+	        }
 	        finally
 	        {
 	            // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
@@ -283,14 +296,27 @@ namespace Raven.Studio.Models
             OnPropertyChanged(() => ResultColumns);}
         }
 
+        public Observable<string> GroupByField { get; private set; } 
         public ObservableCollection<ReportRow> Results { get; private set; } 
 	    public BindableCollection<string> DocumentProperties { get; private set; }
 		public BindableCollection<string> IndexFields { get; private set; }
-		public BindableCollection<AggregationData> Aggregations { get; set; }
-		public ICommand AddAggregation
+        public ObservableCollection<ValueCalculation> ValueCalculations { get; private set; }
+        public IList<FacetAggregation> SummaryModes { get { return AllSummaryModes; } } 
+
+		public ICommand AddValueCalculation
 		{
-			get { return new ActionCommand(() => Aggregations.Add(new AggregationData()));}
+			get { return new ActionCommand(field => ValueCalculations.Add(new ValueCalculation() {Field  =  (string)field, SummaryMode = FacetAggregation.Sum}));}
 		}
+
+	    public ICommand DeleteValueCalculation
+	    {
+            get
+            {
+                return deleteValueCalculation ??
+                       (deleteValueCalculation =
+                        new ActionCommand(parameter => ValueCalculations.Remove(parameter as ValueCalculation)));
+            }
+	    }
 	}
 
     public class ReportRow
@@ -302,5 +328,17 @@ namespace Raven.Studio.Models
 
         public string Key { get; set; }
         public IDictionary<string, double> Values { get; private set; } 
+    }
+
+    public class ValueCalculation
+    {
+        public ValueCalculation()
+        {
+            
+        }
+
+        public string Field { get; set; }
+
+        public FacetAggregation SummaryMode { get; set; }
     }
 }
