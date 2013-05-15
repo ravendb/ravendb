@@ -18,6 +18,9 @@ namespace Raven.Database.Server.Connections
         private readonly ConcurrentSet<string> matchingDocumentPrefixes =
             new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentSet<string> matchingBulkInserts =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
         private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
 
         private EventsTransport eventsTransport;
@@ -59,6 +62,16 @@ namespace Raven.Database.Server.Connections
             matchingIndexes.TryRemove(name);
         }
 
+		public void WatchBulkInsert(string operationId)
+		{
+			matchingBulkInserts.TryAdd(operationId);
+		}
+
+		public void UnwatchBulkInsert(string operationId)
+		{
+			matchingBulkInserts.TryRemove(operationId);
+		}
+
         public void WatchAllIndexes()
         {
             Interlocked.Increment(ref watchAllIndexes);
@@ -68,6 +81,16 @@ namespace Raven.Database.Server.Connections
         {
             Interlocked.Decrement(ref watchAllIndexes);
         }
+
+		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+		{
+			var value = new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" };
+
+			if (matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()) == false)
+				return;
+
+			Enqueue(value);
+		}
 
         public void Send(DocumentChangeNotification documentChangeNotification)
         {

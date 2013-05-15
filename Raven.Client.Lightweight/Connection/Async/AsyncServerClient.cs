@@ -33,6 +33,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -1605,9 +1606,9 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
-		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
-			return new RemoteBulkInsertOperation(options, this);
+			return new RemoteBulkInsertOperation(options, this, changes);
 		}
 #endif
 

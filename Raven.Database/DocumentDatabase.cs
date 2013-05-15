@@ -613,6 +613,11 @@ namespace Raven.Database
             TransportState.Send(obj);
         }
 
+		public void RaiseNotifications(BulkInsertChangeNotification obj)
+		{
+			TransportState.Send(obj);
+		}
+
         public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
 
         public void RunIdleOperations()
@@ -2208,15 +2213,16 @@ namespace Raven.Database
             }
         }
 
-        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
+        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
         {
             var documents = 0;
             TransactionalStorage.Batch(accessor =>
             {
-                RaiseNotifications(new DocumentChangeNotification
-                {
-                    Type = DocumentChangeTypes.BulkInsertStarted
-                }, null);
+	            RaiseNotifications(new BulkInsertChangeNotification
+	            {
+		            OperationId = operationId,
+		            Type = DocumentChangeTypes.BulkInsertStarted
+	            });
                 foreach (var docs in docBatches)
                 {
                     WorkContext.CancellationToken.ThrowIfCancellationRequested();
@@ -2256,13 +2262,14 @@ namespace Raven.Database
 	                    }
 						catch (Exception e)
 						{
-							RaiseNotifications(new DocumentChangeNotification
+							RaiseNotifications(new BulkInsertChangeNotification
 							{
+								OperationId = operationId,
 								Message = e.Message,
 								Etag = doc.Etag,
 								Id = doc.Key,
 								Type = DocumentChangeTypes.BulkInsertError
-							}, null);
+							});
 
 							throw;
 						}
@@ -2282,10 +2289,11 @@ namespace Raven.Database
                     workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
                 }
 
-                RaiseNotifications(new DocumentChangeNotification
+				RaiseNotifications(new BulkInsertChangeNotification
                 {
+					OperationId = operationId,
                     Type = DocumentChangeTypes.BulkInsertEnded
-                }, null);
+                });
                 if (documents == 0)
                     return;
                 workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");

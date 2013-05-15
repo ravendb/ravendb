@@ -68,6 +68,17 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+		public event Action<object, BulkInsertChangeNotification> OnBulkInsertChangeNotification = delegate { };
+
+		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+		{
+			OnBulkInsertChangeNotification(this, bulkInsertChangeNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.Send(bulkInsertChangeNotification);
+			}
+		}
+
 		public event Action<object, ReplicationConflictNotification> OnReplicationConflictNotification = delegate { };
 
 		public void Send(ReplicationConflictNotification replicationConflictNotification)

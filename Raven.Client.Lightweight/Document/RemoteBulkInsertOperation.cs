@@ -11,7 +11,9 @@ using Raven.Client.WinRT.Connection;
 #else
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
+using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 #endif
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -28,6 +30,8 @@ namespace Raven.Client.Document
 {
 	public interface ILowLevelBulkInsertOperation : IDisposable
 	{
+		Guid OperationId { get; }
+
 		void Write(string id, RavenJObject metadata, RavenJObject data);
 
 		Task DisposeAsync();
@@ -40,11 +44,14 @@ namespace Raven.Client.Document
 
 	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
+		private CancellationTokenSource cancellationTokenSource;
+
 #if !SILVERLIGHT
 		private readonly ServerClient operationClient;
 #else
 		private readonly AsyncServerClient operationClient;
 #endif
+		private readonly IDatabaseChanges operationChanges;
 		private readonly MemoryStream bufferedStream = new MemoryStream();
 		private readonly BlockingCollection<RavenJObject> queue;
 
@@ -53,15 +60,32 @@ namespace Raven.Client.Document
 		private int total;
 
 #if !SILVERLIGHT
-		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client)
+		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
 #else
-		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client)
+		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
 		{
+			OperationId = Guid.NewGuid();
 			operationClient = client;
+			operationChanges = changes;
 			queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 
 			operationTask = StartBulkInsertAsync(options);
+
+			SubscribeToBulkInsertNotifications(changes);
+		}
+
+		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
+		{
+			changes
+				.ForBulkInsert(OperationId)
+				.Subscribe(change =>
+				{
+					if (change.Type == DocumentChangeTypes.BulkInsertError)
+					{
+						cancellationTokenSource.Cancel();
+					}
+				});
 		}
 
 		private async Task StartBulkInsertAsync(BulkInsertOptions options)
@@ -83,11 +107,17 @@ namespace Raven.Client.Document
 			}
 			catch
 			{
-				
+
 			}
 #endif
+			var cancellationToken = CreateCancellationToken();
+			WriteQueueToServer(stream, options, cancellationToken);
+		}
 
-			WriteQueueToServer(stream, options);
+		private CancellationToken CreateCancellationToken()
+		{
+			cancellationTokenSource = new CancellationTokenSource();
+			return cancellationTokenSource.Token;
 		}
 
 		private async Task<string> GetToken(string operationUrl)
@@ -137,17 +167,23 @@ namespace Raven.Client.Document
 			if (options.CheckReferencesInIndexes)
 				requestUrl += "&checkReferencesInIndexes=true";
 
+			requestUrl += "&operationId=" + OperationId;
+
 			return requestUrl;
 		}
 
-		private void WriteQueueToServer(Stream stream, BulkInsertOptions options)
+		private void WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
 		{
 			while (true)
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				var batch = new List<RavenJObject>();
 				RavenJObject document;
 				while (queue.TryTake(out document, 200))
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					if (document == null) // marker
 					{
 						FlushBatch(stream, batch);
@@ -165,6 +201,8 @@ namespace Raven.Client.Document
 		}
 
 		public event Action<string> Report;
+
+		public Guid OperationId { get; private set; }
 
 		public void Write(string id, RavenJObject metadata, RavenJObject data)
 		{

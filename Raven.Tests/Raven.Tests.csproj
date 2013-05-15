@@ -526,8 +526,6 @@
     <Compile Include="Bugs\Smuggler.cs" />
     <Compile Include="Bugs\TimeSpanIndexing.cs" />
     <Compile Include="Bugs\WhereInShouldBeBoostedCorrectly.cs" />
-    <Compile Include="Bundles\IndexedProperties\Alexander.cs" />
-    <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
@@ -540,6 +538,10 @@
     <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
     <Compile Include="Bundles\Replication\Issues\ReplicationWithReferencedIndexes.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\Animal.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\Animals_Stats.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\AnimalType.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsTest.cs" />
     <Compile Include="Bundles\SqlReplication\CanReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />

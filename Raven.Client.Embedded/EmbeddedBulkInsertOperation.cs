@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
@@ -15,6 +18,8 @@ namespace Raven.Client.Embedded
 	/// </summary>
 	public class EmbeddedBulkInsertOperation : ILowLevelBulkInsertOperation
 	{
+		private CancellationTokenSource cancellationTokenSource;
+
 		private readonly BulkInsertOptions options;
 		BlockingCollection<JsonDocument> queue;
 		private Task doBulkInsert;
@@ -22,21 +27,49 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Create new instance of this class
 		/// </summary>
-		public EmbeddedBulkInsertOperation(DocumentDatabase database,BulkInsertOptions options)
+		public EmbeddedBulkInsertOperation(DocumentDatabase database,BulkInsertOptions options, IDatabaseChanges changes)
 		{
+			OperationId = Guid.NewGuid();
+
 			this.options = options;
 			queue = new BlockingCollection<JsonDocument>(options.BatchSize * 8);
+
+			var cancellationToken = CreateCancellationToken();
+
 			doBulkInsert = Task.Factory.StartNew(() =>
 			{
-				database.BulkInsert(options, YieldDocuments());
+				database.BulkInsert(options, YieldDocuments(cancellationToken), OperationId);
 			});
+
+			SubscribeToBulkInsertNotifications(changes);
 		}
 
-		private IEnumerable<IEnumerable<JsonDocument>> YieldDocuments()
+		private CancellationToken CreateCancellationToken()
+		{
+			cancellationTokenSource = new CancellationTokenSource();
+			return cancellationTokenSource.Token;
+		}
+
+		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
+		{
+			changes
+				.ForBulkInsert(OperationId)
+				.Subscribe(change =>
+				{
+					if (change.Type == DocumentChangeTypes.BulkInsertError)
+					{
+						cancellationTokenSource.Cancel();
+					}
+				});
+		}
+
+		private IEnumerable<IEnumerable<JsonDocument>> YieldDocuments(CancellationToken cancellationToken)
 		{
 			var list = new List<JsonDocument>();
 			while (true)
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				JsonDocument item;
 				if (queue.TryTake(out item, 100) == false)
 				{
@@ -93,6 +126,11 @@ namespace Raven.Client.Embedded
 			if (onReport != null)
 				onReport("Done with bulk insert");
 		}
+
+		/// <summary>
+		/// Operation Id
+		/// </summary>
+		public Guid OperationId { get; private set; }
 
 		/// <summary>
 		/// Write the specified data to the database
