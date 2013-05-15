@@ -67,7 +67,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <ContentPresenter x:Name="contentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}"/>
-                            <Popup x:Name="PopupElement" b:Popup.StaysOpen="False">
+                            <Popup x:Name="PopupElement" b:Popup.StaysOpen="False" VerticalAlignment="Bottom" Margin="0,1,0,0">
                                 <ContentPresenter Content="{TemplateBinding PopupContent}"/>
                             </Popup>
                             <Path x:Name="DropdownArrow" Grid.Column="1" Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>
