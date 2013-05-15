@@ -806,7 +806,7 @@ namespace Raven.Client.Connection.Async
 					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), method, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
