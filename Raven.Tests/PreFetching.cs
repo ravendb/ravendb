@@ -1,9 +1,9 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Embedded;
 using Raven.Database.Indexing;
+using Rhino.Mocks;
 using Xunit;
 
 namespace Raven.Tests
@@ -17,7 +17,9 @@ namespace Raven.Tests
 		{
 			store = NewDocumentStore();
 				var workContext = store.DocumentDatabase.WorkContext;
-			prefetchingBehavior = new PrefetchingBehavior(workContext, new IndexBatchSizeAutoTuner(workContext));
+			prefetchingBehavior = MockRepository.GeneratePartialMock<PrefetchingBehavior>(workContext, new IndexBatchSizeAutoTuner(workContext));
+			// we need this stub because we don't put any documents to disk for real
+			prefetchingBehavior.Stub(x => x.GetNextDocumentEtagFromDisk(Etag.Empty)).Return(Etag.Empty.IncrementBy(1));
 		}
 
 		public override void Dispose()

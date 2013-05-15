@@ -276,7 +276,7 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private Etag GetNextDocumentEtagFromDisk(Etag etag)
+		public virtual Etag GetNextDocumentEtagFromDisk(Etag etag)
 		{
 			Etag nextDocEtag = null;
 			context.TransactionalStorage.Batch(
