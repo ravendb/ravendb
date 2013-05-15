@@ -11,7 +11,7 @@
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
-		<TextBlock Margin="5" Text="These sql replication where changed, select those you would like to reset the replication for, this could take a long time for large databases." TextWrapping="Wrap"/>
+		<TextBlock Margin="5" Text="The configuration for the following sql replication tasks had changed. You can select the replication tasks you want to reset, so they would re-replicate from scratch. For large databases, this may take a long time." TextWrapping="Wrap"/>
 
 		<ItemsControl Grid.Row="1" ItemsSource="{Binding HasChanges}">
 			<ItemsControl.ItemTemplate>
