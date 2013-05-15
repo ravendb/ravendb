@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Responders.Admin
 	{
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "GET" }; }
+			get { return new[] { "POST" }; }
 		}
 
 		protected override WindowsBuiltInRole[] AdditionalSupportedRoles

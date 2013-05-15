@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
 using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
@@ -83,14 +84,13 @@ namespace Raven.Database.Extensions
 			{
 				public int Usage;
 				public DateTime Timestamp;
-				public Lazy<bool> Value;
+				public Lazy<IList<Principal>> AuthorizationGroups;
 			}
 
 			private const int CacheMaxSize = 1024;
 			private static readonly TimeSpan maxDuration = TimeSpan.FromMinutes(15);
 
-			private readonly ConcurrentDictionary<SecurityIdentifier, CachedResult> cache =
-				new ConcurrentDictionary<SecurityIdentifier, CachedResult>();
+			private readonly ConcurrentDictionary<SecurityIdentifier, CachedResult> cache = new ConcurrentDictionary<SecurityIdentifier, CachedResult>();
 
 			public bool IsInRole(WindowsIdentity windowsIdentity, WindowsBuiltInRole role)
 			{
@@ -98,32 +98,13 @@ namespace Raven.Database.Extensions
 				if (cache.TryGetValue(windowsIdentity.User, out value) && (SystemTime.UtcNow - value.Timestamp) <= maxDuration)
 				{
 					Interlocked.Increment(ref value.Usage);
-					return value.Value.Value;
+					return IsInRole(value, role);
 				}
 
 				var cachedResult = new CachedResult
 				{
 					Usage = value == null ? 1 : value.Usage + 1,
-					Value = new Lazy<bool>(() =>
-					{
-						try
-						{
-							switch (role)
-							{
-								case WindowsBuiltInRole.Administrator:
-									return IsAdministratorNoCache(windowsIdentity.Name);
-								case WindowsBuiltInRole.BackupOperator:
-									return IsBackupOperatorNoCache(windowsIdentity.Name);
-								default:
-									throw new NotSupportedException(role.ToString());
-							}
-						}
-						catch (Exception e)
-						{
-							log.WarnException("Could not determine whatever user is admin or not, assuming not", e);
-							return false;
-						}
-					}),
+					AuthorizationGroups = new Lazy<IList<Principal>>(() => GetUserAuthorizationGroups(windowsIdentity.Name)),
 					Timestamp = SystemTime.UtcNow
 				};
 
@@ -153,36 +134,58 @@ namespace Raven.Database.Extensions
 					}
 				}
 
-				return cachedResult.Value.Value;
+				return IsInRole(cachedResult, role);
 			}
 
-			private static bool IsAdministratorNoCache(string username)
+			private bool IsInRole(CachedResult cachedResult, WindowsBuiltInRole role)
+			{
+				try
+				{
+					var authorizationGroups = cachedResult.AuthorizationGroups.Value;
+
+					switch (role)
+					{
+						case WindowsBuiltInRole.Administrator:
+							return IsAdministratorNoCache(authorizationGroups);
+						case WindowsBuiltInRole.BackupOperator:
+							return IsBackupOperatorNoCache(authorizationGroups);
+						default:
+							throw new NotSupportedException(role.ToString());
+					}
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not determine whatever user is admin or not, assuming not", e);
+					return false;
+				}
+			}
+
+			private IList<Principal> GetUserAuthorizationGroups(string username)
 			{
 				var ctx = GeneratePrincipalContext();
 				var up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
 				if (up != null)
 				{
 					PrincipalSearchResult<Principal> authGroups = up.GetAuthorizationGroups();
-					return authGroups.Any(principal =>
+					return authGroups.ToList();
+				}
+
+				return new List<Principal>();
+			}
+
+			private static bool IsAdministratorNoCache(IEnumerable<Principal> authorizationGroups)
+			{
+				return authorizationGroups.Any(principal =>
 											principal.Sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountDomainAdminsSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountAdministratorSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountEnterpriseAdminsSid));
-				}
-				return false;
 			}
 
-			private static bool IsBackupOperatorNoCache(string username)
+			private static bool IsBackupOperatorNoCache(IEnumerable<Principal> authorizationGroups)
 			{
-				var ctx = GeneratePrincipalContext();
-				var up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
-				if (up != null)
-				{
-					PrincipalSearchResult<Principal> authGroups = up.GetAuthorizationGroups();
-					return authGroups.Any(principal =>
-											principal.Sid.IsWellKnown(WellKnownSidType.BuiltinBackupOperatorsSid));
-				}
-				return false;
+				return authorizationGroups.Any(principal =>
+											   principal.Sid.IsWellKnown(WellKnownSidType.BuiltinBackupOperatorsSid));
 			}
 
 			private static bool? useLocalMachine;

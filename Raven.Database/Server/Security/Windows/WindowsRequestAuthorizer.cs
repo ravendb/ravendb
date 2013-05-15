@@ -81,7 +81,6 @@ namespace Raven.Database.Server.Security.Windows
 					return true;
 			}
 
-
 			var httpRequest = ctx.Request;
 			bool isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			switch (server.SystemConfiguration.AnonymousUserAccessMode)
