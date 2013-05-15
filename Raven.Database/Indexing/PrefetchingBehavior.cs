@@ -426,17 +426,5 @@ namespace Raven.Database.Indexing
 		}
 
 		#endregion
-
-		#region Nested type: InMemoryIndexBatch
-
-		private class InMemoryIndexBatch
-		{
-			public int Age;
-			public List<JsonDocument> Documents;
-			public Guid StartingEtag;
-			public Guid EndEtag;
-		}
-
-		#endregion
 	}
 }
