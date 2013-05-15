@@ -25,6 +25,7 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Impl.Synchronization;
+using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Storage;
@@ -67,6 +68,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private HttpRavenRequestFactory httpRavenRequestFactory;
 
 		private EtagSynchronizer etagSynchronizer;
+		private PrefetchingBehavior prefetchingBehavior;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -78,6 +80,8 @@ namespace Raven.Bundles.Replication.Tasks
 				60 * 1000;
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
+
+			prefetchingBehavior = new PrefetchingBehavior(database.WorkContext, new IndexBatchSizeAutoTuner(database.WorkContext));
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
 			var disposableAction = new DisposableAction(task.Wait);
@@ -723,9 +727,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return result;
 		}
 
-		private static List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
+		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
 		{
-			var docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024 * 1024 * 25).ToList();
+			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag);
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
 			{
