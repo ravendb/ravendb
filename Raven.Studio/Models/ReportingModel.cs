@@ -1,20 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using ActiproSoftware.Text;
+using ActiproSoftware.Text.Implementation;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Linq;
+using Raven.Studio.Commands;
 using Raven.Studio.Controls;
+using Raven.Studio.Controls.Editors;
 using Raven.Studio.Extensions;
 using Raven.Studio.Features.Documents;
+using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
 using Notification = Raven.Studio.Messages.Notification;
@@ -32,6 +39,11 @@ namespace Raven.Studio.Models
 
 		public string PageTitle { get; private set; }
 
+        static ReportingModel()
+        {
+            QueryLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef");
+        }
+
 		public ReportingModel()
 		{
 			PageTitle = "Reporting";
@@ -41,11 +53,38 @@ namespace Raven.Studio.Models
             Results = new ObservableCollection<ReportRow>();
             GroupByField = new Observable<string>();
             ValueCalculations = new ObservableCollection<ValueCalculation>();
+		    ExecutionElapsedTime = new Observable<TimeSpan>();
+            IsFilterVisible = new Observable<bool>();
+
+            FilterDoc = new EditorDocument
+            {
+                Language = QueryLanguage
+            };
 		}
 
-		private string indexName;
+	    public Observable<TimeSpan> ExecutionElapsedTime { get; private set; }
+
+	    public EditorDocument FilterDoc { get; private set; }
+        private QueryIndexAutoComplete queryIndexAutoComplete;
+	    private string indexName;
 	    private ColumnsModel resultColumns;
 	    private ICommand deleteValueCalculation;
+	    private static ISyntaxLanguage QueryLanguage;
+	    private ICommand addFilter;
+	    private ICommand deleteFilter;
+	    private ICommand exportReport;
+
+	    protected QueryIndexAutoComplete QueryIndexAutoComplete
+        {
+            get { return queryIndexAutoComplete; }
+            set
+            {
+                queryIndexAutoComplete = value;
+                FilterDoc.Language.UnregisterService<ICompletionProvider>();
+                FilterDoc.Language.RegisterService(value.CompletionProvider);
+            }
+        }
+
 	    public string IndexName
 		{
 			get
@@ -72,7 +111,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
-
+        public Observable<bool> IsFilterVisible { get; private set; }
+ 
 		private static void NavigateToIndexesList()
 		{
 			UrlUtil.Navigate("/indexes");
@@ -110,6 +150,7 @@ namespace Raven.Studio.Models
 		{
 			var urlParser = new UrlParser(parameters);
 
+		    ExecutionElapsedTime.Value = TimeSpan.Zero;
             GroupByField.Value = "";
             ValueCalculations.Clear();
 
@@ -145,7 +186,10 @@ namespace Raven.Studio.Models
                         return;
                     }
 
-                    IndexFields.Match(task.Result.Fields);
+				    var fields = task.Result.Fields;
+
+				    IndexFields.Match(fields);
+				    QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, FilterDoc);
 				}).Catch();
 		}
 
@@ -178,6 +222,12 @@ namespace Raven.Studio.Models
 	            return;
 	        }
 
+            if (ValueCalculations.Count == 0)
+            {
+                ApplicationModel.Current.Notifications.Add(new Notification("You must add at least one Value"));
+                return;
+            }
+
 	        var facets = new List<AggregationQuery>();
 
             foreach (var value in ValueCalculations)
@@ -192,6 +242,7 @@ namespace Raven.Studio.Models
                     facets.Add(new AggregationQuery
                     {
                         Name = GroupByField.Value,
+                        DisplayName = GroupByField.Value + "-" + value.Field,
                         AggregationField = value.Field,
                         Aggregation = value.SummaryMode
                     });
@@ -206,38 +257,56 @@ namespace Raven.Studio.Models
 	        var progressWindow = new ProgressWindow()
 	        {
 	            Title = "Preparing Report",
-	            IsIndeterminate = true,
+	            IsIndeterminate = false,
 	            CanCancel = true
 	        };
 
 	        progressWindow.Closed += delegate { cancelationTokenSource.Cancel(); };
 	        progressWindow.Show();
 
+	        var queryStartTime = DateTime.UtcNow.Ticks;
+
 	        try
 	        {
-	            var queryFacetsTask = DatabaseCommands.GetFacetsAsync(IndexName, new IndexQuery(),
-	                                                                  AggregationQuery.GetFacets(facets), 0, 512);
+	            var results = new List<KeyValuePair<string, FacetResult>>();
+	            var hasMoreResults = true;
+	            var fetchedResults = 0;
 
-	            await TaskEx.WhenAny(
-	                queryFacetsTask,
-	                TaskEx.Delay(int.MaxValue, cancelationTokenSource.Token));
-
-                if (cancelationTokenSource.IsCancellationRequested)
-                {
-                    return;
-                }
-
-	            var facetResults = await queryFacetsTask;
-
-	            if (facetResults.Results.Count < 1)
+	            while (hasMoreResults)
 	            {
-	                return;
+	                var queryFacetsTask = DatabaseCommands.GetFacetsAsync(IndexName, new IndexQuery() { Query = FilterDoc.Text},
+	                                                                      AggregationQuery.GetFacets(facets), fetchedResults, 256);
+
+	                await TaskEx.WhenAny(
+	                    queryFacetsTask,
+	                    TaskEx.Delay(int.MaxValue, cancelationTokenSource.Token));
+
+	                if (cancelationTokenSource.IsCancellationRequested)
+	                {
+	                    return;
+	                }
+
+	                var facetResults = await queryFacetsTask;
+
+
+                    results.AddRange(facetResults.Results);
+
+	                fetchedResults += facetResults.Results.Select(r => r.Value.Values.Count).Max();
+                    var remainingResults = facetResults.Results.Select(r => r.Value.RemainingTermsCount).Max();
+	                var totalResults = fetchedResults + remainingResults;
+
+	                progressWindow.Progress = (int) ((fetchedResults/(double) totalResults)*100);
+
+	                hasMoreResults = remainingResults > 0;
 	            }
 
 	            var rowsByKey = new Dictionary<string, ReportRow>();
+	            var rows = new List<ReportRow>();
 
-	            foreach (var facetResult in facetResults.Results)
+	            foreach (var facetResult in results)
 	            {
+	                var calculatedField = facetResult.Key.Split('-')[1];
+
 	                foreach (var facetValue in facetResult.Value.Values)
 	                {
 	                    ReportRow result;
@@ -245,24 +314,22 @@ namespace Raven.Studio.Models
 	                    {
 	                        result = new ReportRow {Key = facetValue.Range};
                             rowsByKey.Add(result.Key, result);
-                            Results.Add(result);
+                            rows.Add(result);
 	                    }
 
 	                    foreach (
-	                        var facetAggregation in AllSummaryModes)
+	                        var valueCalculation in ValueCalculations.Where(v => v.Field == calculatedField))
 	                    {
-                            var value = facetValue.GetAggregation(facetAggregation);
+                            var value = facetValue.GetAggregation(valueCalculation.SummaryMode);
 	                        if (value.HasValue)
 	                        {
-	                            result.Values.Add(facetAggregation.ToString().ToUpper() + " of " + facetResult.Key,
-	                                              value.Value);
+                                result.Values.Add(valueCalculation.Header,
+                                                  facetValue.GetAggregation(valueCalculation.SummaryMode) ?? 0);
 	                        }
 	                    }
 
 	                }
 	            }
-
-	            var keys = Results.SelectMany(r => r.Values.Keys).Distinct();
 
 	            var columns = new ColumnsModel();
 
@@ -273,9 +340,14 @@ namespace Raven.Studio.Models
 	            });
 
 	            columns.Columns.AddRange(
-	                keys.Select(k => new ColumnDefinition() {Header = k, Binding = "Values[" + k + "]"}));
+	                ValueCalculations.Select(k => new ColumnDefinition() {Header = k.Header, Binding = "Values[" + k.Header + "]"}));
 
+                Results.AddRange(rows);
 	            ResultColumns = columns;
+
+	            var queryEndTime = DateTime.UtcNow.Ticks;
+
+	            ExecutionElapsedTime.Value = new TimeSpan(queryEndTime - queryStartTime);
 	        }
 	        catch (TaskCanceledException)
 	        {
@@ -303,9 +375,28 @@ namespace Raven.Studio.Models
         public ObservableCollection<ValueCalculation> ValueCalculations { get; private set; }
         public IList<FacetAggregation> SummaryModes { get { return AllSummaryModes; } } 
 
+	    public ICommand ExportReport
+	    {
+	        get { return exportReport ?? (exportReport = new ExportReportToCsvCommand(this)); }
+	    }
+
+	    public ICommand AddFilter
+	    {
+	        get { return addFilter ?? (addFilter = new ActionCommand(() => IsFilterVisible.Value = true)); }
+	    }
+
+        public ICommand DeleteFilter
+        {
+            get { return deleteFilter ?? (deleteFilter = new ActionCommand(() =>
+            {
+                IsFilterVisible.Value = false;
+                FilterDoc.SetText("");
+            })); }
+        }
+
 		public ICommand AddValueCalculation
 		{
-			get { return new ActionCommand(field => ValueCalculations.Add(new ValueCalculation() {Field  =  (string)field, SummaryMode = FacetAggregation.Sum}));}
+			get { return new ActionCommand(field => ValueCalculations.Add(new ValueCalculation() {Field  =  (string)field, SummaryMode = FacetAggregation.Count}));}
 		}
 
 	    public ICommand DeleteValueCalculation
@@ -340,5 +431,10 @@ namespace Raven.Studio.Models
         public string Field { get; set; }
 
         public FacetAggregation SummaryMode { get; set; }
+
+        public string Header
+        {
+            get { return SummaryMode.ToString().ToUpper() + " of " + Field; }
+        }
     }
 }
