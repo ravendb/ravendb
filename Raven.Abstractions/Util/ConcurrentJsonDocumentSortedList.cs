@@ -105,10 +105,10 @@ namespace Raven.Abstractions.Util
 
 		public Etag GetFirstETagGap()
 		{
+			slim.EnterReadLock();
+
 			try
 			{
-				slim.EnterReadLock();
-
 				if (innerList.Count == 0)
 				{
 					return null;
