@@ -77,6 +77,11 @@ namespace Raven.Database.Indexing
 			var nextEtagToIndex = (etag == Etag.Empty) ? GetNextDocumentEtagFromDisk(Etag.Empty) : etag.IncrementBy(1);
 			var firstEtagInQueue = prefetchingQueue.FirstDocumentETag();
 
+			while (documentsToRemove.Any(x => x.Value.Contains(nextEtagToIndex)))
+			{
+				nextEtagToIndex.IncrementBy(1);
+			}
+
 			if (nextEtagToIndex != firstEtagInQueue)
 			{
 				if (TryLoadDocumentsFromFutureBatches(nextEtagToIndex) == false)
