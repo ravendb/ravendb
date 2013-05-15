@@ -120,7 +120,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
-				store.DocumentDatabase.BulkInsert(new BulkInsertOptions(), YieldDocumentBatch(store));
+				store.DocumentDatabase.BulkInsert(new BulkInsertOptions(), YieldDocumentBatch(store), Guid.NewGuid());
 
 				WaitForIndexing(store);
 
