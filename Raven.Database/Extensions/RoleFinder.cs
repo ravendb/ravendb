@@ -14,11 +14,11 @@ using Raven.Database.Server.Security.OAuth;
 
 namespace Raven.Database.Extensions
 {
-	public static class AdminFinder
+	public static class RoleFinder
 	{
-		private static readonly CachingAdminFinder cachingAdminFinder = new CachingAdminFinder();
+		private static readonly CachingRoleFinder cachingRoleFinder = new CachingRoleFinder();
 
-		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
+		public static bool IsInRole(this IPrincipal principal, AnonymousUserAccessMode mode, WindowsBuiltInRole role)
 		{
 			if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
 			{
@@ -40,19 +40,42 @@ namespace Raven.Database.Extensions
 				if (current != null && current.User == windowsIdentity.User)
 					return true;
 
-				if (windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
+				if (windowsPrincipal.IsInRole(role))
 					return true;
 
 				if (windowsIdentity.User == null)
 					return false; // we aren't sure who this use is, probably anonymous?
 				// we still need to make this check, to by pass UAC non elevated admin issue
-				return cachingAdminFinder.IsAdministrator(windowsIdentity);
+				return cachingRoleFinder.IsInRole(windowsIdentity, role);
 			}
 
-			return principal.IsInRole("Administrators");
+			return principal.IsInRole(WindowsBuiltInRoleToGroupConverter(role));
 		}
 
-		public class CachingAdminFinder
+		private static string WindowsBuiltInRoleToGroupConverter(WindowsBuiltInRole role)
+		{
+			switch (role)
+			{
+				case WindowsBuiltInRole.Administrator:
+					return "Administrators";
+				case WindowsBuiltInRole.BackupOperator:
+					return "BackupOperators";
+				default:
+					throw new NotSupportedException(role.ToString());
+			}
+		}
+
+		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
+		{
+			return IsInRole(principal, mode, WindowsBuiltInRole.Administrator);
+		}
+
+		public static bool IsBackupOperator(this IPrincipal principal, AnonymousUserAccessMode mode)
+		{
+			return IsInRole(principal, mode, WindowsBuiltInRole.BackupOperator);
+		}
+
+		public class CachingRoleFinder
 		{
 			private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -69,7 +92,7 @@ namespace Raven.Database.Extensions
 			private readonly ConcurrentDictionary<SecurityIdentifier, CachedResult> cache =
 				new ConcurrentDictionary<SecurityIdentifier, CachedResult>();
 
-			public bool IsAdministrator(WindowsIdentity windowsIdentity)
+			public bool IsInRole(WindowsIdentity windowsIdentity, WindowsBuiltInRole role)
 			{
 				CachedResult value;
 				if (cache.TryGetValue(windowsIdentity.User, out value) && (SystemTime.UtcNow - value.Timestamp) <= maxDuration)
@@ -85,7 +108,15 @@ namespace Raven.Database.Extensions
 					{
 						try
 						{
-							return IsAdministratorNoCache(windowsIdentity.Name);
+							switch (role)
+							{
+								case WindowsBuiltInRole.Administrator:
+									return IsAdministratorNoCache(windowsIdentity.Name);
+								case WindowsBuiltInRole.BackupOperator:
+									return IsBackupOperatorNoCache(windowsIdentity.Name);
+								default:
+									throw new NotSupportedException(role.ToString());
+							}
 						}
 						catch (Exception e)
 						{
@@ -137,6 +168,19 @@ namespace Raven.Database.Extensions
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountDomainAdminsSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountAdministratorSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountEnterpriseAdminsSid));
+				}
+				return false;
+			}
+
+			private static bool IsBackupOperatorNoCache(string username)
+			{
+				var ctx = GeneratePrincipalContext();
+				var up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
+				if (up != null)
+				{
+					PrincipalSearchResult<Principal> authGroups = up.GetAuthorizationGroups();
+					return authGroups.Any(principal =>
+											principal.Sid.IsWellKnown(WellKnownSidType.BuiltinBackupOperatorsSid));
 				}
 				return false;
 			}

@@ -75,6 +75,10 @@ namespace Raven.Database.Server.Security.Windows
 				// admins always go through
 				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
 					return true;
+
+				// backup operators can go through
+				if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
+					return true;
 			}
 
 
