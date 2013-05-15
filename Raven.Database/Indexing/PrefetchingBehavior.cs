@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing
 
 			while (documentsToRemove.Any(x => x.Value.Contains(nextEtagToIndex)))
 			{
-				nextEtagToIndex.IncrementBy(1);
+				nextEtagToIndex = EtagUtil.Increment(nextEtagToIndex, 1);
 			}
 
 			if (nextEtagToIndex != firstEtagInQueue)
