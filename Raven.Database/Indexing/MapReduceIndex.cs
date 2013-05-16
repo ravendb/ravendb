@@ -438,6 +438,12 @@ namespace Raven.Database.Indexing
 					return ravenJObject;
 				var jsonDocument = RavenJObject.FromObject(doc);
 				MergeArrays(jsonDocument);
+
+				// remove _, __, etc fields
+				foreach (var prop in jsonDocument.Where(x=>x.Key.All(ch=>ch == '_')).ToArray())
+				{
+					jsonDocument.Remove(prop.Key);
+				}
 				return jsonDocument;
 			}
 
