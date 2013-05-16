@@ -77,7 +77,7 @@ namespace Raven.Database.Storage
 
         public bool IsNewThisSession(IndexDefinition definition)
         {
-            return this.newDefinitionsThisSession.ContainsKey(definition.Name);
+            return newDefinitionsThisSession.ContainsKey(definition.Name);
         }
 
         private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)

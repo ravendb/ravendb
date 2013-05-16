@@ -256,7 +256,9 @@ namespace Raven.Database.Indexing
 			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (indexDefinitionStorage.IsNewThisSession(indexDefinition) || configuration.RunInMemory)
+			if (configuration.RunInMemory ||
+				(indexDefinition.IsMapReduce == false &&  // there is no point in creating map/reduce indexes in memory, we write the intermediate results to disk anyway
+				 indexDefinitionStorage.IsNewThisSession(indexDefinition)))
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
