@@ -29,7 +29,8 @@
 					   Text="Do you wish to export the database before you delete it?"
 					   Margin="5"/>
 			
-			<Button Content="Export"
+			<Button x:Name="ExportButton"
+                    Content="Export"
 					Grid.Row="1"
 					Margin="5"
 					Click="Export_Click"
@@ -40,7 +41,8 @@
 					   Grid.ColumnSpan="2"
 					   Margin="5"
 					   x:Name="exportLog"
-					   MaxHeight="150"/>
+					   MaxHeight="150"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"/>
 
 			<CheckBox x:Name="hardDelete"
 					  Grid.Row="4"

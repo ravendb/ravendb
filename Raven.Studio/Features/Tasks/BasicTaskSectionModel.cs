@@ -4,13 +4,12 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public abstract class BasicTaskSectionModel : TaskSectionModel
+	public abstract class BasicTaskSectionModel<T> : TaskSectionModel<T> where T : DatabaseTask
 	{
 		public BasicTaskSectionModel()
 		{
 			TaskInputs = new BindableCollection<TaskUIObject>(x => x.Name);
 			TaskDatas = new BindableCollection<TaskData>(x => x.Name);
-			TaskStatus = TaskStatus.DidNotStart;
 		}
 
 		public BindableCollection<TaskUIObject> TaskInputs { get; set; }

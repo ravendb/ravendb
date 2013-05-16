@@ -13,7 +13,7 @@ using Raven.Abstractions.Smuggler;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public abstract class SmugglerTaskSectionModel : TaskSectionModel
+	public abstract class SmugglerTaskSectionModel<T> : TaskSectionModel<T> where T : DatabaseTask
 	{
 		protected static ISyntaxLanguage JScriptLanguage { get; set; }
 
@@ -67,7 +67,7 @@ namespace Raven.Studio.Features.Tasks
 			}
 		}
 
-		public ICommand DeleteFilter
+        public ICommand DeleteFilter
 		{
 			get
 			{
@@ -96,6 +96,29 @@ namespace Raven.Studio.Features.Tasks
 			get { return Script.CurrentSnapshot.Text; }
 			set { Script.SetText(value); }
 		}
+
+	    protected List<FilterSetting> GetFilterSettings()
+	    {
+	        return Filters.Concat(GetCollectionFilterSettings()).ToList();
+	    }
+
+	    private IEnumerable<FilterSetting> GetCollectionFilterSettings()
+	    {
+	        if (!UseCollections.Value)
+	        {
+	            return new List<FilterSetting>();
+	        }
+	        else
+	        {
+	            return Collections.Where(c => c.Selected)
+	                              .Select(c => new FilterSetting()
+	                              {
+	                                  Path = "@metadata.Raven-Entity-Name",
+	                                  Value = c.Name,
+	                                  ShouldMatch = true
+	                              });
+	        }
+	    }
 	}
 
 	public class CollectionSelectionInfo

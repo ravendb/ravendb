@@ -1,4 +1,5 @@
-﻿using System.Windows.Input;
+﻿using System.Linq;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
@@ -7,7 +8,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class StartBackupTaskSectionModel : BasicTaskSectionModel
+	public class StartBackupTaskSectionModel : BasicTaskSectionModel<BackupDatabaseTask>
 	{
 		public BackupStatus Status { get; set; }
 
@@ -19,31 +20,11 @@ namespace Raven.Studio.Features.Tasks
 			TaskInputs.Add(new TaskInput("Location", @"C:\path-to-your-backup-folder"));
 		}
 
-		public override ICommand Action
-		{
-			get { return new BackupCommand(this); }
-		}
+        protected override BackupDatabaseTask CreateTask()
+        {
+            var location = TaskInputs.FirstOrDefault(x => x.Name == "Location");
 
-		public override System.Threading.Tasks.Task TimerTickedAsync()
-		{
-			if (Status == null || Status.IsRunning == false)
-				return null;
-			TaskStatus = TaskStatus.Started;
-			return ApplicationModel.DatabaseCommands.GetAsync(BackupStatus.RavenBackupStatusDocumentKey)
-				.ContinueOnSuccessInTheUIThread(item =>
-				{
-					var documentConvention = ApplicationModel.Current.Server.Value.Conventions;
-					Status = documentConvention.CreateSerializer().Deserialize<BackupStatus>(new RavenJTokenReader(item.DataAsJson));
-
-					Output.Clear();
-					foreach (var backupMessage in Status.Messages)
-					{
-						Output.Add("[" + backupMessage.Timestamp + "]   	" + backupMessage.Severity + " :    	"+ backupMessage.Message);	
-					}
-
-					if(Status.Completed != null)
-						TaskStatus = TaskStatus.Ended;
-				});
-		}
+            return new BackupDatabaseTask(DatabaseCommands, Database.Value.Name, location.Value as string);
+        }
 	}
 }

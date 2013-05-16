@@ -5,7 +5,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class SampleDataTaskSectionModel : BasicTaskSectionModel
+	public class SampleDataTaskSectionModel : BasicTaskSectionModel<CreateSampleDataTask>
 	{
 		public SampleDataTaskSectionModel()
 		{
@@ -14,9 +14,9 @@ namespace Raven.Studio.Features.Tasks
 			Description = "Create sample data for this database.\nThis will only work if you don't have any documents in the database.";       
 		}
 
-		public override ICommand Action
-		{
-			get { return new CreateSampleDataCommand(this, line => Execute.OnTheUI(() => Output.Add(line))); }
-		}
+        protected override CreateSampleDataTask CreateTask()
+        {
+            return new CreateSampleDataTask(DatabaseCommands, Database.Value.Name);
+        }
 	}
 }

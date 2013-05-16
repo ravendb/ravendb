@@ -237,6 +237,9 @@ namespace Raven.Abstractions.Smuggler
 						document.WriteTo(jsonWriter);
 						totalCount++;
 
+                        if (totalCount % 1000 == 0)
+                           ShowProgress("Exported {0} documents", totalCount);
+
 						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 					}
 				}

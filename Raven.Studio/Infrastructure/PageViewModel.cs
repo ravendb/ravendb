@@ -40,14 +40,7 @@ namespace Raven.Studio.Infrastructure
 			return null;
 		}
 
-		public Observable<DatabaseModel> Database {get { return ApplicationModel.Database; }}
-
-		public IAsyncDatabaseCommands DatabaseCommands
-		{
-			get { return Database.Value.AsyncDatabaseCommands; }
-		}
-
-		public virtual bool CanLeavePage()
+	    public virtual bool CanLeavePage()
 		{
 			return true;
 		}
