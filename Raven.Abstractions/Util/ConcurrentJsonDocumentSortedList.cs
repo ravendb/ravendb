@@ -84,6 +84,12 @@ namespace Raven.Abstractions.Util
 			}
 		}
 
+		public Etag NextDocumentETag()
+		{
+			JsonDocument result;
+			return TryPeek(out result) == false ? null : result.Etag;
+		}
+
 		private int CalculateEtagIndex(Etag etag)
 		{
 			int i;
@@ -95,6 +101,35 @@ namespace Raven.Abstractions.Util
 			}
 
 			return i;
+		}
+
+		public Etag GetFirstETagGap()
+		{
+			slim.EnterReadLock();
+
+			try
+			{
+				if (innerList.Count == 0)
+				{
+					return null;
+				}
+
+				// look for the first gap of etag
+				for (var i = 0; i < innerList.Count - 1; i++)
+				{
+					var oneUp = innerList[i].Etag.IncrementBy(1);
+					if (oneUp.Equals(innerList[i + 1].Etag) == false)
+					{
+						return oneUp;
+					}
+				}
+
+				return innerList[innerList.Count - 1].Etag; // take the last one
+			}
+			finally
+			{
+				slim.ExitReadLock();
+			}
 		}
 	}
 }

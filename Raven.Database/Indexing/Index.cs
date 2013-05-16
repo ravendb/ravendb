@@ -130,6 +130,14 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public bool IsCurrentMapIndexingTaskRunning
+		{
+			get
+			{
+				return CurrentMapIndexingTask != null;
+			}
+		}
+
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
@@ -456,10 +464,8 @@ namespace Raven.Database.Indexing
 			if (dir == null)
 				return;
 
-			var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
-			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
-
-			
+			var stale = IsCurrentMapIndexingTaskRunning || IsUpToDateEnoughToWriteToDisk(highestETag) == false;
+			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;		
 
 			if (forceWriteToDisk || toobig || !stale)
 			{
