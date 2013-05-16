@@ -236,9 +236,9 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
-		public void BeforeCreateIndex(string name, IndexDefinition definition)
+		public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)
 		{
-			newDefinitionsThisSession.AddOrUpdate(name, definition, (s, indexDefinition) => definition);
+			newDefinitionsThisSession.TryAdd(name, definition);
 		}
 
         public void AddIndex(string name, IndexDefinition definition)
@@ -249,7 +249,6 @@ namespace Raven.Database.Storage
                     throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
                 return definition;
             });
-			newDefinitionsThisSession.AddOrUpdate(name, definition, (s, indexDefinition) => definition);
         }
 
         public void AddTransform(string name, TransformerDefinition definition)
