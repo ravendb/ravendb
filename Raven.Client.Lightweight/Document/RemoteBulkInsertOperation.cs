@@ -71,10 +71,11 @@ namespace Raven.Client.Document
 			queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 
 			operationTask = StartBulkInsertAsync(options);
-
+#if !MONO
 			SubscribeToBulkInsertNotifications(changes);
+#endif
 		}
-
+#if !MONO
 		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
 		{
 			changes
@@ -87,6 +88,7 @@ namespace Raven.Client.Document
 					}
 				});
 		}
+#endif
 
 		private async Task StartBulkInsertAsync(BulkInsertOptions options)
 		{
