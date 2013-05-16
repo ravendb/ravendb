@@ -16,8 +16,9 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Indexing;
 
-namespace Raven.Database.Indexing
+namespace Raven.Database.Prefetching
 {
 	public class PrefetchingBehavior : IDisposable
 	{
@@ -415,16 +416,16 @@ namespace Raven.Database.Indexing
 			return documentsToRemove.TryGetValue(document.Key, out etags) && etags.Contains(document.Etag);
 		}
 
-		public void AfterDelete(string key, Etag lastDocumentEtag)
+		public void AfterDelete(string key, Etag deletedEtag)
 		{
-			documentsToRemove.AddOrUpdate(key, s => new HashSet<Etag> { lastDocumentEtag },
-										  (s, set) => new HashSet<Etag>(set) { lastDocumentEtag });
+			documentsToRemove.AddOrUpdate(key, s => new HashSet<Etag> { deletedEtag },
+										  (s, set) => new HashSet<Etag>(set) { deletedEtag });
 		}
 
-		public void AfterUpdate(string key, Etag lastDocumentEtag)
+		public void AfterUpdate(string key, Etag etagBeforeUpdate)
 		{
-			updatedDocuments.AddOrUpdate(key, s => new HashSet<Etag> { lastDocumentEtag },
-										  (s, set) => new HashSet<Etag>(set) { lastDocumentEtag });
+			updatedDocuments.AddOrUpdate(key, s => new HashSet<Etag> { etagBeforeUpdate },
+										  (s, set) => new HashSet<Etag>(set) { etagBeforeUpdate });
 		}
 
 		public bool ShouldSkipDeleteFromIndex(JsonDocument item)

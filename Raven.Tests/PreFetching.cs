@@ -4,6 +4,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Embedded;
 using Raven.Database.Indexing;
+using Raven.Database.Prefetching;
 using Rhino.Mocks;
 using Xunit;
 

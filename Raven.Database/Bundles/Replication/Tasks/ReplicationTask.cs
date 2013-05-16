@@ -27,6 +27,7 @@ using Raven.Database.Impl;
 using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
+using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -73,6 +74,7 @@ namespace Raven.Bundles.Replication.Tasks
 		public void Execute(DocumentDatabase database)
 		{
 			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.Replicator);
+			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Replicator);
 
 			docDb = database;
 			var replicationRequestTimeoutInMs =
@@ -80,8 +82,6 @@ namespace Raven.Bundles.Replication.Tasks
 				60 * 1000;
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
-
-			prefetchingBehavior = new PrefetchingBehavior(database.WorkContext, new IndexBatchSizeAutoTuner(database.WorkContext));
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
 			var disposableAction = new DisposableAction(task.Wait);

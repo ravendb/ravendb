@@ -21,6 +21,7 @@ using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Commercial;
 using Raven.Database.Impl.Synchronization;
+using Raven.Database.Prefetching;
 using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -131,6 +132,12 @@ namespace Raven.Database
             get { return etagSynchronizer; }
         }
 
+		private readonly Prefetcher prefetcher;
+		public Prefetcher Prefetcher
+		{
+			get { return prefetcher; }
+		}
+
         /// <summary>
         /// Requires to avoid having serialize writes to the same attachments
         /// </summary>
@@ -224,7 +231,8 @@ namespace Raven.Database
                     CompleteWorkContextSetup();
 
                     etagSynchronizer = new DatabaseEtagSynchronizer(TransactionalStorage);
-                    indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer);
+					prefetcher = new Prefetcher(workContext);
+                    indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer, prefetcher);
 
                     InitializeTriggersExceptIndexCodecs();
                     SecondStageInitialization();
@@ -344,7 +352,7 @@ namespace Raven.Database
                     CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
                     CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
                     ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
-                    InMemoryIndexingQueueSize = indexingExecuter.PrefetchingBehavior.InMemoryIndexingQueueSize,
+                    InMemoryIndexingQueueSize = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).InMemoryIndexingQueueSize,
                     Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
                     CountOfIndexes = IndexStorage.Indexes.Length,
                     DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
@@ -764,13 +772,11 @@ namespace Raven.Database
                         }, documents =>
                         {
                             etagSynchronizer.UpdateSynchronizationState(documents);
-                            indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(documents);
+							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).AfterStorageCommitBeforeWorkNotifications(documents);
                         });
 
 						if (addDocumentResult.Updated)
-						{
-							indexingExecuter.PrefetchingBehavior.AfterUpdate(key, addDocumentResult.PrevEtag);
-						}
+							prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
 
                         PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
@@ -1000,7 +1006,7 @@ namespace Raven.Database
                                 task.Keys.Add(key);
                             }
                             if (deletedETag != null)
-                                indexingExecuter.PrefetchingBehavior.AfterDelete(key, deletedETag);
+                                prefetcher.AfterDelete(key, deletedETag);
                             DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
                         }
 

@@ -18,6 +18,7 @@ using Raven.Database.Impl;
 using Raven.Database.Impl.Synchronization;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
+using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -31,12 +32,12 @@ namespace Raven.Database.Indexing
 
 		private readonly EtagSynchronizer etagSynchronizer;
 
-		public IndexingExecuter(WorkContext context, DatabaseEtagSynchronizer synchronizer)
+		public IndexingExecuter(WorkContext context, DatabaseEtagSynchronizer synchronizer, Prefetcher prefetcher)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
-			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Indexer);
+			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -496,11 +497,6 @@ namespace Raven.Database.Indexing
 					return;
 				Log.WarnException(string.Format("Failed to index documents for index: {0}", index), e);
 			}
-		}
-
-		public PrefetchingBehavior PrefetchingBehavior
-		{
-			get { return prefetchingBehavior; }
 		}
 
 		protected override void Dispose()

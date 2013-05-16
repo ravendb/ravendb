@@ -20,6 +20,7 @@ using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
+using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -49,6 +50,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void Execute(DocumentDatabase database)
 		{
 			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.SqlReplicator);
+			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator);
 
 			Database = database;
 			Database.OnDocumentChange += (sender, notification, metadata) =>
@@ -69,8 +71,6 @@ namespace Raven.Database.Bundles.SqlReplication
 			};
 
 			GetReplicationStatus();
-
-			prefetchingBehavior = new PrefetchingBehavior(Database.WorkContext, new IndexBatchSizeAutoTuner(Database.WorkContext));
 
 			var task = Task.Factory.StartNew(() =>
 			{
