@@ -43,7 +43,7 @@ namespace Raven.Studio.Behaviors
             {
                 column = new DataGridTemplateColumn
                 {
-                    ClipboardContentBinding = columnDefinition.CreateBinding("Item.Document."),
+                    ClipboardContentBinding = GetBinding(columnDefinition),
                     Header = columnDefinition.Header,
                     CellTemplate = cellTemplate,
                 };

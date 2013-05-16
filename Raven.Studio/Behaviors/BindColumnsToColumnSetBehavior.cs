@@ -234,8 +234,9 @@ namespace Raven.Studio.Behaviors
                 if (e.NewValue != null)
                 {
                     behavior.StartObservingColumnsModel(e.NewValue as ColumnsModel);
-                    behavior.ScheduleColumnReset();
                 }
+
+                behavior.ScheduleColumnReset();
             }
         }
 
