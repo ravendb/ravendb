@@ -465,6 +465,7 @@ namespace Raven.Database.Indexing
 			{
 				indexWriter.Commit();
 				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+				IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
 				directory = fsDir;
 
 				indexWriter.Analyzer.Close();

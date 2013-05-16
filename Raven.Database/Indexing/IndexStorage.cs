@@ -368,7 +368,7 @@ namespace Raven.Database.Indexing
 													lastCommitPoint.TimeStamp));
 		}
 
-		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		public static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
 			var indexVersion = "index.version";
 			var version = IndexVersion;
