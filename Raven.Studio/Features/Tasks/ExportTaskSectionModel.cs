@@ -28,7 +28,7 @@ namespace Raven.Studio.Features.Tasks
                 shouldExcludeExpired:Options.Value.ShouldExcludeExpired,
                 batchSize:Options.Value.BatchSize,
                 transformScript:Options.Value.TransformScript,
-                filterSettings: Filters.ToList()
+                filterSettings: GetFilterSettings()
                 );
         }
 	}
