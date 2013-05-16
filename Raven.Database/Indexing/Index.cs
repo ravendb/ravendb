@@ -126,7 +126,14 @@ namespace Raven.Database.Indexing
 				var ramDirectory = directory as RAMDirectory;
 				if (ramDirectory == null)
 					return "false";
-				return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
+				try
+				{
+					return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
+				}
+				catch (AlreadyClosedException)
+				{
+					return "false";
+				}
 			}
 		}
 

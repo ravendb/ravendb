@@ -116,6 +116,7 @@ namespace Raven.Tests.Issues
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			});
+			db.SpinBackgroundWorkers();
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
@@ -132,6 +133,13 @@ namespace Raven.Tests.Issues
 			db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+
+
+			while (db.Statistics.StaleIndexes.Length != 0)
+			{
+				Thread.Sleep(10);
+			}
+
 
 			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
