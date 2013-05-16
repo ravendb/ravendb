@@ -27,6 +27,9 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove =
 			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentDictionary<string, HashSet<Etag>> updatedDocuments =
+			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
+
 		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches =
 			new ConcurrentDictionary<Etag, FutureIndexBatch>();
 
@@ -75,12 +78,9 @@ namespace Raven.Database.Indexing
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
 		{
 			var nextEtagToIndex = (etag == Etag.Empty) ? GetNextDocumentEtagFromDisk(Etag.Empty) : etag.IncrementBy(1);
-			var firstEtagInQueue = prefetchingQueue.FirstDocumentETag();
+			var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
-			while (documentsToRemove.Any(x => x.Value.Contains(nextEtagToIndex)))
-			{
-				nextEtagToIndex = EtagUtil.Increment(nextEtagToIndex, 1);
-			}
+			nextEtagToIndex = HandleEtagGapsIfNeeded(nextEtagToIndex);
 
 			if (nextEtagToIndex != firstEtagInQueue)
 			{
@@ -127,6 +127,8 @@ namespace Raven.Database.Indexing
 			var items = new List<JsonDocument>();
 			JsonDocument result;
 
+			nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
+
 			while (prefetchingQueue.TryPeek(out result) && nextDocEtag.CompareTo(result.Etag) >= 0)
 			{
 				// safe to do peek then dequeue because we are the only one doing the dequeues
@@ -138,6 +140,7 @@ namespace Raven.Database.Indexing
 
 				items.Add(result);
 				nextDocEtag = EtagUtil.Increment(nextDocEtag, 1);
+				nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
 			}
 
 			return items;
@@ -366,7 +369,7 @@ namespace Raven.Database.Indexing
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing || docs.Length == 0)
 				return;
 
-			if (prefetchingQueue.Count > // don't use too much, this is an optimization and we need to be careful about using too much mem
+			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
 				context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 				return;
 
@@ -377,7 +380,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void CleanupDocumentsToRemove(Etag lastIndexedEtag)
+		public void CleanupDocuments(Etag lastIndexedEtag)
 		{
 			var highest = new ComparableByteArray(lastIndexedEtag);
 
@@ -388,6 +391,15 @@ namespace Raven.Database.Indexing
 
 				HashSet<Etag> _;
 				documentsToRemove.TryRemove(docToRemove.Key, out _);
+			}
+
+			foreach (var updatedDocs in updatedDocuments)
+			{
+				if (updatedDocs.Value.All(etag => highest.CompareTo(etag) > 0) == false)
+					continue;
+
+				HashSet<Etag> _;
+				updatedDocuments.TryRemove(updatedDocs.Key, out _);
 			}
 
 			JsonDocument result;
@@ -409,11 +421,48 @@ namespace Raven.Database.Indexing
 										  (s, set) => new HashSet<Etag>(set) { lastDocumentEtag });
 		}
 
+		public void AfterUpdate(string key, Etag lastDocumentEtag)
+		{
+			updatedDocuments.AddOrUpdate(key, s => new HashSet<Etag> { lastDocumentEtag },
+										  (s, set) => new HashSet<Etag>(set) { lastDocumentEtag });
+		}
+
 		public bool ShouldSkipDeleteFromIndex(JsonDocument item)
 		{
 			if (item.SkipDeleteFromIndex == false)
 				return false;
 			return documentsToRemove.ContainsKey(item.Key) == false;
+		}
+
+		private Etag HandleEtagGapsIfNeeded(Etag nextEtag)
+		{
+			if (nextEtag != prefetchingQueue.NextDocumentETag())
+			{
+				nextEtag = SkipDeletedEtags(nextEtag);
+				nextEtag = SkipUpdatedEtags(nextEtag);
+			}
+
+			return nextEtag;
+		}
+
+		private Etag SkipDeletedEtags(Etag nextEtag)
+		{
+			while (documentsToRemove.Any(x => x.Value.Contains(nextEtag)))
+			{
+				nextEtag = EtagUtil.Increment(nextEtag, 1);
+			}
+
+			return nextEtag;
+		}
+
+		private Etag SkipUpdatedEtags(Etag nextEtag)
+		{
+			while (updatedDocuments.Any(x => x.Value.Contains(nextEtag)))
+			{
+				nextEtag = EtagUtil.Increment(nextEtag, 1);
+			}
+
+			return nextEtag;
 		}
 
 		#region Nested type: FutureIndexBatch

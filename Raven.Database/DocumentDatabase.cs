@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Commercial;
 using Raven.Database.Impl.Synchronization;
 using Raven.Database.Queries;
@@ -765,6 +766,11 @@ namespace Raven.Database
                             etagSynchronizer.UpdateSynchronizationState(documents);
                             indexingExecuter.PrefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(documents);
                         });
+
+						if (addDocumentResult.Updated)
+						{
+							indexingExecuter.PrefetchingBehavior.AfterUpdate(key, addDocumentResult.PrevEtag);
+						}
 
                         PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 

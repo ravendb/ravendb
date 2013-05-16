@@ -35,6 +35,7 @@ namespace Raven.Database.Storage
 	public class AddDocumentResult
 	{
 		public Etag Etag;
+		public Etag PrevEtag;
 		public DateTime SavedAt;
 		public bool Updated;
 	}

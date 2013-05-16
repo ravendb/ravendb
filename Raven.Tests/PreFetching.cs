@@ -147,7 +147,7 @@ namespace Raven.Tests
 
 			prefetchingBehavior.AfterDelete("1", first);
 
-			Assert.Equal(1, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count);
+			Assert.Equal(1, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count(x => prefetchingBehavior.FilterDocuments(x) == false));
 		}
 
 		[Fact]

@@ -84,7 +84,7 @@ namespace Raven.Abstractions.Util
 			}
 		}
 
-		public Etag FirstDocumentETag()
+		public Etag NextDocumentETag()
 		{
 			JsonDocument result;
 			return TryPeek(out result) == false ? null : result.Etag;

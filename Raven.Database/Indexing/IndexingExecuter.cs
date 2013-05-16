@@ -144,7 +144,7 @@ namespace Raven.Database.Indexing
 			{
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 				{
-					prefetchingBehavior.CleanupDocumentsToRemove(lastEtag);
+					prefetchingBehavior.CleanupDocuments(lastEtag);
 					UpdateAutoThrottler(jsonDocs, indexingDuration);
 				}
 
