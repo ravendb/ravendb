@@ -507,6 +507,9 @@ namespace Raven.Database.Indexing
 				exceptionAggregator.Execute(pendingTask.Wait);
 			}
 			pendingTasks.Clear();
+
+			exceptionAggregator.Execute(prefetchingBehavior.Dispose);
+
 			if (indexingCompletedEvent != null)
 				exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
 			if (indexingSemaphore != null)

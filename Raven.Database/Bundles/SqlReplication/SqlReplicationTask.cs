@@ -31,7 +31,7 @@ namespace Raven.Database.Bundles.SqlReplication
 {
 	[InheritedExport(typeof(IStartupTask))]
 	[ExportMetadata("Bundle", "sqlReplication")]
-	public class SqlReplicationTask : IStartupTask
+	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
 		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
@@ -472,6 +472,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			});
 			replicationConfigs = sqlReplicationConfigs;
 			return sqlReplicationConfigs;
+		}
+
+		public void Dispose()
+		{
+			prefetchingBehavior.Dispose();
 		}
 	}
 }
