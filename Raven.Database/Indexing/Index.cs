@@ -32,9 +32,11 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
+using Document = Lucene.Net.Documents.Document;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -117,9 +119,15 @@ namespace Raven.Database.Indexing
 
 		protected DateTime PreviousIndexTime { get; set; }
 
-		public bool IsOnRam
+		public string IsOnRam
 		{
-			get { return directory is RAMDirectory; }
+			get
+			{
+				var ramDirectory = directory as RAMDirectory;
+				if (ramDirectory == null)
+					return "false";
+				return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
+			}
 		}
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)

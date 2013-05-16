@@ -1113,7 +1113,7 @@ namespace Raven.Database.Indexing
 											 index.MergeSegments());
 		}
 
-		public bool IndexOnRam(string name)
+		public string IndexOnRam(string name)
 		{
 			return GetIndexByName(name).IsOnRam;
 		}
