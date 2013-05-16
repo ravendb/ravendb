@@ -91,6 +91,18 @@ namespace Raven.Studio.Commands
 					.Catch();
 			}
 
+			var scriptedSettings = settingsModel.GetSection<ScriptedIndexSettingsSectionModel>();
+			if (scriptedSettings != null)
+			{
+				scriptedSettings.StoreChanges();
+				foreach (var scriptedIndexResults in scriptedSettings.ScriptedIndexes)
+				{
+					session.Store(scriptedIndexResults.Value);
+				}
+
+				session.SaveChangesAsync().Catch();
+			}
+
 			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
 			if (sqlReplicationSettings != null)
 			{

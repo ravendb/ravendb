@@ -320,6 +320,10 @@
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
       <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Settings\ScriptedIndexSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\ScriptedIndexSettingsSectionView.xaml.cs">
+      <DependentUpon>ScriptedIndexSettingsSectionView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Settings\SqlReplicationScriptIntelliPromptProvider.cs" />
     <Compile Include="Features\Settings\SqlReplicationsSettingsSectionView.xaml.cs">
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
@@ -1040,6 +1044,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Reporting\ReportingView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\ScriptedIndexSettingsSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

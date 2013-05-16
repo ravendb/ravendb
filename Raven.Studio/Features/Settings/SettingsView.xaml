@@ -24,6 +24,9 @@
 		<DataTemplate DataType="Settings:VersioningSettingsSectionModel">
             <Settings:VersioningSettingsView/>
         </DataTemplate>
+		<DataTemplate DataType="Settings:ScriptedIndexSettingsSectionModel">
+			<Settings:ScriptedIndexSettingsSectionView/>
+		</DataTemplate>
         <DataTemplate DataType="Settings:AuthorizationSettingsSectionModel">
             <Settings:AuthorizationSettingSectionView/>
         </DataTemplate>

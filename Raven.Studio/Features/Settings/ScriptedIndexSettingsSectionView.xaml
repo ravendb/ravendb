@@ -1,0 +1,108 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Settings.ScriptedIndexSettingsSectionView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:settings="clr-namespace:Raven.Studio.Features.Settings"
+             xmlns:toolkit="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Toolkit"
+             xmlns:controls1="clr-namespace:Raven.Studio.Controls"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+             mc:Ignorable="d"
+			 d:DesignHeight="300" d:DesignWidth="400"
+			 d:DataContext="{d:DesignInstance settings:ScriptedIndexSettingsSectionModel}">
+	
+	<Grid x:Name="LayoutRoot">
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
+			<toolkit:HeaderedContentControl.Header>
+				<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+					<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
+					<HyperlinkButton Content="Indexes"
+                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                 Command="{StaticResource NavigateToCommand}"
+                                 CommandParameter="/Indexes"
+                                 VerticalAlignment="Center" />
+					<controls1:NavTriangle/>
+
+					<StackPanel Orientation="Horizontal">
+						<ComboBox ItemsSource="{Binding AvailableIndexes}"
+                              SelectedItem="{Binding IndexName, Mode=TwoWay}"
+                          Width="300"
+                              Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
+					</StackPanel>
+
+					<controls1:NavTriangle/>
+					<TextBlock Text="Scripted Index"
+                           Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                           VerticalAlignment="Center" />
+				</StackPanel>
+			</toolkit:HeaderedContentControl.Header>
+
+
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+				<StackPanel>
+					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
+						<TextBlock Text="Index Script" 
+									Margin="0,0,10,0"
+									Style="{StaticResource Style_TextBlock_PagePartHeader}"
+									VerticalAlignment="Top" />
+						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+							<i:Interaction.Behaviors>
+								<Behaviors:ShowPopupWhilstMouseOver>
+									<Behaviors:ShowPopupWhilstMouseOver.Popup>
+										<Popup>
+											<ContentControl Style="{StaticResource Style_InfoToolTip}">
+												<RichTextBlock MaxWidth="370" Margin="5">
+
+												</RichTextBlock>
+											</ContentControl>
+										</Popup>
+									</Behaviors:ShowPopupWhilstMouseOver.Popup>
+								</Behaviors:ShowPopupWhilstMouseOver>
+							</i:Interaction.Behaviors>
+						</Image>
+					</StackPanel>
+
+					<Editors:EditorBase BoundDocument="{Binding IndexScript}" 
+										IsSelectionMarginVisible="False" 
+										IsLineNumberMarginVisible="False" 
+										AreLineModificationMarksVisible="False"/>
+				</StackPanel>
+
+				<StackPanel Grid.Row="1">
+					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
+						<TextBlock Text="Delete Script" 
+									Margin="0,0,10,0"
+									Style="{StaticResource Style_TextBlock_PagePartHeader}"
+									VerticalAlignment="Top" />
+						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+							<i:Interaction.Behaviors>
+								<Behaviors:ShowPopupWhilstMouseOver>
+									<Behaviors:ShowPopupWhilstMouseOver.Popup>
+										<Popup>
+											<ContentControl Style="{StaticResource Style_InfoToolTip}">
+												<RichTextBlock MaxWidth="370" Margin="5">
+
+												</RichTextBlock>
+											</ContentControl>
+										</Popup>
+									</Behaviors:ShowPopupWhilstMouseOver.Popup>
+								</Behaviors:ShowPopupWhilstMouseOver>
+							</i:Interaction.Behaviors>
+						</Image>
+					</StackPanel>
+
+					<Editors:EditorBase BoundDocument="{Binding DeleteScript}" 
+										IsSelectionMarginVisible="False" 
+										IsLineNumberMarginVisible="False" 
+										AreLineModificationMarksVisible="False"/>
+				</StackPanel>
+			</Grid>
+		</toolkit:HeaderedContentControl>
+	</Grid>
+</UserControl>
