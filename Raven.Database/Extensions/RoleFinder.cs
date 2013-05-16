@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
 using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
@@ -14,11 +15,11 @@ using Raven.Database.Server.Security.OAuth;
 
 namespace Raven.Database.Extensions
 {
-	public static class AdminFinder
+	public static class RoleFinder
 	{
-		private static readonly CachingAdminFinder cachingAdminFinder = new CachingAdminFinder();
+		private static readonly CachingRoleFinder cachingRoleFinder = new CachingRoleFinder();
 
-		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
+		public static bool IsInRole(this IPrincipal principal, AnonymousUserAccessMode mode, WindowsBuiltInRole role)
 		{
 			if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
 			{
@@ -40,19 +41,42 @@ namespace Raven.Database.Extensions
 				if (current != null && current.User == windowsIdentity.User)
 					return true;
 
-				if (windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
+				if (windowsPrincipal.IsInRole(role))
 					return true;
 
 				if (windowsIdentity.User == null)
 					return false; // we aren't sure who this use is, probably anonymous?
 				// we still need to make this check, to by pass UAC non elevated admin issue
-				return cachingAdminFinder.IsAdministrator(windowsIdentity);
+				return cachingRoleFinder.IsInRole(windowsIdentity, role);
 			}
 
-			return principal.IsInRole("Administrators");
+			return principal.IsInRole(WindowsBuiltInRoleToGroupConverter(role));
 		}
 
-		public class CachingAdminFinder
+		private static string WindowsBuiltInRoleToGroupConverter(WindowsBuiltInRole role)
+		{
+			switch (role)
+			{
+				case WindowsBuiltInRole.Administrator:
+					return "Administrators";
+				case WindowsBuiltInRole.BackupOperator:
+					return "BackupOperators";
+				default:
+					throw new NotSupportedException(role.ToString());
+			}
+		}
+
+		public static bool IsAdministrator(this IPrincipal principal, AnonymousUserAccessMode mode)
+		{
+			return IsInRole(principal, mode, WindowsBuiltInRole.Administrator);
+		}
+
+		public static bool IsBackupOperator(this IPrincipal principal, AnonymousUserAccessMode mode)
+		{
+			return IsInRole(principal, mode, WindowsBuiltInRole.BackupOperator);
+		}
+
+		public class CachingRoleFinder
 		{
 			private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -60,39 +84,27 @@ namespace Raven.Database.Extensions
 			{
 				public int Usage;
 				public DateTime Timestamp;
-				public Lazy<bool> Value;
+				public Lazy<IList<Principal>> AuthorizationGroups;
 			}
 
 			private const int CacheMaxSize = 1024;
 			private static readonly TimeSpan maxDuration = TimeSpan.FromMinutes(15);
 
-			private readonly ConcurrentDictionary<SecurityIdentifier, CachedResult> cache =
-				new ConcurrentDictionary<SecurityIdentifier, CachedResult>();
+			private readonly ConcurrentDictionary<SecurityIdentifier, CachedResult> cache = new ConcurrentDictionary<SecurityIdentifier, CachedResult>();
 
-			public bool IsAdministrator(WindowsIdentity windowsIdentity)
+			public bool IsInRole(WindowsIdentity windowsIdentity, WindowsBuiltInRole role)
 			{
 				CachedResult value;
 				if (cache.TryGetValue(windowsIdentity.User, out value) && (SystemTime.UtcNow - value.Timestamp) <= maxDuration)
 				{
 					Interlocked.Increment(ref value.Usage);
-					return value.Value.Value;
+					return IsInRole(value, role);
 				}
 
 				var cachedResult = new CachedResult
 				{
 					Usage = value == null ? 1 : value.Usage + 1,
-					Value = new Lazy<bool>(() =>
-					{
-						try
-						{
-							return IsAdministratorNoCache(windowsIdentity.Name);
-						}
-						catch (Exception e)
-						{
-							log.WarnException("Could not determine whatever user is admin or not, assuming not", e);
-							return false;
-						}
-					}),
+					AuthorizationGroups = new Lazy<IList<Principal>>(() => GetUserAuthorizationGroups(windowsIdentity.Name)),
 					Timestamp = SystemTime.UtcNow
 				};
 
@@ -122,23 +134,58 @@ namespace Raven.Database.Extensions
 					}
 				}
 
-				return cachedResult.Value.Value;
+				return IsInRole(cachedResult, role);
 			}
 
-			private static bool IsAdministratorNoCache(string username)
+			private bool IsInRole(CachedResult cachedResult, WindowsBuiltInRole role)
+			{
+				try
+				{
+					var authorizationGroups = cachedResult.AuthorizationGroups.Value;
+
+					switch (role)
+					{
+						case WindowsBuiltInRole.Administrator:
+							return IsAdministratorNoCache(authorizationGroups);
+						case WindowsBuiltInRole.BackupOperator:
+							return IsBackupOperatorNoCache(authorizationGroups);
+						default:
+							throw new NotSupportedException(role.ToString());
+					}
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not determine whatever user is admin or not, assuming not", e);
+					return false;
+				}
+			}
+
+			private IList<Principal> GetUserAuthorizationGroups(string username)
 			{
 				var ctx = GeneratePrincipalContext();
 				var up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
 				if (up != null)
 				{
 					PrincipalSearchResult<Principal> authGroups = up.GetAuthorizationGroups();
-					return authGroups.Any(principal =>
+					return authGroups.ToList();
+				}
+
+				return new List<Principal>();
+			}
+
+			private static bool IsAdministratorNoCache(IEnumerable<Principal> authorizationGroups)
+			{
+				return authorizationGroups.Any(principal =>
 											principal.Sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountDomainAdminsSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountAdministratorSid) ||
 											principal.Sid.IsWellKnown(WellKnownSidType.AccountEnterpriseAdminsSid));
-				}
-				return false;
+			}
+
+			private static bool IsBackupOperatorNoCache(IEnumerable<Principal> authorizationGroups)
+			{
+				return authorizationGroups.Any(principal =>
+											   principal.Sid.IsWellKnown(WellKnownSidType.BuiltinBackupOperatorsSid));
 			}
 
 			private static bool? useLocalMachine;

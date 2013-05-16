@@ -395,6 +395,13 @@ namespace Raven.Database.Bundles.SqlReplication
 						Script = cfg.Script
 					}, jsonDocument.SerializedSizeOnDisk);
 
+					if (log.IsDebugEnabled && patcher.Debug.Count > 0)
+					{
+						log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", jsonDocument.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
+
+						patcher.Debug.Clear();
+					}
+
 					replicationStats.ScriptSuccess();
 				}
 				catch (ParseException e)

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Security.Principal;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -13,6 +14,19 @@ namespace Raven.Database.Server.Responders.Admin
 {
 	public class AdminBackup : AdminResponder
 	{
+		public override string[] SupportedVerbs
+		{
+			get { return new[] { "POST" }; }
+		}
+
+		protected override WindowsBuiltInRole[] AdditionalSupportedRoles
+		{
+			get
+			{
+				return new[] { WindowsBuiltInRole.BackupOperator };
+			}
+		}
+
 		public override void RespondToAdmin(IHttpContext context)
 		{
 			var backupRequest = context.ReadJsonObject<BackupRequest>();

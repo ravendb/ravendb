@@ -109,7 +109,8 @@ namespace Raven.Database.Server.Responders
 						return;
 					}
 					Debug.Assert(documentMetadata.Etag != null);
-					if (context.MatchEtag(documentMetadata.Etag) && documentMetadata.NonAuthoritativeInformation == false)
+					if (context.MatchEtag(documentMetadata.Etag) &&
+						documentMetadata.NonAuthoritativeInformation != true)
 					{
 						context.SetStatusToNotModified();
 						return;
