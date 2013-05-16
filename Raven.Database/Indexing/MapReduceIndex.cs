@@ -183,7 +183,8 @@ namespace Raven.Database.Indexing
 			AddindexingPerformanceStat(new IndexingPerformanceStats
 			{
 				OutputCount = count,
-				InputCount = sourceCount,
+				ItemsCount = sourceCount,
+				InputCount = documentsWrapped.Count,
 				Operation = "Map",
 				Duration = sw.Elapsed,
 				Started = start
@@ -323,6 +324,7 @@ namespace Raven.Database.Indexing
 		public class ReduceDocuments
 		{
 			private readonly MapReduceIndex parent;
+			private readonly int inputCount;
 			private readonly string name;
 			readonly AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter;
 			private readonly Document luceneDoc = new Document();
@@ -334,16 +336,10 @@ namespace Raven.Database.Indexing
 			private PropertyDescriptorCollection properties = null;
 			private readonly List<AbstractIndexUpdateTriggerBatcher> batchers;
 
-			public ReduceDocuments(
-				MapReduceIndex parent,
-				AbstractViewGenerator viewGenerator,
-				IEnumerable<IGrouping<int, object>> mappedResultsByBucket,
-				int level,
-				WorkContext context,
-				IStorageActionsAccessor actions,
-				HashSet<string> reduceKeys)
+			public ReduceDocuments(MapReduceIndex parent, AbstractViewGenerator viewGenerator, IEnumerable<IGrouping<int, object>> mappedResultsByBucket, int level, WorkContext context, IStorageActionsAccessor actions, HashSet<string> reduceKeys, int inputCount)
 			{
 				this.parent = parent;
+				this.inputCount = inputCount;
 				name = this.parent.name;
 				ViewGenerator = viewGenerator;
 				MappedResultsByBucket = mappedResultsByBucket;
@@ -548,7 +544,8 @@ namespace Raven.Database.Indexing
 				parent.AddindexingPerformanceStat(new IndexingPerformanceStats
 				{
 					OutputCount = count,
-					InputCount = sourceCount,
+					ItemsCount = sourceCount,
+					InputCount = inputCount,
 					Duration = sw.Elapsed,
 					Operation = "Reduce Level " + Level,
 					Started = start

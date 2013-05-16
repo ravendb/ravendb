@@ -829,7 +829,8 @@ namespace Raven.Database.Indexing
 			int level,
 			WorkContext context,
 			IStorageActionsAccessor actions,
-			HashSet<string> reduceKeys)
+			HashSet<string> reduceKeys,
+			int inputCount)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -845,7 +846,7 @@ namespace Raven.Database.Indexing
 			}
 			using (EnsureInvariantCulture())
 			{
-				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys);
+				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
 				reduceDocuments.ExecuteReduction();
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{

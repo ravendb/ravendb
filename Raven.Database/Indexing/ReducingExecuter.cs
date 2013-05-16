@@ -177,7 +177,7 @@ namespace Raven.Database.Indexing
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
 
-						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
+						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Count);
 
 						var batchDuration = batchTimeWatcher.Elapsed;
 						Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration,
@@ -293,7 +293,7 @@ namespace Raven.Database.Indexing
 			context.ReducedPerSecIncreaseBy(results.Length);
 
 			context.TransactionalStorage.Batch(actions =>
-				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys)
+				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))
 				);
 
 			autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);

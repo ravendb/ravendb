@@ -177,7 +177,8 @@ namespace Raven.Database.Indexing
 			AddindexingPerformanceStat(new IndexingPerformanceStats
 			{
 				OutputCount = count,
-				InputCount = sourceCount,
+				ItemsCount = sourceCount,
+				InputCount = batch.Docs.Count,
 				Duration = sw.Elapsed,
 				Operation = "Index",
 				Started = start

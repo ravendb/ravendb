@@ -94,7 +94,10 @@ namespace Raven.Studio.Features.Settings
 			{
 				return new ActionCommand(() =>
 				{
-					SelectedReplication.Value.SqlReplicationTables.Remove(SelectedTable.Value);
+					var sqlReplicationConfigModel = SelectedReplication.Value;
+					if (sqlReplicationConfigModel == null)
+						return;
+					sqlReplicationConfigModel.SqlReplicationTables.Remove(SelectedTable.Value);
 					SelectedTable.Value = null;
 				});
 			}

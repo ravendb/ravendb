@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System;
 using System.IO;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
@@ -14,6 +15,14 @@ namespace Raven.Database.Server.Responders.Admin
 {
 	class AdminRestore : AdminResponder
 	{
+		protected override WindowsBuiltInRole[] AdditionalSupportedRoles
+		{
+			get
+			{
+				return new[] { WindowsBuiltInRole.BackupOperator };
+			}
+		}
+
 		public override void RespondToAdmin(IHttpContext context)
 		{
 			if (EnsureSystemDatabase(context) == false)
