@@ -126,7 +126,15 @@ namespace Raven.Database.Indexing
 				var ramDirectory = directory as RAMDirectory;
 				if (ramDirectory == null)
 					return "false";
-				return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
+				try
+				{
+					var sizeInBytes = ramDirectory.SizeInBytes();
+					return "true (" + DatabaseSize.Humane(sizeInBytes) + ")";
+				}
+				catch (AlreadyClosedException)
+				{
+					return "false";
+				}
 			}
 		}
 
@@ -464,7 +472,7 @@ namespace Raven.Database.Indexing
 			if (dir == null)
 				return;
 
-			var stale = IsCurrentMapIndexingTaskRunning || IsUpToDateEnoughToWriteToDisk(highestETag) == false;
+			var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
 			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;		
 
 			if (forceWriteToDisk || toobig || !stale)
