@@ -25,7 +25,7 @@ namespace Raven.Studio.Features.Reporting
                                     <TextBlock Text=""{Binding $$$BindingPath$$$}""
                                                Behaviors:FadeTrimming.IsEnabled=""True"" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed=""True""
                                                VerticalAlignment=""Center""
-                                               Margin=""5,0""/>
+                                               Margin=""5,2""/>
                                 </DataTemplate>";
 
             templateString = templateString.Replace("$$$BindingPath$$$", definition.Binding);
