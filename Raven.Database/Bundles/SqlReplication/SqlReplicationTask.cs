@@ -415,7 +415,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				catch (Exception e)
 				{
 					replicationStats.RecordScriptError(Database);
-					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping this document", e);
+					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + jsonDocument.Key, e);
 				}
 			}
 			return result;
