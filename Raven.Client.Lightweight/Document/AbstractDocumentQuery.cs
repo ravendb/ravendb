@@ -243,7 +243,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention DocumentConvention
 		{
-			get { return theSession.Conventions; }
+			get { return conventions; }
 		}
 
 #if !SILVERLIGHT

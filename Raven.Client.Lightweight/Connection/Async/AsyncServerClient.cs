@@ -649,7 +649,10 @@ namespace Raven.Client.Connection.Async
 			if (string.IsNullOrEmpty(transformer) == false)
 				path += "&transformer=" + transformer;
 
-			path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+			if (queryInputs != null)
+			{
+				path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+			}
 
 			var uniqueIds = new HashSet<string>(keys);
 			HttpJsonRequest request;
