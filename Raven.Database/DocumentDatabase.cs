@@ -2355,11 +2355,11 @@ namespace Raven.Database
 
 					result = new JsonDocument
 					{
-						Etag = document.Etag,
+						Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()),
 						NonAuthoritativeInformation = document.NonAuthoritativeInformation,
 						LastModified = document.LastModified,
+						DataAsJson = new RavenJObject {{"$values", new RavenJArray(transformed)}},
 					};
-					result.DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed) } };
 				}
 			});
 			return result;
