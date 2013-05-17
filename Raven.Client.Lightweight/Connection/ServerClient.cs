@@ -1297,12 +1297,9 @@ namespace Raven.Client.Connection
 	            path += "&transformer=" + transformer;
 
 
-            foreach (var queryInput in queryInputs)
-            {
-                path += "&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value);
-            }
+		    path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
 
-			var uniqueIds = new HashSet<string>(ids);
+		    var uniqueIds = new HashSet<string>(ids);
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;

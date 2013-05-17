@@ -632,12 +632,12 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false)
+		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", s => DirectGetAsync(s, keys, includes, metadataOnly));
+			return ExecuteWithReplication("GET", s => DirectGetAsync(s, keys, includes, transformer, queryInputs, metadataOnly));
 		}
 
-		private Task<MultiLoadResult> DirectGetAsync(string opUrl, string[] keys, string[] includes, bool metadataOnly)
+		private Task<MultiLoadResult> DirectGetAsync(string opUrl, string[] keys, string[] includes, string transformer , Dictionary<string, RavenJToken> queryInputs , bool metadataOnly)
 		{
 			var path = opUrl + "/queries/?";
 			if (metadataOnly)
@@ -646,6 +646,11 @@ namespace Raven.Client.Connection.Async
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
+			if (string.IsNullOrEmpty(transformer) == false)
+				path += "&transformer=" + transformer;
+
+			path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+
 			var uniqueIds = new HashSet<string>(keys);
 			HttpJsonRequest request;
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
@@ -690,7 +695,7 @@ namespace Raven.Client.Connection.Async
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
 
-				return RetryOperationBecauseOfConflict(opUrl, docResults, multiLoadResult, () => DirectGetAsync(opUrl, keys, includes, false));
+				return RetryOperationBecauseOfConflict(opUrl, docResults, multiLoadResult, () => DirectGetAsync(opUrl, keys, includes, null, null, false));
 			}
 			catch (AggregateException e)
 			{
@@ -1772,7 +1777,7 @@ namespace Raven.Client.Connection.Async
 				resolvingConflict = true;
 				try
 				{
-					return DirectGetAsync(opUrl, conflictIds, null, false)
+					return DirectGetAsync(opUrl, conflictIds, null, null, null, false)
 						.ContinueWith(task =>
 						{
 							var results = task.Result.Results.Select(SerializationHelper.ToJsonDocument).ToArray();

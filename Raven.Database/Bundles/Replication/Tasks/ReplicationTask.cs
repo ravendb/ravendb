@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
@@ -900,6 +901,16 @@ namespace Raven.Bundles.Replication.Tasks
 			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source))
 			{
 				jsonDeserialization.Source = docDb.TransactionalStorage.Id.ToString();
+				try
+				{
+					var ravenJObject = RavenJObject.FromObject(jsonDeserialization);
+					ravenJObject.Remove("Id");
+					docDb.Put(Constants.RavenReplicationDestinations, document.Etag, ravenJObject, document.Metadata, null);
+				}
+				catch (ConcurrencyException)
+				{
+					// we will get it next time
+				}
 			}
 
 			if (jsonDeserialization.Source != docDb.TransactionalStorage.Id.ToString())
