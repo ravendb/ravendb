@@ -479,7 +479,7 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IAsyncDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderBy(propertySelectors.Select(x => GetMemberQueryPath(x)).ToArray());
+			OrderBy(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
 			return this;
 		}
 
@@ -503,7 +503,7 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IAsyncDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderByDescending(propertySelectors.Select(GetMemberQueryPath).ToArray());
+			OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
 			return this;
 		}		
 

@@ -2062,6 +2062,14 @@ If you really want to do in memory filtering on the data returned from the query
 			return QueryResultAsync
 				.ContinueWith(r => r.Result.TotalResults);
 		}
+		public string GetMemberQueryPathForOrderBy(Expression expression)
+		{
+			var memberQueryPath = GetMemberQueryPath(expression);
+			var memberExpression = linqPathProvider.GetMemberExpression(expression);
+			if (DocumentConvention.UsesRangeType(memberExpression.Type))
+				return memberQueryPath + "_Range";
+			return memberQueryPath;
+		}
 
 		public string GetMemberQueryPath(Expression expression)
 		{
@@ -2075,7 +2083,6 @@ If you really want to do in memory filtering on the data returned from the query
 				? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
 				: conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
 			return propertyName;
-
 		}
 	}
 }
