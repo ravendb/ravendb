@@ -980,7 +980,7 @@ namespace Raven.Studio.Models
 						TermVector = FieldTermVector.No,
 						Sort = SortOptions.None,
 						Analyzer = string.Empty,
-						SuggestionAccuracy = 0,
+						SuggestionAccuracy = 0.5f,
 						SuggestionDistance = StringDistanceTypes.None,
 					};
 				}
