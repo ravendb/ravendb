@@ -744,12 +744,20 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public bool UsesRangeType(Object o)
+		public bool UsesRangeType(object o)
 		{
-			if (o is int || o is long || o is double || o is float || o is decimal || o is TimeSpan)
+			if (o == null)
+				return false;
+			var type = o as Type ?? o.GetType();
+			var nonNullable = Nullable.GetUnderlyingType(type);
+			if (nonNullable != null)
+				type = nonNullable;
+
+			if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
+			    type == typeof (decimal) || type == typeof (TimeSpan))
 				return true;
 
-			return customRangeTypes.Contains(o.GetType());
+			return customRangeTypes.Contains(type);
 		}
 
 		public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);

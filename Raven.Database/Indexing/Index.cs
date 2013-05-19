@@ -32,9 +32,11 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
+using Document = Lucene.Net.Documents.Document;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -117,9 +119,22 @@ namespace Raven.Database.Indexing
 
 		protected DateTime PreviousIndexTime { get; set; }
 
-		public bool IsOnRam
+		public string IsOnRam
 		{
-			get { return directory is RAMDirectory; }
+			get
+			{
+				var ramDirectory = directory as RAMDirectory;
+				if (ramDirectory == null)
+					return "false";
+				try
+				{
+					return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
+				}
+				catch (AlreadyClosedException)
+				{
+					return "false";
+				}
+			}
 		}
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
@@ -377,7 +392,7 @@ namespace Raven.Database.Indexing
 						if (itemsInfo.ChangedDocs > 0)
 						{
 							UpdateIndexingStats(context, stats);
-							WriteInMemoryIndexToDiskIfNecessary();
+							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 							Flush(); // just make sure changes are flushed to disk
 						}
 					}
@@ -438,29 +453,26 @@ namespace Raven.Database.Indexing
 			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate);
 		}
 
-		private void WriteInMemoryIndexToDiskIfNecessary()
+		private void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
 		{
 			if (context.Configuration.RunInMemory ||
-				context.IndexDefinitionStorage == null || // may happen during index startup
-				context.IndexDefinitionStorage.IsNewThisSession(indexDefinition) == false)
+				context.IndexDefinitionStorage == null) // may happen during index startup
 				return;
 
 			var dir = indexWriter.Directory as RAMDirectory;
 			if (dir == null)
 				return;
 
-			var stale = false;
+			var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
 			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
 
-			context.Database.TransactionalStorage.Batch(accessor =>
-			{
-				stale = accessor.Staleness.IsIndexStale(indexDefinition.Name, null, null);
-			});
+			
 
 			if (forceWriteToDisk || toobig || !stale)
 			{
 				indexWriter.Commit();
 				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+				IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
 				directory = fsDir;
 
 				indexWriter.Analyzer.Close();
@@ -468,6 +480,8 @@ namespace Raven.Database.Indexing
 				CreateIndexWriter();
 			}
 		}
+
+		protected abstract bool IsUpToDateEnoughToWriteToDisk(Etag highestETag);
 
 		public RavenPerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
 		{

@@ -186,6 +186,16 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
 
+		protected override bool IsUpToDateEnoughToWriteToDisk(Etag highestETag)
+		{
+			bool upToDate = false;
+			context.Database.TransactionalStorage.Batch(accessor =>
+			{
+				upToDate = accessor.Staleness.GetMostRecentDocumentEtag() == highestETag;
+			});
+			return upToDate;
+		}
+
 		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
 		{
 			if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)

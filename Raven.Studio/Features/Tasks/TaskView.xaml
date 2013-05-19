@@ -50,9 +50,9 @@
 			</ListBox.ItemTemplate>
 		</ListBox>
 
-		<ContentControl Grid.Column="1" Content="{Binding SelectedSection.Value}" 
-                            HorizontalContentAlignment="Stretch" 
-                            VerticalContentAlignment="Stretch"
-                            Margin="10,10,0,0"/>
-	</Grid>
+        <Border DataContext="{Binding SelectedSection.Value}" Grid.Column="1" 
+                            Margin="10,10,0,0">
+            <tasks:TaskSectionView  Visibility="{Binding Converter={StaticResource HiddenWhenNull}}"/>
+        </Border>
+    </Grid>
 </infrastructure:View>

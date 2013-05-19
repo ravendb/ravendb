@@ -14,33 +14,9 @@
                          xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
                          d:DesignWidth="640" d:DesignHeight="480"
 						 Title="SmugglerTaskSectionView Page"
-						 d:DataContext="{d:DesignInstance tasks:SmugglerTaskSectionModel}">
+						 d:DataContext="{d:DesignInstance tasks:ExportTaskSectionModel}">
 
-	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-		
-		<Border Background="{StaticResource Brush_HeaderBackground}"
-                BorderBrush="{StaticResource Brush_HeaderBorder}"
-                BorderThickness="1,1,1,0"
-                CornerRadius="4,4,0,0">
-		</Border>
-		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
-			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Tasks_Small}"/>
-			<TextBlock Text="{Binding Name}"
-					   Style="{StaticResource Style_Text_Header}" />
-		</StackPanel>
-
-		<TextBlock FontSize="13"
-				   TextWrapping="Wrap"
-				   Grid.Row="1"
-				   Text="{Binding Description}"
-				   Margin="0,10" />
-
-		<controls:TabControl Grid.Row="2">
+		<controls:TabControl >
 			<controls:TabItem Header="General">
 				<Grid>
 					<Grid.RowDefinitions>
@@ -67,50 +43,6 @@
 								  VerticalAlignment="Center" Margin="5" Content=" Include Transformers"/>
 
 					</StackPanel>
-					<StackPanel Orientation="Horizontal" Grid.Row="1">
-						<Button Content="{Binding Name}"
-								Width="Auto"
-								HorizontalAlignment="Left"
-								Command="{Binding Action}"
-								IsEnabled="{Binding CanExecute.Value}"
-								Padding="8,4"
-								MinWidth="100"
-								Margin="0,10" />
-						<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
-								   VerticalAlignment="Center" 
-								   FontSize="21.333" 
-								   Margin="100,0,0,0"/>
-
-						<ProgressBar Margin="5" 
-									 Width="200" 
-									 Height="25"
-									 FlowDirection="LeftToRight" 
-									 IsIndeterminate="{Binding StatusBarActive}" 
-									 Visibility="{Binding TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
-					</StackPanel>
-					<ItemsControl ItemsSource="{Binding Output}"
-								  Grid.Row="2"
-								  BorderBrush="#FFEAE7E4"
-								  Background="{StaticResource Brush_SubtleBackground2}"
-								  BorderThickness="1"
-								  Margin="0,10,0,0">
-						<ItemsControl.Template>
-							<ControlTemplate TargetType="ItemsControl">
-								<ScrollViewer x:Name="ScrollViewer"
-											  VerticalScrollBarVisibility="Auto"
-											  BorderThickness="{TemplateBinding BorderThickness}"
-											  BorderBrush="{TemplateBinding BorderBrush}"
-											  Background="{TemplateBinding Background}">
-									<ItemsPresenter />
-								</ScrollViewer>
-							</ControlTemplate>
-						</ItemsControl.Template>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource RedIfError}}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
 				</Grid>
 			</controls:TabItem>
 
@@ -185,7 +117,7 @@
 
 							<CheckBox Grid.Column="0" 
 									  IsChecked="{Binding Options.Value.ShouldExcludeExpired, Mode=TwoWay}" 
-									  VerticalAlignment="Center" Margin="5" Content=" Should Exlude Expired"/>
+									  VerticalAlignment="Center" Margin="5" Content="Exclude Expired Documents"/>
 
 						<Grid>
 							<Grid.ColumnDefinitions>
@@ -204,7 +136,7 @@
 						</Grid.RowDefinitions>
 						
 						<CheckBox IsChecked="{Binding UseCollections.Value, Mode=TwoWay}"
-								  Content=" Use Collections"/>
+								  Content="Include only specified collections"/>
 						
 						<ListBox Visibility="{Binding UseCollections.Value, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
 								 ItemsSource="{Binding Collections}"
@@ -218,11 +150,10 @@
 						</ListBox>
 					</Grid>
 					
-					<TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="Transform Script:"></TextBlock>
+					<TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="Transform Script:" Style="{StaticResource Style_TextBlock_PagePartHeader}"></TextBlock>
 					<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="4"  BoundDocument="{Binding Script}" Margin="5"/>
 				</Grid>
 			
 			</controls:TabItem>
 		</controls:TabControl>
-	</Grid>
 </infrastructure:PageView>

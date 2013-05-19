@@ -122,6 +122,9 @@ namespace Raven.Abstractions.Data
 			}
 			else
 			{
+				if(DocumentId == null)
+					throw new ArgumentNullException("DocumentId", "DocumentId cannot be null");
+
 				pathSuffix = DocumentId;
 			}
 

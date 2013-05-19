@@ -6,6 +6,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -34,6 +35,7 @@ namespace Raven.Tests.Issues
 						{"Raven/Esent/CircularLog", "false"}
 					}
 			});
+			db.SpinBackgroundWorkers();
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
@@ -50,10 +52,19 @@ namespace Raven.Tests.Issues
 			db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
+			while (db.Statistics.StaleIndexes.Length != 0)
+			{
+				Thread.Sleep(10);
+			}
+
 			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			while (db.Statistics.StaleIndexes.Length != 0)
+			{
+				Thread.Sleep(10);
+			}
 
 			db.StartBackup(BackupDir, true, new DatabaseDocument());
 			WaitForBackup(db, true);
@@ -63,7 +74,7 @@ namespace Raven.Tests.Issues
 
 			var incrementalDirectories = Directory.GetDirectories(BackupDir, "Inc*");
 
-			// delte 'index-files.required-for-index-restore' to make backup corrupted according to the reported error
+			// delete 'index-files.required-for-index-restore' to make backup corrupted according to the reported error
 			File.Delete(Path.Combine(incrementalDirectories.First(),
 			                         "Indexes\\Raven%2fDocumentsByEntityName\\index-files.required-for-index-restore"));
 
@@ -105,6 +116,7 @@ namespace Raven.Tests.Issues
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			});
+			db.SpinBackgroundWorkers();
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
@@ -121,6 +133,13 @@ namespace Raven.Tests.Issues
 			db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+
+
+			while (db.Statistics.StaleIndexes.Length != 0)
+			{
+				Thread.Sleep(10);
+			}
+
 
 			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);

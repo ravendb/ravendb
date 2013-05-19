@@ -41,7 +41,10 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public bool CanPersist { get { return Name.StartsWith("Auto/") && IndexStats.IsOnRam; } }
+		public bool CanPersist { get
+		{
+			return Name.StartsWith("Auto/") && IndexStats.IsOnRam != "false";
+		} }
 
 		public object LockImage
 		{

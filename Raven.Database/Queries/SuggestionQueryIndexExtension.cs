@@ -121,8 +121,15 @@ namespace Raven.Database.Queries
 			{
 				foreach (var document in documents)
 				{
-					foreach (var fieldable in document.GetFieldables(field))
+					if (document == null)
+						continue;
+					var fieldables = document.GetFieldables(field);
+					if (fieldables == null)
+						continue;
+					foreach (var fieldable in fieldables)
 					{
+						if (fieldable == null)
+							continue;
 						var str = fieldable.StringValue;
 						if(string.IsNullOrEmpty(str))
 							continue;

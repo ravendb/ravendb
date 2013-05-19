@@ -257,16 +257,12 @@
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
-    <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\ChangeLockOfIndexCommand.cs" />
     <Compile Include="Commands\ExportReportToCsvCommand.cs" />
-    <Compile Include="Commands\CsvImportCommand.cs" />
     <Compile Include="Commands\CalculateGeocodeFromAddressCommand.cs" />
-    <Compile Include="Commands\CreateSampleDataCommand.cs" />
     <Compile Include="Commands\DeleteIndexesCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\ExportDocumentDetailsCommand.cs" />
-    <Compile Include="Commands\RestoreCommand.cs" />
     <Compile Include="Commands\SaveSettingsCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
@@ -338,17 +334,28 @@
     <Compile Include="Features\Stats\UserInfoStatusSectionView.xaml.cs">
       <DependentUpon>UserInfoStatusSectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Tasks\BackupDatabaseTask.cs" />
+    <Compile Include="Features\Tasks\CreateSampleDataTask.cs" />
+    <Compile Include="Features\Tasks\CsvImportTask.cs" />
+    <Compile Include="Features\Tasks\DatabaseTask.cs" />
+    <Compile Include="Features\Tasks\ExportDatabaseTask.cs" />
+    <Compile Include="Features\Tasks\ImportDatabaseTask.cs" />
+    <Compile Include="Features\Tasks\RestoreDatabaseTask.cs" />
     <Compile Include="Features\Tasks\SmugglerTaskSectionModel.cs" />
     <Compile Include="Features\Tasks\SmugglerTaskSectionView.xaml.cs">
       <DependentUpon>SmugglerTaskSectionView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\StartRestoreTaskSectionModel.cs" />
+    <Compile Include="Features\Tasks\TaskSectionView.xaml.cs">
+      <DependentUpon>TaskSectionView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Tasks\TasksPageView.xaml.cs">
       <DependentUpon>TasksPageView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Tasks\ToggleIndexingStatusDatabaseTask.cs" />
     <Compile Include="Features\Transformers\EditTransformerView.xaml.cs">
       <DependentUpon>EditTransformerView.xaml</DependentUpon>
     </Compile>
@@ -719,8 +726,6 @@
     <Compile Include="Commands\CopyToClipboardCommand.cs" />
     <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
     <Compile Include="Commands\DeleteIndexCommand.cs" />
-    <Compile Include="Commands\ExportDatabaseCommand.cs" />
-    <Compile Include="Commands\ImportDatabaseCommand.cs" />
     <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
     <Compile Include="Commands\NavigateToExternalUrlCommand.cs" />
@@ -1167,6 +1172,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Tasks\TaskSectionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Tasks\TasksPageView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1513,6 +1522,7 @@
     <Resource Include="Assets\Images\lock_error.png" />
     <Resource Include="Assets\Images\lock_open.png" />
     <Resource Include="Assets\Images\lock_preferences.png" />
+    <Resource Include="Assets\Images\execute_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

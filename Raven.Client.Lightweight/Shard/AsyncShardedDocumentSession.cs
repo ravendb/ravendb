@@ -17,6 +17,7 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
 {
@@ -143,70 +144,67 @@ namespace Raven.Client.Shard
 
 		public Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
+			return LoadAsyncInternal<T>(ids, includes, transformer: null, queryInputs: null);
+		}
+
+		private async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs)
+		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
 
 			if (!idsToLoad.Any())
-				return CompletedTask.With(new T[ids.Length]);
+				return results;
 
 			IncrementRequestCount();
 
-			var loadTasks = idsToLoad.Select(shardsAndIds => (Func<Task>) (() =>
+			foreach (var shard in idsToLoad)
 			{
-				var shards = shardsAndIds.Key;
-				var idsForCurrentShards = shardsAndIds.Select(x => x.Id).ToArray();
-
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
+				var currentShardIds = shard.Select(x => x.Id).ToArray();
+				var multiLoadOperations = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key, new ShardRequestData
 				{
 					EntityType = typeof(T),
-					Keys = idsForCurrentShards
-				}, (commands, i) =>
+					Keys = currentShardIds.ToList()
+				}, async (dbCmd, i) =>
 				{
-					var multiLoadOperation = new MultiLoadOperation(this, commands.DisableAllCaching, idsForCurrentShards, includes);
-
-					Func<Task<MultiLoadOperation>> executer = null;
-					executer = () =>
+					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
+					MultiLoadResult multiLoadResult;
+					do
 					{
 						multiLoadOperation.LogOperation();
-
-						IDisposable loadContext = multiLoadOperation.EnterMultiLoadContext();
-						return commands.GetAsync(idsForCurrentShards, includePaths).ContinueWith(task =>
+						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							loadContext.Dispose();
-
-							if (multiLoadOperation.SetResult(task.Result))
-								return executer();
-							return CompletedTask.With(multiLoadOperation);
-						}).Unwrap();
-					};
-
-					return executer();
-				});
-
-				return multiLoadOperations.ContinueWith(task =>
-				{
-					foreach (var loadResults in task.Result.Select(multiLoadOperation => multiLoadOperation.Complete<T>()))
-					{
-						for (int i = 0; i < loadResults.Length; i++)
-						{
-							if (ReferenceEquals(loadResults[i], null))
-								continue;
-							var id = idsForCurrentShards[i];
-							var itemPosition = Array.IndexOf(ids, id);
-							if (ReferenceEquals(results[itemPosition], default(T)) == false)
-							{
-								throw new InvalidOperationException("Found document with id: " + id +
-								                                    " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-							}
-							results[itemPosition] = loadResults[i];
+							multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs);
 						}
-					}
+					} while (multiLoadOperation.SetResult(multiLoadResult));
+					return multiLoadOperation;
 				});
-			}));
-
-			return loadTasks.StartInParallel().WithResult(() => results);
+				foreach (var multiLoadOperation in multiLoadOperations)
+				{
+					var loadResults = multiLoadOperation.Complete<T>();
+					for (int i = 0; i < loadResults.Length; i++)
+					{
+						if (ReferenceEquals(loadResults[i], null))
+							continue;
+						var id = currentShardIds[i];
+						var itemPosition = Array.IndexOf(ids, id);
+						if (ReferenceEquals(results[itemPosition], default(T)) == false)
+						{
+							throw new InvalidOperationException("Found document with id: " + id +
+																" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+						}
+						results[itemPosition] = loadResults[i];
+					}
+				}
+			}
+			return ids.Select(id => // so we get items that were skipped because they are already in the session cache
+			{
+				object val;
+				entitiesByKey.TryGetValue(id, out val);
+				return (T)val;
+			}).ToArray();
 		}
+
 
 		public IAsyncLoaderWithInclude<object> Include(string path)
 		{

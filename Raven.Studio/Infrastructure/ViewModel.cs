@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reactive;
 using System.Reactive.Subjects;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
@@ -51,5 +52,10 @@ namespace Raven.Studio.Infrastructure
 		{
 			get { return ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value]; }
 		}
-	}
+        public Observable<DatabaseModel> Database {get { return ApplicationModel.Database; }}
+        public IAsyncDatabaseCommands DatabaseCommands
+        {
+            get { return Database.Value.AsyncDatabaseCommands; }
+        }
+    }
 }

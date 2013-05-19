@@ -18,7 +18,7 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			new DeleteDatabase().ShowAsync()
+            new DeleteDatabase() { DatabaseName = databasesModel.SelectedDatabase.Name }.ShowAsync()
 			                    .ContinueOnSuccessInTheUIThread(deleteDatabase =>
 			                    {
 									if(deleteDatabase == null)

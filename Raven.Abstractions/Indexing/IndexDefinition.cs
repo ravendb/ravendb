@@ -292,6 +292,11 @@ namespace Raven.Abstractions.Indexing
 			}
 		}
 
+		public override string ToString()
+		{
+			return Name ?? Map;
+		}
+
 		public IndexDefinition Clone()
 		{
 			var indexDefinition = new IndexDefinition
@@ -360,6 +365,11 @@ namespace Raven.Abstractions.Indexing
 		public TransformerDefinition Clone()
 		{
 			return (TransformerDefinition) MemberwiseClone();
+		}
+
+		public override string ToString()
+		{
+			return Name ?? TransformResults;
 		}
 	}
 }

@@ -256,7 +256,9 @@ namespace Raven.Database.Indexing
 			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
-			if (indexDefinitionStorage.IsNewThisSession(indexDefinition) || configuration.RunInMemory)
+			if (configuration.RunInMemory ||
+				(indexDefinition.IsMapReduce == false &&  // there is no point in creating map/reduce indexes in memory, we write the intermediate results to disk anyway
+				 indexDefinitionStorage.IsNewThisSession(indexDefinition)))
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
@@ -366,7 +368,7 @@ namespace Raven.Database.Indexing
 													lastCommitPoint.TimeStamp));
 		}
 
-		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		public static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
 			var indexVersion = "index.version";
 			var version = IndexVersion;
@@ -1113,7 +1115,7 @@ namespace Raven.Database.Indexing
 											 index.MergeSegments());
 		}
 
-		public bool IndexOnRam(string name)
+		public string IndexOnRam(string name)
 		{
 			return GetIndexByName(name).IsOnRam;
 		}

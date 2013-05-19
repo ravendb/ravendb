@@ -425,6 +425,7 @@ function ExecutePatchScript(docInner){{
 					continue;
 				Debug.Add(o.ToString());
 			}
+			engine.SetParameter("debug_outputs", engine.Global.ArrayClass.New());
 		}
 
 		private static string GetFromResources(string resourceName)

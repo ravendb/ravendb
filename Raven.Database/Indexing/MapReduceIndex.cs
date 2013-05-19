@@ -293,6 +293,14 @@ namespace Raven.Database.Indexing
 			// MapReduce index does not store and use any commit points
 		}
 
+		protected override bool IsUpToDateEnoughToWriteToDisk(Etag highestETag)
+		{
+			// for map/reduce indexes, we always write to disk, the in memory optimization
+			// isn't really doing much for us, since we already write the intermediate results 
+			// to disk anyway, so it doesn't matter
+			return true;
+		}
+
 		public override void Remove(string[] keys, WorkContext context)
 		{
 			context.TransactionalStorage.Batch(actions =>
@@ -430,6 +438,12 @@ namespace Raven.Database.Indexing
 					return ravenJObject;
 				var jsonDocument = RavenJObject.FromObject(doc);
 				MergeArrays(jsonDocument);
+
+				// remove _, __, etc fields
+				foreach (var prop in jsonDocument.Where(x=>x.Key.All(ch=>ch == '_')).ToArray())
+				{
+					jsonDocument.Remove(prop.Key);
+				}
 				return jsonDocument;
 			}
 

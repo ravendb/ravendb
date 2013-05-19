@@ -45,7 +45,7 @@ namespace Raven.Database.Storage
         private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
             new ConcurrentDictionary<string, IndexDefinition>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, IndexDefinition> newDefinitionsThisSession = new ConcurrentDictionary<string, IndexDefinition>();
+        private readonly ConcurrentDictionary<string, IndexDefinition> newDefinitionsThisSession = new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
 
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         private readonly string path;
@@ -77,7 +77,7 @@ namespace Raven.Database.Storage
 
         public bool IsNewThisSession(IndexDefinition definition)
         {
-            return this.newDefinitionsThisSession.ContainsKey(definition.Name);
+            return newDefinitionsThisSession.ContainsKey(definition.Name);
         }
 
         private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)
@@ -236,6 +236,11 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
+		public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)
+		{
+			newDefinitionsThisSession.TryAdd(name, definition);
+		}
+
         public void AddIndex(string name, IndexDefinition definition)
         {
             indexDefinitions.AddOrUpdate(name, definition, (s1, def) =>
@@ -244,7 +249,6 @@ namespace Raven.Database.Storage
                     throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
                 return definition;
             });
-            newDefinitionsThisSession.TryAdd(name, definition);
         }
 
         public void AddTransform(string name, TransformerDefinition definition)

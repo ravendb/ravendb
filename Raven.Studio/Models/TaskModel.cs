@@ -9,17 +9,17 @@ namespace Raven.Studio.Models
 	{
 		public TaskModel()
 		{
-			Sections = new ObservableCollection<TaskSectionModel>();
-			SelectedSection = new Observable<TaskSectionModel>();
+			Sections = new ObservableCollection<ViewModel>();
+            SelectedSection = new Observable<ViewModel>();
 		}
 
-		public ObservableCollection<TaskSectionModel> Sections { get; private set; }
+        public ObservableCollection<ViewModel> Sections { get; private set; }
 
-		public T GetSection<T>() where T : TaskSectionModel
+        public T GetSection<T>() where T : ViewModel
 		{
 			return Sections.OfType<T>().FirstOrDefault();
 		}
 
-		public Observable<TaskSectionModel> SelectedSection { get; private set; }
+        public Observable<ViewModel> SelectedSection { get; private set; }
 	}
 }
