@@ -45,7 +45,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 				</Grid.RowDefinitions>
-				<StackPanel>
+				<StackPanel Margin="5">
 					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
 						<TextBlock Text="Index Script" 
 									Margin="0,0,10,0"
@@ -69,12 +69,13 @@
 					</StackPanel>
 
 					<Editors:EditorBase BoundDocument="{Binding IndexScript}" 
+										MinHeight="150"
 										IsSelectionMarginVisible="False" 
 										IsLineNumberMarginVisible="False" 
 										AreLineModificationMarksVisible="False"/>
 				</StackPanel>
 
-				<StackPanel Grid.Row="1">
+				<StackPanel Grid.Row="1" Margin="5">
 					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
 						<TextBlock Text="Delete Script" 
 									Margin="0,0,10,0"
@@ -99,6 +100,7 @@
 
 					<Editors:EditorBase BoundDocument="{Binding DeleteScript}" 
 										IsSelectionMarginVisible="False" 
+										MinHeight="150"
 										IsLineNumberMarginVisible="False" 
 										AreLineModificationMarksVisible="False"/>
 				</StackPanel>

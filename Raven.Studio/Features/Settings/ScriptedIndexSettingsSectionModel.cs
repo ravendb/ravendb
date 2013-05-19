@@ -16,19 +16,21 @@ namespace Raven.Studio.Features.Settings
 {
 	public class ScriptedIndexSettingsSectionModel : SettingsSectionModel
 	{
-		private static readonly ISyntaxLanguage JScriptLanguage;
+		private static readonly ISyntaxLanguage IndexLanguage;
+		private static readonly ISyntaxLanguage DeleteLanguage;
 
 		public BindableCollection<string> AvailableIndexes { get; private set; }
-		private Observable<DatabaseModel> Database { get { return ApplicationModel.Database; } }
 		public Dictionary<string, ScriptedIndexResults> ScriptedIndexes { get; private set; }
 		private ScriptedIndexResults SelectedScript { get; set; }
+		public List<string> IndexItem { get; set; }
 
 		public EditorDocument IndexScript { get; private set; }
 		public EditorDocument DeleteScript { get; private set; }
 
 		static ScriptedIndexSettingsSectionModel()
 		{
-			JScriptLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("JScript.langdef");
+			IndexLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("JScript.langdef");
+			DeleteLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("JScript.langdef");
 		}
 
 		public ScriptedIndexSettingsSectionModel()
@@ -36,13 +38,16 @@ namespace Raven.Studio.Features.Settings
 			AvailableIndexes = new BindableCollection<string>(x => x);
 			SectionName = "Scripted Index";			
 			ScriptedIndexes = new Dictionary<string, ScriptedIndexResults>();
-			IndexScript = new EditorDocument { Language = JScriptLanguage };
-			DeleteScript = new EditorDocument { Language = JScriptLanguage };
+			IndexItem = new List<string>();
+			IndexScript = new EditorDocument { Language = IndexLanguage };
+			DeleteScript = new EditorDocument { Language = DeleteLanguage };
 			UpdateAvailableIndexes();
-			LoadScrtipForIndex();
+			LoadScriptForIndex();
+			IndexScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider(this));
+			DeleteScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider());
 		}
 
-		private void LoadScrtipForIndex()
+		private void LoadScriptForIndex()
 		{
 			if (IndexName == null)
 				return;
@@ -100,9 +105,24 @@ namespace Raven.Studio.Features.Settings
 					StoreChanges();
 
 				indexName = value;
-				LoadScrtipForIndex();
+				LoadScriptForIndex();
+				UpdateIntelli();
 				OnPropertyChanged(() => IndexName);
 			}
+		}
+
+		private void UpdateIntelli()
+		{
+			DatabaseCommands.GetIndexAsync(IndexName)
+				.ContinueOnUIThread(task =>
+				{
+					if (task.IsFaulted || task.Result == null)
+					{
+						return;
+					}
+
+					IndexItem = task.Result.Fields.ToList();
+				}).Catch();
 		}
 
 		public void StoreChanges()
