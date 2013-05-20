@@ -20,6 +20,7 @@ namespace Raven.Database.Storage
 		Guid Id { get; }
 
 	    IDisposable WriteLock();
+		IDisposable DisableBatchNesting();
 
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);

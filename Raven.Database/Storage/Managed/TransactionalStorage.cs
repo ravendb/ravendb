@@ -26,6 +26,7 @@ namespace Raven.Storage.Managed
 	public class TransactionalStorage : ITransactionalStorage
 	{
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
@@ -39,7 +40,7 @@ namespace Raven.Storage.Managed
 
 		private IPersistentSource persistenceSource;
 		private volatile bool disposed;
-		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 		private Timer idleTimer;
 		private long lastUsageTime;
 		private IUuidGenerator uuidGenerator;
@@ -95,10 +96,16 @@ namespace Raven.Storage.Managed
             return exitLockDisposable;
 	    }
 
+		public IDisposable DisableBatchNesting()
+		{
+			disableBatchNesting.Value = new object();
+			return new DisposableAction(() => disableBatchNesting.Value = null);
+		}
+
 	    [DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
-			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
+			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
 			{
 				if (current.Value != null) // check again, just to be sure
 				{
@@ -123,7 +130,7 @@ namespace Raven.Storage.Managed
 			finally
 			{
 				disposerLock.ExitReadLock();
-				if (disposed == false)
+				if (disposed == false && disableBatchNesting.Value == null)
 					current.Value = null;
 			}
 			result.InvokeOnCommit();
@@ -137,8 +144,9 @@ namespace Raven.Storage.Managed
 			using (tableStorage.BeginTransaction())
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
-				current.Value = storageActionsAccessor;
-				action(current.Value);
+				if (disableBatchNesting.Value == null)
+					current.Value = storageActionsAccessor;
+				action(storageActionsAccessor);
 				storageActionsAccessor.SaveAllTasks();
 				tableStorage.Commit();
 				return storageActionsAccessor;
