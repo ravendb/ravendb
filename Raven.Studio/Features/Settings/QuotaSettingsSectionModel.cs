@@ -10,10 +10,10 @@ namespace Raven.Studio.Features.Settings
             SectionName = "Quotas";
         }
 
-        public int MaxSize { get; set; }
-        public int WarnSize { get; set; }
-        public int MaxDocs { get; set; }
-        public int WarnDocs { get; set; }
+        public long MaxSize { get; set; }
+		public long WarnSize { get; set; }
+		public long MaxDocs { get; set; }
+		public long WarnDocs { get; set; }
 
         public override void LoadFor(DatabaseDocument document)
         {
@@ -25,12 +25,15 @@ namespace Raven.Studio.Features.Settings
             OnEverythingChanged();
         }
 
-        private static int ReadSettingAsInt(DatabaseDocument document, string settingName)
+        private static long ReadSettingAsInt(DatabaseDocument document, string settingName)
         {
-            var value = 0;
-            if (document.Settings.ContainsKey(settingName))
-                int.TryParse(document.Settings[settingName], out value);
-            return value;
+	        long value;
+	        if (document.Settings.ContainsKey(settingName))
+		        long.TryParse(document.Settings[settingName], out value);
+	        else
+		        value = long.MaxValue;
+
+	        return value;
         }
     }
 }
