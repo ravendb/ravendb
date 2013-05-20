@@ -51,6 +51,17 @@ namespace Raven.Database.Server.Responders.Admin
 				return;
 			}
 
+            if (databaseName == Constants.SystemDatabase)
+            {
+                context.SetStatusToBadRequest();
+                context.WriteJson(new
+                {
+                    Error = "Cannot do an online restore for the <system> database"
+                });
+                return;
+            }
+
+
 			var ravenConfiguration = new RavenConfiguration()
 			{
 				DatabaseName = databaseName,
