@@ -248,7 +248,7 @@ namespace Raven.Database.Queries
                                 switch (facet.Mode)
                                 {
                                     case FacetMode.Default:
-                                        var facetValues = facetsByName.GetOrAdd(term.Field);
+                                        var facetValues = facetsByName.GetOrAdd(facet.DisplayName);
                                         FacetValue existing;
                                         if (facetValues.TryGetValue(term.Text, out existing) == false)
                                         {
@@ -333,6 +333,8 @@ namespace Raven.Database.Queries
                         if (match.Value.Docs.Contains(docId) == false)
                             continue;
                         var facet = match.Value.Facet;
+						if(term.Field != facet.AggregationField)
+							continue;
                         switch (facet.Mode)
                         {
                             case FacetMode.Default:
@@ -456,7 +458,7 @@ namespace Raven.Database.Queries
                     List<string> allTerms;
 
                     int maxResults = Math.Min(PageSize ?? facet.MaxResults ?? Database.Configuration.MaxPageSize, Database.Configuration.MaxPageSize);
-                    var groups = facetsByName.GetOrDefault(facet.Name);
+                    var groups = facetsByName.GetOrDefault(facet.DisplayName);
 
                     if (groups == null)
                         continue;
