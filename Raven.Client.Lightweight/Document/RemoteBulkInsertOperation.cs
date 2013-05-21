@@ -103,7 +103,8 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			try
 			{
-				expect100Continue.Dispose();
+				if (expect100Continue != null)
+					expect100Continue.Dispose();
 			}
 			catch
 			{
@@ -111,7 +112,7 @@ namespace Raven.Client.Document
 			}
 #endif
 			var cancellationToken = CreateCancellationToken();
-			WriteQueueToServer(stream, options, cancellationToken);
+			await Task.Factory.StartNew(() => WriteQueueToServer(stream, options, cancellationToken), TaskCreationOptions.LongRunning);
 		}
 
 		private CancellationToken CreateCancellationToken()
