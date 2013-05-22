@@ -391,6 +391,7 @@ more responsive application.
 		/// <summary>
 		/// Tracks the entity.
 		/// </summary>
+		/// <param name="entityType">The entity type.</param>
 		/// <param name="key">The key.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>

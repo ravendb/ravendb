@@ -37,7 +37,9 @@ namespace Raven.Client.Extensions
 		/// <summary>
 		/// Stores the specified dynamic entity, under the specified id
 		/// </summary>
+		/// <param name="session">The session.</param>
 		/// <param name="entity">The entity.</param>
+		/// <param name="etag">The etag.</param>
 		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
 		public static void Store(this IAsyncDocumentSession session, object entity, Etag etag, string id)
 		{
