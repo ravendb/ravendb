@@ -2270,6 +2270,12 @@ namespace Raven.Database
 								inserts++;
 
 							doc.Etag = result.Etag;
+							
+							doc.Metadata.EnsureSnapshot(
+								"Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							doc.DataAsJson.EnsureSnapshot(
+								"Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+
 
 							foreach (var trigger in PutTriggers)
 							{
