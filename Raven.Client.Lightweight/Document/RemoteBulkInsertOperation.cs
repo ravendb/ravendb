@@ -65,6 +65,8 @@ namespace Raven.Client.Document
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
 		{
+			SynchronizationContext.SetSynchronizationContext(null);
+
 			OperationId = Guid.NewGuid();
 			operationClient = client;
 			operationChanges = changes;
