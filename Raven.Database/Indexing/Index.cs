@@ -138,13 +138,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public bool IsCurrentMapIndexingTaskRunning
-		{
-			get
-			{
-				return CurrentMapIndexingTask != null;
-			}
-		}
+		public bool IsInProgress { get; set; }
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{

@@ -393,7 +393,7 @@ namespace Raven.Database
                         .Where(s =>
                         {
 							var indexInstance = IndexStorage.GetIndexInstance(s);
-	                        return (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning) ||
+	                        return (indexInstance != null && indexInstance.IsInProgress) ||
 	                               actions.Staleness.IsIndexStale(s, null, null);
                         }).ToArray();
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).ToArray();
@@ -1251,7 +1251,7 @@ namespace Raven.Database
 					if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
 					{
 						var indexInstance = IndexStorage.GetIndexInstance(index);
-						stale = stale || (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning);
+						stale = stale || (indexInstance != null && indexInstance.IsInProgress);
 					}
 
                     indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
@@ -1382,7 +1382,7 @@ namespace Raven.Database
 	                if (isStale == false && query.Cutoff == null)
 	                {
 						var indexInstance = IndexStorage.GetIndexInstance(index);
-		                isStale = isStale || (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning);
+		                isStale = isStale || (indexInstance != null && indexInstance.IsInProgress);
 	                }
 
                     var indexFailureInformation = actions.Indexing.GetFailureRate(index);
@@ -2179,7 +2179,7 @@ namespace Raven.Database
             TransactionalStorage.Batch(accessor =>
             {
 				var indexInstance = IndexStorage.GetIndexInstance(indexName);
-	            isStale = (indexInstance != null && indexInstance.IsCurrentMapIndexingTaskRunning) ||
+	            isStale = (indexInstance != null && indexInstance.IsInProgress) ||
 	                      accessor.Staleness.IsIndexStale(indexName, null, null);
                 lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
                 var indexStats = accessor.Indexing.GetIndexStats(indexName);
