@@ -264,6 +264,11 @@ namespace Raven.Tests.Helpers
 			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(10)));
 		}
 
+		public static void WaitForIndexing(DocumentDatabase db)
+		{
+			Assert.True(SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)));
+		}
+
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
 			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));

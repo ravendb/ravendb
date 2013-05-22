@@ -52,19 +52,14 @@ namespace Raven.Tests.Issues
 			db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-			while (db.Statistics.StaleIndexes.Length != 0)
-			{
-				Thread.Sleep(10);
-			}
+			WaitForIndexing(db);
 
 			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-			while (db.Statistics.StaleIndexes.Length != 0)
-			{
-				Thread.Sleep(10);
-			}
+
+			WaitForIndexing(db);
 
 			db.StartBackup(BackupDir, true, new DatabaseDocument());
 			WaitForBackup(db, true);
@@ -116,6 +111,7 @@ namespace Raven.Tests.Issues
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			});
+			db.SpinBackgroundWorkers();
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
@@ -132,6 +128,8 @@ namespace Raven.Tests.Issues
 			db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+
+			WaitForIndexing(db);
 
 			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
