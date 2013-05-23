@@ -253,8 +253,13 @@ namespace Raven.Client.Document
 #endif
 		}
 
+		private volatile bool disposed;
+
 		public async Task DisposeAsync()
 		{
+			if (disposed)
+				return;
+			disposed = true;
 			queue.Add(null);
 			await operationTask;
 
@@ -285,7 +290,11 @@ namespace Raven.Client.Document
 
 		public void Dispose()
 		{
-			DisposeAsync().Wait();
+			if (disposed)
+				return;
+
+			var disposeAsync = DisposeAsync().ConfigureAwait(false);
+			disposeAsync.GetAwaiter().GetResult();
 		}
 
 		private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
