@@ -138,7 +138,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public bool IsInProgress { get; set; }
+		public volatile bool IsMapIndexingInProgress;
 
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{

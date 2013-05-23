@@ -311,7 +311,7 @@ namespace Raven.Database.Server.Responders
 					if (isIndexStale == false && indexQuery.Cutoff == null && indexQuery.CutoffEtag == null)
 					{
 						var indexInstance = Database.IndexStorage.GetIndexInstance(index);
-						isIndexStale = isIndexStale || (indexInstance != null && indexInstance.IsInProgress);
+						isIndexStale = isIndexStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
 					}
 
                     indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);

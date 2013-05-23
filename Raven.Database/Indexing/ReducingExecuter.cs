@@ -332,6 +332,11 @@ namespace Raven.Database.Indexing
 			return lastProcessedEtag;
 		}
 
+		protected override void MapIndexingIsInProgress(Index index)
+		{
+			// we only mark Map phase as in progress, nothing to do here
+		}
+
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
