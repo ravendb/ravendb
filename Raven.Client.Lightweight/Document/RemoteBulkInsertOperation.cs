@@ -65,14 +65,25 @@ namespace Raven.Client.Document
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
 		{
-			OperationId = Guid.NewGuid();
-			operationClient = client;
-			operationChanges = changes;
-			queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
+			var synchronizationContext = SynchronizationContext.Current;
+			try
+			{
+				SynchronizationContext.SetSynchronizationContext(null);
 
-			operationTask = StartBulkInsertAsync(options);
+				OperationId = Guid.NewGuid();
+				operationClient = client;
+				operationChanges = changes;
+				queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 
-			SubscribeToBulkInsertNotifications(changes);
+				operationTask = StartBulkInsertAsync(options);
+
+				SubscribeToBulkInsertNotifications(changes);
+			}
+			finally
+			{
+				SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+			}
+			
 		}
 
 		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
@@ -103,7 +114,8 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			try
 			{
-				expect100Continue.Dispose();
+				if (expect100Continue != null)
+					expect100Continue.Dispose();
 			}
 			catch
 			{
@@ -111,7 +123,7 @@ namespace Raven.Client.Document
 			}
 #endif
 			var cancellationToken = CreateCancellationToken();
-			WriteQueueToServer(stream, options, cancellationToken);
+			await Task.Factory.StartNew(() => WriteQueueToServer(stream, options, cancellationToken), TaskCreationOptions.LongRunning);
 		}
 
 		private CancellationToken CreateCancellationToken()
@@ -241,8 +253,13 @@ namespace Raven.Client.Document
 #endif
 		}
 
+		private volatile bool disposed;
+
 		public async Task DisposeAsync()
 		{
+			if (disposed)
+				return;
+			disposed = true;
 			queue.Add(null);
 			await operationTask;
 
@@ -273,7 +290,11 @@ namespace Raven.Client.Document
 
 		public void Dispose()
 		{
-			DisposeAsync().Wait();
+			if (disposed)
+				return;
+
+			var disposeAsync = DisposeAsync().ConfigureAwait(false);
+			disposeAsync.GetAwaiter().GetResult();
 		}
 
 		private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)

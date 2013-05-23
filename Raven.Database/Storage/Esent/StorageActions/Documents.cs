@@ -232,25 +232,26 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
+			if (take <= 0)
+				yield break;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
-				return Enumerable.Empty<JsonDocument>();
+				yield break;
 
 			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
-			if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
-				return Enumerable.Empty<JsonDocument>();
+			if (
+				Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) ==
+				false)
+				yield break;
 
 			if (TryMoveTableRecords(Documents, start, backward: false))
-				return Enumerable.Empty<JsonDocument>();
-
-			var optimizer = new OptimizedIndexReader();
+				yield break;
 			do
 			{
-				optimizer.Add(Session, Documents);
-			} while (Api.TryMoveNext(session, Documents) && optimizer.Count < take);
-
-			return optimizer.Select(Session, Documents, ReadCurrentDocument);
+				yield return ReadCurrentDocument();
+				take--;
+			} while (Api.TryMoveNext(session, Documents) && take > 0);
 		}
 
 		public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)
@@ -273,6 +274,8 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
 				update.Save();
 			}
+
+			etagTouches.Add(preTouchEtag, afterTouchEtag);
 		}
 
 		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)

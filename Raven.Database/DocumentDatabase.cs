@@ -2395,17 +2395,17 @@ namespace Raven.Database
                     if (transformed.Length == 0)
                         return;
 
-                    result = new JsonDocument
-                    {
-                        Etag = document.Etag,
-                        NonAuthoritativeInformation = document.NonAuthoritativeInformation,
-                        LastModified = document.LastModified,
-                    };
-                    result.DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed) } };
-                }
-            });
-            return result;
-        }
+					result = new JsonDocument
+					{
+						Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()),
+						NonAuthoritativeInformation = document.NonAuthoritativeInformation,
+						LastModified = document.LastModified,
+						DataAsJson = new RavenJObject {{"$values", new RavenJArray(transformed)}},
+					};
+				}
+			});
+			return result;
+		}
 
         public TransformerDefinition GetTransformerDefinition(string name)
         {

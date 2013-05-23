@@ -128,8 +128,7 @@ namespace Raven.Database.Indexing
 					return "false";
 				try
 				{
-					var sizeInBytes = ramDirectory.SizeInBytes();
-					return "true (" + DatabaseSize.Humane(sizeInBytes) + ")";
+					return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
 				}
 				catch (AlreadyClosedException)
 				{

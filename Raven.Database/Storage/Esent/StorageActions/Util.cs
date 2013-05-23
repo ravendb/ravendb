@@ -21,24 +21,32 @@ namespace Raven.Storage.Esent.StorageActions
 		private Etag EnsureDocumentEtagMatch(string key, Etag etag, string method)
 		{
 			var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-			if (existingEtag != etag && etag != null)
+			if (etag != null)
 			{
-				if(etag == Etag.InvalidEtag)
+				Etag next;
+				while (etagTouches.TryGetValue(etag, out next))
 				{
-					var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-					if(metadata.ContainsKey(Constants.RavenDeleteMarker) && 
-						metadata.Value<bool>(Constants.RavenDeleteMarker))
-					{
-						return existingEtag;
-					}
+					etag = next;
 				}
-
-				throw new ConcurrencyException(method + " attempted on document '" + key +
-											   "' using a non current etag")
+				if (existingEtag != etag)
 				{
-					ActualETag = existingEtag,
-					ExpectedETag = etag
-				};
+					if (etag == Etag.InvalidEtag)
+					{
+						var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+						if (metadata.ContainsKey(Constants.RavenDeleteMarker) &&
+							metadata.Value<bool>(Constants.RavenDeleteMarker))
+						{
+							return existingEtag;
+						}
+					}
+
+					throw new ConcurrencyException(method + " attempted on document '" + key +
+												   "' using a non current etag")
+					{
+						ActualETag = existingEtag,
+						ExpectedETag = etag
+					};
+				}
 			}
 			return existingEtag;
 		}
