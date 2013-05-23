@@ -199,8 +199,6 @@ namespace Raven.Database.Indexing
 
 		protected abstract Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag);
 
-		protected abstract void MapIndexingIsInProgress(Index index);
-
 		protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
 		{
 			Etag synchronizationEtag = null;
@@ -228,12 +226,8 @@ namespace Raven.Database.Indexing
 					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
 					if (index == null || // not there
 					    index.CurrentMapIndexingTask != null) // busy doing indexing work already, not relevant for this batch
-					{
-						if (index != null) MapIndexingIsInProgress(index);
 						continue;
-					}
 
-					MapIndexingIsInProgress(index);
 					indexToWorkOn.Index = index;
 					indexesToWorkOn.Add(indexToWorkOn);
 				}

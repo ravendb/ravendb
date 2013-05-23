@@ -98,11 +98,6 @@ namespace Raven.Database.Indexing
 			return etagSynchronizer.CalculateSynchronizationEtag(currentEtag, lastProcessedEtag);
 		}
 
-		protected override void MapIndexingIsInProgress(Index index)
-		{
-			index.IsMapIndexingInProgress = true;
-		}
-
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
@@ -122,6 +117,9 @@ namespace Raven.Database.Indexing
 			TimeSpan indexingDuration = TimeSpan.Zero;
 			List<JsonDocument> jsonDocs = null;
 			var lastEtag = Etag.Empty;
+
+			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
+
 			try
 			{
 				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
@@ -155,6 +153,8 @@ namespace Raven.Database.Indexing
 				}
 
 				prefetchingBehavior.BatchProcessingComplete();
+
+				indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
 			}
 		}
 
@@ -219,7 +219,6 @@ namespace Raven.Database.Indexing
 						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
 						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
 						indexToWorkOn.Index.CurrentMapIndexingTask = null;
-						indexToWorkOn.Index.IsMapIndexingInProgress = false;
 
 						return done;
 					}
