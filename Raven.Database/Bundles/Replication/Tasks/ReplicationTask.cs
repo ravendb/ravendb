@@ -127,6 +127,8 @@ namespace Raven.Bundles.Replication.Tasks
 										return IsNotFailing(dest, currentReplicationAttempts);
 									});
 
+								var startedTasks = new List<Task>();
+
 								foreach (var dest in destinationForReplication)
 								{
 									var destination = dest;
@@ -149,6 +151,9 @@ namespace Raven.Bundles.Replication.Tasks
 											}
 										}
 									});
+
+									startedTasks.Add(replicationTask);
+
 									activeTasks.Enqueue(replicationTask);
 									replicationTask.ContinueWith(_ =>
 									{
@@ -162,6 +167,19 @@ namespace Raven.Bundles.Replication.Tasks
 										}
 									});
 								}
+
+								TaskEx.WhenAll(startedTasks.ToArray()).ContinueWith(t =>
+								{
+									if (destinationStats.Count != 0)
+									{
+										var minLastReplicatedEtag = destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
+										                                            .Select(x => x.Value.LastReplicatedEtag)
+										                                            .Min(x => new ComparableByteArray(x.ToByteArray()));
+										                            
+                						if(minLastReplicatedEtag != null)
+											prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
+									}
+								}).AssertNotFailed();
 							}
 						}
 					}
