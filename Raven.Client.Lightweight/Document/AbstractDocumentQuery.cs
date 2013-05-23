@@ -672,7 +672,7 @@ namespace Raven.Client.Document
 			if (queryOperation == null)
 			{
 				ExecuteBeforeQueryListeners();
-				queryOperation = InitializeQueryOperation(headers.Add);
+				queryOperation = InitializeQueryOperation((key, val) => headers[key] =val);
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
