@@ -115,12 +115,12 @@ namespace Raven.Database.Prefetching
 					.ToList();
 			});
 			
-			MaybeAddFutureBatch(jsonDocs);
-
 			foreach (var jsonDocument in jsonDocs)
 			{
 				prefetchingQueue.Add(jsonDocument);
 			}
+
+			MaybeAddFutureBatch(jsonDocs);
 		}
 
 		private List<JsonDocument> GetDocumentsFromQueue(Etag nextDocEtag)
