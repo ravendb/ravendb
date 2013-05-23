@@ -37,7 +37,7 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			var msg = "";
+			var msg = Range + " -  Hits: " + Hits + ",";
 			if (Count != null)
 				msg += "Count: " + Count + ",";
 			if(Sum != null)
