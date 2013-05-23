@@ -289,7 +289,7 @@ namespace Raven.Database.Prefetching
 			return GetNextDocumentEtagFromDisk(etag);
 		}
 
-		public virtual Etag GetNextDocumentEtagFromDisk(Etag etag)
+		private Etag GetNextDocumentEtagFromDisk(Etag etag)
 		{
 			Etag nextDocEtag = null;
 			context.TransactionalStorage.Batch(
