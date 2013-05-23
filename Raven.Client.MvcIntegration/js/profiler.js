@@ -18,7 +18,7 @@
 				.append(new ProfilerButton({ model: profilerData }).render().el);
 
 			if (typeof window.jQuery === 'function') { // bind to original jQuery ajaxComplete
-				window.jQuery('body').on('ajaxComplete', _.bind(profilerData.handleResponse, profilerData));
+			    $(document).on('ajaxComplete', _.bind(profilerData.handleResponse, profilerData));
 			}
 		};
 	}
