@@ -35,7 +35,7 @@ namespace Raven.Storage.Esent.StorageActions
 		protected static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		protected readonly Session session;
 		private Transaction transaction;
-		private bool useLazyCommit;
+		private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
 
 		public JET_DBID Dbid
 		{

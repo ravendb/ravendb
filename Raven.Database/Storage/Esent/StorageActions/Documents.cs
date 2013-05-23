@@ -274,6 +274,8 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
 				update.Save();
 			}
+
+			etagTouches.Add(preTouchEtag, afterTouchEtag);
 		}
 
 		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
