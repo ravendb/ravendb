@@ -14,6 +14,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Impl.Synchronization;
@@ -247,6 +248,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				finally
 				{
 					AfterReplicationCompleted(successes.Count);
+					var lastMinReplicatedEtag = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray())).ToEtag();
+					prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
 				}
 			}
 		}
