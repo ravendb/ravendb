@@ -78,10 +78,8 @@ namespace Raven.Database.Prefetching
 
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
 		{
-			var nextEtagToIndex = (etag == Etag.Empty) ? GetNextDocumentEtagFromDisk(Etag.Empty) : etag.IncrementBy(1);
+			var nextEtagToIndex = GetNextDocEtag(etag);
 			var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
-
-			nextEtagToIndex = HandleEtagGapsIfNeeded(nextEtagToIndex);
 
 			if (nextEtagToIndex != firstEtagInQueue)
 			{
@@ -278,6 +276,17 @@ namespace Raven.Database.Prefetching
 					return jsonDocuments;
 				})
 			});
+		}
+
+		private Etag GetNextDocEtag(Etag etag)
+		{
+			var oneUpEtag = EtagUtil.Increment(etag, 1);
+
+			// no need to go to disk to find the next etag if we already have it in memory
+			if (prefetchingQueue.NextDocumentETag() == oneUpEtag)
+				return oneUpEtag;
+
+			return GetNextDocumentEtagFromDisk(etag);
 		}
 
 		public virtual Etag GetNextDocumentEtagFromDisk(Etag etag)
