@@ -476,8 +476,9 @@ namespace Raven.Database.Indexing
 				IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
 				directory = fsDir;
 
-				indexWriter.Analyzer.Close();
 				indexWriter.Dispose(true);
+				dir.Dispose();
+				
 				CreateIndexWriter();
 			}
 		}
