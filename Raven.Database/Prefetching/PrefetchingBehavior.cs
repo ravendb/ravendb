@@ -422,7 +422,7 @@ namespace Raven.Database.Prefetching
 		public bool FilterDocuments(JsonDocument document)
 		{
 			HashSet<Etag> etags;
-			return documentsToRemove.TryGetValue(document.Key, out etags) && etags.Contains(document.Etag);
+			return (documentsToRemove.TryGetValue(document.Key, out etags) && etags.Contains(document.Etag)) == false;
 		}
 
 		public void AfterDelete(string key, Etag deletedEtag)

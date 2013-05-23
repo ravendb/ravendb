@@ -145,7 +145,7 @@ namespace Raven.Tests
 
 			prefetchingBehavior.AfterDelete("1", first);
 
-			Assert.Equal(1, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count(x => prefetchingBehavior.FilterDocuments(x) == false));
+			Assert.Equal(1, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count(x => prefetchingBehavior.FilterDocuments(x)));
 		}
 
 		[Fact]
@@ -198,7 +198,7 @@ namespace Raven.Tests
 			prefetchingBehavior.AfterDelete("1", first);
 			prefetchingBehavior.AfterDelete("3", third);
 
-			Assert.Equal(2, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count(x => prefetchingBehavior.FilterDocuments(x) == false));
+			Assert.Equal(2, prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty).Count(x => prefetchingBehavior.FilterDocuments(x)));
 		}
 	}
 }

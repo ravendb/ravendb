@@ -666,7 +666,7 @@ namespace Raven.Bundles.Replication.Tasks
 											return false;
 									}
 
-									return destination.FilterDocuments(destinationId, document.Key, document.Metadata);
+									return destination.FilterDocuments(destinationId, document.Key, document.Metadata) && prefetchingBehavior.FilterDocuments(document);
 								})
 								.ToList();
 
