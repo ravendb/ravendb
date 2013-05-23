@@ -664,6 +664,7 @@
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
+    <Compile Include="MailingList\Apo\Lazy.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BulkInsertTest.cs" />
     <Compile Include="MailingList\BulkInsertWithChanges.cs" />

@@ -26,7 +26,7 @@ namespace Raven.Studio.Features.Tasks
             var name = TaskInputs.First(x => x.Name == "Database Name").Value as string;
             var defrag = (bool)TaskInputs.First(x => x.Name == "Defrag").Value;
 
-            return new RestoreDatabaseTask(DatabaseCommands, Database.Value.Name, backupLocation, databaseLocation, defrag);
+            return new RestoreDatabaseTask(DatabaseCommands, name, backupLocation, databaseLocation, defrag);
 	    }
 	}
 }
