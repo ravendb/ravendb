@@ -94,31 +94,12 @@ namespace Raven.Database.Prefetching
 
 		private void LoadDocumentsFromDisk(Etag etag, Etag untilEtag)
 		{
-			List<JsonDocument> jsonDocs = null;
-
-			context.TransactionalStorage.Batch(actions =>
-			{
-				jsonDocs = actions.Documents
-					.GetDocumentsAfter(
-						etag,
-						autoTuner.NumberOfItemsToIndexInSingleBatch,
-						autoTuner.MaximumSizeAllowedToFetchFromStorage,
-						untilEtag: untilEtag)
-					.Where(x => x != null)
-					.Select(doc =>
-					{
-						DocumentRetriever.EnsureIdInMetadata(doc);
-						return doc;
-					})
-					.ToList();
-			});
+			var jsonDocs = GetJsonDocsFromDisk(etag, untilEtag);
 			
 			foreach (var jsonDocument in jsonDocs)
 			{
 				prefetchingQueue.Add(jsonDocument);
 			}
-
-			MaybeAddFutureBatch(jsonDocs);
 		}
 
 		private List<JsonDocument> GetDocumentsFromQueue(Etag nextDocEtag)
@@ -172,10 +153,10 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		private List<JsonDocument> GetJsonDocsFromDisk(Etag etag)
+		private List<JsonDocument> GetJsonDocsFromDisk(Etag etag, Etag untilEtag)
 		{
 			List<JsonDocument> jsonDocs = null;
-			var untilEtag = GetFirstEtagInQueue();
+
 			context.TransactionalStorage.Batch(actions =>
 			{
 				jsonDocs = actions.Documents
@@ -192,7 +173,8 @@ namespace Raven.Database.Prefetching
 					})
 					.ToList();
 			});
-			if (untilEtag == null)
+
+			if (untilEtag == null) // TODO check this case
 			{
 				MaybeAddFutureBatch(jsonDocs);
 			}
@@ -235,7 +217,7 @@ namespace Raven.Database.Prefetching
 
 			// we loaded the maximum amount, there are probably more items to read now.
 			Etag highestLoadedEtag = GetHighestEtag(past);
-			Etag nextEtag = prefetchingQueue.GetFirstETagGap() ?? GetNextDocumentEtagFromDisk(highestLoadedEtag);
+			Etag nextEtag = GetNextDocumentEtagFromDisk(highestLoadedEtag);
 
 			if (nextEtag == highestLoadedEtag)
 				return; // there is nothing newer to do 
@@ -259,7 +241,7 @@ namespace Raven.Database.Prefetching
 					int localWork = 0;
 					while (context.RunIndexing)
 					{
-						jsonDocuments = GetJsonDocsFromDisk(highestLoadedEtag);
+						jsonDocuments = GetJsonDocsFromDisk(EtagUtil.Increment(nextEtag, -1), null);
 						if (jsonDocuments.Count > 0)
 							break;
 
