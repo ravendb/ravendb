@@ -331,10 +331,11 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+
+				Etag existingEtag = null;
 				if (isUpdate)
 				{
-					EnsureDocumentEtagMatch(key, etag, "PUT");
-
+					existingEtag = EnsureDocumentEtagMatch(key, etag, "PUT");
 				}
 				else
 				{
@@ -393,6 +394,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return new AddDocumentResult
 				{
 					Etag = newEtag,
+					PrevEtag = existingEtag,
 					SavedAt = savedAt,
 					Updated = isUpdate
 				};
@@ -407,6 +409,8 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var prep = JET_prep.Insert;
 			bool isUpdate = false;
+
+			Etag existingETag = null;
 			if (checkForUpdates)
 			{
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
@@ -414,6 +418,7 @@ namespace Raven.Storage.Esent.StorageActions
 				isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
 				if (isUpdate)
 				{
+					existingETag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 					prep = JET_prep.Replace;
 				}
 			}
@@ -452,6 +457,7 @@ namespace Raven.Storage.Esent.StorageActions
 				return new AddDocumentResult
 				{
 					Etag = newEtag,
+					PrevEtag = existingETag,
 					SavedAt = savedAt,
 					Updated = isUpdate
 				};

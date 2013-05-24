@@ -27,9 +27,10 @@ namespace Raven.Storage.Managed
 
 		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
 		{
-			var readResult = storage.IndexingStats.Read(name);
+			var indexingStatsReadResult = storage.IndexingStats.Read(name);
+			var lastIndexedEtagsReadResult = storage.LastIndexedEtags.Read(name);
 
-			if (readResult == null)
+			if (indexingStatsReadResult == null)
 				return false;// index does not exists
 
 
@@ -37,17 +38,17 @@ namespace Raven.Storage.Managed
 			{
 				if (cutOff != null)
 				{
-					var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
+					var lastIndexedTime = lastIndexedEtagsReadResult.Key.Value<DateTime>("lastTimestamp");
 					if (cutOff.Value >= lastIndexedTime)
 						return true;
 
-					var lastReducedTime = readResult.Key.Value<DateTime?>("lastReducedTimestamp");
+					var lastReducedTime = indexingStatsReadResult.Key.Value<DateTime?>("lastReducedTimestamp");
 					if (lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
 						return true;
 				}
 				else if (cutoffEtag != null)
 				{
-					var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
+					var lastIndexedEtag = lastIndexedEtagsReadResult.Key.Value<byte[]>("lastEtag");
 
 					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.ToByteArray()) < 0)
 						return true;
@@ -77,7 +78,7 @@ namespace Raven.Storage.Managed
 
 		public bool IsMapStale(string name)
 		{
-			var readResult = storage.IndexingStats.Read(name);
+			var readResult = storage.LastIndexedEtags.Read(name);
 
 			if (readResult == null)
 				return false;
@@ -96,22 +97,23 @@ namespace Raven.Storage.Managed
 
 		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
 		{
-			var readResult = storage.IndexingStats.Read(name);
+			var indexingStatsReadResult = storage.IndexingStats.Read(name);
 
-			if (readResult == null)
+			if (indexingStatsReadResult == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
+			var lastIndexedEtagReadResult = storage.LastIndexedEtags.Read(name);
 
-			if (readResult.Key.Value<object>("lastReducedTimestamp") != null)
+			if (indexingStatsReadResult.Key.Value<object>("lastReducedTimestamp") != null)
 			{
 				return Tuple.Create(
-					readResult.Key.Value<DateTime>("lastReducedTimestamp"),
-					Etag.Parse(readResult.Key.Value<byte[]>("lastReducedEtag"))
+					indexingStatsReadResult.Key.Value<DateTime>("lastReducedTimestamp"),
+					Etag.Parse(indexingStatsReadResult.Key.Value<byte[]>("lastReducedEtag"))
 					);
 			}
 
-			return Tuple.Create(readResult.Key.Value<DateTime>("lastTimestamp"),
-				Etag.Parse(readResult.Key.Value<byte[]>("lastEtag")));
+			return Tuple.Create(lastIndexedEtagReadResult.Key.Value<DateTime>("lastTimestamp"),
+				Etag.Parse(lastIndexedEtagReadResult.Key.Value<byte[]>("lastEtag")));
 		}
 
 		public int GetIndexTouchCount(string name)

@@ -46,6 +46,8 @@ namespace Raven.Storage.Managed.Impl
 			IndexingStats =
 				Add(new Table(x => x.Value<string>("index"), "IndexingStats"));
 
+			LastIndexedEtags =
+				Add(new Table(x => x.Value<string>("index"), "LastIndexedEtags"));
 
 			MappedResults = Add(new Table("MappedResults")
 			{
@@ -140,6 +142,8 @@ namespace Raven.Storage.Managed.Impl
 		public Table ScheduleReductions { get; private set; }
 
 		public Table IndexingStats { get; private set; }
+
+		public Table LastIndexedEtags { get; private set; }
 
 		public Table Transactions { get; private set; }
 

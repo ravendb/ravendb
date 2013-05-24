@@ -282,10 +282,15 @@ namespace Raven.Storage.Managed
 				stream.Flush();
 			}
 
-			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
+			var readResult = storage.Documents.Read(new RavenJObject {{"key", key}});
+			var isUpdate = readResult != null;
 
 			if (isUpdate && checkForUpdates == false)
 				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
+
+			Etag existingEtag = null;
+			if(isUpdate)
+				existingEtag = Etag.Parse(readResult.Key.Value<byte[]>("etag"));
 
 			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
 			var savedAt = SystemTime.UtcNow;
@@ -302,6 +307,7 @@ namespace Raven.Storage.Managed
 			return new AddDocumentResult
 			{
 				Etag = newEtag,
+				PrevEtag = existingEtag,
 				SavedAt = savedAt,
 				Updated = isUpdate
 			};
@@ -345,6 +351,7 @@ namespace Raven.Storage.Managed
 			return new AddDocumentResult
 			{
 				Etag = newEtag,
+				PrevEtag = existingEtag,
 				SavedAt = savedAt,
 				Updated = isUpdate
 			};

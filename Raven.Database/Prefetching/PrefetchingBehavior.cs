@@ -16,8 +16,9 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Indexing;
 
-namespace Raven.Database.Indexing
+namespace Raven.Database.Prefetching
 {
 	public class PrefetchingBehavior : IDisposable
 	{
@@ -27,10 +28,13 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove =
 			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentDictionary<string, HashSet<Etag>> updatedDocuments =
+			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
+
 		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches =
 			new ConcurrentDictionary<Etag, FutureIndexBatch>();
 
-		private readonly ConcurrentJsonDocumentSortedList inMemoryDocs = new ConcurrentJsonDocumentSortedList();
+		private readonly ConcurrentJsonDocumentSortedList prefetchingQueue = new ConcurrentJsonDocumentSortedList();
 
 		private int currentIndexingAge;
 
@@ -42,7 +46,7 @@ namespace Raven.Database.Indexing
 
 		public int InMemoryIndexingQueueSize
 		{
-			get { return inMemoryDocs.Count; }
+			get { return prefetchingQueue.Count; }
 		}
 
 		#region IDisposable Members
@@ -74,68 +78,85 @@ namespace Raven.Database.Indexing
 
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
 		{
-			var inMemResults = new List<JsonDocument>();
-			var nextDocEtag = GetNextDocEtag(etag);
-			if (TryGetInMemoryJsonDocuments(nextDocEtag, inMemResults))
-				return inMemResults;
+			var nextEtagToIndex = GetNextDocEtag(etag);
+			var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
-			var results =
-				GetFutureJsonDocuments(nextDocEtag) ??
-				GetJsonDocsFromDisk(etag); // here we _intentionally_ using the current etag, not the next one
+			if (nextEtagToIndex != firstEtagInQueue)
+			{
+				if (TryLoadDocumentsFromFutureBatches(nextEtagToIndex) == false)
+				{
+					LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
+				}
+			}
 
-			return MergeWithOtherFutureResults(results);
+			return GetDocumentsFromQueue(nextEtagToIndex);
 		}
 
-		private bool TryGetInMemoryJsonDocuments(Etag nextDocEtag, List<JsonDocument> items)
+		private void LoadDocumentsFromDisk(Etag etag, Etag untilEtag)
 		{
-			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
-				return false;
+			var jsonDocs = GetJsonDocsFromDisk(etag, untilEtag);
+			
+			foreach (var jsonDocument in jsonDocs)
+			{
+				prefetchingQueue.Add(jsonDocument);
+			}
+		}
 
+		private List<JsonDocument> GetDocumentsFromQueue(Etag nextDocEtag)
+		{
+			var items = new List<JsonDocument>();
 			JsonDocument result;
-			bool hasDocs = false;
-			while (inMemoryDocs.TryPeek(out result)  &&
-				ComparableByteArray.CompareTo(nextDocEtag.ToByteArray(),result.Etag.ToByteArray()) >= 0)
+
+			nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
+
+			while (prefetchingQueue.TryPeek(out result) && nextDocEtag.CompareTo(result.Etag) >= 0)
 			{
 				// safe to do peek then dequeue because we are the only one doing the dequeues
 				// and here we are single threaded
-				inMemoryDocs.TryDequeue(out result);
+				prefetchingQueue.TryDequeue(out result);
 
 				if (result.Etag != nextDocEtag)
 					continue;
 
 				items.Add(result);
-				hasDocs = true;
 				nextDocEtag = EtagUtil.Increment(nextDocEtag, 1);
+				nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
 			}
-			return hasDocs;
+
+			return items;
 		}
 
-		private List<JsonDocument> GetFutureJsonDocuments(Etag nextDocEtag)
+		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
-				return null;
+				return false;
 			try
 			{
 				FutureIndexBatch nextBatch;
 				if (futureIndexBatches.TryRemove(nextDocEtag, out nextBatch) == false)
-					return null;
+					return false;
 
 				if (Task.CurrentId == nextBatch.Task.Id)
-					return null;
-				return nextBatch.Task.Result;
+					return false;
+
+				foreach (var jsonDocument in nextBatch.Task.Result)
+				{
+					prefetchingQueue.Add(jsonDocument);
+				}
+
+				return true;
 			}
 			catch (Exception e)
 			{
 				log.WarnException("Error when getting next batch value asynchronously, will try in sync manner", e);
-				return null;
+				return false;
 			}
 		}
 
-
-		private List<JsonDocument> GetJsonDocsFromDisk(Etag etag)
+		private List<JsonDocument> GetJsonDocsFromDisk(Etag etag, Etag untilEtag)
 		{
 			List<JsonDocument> jsonDocs = null;
-			var untilEtag = GetNextEtagInMemory();
+
 			context.TransactionalStorage.Batch(actions =>
 			{
 				jsonDocs = actions.Documents
@@ -152,55 +173,20 @@ namespace Raven.Database.Indexing
 					})
 					.ToList();
 			});
-			if (untilEtag == null)
+
+			if (untilEtag == null) // TODO check this case
 			{
 				MaybeAddFutureBatch(jsonDocs);
 			}
 			return jsonDocs;
 		}
 
-		private Etag GetNextEtagInMemory()
+		private Etag GetFirstEtagInQueue()
 		{
 			JsonDocument result;
-			if (inMemoryDocs.TryPeek(out result) == false)
+			if (prefetchingQueue.TryPeek(out result) == false)
 				return null;
 			return result.Etag;
-		}
-
-		private List<JsonDocument> MergeWithOtherFutureResults(List<JsonDocument> results, int timeToWait = 0)
-		{
-			if (results == null || results.Count == 0)
-				return results;
-
-			var nextDocEtag = GetNextDocEtag(GetHighestEtag(results));
-			while (results.Count < (autoTuner.MaximumSizeAllowedToFetchFromStorage / 4) * 3) // we won't be merging if we have more than 3/4 of max already
-			{
-
-				if (TryGetInMemoryJsonDocuments(nextDocEtag, results))
-				{
-					nextDocEtag = GetNextDocEtag(results.Last().Etag);
-					continue;
-				}
-
-				FutureIndexBatch nextBatch;
-				if (futureIndexBatches.TryGetValue(nextDocEtag, out nextBatch) == false)
-				{
-					break;
-				}
-				if (nextBatch.Task.IsCompleted == false)
-				{
-					if (nextBatch.Task.Wait(timeToWait) == false)
-						break;
-					timeToWait /= 2;
-				}
-
-				FutureIndexBatch _;
-				futureIndexBatches.TryRemove(nextBatch.StartingEtag, out _);
-
-				results.AddRange(nextBatch.Task.Result);
-				nextDocEtag = GetNextDocEtag(nextBatch.Task.Result.Last().Etag);
-			}
-			return results;
 		}
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
@@ -231,11 +217,10 @@ namespace Raven.Database.Indexing
 
 			// we loaded the maximum amount, there are probably more items to read now.
 			Etag highestLoadedEtag = GetHighestEtag(past);
-			Etag nextEtag = GetNextDocEtag(highestLoadedEtag);
+			Etag nextEtag = GetNextDocumentEtagFromDisk(highestLoadedEtag);
 
 			if (nextEtag == highestLoadedEtag)
 				return; // there is nothing newer to do 
-
 
 			if (futureIndexBatches.ContainsKey(nextEtag)) // already loading this
 				return;
@@ -256,7 +241,7 @@ namespace Raven.Database.Indexing
 					int localWork = 0;
 					while (context.RunIndexing)
 					{
-						jsonDocuments = GetJsonDocsFromDisk(highestLoadedEtag);
+						jsonDocuments = GetJsonDocsFromDisk(EtagUtil.Increment(nextEtag, -1), null);
 						if (jsonDocuments.Count > 0)
 							break;
 
@@ -275,21 +260,23 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-
-		private Etag GetNextDocEtag(Etag highestEtag)
+		private Etag GetNextDocEtag(Etag etag)
 		{
-			var nextDocEtag = highestEtag;
-
-			var oneUpEtag = EtagUtil.Increment(nextDocEtag, 1);
+			var oneUpEtag = EtagUtil.Increment(etag, 1);
 
 			// no need to go to disk to find the next etag if we already have it in memory
-			JsonDocument next;
-			if (inMemoryDocs.TryPeek(out next) && next.Etag == oneUpEtag ||
-				futureIndexBatches.ContainsKey(oneUpEtag))
+			if (prefetchingQueue.NextDocumentETag() == oneUpEtag)
 				return oneUpEtag;
 
+			return GetNextDocumentEtagFromDisk(etag);
+		}
+
+		private Etag GetNextDocumentEtagFromDisk(Etag etag)
+		{
+			Etag nextDocEtag = null;
 			context.TransactionalStorage.Batch(
-				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(highestEtag); });
+				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(etag); });
+
 			return nextDocEtag;
 		}
 
@@ -374,18 +361,18 @@ namespace Raven.Database.Indexing
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing || docs.Length == 0)
 				return;
 
-			if (inMemoryDocs.Count > // don't use too much, this is an optimization and we need to be careful about using too much mem
+			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
 				context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 				return;
 
 			foreach (var jsonDocument in docs)
 			{
 				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
-				inMemoryDocs.Add(jsonDocument);
+				prefetchingQueue.Add(jsonDocument);
 			}
 		}
 
-		public void CleanupDocumentsToRemove(Etag lastIndexedEtag)
+		public void CleanupDocuments(Etag lastIndexedEtag)
 		{
 			var highest = new ComparableByteArray(lastIndexedEtag);
 
@@ -398,23 +385,38 @@ namespace Raven.Database.Indexing
 				documentsToRemove.TryRemove(docToRemove.Key, out _);
 			}
 
-			JsonDocument result;
-			while (inMemoryDocs.TryPeek(out result) && highest.CompareTo(result.Etag) >= 0)
+			foreach (var updatedDocs in updatedDocuments)
 			{
-				inMemoryDocs.TryDequeue(out result);
+				if (updatedDocs.Value.All(etag => highest.CompareTo(etag) > 0) == false)
+					continue;
+
+				HashSet<Etag> _;
+				updatedDocuments.TryRemove(updatedDocs.Key, out _);
+			}
+
+			JsonDocument result;
+			while (prefetchingQueue.TryPeek(out result) && highest.CompareTo(result.Etag) >= 0)
+			{
+				prefetchingQueue.TryDequeue(out result);
 			}
 		}
 
 		public bool FilterDocuments(JsonDocument document)
 		{
 			HashSet<Etag> etags;
-			return documentsToRemove.TryGetValue(document.Key, out etags) && etags.Contains(document.Etag);
+			return (documentsToRemove.TryGetValue(document.Key, out etags) && etags.Contains(document.Etag)) == false;
 		}
 
-		public void AfterDelete(string key, Etag lastDocumentEtag)
+		public void AfterDelete(string key, Etag deletedEtag)
 		{
-			documentsToRemove.AddOrUpdate(key, s => new HashSet<Etag> { lastDocumentEtag },
-										  (s, set) => new HashSet<Etag>(set) { lastDocumentEtag });
+			documentsToRemove.AddOrUpdate(key, s => new HashSet<Etag> { deletedEtag },
+										  (s, set) => new HashSet<Etag>(set) { deletedEtag });
+		}
+
+		public void AfterUpdate(string key, Etag etagBeforeUpdate)
+		{
+			updatedDocuments.AddOrUpdate(key, s => new HashSet<Etag> { etagBeforeUpdate },
+										  (s, set) => new HashSet<Etag>(set) { etagBeforeUpdate });
 		}
 
 		public bool ShouldSkipDeleteFromIndex(JsonDocument item)
@@ -424,6 +426,37 @@ namespace Raven.Database.Indexing
 			return documentsToRemove.ContainsKey(item.Key) == false;
 		}
 
+		private Etag HandleEtagGapsIfNeeded(Etag nextEtag)
+		{
+			if (nextEtag != prefetchingQueue.NextDocumentETag())
+			{
+				nextEtag = SkipDeletedEtags(nextEtag);
+				nextEtag = SkipUpdatedEtags(nextEtag);
+			}
+
+			return nextEtag;
+		}
+
+		private Etag SkipDeletedEtags(Etag nextEtag)
+		{
+			while (documentsToRemove.Any(x => x.Value.Contains(nextEtag)))
+			{
+				nextEtag = EtagUtil.Increment(nextEtag, 1);
+			}
+
+			return nextEtag;
+		}
+
+		private Etag SkipUpdatedEtags(Etag nextEtag)
+		{
+			while (updatedDocuments.Any(x => x.Value.Contains(nextEtag)))
+			{
+				nextEtag = EtagUtil.Increment(nextEtag, 1);
+			}
+
+			return nextEtag;
+		}
+
 		#region Nested type: FutureIndexBatch
 
 		private class FutureIndexBatch
@@ -431,18 +464,6 @@ namespace Raven.Database.Indexing
 			public int Age;
 			public Etag StartingEtag;
 			public Task<List<JsonDocument>> Task;
-		}
-
-		#endregion
-
-		#region Nested type: InMemoryIndexBatch
-
-		private class InMemoryIndexBatch
-		{
-			public int Age;
-			public List<JsonDocument> Documents;
-			public Guid StartingEtag;
-			public Guid EndEtag;
 		}
 
 		#endregion
