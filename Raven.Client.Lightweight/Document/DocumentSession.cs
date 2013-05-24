@@ -526,8 +526,22 @@ namespace Raven.Client.Document
             return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
 	    }
 
+		public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+			return this.LoadInternal<TResult>(ids, transformer);
+	  
+		}
 
-	    /// <summary>
+		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+			var configuration = new RavenLoadConfiguration();
+			configure(configuration);
+			return this.LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+		}
+
+		/// <summary>
 		/// Gets the document URL for the specified entity.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
