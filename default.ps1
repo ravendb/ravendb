@@ -87,7 +87,7 @@ task Init -depends Verify40, Clean {
 	
 	$commit = Get-Git-Commit
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
-		Foreach-Object { $_ -replace ".13.", ".$($env:buildlabel)." } |
+		Foreach-Object { $_ -replace ".13", ".$($env:buildlabel)" } |
 		Foreach-Object { $_ -replace "{commit}", $commit } |
 		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
 	
@@ -97,6 +97,8 @@ task Init -depends Verify40, Clean {
 }
 
 task Compile -depends Init {
+	
+	"Dummy file so msbuild knows there is one here before embedding as resource." | Out-File "$base_dir\Raven.Database\Server\WebUI\Raven.Studio.xap"
 	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
@@ -196,12 +198,19 @@ task ReleaseNoTests -depends Stable,DoRelease {
 
 }
 
+task Vnext {
+	$global:uploadCategory = "RavenDB-Unstable"
+	$global:uploadMode = "Vnext"
+}
+
 task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
+	$global:uploadMode = "-Unstable"
 }
 
 task Stable {
 	$global:uploadCategory = "RavenDB"
+	$global:uploadMode = "Stable"
 }
 
 task RunTests -depends Test,TestSilverlight
@@ -421,6 +430,8 @@ task UploadStable -depends Stable, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
+task UploadVnext -depends Vnext, DoRelease, Upload
+
 task CreateNugetPackages -depends Compile {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
@@ -520,17 +531,30 @@ task CreateNugetPackages -depends Compile {
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	$sourceFeed = "https://nuget.org/"
+	
+	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
+		
+		if ($global:uploadMode -eq "Vnext") {
+			$sourceFeed = "http://www.myget.org/F/ravendbvnext/api/v2/package"
+		} 
+		else {
+			$sourceFeed = "http://www.myget.org/F/ravendb/api/v2/package"
+		}
+	}
+	
 	if ( (Test-Path $accessPath) ) {
 		$accessKey = Get-Content $accessPath
 		$accessKey = $accessKey.Trim()
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey }
+			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey -Source $sourceFeed }
 		}
 	}
 	else {
-		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
 }
 

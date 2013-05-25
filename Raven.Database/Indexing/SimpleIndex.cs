@@ -93,7 +93,7 @@ namespace Raven.Database.Indexing
 
 						using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
 						{
-							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, actions, stats))
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
 							{
 								float boost;
 								var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);

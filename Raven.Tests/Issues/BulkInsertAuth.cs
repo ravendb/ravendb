@@ -14,7 +14,7 @@ namespace Raven.Tests.Issues
 {
 	public class BulkInsertAuth : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}
@@ -36,7 +36,7 @@ namespace Raven.Tests.Issues
 
 	public class BulkInsertOAuth : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}
@@ -70,8 +70,6 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				WaitForUserToContinueTheTest();
-				
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(),
 															  (ServerClient)store.DatabaseCommands))
 				{

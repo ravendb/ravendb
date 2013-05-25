@@ -9,7 +9,10 @@ namespace Raven.Bundles.Quotas.Size.Triggers
 	{
 		public override void AfterDelete(string key)
 		{
-			SizeQuotaConfiguration.GetConfiguration(Database).AfterDelete();
+			using (Database.DisableAllTriggersForCurrentThread())
+			{
+				SizeQuotaConfiguration.GetConfiguration(Database).AfterDelete();				
+			}
 		}
 	}
 }

@@ -264,18 +264,29 @@ namespace Raven.Client.Indexes
 
 		private string GetPropertyName(string name, Type exprType)
 		{
-			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var propertyInfo = exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ??
+							   exprType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(x => x.Name == name);
 			if (propertyInfo != null)
 			{
-				var jsonProperty = propertyInfo.GetCustomAttributes(typeof (JsonPropertyAttribute), false).FirstOrDefault() as JsonPropertyAttribute;
-				if (jsonProperty != null)
+				foreach (var customAttribute in propertyInfo.GetCustomAttributes(true))
 				{
-					if (keywordsInCSharp.Contains(jsonProperty.PropertyName))
-						return '@' + jsonProperty.PropertyName;
-					return jsonProperty.PropertyName ?? name;
+					string propName;
+					switch (customAttribute.GetType().Name)
+					{
+						case "JsonPropertyAttribute":
+							propName = ((dynamic) customAttribute).PropertyName;
+							break;
+						case "DataMemberAttribute":
+							propName = ((dynamic) customAttribute).Name;
+							break;
+						default:
+							continue;
+					}
+					if (keywordsInCSharp.Contains(propName))
+						return '@' + propName;
+					return propName  ?? name;
 				}
 			}
-
 			return name;
 		}
 

@@ -4,10 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 using Xunit;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Security.OAuth
 {
@@ -15,7 +17,7 @@ namespace Raven.Tests.Security.OAuth
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}
@@ -59,6 +61,63 @@ namespace Raven.Tests.Security.OAuth
 				using (var session = store.OpenSession())
 				{
 					Assert.Equal(name, session.Load<TestClass>(id).Name);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanAuthAsAdminAgainstTenantDb()
+		{
+			using (var server = GetNewServer())
+			{
+
+				server.Database.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				{
+					Name = "sysadmin",
+					Secret = "ThisIsMySecret",
+					Enabled = true,
+					Databases = new List<DatabaseAccess>
+				{
+					new DatabaseAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
+				}
+				}), new RavenJObject(), null);
+
+				server.Database.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				{
+					Name = "dbadmin",
+					Secret = "ThisIsMySecret",
+					Enabled = true,
+					Databases = new List<DatabaseAccess>
+				{
+					new DatabaseAccess{TenantId = "*", Admin = true}, 
+					new DatabaseAccess{TenantId = Constants.SystemDatabase, Admin = false}, 
+				}
+				}), new RavenJObject(), null);
+
+				using (var store = new DocumentStore
+				{
+					Url = server.Database.ServerUrl,
+					ApiKey = "sysadmin/ThisIsMySecret",
+					Conventions = {FailoverBehavior = FailoverBehavior.FailImmediately}
+				}.Initialize())
+				{
+					store.DatabaseCommands.EnsureDatabaseExists("test");
+				}
+
+				using (var store = new DocumentStore
+				{
+					Url = server.Database.ServerUrl,
+					ApiKey = "dbadmin/ThisIsMySecret"
+				}.Initialize())
+				{
+					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", null, store.Conventions))
+						.ExecuteRequest();// can do admin stuff
+
+					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", "GET", null, store.Conventions));
+
+					var json = (RavenJObject)httpJsonRequest.ReadResponseJson();
+
+					Assert.True(json.Value<bool>("IsAdminCurrentDb"));
 				}
 			}
 		}

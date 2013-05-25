@@ -222,6 +222,12 @@ namespace Raven.Database.Indexing
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 
 			}
+			else if(value is double)
+			{
+				var d = (double) value;
+				yield return CreateFieldWithCaching(name, d.ToString("r", CultureInfo.InvariantCulture), storage,
+							   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
+			}
 			else if (value is decimal)
 			{
 				var d = (decimal)value;
@@ -250,8 +256,12 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(Formatting.None), storage,
+				var jsonVal = RavenJToken.FromObject(value).ToString(Formatting.None);
+				if(jsonVal.StartsWith("{") || jsonVal.StartsWith("[")) 
+					yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+				else if (jsonVal.StartsWith("\"") && jsonVal.EndsWith("\"") && jsonVal.Length > 1)
+					jsonVal = jsonVal.Substring(1, jsonVal.Length - 2);
+				yield return CreateFieldWithCaching(name, jsonVal, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
 

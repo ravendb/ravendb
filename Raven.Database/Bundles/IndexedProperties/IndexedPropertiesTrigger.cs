@@ -127,14 +127,27 @@ namespace Raven.Bundles.IndexedProperties
 					{
 						resultDoc.DataAsJson[mapping.Value] = new RavenJValue(numericField.NumericValue);
 					}
-					else
+					else if(field.IsBinary == false)
 					{
-						resultDoc.DataAsJson[mapping.Value] = field.StringValue;
+						resultDoc.DataAsJson[mapping.Value] = GetStringValue(field);
 					}
 					changesMade = true;
 				}
 				if (changesMade)
 					database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+			}
+
+			private static string GetStringValue(IFieldable field)
+			{
+				switch (field.StringValue)
+				{
+					case Constants.NullValue:
+						return null;
+					case Constants.EmptyString:
+						return string.Empty;
+					default:
+						return field.StringValue;
+				}
 			}
 
 			public override void Dispose()

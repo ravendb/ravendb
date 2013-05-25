@@ -85,7 +85,7 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DynamicIndex)));
 		}

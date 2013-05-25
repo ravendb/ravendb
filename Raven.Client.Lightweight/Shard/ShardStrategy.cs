@@ -74,6 +74,8 @@ namespace Raven.Client.Shard
 				foreach (var sortedField in query.SortedFields)
 				{
 					var copy = sortedField;
+				    if (copy.Field.EndsWith("_Range"))
+				        copy.Field = copy.Field.Substring(0, copy.Field.Length - "_Range".Length);
 					results = sortedField.Descending ?
 						results.OrderByDescending(x => x.SelectTokenWithRavenSyntaxReturningSingleValue(copy.Field)) :
 						results.OrderBy(x => x.SelectTokenWithRavenSyntaxReturningSingleValue(copy.Field));

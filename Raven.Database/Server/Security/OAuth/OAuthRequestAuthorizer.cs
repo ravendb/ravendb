@@ -72,12 +72,12 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
-		public override List<string> GetApprovedDatabases(IHttpContext context)
+		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
-			var user = context.User as OAuthPrincipal;
-			if(user == null)
+			var oAuthUser = user as OAuthPrincipal;
+			if (oAuthUser == null)
 				return new List<string>();
-			return user.GetApprovedDatabases();
+			return oAuthUser.GetApprovedDatabases();
 		}
 
 		public override void Dispose()
@@ -109,10 +109,44 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			if (string.IsNullOrEmpty(Settings.OAuthTokenServer) == false)
 			{
-				ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
+				if (Settings.UseDefaultOAuthTokenServer == false)
+				{
+					ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
+				}
+				else
+				{
+					ctx.Response.AddHeader("OAuth-Source", new UriBuilder(Settings.OAuthTokenServer)
+					{
+						Host = ctx.Request.Url.Host,
+						Port = ctx.Request.Url.Port
+					}.Uri.ToString());
+			
+				}
 			}
 			ctx.Response.StatusCode = statusCode;
 			ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
+		}
+
+		public IPrincipal GetUser(IHttpContext ctx, bool hasApiKey)
+		{
+			var token = GetToken(ctx);
+
+			if (token == null)
+			{
+				WriteAuthorizationChallenge(ctx, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
+
+				return null;
+			}
+
+			AccessTokenBody tokenBody;
+			if (!AccessToken.TryParseBody(Settings.OAuthTokenKey, token, out tokenBody))
+			{
+				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is invalid");
+
+				return null;
+			}
+
+			return new OAuthPrincipal(tokenBody, null);
 		}
 	}
 

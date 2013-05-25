@@ -11,13 +11,12 @@ namespace Raven.Abstractions.Connection
 	{
 		public int? RequestTimeoutInMs { get; set; }
 
-		readonly ConcurrentDictionary<string, SecuredAuthenticator> authenticators = new ConcurrentDictionary<string, SecuredAuthenticator>();
+		readonly ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator> authenticators = new ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator>();
 
 		public void ConfigureRequest(RavenConnectionStringOptions options, WebRequest request)
 		{
 			if (RequestTimeoutInMs.HasValue)
 				request.Timeout = RequestTimeoutInMs.Value;
-
 
 			if (options.ApiKey == null)
 			{
@@ -25,12 +24,26 @@ namespace Raven.Abstractions.Connection
 				return;
 			}
 
-			var value = authenticators.GetOrAdd(options.ApiKey, s => new SecuredAuthenticator(s));
+			var webRequestEventArgs = new WebRequestEventArgs { Request = request };
 
-			value.ConfigureRequest(this, new WebRequestEventArgs
+			AbstractAuthenticator existingAuthenticator;
+			if (authenticators.TryGetValue(GetCacheKey(options), out existingAuthenticator))
 			{
-				Request = request
-			});
+				existingAuthenticator.ConfigureRequest(this, webRequestEventArgs);
+			}
+			else
+			{
+				var basicAuthenticator = new BasicAuthenticator(options.ApiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
+				var securedAuthenticator = new SecuredAuthenticator(options.ApiKey);
+
+				basicAuthenticator.ConfigureRequest(this, webRequestEventArgs);
+				securedAuthenticator.ConfigureRequest(this, webRequestEventArgs);
+			}
+		}
+
+		private static Tuple<string, string> GetCacheKey(RavenConnectionStringOptions options)
+		{
+			return Tuple.Create(options.Url, options.ApiKey);
 		}
 
 		public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions)
@@ -43,11 +56,25 @@ namespace Raven.Abstractions.Connection
 			if (options.ApiKey == null)
 				return false;
 
-			var value = authenticators.GetOrAdd(options.ApiKey, s => new SecuredAuthenticator(s));
+			var oauthSource = webResponse.Headers["OAuth-Source"];
 
-			var oauthSource = options.Url + "/OAuth/API-Key";
+			var useBasicAuthenticator =
+				string.IsNullOrEmpty(oauthSource) == false &&
+				oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false;
 
-			var result = value.DoOAuthRequest(oauthSource);
+			var authenticator = authenticators.GetOrAdd(
+				GetCacheKey(options),
+				_ =>
+				{
+					if (useBasicAuthenticator)
+					{
+						return new BasicAuthenticator(options.ApiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
+					}
+
+					return new SecuredAuthenticator(options.ApiKey);
+				});
+
+			var result = authenticator.DoOAuthRequest(oauthSource);
 			return result != null;
 		}
 	}

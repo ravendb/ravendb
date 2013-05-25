@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Client.Document;
 
 namespace Raven.Client.Indexes
 {
@@ -40,6 +41,9 @@ namespace Raven.Client.Indexes
 			var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
 			foreach (var child in children)
 			{
+				if (child.IsGenericTypeDefinition)
+					continue;
+
 				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
 				var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
 				var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
@@ -53,6 +57,9 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public override IndexDefinition CreateIndexDefinition()
 		{
+			if (Conventions == null)
+				Conventions = new DocumentConvention();
+
 			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>
 			{
 				Indexes = Indexes,
@@ -61,7 +68,12 @@ namespace Raven.Client.Indexes
 				Reduce = Reduce,
 				TransformResults = TransformResults,
 				Stores = Stores,
+				TermVectors = TermVectors,
 				Suggestions = IndexSuggestions,
+				AnalyzersStrings = AnalyzersStrings,
+				IndexesStrings = IndexesStrings,
+				StoresStrings = StoresStrings,
+				TermVectorsStrings = TermVectorsStrings
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{

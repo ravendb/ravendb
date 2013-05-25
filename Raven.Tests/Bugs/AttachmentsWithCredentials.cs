@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs
 			base.Dispose();
 		}
 
-		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}

@@ -102,7 +102,6 @@
     <Compile Include="Document\GenerateEntityIdOnTheClient.cs" />
     <Compile Include="Document\EntityToJson.cs" />
     <Compile Include="Document\MultiDatabaseHiLoGenerator.cs" />
-    <Compile Include="Document\OAuth\BasicAuthenticator.cs" />
     <Compile Include="Document\RemoteBulkInsertOperation.cs" />
     <Compile Include="Document\BulkInsertOperation.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />

@@ -9,7 +9,9 @@ namespace Raven.Abstractions.Data
 		public bool Observed { get; set; }
 		public string Message { get; set; }
 		public AlertLevel AlertLevel { get; set; }
-		public Exception Exception { get; set; }
+		public string Exception { get; set; }
+
+		public string UniqueKey { get; set; }
 	}
 
 	public enum AlertLevel

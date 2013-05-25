@@ -8,7 +8,7 @@ using System.Security.Principal;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security.OAuth;
-using Raven.Database.Server.Security.Windows;
+using System.Linq;
 
 namespace Raven.Database.Server.Responders.Debugging
 {
@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Responders.Debugging
 	{
 		public override string UrlPattern
 		{
-			get { return @"^/debug/user-info"; }
+			get { return @"^/debug/user-info$"; }
 		}
 
 		public override string[] SupportedVerbs
@@ -55,10 +55,17 @@ namespace Raven.Database.Server.Responders.Debugging
 				{
 					Remark = "Using windows auth",
 					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdmin = principalWithDatabaseAccess.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
+					Databases = principalWithDatabaseAccess.AdminDatabases.Concat(principalWithDatabaseAccess.ReadOnlyDatabases).Concat(principalWithDatabaseAccess.ReadWriteDatabases)
+						.Select(db => new
+						{
+							Database = db,
+							IsAdmin = principal.IsAdministrator(db)
+						}),
 					principalWithDatabaseAccess.AdminDatabases,
 					principalWithDatabaseAccess.ReadOnlyDatabases,
-					principalWithDatabaseAccess.ReadWriteDatabases,
+					principalWithDatabaseAccess.ReadWriteDatabases
 				});
 				return;
 			}
@@ -70,7 +77,14 @@ namespace Raven.Database.Server.Responders.Debugging
 				{
 					Remark = "Using OAuth",
 					User = oAuthPrincipal.Name,
-					IsAdmin = oAuthPrincipal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminGlobal = oAuthPrincipal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
+					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
+						.Select(db => new
+						{
+							Database = db.TenantId,
+							IsAdmin = principal.IsAdministrator(db.TenantId)
+						}),
 					oAuthPrincipal.TokenBody,
 				});
 				return;

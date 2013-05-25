@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Principal;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
@@ -29,7 +30,7 @@ namespace Raven.Database.Server.Responders
 			// This responder is NOT secured, and anyone can access it.
 			// Because of that, we need to provide explicit security here.
 			
-			// Anonymous Access - All / Get
+			// Anonymous Access - All / Get / Admin
 			// Show all dbs
 
 			// Anonymous Access - None
@@ -41,15 +42,15 @@ namespace Raven.Database.Server.Responders
 
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
-				if(server.RequestAuthorizer.Authorize(context) == false)
+				var user = server.RequestAuthorizer.GetUser(context);
+				if(user == null)
 				{
 					return;
 				}
 
-
-				if (context.User.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode) == false)
+				if (user.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
-					approvedDatabases = server.RequestAuthorizer.GetApprovedDatabases(context);
+					approvedDatabases = server.RequestAuthorizer.GetApprovedDatabases(user, context);
 				}
 			}
 

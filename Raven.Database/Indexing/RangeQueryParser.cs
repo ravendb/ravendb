@@ -48,7 +48,16 @@ namespace Raven.Database.Indexing
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;
-			return NewPrefixQuery(tq != null ? tq.Term : new Term(field, termStr));
+			if (tq == null)
+			{
+				var booleanQuery = new BooleanQuery
+				{
+					{NewPrefixQuery(new Term(field, termStr)), Occur.SHOULD},
+					{NewPrefixQuery(new Term(field, termStr.ToLowerInvariant())), Occur.SHOULD}
+				};
+				return booleanQuery;
+			}
+			return NewPrefixQuery(tq.Term);
 		}
 
 		protected override Query GetWildcardQuery(string field, string termStr)
@@ -63,7 +72,15 @@ namespace Raven.Database.Indexing
 			var fieldQuery = GetFieldQuery(field, termStr);
 
 			var tq = fieldQuery as TermQuery;
-			return NewWildcardQuery(tq != null ? tq.Term : new Term(field, termStr));
+			var analyzedTerm = tq != null ? tq.Term.Text : termStr;
+
+			if (termStr.StartsWith("*") && analyzedTerm.StartsWith("*") == false)
+				analyzedTerm = "*" + analyzedTerm;
+
+			if (termStr.EndsWith("*") && analyzedTerm.EndsWith("*") == false)
+				analyzedTerm += "*";
+
+			return NewWildcardQuery(new Term(field, analyzedTerm));
 
 		}
 

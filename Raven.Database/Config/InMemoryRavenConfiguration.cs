@@ -22,6 +22,7 @@ using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
@@ -84,34 +85,26 @@ namespace Raven.Database.Config
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
-			if (MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default)
-			{
-				InitialNumberOfItemsToIndexInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch;
-			}
-			else
-			{
-				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItemsToIndexInSingleBatch, InitialNumberOfItemsToIndexInSingleBatch);
-			}
-
-			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
-
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
-																	MaxNumberOfItemsToIndexInSingleBatch);
-			}
-
-			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
-			if (MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default)
-			{
-				InitialNumberOfItemsToReduceInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch / 2;
+				                                                    MaxNumberOfItemsToIndexInSingleBatch);
 			}
 			else
 			{
-				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(MaxNumberOfItemsToReduceInSingleBatch,
-																	InitialNumberOfItemsToReduceInSingleBatch);
+				InitialNumberOfItemsToIndexInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default ?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch :
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
 			}
+			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
+
+		
+
+			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
+			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch/2 :
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
 
@@ -261,6 +254,11 @@ namespace Raven.Database.Config
 
 		}
 
+		public bool UseDefaultOAuthTokenServer
+		{
+			get { return Settings["Raven/OAuthTokenServer"] == null;  }
+		}
+
 		private void SetupOAuth()
 		{
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
@@ -368,7 +366,11 @@ namespace Raven.Database.Config
 		/// The initial number of items to take when indexing a batch
 		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
-		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
+		public int InitialNumberOfItemsToIndexInSingleBatch
+		{
+			get { return initialNumberOfItemsToIndexInSingleBatch; }
+			set { initialNumberOfItemsToIndexInSingleBatch = value; }
+		}
 
 		/// <summary>
 		/// Max number of items to take for reducing in a batch
@@ -640,6 +642,7 @@ namespace Raven.Database.Config
 
 		#endregion
 
+		[JsonIgnore]
 		public CompositionContainer Container
 		{
 			get { return container ?? (container = new CompositionContainer(Catalog)); }
@@ -652,12 +655,14 @@ namespace Raven.Database.Config
 
 		public bool DisableDocumentPreFetchingForIndexing { get; set; }
 
+		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
+		private int initialNumberOfItemsToIndexInSingleBatch;
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>
@@ -810,10 +815,10 @@ namespace Raven.Database.Config
 		public void CustomizeValuesForTenant(string tenantId)
 		{
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
 
 			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Tenants", tenantId);
+				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
 		}
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)

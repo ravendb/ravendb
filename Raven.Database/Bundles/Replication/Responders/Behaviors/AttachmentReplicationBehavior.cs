@@ -48,13 +48,13 @@ namespace Raven.Bundles.Replication.Responders
 			memoryStream.Position = 0;
 			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Guid.Empty : existingItem.Etag;
 			Actions.Attachments.AddAttachment(id, etag,
-								memoryStream,
-								new RavenJObject
-								{
-									{Constants.RavenReplicationConflict, true},
-									{"@Http-Status-Code", 409},
-									{"@Http-Status-Description", "Conflict"}
-								});
+			                                  memoryStream,
+			                                  new RavenJObject
+			                                  {
+				                                  {Constants.RavenReplicationConflict, true},
+				                                  {"@Http-Status-Code", 409},
+				                                  {"@Http-Status-Description", "Conflict"}
+			                                  });
 		}
 
 		protected override void AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, Attachment existingItem)
@@ -74,13 +74,14 @@ namespace Raven.Bundles.Replication.Responders
 			Actions.Attachments.AddAttachment(id, existingItem.Etag, memoryStream, existingItem.Metadata);
 		}
 
-		protected override RavenJObject TryGetExisting(string id, out Attachment existingItem, out Guid existingEtag)
+		protected override RavenJObject TryGetExisting(string id, out Attachment existingItem, out Guid existingEtag, out bool deleted)
 		{
 			var existingAttachment = Actions.Attachments.GetAttachment(id);
 			if (existingAttachment != null)
 			{
 				existingItem = existingAttachment;
 				existingEtag = existingAttachment.Etag;
+				deleted = false;
 				return existingAttachment.Metadata;
 			}
 
@@ -95,8 +96,10 @@ namespace Raven.Bundles.Replication.Responders
 					Metadata = listItem.Data,
 					Data = () => new MemoryStream()
 				};
+				deleted = true;
 				return listItem.Data;
 			}
+			deleted = false;
 			existingEtag = Guid.Empty;
 			existingItem = null;
 			return null;

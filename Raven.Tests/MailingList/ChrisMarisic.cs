@@ -43,7 +43,7 @@ namespace Raven.Tests.MailingList
 			}
 		};
 
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.TempIndexPromotionMinimumQueryCount = 1;
 		}

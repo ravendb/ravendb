@@ -35,14 +35,24 @@ namespace Raven.Studio.Infrastructure
 					.AsyncDatabaseCommands
 					.ForSystemDatabase()
 					.GetAsync("Raven/StudioConfig")
-					.ContinueOnSuccessInTheUIThread(doc =>
+					.ContinueWith(task =>
 					{
-						if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+						if (task.IsFaulted == false)
 						{
-							if(doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
-								return;
+							Execute.OnTheUI(() =>
+							{
+								if (task.Result != null && task.Result.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+								{
+									if (task.Result.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+										return;
+								}
+								Command.ExecuteCommand(new CreateDatabaseCommand());
+							});
 						}
-						Command.ExecuteCommand(new CreateDatabaseCommand());
+						else
+						{
+							GC.KeepAlive(task.Exception); // ignoring the exeption
+						}
 					});
 			}
 
