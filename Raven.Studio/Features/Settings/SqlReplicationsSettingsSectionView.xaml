@@ -277,7 +277,7 @@
 															<LineBreak/>
 															<LineBreak/>
 															<Run Text="Call "/>
-															<Span FontFamily="Consolas">sqlReplicate()</Span> for each row you want to write to the database
+															<Span FontFamily="Consolas">replicateToTableName</Span> for each row you want to write to the database
 														</Paragraph>
 														<Paragraph>
 															<LineBreak/>
@@ -303,7 +303,7 @@
 																<Run Text="};"/>
 																<LineBreak/>
 																<LineBreak/>
-																<Run Text="sqlReplicate('Orders', 'Id', orderData);"/>
+																<Run Text="replicateToOrders('Id', orderData);"/>
 																<LineBreak/>
 																<LineBreak/>
 
@@ -328,7 +328,7 @@
 																<LineBreak/>
 																<Run Text="  orderData.TotalCost += line.Cost;"/>
 																<LineBreak/>
-																<Run Text="  sqlReplicate('OrderLines','OrderId', {"/>
+																<Run Text="  replicateToOrderLines('OrderId', {"/>
 																<LineBreak/>
 																<Run Text="    OrderId: documentId,"/>
 																<LineBreak/>

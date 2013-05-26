@@ -70,15 +70,18 @@ namespace Raven.Client.Document
 			{
 				SynchronizationContext.SetSynchronizationContext(null);
 
-				OperationId = Guid.NewGuid();
-				operationClient = client;
-				operationChanges = changes;
-				queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
+			OperationId = Guid.NewGuid();
+			operationClient = client;
+			operationChanges = changes;
+			queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 
-				operationTask = StartBulkInsertAsync(options);
+			operationTask = StartBulkInsertAsync(options);
+#if !MONO
+			SubscribeToBulkInsertNotifications(changes);
+#endif
+		}
 
-				SubscribeToBulkInsertNotifications(changes);
-			}
+#if !MONO
 			finally
 			{
 				SynchronizationContext.SetSynchronizationContext(synchronizationContext);
@@ -98,6 +101,7 @@ namespace Raven.Client.Document
 					}
 				});
 		}
+#endif
 
 		private async Task StartBulkInsertAsync(BulkInsertOptions options)
 		{
@@ -115,7 +119,7 @@ namespace Raven.Client.Document
 			try
 			{
 				if (expect100Continue != null)
-					expect100Continue.Dispose();
+				expect100Continue.Dispose();
 			}
 			catch
 			{

@@ -25,6 +25,7 @@ namespace Raven.Studio.Features.Stats
 		{
 			SectionName = "Alerts";
 			Alerts = new ObservableCollection<AlertProxy>();
+			SelectedAlert = new Observable<AlertProxy>();
 			UnobservedAlerts = new ObservableCollection<AlertProxy>();
 			ServerAlerts = new ObservableCollection<Alert>();
 			ShowObserved = new Observable<bool>();
@@ -97,6 +98,7 @@ namespace Raven.Studio.Features.Stats
 		public ICommand DeleteAllObserved { get { return new DeleteAllObservedCommand(this); } }
 		public ICommand SaveChanges { get { return new SaveAlertsCommand(this); } }
 		public ICommand Refresh{get{return new ActionCommand(GetAlertsFromServer);}}
+		public Observable<AlertProxy> SelectedAlert { get; set; }
 	}
 
 	public class SaveAlertsCommand : Command

@@ -316,6 +316,11 @@
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionView.xaml.cs">
       <DependentUpon>PeriodicBackupSettingsSectionView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Settings\ScriptedIndexSettingsSectionModel.cs" />
+    <Compile Include="Features\Settings\ScriptedIndexSettingsSectionView.xaml.cs">
+      <DependentUpon>ScriptedIndexSettingsSectionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Settings\ScriptIndexIntelliPromptProvider.cs" />
     <Compile Include="Features\Settings\SqlReplicationScriptIntelliPromptProvider.cs" />
     <Compile Include="Features\Settings\SqlReplicationsSettingsSectionView.xaml.cs">
       <DependentUpon>SqlReplicationsSettingsSectionView.xaml</DependentUpon>
@@ -358,6 +363,7 @@
     <Compile Include="Features\Transformers\TransformersListView.xaml.cs">
       <DependentUpon>TransformersListView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\RavenIntelliPromptProvider.cs" />
     <Compile Include="Infrastructure\AsyncCommand.cs" />
     <Compile Include="Infrastructure\Converters\BreakToLinesConverter.cs" />
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
@@ -1045,6 +1051,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Reporting\ReportingView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Settings\ScriptedIndexSettingsSectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

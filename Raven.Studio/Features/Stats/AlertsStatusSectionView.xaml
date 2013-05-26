@@ -11,13 +11,16 @@
 						 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
-                         xmlns:controls="clr-namespace:Raven.Studio.Controls">
+						 d:DataContext="{d:DesignInstance stats:AlertsStatusSectionModel}"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
+                         xmlns:stats="clr-namespace:Raven.Studio.Features.Stats">
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="DataTemplate_List_DetailsView">
 			<sdk:DataGrid x:Name="AlertsList"
                           ItemsSource="{Binding AlertsToSee}"
                           AutoGenerateColumns="False"
+						  SelectedItem="{Binding SelectedAlert.Value, Mode=TwoWay}"
                           IsReadOnly="True"
                           ColumnWidth="170"
                           RowHeight="28" 
@@ -152,7 +155,7 @@
                                                Behaviors:FadeTrimming.IsEnabled="True" 
                                                Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
 											   Margin="5"
-                                               VerticalAlignment="Center"/>
+                                               VerticalAlignment="Top"/>
 									<Rectangle Fill="Black" 
                                                Height="1" 
                                                HorizontalAlignment="Stretch" 
@@ -177,7 +180,7 @@
 						<RowDefinition/>
 					</Grid.RowDefinitions>
 
-					<Border Grid.Row="1"
+					<Border Grid.Row="0"
 							Background="{StaticResource Brush_ToolbarBackground}"
 							CornerRadius="0">
 						<StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="5">
@@ -320,20 +323,105 @@
 							</Button>
 						</StackPanel>
 					</Border>
-					<ContentControl Grid.Row="2"
-									Visibility="{Binding ShowObserved.Value,Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
-									Content="{Binding}" 
-									ContentTemplate="{StaticResource DataTemplate_List_DetailsView}"
-									HorizontalContentAlignment="Stretch"
-									VerticalContentAlignment="Stretch" Margin="0,0,0,4"/>
-					<ContentControl Grid.Row="2"
-									Visibility="{Binding ShowObserved.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
-									Content="{Binding}" 
-									ContentTemplate="{StaticResource DataTemplate_List_DetailsView}"
-									HorizontalContentAlignment="Stretch"
-									VerticalContentAlignment="Stretch" Margin="0,0,0,4"/>
 				</Grid>
 			</toolkit:HeaderedContentControl.Header>
+
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="2*" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
+				<ContentControl Visibility="{Binding ShowObserved.Value,Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
+									Content="{Binding}" 
+									ContentTemplate="{StaticResource DataTemplate_List_DetailsView}"
+									HorizontalContentAlignment="Stretch"
+									VerticalContentAlignment="Stretch" Margin="0,0,0,4"/>
+				<ContentControl Visibility="{Binding ShowObserved.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
+									Content="{Binding}" 
+									ContentTemplate="{StaticResource DataTemplate_List_DetailsView}"
+									HorizontalContentAlignment="Stretch"
+									VerticalContentAlignment="Stretch" Margin="0,0,0,4"/>
+
+				<sdk:GridSplitter Grid.Row="1"
+							  HorizontalAlignment="Stretch"
+							  Style="{StaticResource Style_GridSplitter_Transparent}" />
+
+				<Border BorderBrush="#FFEAE7E4"
+					Background="{StaticResource Brush_SubtleBackground2}"
+					BorderThickness="1"
+					Grid.Row="2"
+                    TextOptions.TextHintingMode="Animated">
+					<Grid Visibility="{Binding SelectedAlert.Value, Converter={StaticResource HiddenWhenNull}}">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="10" />
+							<ColumnDefinition Width="*" />
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="{Binding SelectedAlert.Value.Message, Converter={StaticResource AutoWhenSingleLineStarSizedWhenMultiLine}}" />
+							<RowDefinition Height="{Binding SelectedAlert.Value.Alert, Converter={StaticResource HiddenWhenEmptyStarSizedForValue}}" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+						</Grid.RowDefinitions>
+
+						<TextBlock Grid.Row="0"
+							   Text="Title"
+							   Style="{StaticResource Style_TextBlock_FieldName}"
+							   VerticalAlignment="Top"
+							   Margin="4,0,0,0" />
+						<TextBox Grid.Row="0"
+							 Grid.Column="2"
+							 Text="{Binding SelectedAlert.Value.Title}"
+							 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
+						
+						<TextBlock Grid.Row="1"
+							   Text="Message"
+							   Style="{StaticResource Style_TextBlock_FieldName}"
+							   VerticalAlignment="Top"
+							   Margin="4,3,0,0" />
+						<TextBox Grid.Column="2" Grid.Row="1"
+							 Text="{Binding SelectedAlert.Value.Message}"
+							 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
+							 VerticalScrollBarVisibility="Auto"
+							 HorizontalScrollBarVisibility="Auto" />
+
+						<TextBlock Grid.Row="2"
+							   Text="Exception"
+							   Style="{StaticResource Style_TextBlock_FieldName}"
+							   VerticalAlignment="Top"
+							   Margin="4,3,0,0" />
+						<TextBox Text="{Binding SelectedAlert.Value.Alert}"
+							 Grid.Column="2"
+							 Grid.Row="2"
+							 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"
+							 VerticalScrollBarVisibility="Auto"
+							 HorizontalScrollBarVisibility="Auto" />
+
+						<TextBlock Grid.Row="3"
+							   Text="Reported"
+							   Style="{StaticResource Style_TextBlock_FieldName}"
+							   VerticalAlignment="Center"
+							   Margin="4,0,0,0" />
+						<TextBox Grid.Column="2"
+							 Grid.Row="3"
+							 Text="{Binding SelectedAlert.Value.CreatedAt}"
+							 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
+
+						<TextBlock Grid.Row="4"
+							   Text="Level"
+							   Style="{StaticResource Style_TextBlock_FieldName}"
+							   VerticalAlignment="Center"
+							   Margin="4,0,0,0" />
+						<TextBox Grid.Row="4"
+							 Grid.Column="2"
+							 Text="{Binding SelectedAlert.Value.AlertLevel}"
+							 Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" />
+					</Grid>
+				</Border>
+			</Grid>
 		</toolkit:HeaderedContentControl>
 	</Grid>
 </Infrastructure:PageView>

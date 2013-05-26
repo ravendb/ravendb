@@ -184,6 +184,8 @@ namespace Raven.Database.Storage
 
         private void WriteIndexDefinition(IndexDefinition indexDefinition)
         {
+	        if (configuration.RunInMemory)
+		        return;
             var encodeIndexNameIfNeeded = FixupIndexName(indexDefinition.Name, path);
             var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(encodeIndexNameIfNeeded) + ".index");
             // Hash the name if it's too long (as a path)
