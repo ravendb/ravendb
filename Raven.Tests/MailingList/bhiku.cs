@@ -20,6 +20,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
+				
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Student { FirstName = "David", LastName = "Globe" });

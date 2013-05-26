@@ -26,7 +26,9 @@ using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Impl.Synchronization;
+using Raven.Database.Indexing;
 using Raven.Database.Plugins;
+using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -68,10 +70,12 @@ namespace Raven.Bundles.Replication.Tasks
 		private HttpRavenRequestFactory httpRavenRequestFactory;
 
 		private EtagSynchronizer etagSynchronizer;
+		private PrefetchingBehavior prefetchingBehavior;
 
 		public void Execute(DocumentDatabase database)
 		{
 			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.Replicator);
+			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Replicator);
 
 			docDb = database;
 			var replicationRequestTimeoutInMs =
@@ -124,6 +128,8 @@ namespace Raven.Bundles.Replication.Tasks
 										return IsNotFailing(dest, currentReplicationAttempts);
 									});
 
+								var startedTasks = new List<Task>();
+
 								foreach (var dest in destinationForReplication)
 								{
 									var destination = dest;
@@ -146,6 +152,9 @@ namespace Raven.Bundles.Replication.Tasks
 											}
 										}
 									});
+
+									startedTasks.Add(replicationTask);
+
 									activeTasks.Enqueue(replicationTask);
 									replicationTask.ContinueWith(_ =>
 									{
@@ -159,6 +168,19 @@ namespace Raven.Bundles.Replication.Tasks
 										}
 									});
 								}
+
+								TaskEx.WhenAll(startedTasks.ToArray()).ContinueWith(t =>
+								{
+									if (destinationStats.Count != 0)
+									{
+										var minLastReplicatedEtag = destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
+										                                            .Select(x => x.Value.LastReplicatedEtag)
+										                                            .Min(x => new ComparableByteArray(x.ToByteArray()));
+										                            
+                						if(minLastReplicatedEtag != null)
+											prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
+									}
+								}).AssertNotFailed();
 							}
 						}
 					}
@@ -663,7 +685,7 @@ namespace Raven.Bundles.Replication.Tasks
 											return false;
 									}
 
-									return destination.FilterDocuments(destinationId, document.Key, document.Metadata);
+									return destination.FilterDocuments(destinationId, document.Key, document.Metadata) && prefetchingBehavior.FilterDocuments(document);
 								})
 								.ToList();
 
@@ -724,9 +746,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return result;
 		}
 
-		private static List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
+		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, JsonDocumentsToReplicate result)
 		{
-			var docsToReplicate = actions.Documents.GetDocumentsAfter(result.LastEtag, 1024, 1024 * 1024 * 25).ToList();
+			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag);
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
 			{
@@ -1019,6 +1041,8 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				task.Wait();
 			}
+
+			prefetchingBehavior.Dispose();
 		}
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 	}

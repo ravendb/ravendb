@@ -110,6 +110,11 @@ namespace Raven.Database.Indexing
             {
                 public Term Term;
                 public double? Val;
+
+	            public override string ToString()
+	            {
+		            return string.Format("Term: {0}, Val: {1}", Term, Val);
+	            }
             }
 
             public IEnumerable<CacheVal> GetFromCache(string field, int doc)

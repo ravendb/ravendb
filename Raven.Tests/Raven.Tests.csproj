@@ -679,6 +679,7 @@
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\DynamicObjectTests.cs" />
+    <Compile Include="MailingList\FacetCountTest.cs" />
     <Compile Include="MailingList\FacetHits.cs" />
     <Compile Include="MailingList\FacetQueryNotCorrectWithDefaultFieldSpecified.cs" />
     <Compile Include="MailingList\chad.cs" />
@@ -688,6 +689,7 @@
     <Compile Include="MailingList\DataSetIndexTest.cs" />
     <Compile Include="MailingList\DeanWard.cs" />
     <Compile Include="MailingList\Edin.cs" />
+    <Compile Include="MailingList\FailingBulkInsertTest.cs" />
     <Compile Include="MailingList\FailingChangesApiTests.cs" />
     <Compile Include="MailingList\FailingProjection.cs" />
     <Compile Include="MailingList\Failing_lucene_query_where_in_tests.cs" />

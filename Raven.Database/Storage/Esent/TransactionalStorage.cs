@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
@@ -35,10 +36,11 @@ namespace Raven.Storage.Esent
     {
         private static int instanceCounter;
         private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
+		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
         private readonly string database;
         private readonly InMemoryRavenConfiguration configuration;
         private readonly Action onCommit;
-        private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly string path;
         private volatile bool disposed;
 
@@ -552,11 +554,17 @@ namespace Raven.Storage.Esent
             return null; // Esent doesn't need this
         }
 
+		public IDisposable DisableBatchNesting()
+		{
+			disableBatchNesting.Value = new object();
+			return new DisposableAction(() => disableBatchNesting.Value = null);
+		}
+
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         [CLSCompliant(false)]
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
+            if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
             {
                 if (current.Value != null) // check again, just to be sure
                 {
@@ -567,6 +575,7 @@ namespace Raven.Storage.Esent
                 }
             }
             Action afterStorageCommit = null;
+
             disposerLock.EnterReadLock();
             try
             {
@@ -593,7 +602,7 @@ namespace Raven.Storage.Esent
             finally
             {
                 disposerLock.ExitReadLock();
-                if (disposed == false)
+				if (disposed == false && disableBatchNesting.Value == null)
                     current.Value = null;
             }
             if (afterStorageCommit != null)
@@ -610,8 +619,9 @@ namespace Raven.Storage.Esent
             using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
             {
                 var storageActionsAccessor = new StorageActionsAccessor(pht);
-                current.Value = storageActionsAccessor;
-                action(current.Value);
+				if(disableBatchNesting.Value == null)
+					current.Value = storageActionsAccessor;
+				action(storageActionsAccessor);
                 storageActionsAccessor.SaveAllTasks();
 
                 if (pht.UsingLazyCommit)
