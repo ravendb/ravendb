@@ -1,9 +1,9 @@
 ﻿using System.Linq;
-using Xunit;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Raven.Database.Config;
+using Raven.Tests.Helpers;
+using Xunit;
 
 namespace Raven.Tests.MailingList 
 {
@@ -14,7 +14,6 @@ namespace Raven.Tests.MailingList
             configuration.Settings.Add("Raven/ActiveBundles", "IndexedProperties");
         }
 
-        #region Tests
         [Fact]
         public void ArticlesAreReturnedInIdOrder()
         {
@@ -55,7 +54,6 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-        #endregion
 
         private void CreateArticles(IDocumentStore docStore, int numArticles)
         {
@@ -96,7 +94,6 @@ namespace Raven.Tests.MailingList
             new Articles_byArticleId().Execute(docStore);
         }
 
-        #region Indexes
         public class Articles_byArticleId : AbstractIndexCreationTask<Article, Article>
         {
             public Articles_byArticleId()
@@ -105,9 +102,7 @@ namespace Raven.Tests.MailingList
                                   select new { Id = article.Id };
             }
         }
-        #endregion
 
-        #region Models
         public class Article
         {
             public int       Id       { get; set; }
@@ -147,7 +142,5 @@ namespace Raven.Tests.MailingList
             public int    Id   { get; set; }
             public string Name { get; set; }
         }
-
-        #endregion
     }
 }
