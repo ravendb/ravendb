@@ -154,6 +154,19 @@ namespace Raven.Client
         TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified id
+		/// </summary>
+		/// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <returns></returns>
+		TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified id
+		/// </summary>
+		TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
 		void SaveChanges();

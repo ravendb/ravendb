@@ -92,11 +92,14 @@ namespace Raven.Database.Impl.Synchronization
 
 		private void PersistSynchronizationState()
 		{
-			transactionalStorage.Batch(
-				actions => actions.Lists.Set("Raven/Etag/Synchronization", type.ToString(), RavenJObject.FromObject(new
-				{
-					etag = GetEtagForPersistance()
-				}), UuidType.EtagSynchronization));
+			using (transactionalStorage.DisableBatchNesting())
+			{
+				transactionalStorage.Batch(
+					actions => actions.Lists.Set("Raven/Etag/Synchronization", type.ToString(), RavenJObject.FromObject(new
+					{
+						etag = GetEtagForPersistance()
+					}), UuidType.EtagSynchronization));
+			}	
 		}
 
 		private void LoadSynchronizationState()

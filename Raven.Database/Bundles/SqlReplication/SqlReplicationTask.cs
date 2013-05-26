@@ -14,12 +14,14 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
+using Raven.Database.Prefetching;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -30,7 +32,7 @@ namespace Raven.Database.Bundles.SqlReplication
 {
 	[InheritedExport(typeof(IStartupTask))]
 	[ExportMetadata("Bundle", "sqlReplication")]
-	public class SqlReplicationTask : IStartupTask
+	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
 		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
@@ -49,6 +51,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void Execute(DocumentDatabase database)
 		{
 			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.SqlReplicator);
+			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator);
 
 			Database = database;
 			Database.OnDocumentChange += (sender, notification, metadata) =>
@@ -69,8 +72,6 @@ namespace Raven.Database.Bundles.SqlReplication
 			};
 
 			GetReplicationStatus();
-
-			prefetchingBehavior = new PrefetchingBehavior(Database.WorkContext, new IndexBatchSizeAutoTuner(Database.WorkContext));
 
 			var task = Task.Factory.StartNew(() =>
 			{
@@ -247,6 +248,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				finally
 				{
 					AfterReplicationCompleted(successes.Count);
+					var lastMinReplicatedEtag = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray())).ToEtag();
+					prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
 				}
 			}
 		}
@@ -479,6 +482,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			});
 			replicationConfigs = sqlReplicationConfigs;
 			return sqlReplicationConfigs;
+		}
+
+		public void Dispose()
+		{
+			prefetchingBehavior.Dispose();
 		}
 	}
 }
