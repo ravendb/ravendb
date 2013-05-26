@@ -552,6 +552,7 @@
     <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="Faceted\FacetTestBase.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
+    <Compile Include="Indexes\IndexLocking.cs" />
     <Compile Include="Indexes\Recovery\MapReduceRecoveryTestIndex.cs" />
     <Compile Include="Indexes\Recovery\IndexMessing.cs" />
     <Compile Include="Indexes\Recovery\MapIndexRecoveryTests.cs" />
@@ -582,6 +583,7 @@
     <Compile Include="Issues\RavenDB_1018.cs" />
     <Compile Include="Issues\RavenDB_1041.cs" />
     <Compile Include="Issues\RavenDB_1088.cs" />
+    <Compile Include="Issues\RavenDB_1107.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -719,6 +721,7 @@
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
     <Compile Include="MailingList\LongIds.cs" />
     <Compile Include="MailingList\LuceneSearchSample.cs" />
+    <Compile Include="MailingList\MapLongTests.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
     <Compile Include="MailingList\MoreLikeThisEvaluation.cs" />

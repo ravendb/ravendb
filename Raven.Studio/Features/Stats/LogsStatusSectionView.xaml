@@ -3,14 +3,11 @@
                          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                          xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-                         xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
-                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          xmlns:stats="clr-namespace:Raven.Studio.Features.Stats"
                          mc:Ignorable="d" d:DataContext="{d:DesignInstance stats:LogsStatusSectionModel}">
 

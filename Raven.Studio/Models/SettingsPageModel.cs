@@ -71,25 +71,16 @@ namespace Raven.Studio.Models
 		    }
 
 		    if (bundles.Contains("Replication"))
-		    {
-			    var repModel = new ReplicationSettingsSectionModel();
-			    Settings.Sections.Add(repModel);
-				repModel.LoadFor(null);
-		    }
+			    AddModel(new ReplicationSettingsSectionModel());
 
 		    if (bundles.Contains("SqlReplication"))
-		    {
-			    var sqlModel = new SqlReplicationSettingsSectionModel();
-			    Settings.Sections.Add(sqlModel);
-				sqlModel.LoadFor(null);
-		    }
+			    AddModel(new SqlReplicationSettingsSectionModel());
 
 		    if (bundles.Contains("Versioning"))
-		    {
-			    var verModel = new VersioningSettingsSectionModel();
-			    Settings.Sections.Add(verModel);
-				verModel.LoadFor(null);
-		    }
+			    AddModel(new VersioningSettingsSectionModel());
+
+		    if (bundles.Contains("ScriptedIndexResults"))
+			    AddModel(new ScriptedIndexSettingsSectionModel());
 
 		    if (bundles.Contains("Authorization"))
 		    {
@@ -102,11 +93,31 @@ namespace Raven.Studio.Models
 			    }
 		    }
 
-			if (Settings.Sections.Count == 0)
+		    if (Settings.Sections.Count == 0)
+			    Settings.Sections.Add(new NoSettingsSectionModel());
+
+			var url = new UrlParser(UrlUtil.Url);
+
+			var id = url.GetQueryParam("id");
+			if (string.IsNullOrWhiteSpace(id) == false)
 			{
-				Settings.Sections.Add(new NoSettingsSectionModel());
+				switch (id)
+				{
+					case "scripted":
+						if(Settings.Sections.Any(model => model is ScriptedIndexSettingsSectionModel))
+							Settings.SelectedSection.Value = Settings.Sections.FirstOrDefault(model => model is ScriptedIndexSettingsSectionModel);
+						break;
+				}
 			}
+			else
+				Settings.SelectedSection.Value = Settings.Sections[0];
 	    }
+
+		private void AddModel(SettingsSectionModel model)
+		{
+			Settings.Sections.Add(model);
+			model.LoadFor(null);
+		}
 
 	    public SettingsModel Settings { get; private set; }
 

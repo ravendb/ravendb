@@ -73,6 +73,9 @@ namespace Raven.Abstractions.Linq
 		{
 			switch (binder.Name)
 			{
+				case "GetValueOrDefault":
+					result = new DynamicNullObject {IsExplicitNull = true};
+					return true;
 				case "Count":
 					result = 0;
 					return true;

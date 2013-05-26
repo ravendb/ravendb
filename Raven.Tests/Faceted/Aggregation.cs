@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
@@ -19,6 +18,7 @@ namespace Raven.Tests.Faceted
             public string Product { get; set; }
             public decimal Total { get; set; }
             public Currency Currency { get; set; }
+			public int Quantity { get; set; }
         }
 
         public enum Currency
@@ -34,7 +34,7 @@ namespace Raven.Tests.Faceted
             {
                 Map = orders =>
                       from order in orders
-                      select new { order.Currency, order.Product, order.Total };
+                      select new { order.Currency, order.Product, order.Total, order.Quantity };
 
                 Sort(x => x.Total, SortOptions.Double);
             }
@@ -179,7 +179,7 @@ namespace Raven.Tests.Faceted
 					Assert.NotNull(r.Results["ProductMin"]);
 
 					Assert.Equal(3333, r.Results["ProductMax"].Values.First().Max);
-					Assert.Equal(2, r.Results["ProductMin"].Values.First().Count);
+					Assert.Equal(2, r.Results["ProductMin"].Values[1].Count);
 
 				}
 			}

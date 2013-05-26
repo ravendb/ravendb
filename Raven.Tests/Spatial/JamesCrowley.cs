@@ -34,6 +34,8 @@ namespace Raven.Tests.Spatial
 					session.Store(eventListing);
 					session.SaveChanges();
 				}
+
+				WaitForUserToContinueTheTest(store);
 				using (var session = store.OpenSession())
 				{
 					var matchingEvents = session.Advanced.LuceneQuery<EventWithLocation, EventsBySimpleLocation>()
