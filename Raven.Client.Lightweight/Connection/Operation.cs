@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -47,8 +49,7 @@ namespace Raven.Client.Connection
 				if (status.Value<bool>("Completed"))
 					return status.Value<RavenJToken>("State");
 
-				await TaskEx.Delay(500);
-
+				await Time.Delay(TimeSpan.FromMilliseconds(500));
 			}
 		}
 

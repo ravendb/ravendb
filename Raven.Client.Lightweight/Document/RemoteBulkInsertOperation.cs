@@ -70,25 +70,23 @@ namespace Raven.Client.Document
 			{
 				SynchronizationContext.SetSynchronizationContext(null);
 
-			OperationId = Guid.NewGuid();
-			operationClient = client;
-			operationChanges = changes;
-			queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
+				OperationId = Guid.NewGuid();
+				operationClient = client;
+				operationChanges = changes;
+				queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 
-			operationTask = StartBulkInsertAsync(options);
+				operationTask = StartBulkInsertAsync(options);
 #if !MONO
-			SubscribeToBulkInsertNotifications(changes);
+				SubscribeToBulkInsertNotifications(changes);
 #endif
-		}
-
-#if !MONO
+			}
 			finally
 			{
 				SynchronizationContext.SetSynchronizationContext(synchronizationContext);
 			}
-			
 		}
 
+#if !MONO
 		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
 		{
 			changes
@@ -119,7 +117,7 @@ namespace Raven.Client.Document
 			try
 			{
 				if (expect100Continue != null)
-				expect100Continue.Dispose();
+					expect100Continue.Dispose();
 			}
 			catch
 			{

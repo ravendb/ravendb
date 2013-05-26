@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -51,7 +52,7 @@ namespace Raven.Abstractions.Extensions
 				await task;
 				return true;
 			}
-			if (task == await TaskEx.WhenAny(task, TaskEx.Delay(timeout.Value)))
+			if (task == await Task.WhenAny(task, Time.Delay(timeout.Value)))
 				return true;
 			return false;
 		}
