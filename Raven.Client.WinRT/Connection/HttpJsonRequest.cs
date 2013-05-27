@@ -226,9 +226,7 @@ namespace Raven.Client.WinRT.Connection
 				var reader = new StreamReader(responseStream);
 				var text = reader.ReadToEnd();
 				return text;
-			}
-			);
-
+			});
 		}
 
 		private async Task<T> ReadResponse<T>(Func<HttpResponseMessage> getResponse, Func<Stream, T> handleResponse)
