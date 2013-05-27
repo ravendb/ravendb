@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 #if NETFX_CORE
 using System.Net.Http;
+using System.Threading.Tasks;
 #endif
 
 namespace Raven.Abstractions.Connection
@@ -59,9 +60,9 @@ namespace Raven.Abstractions.Connection
 		/// </summary>
 		/// <param name="response">The response.</param>
 		/// <returns></returns>
-		public static Stream GetResponseStreamWithHttpDecompression(this HttpResponseMessage response)
+		public static async Task<Stream> GetResponseStreamWithHttpDecompression(this HttpResponseMessage response)
 		{
-			var stream = response.Content.ReadAsStreamAsync().Result;
+			var stream = await response.Content.ReadAsStreamAsync();
 			var encoding = response.Headers.GetValues("Content-Encoding");
 			if (encoding != null && encoding.Contains("gzip"))
 				stream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);

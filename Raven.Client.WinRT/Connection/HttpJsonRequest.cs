@@ -79,8 +79,6 @@ namespace Raven.Client.WinRT.Connection
 
 		private HttpJsonRequestFactory factory;
 
-		private static Task noopWaitForTask = new CompletedTask();
-
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -100,9 +98,6 @@ namespace Raven.Client.WinRT.Connection
 			};
 			httpClient = new HttpClient(handler);
 			httpClient.DefaultRequestHeaders.Add("Raven-Client-Version", ClientVersion);
-
-			noopWaitForTask = new CompletedTask();
-			WaitForTask = noopWaitForTask;
 
 			WriteMetadata(metadata);
 			if (method != "GET")
@@ -129,16 +124,16 @@ namespace Raven.Client.WinRT.Connection
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		private Task<string> ReadResponseStringAsync()
+		private async Task<string> ReadResponseStringAsync()
 		{
 			var requestMessage = new HttpRequestMessage(method, url);
-			return WaitForTask.ContinueWith(_ => httpClient.SendAsync(requestMessage)
-													.ConvertSecurityExceptionToServerNotFound()
-													.AddUrlIfFaulting(url)
-													.ContinueWith(t => ReadStringInternal(() => t.Result))
-													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
-													.Unwrap())
-													.Unwrap();
+			var result = await httpClient.SendAsync(requestMessage)
+			                             .ConvertSecurityExceptionToServerNotFound()
+			                             .AddUrlIfFaulting(url);
+
+			return await ReadStringInternal(() => result)
+				             .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
+				             .Unwrap();
 		}
 
 		private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
@@ -199,15 +194,15 @@ namespace Raven.Client.WinRT.Connection
 			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest(task.Result)).Unwrap();
 		}
 
-		public Task<byte[]> ReadResponseBytesAsync()
+		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			return WaitForTask.ContinueWith(_ => httpClient.SendAsync(new HttpRequestMessage(method, url))
-													.ConvertSecurityExceptionToServerNotFound()
-													.AddUrlIfFaulting(url)
-													.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
-													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
-													.Unwrap())
-													.Unwrap();
+			var result = await httpClient.SendAsync(new HttpRequestMessage(method, url))
+			                             .ConvertSecurityExceptionToServerNotFound()
+			                             .AddUrlIfFaulting(url);
+
+			return await ReadResponse(() => result, ConvertStreamToBytes)
+				             .ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
+				             .Unwrap();
 		}
 
 		static byte[] ConvertStreamToBytes(Stream input)
@@ -224,7 +219,7 @@ namespace Raven.Client.WinRT.Connection
 			}
 		}
 
-		private string ReadStringInternal(Func<HttpResponseMessage> getResponse)
+		private Task<string> ReadStringInternal(Func<HttpResponseMessage> getResponse)
 		{
 			return ReadResponse(getResponse, responseStream =>
 			{
@@ -236,7 +231,7 @@ namespace Raven.Client.WinRT.Connection
 
 		}
 
-		private T ReadResponse<T>(Func<HttpResponseMessage> getResponse, Func<Stream, T> handleResponse)
+		private async Task<T> ReadResponse<T>(Func<HttpResponseMessage> getResponse, Func<Stream, T> handleResponse)
 		{
 			HttpResponseMessage response;
 			try
@@ -265,7 +260,7 @@ namespace Raven.Client.WinRT.Connection
 
 			ResponseStatusCode = response.StatusCode;
 
-			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
+			using (var responseStream = await response.GetResponseStreamWithHttpDecompression())
 			{
 				return handleResponse(responseStream);
 			}
@@ -277,11 +272,6 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		/// <value>The response status code.</value>
 		public HttpStatusCode ResponseStatusCode { get; set; }
-
-		/// <summary>
-		/// The task to wait all other actions on
-		/// </summary>
-		public Task WaitForTask { get; set; }
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
@@ -332,23 +322,22 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		public Task WriteAsync(string data)
 		{
-			return WaitForTask.ContinueWith(_ => httpClient.GetStreamAsync(url)
-			                                               .ContinueWith(task =>
-			                                               {
-				                                               Stream dataStream = factory.DisableRequestCompression == false ?
-					                                                                   new GZipStream(task.Result, CompressionMode.Compress) :
-					                                                                   task.Result;
-				                                               var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
-				                                               return streamWriter.WriteAsync(data)
-				                                                                  .ContinueWith(writeTask =>
-				                                                                  {
-					                                                                  streamWriter.Dispose();
-					                                                                  dataStream.Dispose();
-					                                                                  task.Result.Dispose();
-					                                                                  return writeTask;
-				                                                                  }).Unwrap();
-			                                               }).Unwrap())
-			                  .Unwrap();
+			return httpClient.GetStreamAsync(url)
+			                 .ContinueWith(task =>
+			                 {
+				                 Stream dataStream = factory.DisableRequestCompression == false ?
+					                                     new GZipStream(task.Result, CompressionMode.Compress) :
+					                                     task.Result;
+				                 var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
+				                 return streamWriter.WriteAsync(data)
+				                                    .ContinueWith(writeTask =>
+				                                    {
+					                                    streamWriter.Dispose();
+					                                    dataStream.Dispose();
+					                                    task.Result.Dispose();
+					                                    return writeTask;
+				                                    }).Unwrap();
+			                 }).Unwrap();
 		}
 
 		/// <summary>
@@ -357,14 +346,14 @@ namespace Raven.Client.WinRT.Connection
 		public Task WriteAsync(byte[] byteArray)
 		{
 			postedData = byteArray;
-			return WaitForTask.ContinueWith(_ => httpClient.GetStreamAsync(url).ContinueWith(t =>
+			return httpClient.GetStreamAsync(url).ContinueWith(t =>
 			{
 				var dataStream = new GZipStream(t.Result, CompressionMode.Compress);
 				using (dataStream)
 				{
 					dataStream.Write(byteArray, 0, byteArray.Length);
 				}
-			})).Unwrap();
+			});
 		}
 
 		/// <summary>
@@ -391,54 +380,50 @@ namespace Raven.Client.WinRT.Connection
 
 		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
-			return WaitForTask.ContinueWith(__ =>
-			{
 				httpClient.DefaultRequestHeaders.Add("Requires-Big-Initial-Download", "True");
-				return httpClient.GetAsync(url)
-				   .ContinueWith(task =>
-				   {
-					   var stream = task.Result.Content.ReadAsStreamAsync().Result;
-					   var observableLineStream = new ObservableLineStream(stream, () =>
-					   {
-						   httpClient.CancelPendingRequests();
-					   });
-					   observableLineStream.Start();
-					   return (IObservable<string>)observableLineStream;
-				   })
-				   .ContinueWith(task =>
-				   {
-					   var webException = task.Exception.ExtractSingleInnerException() as WebException;
-					   if (webException == null || retries >= 3)
-						   return task;// effectively throw
+			return httpClient.GetAsync(url)
+			                 .ContinueWith(task =>
+			                 {
+				                 var stream = task.Result.Content.ReadAsStreamAsync().Result;
+				                 var observableLineStream = new ObservableLineStream(stream, () =>
+				                 {
+					                 httpClient.CancelPendingRequests();
+				                 });
+				                 observableLineStream.Start();
+				                 return (IObservable<string>) observableLineStream;
+			                 })
+			                 .ContinueWith(task =>
+			                 {
+				                 var webException = task.Exception.ExtractSingleInnerException() as WebException;
+				                 if (webException == null || retries >= 3)
+					                 return task; // effectively throw
 
-					   var httpWebResponse = webException.Response as HttpWebResponse;
-					   if (httpWebResponse == null ||
-							(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
-							 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
-							 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
-						   return task; // effectively throw
+				                 var httpWebResponse = webException.Response as HttpWebResponse;
+				                 if (httpWebResponse == null ||
+				                     (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+				                      httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+				                      httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+					                 return task; // effectively throw
 
-					   if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
-					   {
-						   HandleForbiddenResponseAsync(httpWebResponse);
-						   return task;
-					   }
+				                 if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+				                 {
+					                 HandleForbiddenResponseAsync(httpWebResponse);
+					                 return task;
+				                 }
 
-					   var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+				                 var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
 
-					   if (authorizeResponse == null)
-						   return task; // effectively throw
+				                 if (authorizeResponse == null)
+					                 return task; // effectively throw
 
-					   return authorizeResponse
-						   .ContinueWith(_ =>
-						   {
-							   _.Wait(); //throw on error
-							   return ServerPullAsync(retries + 1);
-						   })
-						   .Unwrap();
-				   }).Unwrap();
-			})
-				.Unwrap();
+				                 return authorizeResponse
+					                 .ContinueWith(_ =>
+					                 {
+						                 _.Wait(); //throw on error
+						                 return ServerPullAsync(retries + 1);
+					                 })
+					                 .Unwrap();
+			                 }).Unwrap();
 		}
 
 		public Task ExecuteWriteAsync(string data)
