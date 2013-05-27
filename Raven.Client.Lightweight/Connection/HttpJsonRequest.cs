@@ -396,10 +396,8 @@ namespace Raven.Client.Connection
 
 			using (response)
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
-			using (var streamReader = new StreamReader(responseStream))
-			using (var jsonReader = new JsonTextReaderAsync(streamReader))
 			{
-				var data = await RavenJToken.ReadFromAsync(jsonReader);
+				var data = await RavenJToken.TryLoadAsync(responseStream);
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
@@ -410,7 +408,7 @@ namespace Raven.Client.Connection
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
-					HttpResult = (int)ResponseStatusCode,
+					HttpResult = (int) ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
 					Result = (data ?? "").ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
