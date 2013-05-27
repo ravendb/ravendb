@@ -51,10 +51,10 @@ namespace Raven.Abstractions.Extensions
 				await task;
 				return true;
 			}
-#if NET45
-			if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)))
-#else
+#if SILVERLIGHT
 			if (task == await TaskEx.WhenAny(task, TaskEx.Delay(timeout.Value)))
+#else
+			if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)))
 #endif
 				return true;
 			return false;

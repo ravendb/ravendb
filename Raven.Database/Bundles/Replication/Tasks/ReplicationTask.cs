@@ -169,12 +169,7 @@ namespace Raven.Bundles.Replication.Tasks
 									});
 								}
 
-#if NET45
-								Task
-#else
-								TaskEx
-#endif								
-									.WhenAll(startedTasks.ToArray()).ContinueWith(t =>
+								Task.WhenAll(startedTasks.ToArray()).ContinueWith(t =>
 								{
 									if (destinationStats.Count != 0)
 									{
