@@ -215,7 +215,11 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag)
 		{
-			int totalCount = 0;
+			var totalCount = 0;
+			var lastReport = SystemTime.UtcNow;
+			var reportInterval = TimeSpan.FromSeconds(2);
+
+			ShowProgress("Exporting Documents");
 
 			while (true)
 			{
@@ -237,8 +241,11 @@ namespace Raven.Abstractions.Smuggler
 						document.WriteTo(jsonWriter);
 						totalCount++;
 
-                        if (totalCount % 1000 == 0)
-                           ShowProgress("Exported {0} documents", totalCount);
+						if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+						{
+							ShowProgress("Exported {0} documents", totalCount);
+							lastReport = SystemTime.UtcNow;
+						}
 
 						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 					}
