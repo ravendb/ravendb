@@ -99,8 +99,6 @@ namespace Raven.Studio.Commands
 				{
 					session.Store(scriptedIndexResults.Value);
 				}
-
-				session.SaveChangesAsync().Catch();
 			}
 
 			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
