@@ -811,7 +811,7 @@ namespace Raven.Client.Connection
 				}
 				catch (WebException e)
 				{
-					if (retries >= 3)
+					if (++retries >= 3)
 						throw;
 
 					httpWebResponse = e.Response as HttpWebResponse;
