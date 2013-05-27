@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Security.OAuth
 {
 	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		public bool Authorize(IHttpContext ctx, bool hasApiKey)
+		public bool Authorize(IHttpContext ctx, bool hasApiKey, bool ignoreDbAccess)
 		{
 			var httpRequest = ctx.Request;
 
@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Security.OAuth
 			var writeAccess = isGetRequest == false;
 			if(!tokenBody.IsAuthorized(TenantId, writeAccess))
 			{
-				if (allowUnauthenticatedUsers)
+				if (allowUnauthenticatedUsers || ignoreDbAccess)
 					return true;
 
 				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", 
