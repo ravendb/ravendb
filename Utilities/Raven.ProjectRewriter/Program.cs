@@ -25,7 +25,7 @@ namespace Raven.ProjectRewriter
 			//    "Raven.Json",
 			//    "Raven.Abstractions");
 
-			GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
+			/*GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
 			                     @"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
 
 
@@ -48,7 +48,7 @@ namespace Raven.ProjectRewriter
 			Generate45("Raven.Client.Embedded",
 			           "Raven.Abstractions",
 			           "Raven.Client.Lightweight",
-			           "Raven.Database");
+			           "Raven.Database");*/
 
 		}
 
