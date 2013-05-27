@@ -23,6 +23,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -35,8 +36,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-	using Raven.Abstractions.Data;
-
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
 	/// </summary>
@@ -46,6 +45,7 @@ namespace Raven.Client.Connection
 		internal readonly string Method;
 
 		internal volatile HttpWebRequest webRequest;
+
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
