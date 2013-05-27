@@ -11,7 +11,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Document
@@ -92,7 +91,13 @@ namespace Raven.Client.Document
 					if (!replicated)
 					{
 						if (countDown.Active)
-							await Time.Delay(TimeSpan.FromMilliseconds(100));
+						{
+#if NET45
+							await Task.Delay(100);
+#else
+							await TaskEx.Delay(100);
+#endif
+						}
 						continue;
 					}
 					countDown.Signal();
