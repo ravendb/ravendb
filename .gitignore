@@ -33,6 +33,7 @@ ClientBin/
 *.g.3.5.csproj
 *.g.csproj
 *.g.4.csproj
+*.g.45.csproj
 *.docstates
 StyleCop.Cache
 *.dotCover
