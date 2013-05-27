@@ -767,7 +767,7 @@ more responsive application.
 
 		
 
-		protected Task<string> GetOrGenerateDocumentKeyAsync(object entity)
+		protected async Task<string> GetOrGenerateDocumentKeyAsync(object entity)
 		{
 			string id;
 			GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
@@ -777,13 +777,11 @@ more responsive application.
 				? CompletedTask.With(id)
 				: GenerateKeyAsync(entity);
 
-			return generator.ContinueWith(task =>
-			{
-				if (task.Result != null && task.Result.StartsWith("/"))
-					throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
+			var result = await generator;
+			if (result != null && result.StartsWith("/"))
+				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 
-				return task.Result;
-			});
+			return result;
 		}
 
 		/// <summary>
