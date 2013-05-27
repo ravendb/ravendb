@@ -100,6 +100,12 @@ namespace Raven.Studio.Commands
 					session.Store(scriptedIndexResults.Value);
 				}
 
+				foreach (var indexName in scriptedSettings.DeletedIndexes)
+				{
+					var id = ScriptedIndexResults.IdPrefix + indexName;
+					DatabaseCommands.DeleteDocumentAsync(id);
+				}
+
 				session.SaveChangesAsync().Catch();
 			}
 
