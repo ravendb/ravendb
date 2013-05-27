@@ -205,6 +205,8 @@ task TestSilverlight -depends Compile, CopyServer {
 task TestWinRT -depends Compile, CopyServer {
 	try
 	{
+		exec { CheckNetIsolation LoopbackExempt -a -n=68089da0-d0b7-4a09-97f5-30a1e8f9f718_pjnejtz0hgswm }
+		
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
 	
 		$xUnit = Get-PackagePath xunit.runners

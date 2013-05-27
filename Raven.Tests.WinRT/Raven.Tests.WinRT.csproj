@@ -114,8 +114,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="RavenTestBase.cs" />
     <Compile Include="BasicSessionApiTests.cs" />
+    <Compile Include="RavenTestBase.cs" />
+    <Compile Include="HttpClientCouldReachLocalhost.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">

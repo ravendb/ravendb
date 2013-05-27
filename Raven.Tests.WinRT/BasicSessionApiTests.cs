@@ -1,33 +1,10 @@
-﻿using System.Net;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using Raven.Client.Document;
 
 namespace Raven.Tests.WinRT
 {
-	[TestClass]
-	public class CanAccessWeb
-	{
-		/*[TestMethod]
-		public async Task CanQueryGoogle2()
-		{
-			var httpClient = new HttpClient();
-			var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://127.0.0.1:8079/stats");
-			var result = await httpClient.SendAsync(httpRequestMessage);
-			Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
-		}*/
-
-		[TestMethod]
-		public async Task CanQueryRavenDb()
-		{
-			var httpClient = new HttpClient();
-			var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://www.google.com");
-			var result = await httpClient.SendAsync(httpRequestMessage);
-			Assert.AreEqual(200, result.StatusCode);
-		}
-	}
-/*
 	[TestClass]
 	public class BasicSessionApiTests : RavenTestBase
 	{
@@ -67,5 +44,5 @@ namespace Raven.Tests.WinRT
 			public string Id { get; set; }
 			public string Name { get; set; }
 		}
-	}*/
+	}
 }
