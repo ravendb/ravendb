@@ -1,5 +1,4 @@
-﻿using System.Net.Http;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using Raven.Client.Document;
 
@@ -8,17 +7,6 @@ namespace Raven.Tests.WinRT
 	[TestClass]
 	public class BasicSessionApiTests : RavenTestBase
 	{
-		[TestMethod]
-		public async Task CanQueryRavenDb()
-		{
-			var httpClient = new HttpClient();
-			var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "http://www.google.com");
-			var result = await httpClient.SendAsync(httpRequestMessage);
-			Assert.Equals(200, result.StatusCode);
-		}
-
-
-
 		[TestMethod]
 		public async Task CanSaveAndLoad()
 		{
