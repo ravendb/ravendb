@@ -414,7 +414,6 @@
     <Compile Include="Models\ConflictsModel.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\DataTemplateSelector.cs" />
     <Compile Include="Infrastructure\TemplateSelectors\TaskUITemplateSelector.cs" />
-    <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />
     <Compile Include="Features\Settings\PeriodicBackupSettingsSectionModel.cs" />
     <Compile Include="Models\QueueModel.cs" />
     <Compile Include="Features\Settings\SqlReplicationSettingsSectionModel.cs" />
@@ -1555,11 +1554,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
-      <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
+      <Project>{8a1db308-d56b-49bc-a421-a2ab32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
