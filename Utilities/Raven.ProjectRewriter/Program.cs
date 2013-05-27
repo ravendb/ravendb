@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
@@ -12,7 +13,9 @@ namespace Raven.ProjectRewriter
 	class Program
 	{
 		static XNamespace xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
-		static void Main(string[] args)
+		private static Dictionary<string, string> net45Guids;
+
+		private static void Main(string[] args)
 		{
 			//Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
 			//    @"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
@@ -23,7 +26,86 @@ namespace Raven.ProjectRewriter
 			//    "Raven.Abstractions");
 
 			GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
-				@"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
+			                     @"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
+
+
+			net45Guids = new Dictionary<string, string>
+			{
+				{"Raven.Abstractions", "{B903FE56-0230-46FE-9458-AEFFEE294179}"},
+				{"Raven.Client.Lightweight", "{E43AA81B-E924-4D7E-8C02-7EF691EBE9EC}"},
+				{"Raven.Database", "{FAEBA971-1A36-4D42-8E98-043E617F1FE5}"},
+				{"Raven.Client.Embedded", "{ACA1B0BD-3455-4EC4-9388-539EF7CFC945}"},
+			};
+
+			Generate45("Raven.Abstractions");
+
+			Generate45("Raven.Client.Lightweight",
+			           "Raven.Abstractions");
+
+			Generate45("Raven.Database",
+					   "Raven.Abstractions");
+
+			Generate45("Raven.Client.Embedded",
+			           "Raven.Abstractions",
+			           "Raven.Client.Lightweight",
+			           "Raven.Database");
+
+		}
+
+		private static void Generate45(string assemblyName, params string[] references)
+		{
+			string srcPath = assemblyName + @"\" + assemblyName + ".csproj";
+			string destFile= assemblyName + @"\" + assemblyName + ".g.45.csproj";
+
+			var database = XDocument.Load(srcPath);
+			foreach (var element in database.Root.Descendants(xmlns + "DefineConstants").ToArray())
+			{
+				if (element.Value.EndsWith(";") == false)
+					element.Value += ";";
+				element.Value += "NET45";
+			}
+
+			foreach (var element in database.Root.Descendants(xmlns + "ProjectReference").ToArray())
+			{
+				if (references.Contains(element.Element(xmlns + "Name").Value) == false)
+					continue;
+				element.Attribute("Include").Value = element.Attribute("Include").Value.Replace(".csproj", ".g.45.csproj");
+				element.Element(xmlns + "Project").Value = net45Guids[element.Element(xmlns + "Name").Value];
+				element.Element(xmlns + "Name").Value += "-4.5";
+			}
+
+			foreach (var element in database.Root.Descendants(xmlns + "ProjectGuid"))
+			{
+				element.Value = net45Guids[assemblyName];
+			}
+			foreach (var element in database.Root.Descendants(xmlns + "TargetFrameworkVersion"))
+			{
+				element.Value = "v4.5";
+			}
+			foreach (var element in database.Root.Descendants(xmlns + "TargetFrameworkProfile"))
+			{
+				element.Value = ""; // Not "Client"
+			}
+			foreach (var element in database.Root.Descendants(xmlns + "AssemblyName"))
+			{
+				element.Value += "-4.5";
+			}
+
+			foreach (var element in database.Root.Descendants(xmlns + "Reference").ToArray())
+			{
+				if (element.Attribute("Include").Value == "Microsoft.CompilerServices.AsyncTargetingPack.Net4")
+					element.Element(xmlns + "HintPath").Value = element.Element(xmlns + "HintPath").Value.Replace(@"net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4", @"net45\Microsoft.CompilerServices.AsyncTargetingPack.Net45");
+			}
+
+			using (var xmlWriter = XmlWriter.Create(destFile,
+													new XmlWriterSettings
+													{
+														Indent = true
+													}))
+			{
+				database.WriteTo(xmlWriter);
+				xmlWriter.Flush();
+			}
 		}
 
 		private static void GenerateSilverlight4(string srcPath, string destFile, params string[] references)
