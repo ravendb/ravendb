@@ -94,7 +94,13 @@ namespace Raven.ProjectRewriter
 			foreach (var element in database.Root.Descendants(xmlns + "Reference").ToArray())
 			{
 				if (element.Attribute("Include").Value == "Microsoft.CompilerServices.AsyncTargetingPack.Net4")
+				{
 					element.Element(xmlns + "HintPath").Value = element.Element(xmlns + "HintPath").Value.Replace(@"net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4", @"net45\Microsoft.CompilerServices.AsyncTargetingPack.Net45");
+				}
+				else if (element.Attribute("Include").Value == "System.Reactive.Core")
+				{
+					element.Element(xmlns + "HintPath").Value = element.Element(xmlns + "HintPath").Value.Replace("net40", "net45");
+				}
 			}
 
 			using (var xmlWriter = XmlWriter.Create(destFile,
