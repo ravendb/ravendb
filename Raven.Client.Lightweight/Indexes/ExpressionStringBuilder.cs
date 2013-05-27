@@ -30,9 +30,9 @@ namespace Raven.Client.Indexes
 	public class ExpressionStringBuilder : ExpressionVisitor
 	{
 		// Fields
-		private static readonly char[] LiteralSymbolsToEscape = new[] {'\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v'};
-		private static readonly string[] LiteralEscapedSymbols = new[] {@"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v"};
-		
+		private static readonly char[] LiteralSymbolsToEscape = new[] { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
+		private static readonly string[] LiteralEscapedSymbols = new[] { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
+
 		private readonly StringBuilder _out = new StringBuilder();
 		private readonly DocumentConvention convention;
 		private readonly Type queryRoot;
@@ -110,7 +110,7 @@ namespace Raven.Client.Indexes
 												string queryRootName, Expression node)
 		{
 			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-			 builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
+			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
 			return builder.ToString();
 		}
 
@@ -227,19 +227,16 @@ namespace Raven.Client.Indexes
 
 		private void OutMember(Expression instance, MemberInfo member, Type exprType)
 		{
-			if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
-			{
-				OutputTypeIfNeeded(member);
-			}
+			OutputTypeIfNeeded(member);
 			var name = GetPropertyName(member.Name, exprType);
 			if (translateIdentityProperty &&
-				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				// only translate from the root type or derivatives
-				(queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
-				// only translate from the root alias
-				(queryRootName == null || (
-					instance.NodeType == ExpressionType.Parameter &&
-					((ParameterExpression)instance).Name == queryRootName)))
+			    convention.GetIdentityProperty(member.DeclaringType) == member &&
+			    // only translate from the root type or derivatives
+			    (queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
+			    // only translate from the root alias
+			    (queryRootName == null || (
+				                              instance.NodeType == ExpressionType.Parameter &&
+				                              ((ParameterExpression) instance).Name == queryRootName)))
 			{
 				name = Constants.DocumentIdFieldName;
 			}
@@ -261,10 +258,7 @@ namespace Raven.Client.Indexes
 
 				Out(member.DeclaringType.Name + "." + name);
 			}
-			if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
-			{
-				CloseOutputTypeIfNeeded(member);
-			}
+			CloseOutputTypeIfNeeded(member);
 		}
 
 		private string GetPropertyName(string name, Type exprType)
@@ -279,17 +273,17 @@ namespace Raven.Client.Indexes
 					switch (customAttribute.GetType().Name)
 					{
 						case "JsonPropertyAttribute":
-							propName = ((dynamic) customAttribute).PropertyName;
+							propName = ((dynamic)customAttribute).PropertyName;
 							break;
 						case "DataMemberAttribute":
-							propName = ((dynamic) customAttribute).Name;
+							propName = ((dynamic)customAttribute).Name;
 							break;
 						default:
 							continue;
 					}
 					if (keywordsInCSharp.Contains(propName))
 						return '@' + propName;
-					return propName  ?? name;
+					return propName ?? name;
 				}
 			}
 			return name;
@@ -298,15 +292,8 @@ namespace Raven.Client.Indexes
 		private void CloseOutputTypeIfNeeded(MemberInfo member)
 		{
 			var memberType = GetMemberType(member);
-			if (memberType == typeof(decimal) ||
-				memberType == typeof(double) ||
-				memberType == typeof(long) ||
-				memberType == typeof(float) ||
-				memberType == typeof(decimal?) ||
-				memberType == typeof(double?) ||
-				memberType == typeof(long?) ||
-				memberType == typeof(DateTime?) ||
-				memberType == typeof(float?))
+			var nonNullable = Nullable.GetUnderlyingType(memberType);
+			if (nonNullable != null && nonNullable != typeof(Guid))
 			{
 				Out(")");
 			}
@@ -314,42 +301,15 @@ namespace Raven.Client.Indexes
 
 		private void OutputTypeIfNeeded(MemberInfo member)
 		{
+			// we need to to handle things such as:
+			// foo.NullableDatetime.GetValueOrDefault().Date
 			var memberType = GetMemberType(member);
-			if (memberType == typeof (DateTime?)) 
+			var nonNullable = Nullable.GetUnderlyingType(memberType);
+			if (nonNullable != null && nonNullable != typeof(Guid))
 			{
-				Out("((DateTime?)");
-			}
-			else if (memberType == typeof(decimal))
-			{
-				Out("((decimal)");
-			}
-			else if (memberType == typeof(double))
-			{
-				Out("((double)");
-			}
-			else if (memberType == typeof(long))
-			{
-				Out("((long)");
-			}
-			else if (memberType == typeof(float))
-			{
-				Out("((float)");
-			}
-			else if (memberType == typeof(decimal?))
-			{
-				Out("((decimal?)");
-			}
-			else if (memberType == typeof(double?))
-			{
-				Out("((double?)");
-			}
-			else if (memberType == typeof(long?))
-			{
-				Out("((long?)");
-			}
-			else if (memberType == typeof(float?))
-			{
-				Out("((float?)");
+				Out("((");
+				Out(ConvertTypeToCSharpKeyword(nonNullable));
+				Out("?) ");
 			}
 		}
 
@@ -809,7 +769,7 @@ namespace Raven.Client.Indexes
 			if (node.Value is char)
 			{
 				Out("'");
-				OutLiteral((char) node.Value);
+				OutLiteral((char)node.Value);
 				Out("'");
 				return node;
 			}
@@ -843,7 +803,7 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-		private void OutLiteral(string value) 
+		private void OutLiteral(string value)
 		{
 			if (value.Length == 0)
 				return;
@@ -851,19 +811,20 @@ namespace Raven.Client.Indexes
 			_out.Append(string.Concat(value.ToCharArray().Select(EscapeChar)));
 		}
 
-		private void OutLiteral(char c) 
+		private void OutLiteral(char c)
 		{
-		   _out.Append(EscapeChar(c));
+			_out.Append(EscapeChar(c));
 		}
 
-		private static string EscapeChar(char c) {
+		private static string EscapeChar(char c)
+		{
 			var index = Array.IndexOf(LiteralSymbolsToEscape, c);
 
 			if (index != -1)
 				return LiteralEscapedSymbols[index];
 
 			if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
-				return @"\u" + ((int) c).ToString("x4");
+				return @"\u" + ((int)c).ToString("x4");
 
 #if NETFX_CORE
 			return c.ToString();
@@ -932,32 +893,32 @@ namespace Raven.Client.Indexes
 			{
 				return "bool?";
 			}
-			if (type == typeof (decimal))
+			if (type == typeof(decimal))
 			{
 				return "decimal";
 			}
-			if (type == typeof (decimal?))
+			if (type == typeof(decimal?))
 			{
 				return "decimal?";
 			}
-			if (type == typeof (double))
+			if (type == typeof(double))
 			{
 				return "double";
 			}
-			if (type == typeof (double?))
+			if (type == typeof(double?))
 			{
 				return "double?";
 			}
-			if (type == typeof (float))
+			if (type == typeof(float))
 			{
 				return "float";
 			}
-			if (type == typeof (float?))
+			if (type == typeof(float?))
 			{
 				return "float?";
 			}
 
-			if (type == typeof (long))
+			if (type == typeof(long))
 			{
 				return "long";
 			}
@@ -1010,7 +971,7 @@ namespace Raven.Client.Indexes
 				return true;
 
 			if (type.Assembly().FullName.StartsWith("Lucene.Net") &&
-				type.Assembly().FullName.Contains("PublicKeyToken=85089178b9ac3181")) 
+				type.Assembly().FullName.Contains("PublicKeyToken=85089178b9ac3181"))
 				return true;
 
 			return false;
@@ -1544,6 +1505,25 @@ namespace Raven.Client.Indexes
 				num2++;
 			}
 			Out(IsIndexerCall(node) ? "]" : ")");
+
+			if (node.Type.IsValueType())
+			{
+				switch (node.Method.Name)
+				{
+					case "First":
+					case "FirstOrDefault":
+					case "Last":
+					case "LastOrDefault":
+					case "Single":
+					case "SingleOrDefault":
+					case "ElementAt":
+					case "ElementAtOrDefault":
+						Out(" ?? default(");
+						Out(ConvertTypeToCSharpKeyword(node.Type));
+						Out(")");
+						break;
+				}
+			}
 			return node;
 		}
 
@@ -1580,7 +1560,7 @@ namespace Raven.Client.Indexes
 #if NETFX_CORE
 			var attribute = node.Method.GetType().GetTypeInfo().GetCustomAttribute(typeof (ExtensionAttribute));
 #else
-			var attribute = Attribute.GetCustomAttribute(node.Method, typeof (ExtensionAttribute));
+			var attribute = Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute));
 #endif
 			if (attribute == null)
 				return false;
@@ -1660,11 +1640,11 @@ namespace Raven.Client.Indexes
 		{
 			if (type.IsGenericType() == false || CheckIfAnonymousType(type))
 			{
-				if(type.IsArray)
+				if (type.IsArray)
 				{
 					VisitType(type.GetElementType());
 					Out("[");
-					for (int i = 0; i < type.GetArrayRank()-1; i++)
+					for (int i = 0; i < type.GetArrayRank() - 1; i++)
 					{
 						Out(",");
 					}
@@ -1672,7 +1652,7 @@ namespace Raven.Client.Indexes
 					return;
 				}
 				var nonNullableType = Nullable.GetUnderlyingType(type);
-				if(nonNullableType != null)
+				if (nonNullableType != null)
 				{
 					VisitType(nonNullableType);
 					Out("?");
@@ -2068,7 +2048,7 @@ namespace Raven.Client.Indexes
 
 		private static bool ShouldConvert(Type nonNullableType)
 		{
-			if(nonNullableType.IsEnum())
+			if (nonNullableType.IsEnum())
 				return true;
 
 			return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType() == false);
