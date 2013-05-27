@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -73,46 +74,130 @@ namespace Raven.Studio.Features.Tasks
 
             using (var stream = saveFile.OpenFile())
             {
-                ItemType operateOnTypes = 0;
+	            ItemType operateOnTypes = 0;
 
-                if (includeDocuments)
-                {
-                    operateOnTypes |= ItemType.Documents;
-                }
+	            if (includeDocuments)
+	            {
+		            operateOnTypes |= ItemType.Documents;
+	            }
 
-                if (includeAttachements)
-                {
-                    operateOnTypes |= ItemType.Attachments;
-                }
+	            if (includeAttachements)
+	            {
+		            operateOnTypes |= ItemType.Attachments;
+	            }
 
-                if (includeIndexes)
-                {
-                    operateOnTypes |= ItemType.Indexes;
-                }
+	            if (includeIndexes)
+	            {
+		            operateOnTypes |= ItemType.Indexes;
+	            }
 
-                if (includeTransformers)
-                {
-                    operateOnTypes |= ItemType.Transformers;
-                }
+	            if (includeTransformers)
+	            {
+		            operateOnTypes |= ItemType.Transformers;
+	            }
 
-                var smuggler = new SmugglerApi(new SmugglerOptions
-                {
-                    BatchSize = batchSize
-                },
-                                               DatabaseCommands,
-                                               message => Report(message));
+	            var smuggler = new SmugglerApi(new SmugglerOptions
+	            {
+		            BatchSize = batchSize
+	            },
+	                                           DatabaseCommands,
+	                                           message => Report(message));
 
-                await smuggler.ExportData(stream, new SmugglerOptions
-                {
-                    BatchSize = batchSize,
-                    Filters = filterSettings,
-                    TransformScript = transformScript,
-                    ShouldExcludeExpired = shouldExcludeExpired,
-                OperateOnTypes = operateOnTypes
-                }, false);
+				//var ms = new ForwardtoUIBoundStream(stream);
+				var ms = new MemoryStream();
+	            var taskGeneration = new Task<Task>(() => smuggler.ExportData(ms, new SmugglerOptions
+	            {
+		            BatchSize = batchSize,
+		            Filters = filterSettings,
+		            TransformScript = transformScript,
+		            ShouldExcludeExpired = shouldExcludeExpired,
+		            OperateOnTypes = operateOnTypes
+	            }, false));
+
+	            ThreadPool.QueueUserWorkItem(state => taskGeneration.Start());
+
+
+	            await taskGeneration.Unwrap();
+	            ms.Position = 0;
+				ms.CopyTo(stream);
+				ms.Flush();
             }
 
-            return DatabaseTaskOutcome.Succesful;
+	        return DatabaseTaskOutcome.Succesful;
         }
+
+		public class ForwardtoUIBoundStream : Stream
+		{
+			readonly byte[] localBuffer = new byte[64 * 1024];
+			private int pos;
+
+			private readonly Stream inner;
+
+			public ForwardtoUIBoundStream(Stream inner)
+			{
+				this.inner = inner;
+			}
+
+			public override void Flush()
+			{
+				Execute.OnTheUI(() =>
+				{
+					inner.Write(localBuffer, 0, pos);
+					pos = 0;
+					inner.Flush();
+				}).Wait();
+			}
+
+			public override long Seek(long offset, SeekOrigin origin)
+			{
+				throw new NotSupportedException();
+			}
+
+			public override void SetLength(long value)
+			{
+				throw new NotSupportedException();
+			}
+
+			public override int Read(byte[] buffer, int offset, int count)
+			{
+				throw new NotSupportedException();
+			}
+
+			public override void Write(byte[] buffer, int offset, int count)
+			{
+				while (count > 0)
+				{
+					var bytes = Math.Min(localBuffer.Length - pos, count);
+					Buffer.BlockCopy(buffer, offset, localBuffer, pos, bytes);
+					pos += bytes;
+					count -= bytes;
+					if (pos == localBuffer.Length)
+						Flush();
+				}
+			}
+
+			public override bool CanRead
+			{
+				get { return false; }
+			}
+			public override bool CanSeek
+			{
+				get { return false; }
+			}
+			public override bool CanWrite
+			{
+				get { return true; }
+			}
+			public override long Length
+			{
+				get { throw new NotSupportedException(); }
+			}
+			public override long Position 
+			{ get{ throw new NotSupportedException();} 
+				set
+				{
+					throw new NotSupportedException();
+				} }
+		}
     }
 }

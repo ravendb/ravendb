@@ -103,7 +103,7 @@ namespace Raven.Abstractions.Smuggler
 #endif
 			Mode = await GetMode();
 
-			using (var streamWriter = new StreamWriter(new GZipStream(stream ?? File.Create(file), CompressionMode.Compress)))
+			var streamWriter = new StreamWriter(new GZipStream(stream ?? File.Create(file), CompressionMode.Compress));
 			{
 				var jsonWriter = new JsonTextWriter(streamWriter)
 									 {
@@ -218,18 +218,18 @@ namespace Raven.Abstractions.Smuggler
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
-
+			var errorcount = 0;
 			ShowProgress("Exporting Documents");
 
 			while (true)
 			{
-				var watch = Stopwatch.StartNew();
 				using (var documents = await GetDocuments(lastEtag))
 				{
-					watch.Stop();
+					var watch = Stopwatch.StartNew();					
 
 					while (await documents.MoveNextAsync())
 					{
+					
 						var document = documents.Current;
 
 						if (!options.MatchFilters(document))
@@ -237,10 +237,9 @@ namespace Raven.Abstractions.Smuggler
 
 						if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
 							continue;
-
 						document.WriteTo(jsonWriter);
 						totalCount++;
-
+						
 						if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
 						{
 							ShowProgress("Exported {0} documents", totalCount);
@@ -248,6 +247,9 @@ namespace Raven.Abstractions.Smuggler
 						}
 
 						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+						if (watch.ElapsedMilliseconds > 100)
+							errorcount++;
+						watch.Start();
 					}
 				}
 
