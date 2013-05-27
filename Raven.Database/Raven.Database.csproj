@@ -432,6 +432,7 @@
     <Compile Include="Server\Responders\QueryStreams.cs" />
     <Compile Include="Server\Responders\Transformers.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\IgnoreDb.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
