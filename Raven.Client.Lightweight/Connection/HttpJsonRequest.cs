@@ -162,19 +162,16 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public Task<byte[]> ReadResponseBytesAsync()
+		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			if (!writeCalled)
+			if (writeCalled == false)
 				webRequest.ContentLength = 0;
-			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
-				.ContinueWith(task =>
-				{
-					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
-					{
-						ResponseHeaders = new NameValueCollection(task.Result.Headers);
-						return stream.ReadData();
-					}
-				});
+			using (var webResponse = await webRequest.GetResponseAsync())
+			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
+			{
+				ResponseHeaders = new NameValueCollection(webResponse.Headers);
+				return await stream.ReadDataAsync();
+			}
 		}
 
 		public void ExecuteRequest()
