@@ -217,9 +217,6 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Internal\*.cs">
       <Link>Abstructions\Extentions\Internal\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\JsonTextReaderAsync.cs">
-      <Link>Abstructions\Json\JsonTextReaderAsync.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\*.cs">
       <Link>Abstructions\Indexing\%(FileName)</Link>
     </Compile>
