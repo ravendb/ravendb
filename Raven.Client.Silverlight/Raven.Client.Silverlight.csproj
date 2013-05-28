@@ -125,6 +125,30 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\FloatFormatHandling.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\FloatFormatHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\FloatParseHandling.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\FloatParseHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonExtensionDataAttribute.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\JsonExtensionDataAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ExpressionValueProvider.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\ExpressionValueProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\TraceJsonReader.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\TraceJsonReader.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\TraceJsonWriter.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\TraceJsonWriter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\DateTimeParser.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Utilities\DateTimeParser.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\ExpressionReflectionDelegateFactory.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Utilities\ExpressionReflectionDelegateFactory.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\*.cs" />
     <Compile Include="..\Raven.Client.Lightweight\Bundles\MoreLikeThis\*.cs">
       <Link>Bundles\MoreLikeThis\%(FileName)</Link>

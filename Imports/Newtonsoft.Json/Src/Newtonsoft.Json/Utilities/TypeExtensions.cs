@@ -34,7 +34,7 @@ using System.Linq;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
-  internal static class TypeExtensions
+  public static class TypeExtensions
   {
 #if NETFX_CORE || PORTABLE
     private static BindingFlags DefaultFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;

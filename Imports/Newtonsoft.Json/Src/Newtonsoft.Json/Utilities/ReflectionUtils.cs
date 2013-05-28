@@ -44,7 +44,7 @@ using Raven.Imports.Newtonsoft.Json.Serialization;
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
 #if (NETFX_CORE || PORTABLE || PORTABLE40)
-  internal enum MemberTypes
+  public enum MemberTypes
   {
     Property,
     Field,
@@ -56,7 +56,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 
 #if NETFX_CORE || PORTABLE
   [Flags]
-  internal enum BindingFlags
+  public enum BindingFlags
   {
     Default = 0,
     IgnoreCase = 1,
@@ -81,7 +81,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
   }
 #endif
 
-  internal static class ReflectionUtils
+  public static class ReflectionUtils
   {
     public static readonly Type[] EmptyTypes;
 

@@ -172,7 +172,7 @@ namespace Raven.Imports.Newtonsoft.Json
 				DateTime dateTime;
 				if (DateTime.TryParseExact(text, isoDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
 				{
-					dateTime = JsonConvert.EnsureDateTime(dateTime, DateTimeZoneHandling);
+					dateTime = DateTimeUtils.EnsureDateTime(dateTime, DateTimeZoneHandling);
 
 					SetToken(JsonToken.Date, dateTime);
 					return true;
@@ -203,7 +203,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 			long javaScriptTicks = long.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
 
-			DateTime utcDateTime = JsonConvert.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
+			DateTime utcDateTime = DateTimeUtils.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
 
 #if !NET20
 			if (_readType == ReadType.ReadAsDateTimeOffset || (_readType == ReadType.Read && _dateParseHandling == DateParseHandling.DateTimeOffset))
@@ -228,7 +228,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						break;
 				}
 
-				dateTime = JsonConvert.EnsureDateTime(dateTime, DateTimeZoneHandling);
+				dateTime = DateTimeUtils.EnsureDateTime(dateTime, DateTimeZoneHandling);
 
 				SetToken(JsonToken.Date, dateTime);
 			}
@@ -2125,7 +2125,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
         if (DateTime.TryParse(s, Culture, DateTimeStyles.RoundtripKind, out dt))
         {
-          dt = JsonConvert.EnsureDateTime(dt, DateTimeZoneHandling);
+          dt = DateTimeUtils.EnsureDateTime(dt, DateTimeZoneHandling);
           SetToken(JsonToken.Date, dt);
           return dt;
         }
