@@ -75,9 +75,9 @@ namespace Raven.Database.Server.Security
 			if (hasApiKey || hasOAuthTokenInCookie || 
 				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
-				return oAuthRequestAuthorizer.Authorize(context, hasApiKey);
+				return oAuthRequestAuthorizer.Authorize(context, hasApiKey, IgnoreDb.Urls.Contains(requestUrl));
 			}
-			return windowsRequestAuthorizer.Authorize(context);
+			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
 		private bool AuthorizeOSingleUseAuthToken(IHttpContext context, string token)
