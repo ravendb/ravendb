@@ -25,7 +25,7 @@
 
 using System;
 
-namespace Newtonsoft.Json.Utilities
+namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
   internal enum ParserTimeZone
   {

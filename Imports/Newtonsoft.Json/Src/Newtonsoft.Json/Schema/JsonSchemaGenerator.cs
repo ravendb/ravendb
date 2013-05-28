@@ -27,16 +27,16 @@ using System;
 using System.Globalization;
 using System.ComponentModel;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Utilities;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Schema
+namespace Raven.Imports.Newtonsoft.Json.Schema
 {
   /// <summary>
   /// Generates a <see cref="JsonSchema"/> from a specified <see cref="Type"/>.

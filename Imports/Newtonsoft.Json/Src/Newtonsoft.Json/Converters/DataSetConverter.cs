@@ -26,9 +26,9 @@
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE40 || PORTABLE)
 using System;
 using System.Data;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 
-namespace Newtonsoft.Json.Converters
+namespace Raven.Imports.Newtonsoft.Json.Converters
 {
   /// <summary>
   /// Converts a <see cref="DataSet"/> to and from JSON.

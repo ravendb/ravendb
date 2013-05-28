@@ -1,7 +1,7 @@
 ﻿#if (NETFX_CORE || SILVERLIGHT || PORTABLE40 || PORTABLE)
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies what messages to output for the <see cref="ITraceWriter"/> class.

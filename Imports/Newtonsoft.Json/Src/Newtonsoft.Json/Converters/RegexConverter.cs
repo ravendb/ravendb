@@ -27,7 +27,7 @@ using System;
 using System.Text.RegularExpressions;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using System.Globalization;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.Imports.Newtonsoft.Json.Converters
 {

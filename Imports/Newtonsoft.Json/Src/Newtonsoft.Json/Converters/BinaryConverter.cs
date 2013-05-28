@@ -27,10 +27,10 @@
 using System;
 using System.Data.SqlTypes;
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Collections.Generic;
 
-namespace Newtonsoft.Json.Converters
+namespace Raven.Imports.Newtonsoft.Json.Converters
 {
 #if !NET20
   internal interface IBinary

@@ -32,17 +32,17 @@ using System.Numerics;
 #if !(NET20 || NET35 || SILVERLIGHT || PORTABLE40)
 using System.Threading.Tasks;
 #endif
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Xml;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using System.Text;
 #if !NET20 && (!SILVERLIGHT || WINDOWS_PHONE) && !PORTABLE40
 using System.Xml.Linq;
 #endif
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Provides methods for converting between common language runtime types and JSON types.

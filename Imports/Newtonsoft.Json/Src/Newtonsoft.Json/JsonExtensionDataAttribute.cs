@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Instructs the <see cref="JsonSerializer"/> to populate properties with no matching class member onto the specified collection.

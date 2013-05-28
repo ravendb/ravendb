@@ -27,12 +27,12 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Utilities
+namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
   internal static class TypeExtensions
   {

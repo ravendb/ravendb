@@ -28,19 +28,19 @@ using System.Collections.Generic;
 #if !(NET20 || NET35 || SILVERLIGHT || PORTABLE40 || PORTABLE)
 using System.Numerics;
 #endif
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Schema;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Schema;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.IO;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Represents a reader that provides <see cref="JsonSchema"/> validation.
