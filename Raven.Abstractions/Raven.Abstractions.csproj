@@ -67,8 +67,20 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\JsonValueConverter.cs">
       <Link>Imports\Newtonsoft.Json\Converters\JsonValueConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\FloatFormatHandling.cs">
+      <Link>Imports\Newtonsoft.Json\FloatFormatHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\FloatParseHandling.cs">
+      <Link>Imports\Newtonsoft.Json\FloatParseHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonExtensionDataAttribute.cs">
+      <Link>Imports\Newtonsoft.Json\JsonExtensionDataAttribute.cs</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs">
       <Link>Imports\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ExpressionValueProvider.cs">
+      <Link>Imports\Newtonsoft.Json\Serialization\ExpressionValueProvider.cs</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
       <Link>Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
@@ -76,11 +88,23 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs">
       <Link>Imports\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\TraceJsonReader.cs">
+      <Link>Imports\Newtonsoft.Json\Serialization\TraceJsonReader.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\TraceJsonWriter.cs">
+      <Link>Imports\Newtonsoft.Json\Serialization\TraceJsonWriter.cs</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\StringEscapeHandling.cs">
       <Link>Imports\Newtonsoft.Json\StringEscapeHandling.cs</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
       <Link>Imports\Newtonsoft.Json\TraceLevel.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\DateTimeParser.cs">
+      <Link>Imports\Newtonsoft.Json\Utilities\DateTimeParser.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\ExpressionReflectionDelegateFactory.cs">
+      <Link>Imports\Newtonsoft.Json\Utilities\ExpressionReflectionDelegateFactory.cs</Link>
     </Compile>
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\BsonBinaryType.cs">
