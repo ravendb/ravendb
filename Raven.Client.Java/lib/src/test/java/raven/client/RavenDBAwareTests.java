@@ -5,13 +5,12 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
-import org.junit.Test;
 
 import raven.client.json.RavenJObject;
 import raven.client.json.RavenJValue;
 import raven.client.utils.UrlUtils;
 
-public class RavenDBAwareTests {
+public abstract class RavenDBAwareTests {
 
   public final static String DEFAULT_SERVER_URL = "http://localhost:8123";
 
@@ -21,7 +20,7 @@ public class RavenDBAwareTests {
     return DEFAULT_SERVER_URL;
   }
 
-  public void createDb(String dbName) throws Exception {
+  protected void createDb(String dbName) throws Exception {
     PutMethod put = null;
     try {
       put = new PutMethod(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
@@ -48,13 +47,8 @@ public class RavenDBAwareTests {
     return doc.toString();
   }
 
-  @Test
-  public void testCreateDb() throws Exception {
-    createDb("db1");
-    deleteDb("db1");
-  }
 
-  private void deleteDb(String dbName) throws Exception {
+  protected void deleteDb(String dbName) throws Exception {
 
     DeleteMethod deleteMethod = null;
     try {

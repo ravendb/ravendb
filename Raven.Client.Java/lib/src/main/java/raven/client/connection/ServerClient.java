@@ -8,6 +8,7 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.HttpsURL;
 
 import raven.client.data.Constants;
+import raven.client.extensions.MultiDatabase;
 import raven.client.json.JsonDocument;
 import raven.client.json.PutResult;
 import raven.client.json.RavenJObject;
@@ -52,7 +53,7 @@ public class ServerClient implements IDatabaseCommands {
       metadata.add("ETag", RavenJToken.fromObject(etag.toString()));
     }
     try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-        new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + UrlUtils.escapeDataString(key), "DELETE"))) {
+        new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + UrlUtils.escapeDataString(key), HttpMethods.DELETE))) {
       jsonRequest.executeDeleteRequest();
     } catch (Exception e) {
       throw new ServerClientException(e);
@@ -74,7 +75,7 @@ public class ServerClient implements IDatabaseCommands {
    */
   private JsonDocument directGet(String serverUrl, String key) throws ServerClientException {
     try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-        new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + UrlUtils.escapeDataString(key), "GET"))) {
+        new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + UrlUtils.escapeDataString(key), HttpMethods.GET))) {
       RavenJToken responseJson = jsonRequest.getResponseAsJson(HttpStatus.SC_OK);
 
       String docKey = jsonRequest.getResponseHeader(Constants.DOCUMENT_ID_FIELD_NAME);
@@ -114,7 +115,7 @@ public class ServerClient implements IDatabaseCommands {
     if (metadata == null) {
       metadata = new RavenJObject();
     }
-    String method = StringUtils.isNotNullOrEmpty(key) ? "PUT" : "POST";
+    HttpMethods method = StringUtils.isNotNullOrEmpty(key) ? HttpMethods.PUT : HttpMethods.POST;
     if (etag != null) {
       metadata.set("ETag", new RavenJValue(etag.toString()));
     }
@@ -145,6 +146,23 @@ public class ServerClient implements IDatabaseCommands {
     UUID actualEtag = null;
     //TODO: implement me!
     return new ConcurrencyException(expectedEtag, actualEtag, e);
+  }
+
+  public IDatabaseCommands forSystemDatabase() {
+    String databaseUrl = MultiDatabase.getRootDatabaseUrl(url);
+    if (databaseUrl.equals(url)) {
+      return this;
+    }
+    return new ServerClient(databaseUrl);
+  }
+
+  public IDatabaseCommands forDatabase(String database) {
+    String databaseUrl = MultiDatabase.getRootDatabaseUrl(url);
+    databaseUrl = url + "/databases/" + database;
+    if (databaseUrl.equals(url)) {
+      return this;
+    }
+    return new ServerClient(databaseUrl);
   }
 
 

@@ -21,7 +21,7 @@ public class PutResult {
   /**
    * @return the eTag
    */
-  public UUID geteTag() {
+  public UUID getEtag() {
     return etag;
   }
   /* (non-Javadoc)

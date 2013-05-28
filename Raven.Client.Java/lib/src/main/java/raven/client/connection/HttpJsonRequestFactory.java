@@ -10,16 +10,16 @@ public class HttpJsonRequestFactory  {
   public HttpJsonRequest createHttpJsonRequest(CreateHttpJsonRequestParams params) {
     HttpClient httpClient = params.getServerClient().getHttpClient();
     switch (params.getMethod()) {
-    case "GET":
+    case GET:
       GetMethod getMethod = new GetMethod(params.getUrl());
       return new HttpJsonRequest(httpClient, getMethod);
-    case "POST":
+    case POST:
       PostMethod postMethod = new PostMethod(params.getUrl());
       return new HttpJsonRequest(httpClient, postMethod);
-    case "PUT":
+    case PUT:
       PutMethod putMethod = new PutMethod(params.getUrl());
       return new HttpJsonRequest(httpClient, putMethod);
-    case "DELETE":
+    case DELETE:
       DeleteMethod deleteMethod = new DeleteMethod(params.getUrl());
       return new HttpJsonRequest(httpClient, deleteMethod);
 

@@ -3,7 +3,7 @@ package raven.client.connection;
 import java.io.Serializable;
 
 public class CreateHttpJsonRequestParams implements Serializable {
-  private String method;
+  private HttpMethods method;
   private String url;
   private ServerClient serverClient;
 
@@ -21,30 +21,19 @@ public class CreateHttpJsonRequestParams implements Serializable {
     return url;
   }
 
-
-
   /**
    * @return the method
    */
-  public String getMethod() {
+  public HttpMethods getMethod() {
     return method;
   }
 
-  /**
-   * @param method the method to set
-   */
-  public void setMethod(String method) {
-    this.method = method;
-  }
 
-
-  public CreateHttpJsonRequestParams(ServerClient serverClient, String url, String method) {
+  public CreateHttpJsonRequestParams(ServerClient serverClient, String url, HttpMethods method) {
     super();
     this.method = method;
     this.url = url;
     this.serverClient = serverClient;
   }
-
-
 
 }

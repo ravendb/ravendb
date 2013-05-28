@@ -31,4 +31,16 @@ public interface IDatabaseCommands {
    * @param etag The etag.
    */
   public void delete(String key, UUID etag) throws ServerClientException;
+
+  /**
+   * Create a new instance of {@link IDatabaseCommands} that will interacts with the specified database
+   * @param database
+   * @return
+   */
+  public IDatabaseCommands forDatabase(String database);
+
+  /**
+   * Creates a new instance of {@link IDatabaseCommands} that will interacts with the default database.
+   */
+  public IDatabaseCommands forSystemDatabase();
 }
