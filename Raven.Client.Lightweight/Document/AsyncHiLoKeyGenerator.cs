@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT
+using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -47,13 +48,13 @@ namespace Raven.Client.Document
 		///<summary>
 		/// Create the next id (numeric)
 		///</summary>
-		public Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
+		public async Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
 		{
 			var myRange = Range; // thread safe copy
 			long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
 			if (incrementedCurrent <= myRange.Max)
 			{
-				return CompletedTask.With(incrementedCurrent);
+				return incrementedCurrent;
 			}
 
 			bool lockTaken = false;
@@ -64,23 +65,20 @@ namespace Raven.Client.Document
 				{
 					// Lock was contended, and the max has already been changed. Just get a new id as usual.
 					generatorLock.Exit();
-					return NextIdAsync(databaseCommands);
+					return await NextIdAsync(databaseCommands);
 				}
 				// Get a new max, and use the current value.
-				return GetNextRangeAsync(databaseCommands)
-					.ContinueWith(task =>
-					{
-						try
-						{
-							Range = task.Result;
-						}
-						finally
-						{
-							generatorLock.Exit();
-						}
 
-						return NextIdAsync(databaseCommands);
-					}).Unwrap();
+				try
+				{
+					Range = await GetNextRangeAsync(databaseCommands);
+				}
+				finally
+				{
+					generatorLock.Exit();
+				}
+
+				return await NextIdAsync(databaseCommands);
 			}
 			catch
 			{
