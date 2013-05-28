@@ -113,8 +113,12 @@ namespace Raven.Studio.Commands
 				scriptedSettings.StoreChanges();
 				foreach (var scriptedIndexResults in scriptedSettings.ScriptedIndexes)
 				{
-					if(scriptedIndexResults.Value != null)
-						session.Store(scriptedIndexResults.Value);
+
+					if (scriptedIndexResults.Value != null)
+					{
+						scriptedIndexResults.Value.Id = ScriptedIndexResults.IdPrefix + scriptedIndexResults.Key;
+						session.Store(scriptedIndexResults.Value, scriptedIndexResults.Value.Id);
+					}
 				}
 
 				foreach (var indexName in scriptedSettings.DeletedIndexes)
