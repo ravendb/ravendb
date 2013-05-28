@@ -296,7 +296,10 @@ namespace Raven.Client.WinRT.Connection
 				}
 				var headerName = prop.Key;
 				if (headerName == "ETag")
+				{
 					headerName = "If-None-Match";
+					value = "\"" + value + "\"";
+				}
 				if (headerName.StartsWith("@") ||
 					headerName == Constants.LastModified ||
 					headerName == Constants.RavenLastModified)
