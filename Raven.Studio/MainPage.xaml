@@ -128,9 +128,9 @@
 
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
-                <Delay:SplitHyperlinkButtonPopup Content="Documents"
+				<Delay:SplitHyperlinkButtonPopup Content="{Binding Settings.DocumentsTabSelection}"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/documents">
+								 CommandParameter="{Binding Settings.DocumentsTabSelection, StringFormat='/{0}'}">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
 							<System:String>/Edit</System:String>

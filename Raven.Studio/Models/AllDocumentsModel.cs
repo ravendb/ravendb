@@ -15,6 +15,8 @@ namespace Raven.Studio.Models
 		    ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 		                                                   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 		                                                   "/docs";
+		    Settings.Instance.DocumentsTabSelection = "Documents";
+			ApplicationModel.Current.Refresh();
 		}
 
 		public DocumentsModel Documents

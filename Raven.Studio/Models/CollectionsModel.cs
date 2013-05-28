@@ -68,6 +68,7 @@ namespace Raven.Studio.Models
 		public CollectionsModel()
 		{
 			ModelUrl = "/collections";
+		
 			ApplicationModel.Current.Server.Value.RawUrl = null;
 			SortByName = new Observable<bool>{Value = Settings.Instance.SortCollectionByName};
             Collections = new BindableCollection<CollectionModel>(model => model.Name);
@@ -121,6 +122,8 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
+			Settings.Instance.DocumentsTabSelection = "Collections";
+			ApplicationModel.Current.Refresh();
 			var urlParser = new UrlParser(parameters);
 			var name = urlParser.GetQueryParam("name");
 			initialSelectedDatabaseName = name;

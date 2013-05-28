@@ -54,15 +54,21 @@ namespace Raven.Studio.Infrastructure
 			set { currentSettings["DocumentOutliningMode"] = value; }
 		}
 
+		public string DocumentsTabSelection
+		{
+			get { return GetSettingAsString("DocumentsTabSelection", "Documents"); }
+			set { currentSettings["DocumentsTabSelection"] = value; }
+		}
+
 		public bool SortCollectionByName
 		{
 			get { return GetSettingAsBool("SortCollectionByName"); }
 			set { currentSettings["SortCollectionByName"] = value; }
 		}
 
-		private string GetSettingAsString(string key)
+		private string GetSettingAsString(string key, string defaultValue = "")
 		{
-		    return currentSettings.ContainsKey(key) ? (string) currentSettings[key] : "";
+			return currentSettings.ContainsKey(key) ? (string)currentSettings[key] : defaultValue;
 		}
 
 	    private int GetSettingAsInt(string key)
