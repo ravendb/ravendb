@@ -26,8 +26,8 @@
 using System;
 using System.Runtime.Serialization;
 
-#if !PocketPC && !NET20
-namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
+#if !NET20
+namespace Newtonsoft.Json.Tests.TestObjects
 {
   [DataContract]
   public class Computer

@@ -23,14 +23,14 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE40 || PORTABLE)
 using System;
 using System.Data.SqlTypes;
 using System.Globalization;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json.Utilities;
 using System.Collections.Generic;
 
-namespace Raven.Imports.Newtonsoft.Json.Converters
+namespace Newtonsoft.Json.Converters
 {
 #if !NET20
   internal interface IBinary

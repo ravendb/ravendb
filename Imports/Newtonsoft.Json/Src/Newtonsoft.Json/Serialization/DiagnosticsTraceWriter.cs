@@ -1,9 +1,9 @@
-﻿#if !(SILVERLIGHT || PORTABLE || NETFX_CORE || MONO)
+﻿#if !(SILVERLIGHT || PORTABLE40 || PORTABLE || NETFX_CORE)
 using System;
 using System.Diagnostics;
 using DiagnosticsTrace = System.Diagnostics.Trace;
 
-namespace Raven.Imports.Newtonsoft.Json.Serialization
+namespace Newtonsoft.Json.Serialization
 {
   /// <summary>
   /// Represents a trace writer that writes to the application's <see cref="TraceListener"/> instances.

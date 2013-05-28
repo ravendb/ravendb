@@ -23,12 +23,12 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE || MONO)
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE40 || PORTABLE)
 using System;
 using System.Data;
-using Raven.Imports.Newtonsoft.Json.Serialization;
+using Newtonsoft.Json.Serialization;
 
-namespace Raven.Imports.Newtonsoft.Json.Converters
+namespace Newtonsoft.Json.Converters
 {
   /// <summary>
   /// Converts a <see cref="DataSet"/> to and from JSON.
@@ -70,7 +70,10 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
     /// <returns>The object value.</returns>
     public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
     {
-      DataSet ds = new DataSet();
+      // handle typed datasets
+      DataSet ds = (objectType == typeof(DataSet))
+        ? new DataSet()
+        : (DataSet)Activator.CreateInstance(objectType);
 
       DataTableConverter converter = new DataTableConverter();
 
@@ -78,8 +81,13 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
 
       while (reader.TokenType == JsonToken.PropertyName)
       {
-        DataTable dt = (DataTable)converter.ReadJson(reader, typeof (DataTable), null, serializer);
-        ds.Tables.Add(dt);
+        DataTable dt = ds.Tables[(string)reader.Value];
+        bool exists = (dt != null);
+        
+        dt = (DataTable)converter.ReadJson(reader, typeof (DataTable), dt, serializer);
+
+        if (!exists)
+          ds.Tables.Add(dt);
 
         reader.Read();
       }
@@ -96,7 +104,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
     /// </returns>
     public override bool CanConvert(Type valueType)
     {
-      return (valueType == typeof(DataSet));
+      return typeof(DataSet).IsAssignableFrom(valueType);
     }
   }
 }
