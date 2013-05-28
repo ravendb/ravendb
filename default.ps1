@@ -115,16 +115,8 @@ task Compile -depends Init {
 	}
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
-	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue 
-	
-	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
-	Copy-Item (Get-DependencyPackageFiles 'Rx-Interfaces') $build_dir -force
-	Copy-Item (Get-DependencyPackageFiles 'Rx-Core') $build_dir -force
-	Copy-Item (Get-DependencyPackageFiles 'Rx-Linq') $build_dir -force
-	Copy-Item (Get-DependencyPackageFiles 'Rx-PlatformServices') $build_dir -force
-	Copy-Item (Get-DependencyPackageFiles 'Rx-Xaml') $build_dir -force
-	
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue
 }
 
 task FullStorageTest {
