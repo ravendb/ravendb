@@ -25,7 +25,13 @@
                 BorderThickness="1,1,1,0"
                 CornerRadius="4,4,0,0">
 		</Border>
-		<StackPanel Orientation="Horizontal">
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			<StackPanel Orientation="Horizontal">
 			<HyperlinkButton Content="Documents"
                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
                                 Command="{StaticResource NavigateToCommand}"
@@ -36,7 +42,20 @@
 			<TextBlock Text="Collections"
 					   Grid.Row="0"
 					   Style="{StaticResource Style_Text_Header}" />
-		</StackPanel>
+			</StackPanel>
+
+			<StackPanel Orientation="Horizontal"
+						Grid.Column="2"
+						VerticalAlignment="Center"
+						Margin="0,0,4,0"
+						HorizontalAlignment="Right">
+				<TextBlock Text="Sort by: " VerticalAlignment="Center"/>
+				<ComboBox SelectedIndex="{Binding SortByName.Value, Converter={StaticResource BooleanToIndex}, Mode=TwoWay}" Width="65">
+					<ComboBoxItem Content="Count"/>
+					<ComboBoxItem Content="Name"/>
+				</ComboBox>
+			</StackPanel>
+		</Grid>
 
 
 		<ListBox x:Name="CollectionsList" 

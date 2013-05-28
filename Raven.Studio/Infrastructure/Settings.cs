@@ -54,6 +54,12 @@ namespace Raven.Studio.Infrastructure
 			set { currentSettings["DocumentOutliningMode"] = value; }
 		}
 
+		public bool SortCollectionByName
+		{
+			get { return GetSettingAsBool("SortCollectionByName"); }
+			set { currentSettings["SortCollectionByName"] = value; }
+		}
+
 		private string GetSettingAsString(string key)
 		{
 		    return currentSettings.ContainsKey(key) ? (string) currentSettings[key] : "";
