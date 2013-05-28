@@ -476,7 +476,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("PUT", opUrl => DirectPutAsync(opUrl, key, etag, document, metadata));
 		}
 
-		private Task<PutResult> DirectPutAsync(string opUrl, string key, Etag etag, RavenJObject document, RavenJObject metadata)
+		private async Task<PutResult> DirectPutAsync(string opUrl, string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			if (metadata == null)
 				metadata = new RavenJObject();
@@ -494,33 +494,31 @@ namespace Raven.Client.Connection.Async
 
 			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			return request.WriteAsync(document.ToString())
-			              .ContinueWith(task =>
-			              {
-				              if (task.Exception != null)
-					              throw new InvalidOperationException("Unable to write to server");
+			try
+			{
+				await request.WriteAsync(document.ToString());
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Unable to write to server", e);
+			}
 
-				              return request.ReadResponseJsonAsync()
-				                            .ContinueWith(task1 =>
-				                            {
-					                            try
-					                            {
-						                            return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(task1.Result));
-					                            }
-					                            catch (AggregateException e)
-					                            {
-						                            var we = e.ExtractSingleInnerException() as WebException;
-						                            if (we == null)
-							                            throw;
-						                            var httpWebResponse = we.Response as HttpWebResponse;
-						                            if (httpWebResponse == null ||
-						                                httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-							                            throw;
-						                            throw ThrowConcurrencyException(we);
-					                            }
-				                            });
-			              })
-			              .Unwrap();
+			var result = await request.ReadResponseJsonAsync();
+			try
+			{
+				return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(result));
+			}
+			catch (AggregateException e)
+			{
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
+				var httpWebResponse = we.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				throw ThrowConcurrencyException(we);
+			}
 		}
 
 		/// <summary>

@@ -321,24 +321,20 @@ namespace Raven.Client.WinRT.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		public Task WriteAsync(string data)
+		public async Task WriteAsync(string data)
 		{
-			return httpClient.GetStreamAsync(url)
-			                 .ContinueWith(task =>
-			                 {
-				                 Stream dataStream = factory.DisableRequestCompression == false ?
-					                                     new GZipStream(task.Result, CompressionMode.Compress) :
-					                                     task.Result;
-				                 var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
-				                 return streamWriter.WriteAsync(data)
-				                                    .ContinueWith(writeTask =>
-				                                    {
-					                                    streamWriter.Dispose();
-					                                    dataStream.Dispose();
-					                                    task.Result.Dispose();
-					                                    return writeTask;
-				                                    }).Unwrap();
-			                 }).Unwrap();
+			var stream = await httpClient.GetStreamAsync(url);
+
+			var dataStream = factory.DisableRequestCompression == false
+				                 ? new GZipStream(stream, CompressionMode.Compress)
+				                 : stream;
+
+			var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
+			await streamWriter.WriteAsync(data);
+
+			streamWriter.Dispose();
+			dataStream.Dispose();
+			stream.Dispose();
 		}
 
 		/// <summary>
