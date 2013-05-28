@@ -78,7 +78,22 @@
 											<Popup>
 												<ContentControl Style="{StaticResource Style_InfoToolTip}">
 													<RichTextBlock MaxWidth="370" Margin="5">
-
+														<Paragraph>Index Scripts are written in JScript.</Paragraph>
+														<Paragraph>Example:
+															<LineBreak/>
+															<Span FontFamily="Consolas">
+																<LineBreak/>
+																<Span Foreground="Blue">var</Span> company = LoadDocument(<Span Foreground="Blue">this</Span>.Company);
+																<LineBreak/>
+																<Span Foreground="Blue">if</Span>(company == null) <Span Foreground="Blue">return;</Span>
+																<LineBreak/>
+																company.Orders = { Count:
+																<Span Foreground="Blue">this</Span>.Count, Total:<Span Foreground="Blue">this</Span>.Total };
+																<LineBreak/>
+																PutDocument(<Span Foreground="Blue">this</Span>.Company, company);
+															</Span>
+															<LineBreak/>
+														</Paragraph>
 													</RichTextBlock>
 												</ContentControl>
 											</Popup>
@@ -108,7 +123,23 @@
 											<Popup>
 												<ContentControl Style="{StaticResource Style_InfoToolTip}">
 													<RichTextBlock MaxWidth="370" Margin="5">
-
+														<Paragraph>Index Scripts are written in JScript.</Paragraph>
+														<Paragraph>Example:
+															<LineBreak/>
+															<Span FontFamily="Consolas">
+																<LineBreak/>
+																<Span Foreground="Blue">var</Span> company = LoadDocument(<Span Foreground="Blue">this</Span>.Company);
+																<LineBreak/>
+																<Span Foreground="Blue">if</Span> (company == null)
+																<Span Foreground="Blue">return</Span>;
+																<LineBreak/>
+																<Span Foreground="Blue">delete</Span> company.Orders;
+																<LineBreak/>
+																PutDocument(
+																<Span Foreground="Blue">this</Span>.Company, company);
+															</Span>
+															<LineBreak/>
+														</Paragraph>
 													</RichTextBlock>
 												</ContentControl>
 											</Popup>
