@@ -58,6 +58,10 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
