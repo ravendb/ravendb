@@ -11,7 +11,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
 using Raven.Client.Linq;
@@ -92,10 +91,7 @@ namespace Raven.Client.WinRT.Connection
 			this.factory = factory;
 			this.method = new HttpMethod(method);
 
-			var handler = new HttpClientHandler
-			{
-				
-			};
+			var handler = new HttpClientHandler();
 			httpClient = new HttpClient(handler);
 			httpClient.DefaultRequestHeaders.Add("Raven-Client-Version", ClientVersion);
 
@@ -323,18 +319,10 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		public async Task WriteAsync(string data)
 		{
-			var stream = await httpClient.GetStreamAsync(url);
-
-			var dataStream = factory.DisableRequestCompression == false
-				                 ? new GZipStream(stream, CompressionMode.Compress)
-				                 : stream;
-
-			var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
-			await streamWriter.WriteAsync(data);
-
-			streamWriter.Dispose();
-			dataStream.Dispose();
-			stream.Dispose();
+			var response = await httpClient.SendAsync(new HttpRequestMessage(method, url)
+			{
+				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
+			});
 		}
 
 		/// <summary>
