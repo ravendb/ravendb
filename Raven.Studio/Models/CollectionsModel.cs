@@ -22,11 +22,9 @@ namespace Raven.Studio.Models
 	    private CollectionDocumentsCollectionSource collectionSource; 
 		private DocumentsModel documentsForSelectedCollection;
 
-        public CollectionViewSource SortedCollectionsList
-        {
-            get; private set; }
+		public CollectionViewSource SortedCollectionsList { get; private set; }
 
-        public CollectionDocumentsCollectionSource CollectionSource
+		public CollectionDocumentsCollectionSource CollectionSource
 		{
             get
             {
@@ -34,6 +32,8 @@ namespace Raven.Studio.Models
                        (collectionSource = new CollectionDocumentsCollectionSource {CollectionName = GetSelectedCollectionName()});
             }
 		}
+
+		public Observable<bool> SortByName { get; set; } 
 
 	    private string GetSelectedCollectionName()
 	    {
@@ -68,7 +68,9 @@ namespace Raven.Studio.Models
 		public CollectionsModel()
 		{
 			ModelUrl = "/collections";
+		
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+			SortByName = new Observable<bool>{Value = Settings.Instance.SortCollectionByName};
             Collections = new BindableCollection<CollectionModel>(model => model.Name);
             SelectedCollection = new Observable<CollectionModel>();
 
@@ -76,10 +78,8 @@ namespace Raven.Studio.Models
                                  .Where(n =>n.Name.Equals(CollectionsIndex,StringComparison.InvariantCulture))
                                  .Select(m => Unit.Default));
 
-		    DocumentsForSelectedCollection.DocumentNavigatorFactory =
-		        (id, index) =>
-		        DocumentNavigator.Create(id, index, CollectionsIndex,
-		                                 new IndexQuery() {Query = "Tag:" + GetSelectedCollectionName()});
+		    DocumentsForSelectedCollection.DocumentNavigatorFactory = (id, index) =>
+		        DocumentNavigator.Create(id, index, CollectionsIndex, new IndexQuery {Query = "Tag:" + GetSelectedCollectionName()});
 
             SelectedCollection.PropertyChanged += (sender, args) =>
             {
@@ -89,18 +89,41 @@ namespace Raven.Studio.Models
                 DocumentsForSelectedCollection.Context = "Collection/" + GetSelectedCollectionName();
             };
 
-		    SortedCollectionsList = new CollectionViewSource()
+		    SortedCollectionsList = new CollectionViewSource
 		    {
 		        Source = Collections,
 		        SortDescriptions =
 		        {
+					SortByName.Value ? new SortDescription("Name", ListSortDirection.Ascending):
 		            new SortDescription("Count", ListSortDirection.Descending)
 		        }
 		    };
+
+			SortByName.PropertyChanged += (sender, args) =>
+			{
+				SortedCollectionsList = new CollectionViewSource
+				{
+					Source = Collections,
+					SortDescriptions =
+					{
+						SortByName.Value
+							? new SortDescription("Name", ListSortDirection.Ascending)
+							: new SortDescription("Count", ListSortDirection.Descending)
+					}
+				};
+
+				Settings.Instance.SortCollectionByName = SortByName.Value;
+				var selected = SelectedCollection.Value;
+				SortedCollectionsList.View.Refresh();
+				OnPropertyChanged(() => SortedCollectionsList);
+				SelectedCollection.Value = selected;
+			};
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
+			Settings.Instance.DocumentsTabSelection = "Collections";
+			ApplicationModel.Current.Refresh();
 			var urlParser = new UrlParser(parameters);
 			var name = urlParser.GetQueryParam("name");
 			initialSelectedDatabaseName = name;

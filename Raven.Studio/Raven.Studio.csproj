@@ -365,6 +365,7 @@
     </Compile>
     <Compile Include="Impl\RavenIntelliPromptProvider.cs" />
     <Compile Include="Infrastructure\AsyncCommand.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToIndexConverter.cs" />
     <Compile Include="Infrastructure\Converters\BreakToLinesConverter.cs" />
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
