@@ -1159,7 +1159,7 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
 		{
-			return ExecuteWithReplication("POST", operationUrl =>
+			return ExecuteWithReplication("POST", async operationUrl =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
@@ -1171,33 +1171,25 @@ namespace Raven.Client.Connection.Async
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 				var data = jArray.ToString(Formatting.None);
 
-				return req.WriteAsync(data)
-				          .ContinueWith(writeTask =>
-				          {
-					          writeTask.Wait(); // throw
-					          return req.ReadResponseJsonAsync();
-				          })
-				          .Unwrap()
-				          .ContinueWith(task =>
-				          {
-					          RavenJArray response;
-					          try
-					          {
-						          response = (RavenJArray) task.Result;
-					          }
-					          catch (AggregateException e)
-					          {
-						          var we = e.ExtractSingleInnerException() as WebException;
-						          if (we == null)
-							          throw;
-						          var httpWebResponse = we.Response as HttpWebResponse;
-						          if (httpWebResponse == null ||
-						              httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-							          throw;
-						          throw ThrowConcurrencyException(we);
-					          }
-					          return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
-				          });
+				await req.WriteAsync(data);
+				var result = await req.ReadResponseJsonAsync();
+				RavenJArray response;
+				try
+				{
+					response = (RavenJArray) result;
+				}
+				catch (AggregateException e)
+				{
+					var we = e.ExtractSingleInnerException() as WebException;
+					if (we == null)
+						throw;
+					var httpWebResponse = we.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+					    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+						throw;
+					throw ThrowConcurrencyException(we);
+				}
+				return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 			});
 		}
 
