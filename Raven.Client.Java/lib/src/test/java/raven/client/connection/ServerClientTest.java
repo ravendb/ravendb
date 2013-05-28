@@ -5,6 +5,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
+import java.util.List;
+
 import org.junit.Test;
 
 import raven.client.RavenDBAwareTests;
@@ -55,6 +57,16 @@ public class ServerClientTest extends RavenDBAwareTests {
 
     assertEquals(putResult.getEtag(), jsonDocument.getEtag());
     assertEquals(new RavenJValue("John"), jsonDocument.getDataAsJson().get("firstname"));
+
+    Person person2 = new Person();
+    person2.setFirstname("Albert");
+    person2.setLastname("Einstein");
+    db1Commands.put("users/albert", null, RavenJObject.fromObject(person2), null);
+
+    List<JsonDocument> jsonDocuments = db1Commands.startsWith("users", "", 0, 10, false);
+    assertEquals(2, jsonDocuments.size());
+
+    //TODO: test for all fields!
 
     deleteDb("db1");
   }

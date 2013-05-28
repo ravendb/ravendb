@@ -1,5 +1,6 @@
 package raven.client.connection;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.httpclient.HttpClient;
@@ -36,6 +37,10 @@ public class ServerClient implements IDatabaseCommands {
 
   public ServerClient(String url) {
     super();
+    if (url.endsWith("/")) {
+      url = url.substring(0, url.length() - 1);
+    }
+
     this.url = url;
     httpClient = new HttpClient();
     jsonRequestFactory = new HttpJsonRequestFactory();
@@ -63,8 +68,16 @@ public class ServerClient implements IDatabaseCommands {
 
   @Override
   public JsonDocument get(String key) throws ServerClientException {
+    ensureIsNotNullOrEmpty(key, "key");
     //TODO: support for replication
     return directGet(url, key);
+  }
+
+  private void ensureIsNotNullOrEmpty(String key, String argName) {
+    if (key == null || "".equals(key)) {
+      throw new IllegalArgumentException("Key cannot be null or empty " + argName);
+    }
+
   }
 
   /**
@@ -86,19 +99,35 @@ public class ServerClient implements IDatabaseCommands {
 
       return SerializationHelper.deserializeJsonDocument(docKey, responseJson, jsonRequest);
 
-    } catch (Exception e) {
-      if (e instanceof HttpOperationException) {
-        HttpOperationException httpException = (HttpOperationException) e;
-        if (httpException.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-          return null;
-        }
-        //TODO: resolve conflicts
-      } else {
-        throw new ServerClientException(e);
+    } catch (HttpOperationException e) {
+      HttpOperationException httpException = (HttpOperationException) e;
+      if (httpException.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        return null;
       }
+      //TODO: resolve conflicts
+    } catch (Exception e) {
+        throw new ServerClientException(e);
     }
     return null;
   }
+
+  private List<JsonDocument> directStartsWith(String serverUrl, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly) throws ServerClientException {
+    String actualUrl = serverUrl + String.format("/docs?startsWith=%s&matches=%s&start=%d&pageSize=%d", UrlUtils.escapeDataString(keyPrefix),
+        StringUtils.defaultIfNull(matches, ""), start, pageSize);
+    if (metadataOnly) {
+      actualUrl += "&metadata-only=true";
+    }
+    try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, actualUrl, HttpMethods.GET))) {
+
+      RavenJToken responseJson = jsonRequest.getResponseAsJson(HttpStatus.SC_OK);
+      return SerializationHelper.ravenJObjectsToJsonDocuments(responseJson);
+    } catch (Exception e) {
+      //TODO: resolve conflicts
+      throw new ServerClientException(e);
+    }
+  }
+
   /**
    * @return the url
    */
@@ -164,6 +193,15 @@ public class ServerClient implements IDatabaseCommands {
     }
     return new ServerClient(databaseUrl);
   }
+
+  @Override
+  public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly) throws ServerClientException {
+    ensureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
+    //TODO: replication
+    return directStartsWith(url, keyPrefix, matches, start, pageSize, metadataOnly);
+  }
+
+
 
 
 }

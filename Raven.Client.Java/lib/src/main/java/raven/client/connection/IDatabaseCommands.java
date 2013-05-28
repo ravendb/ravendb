@@ -1,5 +1,6 @@
 package raven.client.connection;
 
+import java.util.List;
 import java.util.UUID;
 
 import raven.client.json.JsonDocument;
@@ -43,4 +44,15 @@ public interface IDatabaseCommands {
    * Creates a new instance of {@link IDatabaseCommands} that will interacts with the default database.
    */
   public IDatabaseCommands forSystemDatabase();
+
+  /**
+   * Retrieves documents for the specified key prefix
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @param metadataOnly
+   * @return
+   */
+  public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly) throws ServerClientException;
 }

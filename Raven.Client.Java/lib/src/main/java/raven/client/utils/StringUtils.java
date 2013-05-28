@@ -12,4 +12,8 @@ public class StringUtils {
     }
     return sb.toString();
   }
+
+  public static Object defaultIfNull(String input, String defaultInput) {
+    return (input != null) ? input : defaultInput;
+  }
 }

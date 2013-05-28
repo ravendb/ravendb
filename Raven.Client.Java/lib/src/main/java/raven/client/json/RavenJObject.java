@@ -247,16 +247,19 @@ public class RavenJObject extends RavenJToken   {
     }
     RavenJToken ravenJToken = get(key);
     if (ravenJToken != null) {
+      RavenJValue ravenValue = (RavenJValue) ravenJToken;
       switch (ravenJToken.getType()) {
       case STRING:
-        RavenJValue ravenValue = (RavenJValue) ravenJToken;
         if (String.class.isAssignableFrom(clazz)) {
           return (T) ((RavenJValue)ravenJToken).getValue();
         } else if (UUID.class.isAssignableFrom(clazz)) {
           return (T) UUID.fromString((String) ravenValue.getValue());
         }
         break;
-
+      case BOOLEAN:
+        if (Boolean.class.isAssignableFrom(clazz)) {
+          return (T)ravenValue.getValue();
+        }
       }
     }
     throw new IllegalArgumentException("Unsupported conversion. From:" + ravenJToken.getType() + " to " + clazz.getCanonicalName());
