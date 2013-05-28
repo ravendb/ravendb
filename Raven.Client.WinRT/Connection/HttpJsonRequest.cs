@@ -101,13 +101,13 @@ namespace Raven.Client.WinRT.Connection
 
 			WriteMetadata(metadata);
 			if (method != "GET")
-				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json; charset=utf-8"));
+				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") {CharSet = "utf-8"});
 
 			if (factory.DisableRequestCompression)
 				return;
 
 			if (method == "POST" || method == "PUT" || method == "PATCH" || method == "EVAL")
-				httpClient.DefaultRequestHeaders.Add("Content-Encoding", "gzip");
+				httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
 		}
 
 		public Task<RavenJToken> ReadResponseJsonAsync()
