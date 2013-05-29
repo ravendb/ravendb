@@ -388,7 +388,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			return ExecuteWithReplication("DELETE", operationUrl =>
+			return ExecuteWithReplication("DELETE", async operationUrl =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -397,20 +397,20 @@ namespace Raven.Client.Connection.Async
 
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ExecuteRequestAsync()
-				              .ContinueWith(task =>
-				              {
-					              var aggregateException = task.Exception;
-					              if (aggregateException == null)
-						              return task;
-					              var e = aggregateException.ExtractSingleInnerException() as WebException;
-					              if (e == null)
-						              return task;
-					              var httpWebResponse = e.Response as HttpWebResponse;
-					              if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						              throw new InvalidOperationException("There is no index named: " + indexName, e);
-					              return task;
-				              }).Unwrap();
+				try
+				{
+					await request.ExecuteRequestAsync();
+				}
+				catch (AggregateException aggregateException)
+				{
+					var e = aggregateException.ExtractSingleInnerException() as WebException;
+					if (e != null)
+					{
+						var httpWebResponse = e.Response as HttpWebResponse;
+						if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+							throw new InvalidOperationException("There is no index named: " + indexName, e);
+					}
+				}
 			});
 		}
 
