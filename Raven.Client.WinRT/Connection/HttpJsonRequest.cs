@@ -323,6 +323,8 @@ namespace Raven.Client.WinRT.Connection
 			{
 				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
 			});
+
+			response.EnsureSuccessStatusCode();
 		}
 
 		/// <summary>
