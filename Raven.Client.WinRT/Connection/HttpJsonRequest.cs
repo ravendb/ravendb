@@ -330,17 +330,20 @@ namespace Raven.Client.WinRT.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		public Task WriteAsync(byte[] byteArray)
+		public async Task WriteAsync(byte[] byteArray)
 		{
 			postedData = byteArray;
-			return httpClient.GetStreamAsync(url).ContinueWith(t =>
+
+			using (var stream = new MemoryStream(byteArray))
+			using (var dataStream = new GZipStream(stream, CompressionMode.Compress))
 			{
-				var dataStream = new GZipStream(t.Result, CompressionMode.Compress);
-				using (dataStream)
+				var response = await httpClient.SendAsync(new HttpRequestMessage(method, url)
 				{
-					dataStream.Write(byteArray, 0, byteArray.Length);
-				}
-			});
+					Content = new StreamContent(dataStream);
+				});
+
+				response.EnsureSuccessStatusCode();
+			}
 		}
 
 		/// <summary>
