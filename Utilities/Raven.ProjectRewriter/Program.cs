@@ -91,20 +91,16 @@ namespace Raven.ProjectRewriter
 			}
 			foreach (var element in database.Root.Descendants(xmlns + "PropertyGroup"))
 			{
-				var condition = element.Attribute("Condition");
-				if (condition != null && condition.Value.Contains("== 'Release|"))
+				var outputPath = element.Descendants(xmlns + "OutputPath").FirstOrDefault();
+				if (outputPath != null)
 				{
-					var outputPath = element.Descendants(xmlns + "OutputPath").FirstOrDefault();
-					if (outputPath != null)
-					{
-						outputPath.Value += @"net45\";
-					}
+					outputPath.Value += @"net45\";
+				}
 
-					var documentationFile = element.Descendants(xmlns + "DocumentationFile").FirstOrDefault();
-					if (documentationFile != null)
-					{
-						documentationFile.Value = documentationFile.Value.Replace(@"..\build", @"..\build\net45\");
-					}
+				var documentationFile = element.Descendants(xmlns + "DocumentationFile").FirstOrDefault();
+				if (documentationFile != null)
+				{
+					documentationFile.Value = documentationFile.Value.Replace(@"..\build", @"..\build\net45\");
 				}
 			}
 
