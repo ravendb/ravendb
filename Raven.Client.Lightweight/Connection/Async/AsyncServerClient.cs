@@ -330,7 +330,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Puts the transfromer definition for the specified name asynchronously with url
 		/// </summary>
-		public Task<string> DirectPutTransformerAsync(string name, TransformerDefinition transformerDefinition, string operationUrl)
+		public async Task<string> DirectPutTransformerAsync(string name, TransformerDefinition transformerDefinition, string operationUrl)
 		{
 			var requestUri = operationUrl + "/transformers/" + name;
 
@@ -339,42 +339,39 @@ namespace Raven.Client.Connection.Async
 					.AddOperationHeaders(OperationsHeaders));
 
 			var serializeObject = JsonConvert.SerializeObject(transformerDefinition, Default.Converters);
-			return request.WriteAsync(serializeObject)
-			              .ContinueWith(writeTask => request.ReadResponseJsonAsync()
-			                                                .ContinueWith(readJsonTask =>
-			                                                {
-				                                                try
-				                                                {
-					                                                return readJsonTask.Result.Value<string>("Transformer");
-				                                                }
-				                                                catch (AggregateException e)
-				                                                {
-					                                                var we = e.ExtractSingleInnerException() as WebException;
-					                                                if (we == null)
-						                                                throw;
 
-					                                                var response = we.Response as HttpWebResponse;
+			try
+			{
+				await request.WriteAsync(serializeObject);
+				var result = await request.ReadResponseJsonAsync();
+				return result.Value<string>("Transformer");
+			}
+			catch (AggregateException e)
+			{
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
 
-					                                                if (response.StatusCode == HttpStatusCode.BadRequest)
-					                                                {
-						                                                var error = we.TryReadErrorResponseObject(
-							                                                new {Error = "", Message = ""});
+				var response = we.Response as HttpWebResponse;
 
-						                                                if (error == null)
-						                                                {
-							                                                throw;
-						                                                }
+				if (response.StatusCode == HttpStatusCode.BadRequest)
+				{
+					var error = we.TryReadErrorResponseObject(
+						new {Error = "", Message = ""});
 
-						                                                var compilationException = new TransformCompilationException(error.Message);
+					if (error == null)
+					{
+						throw;
+					}
 
-						                                                throw compilationException;
-					                                                }
+					var compilationException = new TransformCompilationException(error.Message);
 
-					                                                throw;
-				                                                }
+					throw compilationException;
+				}
 
-			                                                }))
-			              .Unwrap();
+				throw;
+			}
+
 		}
 
 		/// <summary>
