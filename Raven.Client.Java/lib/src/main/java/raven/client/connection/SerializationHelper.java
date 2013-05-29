@@ -14,13 +14,13 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 
+import raven.abstractions.data.Attachment;
 import raven.client.data.Constants;
 import raven.client.json.JTokenType;
 import raven.client.json.JsonDocument;
 import raven.client.json.RavenJArray;
 import raven.client.json.RavenJObject;
 import raven.client.json.RavenJToken;
-import raven.client.json.RavenJValue;
 import raven.client.utils.StringUtils;
 
 public class SerializationHelper {
@@ -206,5 +206,10 @@ public class SerializationHelper {
       list.add(new JsonDocument(tokenObject, metadata, id, nonAuthoritativeInformation, etag, lastModified));
     }
     return list;
+  }
+
+  public static List<Attachment> deserializeAttachements(RavenJToken responseJson) {
+    // TODO Auto-generated method stub
+    return null;
   }
 }

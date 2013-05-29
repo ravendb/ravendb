@@ -1,6 +1,6 @@
 package raven.client.json.lang;
 
-public class ServerClientException extends Exception {
+public class ServerClientException extends RuntimeException {
 
   public ServerClientException() {
     super();

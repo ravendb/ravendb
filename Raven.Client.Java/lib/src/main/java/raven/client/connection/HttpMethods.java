@@ -18,5 +18,10 @@ public enum HttpMethods {
   /**
    * PUT method
    */
-  PUT;
+  PUT,
+
+  /**
+   * HEAD method
+   */
+  HEAD;
 }

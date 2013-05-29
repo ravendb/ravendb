@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -44,6 +45,9 @@ public class ServerClientTest extends RavenDBAwareTests {
 
     createDb("db1");
 
+    List<String> databaseNames = systemDatabaseClient.getDatabaseNames(20, 0);
+    System.out.println(databaseNames);
+
     IDatabaseCommands db1Commands = client.forDatabase("db1");
     Person person1 = new Person();
     person1.setFirstname("John");
@@ -61,12 +65,20 @@ public class ServerClientTest extends RavenDBAwareTests {
     Person person2 = new Person();
     person2.setFirstname("Albert");
     person2.setLastname("Einstein");
-    db1Commands.put("users/albert", null, RavenJObject.fromObject(person2), null);
+    PutResult albertPutResult = db1Commands.put("users/albert", null, RavenJObject.fromObject(person2), null);
 
     List<JsonDocument> jsonDocuments = db1Commands.startsWith("users", "", 0, 10, false);
     assertEquals(2, jsonDocuments.size());
 
+
+    List<JsonDocument> documents = db1Commands.getDocuments(0, 20, false);
+    assertEquals(2, documents.size());
     //TODO: test for all fields!
+
+    db1Commands.delete("users/albert", albertPutResult.getEtag());
+    db1Commands.delete("users/albert", UUID.randomUUID());
+
+    assertEquals(1,  db1Commands.getDocuments(0, 20, false).size());
 
     deleteDb("db1");
   }

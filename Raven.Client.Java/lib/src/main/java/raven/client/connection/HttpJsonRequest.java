@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.UUID;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
@@ -11,11 +12,15 @@ import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
+import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
 
+import raven.client.json.RavenJObject;
 import raven.client.json.RavenJToken;
 import raven.client.json.lang.HttpOperationException;
+import raven.client.utils.StringUtils;
 
+//TODO: review me
 public class HttpJsonRequest implements AutoCloseable {
 
   private HttpClient httpClient;
@@ -44,6 +49,10 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
 
+  public byte[] getResponseBytes() throws IOException {
+    return methodBase.getResponseBody();
+  }
+
   /**
    * @return
    * @see org.apache.commons.httpclient.HttpMethodBase#getResponseHeaders()
@@ -55,10 +64,9 @@ public class HttpJsonRequest implements AutoCloseable {
   public RavenJToken getResponseAsJson(Integer... expectedStatus) throws IOException {
     respCode = httpClient.executeMethod(methodBase);
 
-
     if (!Arrays.asList(expectedStatus).contains(respCode) && HttpStatus.SC_UNAUTHORIZED != respCode
         && HttpStatus.SC_FORBIDDEN != respCode && HttpStatus.SC_PRECONDITION_FAILED != respCode) {
-      throw new HttpOperationException(respCode);
+      throw new HttpOperationException(methodBase);
     }
 
     if (HttpStatus.SC_FORBIDDEN == respCode) {
@@ -79,7 +87,7 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   private void handleUnauthorizedResponse(int respCode) {
-    throw new HttpOperationException(respCode);
+    throw new HttpOperationException(methodBase);
   }
 
 
@@ -91,23 +99,53 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   protected void handleForbiddenResponse() {
-    throw new HttpOperationException(HttpStatus.SC_FORBIDDEN);
+    throw new HttpOperationException(methodBase);
+  }
+
+  public void write(InputStream is) {
+    if (methodBase.isRequestSent()) {
+      throw new IllegalStateException("Request was already sent!");
+    }
+    EntityEnclosingMethod postMethod = (EntityEnclosingMethod) methodBase;
+    postMethod.setRequestEntity(new InputStreamRequestEntity(is));
   }
 
   public void write(String string) throws UnsupportedEncodingException {
     if (methodBase.isRequestSent()) {
       throw new IllegalStateException("Request was already sent!");
     }
-    //TODO: check cast
     EntityEnclosingMethod postMethod = (EntityEnclosingMethod) methodBase;
     postMethod.setRequestEntity(new StringRequestEntity(string, "application/json", "utf-8"));
   }
 
-  public void executeDeleteRequest() throws HttpException, IOException {
+
+
+  public void executeRequest() throws HttpException, IOException {
     respCode = httpClient.executeMethod(methodBase);
-    if (respCode != HttpStatus.SC_OK && respCode != HttpStatus.SC_NO_CONTENT) {
-      throw new HttpOperationException(respCode);
+
+    if (respCode >= 400) {
+      throw new HttpOperationException(methodBase);
     }
+  }
+
+  public UUID getEtagHeader() {
+    return etagHeaderToGuid(methodBase.getResponseHeader("ETag"));
+  }
+
+  private UUID etagHeaderToGuid(Header responseHeader) {
+    if (StringUtils.isNullOrEmpty(responseHeader.getValue())) {
+      throw new IllegalStateException("Response didn't had an ETag header");
+    }
+    String value = responseHeader.getValue();
+    if (value.startsWith("\"")) {
+      return UUID.fromString(value.substring(1, value.length() -2));
+    }
+    return  UUID.fromString(value);
+  }
+
+  public RavenJObject filterHeadersAttachment() {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

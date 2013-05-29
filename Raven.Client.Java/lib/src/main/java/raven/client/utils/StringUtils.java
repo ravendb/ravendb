@@ -16,4 +16,8 @@ public class StringUtils {
   public static Object defaultIfNull(String input, String defaultInput) {
     return (input != null) ? input : defaultInput;
   }
+
+  public static boolean isNullOrEmpty(String value) {
+    return value == null || "".equals(value);
+  }
 }

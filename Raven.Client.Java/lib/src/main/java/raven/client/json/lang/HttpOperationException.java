@@ -1,33 +1,39 @@
 package raven.client.json.lang;
 
+import org.apache.commons.httpclient.HttpMethodBase;
+
 public class HttpOperationException extends RuntimeException {
-  private int statusCode;
+  private HttpMethodBase methodBase;
 
   /**
-   * @return the statusCode
+   * @return the methodBase
    */
+  public HttpMethodBase getMethodBase() {
+    return methodBase;
+  }
+
+  public HttpOperationException(HttpMethodBase methodBase) {
+    super("statusCode = " + methodBase.getStatusCode());
+    this.methodBase = methodBase;
+  }
+
   public int getStatusCode() {
-    return statusCode;
+    return methodBase.getStatusCode();
   }
 
-  public HttpOperationException(int statusCode) {
-    super("statusCode = " + statusCode);
-    this.statusCode = statusCode;
+  public HttpOperationException(String message, Throwable cause, HttpMethodBase methodBase) {
+    super("statusCode = " + methodBase.getStatusCode() + message, cause);
+    this.methodBase = methodBase;
   }
 
-  public HttpOperationException(String message, Throwable cause, int statusCode) {
-    super("statusCode = " + statusCode + message, cause);
-    this.statusCode = statusCode;
+  public HttpOperationException(String message, HttpMethodBase methodBase) {
+    super("statusCode = " + methodBase.getStatusCode() + message);
+    this.methodBase = methodBase;
   }
 
-  public HttpOperationException(String message, int statusCode) {
-    super("statusCode = " + statusCode + message);
-    this.statusCode = statusCode;
-  }
-
-  public HttpOperationException(Throwable cause, int statusCode) {
+  public HttpOperationException(Throwable cause, HttpMethodBase methodBase) {
     super(cause);
-    this.statusCode = statusCode;
+    this.methodBase = methodBase;
   }
 
 
