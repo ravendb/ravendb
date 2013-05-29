@@ -1806,6 +1806,9 @@ namespace Raven.Database
 				},
 				() =>
 				{
+					if (patchDefault == null)
+						return null;
+
 					scriptedJsonPatcher = new ScriptedJsonPatcher(this);
 					var jsonDoc = new RavenJObject();
 					jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
@@ -1840,9 +1843,12 @@ namespace Raven.Database
 									  (jsonDoc, size) => new JsonPatcher(jsonDoc).Apply(patchExistingDoc),
 									  () =>
 									  {
-										 var jsonDoc = new RavenJObject();
-										 jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
-										 return new JsonPatcher(jsonDoc).Apply(patchDefaultDoc);
+										  if (patchDefaultDoc == null || patchDefaultDoc.Length == 0)
+											  return null;
+
+										  var jsonDoc = new RavenJObject();
+										  jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
+										  return new JsonPatcher(jsonDoc).Apply(patchDefaultDoc);
 									  },
 									  () => null, debugMode);
 		}
