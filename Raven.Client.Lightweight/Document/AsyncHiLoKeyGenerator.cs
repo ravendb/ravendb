@@ -164,35 +164,29 @@ namespace Raven.Client.Document
 
 		private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
 		{
-			return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
-								 document.DataAsJson,
-								 document.Metadata);
+			return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag, document.DataAsJson, document.Metadata);
 		}
 
-		private Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
+		private async Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
 		{
-			return databaseCommands.GetAsync(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0])
-				.ContinueWith(task =>
-				{
-					var documents = task.Result;
-					if (documents.Results.Count == 2 && documents.Results[1] != null)
-					{
-						lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
-					}
-					else
-					{
-						lastServerPrefix = string.Empty;
-					}
-					if (documents.Results.Count == 0 || documents.Results[0] == null)
-						return (JsonDocument)null;
+			var documents = await databaseCommands.GetAsync(new[] {HiLoDocumentKey, RavenKeyServerPrefix}, new string[0]);
+			if (documents.Results.Count == 2 && documents.Results[1] != null)
+			{
+				lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
+			}
+			else
+			{
+				lastServerPrefix = string.Empty;
+			}
+			if (documents.Results.Count == 0 || documents.Results[0] == null)
+				return null;
 
-					var jsonDocument = documents.Results[0].ToJsonDocument();
-					foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
-					{
-						jsonDocument.Metadata.Remove(key);
-					}
-					return jsonDocument;
-				});
+			var jsonDocument = documents.Results[0].ToJsonDocument();
+			foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
+			{
+				jsonDocument.Metadata.Remove(key);
+			}
+			return jsonDocument;
 		}
 	}
 }
