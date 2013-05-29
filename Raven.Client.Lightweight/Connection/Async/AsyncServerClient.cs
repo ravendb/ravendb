@@ -328,7 +328,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Puts the transfromer definition for the specified name asynchronously with url
+		/// Puts the transformer definition for the specified name asynchronously with url
 		/// </summary>
 		public async Task<string> DirectPutTransformerAsync(string name, TransformerDefinition transformerDefinition, string operationUrl)
 		{
