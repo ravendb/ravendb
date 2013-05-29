@@ -687,25 +687,17 @@ more responsive application.
 			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
 		}
 
-		private Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
+		private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
 
 			if (id == null)
 			{
-				return GenerateDocumentKeyForStorageAsync(entity).ContinueWith(task =>
-				{
-					id = task.Result;
-					StoreInternal(entity, etag, id, forceConcurrencyCheck);
-
-					return new CompletedTask();
-				});
+				id = await GenerateDocumentKeyForStorageAsync(entity);
 			}
 
 			StoreInternal(entity, etag, id, forceConcurrencyCheck);
-
-			return new CompletedTask();
 		}
 
 		protected abstract string GenerateKey(object entity);
@@ -715,30 +707,24 @@ more responsive application.
 			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
 		}
 
-		protected internal Task<string> GenerateDocumentKeyForStorageAsync(object entity)
+		protected internal async Task<string> GenerateDocumentKeyForStorageAsync(object entity)
 		{
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
 				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
-					return CompletedTask.With(id);
-				else
-					return GenerateKeyAsync(entity)
-						.ContinueWith(task =>
-						{
-							// If we generated a new id, store it back into the Id field so the client has access to to it                    
-							if (task.Result != null)
-								GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, task.Result);
-							return task.Result;
-						});
+					return id;
+
+				var key = await GenerateKeyAsync(entity);
+				// If we generated a new id, store it back into the Id field so the client has access to to it                    
+				if (key != null)
+					GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
+				return key;
 			}
 
-			return GetOrGenerateDocumentKeyAsync(entity)
-				.ContinueWith(task =>
-				{
-					GenerateEntityIdOnTheClient.TrySetIdentity(entity, task.Result);
-					return task.Result;
-				});
+			var result = await GetOrGenerateDocumentKeyAsync(entity);
+			GenerateEntityIdOnTheClient.TrySetIdentity(entity, result);
+			return result;
 		}
 
 		protected abstract Task<string> GenerateKeyAsync(object entity);
