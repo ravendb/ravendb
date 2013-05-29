@@ -259,7 +259,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">Should overwrite index</param>
 		/// <param name="operationUrl">The server's url</param>
-		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string operationUrl)
+		public async Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string operationUrl)
 		{
 			var requestUri = operationUrl + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
@@ -268,71 +268,63 @@ namespace Raven.Client.Connection.Async
 
 			webRequest.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			return webRequest.ExecuteRequestAsync()
-			                 .ContinueWith(task =>
-			                 {
-				                 try
-				                 {
-					                 task.Wait();
-					                 if (overwrite == false)
-						                 throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-				                 }
-				                 catch (AggregateException e)
-				                 {
-					                 var we = e.ExtractSingleInnerException() as WebException;
-					                 if (we == null)
-						                 throw;
-					                 var response = we.Response as HttpWebResponse;
-					                 if (response == null || response.StatusCode != HttpStatusCode.NotFound)
-						                 throw;
+			try
+			{
+				await webRequest.ExecuteRequestAsync();
+				if (overwrite == false)
+					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+			}
+			catch (AggregateException e)
+			{
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
+				var response = we.Response as HttpWebResponse;
+				if (response == null || response.StatusCode != HttpStatusCode.NotFound)
+					throw;
+			}
 
-				                 }
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
-				                 var request = jsonRequestFactory.CreateHttpJsonRequest(
-					                 new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
-						                 .AddOperationHeaders(OperationsHeaders));
+			var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 
-				                 var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
-				                 return request.WriteAsync(serializeObject)
-				                               .ContinueWith(writeTask => request.ReadResponseJsonAsync()
-				                                                                 .ContinueWith(readJsonTask =>
-				                                                                 {
-					                                                                 try
-					                                                                 {
-						                                                                 return readJsonTask.Result.Value<string>("Index");
-					                                                                 }
-					                                                                 catch (AggregateException e)
-					                                                                 {
-						                                                                 var we = e.ExtractSingleInnerException() as WebException;
-						                                                                 if (we == null)
-							                                                                 throw;
+			try
+			{
+				await request.WriteAsync(serializeObject);
+				var result = await request.ReadResponseJsonAsync();
+				return result.Value<string>("Index");
+			}
+			catch (AggregateException e)
+			{
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
 
-						                                                                 var response = we.Response as HttpWebResponse;
+				var response = we.Response as HttpWebResponse;
 
-						                                                                 if (response.StatusCode == HttpStatusCode.BadRequest)
-						                                                                 {
-							                                                                 var error = we.TryReadErrorResponseObject(
-								                                                                 new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+				if (response.StatusCode == HttpStatusCode.BadRequest)
+				{
+					var error = we.TryReadErrorResponseObject(
+						new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
 
-							                                                                 if (error == null)
-							                                                                 {
-								                                                                 throw;
-							                                                                 }
+					if (error == null)
+					{
+						throw;
+					}
 
-							                                                                 var compilationException = new IndexCompilationException(error.Message)
-							                                                                 {
-								                                                                 IndexDefinitionProperty = error.IndexDefinitionProperty,
-								                                                                 ProblematicText = error.ProblematicText
-							                                                                 };
+					var compilationException = new IndexCompilationException(error.Message)
+					{
+						IndexDefinitionProperty = error.IndexDefinitionProperty,
+						ProblematicText = error.ProblematicText
+					};
 
-							                                                                 throw compilationException;
-						                                                                 }
+					throw compilationException;
+				}
 
-						                                                                 throw;
-					                                                                 }
-				                                                                 })).
-				                                Unwrap();
-			                 }).Unwrap();
+				throw;
+			}
 		}
 
 		/// <summary>
