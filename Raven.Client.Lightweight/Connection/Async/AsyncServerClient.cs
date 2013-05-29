@@ -683,18 +683,18 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", async url =>
 			{
 				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
 				if (metadataOnly)
 					requestUri += "&metadata-only=true";
-				return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
-					                                                .AddOperationHeaders(OperationsHeaders))
-				                         .ReadResponseJsonAsync()
-				                         .ContinueWith(task => ((RavenJArray) task.Result)
-					                                               .Cast<RavenJObject>()
-					                                               .ToJsonDocuments()
-					                                               .ToArray());
+				var result = (RavenJArray) await jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+					                                                                          .AddOperationHeaders(OperationsHeaders))
+				                                                   .ReadResponseJsonAsync();
+
+				return result.Cast<RavenJObject>()
+				             .ToJsonDocuments()
+				             .ToArray();
 			});
 		}
 
@@ -1845,17 +1845,15 @@ namespace Raven.Client.Connection.Async
 			get { return this; }
 		}
 
-		Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
+		async Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
 		{
-			return url.ReplicationInfo()
-			          .NoCache()
-			          .ToJsonRequest(this, credentials, convention)
-			          .ReadResponseJsonAsync()
-			          .ContinueWith(task =>
-			          {
-				          var jo = ((RavenJObject) task.Result);
-				          return jo.Deserialize<ReplicationStatistics>(convention);
-			          });
+			var result = await url.ReplicationInfo()
+			                      .NoCache()
+			                      .ToJsonRequest(this, credentials, convention)
+			                      .ReadResponseJsonAsync();
+
+			var jo = (RavenJObject) result;
+			return jo.Deserialize<ReplicationStatistics>(convention);
 		}
 
 		#endregion
