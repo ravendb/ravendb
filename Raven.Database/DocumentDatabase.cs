@@ -1236,6 +1236,7 @@ namespace Raven.Database
                 query.FieldsToFetch = new[] { Constants.AllFields };
             }
 
+	        var duration = Stopwatch.StartNew();
             var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             TransactionalStorage.Batch(
                 actions =>
@@ -1320,7 +1321,8 @@ namespace Raven.Database
                 ResultEtag = resultEtag,
                 IdsToInclude = idsToLoad,
                 LastQueryTime = SystemTime.UtcNow,
-                Highlightings = highlightings
+                Highlightings = highlightings,
+				DurationMilliseconds = duration.ElapsedMilliseconds
             };
         }
 

@@ -140,6 +140,9 @@ namespace Raven.Client.Connection
 			if (json.ContainsKey("NonAuthoritativeInformation"))
 				result.NonAuthoritativeInformation = Convert.ToBoolean(json["NonAuthoritativeInformation"].ToString());
 
+			if (json.ContainsKey("DurationMilliseconds"))
+				result.DurationMilliseconds = json.Value<long>("DurationMilliseconds");
+
 			return result;
 		}
 
