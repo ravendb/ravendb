@@ -1234,7 +1234,7 @@ namespace Raven.Client.Connection
 				}
 				throw;
 			}
-			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader());
+			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader(), request.ResponseHeaders["Temp-Request-Time"]);
 			var docResults = directQuery.Results.Concat(directQuery.Includes);
 			return RetryOperationBecauseOfConflict(docResults, directQuery,
 				() => DirectQuery(index, query, operationUrl, includes, metadataOnly, includeEntries));
