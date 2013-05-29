@@ -47,7 +47,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>Bin\Debug</OutputPath>
+    <OutputPath>..\build\sl5\</OutputPath>
     <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
     <NoStdLib>true</NoStdLib>
     <NoConfig>true</NoConfig>
@@ -57,7 +57,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>Bin\Release</OutputPath>
+    <OutputPath>..\build\sl5\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
     <NoStdLib>true</NoStdLib>
     <NoConfig>true</NoConfig>
@@ -729,7 +729,6 @@
     <Compile Include="Views\Transformers.xaml.cs">
       <DependentUpon>Transformers.xaml</DependentUpon>
     </Compile>
-    <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\UpdateTextBindingOnPropertyChanged.cs" />
     <Compile Include="Behaviors\DoubleClickBehavior.cs" />
@@ -1455,6 +1454,7 @@
     <Resource Include="app.config">
       <SubType>Designer</SubType>
     </Resource>
+    <EmbeddedResource Include="Assets\EmbeddedData\Northwind.dump" />
     <None Include="packages.config" />
     <None Include="Properties\AppManifest.xml" />
     <EmbeddedResource Include="Settings.dat" />

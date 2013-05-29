@@ -39,72 +39,94 @@
 				</StackPanel>
 			</toolkit:HeaderedContentControl.Header>
 
-
-			<Grid>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-				</Grid.RowDefinitions>
-				<StackPanel Margin="5">
-					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
-						<TextBlock Text="Index Script" 
+<Grid>
+				<Grid Visibility="{Binding SelectedScript, Converter={StaticResource HiddenWhenNotNull}}">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<TextBlock Text="There is no Script for this index."/>
+					<HyperlinkButton Content="Create Script"
+								 Command="{Binding CreateScript}"
+								 Grid.Row="1"/>
+				</Grid>
+				<Grid Visibility="{Binding SelectedScript, Converter={StaticResource HiddenWhenNull}}">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<Button Command="{Binding RemoveScript}"
+							VerticalAlignment="Top"
+							ToolTipService.ToolTip="Remove Script For This Index"
+							Style="{StaticResource Style_Button_MouseOverChrome}">
+						<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+					</Button>
+					<StackPanel Margin="5" Grid.Column="1">
+						<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
+							<TextBlock Text="Index Script" 
 									Margin="0,0,10,0"
 									Style="{StaticResource Style_TextBlock_PagePartHeader}"
 									VerticalAlignment="Top" />
-						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
-							<i:Interaction.Behaviors>
-								<Behaviors:ShowPopupWhilstMouseOver>
-									<Behaviors:ShowPopupWhilstMouseOver.Popup>
-										<Popup>
-											<ContentControl Style="{StaticResource Style_InfoToolTip}">
-												<RichTextBlock MaxWidth="370" Margin="5">
+							<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+								<i:Interaction.Behaviors>
+									<Behaviors:ShowPopupWhilstMouseOver>
+										<Behaviors:ShowPopupWhilstMouseOver.Popup>
+											<Popup>
+												<ContentControl Style="{StaticResource Style_InfoToolTip}">
+													<RichTextBlock MaxWidth="370" Margin="5">
 
-												</RichTextBlock>
-											</ContentControl>
-										</Popup>
-									</Behaviors:ShowPopupWhilstMouseOver.Popup>
-								</Behaviors:ShowPopupWhilstMouseOver>
-							</i:Interaction.Behaviors>
-						</Image>
-					</StackPanel>
+													</RichTextBlock>
+												</ContentControl>
+											</Popup>
+										</Behaviors:ShowPopupWhilstMouseOver.Popup>
+									</Behaviors:ShowPopupWhilstMouseOver>
+								</i:Interaction.Behaviors>
+							</Image>
+						</StackPanel>
 
-					<Editors:EditorBase BoundDocument="{Binding IndexScript}" 
+						<Editors:EditorBase BoundDocument="{Binding IndexScript}" 
 										MinHeight="150"
 										IsSelectionMarginVisible="False" 
 										IsLineNumberMarginVisible="False" 
 										AreLineModificationMarksVisible="False"/>
-				</StackPanel>
+					</StackPanel>
 
-				<StackPanel Grid.Row="1" Margin="5">
-					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
-						<TextBlock Text="Delete Script" 
+					<StackPanel Grid.Row="1" Margin="5" Grid.Column="1">
+						<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
+							<TextBlock Text="Delete Script" 
 									Margin="0,0,10,0"
 									Style="{StaticResource Style_TextBlock_PagePartHeader}"
 									VerticalAlignment="Top" />
-						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
-							<i:Interaction.Behaviors>
-								<Behaviors:ShowPopupWhilstMouseOver>
-									<Behaviors:ShowPopupWhilstMouseOver.Popup>
-										<Popup>
-											<ContentControl Style="{StaticResource Style_InfoToolTip}">
-												<RichTextBlock MaxWidth="370" Margin="5">
+							<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+								<i:Interaction.Behaviors>
+									<Behaviors:ShowPopupWhilstMouseOver>
+										<Behaviors:ShowPopupWhilstMouseOver.Popup>
+											<Popup>
+												<ContentControl Style="{StaticResource Style_InfoToolTip}">
+													<RichTextBlock MaxWidth="370" Margin="5">
 
-												</RichTextBlock>
-											</ContentControl>
-										</Popup>
-									</Behaviors:ShowPopupWhilstMouseOver.Popup>
-								</Behaviors:ShowPopupWhilstMouseOver>
-							</i:Interaction.Behaviors>
-						</Image>
-					</StackPanel>
+													</RichTextBlock>
+												</ContentControl>
+											</Popup>
+										</Behaviors:ShowPopupWhilstMouseOver.Popup>
+									</Behaviors:ShowPopupWhilstMouseOver>
+								</i:Interaction.Behaviors>
+							</Image>
+						</StackPanel>
 
-					<Editors:EditorBase BoundDocument="{Binding DeleteScript}" 
+						<Editors:EditorBase BoundDocument="{Binding DeleteScript}" 
 										IsSelectionMarginVisible="False" 
 										MinHeight="150"
 										IsLineNumberMarginVisible="False" 
 										AreLineModificationMarksVisible="False"/>
-				</StackPanel>
+					</StackPanel>
+				</Grid>
 			</Grid>
+			
 		</toolkit:HeaderedContentControl>
 	</Grid>
 </UserControl>

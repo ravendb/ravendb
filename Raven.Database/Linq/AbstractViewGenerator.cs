@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -12,6 +13,7 @@ using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Abstractions.Linq;
 using Raven.Database.Indexing;
 using Spatial4n.Core.Shapes;
 
@@ -111,12 +113,35 @@ namespace Raven.Database.Linq
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
 		}
 
-		protected dynamic LoadDocument(string key)
+		protected dynamic LoadDocument(object item)
 		{
 			if (CurrentIndexingScope.Current == null)
-				throw new InvalidOperationException("LoadDocument may only be called from the map portion of the index. Was called with: " + key);
+				throw new InvalidOperationException("LoadDocument may only be called from the map portion of the index. Was called with: " + item);
 
-			return CurrentIndexingScope.Current.LoadDocument(key);
+			if (item == null || item is DynamicNullObject)
+				return new DynamicNullObject();
+
+			var key = item as string;
+			if (key != null)
+				return CurrentIndexingScope.Current.LoadDocument(key);
+
+			var enumerable = item as IEnumerable;
+			if (enumerable != null)
+			{
+				var enumerator = enumerable.GetEnumerator();
+				using (enumerable as IDisposable)
+				{
+					var items = new List<dynamic>();
+					while (enumerator.MoveNext())
+					{
+						items.Add(LoadDocument(enumerator.Current));
+					}
+					return new DynamicList(items);
+				}
+			}
+			throw new InvalidOperationException(
+				"LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
+				item.GetType().FullName + ": " + item);
 		}
 
 		public void AddQueryParameterForMap(string field)

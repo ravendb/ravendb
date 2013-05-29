@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 
-namespace Raven.Abstractions.Util
+namespace Raven.Database.Prefetching
 {
 	public class ConcurrentJsonDocumentSortedList
 	{

@@ -1506,7 +1506,7 @@ namespace Raven.Client.Indexes
 			}
 			Out(IsIndexerCall(node) ? "]" : ")");
 
-			if (node.Type.IsValueType())
+			if (node.Type.IsValueType && TypeExistsOnServer(node.Type))
 			{
 				switch (node.Method.Name)
 				{

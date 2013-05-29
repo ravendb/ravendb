@@ -14,9 +14,11 @@ using System.Windows.Shapes;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Smuggler;
 
 namespace Raven.Studio.Features.Tasks
 {
@@ -40,37 +42,18 @@ namespace Raven.Studio.Features.Tasks
             // this code assumes a small enough dataset, and doesn't do any sort
             // of paging or batching whatsoever.
 
-            using (var sampleData = typeof(CreateSampleDataTask).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))
-            using (var streamReader = new StreamReader(sampleData))
+            using (var sampleData = typeof(CreateSampleDataTask).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.Northwind.dump"))
             {
                 Report("Reading documents");
 
-                var musicStoreData = (RavenJObject)RavenJToken.ReadFrom(new JsonTextReader(streamReader));
-                foreach (var index in musicStoreData.Value<RavenJArray>("Indexes"))
+                var smugglerOptions = new SmugglerOptions
                 {
-                    var indexName = index.Value<string>("name");
-                    var ravenJObject = index.Value<RavenJObject>("definition");
-                    Report("Adding index " + indexName);
-                    var putDoc = DatabaseCommands.PutIndexAsync(indexName, ravenJObject.JsonDeserialization<IndexDefinition>(), true);
-                    await putDoc;
-                }
+                    OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
+                    ShouldExcludeExpired = false,
+                };
+                var smuggler = new SmugglerApi(smugglerOptions, DatabaseCommands, s => Report(s));
 
-                Report("Storing documents");
-
-                await DatabaseCommands.BatchAsync(
-                    musicStoreData.Value<RavenJArray>("Docs").OfType<RavenJObject>().Select(
-                        doc =>
-                        {
-                            var metadata = doc.Value<RavenJObject>("@metadata");
-                            doc.Remove("@metadata");
-                            return new PutCommandData
-                            {
-                                Document = doc,
-                                Metadata = metadata,
-                                Key = metadata.Value<string>("@id"),
-                            };
-                        }).ToArray()
-                    );
+                await smuggler.ImportData(sampleData, smugglerOptions);
             }
 
             return DatabaseTaskOutcome.Succesful;

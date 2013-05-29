@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Client.Authorization</id>
-		<version>1.2</version>
+		<version>{{version}}</version>
 		<title>RavenDB Client for Authorization bundle</title>
 		<authors>Hibernating Rhinos</authors>
 		<description>RavenDB 'Authorization' bundle client extend RavenDB and add document level permissions.</description>
