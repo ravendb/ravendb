@@ -552,7 +552,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", url => DirectGetAsync(url, key));
 		}
 
-		public Task<JsonDocument> DirectGetAsync(string opUrl, string key)
+		public async Task<JsonDocument> DirectGetAsync(string opUrl, string key)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
@@ -561,46 +561,43 @@ namespace Raven.Client.Connection.Async
 
 			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			return request.ReadResponseJsonAsync()
-			              .ContinueWith(task =>
-			              {
-				              try
-				              {
-					              var requestJson = task.Result;
-					              var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
-					              docKey = Uri.UnescapeDataString(docKey);
-					              request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-					              var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
-					                                                                                        request.ResponseHeaders,
-					                                                                                        request.ResponseStatusCode);
-					              return (Task<JsonDocument>) new CompletedTask<JsonDocument>(deserializeJsonDocument);
-				              }
-				              catch (AggregateException e)
-				              {
-					              var we = e.ExtractSingleInnerException() as WebException;
-					              if (we == null)
-						              throw;
-					              var httpWebResponse = we.Response as HttpWebResponse;
-					              if (httpWebResponse == null)
-						              throw;
-					              if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						              return new CompletedTask<JsonDocument>((JsonDocument) null);
-					              if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-					              {
-						              var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-						              var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+			Task<JsonDocument> resolveConflictTask;
+			try
+			{
+				var requestJson = await request.ReadResponseJsonAsync();
+				var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+				docKey = Uri.UnescapeDataString(docKey);
+				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
+				return deserializeJsonDocument;
+			}
+			catch (AggregateException e)
+			{
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
+				var httpWebResponse = we.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					return null;
+				if (httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
 
-						              return TryResolveConflictOrCreateConcurrencyException(opUrl, key, conflictsDoc, httpWebResponse.GetEtagHeader())
-							              .ContinueWith(conflictTask =>
-							              {
-								              if (conflictTask.Result != null)
-									              throw conflictTask.Result;
-								              return DirectGetAsync(opUrl, key);
-							              }).Unwrap();
-					              }
-					              throw;
-				              }
-			              }).Unwrap();
+				resolveConflictTask = ResolveConflict(httpWebResponse, opUrl, key);
+			}
+
+			return await resolveConflictTask;
+		}
+
+		private async Task<JsonDocument> ResolveConflict(HttpWebResponse httpWebResponse, string opUrl, string key)
+		{
+			var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
+			var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+			var result = await TryResolveConflictOrCreateConcurrencyException(opUrl, key, conflictsDoc, httpWebResponse.GetEtagHeader());
+			if (result != null)
+				throw result;
+			return await DirectGetAsync(opUrl, key);
 		}
 
 		/// <summary>
@@ -1679,30 +1676,26 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		private Task<bool> AssertNonConflictedDocumentAndCheckIfNeedToReload(string opUrl, RavenJObject docResult)
+		private async Task<bool> AssertNonConflictedDocumentAndCheckIfNeedToReload(string opUrl, RavenJObject docResult)
 		{
 			if (docResult == null)
-				return new CompletedTask<bool>(false);
+				return false;
 			var metadata = docResult[Constants.Metadata];
 			if (metadata == null)
-				return new CompletedTask<bool>(false);
+				return false;
 
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
 			{
-				return TryResolveConflictOrCreateConcurrencyException(opUrl, metadata.Value<string>("@id"), docResult,
-				                                                      HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag")))
-					.ContinueWith(task =>
-					{
-						if (task.Result == null)
-							return true;
-						throw task.Result;
-					});
-
+				var result = await TryResolveConflictOrCreateConcurrencyException(opUrl, metadata.Value<string>("@id"), docResult,
+				                                                                  HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag")));
+				if (result == null)
+					return true;
+				throw result;
 			}
-			return new CompletedTask<bool>(false);
+			return false;
 		}
 
-		private Task<ConflictException> TryResolveConflictOrCreateConcurrencyException(string opUrl, string key, RavenJObject conflictsDoc, Etag etag)
+		private async Task<ConflictException> TryResolveConflictOrCreateConcurrencyException(string opUrl, string key, RavenJObject conflictsDoc, Etag etag)
 		{
 			var ravenJArray = conflictsDoc.Value<RavenJArray>("Conflicts");
 			if (ravenJArray == null)
@@ -1710,22 +1703,16 @@ namespace Raven.Client.Connection.Async
 
 			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
 
-			return TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, opUrl)
-				.ContinueWith(t =>
-				{
-					if (t.Result)
-					{
-						return (ConflictException) null;
-					}
+			var result = await TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, opUrl);
+			if (result)
+				return null;
 
-					return new ConflictException("Conflict detected on " + key +
-					                             ", conflict must be resolved before the document will be accessible",
-					                             true)
-					{
-						ConflictedVersionIds = conflictIds,
-						Etag = etag
-					};
-				});
+			return new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the document will be accessible",
+			                             true)
+			{
+				ConflictedVersionIds = conflictIds,
+				Etag = etag
+			};
 		}
 
 		internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string key, Etag etag, string[] conflictIds, string opUrl = null)
