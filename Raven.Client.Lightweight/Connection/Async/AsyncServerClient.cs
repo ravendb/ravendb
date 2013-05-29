@@ -952,7 +952,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
 		{
-			return ExecuteWithReplication("GET", operationUrl => // logical GET even though the actual request is a POST
+			return ExecuteWithReplication("GET", async operationUrl => // logical GET even though the actual request is a POST
 			{
 				var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
 
@@ -968,25 +968,13 @@ namespace Raven.Client.Connection.Async
 				if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
 				{
 					var cachedResponses = multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length], jsonRequestFactory);
-					return Task.Factory.StartNew(() => cachedResponses);
+					return cachedResponses;
 				}
 
-
-				return httpJsonRequest.WriteAsync(postedData)
-				                      .ContinueWith(
-					                      task =>
-					                      {
-						                      task.Wait(); // will throw on error
-						                      return httpJsonRequest.ReadResponseJsonAsync()
-						                                            .ContinueWith(replyTask =>
-						                                            {
-							                                            var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(new RavenJTokenReader(replyTask.Result));
-							                                            return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
-						                                            })
-							                      ;
-					                      })
-				                      .Unwrap();
-
+				await httpJsonRequest.WriteAsync(postedData);
+				var result = await httpJsonRequest.ReadResponseJsonAsync();
+				var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(new RavenJTokenReader(result));
+				return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 			});
 		}
 
