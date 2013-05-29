@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Commands;
-using Raven.Database.Data;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Extensions
@@ -63,6 +63,33 @@ namespace Raven.Database.Extensions
 					advPatchCommandData.Metadata = doc.Metadata;
 					advPatchCommandData.Etag = doc.Etag;
 				}
+				return;
+			}
+
+			var patchOrPutCommandData = self as PatchOrPutCommandData;
+			if (patchOrPutCommandData != null)
+			{
+				var result = database.ApplyPatch(patchOrPutCommandData.Key, patchOrPutCommandData.Etag,
+												 patchOrPutCommandData.Patches, patchOrPutCommandData.TransactionInformation);
+
+				if (result.PatchResult != PatchResult.DocumentDoesNotExists)
+				{
+					var doc = database.Get(patchOrPutCommandData.Key, patchOrPutCommandData.TransactionInformation);
+					if (doc != null)
+					{
+						patchOrPutCommandData.Metadata = doc.Metadata;
+						patchOrPutCommandData.Etag = doc.Etag;
+					}
+				}
+				else
+				{
+					var putResult = database.Put(patchOrPutCommandData.Key, patchOrPutCommandData.Etag,
+												 patchOrPutCommandData.Document, patchOrPutCommandData.Metadata,
+												 patchOrPutCommandData.TransactionInformation);
+					patchOrPutCommandData.Etag = putResult.ETag;
+					patchOrPutCommandData.Key = putResult.Key;
+				}
+
 				return;
 			}
 		}

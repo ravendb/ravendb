@@ -941,6 +941,30 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Sends a patch request for a specific document or, if it does not exist, puts the specified document instead
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="document">The document.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public RavenJObject PatchOrPut(string key, PatchRequest[] patches, RavenJObject document, RavenJObject metadata, Etag etag)
+		{
+			var batchResults = Batch(new[]
+				  {
+					  new PatchOrPutCommandData
+					  {
+						  Key = key,
+						  Patches = patches,
+						  Document = document,
+						  Metadata = metadata,
+						  Etag = etag
+					  }
+				  });
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
 		/// Disable all caching within the given scope
 		/// </summary>
 		public IDisposable DisableAllCaching()

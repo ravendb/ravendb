@@ -1285,5 +1285,65 @@ namespace Raven.Tests.Document
 			               	};
 			Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new MemoryStream(new byte[] {0, 1, 2}), metadata));
 		}
+
+		[Fact]
+		public void PatchOrPut_patches_document_when_present()
+		{
+			var company = new Company {Name = "Hibernating Rhinos"};
+
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+
+			documentStore.DatabaseCommands.PatchOrPut(company.Id,
+													  new[]
+													  {
+														  new PatchRequest
+														  {
+															  Type = PatchCommandType.Set,
+															  Name = "Name",
+															  Value = "Patch",
+														  }
+													  },
+													  RavenJObject.FromObject(new Company {Name = "Put"}),
+													  new RavenJObject(),
+													  null);
+
+			using (var session = documentStore.OpenSession())
+			{
+				var company2 = session.Load<Company>(company.Id);
+
+				Assert.NotNull(company2);
+				Assert.Equal(company2.Name, "Patch");
+			}
+		}
+
+		[Fact]
+		public void PatchOrPut_puts_document_when_missing()
+		{
+			documentStore.DatabaseCommands.PatchOrPut("Company/1",
+													  new[]
+													  {
+														  new PatchRequest
+														  {
+															  Type = PatchCommandType.Set,
+															  Name = "Name",
+															  Value = "Patch",
+														  }
+													  },
+													  RavenJObject.FromObject(new Company { Name = "Put" }),
+													  new RavenJObject(),
+													  null);
+
+			using (var session = documentStore.OpenSession())
+			{
+				var company = session.Load<Company>("Company/1");
+
+				Assert.NotNull(company);
+				Assert.Equal(company.Name, "Put");
+			}
+		}
 	}
 }

@@ -85,6 +85,7 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
       <Link>Imports\Newtonsoft.Json\TraceLevel.cs</Link>
     </Compile>
+    <Compile Include="Commands\PatchOrPutCommandData.cs" />
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\BsonBinaryType.cs">
       <Link>Imports\Newtonsoft.Json\Bson\BsonBinaryType.cs</Link>

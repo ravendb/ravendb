@@ -57,6 +57,20 @@ namespace Raven.Database.Data
 						Patch = ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch")),
 						DebugMode = debug
 					};
+				case "PATCHPUT":
+					return new PatchOrPutCommandData
+					{
+						Key = key,
+						Etag = GetEtagFromCommand(jsonCommand),
+						TransactionInformation = transactionInformation,
+						Patches = jsonCommand
+							.Value<RavenJArray>("Patches")
+							.Cast<RavenJObject>()
+							.Select(PatchRequest.FromJson)
+							.ToArray(),
+						Document = jsonCommand["Document"] as RavenJObject,
+						Metadata = jsonCommand["Metadata"] as RavenJObject,
+					};
 				default:
 					throw new ArgumentException("Batching only supports PUT, PATCH, EVAL and DELETE.");
 			}

@@ -169,6 +169,24 @@ namespace Raven.Client.Connection.Async
         Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document or, if it does not exist, puts the specified document instead
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="document">The document.</param>
+		/// <param name="metadata">The metadata.</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		Task<RavenJObject> PatchOrPutAsync(string key, PatchRequest[] patches, RavenJObject document, RavenJObject metadata, Etag etag);
+
+		/// <summary>
 		/// Create a http request to the specified relative url on the current database
 		/// </summary>
 		HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false);

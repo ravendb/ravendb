@@ -84,6 +84,7 @@
     <Compile Include="Util\AsyncCountdownEvent.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\EvictItemsFromCacheBasedOnChanges.cs" />
+    <Compile Include="Connection\DatabaseCommandsExtensions.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
     <Compile Include="Changes\LocalConnectionState.cs" />
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />

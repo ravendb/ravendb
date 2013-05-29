@@ -233,6 +233,16 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<PutResult>(databaseCommands.Put(key, etag, document, metadata));
 		}
 
+		public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.Patch(key, patches, etag));
+		}
+
+		public Task<RavenJObject> PatchOrPutAsync(string key, PatchRequest[] patches, RavenJObject document, RavenJObject metadata, Etag etag)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.PatchOrPut(key, patches, document, metadata, etag));
+		}
+
 		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false)
 		{
 			throw new NotImplementedException();
