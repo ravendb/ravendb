@@ -57,7 +57,6 @@ namespace Raven.Database.Server.Security.OAuth
 			{
 				if (allowUnauthenticatedUsers)
 				if (allowUnauthenticatedUsers || ignoreDbAccess)
-				if (allowUnauthenticatedUsers || ignoreDb)
 					return true;
 
 				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", 
