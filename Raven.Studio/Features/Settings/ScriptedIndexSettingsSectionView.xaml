@@ -16,27 +16,47 @@
 	<Grid x:Name="LayoutRoot">
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
 			<toolkit:HeaderedContentControl.Header>
-				<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
-					<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
-					<HyperlinkButton Content="Indexes"
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+						<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
+						<HyperlinkButton Content="Indexes"
                                  Style="{StaticResource Style_Link_Breadcrumb_Header}"
                                  Command="{StaticResource NavigateToCommand}"
                                  CommandParameter="/Indexes"
                                  VerticalAlignment="Center" />
-					<controls1:NavTriangle/>
+						<controls1:NavTriangle/>
 
-					<StackPanel Orientation="Horizontal">
-						<ComboBox ItemsSource="{Binding AvailableIndexes}"
+						<StackPanel Orientation="Horizontal">
+							<ComboBox ItemsSource="{Binding AvailableIndexes}"
                               SelectedItem="{Binding IndexName, Mode=TwoWay}"
                           Width="300"
                               Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
-					</StackPanel>
+						</StackPanel>
 
-					<controls1:NavTriangle/>
-					<TextBlock Text="Scripted Index"
+						<controls1:NavTriangle/>
+						<TextBlock Text="Scripted Index"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
                            VerticalAlignment="Center" />
-				</StackPanel>
+					</StackPanel>
+
+					<Button Command="{Binding RemoveScript}"
+							Grid.Column="2"
+							Visibility="{Binding SelectedScript, Converter={StaticResource HiddenWhenNull}}"
+							VerticalAlignment="Center"
+							ToolTipService.ToolTip="Remove Script For This Index"
+							Style="{StaticResource Style_Button_MouseOverChrome}">
+						<StackPanel Orientation="Horizontal">
+							<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12" Margin="5"/>
+							<TextBlock Text="Remove Script" Margin="5"/>
+						</StackPanel>
+					</Button>
+				</Grid>
+				
 			</toolkit:HeaderedContentControl.Header>
 
 <Grid>
@@ -59,12 +79,6 @@
 						<RowDefinition Height="Auto"/>
 						<RowDefinition Height="Auto"/>
 					</Grid.RowDefinitions>
-					<Button Command="{Binding RemoveScript}"
-							VerticalAlignment="Top"
-							ToolTipService.ToolTip="Remove Script For This Index"
-							Style="{StaticResource Style_Button_MouseOverChrome}">
-						<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-					</Button>
 					<StackPanel Margin="5" Grid.Column="1">
 						<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
 							<TextBlock Text="Index Script" 
