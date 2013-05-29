@@ -727,7 +727,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}&facetStart={3}&facetPageSize={4}",
 				                                              Uri.EscapeUriString(index),
@@ -742,12 +742,8 @@ namespace Raven.Client.Connection.Async
 
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(task =>
-				              {
-					              var json = (RavenJObject) task.Result;
-					              return json.JsonDeserialization<FacetResults>();
-				              });
+				var json = (RavenJObject) await request.ReadResponseJsonAsync();
+				return json.JsonDeserialization<FacetResults>();
 			});
 		}
 
@@ -794,7 +790,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var requestUri = url + "/logs";
 				if (errorsOnly)
@@ -806,27 +802,27 @@ namespace Raven.Client.Connection.Async
 				request.AddOperationHeaders(OperationsHeaders);
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(task => convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(task.Result)));
+				var result = await request.ReadResponseJsonAsync();
+				return convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(result));
 			});
 		}
 
-		public Task<LicensingStatus> GetLicenseStatusAsync()
+		public async Task<LicensingStatus> GetLicenseStatusAsync()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/license/status").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-			              .ContinueWith(task => convention.CreateSerializer().Deserialize<LicensingStatus>(new RavenJTokenReader(task.Result)));
+			var result = await request.ReadResponseJsonAsync();
+			return convention.CreateSerializer().Deserialize<LicensingStatus>(new RavenJTokenReader(result));
 		}
 
-		public Task<BuildNumber> GetBuildNumberAsync()
+		public async Task<BuildNumber> GetBuildNumberAsync()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/build/version").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-			              .ContinueWith(task => convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(task.Result)));
+			var result = await request.ReadResponseJsonAsync();
+			return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
 		}
 
 		public async Task<LicensingStatus> GetLicenseStatus()
@@ -916,7 +912,7 @@ namespace Raven.Client.Connection.Async
 
 		public Task<string> GetIndexingStatusAsync()
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
@@ -925,14 +921,14 @@ namespace Raven.Client.Connection.Async
 				request.AddOperationHeaders(OperationsHeaders);
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+				var result = await request.ReadResponseJsonAsync();
+				return result.Value<string>("IndexingStatus");
 			});
 		}
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
@@ -946,11 +942,8 @@ namespace Raven.Client.Connection.Async
 
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(
-					              task =>
-					              SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray) task.Result).OfType<RavenJObject>()).ToArray());
-
+				var result = (RavenJArray) await request.ReadResponseJsonAsync();
+				return SerializationHelper.RavenJObjectsToJsonDocuments(result.OfType<RavenJObject>()).ToArray();
 			});
 		}
 
