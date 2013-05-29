@@ -184,6 +184,7 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
+    <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Security\Authentication.cs" />

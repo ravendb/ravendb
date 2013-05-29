@@ -30,7 +30,7 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
-		public IList<JsonDocument> CreatedDocs;
+		public IList<JsonDocument> CreatedDocs = new List<JsonDocument>();
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
@@ -97,7 +97,6 @@ namespace Raven.Database.Json
 			try
 			{
 			    CustomizeEngine(jintEngine);
-                CreatedDocs = new List<JsonDocument>();
 			    jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>) (PutDocument)));
 			    jintEngine.SetParameter("__document_id", docId);
 			    foreach (var kvp in patch.Values)
@@ -170,6 +169,8 @@ namespace Raven.Database.Json
 			var rjo = new RavenJObject();
 			foreach (var key in jsObject.GetKeys())
 			{
+			    if (key == Constants.ReduceKeyFieldName || key == Constants.DocumentIdFieldName)
+			        continue;
 				var jsInstance = jsObject[key];
 				switch (jsInstance.Type)
 				{
