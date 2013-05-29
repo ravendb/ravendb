@@ -40,9 +40,10 @@ namespace Raven.Client.Document
 		/// <param name="convention">The convention.</param>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
+		public async Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
 		{
-			return NextIdAsync(databaseCommands).ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
+			var nextId = await NextIdAsync(databaseCommands);
+			return GetDocumentKeyFromId(convention, nextId);
 		}
 
 		///<summary>
