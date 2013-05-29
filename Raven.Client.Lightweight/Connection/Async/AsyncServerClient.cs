@@ -465,6 +465,91 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag)
+		{
+			var batchResults = await BatchAsync(new ICommandData[]
+					{
+						new PatchCommandData
+							{
+								Key = key,
+								Patches = patches,
+								Etag = etag
+							}
+					});
+			return batchResults[0].AdditionalData;
+		}
+
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
+		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
+		{
+			var batchResults = await BatchAsync(new ICommandData[]
+					{
+						new PatchCommandData
+							{
+								Key = key,
+								Patches = patchesToExisting,
+								PatchesIfMissing = patchesToDefault,
+								Metadata = defaultMetadata
+							}
+					});
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public async Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, Etag etag)
+		{
+			var batchResults = await BatchAsync(new ICommandData[]
+			{
+				new ScriptedPatchCommandData
+				{
+					Key = key,
+					Patch = patch,
+					Etag = etag
+				}
+			});
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
+		/// <param name="patchDefault">The patch request to use (using JavaScript)  to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		public async Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
+		{
+			var batchResults = await BatchAsync(new ICommandData[]
+			{
+				new ScriptedPatchCommandData
+				{
+					Key = key,
+					Patch = patchExisting,
+					PatchIfMissing = patchDefault,
+					Metadata = defaultMetadata
+				}
+			});
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>

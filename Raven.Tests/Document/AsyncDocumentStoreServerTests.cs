@@ -268,6 +268,82 @@ namespace Raven.Tests.Document
 				var company = for_verifying.LoadAsync<Company>(entity.Id).Result;
 				Assert.Null(company);
 			}
-        }
-    }
+		}
+
+		[Fact]
+		public void Can_patch_existing_document_when_present()
+		{
+			var company = new Company { Name = "Hibernating Rhinos" };
+
+			using (var session = DocumentStore.OpenAsyncSession())
+			{
+				session.StoreAsync(company).Wait();
+				session.SaveChangesAsync().Wait();
+			}
+
+			DocumentStore.AsyncDatabaseCommands.PatchAsync(
+				company.Id,
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject()).Wait();
+
+			using (var session = DocumentStore.OpenAsyncSession())
+			{
+				var company2 = session.LoadAsync<Company>(company.Id).Result;
+
+				Assert.NotNull(company2);
+				Assert.Equal(company2.Name, "Existing");
+			}
+		}
+
+		[Fact]
+		public void Can_patch_default_document_when_missing()
+		{
+			DocumentStore.AsyncDatabaseCommands.PatchAsync(
+				"Company/1",
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject()).Wait();
+
+			using (var session = DocumentStore.OpenAsyncSession())
+			{
+				var company = session.LoadAsync<Company>("Company/1").Result;
+
+				Assert.NotNull(company);
+				Assert.Equal(company.Name, "New");
+			}
+		}
+	}
 }
