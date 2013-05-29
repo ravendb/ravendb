@@ -123,18 +123,16 @@ namespace Raven.Client.Connection.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				return operationUrl.IndexNames(start, pageSize)
-				                   .NoCache()
-				                   .ToJsonRequest(this, credentials, convention)
-				                   .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-				                   .ReadResponseJsonAsync()
-				                   .ContinueWith(task =>
-				                   {
-					                   var json = ((RavenJArray) task.Result);
-					                   return json.Select(x => x.Value<string>()).ToArray();
-				                   });
+				var result = await operationUrl.IndexNames(start, pageSize)
+				                               .NoCache()
+				                               .ToJsonRequest(this, credentials, convention)
+				                               .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                               .ReadResponseJsonAsync();
+
+				var json = (RavenJArray) result;
+				return json.Select(x => x.Value<string>()).ToArray();
 			});
 		}
 
@@ -145,21 +143,17 @@ namespace Raven.Client.Connection.Async
 		/// <param name="pageSize">Size of the page.</param>
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var url2 = (operationUrl + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(task =>
-				              {
-					              var json = ((RavenJArray) task.Result);
-					              //NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-					              return json
-						              .Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
-						              .ToArray();
-				              });
+				var result = await request.ReadResponseJsonAsync();
+				var json = ((RavenJArray) result);
+				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+				return json.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
+				           .ToArray();
 			});
 		}
 
@@ -168,21 +162,18 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var url2 = (operationUrl + "/transformers?start=" + start + "&pageSize=" + pageSize).NoCache();
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(task =>
-				              {
-					              var json = ((RavenJArray) task.Result);
-					              //NOTE: To review, I'm not confidence this is the correct way to deserialize the transformer definition
-					              return json
-						              .Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
-						              .ToArray();
-				              });
+				var result = await request.ReadResponseJsonAsync();
+
+				var json = (RavenJArray) result;
+				//NOTE: To review, I'm not confidence this is the correct way to deserialize the transformer definition
+				return json.Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
+				           .ToArray();
 			});
 		}
 
@@ -208,19 +199,17 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">The name.</param>
 		public Task<IndexDefinition> GetIndexAsync(string name)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				return operationUrl.IndexDefinition(name)
-				                   .NoCache()
-				                   .ToJsonRequest(this, credentials, convention)
-				                   .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-				                   .ReadResponseJsonAsync()
-				                   .ContinueWith(task =>
-				                   {
-					                   var json = (RavenJObject) task.Result;
-					                   //NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-					                   return convention.CreateSerializer().Deserialize<IndexDefinition>(new RavenJTokenReader(json["Index"]));
-				                   });
+				var result = await operationUrl.IndexDefinition(name)
+				                               .NoCache()
+				                               .ToJsonRequest(this, credentials, convention)
+				                               .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                               .ReadResponseJsonAsync();
+
+				var json = (RavenJObject) result;
+				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+				return convention.CreateSerializer().Deserialize<IndexDefinition>(new RavenJTokenReader(json["Index"]));
 			});
 		}
 
@@ -230,19 +219,17 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">The name.</param>
 		public Task<TransformerDefinition> GetTransformerAsync(string name)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
+			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				return operationUrl.Transformer(name)
-				                   .NoCache()
-				                   .ToJsonRequest(this, credentials, convention)
-				                   .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-				                   .ReadResponseJsonAsync()
-				                   .ContinueWith(task =>
-				                   {
-					                   var json = (RavenJObject) task.Result;
-					                   //NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-					                   return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(json));
-				                   });
+				var result = await operationUrl.Transformer(name)
+				                               .NoCache()
+				                               .ToJsonRequest(this, credentials, convention)
+				                               .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                               .ReadResponseJsonAsync();
+
+				var json = (RavenJObject) result;
+				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
+				return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(json));
 			});
 		}
 
