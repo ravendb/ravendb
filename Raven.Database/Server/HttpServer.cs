@@ -1071,7 +1071,7 @@ namespace Raven.Database.Server
 			{
 				var bundlesList = bundles.Split(';').ToList();
 
-				foreach (var bundle in bundlesList)
+				foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
 				{
 					string value;
 					if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))

@@ -55,7 +55,6 @@ namespace Raven.Database.Server.Security.OAuth
 			var writeAccess = isGetRequest == false;
 			if(!tokenBody.IsAuthorized(TenantId, writeAccess))
 			{
-				if (allowUnauthenticatedUsers)
 				if (allowUnauthenticatedUsers || ignoreDbAccess)
 					return true;
 

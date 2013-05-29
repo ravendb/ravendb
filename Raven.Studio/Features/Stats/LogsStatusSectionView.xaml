@@ -167,7 +167,7 @@
 					<sdk:DataGridTextColumn Header="Level"
                                             Binding="{Binding Level}" Width="50"/>
 					<sdk:DataGridTextColumn Header="Logged"
-                                            Binding="{Binding TimeStamp}" Width="150"/>
+                                            Binding="{Binding TimeStamp, Converter={StaticResource UtcToLocalConverter}}" Width="150"/>
 					<sdk:DataGridTextColumn Header="Message"
                                             Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" 
                                             Width="2*"/>
