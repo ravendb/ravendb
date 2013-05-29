@@ -26,6 +26,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Status";
 		public Guid LastDocsEtag { get; set; }
 		public Guid LastAttachmentsEtag { get; set; }
+		public DateTime LastBackup { get; set; }
 
 		public PeriodicBackupStatus()
 		{
