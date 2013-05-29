@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Database</id>
-		<version>1.2</version>
+		<version>{{version}}</version>
 		<title>RavenDB Database</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>This package allows you to extend RavenDB database.</summary>

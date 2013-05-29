@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Tests.Helpers</id>
-		<version>1.2</version>
+		<version>{{version}}</version>
 		<title>RavenDB Test Helpers</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>This package includes a utiliti class that helps test features of RavenDB.</summary>

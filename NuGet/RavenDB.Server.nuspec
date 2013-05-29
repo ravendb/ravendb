@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Server</id>
-		<version>1.2</version>
+		<version>{{version}}</version>
 		<title>RavenDB Server</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>This package contains the Raven.Server.exe database binaries.</summary>
