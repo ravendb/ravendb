@@ -760,7 +760,7 @@ namespace Raven.Client.Connection.Async
 
 			string facetsJson = JsonConvert.SerializeObject(facets);
 			var method = facetsJson.Length > 1024 ? "POST" : "GET";
-			return ExecuteWithReplication(method, operationUrl =>
+			return ExecuteWithReplication(method, async operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
 				                                              Uri.EscapeUriString(index),
@@ -779,12 +779,8 @@ namespace Raven.Client.Connection.Async
 				if (method != "GET")
 					request.WriteAsync(facetsJson).Wait();
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(task =>
-				              {
-					              var json = (RavenJObject) task.Result;
-					              return json.JsonDeserialization<FacetResults>();
-				              });
+				var json = (RavenJObject) await request.ReadResponseJsonAsync();
+				return json.JsonDeserialization<FacetResults>();
 			});
 		}
 
@@ -1051,8 +1047,8 @@ namespace Raven.Client.Connection.Async
 			if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
 			{
 				var content = new StreamReader(httpWebResponse.GetResponseStream());
-				var jo = RavenJObject.Load(new JsonTextReader(content));
-				var error = jo.Deserialize<ServerRequestError>(convention);
+				var json = RavenJObject.Load(new JsonTextReader(content));
+				var error = json.Deserialize<ServerRequestError>(convention);
 
 				throw new WebException(error.Error);
 			}
@@ -1177,13 +1173,12 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public async Task<DatabaseStatistics> GetStatisticsAsync()
 		{
-			var result = await url.Stats()
-			                      .NoCache()
-			                      .ToJsonRequest(this, credentials, convention)
-			                      .ReadResponseJsonAsync();
+			var json = (RavenJObject) await url.Stats()
+			                                   .NoCache()
+			                                   .ToJsonRequest(this, credentials, convention)
+			                                   .ReadResponseJsonAsync();
 
-			var jo = ((RavenJObject) result);
-			return jo.Deserialize<DatabaseStatistics>(convention);
+			return json.Deserialize<DatabaseStatistics>(convention);
 		}
 
 		/// <summary>
@@ -1619,7 +1614,7 @@ namespace Raven.Client.Connection.Async
 		private bool resolvingConflict;
 		private bool resolvingConflictRetries;
 
-		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
+		private async Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
@@ -1628,17 +1623,11 @@ namespace Raven.Client.Connection.Async
 			currentlyExecuting = true;
 			try
 			{
-				return replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation)
-				                          .ContinueWith(task =>
-				                          {
-					                          currentlyExecuting = false;
-					                          return task;
-				                          }).Unwrap();
+				return await replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
 			}
-			catch (Exception)
+			finally
 			{
 				currentlyExecuting = false;
-				throw;
 			}
 		}
 
@@ -1780,17 +1769,14 @@ namespace Raven.Client.Connection.Async
 			get { return this; }
 		}
 
-		Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
+		async Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
 		{
-			return rootUrl.AdminStats()
-			              .NoCache()
-			              .ToJsonRequest(this, credentials, convention)
-			              .ReadResponseJsonAsync()
-			              .ContinueWith(task =>
-			              {
-				              var jo = ((RavenJObject) task.Result);
-				              return jo.Deserialize<AdminStatistics>(convention);
-			              });
+			var json = (RavenJObject) await rootUrl.AdminStats()
+			                                       .NoCache()
+			                                       .ToJsonRequest(this, credentials, convention)
+			                                       .ReadResponseJsonAsync();
+
+			return json.Deserialize<AdminStatistics>(convention);
 		}
 
 		#endregion
@@ -1813,13 +1799,12 @@ namespace Raven.Client.Connection.Async
 
 		async Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
 		{
-			var result = await url.ReplicationInfo()
-			                      .NoCache()
-			                      .ToJsonRequest(this, credentials, convention)
-			                      .ReadResponseJsonAsync();
+			var json = (RavenJObject) await url.ReplicationInfo()
+			                                   .NoCache()
+			                                   .ToJsonRequest(this, credentials, convention)
+			                                   .ReadResponseJsonAsync();
 
-			var jo = (RavenJObject) result;
-			return jo.Deserialize<ReplicationStatistics>(convention);
+			return json.Deserialize<ReplicationStatistics>(convention);
 		}
 
 		#endregion
