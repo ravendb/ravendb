@@ -635,7 +635,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", s => DirectGetAsync(s, keys, includes, transformer, queryInputs, metadataOnly));
 		}
 
-		private Task<MultiLoadResult> DirectGetAsync(string opUrl, string[] keys, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
+		private async Task<MultiLoadResult> DirectGetAsync(string opUrl, string[] keys, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
 		{
 			var path = opUrl + "/queries/?";
 			if (metadataOnly)
@@ -659,40 +659,31 @@ namespace Raven.Client.Connection.Async
 			if (uniqueIds.Sum(x => x.Length) < 1024)
 			{
 				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-				request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
-					                                                                         convention)
+				request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
 						                                         .AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-				              .ContinueWith(task => CompleteMultiGetAsync(opUrl, keys, includes, task))
-				              .Unwrap();
+				var result = await request.ReadResponseJsonAsync();
+				return await CompleteMultiGetAsync(opUrl, keys, includes, result);
 			}
-			request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", credentials,
-				                                                                         convention)
-					                                         .AddOperationHeaders(OperationsHeaders));
-			return request.WriteAsync(new RavenJArray(uniqueIds).ToString(Formatting.None))
-			              .ContinueWith(writeTask => request.ReadResponseJsonAsync())
-			              .Unwrap()
-			              .ContinueWith(task => CompleteMultiGetAsync(opUrl, keys, includes, task))
-			              .Unwrap();
+			request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", credentials, convention)
+				                                                   .AddOperationHeaders(OperationsHeaders));
+
+			await request.WriteAsync(new RavenJArray(uniqueIds).ToString(Formatting.None));
+			var responseResult = await request.ReadResponseJsonAsync();
+			return await CompleteMultiGetAsync(opUrl, keys, includes, responseResult);
 		}
 
-		private Task<MultiLoadResult> CompleteMultiGetAsync(string opUrl, string[] keys, string[] includes, Task<RavenJToken> task)
+		private Task<MultiLoadResult> CompleteMultiGetAsync(string opUrl, string[] keys, string[] includes, RavenJToken result)
 		{
 			try
 			{
-				var result = task.Result;
-
 				var multiLoadResult = new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
 					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
 				};
-
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
 
@@ -1761,7 +1752,7 @@ namespace Raven.Client.Connection.Async
 				});
 		}
 
-		internal Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string key, Etag etag, string[] conflictIds, string opUrl = null)
+		internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string key, Etag etag, string[] conflictIds, string opUrl = null)
 		{
 			if (string.IsNullOrEmpty(opUrl))
 				opUrl = Url;
@@ -1771,28 +1762,20 @@ namespace Raven.Client.Connection.Async
 				resolvingConflict = true;
 				try
 				{
-					return DirectGetAsync(opUrl, conflictIds, null, null, null, false)
-						.ContinueWith(task =>
+					var result = await DirectGetAsync(opUrl, conflictIds, null, null, null, false);
+					var results = result.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
+
+					foreach (var conflictListener in conflictListeners)
+					{
+						JsonDocument resolvedDocument;
+						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
-							var results = task.Result.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
+							await DirectPutAsync(opUrl, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
+							return true;
+						}
+					}
 
-							foreach (var conflictListener in conflictListeners)
-							{
-								JsonDocument resolvedDocument;
-								if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
-								{
-									return DirectPutAsync(opUrl, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata)
-										.ContinueWith(_ =>
-										{
-											_.AssertNotFailed();
-											return true;
-										});
-								}
-							}
-
-							return new CompletedTask<bool>(false);
-						}).Unwrap();
-
+					return false;
 				}
 				finally
 				{
@@ -1800,7 +1783,7 @@ namespace Raven.Client.Connection.Async
 				}
 			}
 
-			return new CompletedTask<bool>(false);
+			return false;
 		}
 
 		private Task<T> RetryOperationBecauseOfConflict<T>(string opUrl, IEnumerable<RavenJObject> docResults, T currentResult, Func<Task<T>> nextTry)
@@ -1808,32 +1791,27 @@ namespace Raven.Client.Connection.Async
 			return RetryOperationBecauseOfConflictLoop(opUrl, docResults.GetEnumerator(), false, currentResult, nextTry);
 		}
 
-		private Task<T> RetryOperationBecauseOfConflictLoop<T>(string opUrl, IEnumerator<RavenJObject> enumerator, bool requiresRetry, T currentResult, Func<Task<T>> nextTry)
+		private async Task<T> RetryOperationBecauseOfConflictLoop<T>(string opUrl, IEnumerator<RavenJObject> enumerator, bool requiresRetry, T currentResult, Func<Task<T>> nextTry)
 		{
 			if (enumerator.MoveNext() == false)
-				return RetryOperationBecauseOfConflictContinuation<T>(requiresRetry, currentResult, nextTry);
+				return await RetryOperationBecauseOfConflictContinuation<T>(requiresRetry, currentResult, nextTry);
 
-			return AssertNonConflictedDocumentAndCheckIfNeedToReload(opUrl, enumerator.Current)
-				.ContinueWith(task =>
-				{
-					requiresRetry |= task.Result;
+			requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(opUrl, enumerator.Current);
 
-					return RetryOperationBecauseOfConflictLoop<T>(opUrl, enumerator, requiresRetry, currentResult, nextTry);
-				}).Unwrap();
+			return await RetryOperationBecauseOfConflictLoop<T>(opUrl, enumerator, requiresRetry, currentResult, nextTry);
 		}
 
-		private Task<T> RetryOperationBecauseOfConflictContinuation<T>(bool requiresRetry, T currentResult, Func<Task<T>> nextTry)
+		private async Task<T> RetryOperationBecauseOfConflictContinuation<T>(bool requiresRetry, T currentResult, Func<Task<T>> nextTry)
 		{
 			if (!requiresRetry)
-				return new CompletedTask<T>(currentResult);
+				return currentResult;
 
 			if (resolvingConflictRetries)
-				throw new InvalidOperationException(
-					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+				throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
 			resolvingConflictRetries = true;
 			try
 			{
-				return nextTry();
+				return await nextTry();
 			}
 			finally
 			{
