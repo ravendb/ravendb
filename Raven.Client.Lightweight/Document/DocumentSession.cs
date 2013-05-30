@@ -604,7 +604,7 @@ namespace Raven.Client.Document
 	                Document = queryOperation.Deserialize<T>(enumerator.Current),
 	                Etag = etag,
 	                Key = key,
-	                Metdata = meta
+	                Metadata = meta
 	            };
 	        }
 	    }
@@ -622,7 +622,7 @@ namespace Raven.Client.Document
 					Document = (T) ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
 					Etag = document.Etag,
 					Key = document.Key,
-					Metdata = document.Metadata
+					Metadata = document.Metadata
 				};
 			}
 		}
