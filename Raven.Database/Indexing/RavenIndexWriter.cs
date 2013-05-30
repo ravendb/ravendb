@@ -128,7 +128,7 @@ namespace Raven.Database.Indexing
 			currentNumberOfWrites = 0;
 		}
 
-		private void DisposeIndexWriter()
+		private void DisposeIndexWriter(bool waitForMerges = true)
 		{
 			if (indexWriter == null)
 				return;
@@ -147,7 +147,7 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				writer.Dispose();
+				writer.Dispose(waitForMerges);
 			}
 			catch (Exception e)
 			{
@@ -157,18 +157,12 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			if (indexWriter != null)
-				indexWriter.Dispose();
-
-			indexWriter = null;
+			DisposeIndexWriter();
 		}
 
 		public void Dispose(bool waitForMerges)
 		{
-			if (indexWriter != null)
-				indexWriter.Dispose(waitForMerges);
-
-			indexWriter = null;
+			DisposeIndexWriter(waitForMerges);
 		}
 
 		public RavenIndexWriter CreateRamWriter()

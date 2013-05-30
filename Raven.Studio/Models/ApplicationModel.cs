@@ -61,6 +61,11 @@ namespace Raven.Studio.Models
 			UpdateAlerts();
 		}
 
+		public Settings Settings
+		{
+			get { return Settings.Instance; }
+		}
+
 		private void UpdateAlerts()
 		{
 			Server.Value.DocumentStore.OpenAsyncSession(Server.Value.SelectedDatabase.Value.Name).LoadAsync<AlertsDocument>(Constants.RavenAlerts).ContinueOnSuccessInTheUIThread(
@@ -246,6 +251,11 @@ namespace Raven.Studio.Models
 				return firstOrDefault.Version;
 
 			return "0.0.unknown.0";
+		}
+
+		public void Refresh()
+		{
+			OnPropertyChanged(() => Settings);
 		}
 	}
 }

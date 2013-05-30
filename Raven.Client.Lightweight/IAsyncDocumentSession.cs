@@ -79,11 +79,28 @@ namespace Raven.Client
 		void Delete<T>(T entity);
 
 		/// <summary>
+		/// Begins the a load that will use the specified results transformer against the specified id
+		/// </summary>
+		Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new();
+
+
+		/// <summary>
+		/// Begins the a load that will use the specified results transformer against the specified id
+		/// </summary>
+		Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
+		/// Begins the a load that will use the specified results transformer against the specified id
+		/// </summary>
+		Task<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
 		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
 		Task<T> LoadAsync<T>(string id);
+
 
 		/// <summary>
 		/// Begins the async multi-load operation
@@ -91,6 +108,11 @@ namespace Raven.Client
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
 		Task<T[]> LoadAsync<T>(params string[] ids);
+
+		/// <summary>
+		/// Begins the async load operation
+		/// </summary>
+		Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Begins the async multi-load operation

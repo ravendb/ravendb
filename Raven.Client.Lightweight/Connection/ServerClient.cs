@@ -1301,7 +1301,8 @@ namespace Raven.Client.Connection
 			{
 				path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
 			}
-
+		    var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
 		    var uniqueIds = new HashSet<string>(ids);
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
@@ -1310,7 +1311,7 @@ namespace Raven.Client.Connection
 			{
 				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
+						new CreateHttpJsonRequestParams(this, path, "GET", metadata, credentials, convention)
 							.AddOperationHeaders(OperationsHeaders))
 							.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1318,7 +1319,7 @@ namespace Raven.Client.Connection
 			else
 			{
 				request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, path, "POST", credentials, convention)
+						new CreateHttpJsonRequestParams(this, path, "POST", metadata, credentials, convention)
 							.AddOperationHeaders(OperationsHeaders))
 							.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 

@@ -91,7 +91,13 @@ namespace Raven.Client.Document
 					if (!replicated)
 					{
 						if (countDown.Active)
+						{
+#if NET45
+							await Task.Delay(100);
+#else
 							await TaskEx.Delay(100);
+#endif
+						}
 						continue;
 					}
 					countDown.Signal();

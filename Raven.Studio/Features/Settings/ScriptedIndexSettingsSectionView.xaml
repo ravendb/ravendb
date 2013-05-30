@@ -16,95 +16,162 @@
 	<Grid x:Name="LayoutRoot">
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
 			<toolkit:HeaderedContentControl.Header>
-				<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
-					<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
-					<HyperlinkButton Content="Indexes"
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+						<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
+						<HyperlinkButton Content="Indexes"
                                  Style="{StaticResource Style_Link_Breadcrumb_Header}"
                                  Command="{StaticResource NavigateToCommand}"
                                  CommandParameter="/Indexes"
                                  VerticalAlignment="Center" />
-					<controls1:NavTriangle/>
+						<controls1:NavTriangle/>
 
-					<StackPanel Orientation="Horizontal">
-						<ComboBox ItemsSource="{Binding AvailableIndexes}"
+						<StackPanel Orientation="Horizontal">
+							<ComboBox ItemsSource="{Binding AvailableIndexes}"
                               SelectedItem="{Binding IndexName, Mode=TwoWay}"
                           Width="300"
                               Style="{StaticResource Style_ComboBox_MutedChrome_Breadcrumb}" />
-					</StackPanel>
+						</StackPanel>
 
-					<controls1:NavTriangle/>
-					<TextBlock Text="Scripted Index"
+						<controls1:NavTriangle/>
+						<TextBlock Text="Scripted Index"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
                            VerticalAlignment="Center" />
-				</StackPanel>
+					</StackPanel>
+
+					<Button Command="{Binding RemoveScript}"
+							Grid.Column="2"
+							Visibility="{Binding SelectedScript, Converter={StaticResource HiddenWhenNull}}"
+							VerticalAlignment="Center"
+							ToolTipService.ToolTip="Remove Script For This Index"
+							Style="{StaticResource Style_Button_MouseOverChrome}">
+						<StackPanel Orientation="Horizontal">
+							<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12" Margin="5"/>
+							<TextBlock Text="Remove Script" Margin="5"/>
+						</StackPanel>
+					</Button>
+				</Grid>
+				
 			</toolkit:HeaderedContentControl.Header>
 
-
-			<Grid>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-				</Grid.RowDefinitions>
-				<StackPanel Margin="5">
-					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
-						<TextBlock Text="Index Script" 
+<Grid>
+				<Grid Visibility="{Binding SelectedScript, Converter={StaticResource HiddenWhenNotNull}}">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<TextBlock Text="There is no Script for this index."/>
+					<HyperlinkButton Content="Create Script"
+								 Command="{Binding CreateScript}"
+								 Grid.Row="1"/>
+				</Grid>
+				<Grid Visibility="{Binding SelectedScript, Converter={StaticResource HiddenWhenNull}}">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<StackPanel Margin="5" Grid.Column="1">
+						<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
+							<TextBlock Text="Index Script" 
 									Margin="0,0,10,0"
 									Style="{StaticResource Style_TextBlock_PagePartHeader}"
 									VerticalAlignment="Top" />
-						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
-							<i:Interaction.Behaviors>
-								<Behaviors:ShowPopupWhilstMouseOver>
-									<Behaviors:ShowPopupWhilstMouseOver.Popup>
-										<Popup>
-											<ContentControl Style="{StaticResource Style_InfoToolTip}">
-												<RichTextBlock MaxWidth="370" Margin="5">
+							<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+								<i:Interaction.Behaviors>
+									<Behaviors:ShowPopupWhilstMouseOver>
+										<Behaviors:ShowPopupWhilstMouseOver.Popup>
+											<Popup>
+												<ContentControl Style="{StaticResource Style_InfoToolTip}">
+													<RichTextBlock MaxWidth="370" Margin="5">
+														<Paragraph>Index Scripts are written in JScript.</Paragraph>
+														<Paragraph>Example:
+															<LineBreak/>
+															<Span FontFamily="Consolas">
+																<LineBreak/>
+																<Span Foreground="Blue">var</Span> company = LoadDocument(<Span Foreground="Blue">this</Span>.Company);
+																<LineBreak/>
+																<Span Foreground="Blue">if</Span>(company == null) <Span Foreground="Blue">return;</Span>
+																<LineBreak/>
+																company.Orders = { Count:
+																<Span Foreground="Blue">this</Span>.Count, Total:<Span Foreground="Blue">this</Span>.Total };
+																<LineBreak/>
+																PutDocument(<Span Foreground="Blue">this</Span>.Company, company);
+															</Span>
+															<LineBreak/>
+														</Paragraph>
+													</RichTextBlock>
+												</ContentControl>
+											</Popup>
+										</Behaviors:ShowPopupWhilstMouseOver.Popup>
+									</Behaviors:ShowPopupWhilstMouseOver>
+								</i:Interaction.Behaviors>
+							</Image>
+						</StackPanel>
 
-												</RichTextBlock>
-											</ContentControl>
-										</Popup>
-									</Behaviors:ShowPopupWhilstMouseOver.Popup>
-								</Behaviors:ShowPopupWhilstMouseOver>
-							</i:Interaction.Behaviors>
-						</Image>
-					</StackPanel>
-
-					<Editors:EditorBase BoundDocument="{Binding IndexScript}" 
+						<Editors:EditorBase BoundDocument="{Binding IndexScript}" 
 										MinHeight="150"
 										IsSelectionMarginVisible="False" 
 										IsLineNumberMarginVisible="False" 
 										AreLineModificationMarksVisible="False"/>
-				</StackPanel>
+					</StackPanel>
 
-				<StackPanel Grid.Row="1" Margin="5">
-					<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
-						<TextBlock Text="Delete Script" 
+					<StackPanel Grid.Row="1" Margin="5" Grid.Column="1">
+						<StackPanel  Margin="5,10,5,0" Orientation="Horizontal">
+							<TextBlock Text="Delete Script" 
 									Margin="0,0,10,0"
 									Style="{StaticResource Style_TextBlock_PagePartHeader}"
 									VerticalAlignment="Top" />
-						<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
-							<i:Interaction.Behaviors>
-								<Behaviors:ShowPopupWhilstMouseOver>
-									<Behaviors:ShowPopupWhilstMouseOver.Popup>
-										<Popup>
-											<ContentControl Style="{StaticResource Style_InfoToolTip}">
-												<RichTextBlock MaxWidth="370" Margin="5">
+							<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+								<i:Interaction.Behaviors>
+									<Behaviors:ShowPopupWhilstMouseOver>
+										<Behaviors:ShowPopupWhilstMouseOver.Popup>
+											<Popup>
+												<ContentControl Style="{StaticResource Style_InfoToolTip}">
+													<RichTextBlock MaxWidth="370" Margin="5">
+														<Paragraph>Index Scripts are written in JScript.</Paragraph>
+														<Paragraph>Example:
+															<LineBreak/>
+															<Span FontFamily="Consolas">
+																<LineBreak/>
+																<Span Foreground="Blue">var</Span> company = LoadDocument(<Span Foreground="Blue">this</Span>.Company);
+																<LineBreak/>
+																<Span Foreground="Blue">if</Span> (company == null)
+																<Span Foreground="Blue">return</Span>;
+																<LineBreak/>
+																<Span Foreground="Blue">delete</Span> company.Orders;
+																<LineBreak/>
+																PutDocument(
+																<Span Foreground="Blue">this</Span>.Company, company);
+															</Span>
+															<LineBreak/>
+														</Paragraph>
+													</RichTextBlock>
+												</ContentControl>
+											</Popup>
+										</Behaviors:ShowPopupWhilstMouseOver.Popup>
+									</Behaviors:ShowPopupWhilstMouseOver>
+								</i:Interaction.Behaviors>
+							</Image>
+						</StackPanel>
 
-												</RichTextBlock>
-											</ContentControl>
-										</Popup>
-									</Behaviors:ShowPopupWhilstMouseOver.Popup>
-								</Behaviors:ShowPopupWhilstMouseOver>
-							</i:Interaction.Behaviors>
-						</Image>
-					</StackPanel>
-
-					<Editors:EditorBase BoundDocument="{Binding DeleteScript}" 
+						<Editors:EditorBase BoundDocument="{Binding DeleteScript}" 
 										IsSelectionMarginVisible="False" 
 										MinHeight="150"
 										IsLineNumberMarginVisible="False" 
 										AreLineModificationMarksVisible="False"/>
-				</StackPanel>
+					</StackPanel>
+				</Grid>
 			</Grid>
+			
 		</toolkit:HeaderedContentControl>
 	</Grid>
 </UserControl>

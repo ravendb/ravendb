@@ -184,6 +184,9 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
+    <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
+    <Compile Include="Prefetching\Prefetcher.cs" />
+    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
@@ -254,7 +257,7 @@
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceTokenizer.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
-    <Compile Include="Indexing\PrefetchingBehavior.cs" />
+    <Compile Include="Prefetching\PrefetchingBehavior.cs" />
     <Compile Include="Indexing\RavenIndexWriter.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\BBoxStrategyThatSupportsAllShapes.cs" />
@@ -430,6 +433,7 @@
     <Compile Include="Server\Responders\QueryStreams.cs" />
     <Compile Include="Server\Responders\Transformers.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\IgnoreDb.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />

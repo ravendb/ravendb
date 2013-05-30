@@ -202,6 +202,8 @@ namespace Raven.Studio.Features.Stats
 				return ((long)value).ToString("#,#");
 			if (value is float)
 				return ((float)value).ToString("#,#");
+			if (value is DateTime)
+				return ((DateTime) value).ToLocalTime().ToString();
 
 			return value.ToString();
 		}
@@ -301,6 +303,30 @@ namespace Raven.Studio.Features.Stats
 			{
 				statInfoItem.Level2Data.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
 			}
+
+			TrimDictionaries(statInfoItem);
+		}
+
+		private void TrimDictionaries(StatInfoItem statInfoItem)
+		{
+			statInfoItem.MapData = TrimDictionary(statInfoItem.MapData);
+			statInfoItem.IndexData = TrimDictionary(statInfoItem.IndexData);
+			statInfoItem.Level0Data = TrimDictionary(statInfoItem.Level0Data);
+			statInfoItem.Level1Data = TrimDictionary(statInfoItem.Level1Data);
+			statInfoItem.Level2Data = TrimDictionary(statInfoItem.Level2Data);
+		}
+
+		private Dictionary<DateTime, IndexingPerformanceStats> TrimDictionary(Dictionary<DateTime, IndexingPerformanceStats> data)
+		{
+			const int maxSize = 50;
+			const int trimToSize = 25;
+
+			if (data.Count < maxSize)
+				return data;
+
+			return data.OrderBy(pair => pair.Key)
+			           .Skip(data.Count - trimToSize)
+			           .ToDictionary(pair => pair.Key, pair => pair.Value);
 		}
 
 		public Observable<DatabaseStatistics> StatsData { get; set; }

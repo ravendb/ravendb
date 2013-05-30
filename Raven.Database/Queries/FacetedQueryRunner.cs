@@ -423,7 +423,7 @@ namespace Raven.Database.Queries
             private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange)
             {
                 facetValue.Hits++;
-                if (value.Aggregation == FacetAggregation.Count)
+                if (value.Aggregation == FacetAggregation.Count  || value.Aggregation == FacetAggregation.None)
                 {
                     return;
                 }

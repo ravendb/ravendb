@@ -77,6 +77,7 @@ namespace Raven.Database.Indexing
                     foreach (var field in fieldsToRead)
                     {
                         var read = readFromCache[field];
+						var shouldReset = new HashSet<Tuple<string, int>>();
                         using (var termEnum = reader.Terms(new Term(field)))
                         {
                             do
@@ -91,7 +92,6 @@ namespace Raven.Database.Indexing
                                 var totalDocCountIncludedDeletes = termEnum.DocFreq();
                                 termDocs.Seek(termEnum.Term);
 
-                                bool reset = true;
                                 while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                                 {
                                     totalDocCountIncludedDeletes -= 1;
@@ -102,11 +102,10 @@ namespace Raven.Database.Indexing
                                     if (docIds.Contains(termDocs.Doc) == false)
                                         break;
 
-                                    if (reset)
-                                    {
-                                        state.ResetInCache(field, termDocs.Doc);
-                                        reset = false;
-                                    }
+									if (shouldReset.Add(Tuple.Create(field, termDocs.Doc)))
+									{
+										state.ResetInCache(field, termDocs.Doc);
+									}
 
                                     var d = convert(termEnum.Term);
                                     state.SetInCache(field, termDocs.Doc, termEnum.Term, d);
@@ -176,6 +175,7 @@ namespace Raven.Database.Indexing
                     foreach (var field in fieldsToRead)
                     {
                         var read = readFromCache[field];
+	                    var shouldReset = new HashSet<Tuple<string, int>>();
                         using (var termEnum = reader.Terms(new Term(field)))
                         {
                             do
@@ -190,7 +190,6 @@ namespace Raven.Database.Indexing
                                 var totalDocCountIncludedDeletes = termEnum.DocFreq();
                                 termDocs.Seek(termEnum.Term);
 
-                                bool reset = true;
                                 while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                                 {
                                     totalDocCountIncludedDeletes -= 1;
@@ -201,10 +200,9 @@ namespace Raven.Database.Indexing
                                     if (docIds.Contains(termDocs.Doc) == false)
                                         continue;
 
-                                    if (reset)
+									if (shouldReset.Add(Tuple.Create(field,termDocs.Doc)))
                                     {
                                         state.ResetInCache(field, termDocs.Doc);
-                                        reset = false;
                                     }
 
                                     state.SetInCache(field, termDocs.Doc, termEnum.Term);

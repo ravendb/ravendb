@@ -189,6 +189,18 @@ namespace Raven.Client.Shard
 			return Load<T>(documentKeys);
 		}
 
+		public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			return LoadInternal<TResult>(ids, new KeyValuePair<string, Type>[0], new TTransformer().TransformerName);
+		}
+
+		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var ravenLoadConfiguration = new RavenLoadConfiguration();
+			configure(ravenLoadConfiguration);
+			return LoadInternal<TResult>(ids.ToArray(), new KeyValuePair<string, Type>[0], new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+		}
+
 		public T[] LoadInternal<T>(string[] ids)
 		{
 			return LoadInternal<T>(ids, new KeyValuePair<string, Type>[0]);

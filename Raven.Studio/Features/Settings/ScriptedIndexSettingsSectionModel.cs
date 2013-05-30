@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Windows.Input;
 using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Controls.Editors;
@@ -21,7 +23,15 @@ namespace Raven.Studio.Features.Settings
 
 		public BindableCollection<string> AvailableIndexes { get; private set; }
 		public Dictionary<string, ScriptedIndexResults> ScriptedIndexes { get; private set; }
-		private ScriptedIndexResults SelectedScript { get; set; }
+		public ScriptedIndexResults SelectedScript
+		{
+			get { return selectedScript; }
+			set
+			{
+				selectedScript = value;
+				SelectedScriptChanged();
+			}
+		}
 		public List<string> IndexItem { get; set; }
 
 		public EditorDocument IndexScript { get; private set; }
@@ -33,8 +43,11 @@ namespace Raven.Studio.Features.Settings
 			DeleteLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("JScript.langdef");
 		}
 
+		public Observable<RavenJObject> DocumentToSample { get; set; } 
+
 		public ScriptedIndexSettingsSectionModel()
 		{
+			DocumentToSample = new Observable<RavenJObject>();
 			AvailableIndexes = new BindableCollection<string>(x => x);
 			SectionName = "Scripted Index";			
 			ScriptedIndexes = new Dictionary<string, ScriptedIndexResults>();
@@ -43,8 +56,8 @@ namespace Raven.Studio.Features.Settings
 			DeleteScript = new EditorDocument { Language = DeleteLanguage };
 			UpdateAvailableIndexes();
 			LoadScriptForIndex();
-			IndexScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider(this));
-			DeleteScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider());
+			IndexScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider(DocumentToSample));
+			DeleteScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider(DocumentToSample, false));
 		}
 
 		private void LoadScriptForIndex()
@@ -55,12 +68,6 @@ namespace Raven.Studio.Features.Settings
 			if (ScriptedIndexes.ContainsKey(indexName))
 			{
 				SelectedScript = ScriptedIndexes[indexName];
-
-				IndexScript.SetText(SelectedScript.IndexScript);
-				DeleteScript.SetText(SelectedScript.DeleteScript);
-				OnPropertyChanged(() => SelectedScript);
-				OnPropertyChanged(() => IndexScript);
-				OnPropertyChanged(() => DeleteScript);
 				return;
 			}
 
@@ -70,7 +77,7 @@ namespace Raven.Studio.Features.Settings
 			                {
 				                if (doc == null)
 				                {
-					                ScriptedIndexes[indexName] = new ScriptedIndexResults {Id = id};
+					                ScriptedIndexes[indexName] = null;
 				                }
 				                else
 				                {
@@ -80,16 +87,24 @@ namespace Raven.Studio.Features.Settings
 				                }
 
 				                SelectedScript = ScriptedIndexes[indexName];
-
-				                IndexScript.SetText(SelectedScript.IndexScript);
-				                DeleteScript.SetText(SelectedScript.DeleteScript);
-				                OnPropertyChanged(() => SelectedScript);
-								OnPropertyChanged(() => IndexScript);
-								OnPropertyChanged(() => DeleteScript);
 			                });
 		}
 
+		private void SelectedScriptChanged()
+		{
+			OnPropertyChanged(() => SelectedScript);
+
+			if (SelectedScript != null)
+			{
+				IndexScript.SetText(SelectedScript.IndexScript);
+				DeleteScript.SetText(SelectedScript.DeleteScript);
+				OnPropertyChanged(() => IndexScript);
+				OnPropertyChanged(() => DeleteScript);
+			}
+		}
+
 		private string indexName;
+		private ScriptedIndexResults selectedScript;
 		public string IndexName
 		{
 			get
@@ -110,6 +125,32 @@ namespace Raven.Studio.Features.Settings
 				OnPropertyChanged(() => IndexName);
 			}
 		}
+		public ICommand CreateScript
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					var id = ScriptedIndexResults.IdPrefix + indexName;
+					ScriptedIndexes[IndexName] = new ScriptedIndexResults {Id = id};
+					SelectedScript = ScriptedIndexes[IndexName];
+					if (DeletedIndexes.Contains(IndexName))
+						DeletedIndexes.Remove(IndexName);
+				});
+			}
+		}
+
+		public List<string> DeletedIndexes = new List<string>(); 
+
+		public ICommand RemoveScript
+		{
+			get { return new ActionCommand(() =>
+			{
+				SelectedScript = null;
+				ScriptedIndexes.Remove(indexName);
+				DeletedIndexes.Add(indexName);
+			});}
+		}
 
 		private void UpdateIntelli()
 		{
@@ -122,11 +163,23 @@ namespace Raven.Studio.Features.Settings
 					}
 
 					IndexItem = task.Result.Fields.ToList();
+					UpdateDocumentToSample();
 				}).Catch();
+		}
+
+		private void UpdateDocumentToSample()
+		{
+			DocumentToSample.Value = new RavenJObject();
+			foreach (var item in IndexItem)
+			{
+				DocumentToSample.Value.Add(item, new RavenJObject());
+			}
 		}
 
 		public void StoreChanges()
 		{
+			if (SelectedScript == null)
+				return;
 			SelectedScript.IndexScript = IndexScript.Text;
 			SelectedScript.DeleteScript = DeleteScript.Text;
 		}

@@ -18,6 +18,7 @@ using Raven.Database.Impl;
 using Raven.Database.Impl.Synchronization;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
+using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -31,12 +32,12 @@ namespace Raven.Database.Indexing
 
 		private readonly EtagSynchronizer etagSynchronizer;
 
-		public IndexingExecuter(WorkContext context, DatabaseEtagSynchronizer synchronizer)
+		public IndexingExecuter(WorkContext context, DatabaseEtagSynchronizer synchronizer, Prefetcher prefetcher)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
-			prefetchingBehavior = new PrefetchingBehavior(context, autoTuner);
 			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Indexer);
+			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -116,6 +117,9 @@ namespace Raven.Database.Indexing
 			TimeSpan indexingDuration = TimeSpan.Zero;
 			List<JsonDocument> jsonDocs = null;
 			var lastEtag = Etag.Empty;
+
+			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
+
 			try
 			{
 				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
@@ -144,11 +148,13 @@ namespace Raven.Database.Indexing
 			{
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 				{
-					prefetchingBehavior.CleanupDocumentsToRemove(lastEtag);
+					prefetchingBehavior.CleanupDocuments(lastEtag);
 					UpdateAutoThrottler(jsonDocs, indexingDuration);
 				}
 
 				prefetchingBehavior.BatchProcessingComplete();
+
+				indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
 			}
 		}
 
@@ -391,10 +397,6 @@ namespace Raven.Database.Indexing
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
-				var indexLastIndexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
-				if (indexLastIndexEtag.CompareTo(lastIndexedEtag) >= 0)
-					return;
-
 				var indexName = indexToWorkOn.IndexName;
 				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexName);
 				if (viewGenerator == null)
@@ -404,17 +406,13 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
-					if (prefetchingBehavior.FilterDocuments(item.Doc))
+					if (prefetchingBehavior.FilterDocuments(item.Doc) == false)
 						continue;
 
 					// did we already indexed this document in this index?
 					var etag = item.Doc.Etag;
 					if (etag == null)
 						continue;
-
-					if (indexLastIndexEtag.CompareTo(new ComparableByteArray(etag.ToByteArray())) >= 0)
-						continue;
-
 
 					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
@@ -506,11 +504,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public PrefetchingBehavior PrefetchingBehavior
-		{
-			get { return prefetchingBehavior; }
-		}
-
 		protected override void Dispose()
 		{
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not dispose of IndexingExecuter");
@@ -519,6 +512,9 @@ namespace Raven.Database.Indexing
 				exceptionAggregator.Execute(pendingTask.Wait);
 			}
 			pendingTasks.Clear();
+
+			exceptionAggregator.Execute(prefetchingBehavior.Dispose);
+
 			if (indexingCompletedEvent != null)
 				exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
 			if (indexingSemaphore != null)

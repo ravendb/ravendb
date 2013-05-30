@@ -21,6 +21,7 @@ namespace Raven.Munin
 	{
 		private readonly IPersistentSource persistentSource;
 		private readonly List<Table> tables = new List<Table>();
+		private readonly ReaderWriterLockSlim rwlSlim = new ReaderWriterLockSlim();
 
 		public List<Table> Tables
 		{
@@ -383,6 +384,18 @@ namespace Raven.Munin
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		public IDisposable ReadLock()
+		{
+			rwlSlim.EnterReadLock();
+			return new DisposableAction(() => rwlSlim.ExitReadLock());
+		}
+
+		public IDisposable WriteLock()
+		{
+			rwlSlim.EnterWriteLock();
+			return new DisposableAction(() => rwlSlim.ExitWriteLock());
 		}
 
 		/// <summary>

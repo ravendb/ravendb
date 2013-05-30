@@ -365,6 +365,7 @@
     </Compile>
     <Compile Include="Impl\RavenIntelliPromptProvider.cs" />
     <Compile Include="Infrastructure\AsyncCommand.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToIndexConverter.cs" />
     <Compile Include="Infrastructure\Converters\BreakToLinesConverter.cs" />
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
@@ -714,7 +715,6 @@
     <Compile Include="Views\Transformers.xaml.cs">
       <DependentUpon>Transformers.xaml</DependentUpon>
     </Compile>
-    <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\UpdateTextBindingOnPropertyChanged.cs" />
     <Compile Include="Behaviors\DoubleClickBehavior.cs" />
@@ -1440,6 +1440,7 @@
     <Resource Include="app.config">
       <SubType>Designer</SubType>
     </Resource>
+    <EmbeddedResource Include="Assets\EmbeddedData\Northwind.dump" />
     <None Include="packages.config" />
     <None Include="Properties\AppManifest.xml" />
     <EmbeddedResource Include="Settings.dat" />

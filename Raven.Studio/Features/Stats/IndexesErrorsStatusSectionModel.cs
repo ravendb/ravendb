@@ -41,11 +41,6 @@ namespace Raven.Studio.Features.Stats
 			ApplicationModel.Current.Server.Value.RawUrl = null;
 
 			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => Errors);
-		}
-
-		public override void LoadModelParameters(string parameters)
-		{
-			IndexName = new UrlParser(parameters).Path.Trim('/');
 
 			var allErrors = Database.Value.Statistics.Value.Errors;
 			if (IsShowingErrorForASpecificIndex)

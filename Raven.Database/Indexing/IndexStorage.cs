@@ -596,7 +596,7 @@ namespace Raven.Database.Indexing
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
 		{
 			var newDir = new LuceneCodecDirectory(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path))), documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
-			Lucene.Net.Store.Directory.Copy(ramDir, newDir, true);
+			Lucene.Net.Store.Directory.Copy(ramDir, newDir, false);
 			return newDir;
 		}
 
