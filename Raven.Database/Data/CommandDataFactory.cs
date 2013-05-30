@@ -45,7 +45,12 @@ namespace Raven.Database.Data
 							.Value<RavenJArray>("Patches")
 							.Cast<RavenJObject>()
 							.Select(PatchRequest.FromJson)
-							.ToArray()
+							.ToArray(),
+						PatchesIfMissing = jsonCommand["PatchesIfMissing"] == null ? null : jsonCommand
+							.Value<RavenJArray>("PatchesIfMissing")
+							.Cast<RavenJObject>()
+							.Select(PatchRequest.FromJson)
+							.ToArray(),
 					};
 				case "EVAL":
 					var debug = jsonCommand["DebugMode"].Value<bool>();
@@ -55,6 +60,7 @@ namespace Raven.Database.Data
 						Etag = GetEtagFromCommand(jsonCommand),
 						TransactionInformation = transactionInformation,
 						Patch = ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch")),
+						PatchIfMissing = jsonCommand["PatchIfMissing"] == null ? null : ScriptedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("PatchIfMissing")),
 						DebugMode = debug
 					};
 				default:

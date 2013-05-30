@@ -39,7 +39,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -49,7 +49,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -665,6 +665,7 @@
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\Apo\Lazy.cs" />
+    <Compile Include="MailingList\AsyncSpatial.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BulkInsertTest.cs" />
     <Compile Include="MailingList\BulkInsertWithChanges.cs" />
@@ -732,6 +733,7 @@
     <Compile Include="MailingList\Maxime2.cs" />
     <Compile Include="MailingList\NullableSorting.cs" />
     <Compile Include="MailingList\Oguzhntopcu.cs" />
+    <Compile Include="MailingList\PatchingWithNaNAndIsFinite.cs" />
     <Compile Include="MailingList\Pfeffer.cs" />
     <Compile Include="MailingList\ProjectionShouldNotLoadDocument.cs" />
     <Compile Include="MailingList\QueryIn.cs" />

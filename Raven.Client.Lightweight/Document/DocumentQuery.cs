@@ -26,7 +26,7 @@ namespace Raven.Client.Document
 	{
 
 
-	    /// <summary>
+		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
@@ -86,7 +86,7 @@ namespace Raven.Client.Document
 	        this.queryInputs = queryInputs;
 	    }
 
-	    /// <summary>
+		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
@@ -723,7 +723,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-        /// Sorts the query results by distance.
+		/// Sorts the query results by distance.
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
 		{

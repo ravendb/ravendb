@@ -16,6 +16,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Smuggler;
 using Raven.Database.Tasks;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
 
@@ -86,7 +87,10 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 					var interval = TimeSpan.FromMilliseconds(backupConfigs.IntervalMilliseconds);
 					logger.Info("Periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
-					timer = new Timer(TimerCallback, null, TimeSpan.Zero, interval);
+
+					var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastBackup;
+					var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
+					timer = new Timer(TimerCallback, null, nextBackup, interval);
 				}
 				catch (Exception ex)
 				{
@@ -158,8 +162,9 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
 							localBackupStatus.LastDocsEtag = options.LastDocsEtag;
+							localBackupStatus.LastBackup = SystemTime.UtcNow;
 
-							var ravenJObject = RavenJObject.FromObject(localBackupStatus);
+							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
 							ravenJObject.Remove("Id");
 							var putResult = documentDatabase.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
 							                             new RavenJObject(), null);

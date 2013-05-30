@@ -25,9 +25,8 @@ namespace Raven.ProjectRewriter
 			//    "Raven.Json",
 			//    "Raven.Abstractions");
 
-			GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
-			                     @"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
-
+			/*GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
+			                     @"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");*/
 
 			net45Guids = new Dictionary<string, string>
 			{
@@ -89,6 +88,20 @@ namespace Raven.ProjectRewriter
 			foreach (var element in database.Root.Descendants(xmlns + "AssemblyName"))
 			{
 				element.Value += "-4.5";
+			}
+			foreach (var element in database.Root.Descendants(xmlns + "PropertyGroup"))
+			{
+				var outputPath = element.Descendants(xmlns + "OutputPath").FirstOrDefault();
+				if (outputPath != null)
+				{
+					outputPath.Value += @"net45\";
+				}
+
+				var documentationFile = element.Descendants(xmlns + "DocumentationFile").FirstOrDefault();
+				if (documentationFile != null)
+				{
+					documentationFile.Value = documentationFile.Value.Replace(@"..\build", @"..\build\net45\");
+				}
 			}
 
 			foreach (var element in database.Root.Descendants(xmlns + "Reference").ToArray())
