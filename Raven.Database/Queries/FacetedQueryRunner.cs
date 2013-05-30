@@ -384,8 +384,8 @@ namespace Raven.Database.Queries
                     case SortOptions.Byte:
                     case SortOptions.Short:
                     case SortOptions.Custom:
-                        throw new InvalidOperationException("Cannot translate value with sort option: String");
                     case SortOptions.None:
+                        throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", term.Field));
                     case SortOptions.Int:
                         return NumericUtils.PrefixCodedToInt(term.Text);
                     case SortOptions.Float:
