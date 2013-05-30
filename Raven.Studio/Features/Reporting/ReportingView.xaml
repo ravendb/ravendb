@@ -102,7 +102,21 @@
 					</Button.Content>
 				</Button>
 
-			</StackPanel>
+                <contextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                
+                <Button Command="{StaticResource NavigateToCommand}"
+                        CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Edit the Index Definition">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource Image_Edit_Small}"
+                                   Stretch="None"/>
+                            <TextBlock Text="Edit Index" Margin="2,0,0,0" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </StackPanel>
 		</Border>
 
 		<Grid Grid.Row="2" Margin="5">
