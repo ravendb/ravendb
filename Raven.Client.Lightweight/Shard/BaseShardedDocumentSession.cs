@@ -202,6 +202,11 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
+		public void PrepareTransaction(string txId)
+		{
+			throw new NotSupportedException("DTC support is handled via the internal document stores");
+		}
+
 		/// <summary>
 		/// Stores the recovery information for the specified transaction
 		/// </summary>

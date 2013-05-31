@@ -1476,6 +1476,30 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public void PrepareTransaction(string txId)
+		{
+			ExecuteWithReplication<object>("POST", u =>
+			{
+				DirectPrepareTransaction(txId, u);
+				return null;
+			});
+		}
+
+		private void DirectPrepareTransaction(string txId, string operationUrl)
+		{
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, "POST", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+
+			httpJsonRequest.ReadResponseJson();
+		}
+
+		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
