@@ -7,15 +7,18 @@ using System.Threading;
 using Raven.Client.Connection;
 using Raven.Tests.Document;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
 	public class ExplicitTransaction : RavenTest
 	{
-		[Fact]
-		public void Can_use_transactions_to_isolate_saves()
+		[Theory]
+		[InlineData("munin")]
+		[InlineData("esent")]
+		public void Can_use_transactions_to_isolate_saves(string storage)
 		{
-			using (var documentStore = NewDocumentStore())
+			using (var documentStore = NewDocumentStore(requestedStorage:storage))
 			{
 				var company = new Company { Name = "Company Name" };
 				var session = documentStore.OpenSession();
@@ -29,17 +32,20 @@ namespace Raven.Tests.Bugs
 						using (var session2 = documentStore.OpenSession())
 							Assert.Null(session2.Load<Company>(company.Id));
 					}
-					Assert.NotNull(session.Load<Company>(company.Id)); 
+					Assert.NotNull(session.Load<Company>(company.Id));
+					documentStore.DatabaseCommands.PrepareTransaction(RavenTransactionAccessor.GetTransactionInformation().Id);
 					documentStore.DatabaseCommands.Commit(RavenTransactionAccessor.GetTransactionInformation().Id);
 				}
 				Assert.NotNull(session.Load<Company>(company.Id));
 			}
 		}
 
-		[Fact]
-		public void Will_process_all_different_documents_enlisted_in_a_transaction()
+		[Theory]
+		[InlineData("munin")]
+		[InlineData("esent")]
+		public void Will_process_all_different_documents_enlisted_in_a_transaction(string storage)
 		{
-			using (var documentStore = NewDocumentStore())
+			using (var documentStore = NewDocumentStore(requestedStorage:storage))
 			{
 				using (RavenTransactionAccessor.StartTransaction())
 				{
@@ -52,6 +58,7 @@ namespace Raven.Tests.Bugs
 						session.Store(new Company { Name = "Company" });
 						session.SaveChanges();
 					}
+					documentStore.DatabaseCommands.PrepareTransaction(RavenTransactionAccessor.GetTransactionInformation().Id);
 					documentStore.DatabaseCommands.Commit(RavenTransactionAccessor.GetTransactionInformation().Id);
 			
 				}

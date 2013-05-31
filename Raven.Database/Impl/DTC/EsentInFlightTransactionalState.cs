@@ -42,7 +42,7 @@ namespace Raven.Database.Impl.DTC
 		{
 			EsentTransactionContext context;
 			if (transactionContexts.TryGetValue(id, out context) == false)
-				throw new InvalidOperationException("There is no transaction with id: " + id + " ready to commit. Did you call Prepare phase?");
+				throw new InvalidOperationException("There is no transaction with id: " + id + " ready to commit. Did you call PrepareTransaction?");
 
 			lock (context)
 			{
