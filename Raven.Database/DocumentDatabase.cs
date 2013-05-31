@@ -1989,15 +1989,7 @@ namespace Raven.Database
             for (int index = 0; index < commands.Count; index++)
             {
                 var command = commands[index];
-                command.Execute(this);
-                results[index] = new BatchResult
-                {
-                    Method = command.Method,
-                    Key = command.Key,
-                    Etag = command.Etag,
-                    Metadata = command.Metadata,
-                    AdditionalData = command.AdditionalData
-                };
+                results[index] = command.ExecuteBatch(this);
             }
             return results;
         }

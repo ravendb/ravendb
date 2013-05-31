@@ -1361,5 +1361,52 @@ namespace Raven.Tests.Document
 				Assert.Equal(company.Name, "New");
 			}
 		}
+
+		[Fact]
+		public void Should_not_throw_when_ignore_missing_true()
+		{
+			Assert.DoesNotThrow(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}));
+		
+			Assert.DoesNotThrow(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, true));
+		}
+
+		[Fact]
+		public void Should_throw_when_ignore_missing_false()
+		{
+			Assert.Throws<DocumentDoesNotExistsException>(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, false));
+		}
 	}
 }
