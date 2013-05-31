@@ -100,7 +100,11 @@ namespace Raven.Bundles.Replication.Responders
 			metadata[Constants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			AddWithoutConflict(newDocumentConflictId, Guid.Empty, metadata, incoming);
+			AddWithoutConflict(
+				newDocumentConflictId,
+				null, // we explicitly want to overwrite a document if it already exists, since it  is known uniuque by the key 
+				metadata, 
+				incoming);
 			return newDocumentConflictId;
 		}
 
