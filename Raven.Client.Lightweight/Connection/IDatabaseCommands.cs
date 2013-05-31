@@ -364,7 +364,7 @@ namespace Raven.Client.Connection
         FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
 
 		/// <summary>
-		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
@@ -374,8 +374,24 @@ namespace Raven.Client.Connection
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag and  if the document is missing
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		RavenJObject Patch(string key, ScriptedPatchRequest patch);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing);
 
 		/// <summary>
 		/// Sends a patch request for a specific document

@@ -10,8 +10,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -344,6 +347,63 @@ namespace Raven.Tests.Document
 				Assert.NotNull(company);
 				Assert.Equal(company.Name, "New");
 			}
+		}
+
+		[Fact]
+		public void Should_not_throw_when_ignore_missing_true()
+		{
+			Assert.DoesNotThrow(
+				() => DocumentStore.AsyncDatabaseCommands.PatchAsync(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}).Wait());
+
+			Assert.DoesNotThrow(
+				() => DocumentStore.AsyncDatabaseCommands.PatchAsync(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, true).Wait());
+		}
+
+		[Fact]
+		public void Should_throw_when_ignore_missing_false()
+		{
+			Assert.Throws<DocumentDoesNotExistsException>(
+				() =>
+				{
+					try
+					{
+						DocumentStore.AsyncDatabaseCommands.PatchAsync(
+							"Company/1",
+							new[]
+							{
+								new PatchRequest
+								{
+									Type = PatchCommandType.Set,
+									Name = "Name",
+									Value = "Existing",
+								}
+							}, false).Wait();
+					}
+					catch (AggregateException e)
+					{
+						throw e.ExtractSingleInnerException();
+					}
+				});
 		}
 	}
 }
