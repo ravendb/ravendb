@@ -128,7 +128,8 @@ namespace Raven.Storage.Esent
                 if (documentCacher != null)
                     exceptionAggregator.Execute(documentCacher.Dispose);
 
-				exceptionAggregator.Execute(inFlightTransactionalState.Dispose);
+				if(inFlightTransactionalState != null)
+					exceptionAggregator.Execute(inFlightTransactionalState.Dispose);
 
                 exceptionAggregator.Execute(() =>
                     {
