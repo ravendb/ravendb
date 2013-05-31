@@ -18,6 +18,13 @@ namespace Raven.Studio.Features.Settings
 		{
 			session.Items.Add(new CompletionItem
 			{
+				ImageSourceProvider = new CommonImageSourceProvider(CommonImage.ClassPublic),
+				Text = "this.",
+				AutoCompletePreText = "this."
+			});
+
+			session.Items.Add(new CompletionItem
+			{
 				ImageSourceProvider = new CommonImageSourceProvider(CommonImage.MethodPublic),
 				Text = "LoadDocument",
 				AutoCompletePreText = "LoadDocument",
