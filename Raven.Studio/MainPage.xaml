@@ -12,7 +12,8 @@
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" 
 			 xmlns:Delay="clr-namespace:Delay"
-             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu">
+             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+             xmlns:documents="clr-namespace:Raven.Studio.Features.Documents">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -353,6 +354,8 @@
 					</sdk:UriMapper>
 				</sdk:Frame.UriMapper>
 			</sdk:Frame>
+            
+            <documents:DocumentPadLayer Margin="5"/>
 		</Grid>
 
 		<RavenControls:NotificationArea Grid.RowSpan="999"
