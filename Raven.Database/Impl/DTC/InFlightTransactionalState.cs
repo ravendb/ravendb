@@ -11,32 +11,44 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
 
-namespace Raven.Database.Impl
+namespace Raven.Database.Impl.DTC
 {
-	public class InFlightTransactionalState
+	public abstract class InFlightTransactionalState
 	{
-		private class TransactionState
+		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+
+		protected readonly Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut;
+		protected readonly Func<string, Etag, TransactionInformation, bool> databaseDelete;
+
+		protected class TransactionState
 		{
 			public readonly List<DocumentInTransactionData> changes = new List<DocumentInTransactionData>();
 			public volatile Reference<DateTime> lastSeen = new Reference<DateTime>();
 		}
 
-		private class ChangedDoc
+		protected class ChangedDoc
 		{
 			public string transactionId;
 			public Etag currentEtag;
 			public Etag committedEtag;
 		}
 
-		readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>();
+		protected readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>();
 
-		private readonly ConcurrentDictionary<string, TransactionState> transactionStates =
+		protected readonly ConcurrentDictionary<string, TransactionState> transactionStates =
             new ConcurrentDictionary<string, TransactionState>();
+
+		protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
+		{
+			this.databasePut = databasePut;
+			this.databaseDelete = databaseDelete;
+		}
 
 		public Etag AddDocumentInTransaction(
 			string key,
@@ -121,7 +133,7 @@ namespace Raven.Database.Impl
 			};
 		}
 
-        public void Rollback(string id)
+        public virtual void Rollback(string id)
 		{
 			TransactionState value;
 			if (transactionStates.TryGetValue(id, out value) == false)
@@ -138,38 +150,11 @@ namespace Raven.Database.Impl
 			transactionStates.TryRemove(id, out value);
 		}
 
-        private readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
+        protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
 
-        public void Commit(string id, Action<DocumentInTransactionData> action)
-		{
-			TransactionState value;
-			if (transactionStates.TryGetValue(id, out value) == false)
-				throw new InvalidOperationException("There is no transaction with id: " + id);
+		public abstract void Commit(string id);
 
-			lock (value)
-			{
-				currentlyCommittingTransaction.Value = id;
-				try
-				{
-					foreach (var change in value.changes)
-					{
-						action(new DocumentInTransactionData
-						{
-							Metadata = change.Metadata == null ? null : (RavenJObject)change.Metadata.CreateSnapshot(),
-							Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
-							Delete = change.Delete,
-							Etag = change.Etag,
-							LastModified = change.LastModified,
-							Key = change.Key
-						});
-					}
-				}
-				finally
-				{
-				    currentlyCommittingTransaction.Value = null;
-				}
-			}
-		}
+		public abstract void Prepare(string id);
 
 		private Etag AddToTransactionState(string key,
 			Etag etag,
@@ -300,6 +285,45 @@ namespace Raven.Database.Impl
         public bool HasTransaction(string txId)
 		{
 			return transactionStates.ContainsKey(txId);
+		}
+
+		protected void RunOperationsInTransaction(string id)
+		{
+			TransactionState value;
+			if (transactionStates.TryGetValue(id, out value) == false)
+				throw new InvalidOperationException("There is no transaction with id: " + id);
+
+			lock (value)
+			{
+				currentlyCommittingTransaction.Value = id;
+				try
+				{
+					foreach (var change in value.changes)
+					{
+						var doc = new DocumentInTransactionData
+						{
+							Metadata = change.Metadata == null ? null : (RavenJObject)change.Metadata.CreateSnapshot(),
+							Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
+							Delete = change.Delete,
+							Etag = change.Etag,
+							LastModified = change.LastModified,
+							Key = change.Key
+						};
+
+						log.Debug("Commit of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
+						// doc.Etag - represent the _modified_ document etag, and we already
+						// checked etags on previous PUT/DELETE, so we don't pass it here
+						if (doc.Delete)
+							databaseDelete(doc.Key, null, null);
+						else
+							databasePut(doc.Key, null, doc.Data, doc.Metadata, null);
+					}
+				}
+				finally
+				{
+					currentlyCommittingTransaction.Value = null;
+				}
+			}
 		}
 	}
 }

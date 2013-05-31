@@ -31,6 +31,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		[ThreadStatic]
+		private static bool supressExplicitRavenTransaction = false;
+
 		/// <summary>
 		/// Starts a transaction
 		/// </summary>
@@ -63,7 +66,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public static TransactionInformation GetTransactionInformation()
 		{
-			if (CurrentRavenTransactions.Count >0)
+			if (CurrentRavenTransactions.Count > 0 && supressExplicitRavenTransaction == false)
 				return CurrentRavenTransactions.Peek();
 			if (Transaction.Current == null)
 				return null;
@@ -72,6 +75,15 @@ namespace Raven.Client.Connection
                 Id = Transaction.Current.TransactionInformation.LocalIdentifier,
 				Timeout = DefaultTimeout ?? TransactionManager.DefaultTimeout
 			};
+		}
+
+		internal static IDisposable SupressExplicitRavenTransaction()
+		{
+			supressExplicitRavenTransaction = true;
+			return new DisposableAction(() =>
+			{
+				supressExplicitRavenTransaction = false;
+			});
 		}
 	}
 }

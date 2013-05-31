@@ -8,7 +8,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
@@ -38,5 +40,6 @@ namespace Raven.Database.Storage
 		Guid ChangeId();
 		void ClearCaches();
 		void DumpAllStorageTables();
+		InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
 	}
 }

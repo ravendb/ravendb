@@ -691,6 +691,13 @@ namespace Raven.Client.Document
 			ClearEnlistment();
 		}
 
+		public void PrepareTransaction(string txId)
+		{
+			IncrementRequestCount();
+			DatabaseCommands.PrepareTransaction(txId);
+			ClearEnlistment();
+		}
+
 		/// <summary>
 		/// Query RavenDB dynamically using LINQ
 		/// </summary>

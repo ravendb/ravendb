@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
@@ -36,6 +37,8 @@ namespace Raven.Storage.Esent.StorageActions
 		protected readonly Session session;
 		private Transaction transaction;
 		private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
+		private readonly EsentTransactionContext transactionContext;
+		private readonly IDisposable sharedSessionContextHolder;
 
 		public JET_DBID Dbid
 		{
@@ -56,6 +59,7 @@ namespace Raven.Storage.Esent.StorageActions
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
 			IUuidGenerator uuidGenerator,
 			IDocumentCacher cacher,
+			EsentTransactionContext transactionContext,
 			TransactionalStorage transactionalStorage)
 		{
 			this.tableColumnsCache = tableColumnsCache;
@@ -63,10 +67,21 @@ namespace Raven.Storage.Esent.StorageActions
 			this.uuidGenerator = uuidGenerator;
 			this.cacher = cacher;
 			this.transactionalStorage = transactionalStorage;
+			this.transactionContext = transactionContext;
+
 			try
 			{
-				session = new Session(instance);
-				transaction = new Transaction(session);
+				if (transactionContext == null)
+				{
+					session = new Session(instance);
+					transaction = new Transaction(session);
+				}
+				else
+				{
+					session = transactionContext.Session;
+					transaction = transactionContext.Transaction;
+					sharedSessionContextHolder = transactionContext.EnterSessionContext();
+				}
 				Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 			}
 			catch (Exception)
@@ -127,11 +142,18 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Equals(dbid, JET_DBID.Nil) == false && session != null)
 				Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
 
-			if (transaction != null)
-				transaction.Dispose();
+			if (transactionContext == null)
+			{
+				if (transaction != null)
+					transaction.Dispose();
 
-			if (session != null)
-				session.Dispose();
+				if (session != null)
+					session.Dispose();
+			}
+			else
+			{
+				sharedSessionContextHolder.Dispose();
+			}
 		}
 
 		public void UseLazyCommit()
@@ -169,7 +191,10 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public Action Commit(CommitTransactionGrbit txMode)
 		{
-			transaction.Commit(txMode);
+			if (transactionContext == null)
+			{
+				transaction.Commit(txMode);
+			}
 
 			return OnStorageCommit;
 		}

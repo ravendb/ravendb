@@ -20,6 +20,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Commercial;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Impl.Synchronization;
 using Raven.Database.Prefetching;
 using Raven.Database.Queries;
@@ -105,7 +106,7 @@ namespace Raven.Database
         private long pendingTaskCounter;
         private readonly ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, PendingTaskAndState>();
 
-        private readonly InFlightTransactionalState inFlightTransactionalState = new InFlightTransactionalState();
+	    private readonly InFlightTransactionalState inFlightTransactionalState;
 
         private class PendingTaskAndState
         {
@@ -211,6 +212,8 @@ namespace Raven.Database
 
                 try
                 {
+
+	                inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(Put, Delete);
 
                     TransactionalStorage.Batch(actions =>
                         sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
@@ -1047,28 +1050,29 @@ namespace Raven.Database
             return inFlightTransactionalState.HasTransaction(txId);
         }
 
+		public void PrepareTransaction(string txId)
+		{
+			try
+			{
+				inFlightTransactionalState.Prepare(txId);
+				log.Debug("Prepare of tx {0} completed", txId);
+			}
+			catch (Exception e)
+			{
+				if (TransactionalStorage.HandleException(e))
+					return;
+				throw;
+			}
+		}
+
         public void Commit(string txId)
         {
             try
             {
                 try
                 {
-                    TransactionalStorage.Batch(actions =>
-                    {
-                        inFlightTransactionalState.Commit(txId, doc => // this just commit the values, not remove the tx
-            {
-                log.Debug("Commit of txId {0}: {1} {2}", txId, doc.Delete ? "DEL" : "PUT", doc.Key);
-                // doc.Etag - represent the _modified_ document etag, and we already
-                // checked etags on previous PUT/DELETE, so we don't pass it here
-                if (doc.Delete)
-                    Delete(doc.Key, null, null);
-                else
-                    Put(doc.Key, null,
-                        doc.Data,
-                        doc.Metadata, null);
-            });
-                        log.Debug("Commit of tx {0} completed", txId);
-                    });
+		            inFlightTransactionalState.Commit(txId);
+		            log.Debug("Commit of tx {0} completed", txId);
                 }
                 finally
                 {

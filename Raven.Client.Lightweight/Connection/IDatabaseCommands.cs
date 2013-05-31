@@ -489,6 +489,12 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="name">The name.</param>
 		void DeleteTransformer(string name);
+
+		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		void PrepareTransaction(string txId);
 	}
 }
 #endif
