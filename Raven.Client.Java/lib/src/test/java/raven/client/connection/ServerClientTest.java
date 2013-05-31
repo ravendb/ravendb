@@ -8,6 +8,7 @@ import static org.junit.Assert.assertSame;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.client.RavenDBAwareTests;
@@ -38,6 +39,8 @@ public class ServerClientTest extends RavenDBAwareTests {
 
 
   @Test
+  @Ignore
+  //TODO: remove this test - as it breaks one test one functionality principal
   public void testDatabaseChanges() throws Exception {
     ServerClient client = new ServerClient(DEFAULT_SERVER_URL);
     IDatabaseCommands systemDatabaseClient = client.forSystemDatabase();

@@ -4,7 +4,9 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import raven.abstractions.closure.Action3;
 import raven.client.document.DocumentConvention;
+import raven.client.document.FailoverBehavior;
 import raven.client.json.RavenJObject;
 
 public class CreateHttpJsonRequestParams implements Serializable {
@@ -60,6 +62,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   }
 
 
+
   public CreateHttpJsonRequestParams(ServerClient serverClient, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
     super();
     this.method = method;
@@ -72,6 +75,12 @@ public class CreateHttpJsonRequestParams implements Serializable {
 
   public CreateHttpJsonRequestParams addOperationHeaders(Map<String, String> operationsHeaders) {
     this.operationHeaders = operationsHeaders;//TODO: implement me!
+    return this;
+  }
+
+  public CreateHttpJsonRequestParams addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl,
+      ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action3<Map<String, String>, String, String> handleReplicationStatusChanges) {
+    //TODO: implement me!
     return this;
   }
 
