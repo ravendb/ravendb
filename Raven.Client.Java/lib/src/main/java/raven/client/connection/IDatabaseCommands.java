@@ -18,6 +18,19 @@ public interface IDatabaseCommands {
    * @param etag The etag.
    */
   public void delete(String key, UUID etag);
+  /**
+   * Generate the next identity value from the server
+   * @param name
+   * @return
+   */
+  public Long nextIdentityFor(String name);
+
+  /**
+   * Get the full URL for the given document key
+   * @param documentKey
+   * @return
+   */
+  public String urlFor(String documentKey);
 
   /**
    * Create a new instance of {@link IDatabaseCommands} that will interacts with the specified database

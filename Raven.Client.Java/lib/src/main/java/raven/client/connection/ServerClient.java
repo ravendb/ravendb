@@ -18,6 +18,7 @@ import org.apache.commons.io.IOUtils;
 import com.google.common.base.Function;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.MultiLoadResult;
 import raven.client.data.Constants;
 import raven.client.document.DocumentConvention;
 import raven.client.extensions.MultiDatabase;
@@ -129,7 +130,6 @@ public class ServerClient implements IDatabaseCommands {
    * @param key
    * @return
    */
-  //TODO: review me
   private JsonDocument directGet(String serverUrl, String key) throws ServerClientException {
     RavenJObject metadata = new RavenJObject();
     addTransactionInformation(metadata);
@@ -156,7 +156,7 @@ public class ServerClient implements IDatabaseCommands {
       }
       throw new ServerClientException(e);
     } catch (Exception e) {
-        throw new ServerClientException(e);
+      throw new ServerClientException(e);
     }
   }
   protected Attachment directGetAttachment(HttpMethods method, String key, String operationUrl) {
@@ -194,7 +194,7 @@ public class ServerClient implements IDatabaseCommands {
       return SerializationHelper.deserializeAttachements(responseJson);
 
     } catch (Exception e) {
-        throw new ServerClientException(e);
+      throw new ServerClientException(e);
     }
   }
 
@@ -345,6 +345,36 @@ public class ServerClient implements IDatabaseCommands {
     return operation.apply(url);
   }
 
+  @Override
+  public MultiLoadResult get(final String[] ids, final String[] includes, final boolean metadataOnly) {
+    return executeWithReplication(HttpMethods.GET, new Function<String, MultiLoadResult>() {
+
+      @Override
+      public MultiLoadResult apply(String u) {
+        return directGet(ids, u, includes, metadataOnly);
+      }
+    });
+  }
+
+  protected MultiLoadResult directGet(String[] ids, String u, String[] includes, boolean metadataOnly) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  //TODO : private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
+  //TODO: public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
+  //TODO: private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
+  //TODO: private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+  //TODO: public void Commit(Guid txId)
+  //TODO: private void DirectCommit(Guid txId, string operationUrl)
+  //TODO: public void Rollback(Guid txId)
+  //TODO: public byte[] PromoteTransaction(Guid fromTxId)
+  //TODO: private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
+  //TODO:private void DirectRollback(Guid txId, string operationUrl)
+  //TODO: public IDatabaseCommands With(ICredentials credentialsForSession)
+  //TODO: public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+  //TODO: public IDisposable ForceReadFromMaster()
+
   public IDatabaseCommands forDatabase(String database) {
     String databaseUrl = MultiDatabase.getRootDatabaseUrl(url);
     databaseUrl = url + "/databases/" + database;
@@ -396,6 +426,61 @@ public class ServerClient implements IDatabaseCommands {
   //TODO: private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
 
   //TODO: private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Guid etag)
+
+  /*TODO public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
+   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+   * private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+   * public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+   * public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
+   * public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
+   * public DatabaseStatistics GetStatistics()
+   */
+
+  /*
+   * TODO:
+   *
+   * public JsonDocumentMetadata Head(string key)
+   * public JsonDocumentMetadata DirectHead(string serverUrl, string key)
+   * public GetResponse[] MultiGet(GetRequest[] requests)
+   * public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
+   * public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
+   * public void Patch(string key, PatchRequest[] patches)
+   * public void Patch(string key, ScriptedPatchRequest patch)
+   * public void Patch(string key, PatchRequest[] patches, Guid? etag)
+   * public void Patch(string key, ScriptedPatchRequest patch, Guid? etag)
+   * public IDisposable DisableAllCaching()
+   * public ProfilingInformation ProfilingInformation
+   * public RavenJToken GetOperationStatus(long id)
+   * public IDisposable Expect100Continue()
+   */
+
+  public Long nextIdentityFor(final String name) {
+    return executeWithReplication(HttpMethods.POST, new Function<String, Long>() {
+      @Override
+      public Long apply(String url) {
+        return directNextIdentityFor(name, url);
+      }
+    });
+  }
+
+  protected Long directNextIdentityFor(String name, String operationUrl) {
+    try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/identity/next?name=" + UrlUtils.escapeDataString(name), HttpMethods.POST, new RavenJObject(), credentials, convention).
+        addOperationHeaders(operationsHeaders))) {
+      RavenJToken ravenJToken = jsonRequest.getResponseAsJson(HttpStatus.SC_OK); //TODO: status
+      return ravenJToken.value(Long.class, "Value");
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
+
+  @Override
+  public String urlFor(String documentKey) {
+    return url + "/docs/" + documentKey;
+  }
 
   public List<String> getDatabaseNames(int pageSize, int start) {
     String url = RavenUrlExtensions.databases("", pageSize, start);
