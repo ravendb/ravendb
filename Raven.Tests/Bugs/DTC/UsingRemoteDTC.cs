@@ -1,15 +1,18 @@
 using System.Transactions;
 using Raven.Client.Document;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.DTC
 {
 	public class UsingRemoteDTC : RemoteClientTest
 	{
-		[Fact]
-		public void CanUseRemoteDTC()
+		[Theory]
+		[InlineData(true)]
+		[InlineData(false)]
+		public void CanUseRemoteDTC(bool runinmemory)
 		{
-			using (GetNewServer())
+			using (GetNewServer(runInMemory: runinmemory))
 			{
 				using(var store = new DocumentStore{ Url = "http://localhost:8079"}.Initialize())
 				{
