@@ -15,6 +15,7 @@
              xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
              xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions"
              xmlns:media="clr-namespace:Microsoft.Expression.Interactivity.Media;assembly=Microsoft.Expression.Interactions"
+             xmlns:indexes="clr-namespace:Raven.Studio.Features.Indexes"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Models:IndexDefinitionModel}">
 	<UserControl.Resources>
@@ -716,7 +717,7 @@
                                   Margin="0,10">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid>
+                                <Grid Margin="0,0,0,20">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"
                                                        MinHeight="100" />
@@ -726,27 +727,25 @@
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="24" />
+                                        <ColumnDefinition Width="28" />
                                     </Grid.ColumnDefinitions>
 
 
                                     <Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" Height="{Binding TextHeight}" MinHeight="100" />
+
                                     <Border BorderBrush="#DA000C" BorderThickness="1" 
                                             Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibility}}"/>
 
-                                    <sdk:GridSplitter Grid.Row="1"
-                                                      Grid.ColumnSpan="2"
-                                                      Background="Transparent"
-                                                      HorizontalAlignment="Stretch" />
 
-                                    <Button Grid.Column="1"
+                                    <StackPanel Grid.Column="1" Margin="2,0">
+                                    <Button 
                                             Style="{StaticResource Style_Button_MouseOverChrome}"
                                             Padding="4"
-                                            Margin="2,0"
+                                            Margin="0,0,0,2"
                                             x:Name="RemoveMap"
                                             Visibility="{Binding DataContext.Maps.Count, ConverterParameter=1, Converter={StaticResource HiddenWhenLessOrEqualTo}, ElementName=this}"
                                             ToolTipService.ToolTip="Remove this map from the index"
-                                            HorizontalAlignment="Right"
+                                            HorizontalAlignment="Center"
                                             VerticalAlignment="Top"
                                             Command="{Binding DataContext.RemoveMap, ElementName=this}"
                                             CommandParameter="{Binding}">
@@ -756,6 +755,17 @@
                                                    Height="12" />
                                         </Button.Content>
                                     </Button>
+                                        <Button Command="{Binding DataContext.ShowSampleDocument, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top"
+                                            Margin="0"
+                                            Padding="4"
+                                            Style="{StaticResource Style_Button_MouseOverChrome}"
+                                                ToolTipService.ToolTip="Show a sample document for this map">
+                                            <Image Source="{StaticResource Image_OpenInDocumentPad_Tiny}" Width="16" Height="16"/>
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

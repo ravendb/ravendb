@@ -16,11 +16,19 @@
                          xmlns:reporting="clr-namespace:Raven.Studio.Features.Reporting"
                          xmlns:delay="clr-namespace:Delay" xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                         xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions"
+                         xmlns:media="clr-namespace:Microsoft.Expression.Interactivity.Media;assembly=Microsoft.Expression.Interactions"
                          d:DesignWidth="640" d:DesignHeight="480"
 						 d:DataContext="{d:DesignInstance models:ReportingModel}"
 						 Title="ReportingView Page">
 <UserControl.Resources>
-		<DataTemplate x:Key="ValueCalculationTemplate" DataType="models:ValueCalculation">
+        <Storyboard x:Key="ShowErrorPanel">
+            <DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="50" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="HideErrorPanel">
+            <DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="0" Duration="0:0:0.1"/>
+        </Storyboard>
+        <DataTemplate x:Key="ValueCalculationTemplate" DataType="models:ValueCalculation">
 				<Grid Margin="4,2,4,2">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="100"/>
@@ -102,7 +110,21 @@
 					</Button.Content>
 				</Button>
 
-			</StackPanel>
+                <contextMenu:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                
+                <Button Command="{StaticResource NavigateToCommand}"
+                        CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Edit the Index Definition">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource Image_Edit_Small}"
+                                   Stretch="None"/>
+                            <TextBlock Text="Edit Index" Margin="2,0,0,0" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </StackPanel>
 		</Border>
 
 		<Grid Grid.Row="2" Margin="5">
@@ -114,6 +136,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 				</Grid.RowDefinitions>
 
@@ -256,7 +279,26 @@
                     </i:Interaction.Behaviors>
                 </sdk:DataGrid>
                 </toolkit:HeaderedContentControl>
-                <Border Grid.Row="6"
+                <Border Background="{StaticResource Brush_ErrorBackground}"
+						Grid.Row="6" Height="0"
+						VerticalAlignment="Bottom"
+						x:Name="QueryErrorPanel">
+                    <i:Interaction.Triggers>
+                        <ei:DataTrigger Binding="{Binding IsErrorVisible.Value}" Value="True" Comparison="Equal">
+                            <media:ControlStoryboardAction Storyboard="{StaticResource ShowErrorPanel}" ControlStoryboardOption="Play"/>
+                        </ei:DataTrigger>
+                        <ei:DataTrigger Binding="{Binding IsErrorVisible.Value}" Value="False" Comparison="Equal">
+                            <media:ControlStoryboardAction Storyboard="{StaticResource HideErrorPanel}" ControlStoryboardOption="Play"/>
+                        </ei:DataTrigger>
+                    </i:Interaction.Triggers>
+                    <TextBlock Text="{Binding QueryErrorMessage.Value}" Foreground="White" Margin="5" VerticalAlignment="Top" 
+							   TextWrapping="Wrap"
+							   behaviors:FadeTrimming.IsEnabled="True"
+							   behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True">
+                    </TextBlock>
+                </Border>
+
+                <Border Grid.Row="7"
                         VerticalAlignment="Bottom"
 						Background="{StaticResource Brush_HeaderBackground}"
 						BorderBrush="{StaticResource Brush_HeaderBorder}"

@@ -85,5 +85,5 @@
     <BitmapImage x:Key="Image_ExportDetails_Tiny" UriSource="export_details_tiny.png"/>
     <BitmapImage x:Key="Image_ImportCsv_Tiny" UriSource="import_csv_tiny.png"/>
     <BitmapImage x:Key="Image_Execute_Tiny" UriSource="execute_tiny.png"/>
-    
+    <BitmapImage x:Key="Image_OpenInDocumentPad_Tiny" UriSource="to_documentpad_tiny.png"/>
 </ResourceDictionary>

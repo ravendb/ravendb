@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Queries;
 using Raven.Database.Extensions;
@@ -47,7 +49,19 @@ namespace Raven.Database.Server.Responders
 
             context.WriteETag(etag);
 
-            context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize));
+		    try
+		    {
+		        context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize));
+		    }
+		    catch (Exception ex)
+		    {
+		        if (ex is ArgumentException || ex is InvalidOperationException)
+		        {
+		            throw new BadRequestException(ex.Message, ex);
+		        }
+
+		        throw;
+		    }
 		}
 
 		private bool TryGetFacets(IHttpContext context, string index, out Etag etag, out List<Facet> facets)

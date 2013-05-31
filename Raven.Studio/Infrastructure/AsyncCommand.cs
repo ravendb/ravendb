@@ -14,16 +14,21 @@ namespace Raven.Studio.Infrastructure
 {
     public class AsyncActionCommand : Command
     {
-        private readonly Func<Task> execute;
+        private readonly Func<object, Task> execute;
 
-        public AsyncActionCommand(Func<Task> execute)
+        public AsyncActionCommand(Func<object, Task> execute)
         {
             this.execute = execute;
         }
 
+        public AsyncActionCommand(Func<Task> execute)
+        {
+            this.execute = _ => execute();
+        }
+
         protected override System.Threading.Tasks.Task ExecuteAsync(object parameter)
         {
-            return execute();
+            return execute(parameter);
         }
     }
 }

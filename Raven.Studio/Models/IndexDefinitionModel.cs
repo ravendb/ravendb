@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using DrWPF.Windows.Data;
@@ -25,6 +26,7 @@ namespace Raven.Studio.Models
 {
 	public class IndexDefinitionModel : PageViewModel, IHasPageTitle, IAutoCompleteSuggestionProvider
 	{
+        public const string CollectionsIndex = "Raven/DocumentsByEntityName";
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
@@ -436,6 +438,7 @@ namespace Raven.Studio.Models
 	    private string definitionErrorMessage;
 	    private ObservableDictionary<string, bool> propertyHasError;
 	    private bool isShowingErrors;
+	    private ICommand showSampleDocument;
 
 	    public bool ShowTransformResults
 		{
@@ -474,7 +477,46 @@ namespace Raven.Studio.Models
 		public BindableCollection<FieldProperties> Fields { get; private set; }
 		public BindableCollection<SpatialFieldProperties> SpatialFields { get; private set; }
 
-		public int ErrorsCount
+	    public ICommand ShowSampleDocument
+	    {
+	        get { return showSampleDocument ?? (showSampleDocument = new AsyncActionCommand(HandleShowSampleDocument)); }
+	    }
+
+	    private async Task HandleShowSampleDocument(object parameter)
+	    {
+	        var mapItem = parameter as MapItem;
+            if (mapItem == null || string.IsNullOrWhiteSpace(mapItem.Text))
+            {
+                ApplicationModel.Current.ShowDocumentInDocumentPad("");
+                return;
+            }
+
+	        const string collectionNameRegEx = @"docs\.(?<collection>[\w]+)";
+	        var match = Regex.Match(mapItem.Text, collectionNameRegEx);
+            if (!match.Success)
+            {
+                ApplicationModel.Current.ShowDocumentInDocumentPad("");
+                return;
+            }
+
+	        var collectionName = match.Groups[1].ToString();
+	        var results =
+	            await
+	            DatabaseCommands.QueryAsync(CollectionsIndex,
+	                                        new IndexQuery() {Query = "Tag:" + collectionName, PageSize = 1}, null,
+	                                        metadataOnly: true);
+
+            if (results.Results.Count == 0)
+            {
+                ApplicationModel.Current.ShowDocumentInDocumentPad("");
+                return;
+            }
+
+	        var docId = results.Results[0].SelectToken("@metadata.@id").ToString();
+            ApplicationModel.Current.ShowDocumentInDocumentPad(docId);
+	    }
+
+	    public int ErrorsCount
 		{
 			get
 			{
