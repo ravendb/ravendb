@@ -1,4 +1,4 @@
-package raven.client.data;
+package raven.abstractions.data;
 
 public class Constants {
   public final static String DOCUMENT_ID_FIELD_NAME = "__document_id";

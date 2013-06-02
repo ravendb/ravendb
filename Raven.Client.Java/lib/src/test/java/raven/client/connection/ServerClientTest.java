@@ -11,11 +11,11 @@ import java.util.UUID;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import raven.abstractions.data.JsonDocument;
+import raven.abstractions.json.PutResult;
+import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.RavenJValue;
 import raven.client.RavenDBAwareTests;
-import raven.client.json.JsonDocument;
-import raven.client.json.PutResult;
-import raven.client.json.RavenJObject;
-import raven.client.json.RavenJValue;
 
 public class ServerClientTest extends RavenDBAwareTests {
 

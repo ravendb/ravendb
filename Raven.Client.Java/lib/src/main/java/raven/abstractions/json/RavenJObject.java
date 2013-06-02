@@ -1,4 +1,4 @@
-package raven.client.json;
+package raven.abstractions.json;
 
 import java.io.IOException;
 import java.util.Map;
@@ -10,9 +10,9 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import raven.abstractions.json.lang.JsonReaderException;
+import raven.abstractions.json.lang.JsonWriterException;
 import raven.client.common.extensions.JsonExtensions;
-import raven.client.json.lang.JsonReaderException;
-import raven.client.json.lang.JsonWriterException;
 import raven.client.utils.StringUtils;
 
 public class RavenJObject extends RavenJToken   {

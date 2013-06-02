@@ -1,4 +1,4 @@
-package raven.client.connection;
+package raven.abstractions.data;
 
 public enum HttpMethods {
   /**

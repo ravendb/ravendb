@@ -1,4 +1,4 @@
-package raven.client.json;
+package raven.abstractions.json;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -10,7 +10,7 @@ import java.util.Date;
 import org.apache.commons.codec.binary.Base64;
 import org.codehaus.jackson.JsonGenerator;
 
-import raven.client.json.lang.JsonWriterException;
+import raven.abstractions.json.lang.JsonWriterException;
 
 public class RavenJValue extends RavenJToken {
 

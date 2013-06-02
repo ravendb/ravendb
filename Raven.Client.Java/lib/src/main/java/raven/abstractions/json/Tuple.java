@@ -1,4 +1,4 @@
-package raven.client.json;
+package raven.abstractions.json;
 
 public class Tuple<T, S> {
   public static <T,S> Tuple<T, S> create(T item1, S item2) {

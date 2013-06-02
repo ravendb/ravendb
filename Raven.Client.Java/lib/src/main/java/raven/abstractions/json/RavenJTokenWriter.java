@@ -1,4 +1,4 @@
-package raven.client.json;
+package raven.abstractions.json;
 
 import java.io.IOException;
 import java.math.BigDecimal;

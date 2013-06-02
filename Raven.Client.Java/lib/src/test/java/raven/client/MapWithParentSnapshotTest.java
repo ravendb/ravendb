@@ -12,10 +12,10 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import raven.client.json.JTokenType;
-import raven.client.json.MapWithParentSnapshot;
-import raven.client.json.RavenJToken;
-import raven.client.json.RavenJValue;
+import raven.abstractions.json.JTokenType;
+import raven.abstractions.json.MapWithParentSnapshot;
+import raven.abstractions.json.RavenJToken;
+import raven.abstractions.json.RavenJValue;
 
 public class MapWithParentSnapshotTest {
   @Test

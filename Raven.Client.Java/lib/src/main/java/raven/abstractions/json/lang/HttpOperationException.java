@@ -1,4 +1,4 @@
-package raven.client.json.lang;
+package raven.abstractions.json.lang;
 
 import org.apache.commons.httpclient.HttpMethodBase;
 

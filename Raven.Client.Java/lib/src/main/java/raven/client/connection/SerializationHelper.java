@@ -15,13 +15,13 @@ import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
-import raven.client.data.Constants;
-import raven.client.json.JTokenType;
-import raven.client.json.JsonDocument;
-import raven.client.json.RavenJArray;
-import raven.client.json.RavenJObject;
-import raven.client.json.RavenJToken;
+import raven.abstractions.data.Constants;
+import raven.abstractions.json.JTokenType;
+import raven.abstractions.json.RavenJArray;
+import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.RavenJToken;
 import raven.client.utils.StringUtils;
 
 public class SerializationHelper {

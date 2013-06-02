@@ -5,10 +5,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import raven.abstractions.closure.Action3;
+import raven.abstractions.data.HttpMethods;
+import raven.abstractions.json.RavenJObject;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
-import raven.client.json.RavenJObject;
 
+//TODO: hash based cache
 public class CreateHttpJsonRequestParams implements Serializable {
   private HttpMethods method;
   private String url;

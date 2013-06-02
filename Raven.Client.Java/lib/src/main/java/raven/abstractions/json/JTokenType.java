@@ -1,4 +1,4 @@
-package raven.client.json;
+package raven.abstractions.json;
 
 /**
  * Specified the type of token.

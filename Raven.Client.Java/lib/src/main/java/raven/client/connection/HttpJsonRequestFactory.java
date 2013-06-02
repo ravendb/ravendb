@@ -6,6 +6,7 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 
+//TODO: review me
 public class HttpJsonRequestFactory  {
   public HttpJsonRequest createHttpJsonRequest(CreateHttpJsonRequestParams params) {
     HttpClient httpClient = params.getServerClient().getHttpClient();

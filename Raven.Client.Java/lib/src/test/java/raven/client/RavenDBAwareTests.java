@@ -6,8 +6,8 @@ import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
 
-import raven.client.json.RavenJObject;
-import raven.client.json.RavenJValue;
+import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.RavenJValue;
 import raven.client.utils.UrlUtils;
 
 public abstract class RavenDBAwareTests {

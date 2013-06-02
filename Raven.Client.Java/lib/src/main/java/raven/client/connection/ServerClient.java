@@ -16,20 +16,21 @@ import org.apache.commons.io.IOUtils;
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.HttpMethods;
+import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
-import raven.client.data.Constants;
+import raven.abstractions.data.Constants;
+import raven.abstractions.json.PutResult;
+import raven.abstractions.json.RavenJArray;
+import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.RavenJToken;
+import raven.abstractions.json.RavenJValue;
+import raven.abstractions.json.lang.ConcurrencyException;
+import raven.abstractions.json.lang.HttpOperationException;
+import raven.abstractions.json.lang.ServerClientException;
 import raven.client.document.DocumentConvention;
 import raven.client.extensions.MultiDatabase;
-import raven.client.json.JsonDocument;
-import raven.client.json.PutResult;
-import raven.client.json.RavenJArray;
-import raven.client.json.RavenJObject;
-import raven.client.json.RavenJToken;
-import raven.client.json.RavenJValue;
-import raven.client.json.lang.ConcurrencyException;
-import raven.client.json.lang.HttpOperationException;
-import raven.client.json.lang.ServerClientException;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.StringUtils;
 import raven.client.utils.UrlUtils;
@@ -257,8 +258,6 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-  //TODO: public bool InFailoverMode()
-
   private PutResult directPut(RavenJObject metadata, String key, UUID etag, RavenJObject document, String operationUrl) throws ServerClientException {
     if (metadata == null) {
       metadata = new RavenJObject();
@@ -416,6 +415,7 @@ public class ServerClient implements IDatabaseCommands {
     };
   }
 
+  //TODO: public bool InFailoverMode()
   //TODO : private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
   //TODO: public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
   //TODO: private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
@@ -435,40 +435,38 @@ public class ServerClient implements IDatabaseCommands {
   //TODO: public IndexDefinition GetIndex(string name)
   //TODO: private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
   //TODO: public HttpJsonRequest CreateRequest(string method, string requestUrl, bool disableRequestCompression = false)
-
   //TODO: private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
-
   //TODO: private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Guid etag)
-
-  /*TODO public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
-   * public string[] GetIndexNames(int start, int pageSize)
-   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
-   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
-   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
-   * public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
-   * private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
-   * public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
-   * public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
-   * public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
-   * public DatabaseStatistics GetStatistics()
-   */
-
-  /*
-   * TODO:
-   *
-   *
-   * public GetResponse[] MultiGet(GetRequest[] requests)
-   * public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
-   * public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
-   * public void Patch(string key, PatchRequest[] patches)
-   * public void Patch(string key, ScriptedPatchRequest patch)
-   * public void Patch(string key, PatchRequest[] patches, Guid? etag)
-   * public void Patch(string key, ScriptedPatchRequest patch, Guid? etag)
-   * public IDisposable DisableAllCaching()
-   * public ProfilingInformation ProfilingInformation
-   * public RavenJToken GetOperationStatus(long id)
-   * public IDisposable Expect100Continue()
-   */
+  //TODO public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+  //TODO: public string[] GetIndexNames(int start, int pageSize)
+  //TODO: public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
+  //TODO: public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+  //TODO: public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+  //TODO: public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+  //TODO: private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+  //TODO: public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+  //TODO: public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
+  //TODO: public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
+  //TODO: public DatabaseStatistics GetStatistics()
+  //TODO: public GetResponse[] MultiGet(GetRequest[] requests)
+  //TODO: public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
+  //TODO: public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
+  //TODO: public void Patch(string key, PatchRequest[] patches)
+  //TODO: public void Patch(string key, ScriptedPatchRequest patch)
+  //TODO: public void Patch(string key, PatchRequest[] patches, Guid? etag)
+  //TODO: public void Patch(string key, ScriptedPatchRequest patch, Guid? etag)
+  //TODO: public IDisposable DisableAllCaching()
+  //TODO: public ProfilingInformation ProfilingInformation
+  //TODO: public RavenJToken GetOperationStatus(long id)
+  //TODO: public IDisposable Expect100Continue()
+  //TODO :public string PutIndex(string name, IndexDefinition definition)
+  //TODO: public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
+  //TODO: public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
+  //TODO: public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
+  //TODO: public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
+  //TODO: private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly, bool includeEntries)
+  //TODO: public void DeleteIndex(string name)
+  //TODO: private void DirectDeleteIndex(string name, string operationUrl)
 
   @Override
   public JsonDocumentMetadata head(final String key) {
@@ -481,14 +479,7 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
-  //TODO :public string PutIndex(string name, IndexDefinition definition)
-  //TODO: public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
-  //TODO: public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
-  //TODO: public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
-  //TODO: public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
-  //TODO: private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly, bool includeEntries)
-  //TODO: public void DeleteIndex(string name)
-  //TODO: private void DirectDeleteIndex(string name, string operationUrl)
+
 
   protected JsonDocumentMetadata directHead(String serverUrl, String key) {
     RavenJObject metadata = new RavenJObject();

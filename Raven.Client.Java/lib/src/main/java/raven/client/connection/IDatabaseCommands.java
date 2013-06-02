@@ -5,12 +5,12 @@ import java.util.List;
 import java.util.UUID;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
-import raven.client.json.JsonDocument;
-import raven.client.json.PutResult;
-import raven.client.json.RavenJObject;
-import raven.client.json.lang.ServerClientException;
+import raven.abstractions.json.PutResult;
+import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.lang.ServerClientException;
 
 public interface IDatabaseCommands {
   /**
