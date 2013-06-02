@@ -15,6 +15,7 @@ import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.JsonDocumentMetadata;
 import raven.client.data.Constants;
 import raven.client.json.JTokenType;
 import raven.client.json.JsonDocument;
@@ -209,6 +210,11 @@ public class SerializationHelper {
   }
 
   public static List<Attachment> deserializeAttachements(RavenJToken responseJson) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public static JsonDocumentMetadata deserializeJsonDocumentMetadata(RavenJToken responseJson) {
     // TODO Auto-generated method stub
     return null;
   }

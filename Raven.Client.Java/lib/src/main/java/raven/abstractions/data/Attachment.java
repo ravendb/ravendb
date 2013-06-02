@@ -10,10 +10,14 @@ public class Attachment {
   private RavenJObject metadata;
   private UUID etag;
   private String key;
+  private boolean canGetData;
   /**
    * @return the data
    */
   public byte[] getData() {
+    if (!canGetData) {
+      throw new IllegalArgumentException("Cannot get attachment data because it was NOT loaded using GET method");
+    }
     return data;
   }
   /**
@@ -71,8 +75,9 @@ public class Attachment {
     this.key = key;
   }
 
-  public Attachment(byte[] data, int size, RavenJObject metadata, UUID etag, String key) {
+  public Attachment(boolean canGetData, byte[] data, int size, RavenJObject metadata, UUID etag, String key) {
     super();
+    this.canGetData = canGetData;
     this.data = data;
     this.size = size;
     this.metadata = metadata;

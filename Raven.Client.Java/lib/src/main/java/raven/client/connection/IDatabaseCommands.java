@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
 import raven.client.json.JsonDocument;
 import raven.client.json.PutResult;
@@ -48,6 +49,14 @@ public interface IDatabaseCommands {
    * Gets the results for the specified ids.
    * @param ids The ids.
    * @param includes The includes.
+   * @return
+   */
+  MultiLoadResult get(String[] ids, String[] includes);
+
+  /**
+   * Gets the results for the specified ids.
+   * @param ids The ids.
+   * @param includes The includes.
    * @param metadataOnly Load just the document metadata.
    * @return
    */
@@ -72,10 +81,25 @@ public interface IDatabaseCommands {
   /**
    * Returns list of database names
    * @param pageSize
+   * @return
+   */
+  List<String> getDatabaseNames(int pageSize);
+
+  /**
+   * Returns list of database names
+   * @param pageSize
    * @param start
    * @return
    */
   public List<String> getDatabaseNames(int pageSize, int start);
+
+  /**
+   * Get documents from server
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public List<JsonDocument> getDocuments(int start, int pageSize);
 
   /**
    * Get documents from server
@@ -118,7 +142,6 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    */
   public void putAttachment(String key, UUID etag, InputStream data, RavenJObject metadata);
-
   /**
    * Retrieves documents for the specified key prefix
    * @param keyPrefix
@@ -140,7 +163,6 @@ public interface IDatabaseCommands {
    * @return
    */
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly);
-
   /**
    *  Updates just the attachment with the specified key's metadata
    * @param key The key.
@@ -154,5 +176,12 @@ public interface IDatabaseCommands {
    * @return
    */
   public String urlFor(String documentKey);
+
+  /**
+   * Checks if the document exists for the specified key
+   * @param key The key.
+   * @return
+   */
+  public JsonDocumentMetadata head(String key);
 
 }
