@@ -7,16 +7,19 @@ namespace Raven.Tests.WinRT
 {
 	public class RavenTestBase
 	{
-		protected string Url
+		static RavenTestBase()
 		{
-			get
-			{
-				if (UseFiddler)
-					return "http://ipv4.fiddler:8079";
-				return "http://localhost:8079";
-			}
+			Url = "http://localhost:8079";
 		}
 
-		protected bool UseFiddler { get; set; }
+		public RavenTestBase(bool useFiddler = false)
+		{
+			Url = useFiddler
+				      ? "http://ipv4.fiddler:8079"
+				      : "http://localhost:8079";
+		}
+
+
+		protected static string Url { get; private set; }
 	}
 }
