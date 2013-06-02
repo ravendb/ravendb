@@ -406,7 +406,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source)
+		public static async Task<IList<T>> ToListAsync<T>(this IQueryable<T> source)
 		{
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
@@ -414,8 +414,8 @@ namespace Raven.Client
 
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item2);
+			var result = await documentQuery.ToListAsync();
+			return result.Item2;
 		}
 
 		/// <summary>

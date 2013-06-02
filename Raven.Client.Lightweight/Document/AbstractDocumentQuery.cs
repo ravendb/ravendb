@@ -862,22 +862,21 @@ namespace Raven.Client.Document
 		}
 #endif
 
-		private Task<Tuple<QueryOperation,IList<T>>> ProcessEnumerator(Task<QueryOperation> task)
+		private async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
 		{
-			var currentQueryOperation = task.Result;
 			try
 			{
 				var list = currentQueryOperation.Complete<T>();
-				return Task.Factory.StartNew(() => Tuple.Create(currentQueryOperation, list));
+				return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
 			}
 			catch (Exception e)
 			{
 				if (queryOperation.ShouldQueryAgain(e) == false)
 					throw;
-				return ExecuteActualQueryAsync()
-					.ContinueWith(t => ProcessEnumerator(t))
-					.Unwrap();
 			}
+
+			var result = await ExecuteActualQueryAsync();
+			return await ProcessEnumerator(result);
 		}
 
 		/// <summary>
@@ -2025,12 +2024,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public Task<Tuple<QueryResult,IList<T>>> ToListAsync()
+		public async Task<Tuple<QueryResult, IList<T>>> ToListAsync()
 		{
-			return InitAsync()
-				.ContinueWith(t => ProcessEnumerator(t))
-				.Unwrap()
-				.ContinueWith(t => Tuple.Create(t.Result.Item1.CurrentQueryResults, t.Result.Item2));
+			var currentQueryOperation = await InitAsync();
+			return await ProcessEnumerator(currentQueryOperation);
 		}
 
 		/// <summary>
