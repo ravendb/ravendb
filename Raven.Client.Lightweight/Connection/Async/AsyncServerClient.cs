@@ -125,13 +125,12 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				var result = await operationUrl.IndexNames(start, pageSize)
-				                               .NoCache()
-				                               .ToJsonRequest(this, credentials, convention)
-				                               .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-				                               .ReadResponseJsonAsync();
+				var json = (RavenJArray) await operationUrl.IndexNames(start, pageSize)
+				                                           .NoCache()
+				                                           .ToJsonRequest(this, credentials, convention)
+				                                           .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                                           .ReadResponseJsonAsync();
 
-				var json = (RavenJArray) result;
 				return json.Select(x => x.Value<string>()).ToArray();
 			});
 		}
@@ -149,8 +148,7 @@ namespace Raven.Client.Connection.Async
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				var result = await request.ReadResponseJsonAsync();
-				var json = ((RavenJArray) result);
+				var json = (RavenJArray) await request.ReadResponseJsonAsync();
 				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 				return json.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
 				           .ToArray();
@@ -168,9 +166,8 @@ namespace Raven.Client.Connection.Async
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				var result = await request.ReadResponseJsonAsync();
+				var json = (RavenJArray) await request.ReadResponseJsonAsync();
 
-				var json = (RavenJArray) result;
 				//NOTE: To review, I'm not confidence this is the correct way to deserialize the transformer definition
 				return json.Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
 				           .ToArray();
@@ -201,13 +198,12 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				var result = await operationUrl.IndexDefinition(name)
-				                               .NoCache()
-				                               .ToJsonRequest(this, credentials, convention)
-				                               .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-				                               .ReadResponseJsonAsync();
+				var json = (RavenJObject) await operationUrl.IndexDefinition(name)
+				                                            .NoCache()
+				                                            .ToJsonRequest(this, credentials, convention)
+				                                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                                            .ReadResponseJsonAsync();
 
-				var json = (RavenJObject) result;
 				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 				return convention.CreateSerializer().Deserialize<IndexDefinition>(new RavenJTokenReader(json["Index"]));
 			});
@@ -221,13 +217,12 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				var result = await operationUrl.Transformer(name)
-				                               .NoCache()
-				                               .ToJsonRequest(this, credentials, convention)
-				                               .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-				                               .ReadResponseJsonAsync();
+				var json = (RavenJObject) await operationUrl.Transformer(name)
+				                                            .NoCache()
+				                                            .ToJsonRequest(this, credentials, convention)
+				                                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+				                                            .ReadResponseJsonAsync();
 
-				var json = (RavenJObject) result;
 				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 				return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(json));
 			});
@@ -1108,12 +1103,11 @@ namespace Raven.Client.Connection.Async
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 				var data = jArray.ToString(Formatting.None);
 
-				await req.WriteAsync(data);
-				var result = await req.ReadResponseJsonAsync();
 				RavenJArray response;
 				try
 				{
-					response = (RavenJArray) result;
+					await req.WriteAsync(data);
+					response = (RavenJArray) await req.ReadResponseJsonAsync();
 				}
 				catch (AggregateException e)
 				{
