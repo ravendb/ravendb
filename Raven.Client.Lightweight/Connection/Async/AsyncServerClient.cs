@@ -474,9 +474,9 @@ namespace Raven.Client.Connection.Async
 				throw new InvalidOperationException("Unable to write to server", e);
 			}
 
-			var result = await request.ReadResponseJsonAsync();
 			try
 			{
+				var result = await request.ReadResponseJsonAsync();
 				return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(result));
 			}
 			catch (AggregateException e)
