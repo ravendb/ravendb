@@ -105,8 +105,8 @@
     <Compile Include="Connection\CreateHttpJsonRequestParams.cs" />
     <Compile Include="Connection\ObservableLineStream.cs" />
     <Compile Include="Connection\HttpExtensions.cs" />
-    <Compile Include="Connection\HttpJsonRequest.cs" />
-    <Compile Include="Connection\HttpJsonRequestFactory.cs" />
+    <Compile Include="Connection\Implementation\HttpJsonRequest.cs" />
+    <Compile Include="Connection\Implementation\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\IDatabaseCommands.cs" />
     <Compile Include="Connection\IRavenQueryInspector.cs" />
     <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
