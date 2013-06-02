@@ -16,23 +16,26 @@ namespace Raven.Client.WinRT.Connection
 		{
 			this.data = data;
 			this.disableRequestCompression = disableRequestCompression;
+
+			if (disableRequestCompression == false)
+			{
+				Headers.ContentEncoding.Add("gzip");
+			}
 		}
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-			var streamWriter = new StreamWriter(stream, Encoding.UTF8);
-			await streamWriter.WriteAsync(data);
-		}
+			if (disableRequestCompression == false)
+				stream = new GZipStream(stream, CompressionMode.Compress, true);
 
-		protected override async Task<Stream> CreateContentReadStreamAsync()
-		{
-			var stream = await base.CreateContentReadStreamAsync();
+			using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096, true))
+			{
+				await streamWriter.WriteAsync(data);
+				await streamWriter.FlushAsync();
+			}
 
-			if (disableRequestCompression)
-				return stream;
-
-			var gzipStream = new GZipStream(stream, CompressionMode.Compress);
-			return gzipStream;
+			if (disableRequestCompression == false)
+				stream.Dispose();
 		}
 
 		protected override bool TryComputeLength(out long length)

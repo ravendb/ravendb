@@ -77,6 +77,7 @@ namespace Raven.Client.WinRT.Connection
 		}
 
 		private HttpJsonRequestFactory factory;
+		private HttpResponseMessage writeResponse;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -120,12 +121,16 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		private async Task<string> ReadResponseStringAsync()
 		{
-			var requestMessage = new HttpRequestMessage(method, url);
-			var result = await httpClient.SendAsync(requestMessage)
-			                             .ConvertSecurityExceptionToServerNotFound()
-			                             .AddUrlIfFaulting(url);
+			HttpResponseMessage response = null;
+			if (writeResponse == null)
+			{
+				var requestMessage = new HttpRequestMessage(method, url);
+				response = await httpClient.SendAsync(requestMessage)
+											 .ConvertSecurityExceptionToServerNotFound()
+											 .AddUrlIfFaulting(url);
+			}
 
-			return await ReadStringInternal(() => result)
+			return await ReadStringInternal(() => response ?? writeResponse)
 				             .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
 				             .Unwrap();
 		}
@@ -150,13 +155,11 @@ namespace Raven.Client.WinRT.Connection
 			}
 
 			var authorizeResponse = HandleUnauthorizedResponseAsync(webResponse);
-
 			if (authorizeResponse == null)
 			{
 				task.AssertNotFailed();
 				return task;// never get called
 			}
-
 
 			return authorizeResponse
 				.ContinueWith(task1 =>
@@ -317,12 +320,12 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		public async Task WriteAsync(string data)
 		{
-			var response = await httpClient.SendAsync(new HttpRequestMessage(method, url)
+			writeResponse = await httpClient.SendAsync(new HttpRequestMessage(method, url)
 			{
 				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
 			});
 
-			response.EnsureSuccessStatusCode();
+			writeResponse.EnsureSuccessStatusCode();
 		}
 
 		/// <summary>
@@ -335,12 +338,12 @@ namespace Raven.Client.WinRT.Connection
 			using (var stream = new MemoryStream(byteArray))
 			using (var dataStream = new GZipStream(stream, CompressionMode.Compress))
 			{
-				var response = await httpClient.SendAsync(new HttpRequestMessage(method, url)
+				writeResponse = await httpClient.SendAsync(new HttpRequestMessage(method, url)
 				{
 					Content = new StreamContent(dataStream)
 				});
 
-				response.EnsureSuccessStatusCode();
+				writeResponse.EnsureSuccessStatusCode();
 			}
 		}
 
