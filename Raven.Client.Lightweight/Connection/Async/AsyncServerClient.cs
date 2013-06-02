@@ -381,6 +381,11 @@ namespace Raven.Client.Connection.Async
 			                                                                    .ExecuteRequestAsync());
 		}
 
+		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete)
+		{
+			return DeleteByIndexAsync(indexName, queryToDelete, false);
+		}
+
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			return ExecuteWithReplication("DELETE", async operationUrl =>
