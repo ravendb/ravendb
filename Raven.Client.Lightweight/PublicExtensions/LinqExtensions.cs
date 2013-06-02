@@ -421,7 +421,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Returns a first or default asynchronously. 
 		/// </summary>
-		public static Task<T> FirstOrDefaultAsync<T>(this IQueryable<T> source)
+		public static async Task<T> FirstOrDefaultAsync<T>(this IQueryable<T> source)
 		{
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
@@ -431,33 +431,33 @@ namespace Raven.Client
 				.ToAsyncLuceneQuery<T>(source.Expression)
 				.Take(1);
 			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item2.FirstOrDefault());
+			var result = await documentQuery.ToListAsync();
+			return result.Item2.FirstOrDefault();
 		}
 
 		/// <summary>
 		/// Returns whatever the query has any results asynchronously
 		/// </summary>
-		public static Task<bool> AnyAsync<T>(this IQueryable<T> source)
+		public static async Task<bool> AnyAsync<T>(this IQueryable<T> source)
 		{
-			return source.CountAsync().ContinueWith(x => x.Result > 0);
+			var result = await source.CountAsync();
+			return result > 0;
 		}
 
 		/// <summary>
 		/// Returns the total count of results for a query asynchronously. 
 		/// </summary>
-		public static Task<int> CountAsync<T>(this IQueryable<T> source)
+		public static async Task<int> CountAsync<T>(this IQueryable<T> source)
 		{
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with CountAsync");
 
-			var documentQuery = provider
-				.ToAsyncLuceneQuery<T>(source.Expression)
-				.Take(0);
+			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression)
+			                            .Take(0);
 			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item1.TotalResults);
+			var result = await documentQuery.ToListAsync();
+			return result.Item1.TotalResults;
 		}
 
 #if !NETFX_CORE

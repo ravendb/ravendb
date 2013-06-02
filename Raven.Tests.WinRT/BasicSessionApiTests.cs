@@ -47,6 +47,49 @@ namespace Raven.Tests.WinRT
 				}
 			}
 		}
+		
+		[TestMethod]
+		public async Task CanUseCount()
+		{
+			using (var store = new DocumentStore { Url = Url }.Initialize())
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					await session.StoreAsync(new User { Name = "Fitzchak" });
+					await session.StoreAsync(new User { Name = "Oren" });
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var usersCount = await session.Query<User>().CountAsync();
+					Assert.AreEqual(2, usersCount);
+				}
+			}
+		}
+
+		[TestMethod]
+		public async Task CanUseAny()
+		{
+			using (var store = new DocumentStore { Url = Url }.Initialize())
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					Assert.IsFalse(await session.Query<User>().AnyAsync());
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					await session.StoreAsync(new User { Name = "Fitzchak" });
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession())
+				{
+					Assert.IsTrue(await session.Query<User>().AnyAsync());
+				}
+			}
+		}
 
 		private class User
 		{
