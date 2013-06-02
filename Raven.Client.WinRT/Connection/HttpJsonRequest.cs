@@ -99,17 +99,15 @@ namespace Raven.Client.WinRT.Connection
 			if (method != "GET")
 				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") {CharSet = "utf-8"});
 
-			if (factory.DisableRequestCompression)
-				return;
-
+			if (factory.DisableRequestCompression == false)
 			if (method == "POST" || method == "PUT" || method == "PATCH" || method == "EVAL")
-				httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+				httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
 		}
 
-		public Task<RavenJToken> ReadResponseJsonAsync()
+		public async Task<RavenJToken> ReadResponseJsonAsync()
 		{
-			return ReadResponseStringAsync()
-				.ContinueWith(task => RavenJToken.Parse(task.Result));
+			var result = await ReadResponseStringAsync();
+			return RavenJToken.Parse(result);
 		}
 
 		public Task ExecuteRequestAsync()
@@ -339,7 +337,7 @@ namespace Raven.Client.WinRT.Connection
 			{
 				var response = await httpClient.SendAsync(new HttpRequestMessage(method, url)
 				{
-					Content = new StreamContent(dataStream);
+					Content = new StreamContent(dataStream)
 				});
 
 				response.EnsureSuccessStatusCode();
