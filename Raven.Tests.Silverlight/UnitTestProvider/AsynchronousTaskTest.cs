@@ -9,11 +9,6 @@ namespace Raven.Tests.Silverlight.UnitTestProvider
 {
 	public abstract class AsynchronousTaskTest : SilverlightTest
 	{
-		protected Task Delay(int milliseconds)
-		{
-			return Time.Delay(TimeSpan.FromMilliseconds(milliseconds));
-		}
-
 		internal void ExecuteTest(MethodInfo test)
 		{
 			var tasks = (IEnumerable<Task>)test.Invoke(this, new object[] { });

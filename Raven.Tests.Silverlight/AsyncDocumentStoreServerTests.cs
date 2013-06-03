@@ -141,7 +141,7 @@ namespace Raven.Tests.Silverlight
 					yield return (query);
 					if (query.Result.IsStale)
 					{
-						yield return Delay(100);
+						yield return TaskEx.Delay(100);
 						continue;
 					}
 					Assert.AreNotEqual(0, query.Result.TotalResults);
@@ -185,7 +185,7 @@ namespace Raven.Tests.Silverlight
 							            new string[0]);
 						yield return query;
 						if (query.Result.IsStale)
-							yield return Delay(100);
+							yield return TaskEx.Delay(100);
 					} while (query.Result.IsStale);
 					var ravenJToken = (RavenJArray) query.Result.Results[0]["Contacts"];
 					Assert.AreEqual(2, ravenJToken.Count());

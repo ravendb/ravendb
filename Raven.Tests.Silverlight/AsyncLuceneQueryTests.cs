@@ -123,7 +123,7 @@ namespace Raven.Tests.Silverlight
 
 					if (query.Result.IsStale)
 					{
-						yield return Delay(100);
+						yield return TaskEx.Delay(100);
 						continue;
 					}
 					yield break;

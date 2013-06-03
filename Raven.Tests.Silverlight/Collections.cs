@@ -48,7 +48,7 @@ namespace Raven.Tests.Silverlight
 					.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 25);
 				yield return task;
 				if (task.Result.Length == 0)
-					yield return Delay(100);
+					yield return TaskEx.Delay(100);
 			} while (task.Result.Length == 0); 
 
 			var collections = task.Result;
