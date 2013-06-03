@@ -142,7 +142,7 @@
     <Compile Include="Document\BulkInsertOperation.cs" />
     <Compile Include="Exceptions\ServerRequestError.cs" />
     <Compile Include="FieldHighlightings.cs" />
-    <Compile Include="Extensions\AsyncDocumentSessionExtesions.cs" />
+    <Compile Include="Extensions\AsyncDocumentSessionExtensions.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />

@@ -1,4 +1,4 @@
-﻿using System;
+﻿#if !NETFX_CORE
 using Raven.Abstractions.Data;
 
 namespace Raven.Client.Extensions
@@ -6,7 +6,7 @@ namespace Raven.Client.Extensions
 	/// <summary>
 	/// Extension methods that allow the usage of non-async Store methods directly on an Async Session
 	/// </summary>
-	public static class AsyncDocumentSessionExtesions
+	public static class AsyncDocumentSessionExtensions
 	{
 		/// <summary>
 		/// Stores the specified entity with the specified etag.
@@ -47,3 +47,4 @@ namespace Raven.Client.Extensions
 		}
 	}
 }
+#endif
