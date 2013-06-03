@@ -29,7 +29,7 @@ namespace Raven.Tests.WinRT
 				var observableWithTask = taskObservable.ForDocument("companies/1");
 				await observableWithTask.Task;
 
-				observableWithTask.Subscribe(tcs.SetResult);
+				/*observableWithTask.Subscribe(tcs.SetResult);*/
 
 				var entity1 = new Company { Name = "Async Company #1" };
 				using (var session_for_storing = store.OpenAsyncSession(dbname))

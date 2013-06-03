@@ -18,10 +18,10 @@ namespace Raven.Tests.WinRT
 		{
 			using (var store = NewDocumentStore())
 			{
-				using (var op = store.AsyncDatabaseCommands.GetBulkInsertOperation(new BulkInsertOptions(), store.Changes()))
+				/*using (var op = store.AsyncDatabaseCommands.GetBulkInsertOperation(new BulkInsertOptions(), store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
-				}
+				}*/
 
 				using (var session = store.OpenAsyncSession())
 				{
