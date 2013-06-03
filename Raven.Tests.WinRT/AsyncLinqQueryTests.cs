@@ -92,6 +92,35 @@ namespace Raven.Tests.WinRT
 		}
 
 		[TestMethod]
+		public async Task CanUseAny()
+		{
+			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanUseAny");
+			using (var store = NewDocumentStore())
+			{
+				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+
+				var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
+				using (var session = store.OpenAsyncSession(dbname))
+				{
+					await session.StoreAsync(entity);
+					await session.SaveChangesAsync();
+				}
+
+				using (var session = store.OpenAsyncSession(dbname))
+				{
+					RavenQueryStatistics stats;
+					var condition = await session.Query<Company>()
+											 .Customize(x => x.WaitForNonStaleResults())
+											 .Statistics(out stats)
+											 .Where(x => x.Name == "Async Company #1")
+											 .AnyAsync();
+
+					Assert.IsTrue(condition);
+				}
+			}
+		}
+
+		[TestMethod]
 		public async Task CanGetTotalCountFromStats()
 		{
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanGetTotalCountFromStats");

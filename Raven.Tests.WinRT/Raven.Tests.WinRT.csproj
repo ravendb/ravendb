@@ -120,7 +120,6 @@
     <Compile Include="..\raven.tests\document\Contact.cs">
       <Link>FromSilverlight\Entities\Contact.cs</Link>
     </Compile>
-    <Compile Include="BasicSessionApiTests.cs" />
     <Compile Include="AsyncDatabaseCommandsTests.cs" />
     <Compile Include="AsyncDocumentStoreServerTests.cs" />
     <Compile Include="AsyncLinqQueryTests.cs" />
