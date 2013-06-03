@@ -15,6 +15,9 @@ using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Linq;
 using Raven.Abstractions.Extensions;
+#if NETFX_CORE
+using Raven.Client.WinRT.MissingFromWinRT;
+#endif
 
 namespace Raven.Client
 {
@@ -289,6 +292,7 @@ namespace Raven.Client
 		{
 			return queryable.AsProjection<TResult>();
 		}
+#endif
 
 		/// <summary>
 		/// Project using a different type
@@ -301,7 +305,6 @@ namespace Raven.Client
 			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			return (IRavenQueryable<TResult>)results;
 		}
-#endif
 
 #if !SILVERLIGHT && !NETFX_CORE
 
