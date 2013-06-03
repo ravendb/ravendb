@@ -3,13 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using Raven.Abstractions;
 using Raven.Client;
 using Raven.Client.Document;
 
 namespace Raven.Tests.WinRT
 {
-	public class RavenTestBase
+	[TestClass]
+	public abstract class RavenTestBase
 	{
 		public string Url { get; private set; }
 

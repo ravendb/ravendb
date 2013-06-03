@@ -9,6 +9,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.WinRT
 {
+	[TestClass]
 	public class SerializationHelperTests : RavenTestBase
 	{
 		[TestMethod]

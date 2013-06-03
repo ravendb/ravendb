@@ -10,6 +10,7 @@ using Raven.Tests.WinRT.Entities;
 
 namespace Raven.Tests.WinRT
 {
+	[TestClass]
 	public class AsyncLinqQueryTests : RavenTestBase
 	{
 		[TestMethod]

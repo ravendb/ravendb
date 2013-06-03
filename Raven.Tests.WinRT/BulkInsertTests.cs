@@ -10,6 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.WinRT
 {
+	[TestClass]
 	public class BulkInsertTests : RavenTestBase
 	{
 		[Ignore] // Currently not working, because we can't do unknown length streamed uploads

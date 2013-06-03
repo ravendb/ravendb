@@ -13,6 +13,7 @@ namespace Raven.Tests.WinRT
 	/// <summary>
 	/// Not actually a test, just an easy way for me to insert some sample data
 	/// </summary>
+	[TestClass]
 	public class Generate : RavenTestBase
 	{
 		[Ignore]

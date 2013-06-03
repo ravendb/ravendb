@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.WinRT
 {
+	[TestClass]
 	public class Indexes : RavenTestBase
 	{
 		[TestMethod]

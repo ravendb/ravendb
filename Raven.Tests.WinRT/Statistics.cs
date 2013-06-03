@@ -6,6 +6,7 @@ using Raven.Tests.Document;
 
 namespace Raven.Tests.WinRT
 {
+	[TestClass]
 	public class Statistics : RavenTestBase
 	{
 		[TestMethod]
