@@ -26,19 +26,14 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			
 			var tcs = new TaskCompletionSource<DocumentChangeNotification>();
-			using (var documentStore = new DocumentStore
-			{
-				Url = Url + Port,
-			}.Initialize())
+			using (var documentStore = NewDocumentStore())
 			{
 				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 				var taskObservable = documentStore.Changes(dbname);
-
 				yield return taskObservable.Task;
 
 				var observableWithTask = taskObservable.ForDocument("companies/1");
-
 				yield return observableWithTask.Task;
 
 				observableWithTask
