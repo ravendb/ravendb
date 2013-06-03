@@ -114,7 +114,30 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\raven.tests\document\Company.cs">
+      <Link>FromSilverlight\Entities\Company.cs</Link>
+    </Compile>
+    <Compile Include="..\raven.tests\document\Contact.cs">
+      <Link>FromSilverlight\Entities\Contact.cs</Link>
+    </Compile>
     <Compile Include="BasicSessionApiTests.cs" />
+    <Compile Include="AsyncDatabaseCommandsTests.cs" />
+    <Compile Include="AsyncDocumentStoreServerTests.cs" />
+    <Compile Include="AsyncLinqQueryTests.cs" />
+    <Compile Include="AsyncLuceneQueryTests.cs" />
+    <Compile Include="Attachments.cs" />
+    <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="Collections.cs" />
+    <Compile Include="Entities\Customer.cs" />
+    <Compile Include="Entities\DenormalizedReference.cs" />
+    <Compile Include="Entities\Order.cs" />
+    <Compile Include="Entities\OrderLine.cs" />
+    <Compile Include="Entities\TheCompanyName.cs" />
+    <Compile Include="Generate.cs" />
+    <Compile Include="Indexes.cs" />
+    <Compile Include="Notifications.cs" />
+    <Compile Include="SerializationHelperTests.cs" />
+    <Compile Include="Statistics.cs" />
     <Compile Include="RavenTestBase.cs" />
     <Compile Include="HttpClientCouldReachLocalhost.cs" />
   </ItemGroup>

@@ -92,9 +92,9 @@ namespace Raven.Tests.WinRT
 
 			}
 
-			private static async Task CreateData()
+			private static async Task CreateData(string url)
 			{
-				using (var store = new DocumentStore { Url = RavenTestBase.Url }.Initialize())
+				using (var store = new DocumentStore { Url = url }.Initialize())
 				{
 					using (var session = store.OpenAsyncSession())
 					{
@@ -105,9 +105,9 @@ namespace Raven.Tests.WinRT
 				}
 			}
 
-			private static async Task CleanupData()
+			private static async Task CleanupData(string url)
 			{
-				using (var store = new DocumentStore { Url = RavenTestBase.Url }.Initialize())
+				using (var store = new DocumentStore { Url = url }.Initialize())
 				{
 					await store.AsyncDatabaseCommands.DeleteByIndexAsync("Raven/DocumentsByEntityName", new IndexQuery
 					{

@@ -3,14 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions;
+using Raven.Client;
+using Raven.Client.Document;
+
 namespace Raven.Tests.WinRT
 {
 	public class RavenTestBase
 	{
-		static RavenTestBase()
-		{
-			Url = "http://localhost:8079";
-		}
+		public string Url { get; private set; }
 
 		public RavenTestBase(bool useFiddler = false)
 		{
@@ -19,7 +20,14 @@ namespace Raven.Tests.WinRT
 				      : "http://localhost:8079";
 		}
 
+		protected static string GenerateNewDatabaseName(string name)
+		{
+			return name + "-" + SystemTime.UtcNow.Ticks;
+		}
 
-		public static string Url { get; private set; }
+		protected IDocumentStore NewDocumentStore()
+		{
+			return new DocumentStore { Url = Url }.Initialize();
+		}
 	}
 }
