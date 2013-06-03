@@ -10,34 +10,8 @@ namespace Raven.Tests.WinRT
 	[TestClass]
 	public class BasicSessionApiTests : RavenTestBase
 	{
-		[AssemblyInitialize]
-		public static async Task SetUpData(TestContext context)
-		{
-			using (var store = new DocumentStore { Url = Url }.Initialize())
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					await session.StoreAsync(new User { Name = "Fitzchak" });
-					await session.StoreAsync(new User { Name = "Oren" });
-					await session.SaveChangesAsync();
-				}
-			}
-		}
-
-		[AssemblyCleanup]
-		public static async Task CleanupData()
-		{
-			using (var store = new DocumentStore { Url = Url }.Initialize())
-			{
-				await store.AsyncDatabaseCommands.DeleteByIndexAsync("Raven/DocumentsByEntityName", new IndexQuery
-				{
-					Query = "Tag:Users"
-				});
-			}
-		}
-
 		[TestMethod]
-		public async Task CanSaveAndLoad()
+		public async Task CanLoad()
 		{
 			using (var store = new DocumentStore {Url = Url}.Initialize())
 			{
@@ -101,6 +75,46 @@ namespace Raven.Tests.WinRT
 			public string Id { get; set; }
 			public string Name { get; set; }
 			public bool IsActive { get; set; }
+		}
+
+		public static class SetUpData
+		{
+			[ClassInitialize]
+			public static async Task AssemblyDataInitialize(TestContext context)
+			{
+				await CleanupData();
+				await CreateData();
+			}
+
+			[ClassCleanup]
+			public static async Task AssemblyDataCleanup()
+			{
+
+			}
+
+			private static async Task CreateData()
+			{
+				using (var store = new DocumentStore { Url = RavenTestBase.Url }.Initialize())
+				{
+					using (var session = store.OpenAsyncSession())
+					{
+						await session.StoreAsync(new User { Id = "users/1", Name = "Fitzchak" });
+						await session.StoreAsync(new User { Name = "Oren" });
+						await session.SaveChangesAsync();
+					}
+				}
+			}
+
+			private static async Task CleanupData()
+			{
+				using (var store = new DocumentStore { Url = RavenTestBase.Url }.Initialize())
+				{
+					await store.AsyncDatabaseCommands.DeleteByIndexAsync("Raven/DocumentsByEntityName", new IndexQuery
+					{
+						Query = "Tag:Users"
+					});
+				}
+			}
 		}
 	}
 }

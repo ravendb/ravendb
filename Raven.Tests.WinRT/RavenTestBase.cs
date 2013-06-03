@@ -20,6 +20,6 @@ namespace Raven.Tests.WinRT
 		}
 
 
-		protected static string Url { get; private set; }
+		public static string Url { get; private set; }
 	}
 }
