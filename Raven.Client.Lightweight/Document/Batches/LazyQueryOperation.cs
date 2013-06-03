@@ -63,7 +63,7 @@ namespace Raven.Client.Document.Batches
 			}
 
 			var list = responses
-				.Select(response => SerializationHelper.ToQueryResult((RavenJObject) response.Result, response.GetEtagHeader()))
+				.Select(response => SerializationHelper.ToQueryResult((RavenJObject)response.Result, response.GetEtagHeader(), response.Headers["Temp-Request-Time"]))
 				.ToList();
 
 			var queryResult = shardStrategy.MergeQueryResults(queryOperation.IndexQuery, list);
@@ -82,7 +82,7 @@ namespace Raven.Client.Document.Batches
 			if (response.Status == 404)
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
 			var json = (RavenJObject)response.Result;
-			var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader());
+			var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader(), response.Headers["Temp-Request-Time"]);
 			HandleResponse(queryResult);
 		}
 

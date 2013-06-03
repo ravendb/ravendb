@@ -1234,7 +1234,7 @@ namespace Raven.Client.Connection
 				}
 				throw;
 			}
-			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader());
+			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader(), request.ResponseHeaders["Temp-Request-Time"]);
 			var docResults = directQuery.Results.Concat(directQuery.Includes);
 			return RetryOperationBecauseOfConflict(docResults, directQuery,
 				() => DirectQuery(index, query, operationUrl, includes, metadataOnly, includeEntries));
@@ -1468,6 +1468,30 @@ namespace Raven.Client.Connection
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+
+			httpJsonRequest.ReadResponseJson();
+		}
+
+		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public void PrepareTransaction(string txId)
+		{
+			ExecuteWithReplication<object>("POST", u =>
+			{
+				DirectPrepareTransaction(txId, u);
+				return null;
+			});
+		}
+
+		private void DirectPrepareTransaction(string txId, string operationUrl)
+		{
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1943,10 +1967,52 @@ namespace Raven.Client.Connection
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
+		{
+			var batchResults = Batch(new[]
+			{
+				new PatchCommandData
+				{
+					Key = key,
+					Patches = patches
+				}
+			});
+			if (!ignoreMissing && batchResults[0].PatchResult != null && batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
+				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
 			return Patch(key, patch, null);
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
+		{
+			var batchResults = Batch(new[]
+				  {
+					  new ScriptedPatchCommandData
+					  {
+						  Key = key,
+						  Patch = patch
+					  }
+				  });
+			if (!ignoreMissing && batchResults[0].PatchResult != null && batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
+				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>
@@ -1970,6 +2036,28 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
+		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
+		{
+			var batchResults = Batch(new[]
+					{
+						new PatchCommandData
+							{
+								Key = key,
+								Patches = patchesToExisting,
+								PatchesIfMissing = patchesToDefault,
+								Metadata = defaultMetadata
+							}
+					});
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
@@ -1984,6 +2072,28 @@ namespace Raven.Client.Connection
 					Key = key,
 					Patch = patch,
 					Etag = etag
+				}
+			});
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
+		/// <param name="patchDefault">The patch request to use (using JavaScript)  to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
+		{
+			var batchResults = Batch(new[]
+			{
+				new ScriptedPatchCommandData
+				{
+					Key = key,
+					Patch = patchExisting,
+					PatchIfMissing = patchDefault,
+					Metadata = defaultMetadata
 				}
 			});
 			return batchResults[0].AdditionalData;

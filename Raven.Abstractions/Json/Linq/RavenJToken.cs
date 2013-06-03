@@ -313,6 +313,12 @@ namespace Raven.Json.Linq
 								RavenJToken token;
 								if (otherObj.TryGetValue(kvp.Key, out token) == false)
 									return false;
+								if (kvp.Value == null)
+								{
+									if (token != null && token.Type != JTokenType.Null)
+										return false;
+									continue;
+								}
 								switch (kvp.Value.Type)
 								{
 									case JTokenType.Array:

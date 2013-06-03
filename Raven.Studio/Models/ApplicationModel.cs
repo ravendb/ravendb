@@ -13,6 +13,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using System.Linq;
@@ -50,7 +51,7 @@ namespace Raven.Studio.Models
 
 			RegisterToAlerts();
 			State = new ApplicationState();
-			
+		    DocumentPad = new DocumentPadModel();	
 		}
 
 		private void RegisterToAlerts()
@@ -59,6 +60,11 @@ namespace Raven.Studio.Models
 			      .ForDocument(Constants.RavenAlerts)
 			      .Subscribe(notification => UpdateAlerts());
 			UpdateAlerts();
+		}
+
+		public Settings Settings
+		{
+			get { return Settings.Instance; }
 		}
 
 		private void UpdateAlerts()
@@ -112,6 +118,15 @@ namespace Raven.Studio.Models
 		{
 			rootVisual.DataContext = this;
 		}
+
+        public DocumentPadModel DocumentPad { get; private set; }
+
+        public void ShowDocumentInDocumentPad(string documentId)
+        {
+            DocumentPad.IsOpen = true;
+            DocumentPad.DocumentId = documentId;
+            DocumentPad.LoadDocument.Execute(null);
+        }
 
 		public void AddNotification(Notification notification)
 		{
@@ -246,6 +261,11 @@ namespace Raven.Studio.Models
 				return firstOrDefault.Version;
 
 			return "0.0.unknown.0";
+		}
+
+		public void Refresh()
+		{
+			OnPropertyChanged(() => Settings);
 		}
 	}
 }

@@ -43,11 +43,18 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 
 		public string this[string key]
 		{
-			get { return inner[key].FirstOrDefault(); }
+			get
+			{
+				List<string> list;
+				if (inner.TryGetValue(key, out list))
+					return list.FirstOrDefault();
+				return null;
+			}
 			set
-			{ 
-				if(inner.ContainsKey(key))
-					inner[key].Add(value);
+			{
+				List<string> list;
+				if (inner.TryGetValue(key, out list))
+					list.Add(value);
 				else
 					inner.Add(key, new List<string>{value});
 			}

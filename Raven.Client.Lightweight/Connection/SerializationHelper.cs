@@ -121,7 +121,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Translate a result for a query
 		/// </summary>
-		public static QueryResult ToQueryResult(RavenJObject json, Etag etag)
+		public static QueryResult ToQueryResult(RavenJObject json, Etag etag, string tempRequestTime)
 		{
 			var result = new QueryResult
 			{
@@ -140,6 +140,17 @@ namespace Raven.Client.Connection
 			if (json.ContainsKey("NonAuthoritativeInformation"))
 				result.NonAuthoritativeInformation = Convert.ToBoolean(json["NonAuthoritativeInformation"].ToString());
 
+			if (json.ContainsKey("DurationMilliseconds"))
+				result.DurationMilliseconds = json.Value<long>("DurationMilliseconds");
+
+			if (string.IsNullOrEmpty(tempRequestTime) == false)
+			{
+				long l;
+				if (long.TryParse(tempRequestTime, out l))
+				{
+					result.DurationMilliseconds = l;
+				}
+			}
 			return result;
 		}
 

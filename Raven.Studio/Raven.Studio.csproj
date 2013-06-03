@@ -242,6 +242,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\AddKeyBindingBehaviour.cs" />
     <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
@@ -254,6 +255,7 @@
     <Compile Include="Behaviors\DataGridColumnGenerator.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\MouseHoverTrigger.cs" />
+    <Compile Include="Behaviors\ResizablePopupFrameBehavior.cs" />
     <Compile Include="Behaviors\ResizeDragBehavior.cs" />
     <Compile Include="Behaviors\ShowQuickDocumentPopupBehavior.cs" />
     <Compile Include="Behaviors\SizeBindings.cs" />
@@ -317,6 +319,13 @@
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Documents\DocumentDetailsColumnGenerator.cs" />
+    <Compile Include="Features\Documents\DocumentPadLayer.xaml.cs">
+      <DependentUpon>DocumentPadLayer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\DocumentPadModel.cs" />
+    <Compile Include="Features\Documents\DocumentPadView.xaml.cs">
+      <DependentUpon>DocumentPadView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
@@ -381,6 +390,7 @@
     </Compile>
     <Compile Include="Impl\RavenIntelliPromptProvider.cs" />
     <Compile Include="Infrastructure\AsyncCommand.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToIndexConverter.cs" />
     <Compile Include="Infrastructure\Converters\BreakToLinesConverter.cs" />
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
@@ -1064,6 +1074,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\DocumentPadLayer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentPadView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Reporting\ReportingView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1540,6 +1558,7 @@
     <Resource Include="Assets\Images\lock_open.png" />
     <Resource Include="Assets\Images\lock_preferences.png" />
     <Resource Include="Assets\Images\execute_tiny.png" />
+    <Resource Include="Assets\Images\to_documentpad_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

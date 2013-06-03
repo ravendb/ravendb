@@ -38,6 +38,7 @@ namespace Raven.Studio.Features.JsonEditor
         private ICommand _showDocumentCommand;
 
         private bool _documentLoaded;
+        private ICommand _openInDocumentPadCommand;
 
         public QuickDocumentView()
         {
@@ -54,6 +55,17 @@ namespace Raven.Studio.Features.JsonEditor
         public ICommand ShowDocument
         {
             get { return _showDocumentCommand ?? (_showDocumentCommand = new ActionCommand(HandleShowDocument)); }
+        }
+
+        public ICommand OpenInDocumentPad
+        {
+            get { return _openInDocumentPadCommand ?? (_openInDocumentPadCommand = new ActionCommand(HandleOpenInDocumentPad)); }
+        }
+
+        private void HandleOpenInDocumentPad()
+        {
+            ApplicationModel.Current.ShowDocumentInDocumentPad(DocumentId);
+            Editor.IntelliPrompt.CloseAllSessions();
         }
 
         private async void HandleShowDocument()

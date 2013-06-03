@@ -65,6 +65,7 @@ namespace Raven.Database.Server.Responders
 
 		public static IEnumerable<string> GetPaths(string fileName, string webDir)
 		{
+		    yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"sl5", fileName);
 			// dev path
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Raven.Studio\bin\debug", fileName);
 			// dev path

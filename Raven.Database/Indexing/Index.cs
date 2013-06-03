@@ -466,7 +466,7 @@ namespace Raven.Database.Indexing
 				return;
 
 			var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
-			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;		
+			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
 
 			if (forceWriteToDisk || toobig || !stale)
 			{
@@ -477,7 +477,7 @@ namespace Raven.Database.Indexing
 
 				indexWriter.Dispose(true);
 				dir.Dispose();
-				
+
 				CreateIndexWriter();
 			}
 		}
@@ -548,8 +548,8 @@ namespace Raven.Database.Indexing
 				{
 					context.AddError(name,
 									TryGetDocKey(o),
-									exception.Message, 
-                                    "Map"
+									exception.Message,
+									"Map"
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
@@ -575,7 +575,7 @@ namespace Raven.Database.Indexing
 					context.AddError(name,
 									TryGetDocKey(o),
 									exception.Message,
-                                    "Reduce"
+									"Reduce"
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
@@ -601,7 +601,7 @@ namespace Raven.Database.Indexing
 					context.AddError(name,
 									TryGetDocKey(o),
 									exception.Message,
-                                    "Reduce"
+									"Reduce"
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
@@ -892,7 +892,7 @@ namespace Raven.Database.Indexing
 							do
 							{
 								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
-								moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, ref start);
+								moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, pageSize, ref start);
 								pageSize += moreRequired * 2;
 							} while (moreRequired > 0);
 							indexQuery.TotalSize.Value = search.TotalHits;
@@ -1249,11 +1249,10 @@ namespace Raven.Database.Indexing
 			private readonly bool isProjectionOrMapReduce;
 			private readonly Searchable indexSearcher;
 			private readonly Index parent;
-			private int alreadyScannedPositions;
+			private int alreadyScannedPositions, alreadyScannedPositionsForDistinct;
 			private readonly HashSet<string> documentsAlreadySeenInPreviousPage;
 			private readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
-			private int itemsSkipped;
 
 			public DuplicateDocumentRecorder(Searchable indexSearcher,
 				Index parent,
@@ -1271,10 +1270,13 @@ namespace Raven.Database.Indexing
 			}
 
 
-			public int RecordResultsAlreadySeenForDistinctQuery(TopDocs search, bool adjustStart, ref int start)
+			public int RecordResultsAlreadySeenForDistinctQuery(TopDocs search, bool adjustStart, int pageSize, ref int start)
 			{
+				int itemsSkipped = 0;
 				if (min == -1)
+				{
 					min = start;
+				}
 				min = Math.Min(min, search.TotalHits);
 
 				// we are paging, we need to check that we don't have duplicates in the previous pages
@@ -1301,22 +1303,33 @@ namespace Raven.Database.Indexing
 					}
 					alreadyScannedPositions = min;
 				}
+
+
+				if (fieldsToFetch.IsDistinctQuery)
+				{
+					// add results that were already there in previous pages
+					for (int i = alreadyScannedPositionsForDistinct; i < min; i++)
+					{
+						if (i >= search.ScoreDocs.Length)
+						{
+							alreadyScannedPositionsForDistinct = i;
+							var pageSizeIncreaseSize = min - search.ScoreDocs.Length;
+							return pageSizeIncreaseSize;
+						}
+
+						Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
+						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
+						if (alreadyReturned.Add(indexQueryResult.Projection) == false)
+						{
+							min++; // we found a duplicate
+							itemsSkipped++;
+						}
+					}
+					alreadyScannedPositionsForDistinct = min;
+				}
 				if (adjustStart)
-				{
 					start += itemsSkipped;
-				}
-
-				if (fieldsToFetch.IsDistinctQuery == false)
-					return 0;
-
-				// add results that were already there in previous pages
-				for (int i = 0; i < min; i++)
-				{
-					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
-					alreadyReturned.Add(indexQueryResult.Projection);
-				}
-				return 0;
+				return itemsSkipped;
 			}
 		}
 
@@ -1361,7 +1374,7 @@ namespace Raven.Database.Indexing
 						{
 							// however, we copy the current segments.gen & index.version to make 
 							// sure that we get the _at the time_ of the write. 
-							foreach (var fileName in new[] {"segments.gen", "index.version"})
+							foreach (var fileName in new[] { "segments.gen", "index.version" })
 							{
 								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
 								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
@@ -1405,7 +1418,7 @@ namespace Raven.Database.Indexing
 									"Could not backup index " + name +
 									" because failed to copy file : " + fullPath + ". Skipping the index, will force index reset on restore", e);
 								neededFilesWriter.Dispose();
-								TryDelete(neededFilePath); 
+								TryDelete(neededFilePath);
 								return;
 
 							}
@@ -1430,7 +1443,7 @@ namespace Raven.Database.Indexing
 					{
 						snapshotter.Release();
 					}
-					catch 
+					catch
 					{
 						if (throwOnFinallyException)
 							throw;

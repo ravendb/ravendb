@@ -18,11 +18,8 @@ namespace Raven.Studio.Impl
 		public IEnumerable<Ordering> Orderings { get; private set; }
 		protected Observable<RavenJObject> DocumentToSample;
 		protected IList<JsonDocument> RecentDocuments;
+		protected bool ShowDocumentProperties = true;
 
-		protected RavenIntelliPromptProvider()
-		{
-			
-		}
 		protected RavenIntelliPromptProvider(Observable<RavenJObject> documentToSample)
 		{
 			DocumentToSample = documentToSample;
@@ -44,7 +41,7 @@ namespace Raven.Studio.Impl
 
 			var completionContext = GetCompletionContext(view);
 
-			if (completionContext.IsDocumentProperty)
+			if (completionContext.IsDocumentProperty && ShowDocumentProperties)
 			{
 				var properties = GetProperties(completionContext.CompletedPropertyPath);
 				foreach (var property in properties)

@@ -32,6 +32,7 @@ namespace Raven.Tests.Bugs.DTC
   ""Last-Modified"": ""Mon, 21 Mar 2011 19:59:58 GMT"",
   ""Non-Authoritative-Information"": false
 }"), transactionInformation);
+				store.DatabaseCommands.PrepareTransaction(transactionInformation.Id);
 				store.DatabaseCommands.Commit(transactionInformation.Id);
 
 
@@ -41,6 +42,7 @@ namespace Raven.Tests.Bugs.DTC
 				};
 				store.DocumentDatabase.Delete(documentKey, null, deleteTx);
 
+				store.DatabaseCommands.PrepareTransaction(deleteTx.Id);
 				store.DocumentDatabase.Commit(deleteTx.Id);
 			}
 		}

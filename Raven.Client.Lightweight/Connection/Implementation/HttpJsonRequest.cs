@@ -504,6 +504,10 @@ namespace Raven.Client.Connection
 						ProblematicText = ravenJObject.Value<string>("ProblematicText")
 					};
 				}
+                if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
+			    {
+                    throw new BadRequestException(ravenJObject.Value<string>("Message"), e);
+			    }
 				if (ravenJObject.ContainsKey("Error"))
 				{
 					var sb = new StringBuilder();

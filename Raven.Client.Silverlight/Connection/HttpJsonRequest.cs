@@ -145,6 +145,7 @@ namespace Raven.Client.Silverlight.Connection
 			return WaitForTask.ContinueWith(_ => webRequest
 				                                     .GetResponseAsync()
 				                                     .ConvertSecurityExceptionToServerNotFound()
+                                                    .MaterializeBadRequestAsException()
 				                                     .AddUrlIfFaulting(webRequest.RequestUri)
 				                                     .ContinueWith(t => ReadStringInternal(() => t.Result))
 				                                     .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))

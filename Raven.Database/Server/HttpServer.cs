@@ -773,7 +773,7 @@ namespace Raven.Database.Server
 						sp.Stop();
 						if (ctx.Response.BufferOutput)
 						{
-							ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0 ms", CultureInfo.InvariantCulture));
+							ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture));
 						}
 						return requestResponder.IsUserInterfaceRequest;
 					}
@@ -1071,7 +1071,7 @@ namespace Raven.Database.Server
 			{
 				var bundlesList = bundles.Split(';').ToList();
 
-				foreach (var bundle in bundlesList)
+				foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
 				{
 					string value;
 					if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))

@@ -50,6 +50,7 @@ namespace Raven.Client.Document
 		{
 			try
 			{
+
 				onTxComplete();
 				ctx.CreateFile(TransactionRecoveryInformationFileName, stream =>
 				{
@@ -59,6 +60,8 @@ namespace Raven.Client.Document
 					writer.Write(session.DatabaseName ?? "");
 					writer.Write(preparingEnlistment.RecoveryInformation());
 				});
+
+				session.PrepareTransaction(transaction.LocalIdentifier); 
 			}
 			catch (Exception e)
 			{

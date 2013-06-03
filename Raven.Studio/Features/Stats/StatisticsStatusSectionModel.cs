@@ -202,6 +202,8 @@ namespace Raven.Studio.Features.Stats
 				return ((long)value).ToString("#,#");
 			if (value is float)
 				return ((float)value).ToString("#,#");
+			if (value is DateTime)
+				return ((DateTime) value).ToLocalTime().ToString();
 
 			return value.ToString();
 		}

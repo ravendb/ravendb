@@ -21,11 +21,13 @@ using Raven.Database;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Esent.Debug;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 using Raven.Storage.Esent.Backup;
 using Raven.Storage.Esent.SchemaUpdates;
 using Raven.Storage.Esent.StorageActions;
@@ -37,6 +39,7 @@ namespace Raven.Storage.Esent
         private static int instanceCounter;
         private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
 		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
+		private readonly ThreadLocal<EsentTransactionContext> dtcTransactionContext = new ThreadLocal<EsentTransactionContext>();
         private readonly string database;
         private readonly InMemoryRavenConfiguration configuration;
         private readonly Action onCommit;
@@ -48,6 +51,7 @@ namespace Raven.Storage.Esent
         private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
         private IUuidGenerator generator;
         private readonly IDocumentCacher documentCacher;
+	    private EsentInFlightTransactionalState inFlightTransactionalState;
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -123,6 +127,10 @@ namespace Raven.Storage.Esent
                 exceptionAggregator.Execute(current.Dispose);
                 if (documentCacher != null)
                     exceptionAggregator.Execute(documentCacher.Dispose);
+
+				if(inFlightTransactionalState != null)
+					exceptionAggregator.Execute(inFlightTransactionalState.Dispose);
+
                 exceptionAggregator.Execute(() =>
                     {
                         Api.JetTerm2(instance, TermGrbit.Complete);
@@ -160,7 +168,7 @@ namespace Raven.Storage.Esent
         {
             long sizeInBytes;
 
-            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
+            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, null, this))
             {
                 int sizeInPages, pageSize;
                 Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out sizeInPages, JET_DbInfo.Filesize);
@@ -341,7 +349,16 @@ namespace Raven.Storage.Esent
             });
         }
 
-        public void ClearCaches()
+	    public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+	    {
+			var txMode = configuration.TransactionMode == TransactionMode.Lazy
+			   ? CommitTransactionGrbit.LazyFlush
+			   : CommitTransactionGrbit.None;
+
+		    return inFlightTransactionalState ?? (inFlightTransactionalState = new EsentInFlightTransactionalState(this, txMode, put, delete));
+	    }
+
+	    public void ClearCaches()
         {
             var cacheSizeMax = SystemParameters.CacheSizeMax;
             SystemParameters.CacheSize = 1; // force emptying of the cache
@@ -560,6 +577,16 @@ namespace Raven.Storage.Esent
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
+		public IDisposable SetTransactionContext(EsentTransactionContext context)
+		{
+			dtcTransactionContext.Value = context;
+
+			return new DisposableAction(() =>
+			{
+				dtcTransactionContext.Value = null;
+			});
+		}
+
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         [CLSCompliant(false)]
         public void Batch(Action<IStorageActionsAccessor> action)
@@ -579,7 +606,13 @@ namespace Raven.Storage.Esent
             disposerLock.EnterReadLock();
             try
             {
-                afterStorageCommit = ExecuteBatch(action);
+                afterStorageCommit = ExecuteBatch(action, dtcTransactionContext.Value);
+
+				if (dtcTransactionContext.Value != null)
+				{
+					dtcTransactionContext.Value.AfterCommit((Action)afterStorageCommit.Clone());
+					afterStorageCommit = null; // delay until transaction will be committed
+				}
             }
             catch (EsentErrorException e)
             {
@@ -611,12 +644,12 @@ namespace Raven.Storage.Esent
         }
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-        private Action ExecuteBatch(Action<IStorageActionsAccessor> action)
+        private Action ExecuteBatch(Action<IStorageActionsAccessor> action, EsentTransactionContext transactionContext)
         {
             var txMode = configuration.TransactionMode == TransactionMode.Lazy
                 ? CommitTransactionGrbit.LazyFlush
                 : CommitTransactionGrbit.None;
-            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
+            using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
             {
                 var storageActionsAccessor = new StorageActionsAccessor(pht);
 				if(disableBatchNesting.Value == null)

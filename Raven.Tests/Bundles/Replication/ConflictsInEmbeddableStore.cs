@@ -136,7 +136,7 @@ namespace Raven.Tests.Bundles.Replication
 				store1.DatabaseCommands.Put("marker", null, new RavenJObject(), new RavenJObject());
 
 				TellFirstInstanceToReplicateToSecondInstance();
-
+					
 				WaitForReplication(store2, "marker");
 
 				var conflictException = Assert.Throws<ConflictException>(() =>

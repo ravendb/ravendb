@@ -59,6 +59,9 @@ namespace Raven.Database.Bundles.SqlReplication
 				if (notification.Id == null)
 					return;
 
+				if (metadata == null)
+					return; // this is a delete being made on an already deleted document
+
 				if (notification.Type == DocumentChangeTypes.Delete)
 				{
 					RecordDelete(notification.Id, metadata);

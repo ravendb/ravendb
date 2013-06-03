@@ -667,6 +667,7 @@
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\Apo\Lazy.cs" />
+    <Compile Include="MailingList\AsyncSpatial.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BulkInsertTest.cs" />
     <Compile Include="MailingList\BulkInsertWithChanges.cs" />
@@ -680,6 +681,7 @@
     <Compile Include="MailingList\ConcurrencyTests.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DistinctWithPaging.cs" />
     <Compile Include="MailingList\DynamicObjectTests.cs" />
     <Compile Include="MailingList\FacetCountTest.cs" />
     <Compile Include="MailingList\FacetHits.cs" />
@@ -711,6 +713,7 @@
     <Compile Include="MailingList\ItemsBySetIdIndexTests.cs" />
     <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\jbartruf.cs" />
+    <Compile Include="MailingList\JsonComarision.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
     <Compile Include="MailingList\Lindblom.cs" />
@@ -734,6 +737,7 @@
     <Compile Include="MailingList\Maxime2.cs" />
     <Compile Include="MailingList\NullableSorting.cs" />
     <Compile Include="MailingList\Oguzhntopcu.cs" />
+    <Compile Include="MailingList\PatchingWithNaNAndIsFinite.cs" />
     <Compile Include="MailingList\Pfeffer.cs" />
     <Compile Include="MailingList\ProjectionShouldNotLoadDocument.cs" />
     <Compile Include="MailingList\QueryIn.cs" />

@@ -23,6 +23,9 @@ namespace Raven.Studio.Behaviors
             Up,
             Down,
             LeftUp,
+            RightUp,
+            LeftDown,
+            RightDown,
         }
 
         /// <summary>
@@ -112,6 +115,9 @@ namespace Raven.Studio.Behaviors
                     DragElement.Cursor = Cursors.SizeNS;
                     break;
                 case ResizeDirections.LeftUp:
+                case ResizeDirections.LeftDown:
+                case ResizeDirections.RightDown:
+                case ResizeDirections.RightUp:
                     DragElement.Cursor = Cursors.SizeNWSE;
                     break;
                 default:
@@ -295,13 +301,31 @@ namespace Raven.Studio.Behaviors
                     if (ResizeElement.Height + deltaY > 0)
                         ResizeElement.Height += deltaY;
                     break;
+                case ResizeDirections.Down:
+                    if (ResizeElement.Height - deltaY > 0)
+                        ResizeElement.Height -= deltaY;
+                    break;
                 case ResizeDirections.LeftUp:
                     if (ResizeElement.Height + deltaY > 0)
                         ResizeElement.Height += deltaY;
                     if (ResizeElement.Width + deltaX > 0)
                         ResizeElement.Width += deltaX;
                     break;
-                case ResizeDirections.Down:
+                case ResizeDirections.RightUp:
+                    if (ResizeElement.Width - deltaX > 0)
+                        ResizeElement.Width -= deltaX;
+                    if (ResizeElement.Height + deltaY > 0)
+                        ResizeElement.Height += deltaY;
+                    break;
+                case ResizeDirections.LeftDown:
+                    if (ResizeElement.Width + deltaX > 0)
+                        ResizeElement.Width += deltaX;
+                    if (ResizeElement.Height - deltaY > 0)
+                        ResizeElement.Height -= deltaY;
+                    break;
+                case ResizeDirections.RightDown:
+                    if (ResizeElement.Width - deltaX > 0)
+                        ResizeElement.Width -= deltaX;
                     if (ResizeElement.Height - deltaY > 0)
                         ResizeElement.Height -= deltaY;
                     break;

@@ -1,5 +1,7 @@
 ﻿using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
+using Raven.Json.Linq;
 using Raven.Studio.Impl;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Settings
 {
@@ -7,29 +9,19 @@ namespace Raven.Studio.Features.Settings
 	{
 		private readonly ScriptedIndexSettingsSectionModel model;
 
-		public ScriptIndexIntelliPromptProvider()
+		public ScriptIndexIntelliPromptProvider(Observable<RavenJObject> document, bool showDocumentProperied = true) : base(document)
 		{
-			model = null;
-		}
-		public ScriptIndexIntelliPromptProvider(ScriptedIndexSettingsSectionModel model)
-		{
-			this.model = model;
+			ShowDocumentProperties = showDocumentProperied;
 		}
 
 		protected override void AddItemsToSession(CompletionSession session)
 		{
-			if (model != null)
+			session.Items.Add(new CompletionItem
 			{
-				foreach (var item in model.IndexItem)
-				{
-					session.Items.Add(new CompletionItem
-					{
-						ImageSourceProvider = new CommonImageSourceProvider(CommonImage.PropertyPublic),
-						Text = "this." + item,
-						AutoCompletePreText = "this." + item
-					});
-				}
-			}
+				ImageSourceProvider = new CommonImageSourceProvider(CommonImage.ClassPublic),
+				Text = "this.",
+				AutoCompletePreText = "this."
+			});
 
 			session.Items.Add(new CompletionItem
 			{

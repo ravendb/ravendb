@@ -84,6 +84,11 @@ namespace Raven.Abstractions.Data
 		public DateTime LastQueryTime { get; set; }
 
 		/// <summary>
+		/// The duration of actually executing the query server side
+		/// </summary>
+		public long DurationMilliseconds { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
 		public QueryResult()

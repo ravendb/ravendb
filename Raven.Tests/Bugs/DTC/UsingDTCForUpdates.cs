@@ -2,15 +2,18 @@ using System;
 using System.Transactions;
 using Raven.Json.Linq;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.DTC
 {
 	public class UsingDTCForUpdates : RavenTest
 	{
-		[Fact]
-		public void can_update_a_doc_within_transaction_scope()
+		[Theory]
+		[InlineData("esent")]
+		[InlineData("munin")]
+		public void can_update_a_doc_within_transaction_scope(string storage)
 		{
-			using (var documentStore = NewDocumentStore())
+			using (var documentStore = NewDocumentStore(requestedStorage:storage))
 			{
 				var id1 = Guid.NewGuid();
 				RavenJObject dummy = null;

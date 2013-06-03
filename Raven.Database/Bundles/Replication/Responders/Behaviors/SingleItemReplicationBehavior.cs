@@ -57,8 +57,6 @@ namespace Raven.Bundles.Replication.Responders
 
 
 			var existingDocumentIsInConflict = existingMetadata[Constants.RavenReplicationConflict] != null;
-			var existingDocumentIsDeleted = existingMetadata[Constants.RavenDeleteMarker] != null
-											&& existingMetadata[Constants.RavenDeleteMarker].Value<bool>();
 
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
 				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
@@ -107,7 +105,7 @@ namespace Raven.Bundles.Replication.Responders
 																		OperationType = ReplicationOperationTypes.Put,
 																		Conflicts = createdConflict.ConflictedIds
 																	}));
-		}
+			}
 
 		protected abstract ReplicationConflictTypes ReplicationConflict { get; }
 
@@ -116,7 +114,11 @@ namespace Raven.Bundles.Replication.Responders
 			metadata[Constants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			AddWithoutConflict(newDocumentConflictId, Etag.Empty, metadata, incoming);
+			AddWithoutConflict(
+				newDocumentConflictId,
+				null, // we explicitly want to overwrite a document if it already exists, since it  is known uniuque by the key 
+				metadata, 
+				incoming);
 			return newDocumentConflictId;
 		}
 
@@ -197,7 +199,7 @@ namespace Raven.Bundles.Replication.Responders
 															OperationType = ReplicationOperationTypes.Delete
 														}));
 
-		}
+			}
 
 		protected abstract void DeleteItem(string id, Etag etag);
 

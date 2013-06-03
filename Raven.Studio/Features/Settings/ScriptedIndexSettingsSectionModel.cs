@@ -43,8 +43,11 @@ namespace Raven.Studio.Features.Settings
 			DeleteLanguage = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("JScript.langdef");
 		}
 
+		public Observable<RavenJObject> DocumentToSample { get; set; } 
+
 		public ScriptedIndexSettingsSectionModel()
 		{
+			DocumentToSample = new Observable<RavenJObject>();
 			AvailableIndexes = new BindableCollection<string>(x => x);
 			SectionName = "Scripted Index";			
 			ScriptedIndexes = new Dictionary<string, ScriptedIndexResults>();
@@ -53,8 +56,8 @@ namespace Raven.Studio.Features.Settings
 			DeleteScript = new EditorDocument { Language = DeleteLanguage };
 			UpdateAvailableIndexes();
 			LoadScriptForIndex();
-			IndexScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider(this));
-			DeleteScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider());
+			IndexScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider(DocumentToSample));
+			DeleteScript.Language.RegisterService(new ScriptIndexIntelliPromptProvider(DocumentToSample, false));
 		}
 
 		private void LoadScriptForIndex()
@@ -160,7 +163,17 @@ namespace Raven.Studio.Features.Settings
 					}
 
 					IndexItem = task.Result.Fields.ToList();
+					UpdateDocumentToSample();
 				}).Catch();
+		}
+
+		private void UpdateDocumentToSample()
+		{
+			DocumentToSample.Value = new RavenJObject();
+			foreach (var item in IndexItem)
+			{
+				DocumentToSample.Value.Add(item, new RavenJObject());
+			}
 		}
 
 		public void StoreChanges()

@@ -15,8 +15,10 @@ using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Backup;
 using Raven.Storage.Managed.Impl;
@@ -46,6 +48,7 @@ namespace Raven.Storage.Managed
 		private IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher documentCacher;
 	    private DisposableAction exitLockDisposable;
+		private MuninInFlightTransactionalState inFlightTransactionalState;
 
 	    public IPersistentSource PersistenceSource
 		{
@@ -102,7 +105,7 @@ namespace Raven.Storage.Managed
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
-	    [DebuggerNonUserCode]
+		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
@@ -261,6 +264,11 @@ namespace Raven.Storage.Managed
 		public void DumpAllStorageTables()
 		{
 			throw new NotSupportedException("Not valid for munin");
+		}
+
+		public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+		{
+			return inFlightTransactionalState ?? (inFlightTransactionalState = new MuninInFlightTransactionalState(this, put, delete));
 		}
 
 		public void ClearCaches()
