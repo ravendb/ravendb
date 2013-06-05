@@ -5,17 +5,90 @@
                          xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:models="clr-namespace:Raven.Studio.Models"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                         xmlns:behaviors="clr-namespace:Raven.Studio.Behaviors"
+                         xmlns:converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
+                         xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          mc:Ignorable="d"
                          Title="Documents"
                          Style="{StaticResource PageStyle}"
-                         Infrastructure:ModelAttacher.AttachObservableModel="AllDocumentsModel">
+                         Infrastructure:ModelAttacher.AttachObservableModel="DocumentsPageModel">
 
-	<Grid DataContext="{Binding Path=Value}">
+    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Path=Value}" 
+                                    d:DataContext="{d:DesignInstance models:DocumentsPageModel}">
+        <toolkit:HeaderedContentControl.Header>
+
+                <StackPanel Orientation="Horizontal">
+                <Image Style="{StaticResource Style_Image_DocumentsPageHeader}" />
+                <HyperlinkButton Content="Documents"
+                                                 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                                                 Command="{StaticResource NavigateToCommand}"
+                                                 CommandParameter="/documents"
+                                                 VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                                 Margin="6"/>
+                <controls:NavTriangle Visibility="{Binding SelectedCollection.Value.Name, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
+                <TextBlock Text="{Binding SelectedCollection.Value.Name}"
+                                                 ToolTipService.ToolTip="{Binding SelectedCollection.Value.Name}"
+                                                 Style="{StaticResource Style_TextBlock_Breadcrumb}"
+                                                 Margin="4,0" VerticalAlignment="Center"
+                           Visibility="{Binding SelectedCollection.Value.Name, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
+            </StackPanel>
+
+        </toolkit:HeaderedContentControl.Header>
+        <Grid Margin="{StaticResource Margin_ContentPage}">
+        <Grid.Resources>
+            <converters:StringEmptyToGridLengthConverter ValueWhenEmpty="Auto" ValueWhenNonEmpty="15" x:Key="IndentWhenHasValue"/>
+        </Grid.Resources>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <ListBox ItemsSource="{Binding SortedCollectionsList.View}" SelectedItem="{Binding SelectedCollection.Value, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="models:CollectionModel">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{Binding Name, Converter={StaticResource IndentWhenHasValue}}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="1">
+                            <Rectangle Margin="0"
+                                                       HorizontalAlignment="Left"
+                                                       Fill="#06000000"
+                                                       Width="8"
+                                                       RadiusX="1"
+                                                       RadiusY="1"/>
 
-		<Documents:DocumentsView DataContext="{Binding Path=Documents}"
-								 Margin="{StaticResource Margin_ContentPage}" />
+                            <Rectangle HorizontalAlignment="Left"
+                                                       Width="4"
+                                                       Fill="{Binding Path=Fill}"
+                                                       Margin="2"
+                                                       Height="22"          
+                                                       RadiusX="1"
+                                                       RadiusY="1">
+                            </Rectangle>
+                            <TextBlock Margin="10,0,0,0" behaviors:FadeTrimming.IsEnabled="True" behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True" VerticalAlignment="Center">
+                                <Run Text="{Binding DisplayName}" />
+                                <Run Text=" "/>
+                                <Run Text="{Binding Count, StringFormat='({0:#,#;;0})'}" Foreground="DarkGray"/>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        
+        <sdk:GridSplitter Grid.Column="1" VerticalAlignment="Stretch" HorizontalAlignment="Center"/>
+        
+        <Documents:DocumentsView DataContext="{Binding Path=DocumentsModel}"
+								 Grid.Column="2" />
 	</Grid>
+    </toolkit:HeaderedContentControl>
 </Infrastructure:PageView>

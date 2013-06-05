@@ -381,6 +381,7 @@
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
     <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
+    <Compile Include="Models\DocumentsPageModel.cs" />
     <Compile Include="Models\ReportingModel.cs" />
     <Compile Include="Infrastructure\SamplingInvoker.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
