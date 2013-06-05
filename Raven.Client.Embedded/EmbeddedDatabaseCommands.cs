@@ -374,6 +374,7 @@ namespace Raven.Client.Embedded
 			database.DeleteTransfom(name);
 		}
 
+
 		/// <summary>
 		/// Resets the specified index
 		/// </summary>
@@ -696,6 +697,15 @@ namespace Raven.Client.Embedded
 			database.Rollback(txId);
 		}
 
+		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public void PrepareTransaction(string txId)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			database.PrepareTransaction(txId);
+		}
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>

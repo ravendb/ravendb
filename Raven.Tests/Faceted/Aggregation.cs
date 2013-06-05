@@ -37,6 +37,7 @@ namespace Raven.Tests.Faceted
                       select new { order.Currency, order.Product, order.Total, order.Quantity };
 
                 Sort(x => x.Total, SortOptions.Double);
+				Sort(x => x.Quantity, SortOptions.Int);
             }
         }
 

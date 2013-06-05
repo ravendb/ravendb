@@ -105,7 +105,7 @@ namespace Raven.Bundles.Replication.Responders
 																		OperationType = ReplicationOperationTypes.Put,
 																		Conflicts = createdConflict.ConflictedIds
 																	}));
-		}
+			}
 
 		protected abstract ReplicationConflictTypes ReplicationConflict { get; }
 
@@ -114,7 +114,11 @@ namespace Raven.Bundles.Replication.Responders
 			metadata[Constants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			AddWithoutConflict(newDocumentConflictId, Etag.Empty, metadata, incoming);
+			AddWithoutConflict(
+				newDocumentConflictId,
+				null, // we explicitly want to overwrite a document if it already exists, since it  is known uniuque by the key 
+				metadata, 
+				incoming);
 			return newDocumentConflictId;
 		}
 
@@ -195,7 +199,7 @@ namespace Raven.Bundles.Replication.Responders
 															OperationType = ReplicationOperationTypes.Delete
 														}));
 
-		}
+			}
 
 		protected abstract void DeleteItem(string id, Etag etag);
 

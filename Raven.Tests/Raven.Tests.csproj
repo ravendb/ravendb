@@ -711,6 +711,7 @@
     <Compile Include="MailingList\ItemsBySetIdIndexTests.cs" />
     <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\jbartruf.cs" />
+    <Compile Include="MailingList\JsonComarision.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
     <Compile Include="MailingList\Lindblom.cs" />

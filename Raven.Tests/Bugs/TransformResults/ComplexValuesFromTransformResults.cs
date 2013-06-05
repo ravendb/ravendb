@@ -6,7 +6,6 @@ using Raven.Abstractions.MEF;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database.Impl;
 using Raven.Database.Linq;
@@ -96,7 +95,11 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				documentStore.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
-					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(), new InFlightTransactionalState());
+					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(),
+					                                              documentStore.DocumentDatabase.TransactionalStorage
+					                                                           .GetInFlightTransactionalState(
+						                                                           documentStore.DocumentDatabase.Put,
+						                                                           documentStore.DocumentDatabase.Delete));
 					var dynamicJsonObjects = new[] { new DynamicJsonObject(accessor.Documents.DocumentByKey("answer2s/" + answerId.ToString(), null).ToJson()), };
 					var transformResultsDefinition = abstractViewGenerator.TransformResultsDefinition(documentRetriever,
 																									  dynamicJsonObjects
