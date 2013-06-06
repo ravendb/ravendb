@@ -114,7 +114,7 @@
                             toolkit:DockPanel.Dock="Left"
                             ToolTipService.ToolTip="Back"
                             VerticalAlignment="Center"
-                            Margin="1"
+                            Margin="1,1,0,1"
                                 IsEnabled="{Binding IsBackEnabled}">
                             <TextBlock Text="ç" FontFamily="Wingdings" FontSize="13" FontWeight="Bold" Foreground="White"/>
                         </Button>
@@ -123,7 +123,7 @@
                             toolkit:DockPanel.Dock="Left"
                             ToolTipService.ToolTip="Forward"
                             VerticalAlignment="Center"
-                                Margin="1"
+                                Margin="0,1,1,1"
                                 IsEnabled="{Binding IsForwardEnabled}">
                             <TextBlock Text="è" FontFamily="Wingdings" FontSize="13" FontWeight="Bold" Foreground="White"/>
                         </Button>
