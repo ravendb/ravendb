@@ -40,16 +40,16 @@ namespace Raven.Bundles.Replication.Responders
 			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Guid.Empty : existingItem.Etag;
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 			Actions.Documents.AddDocument(id, etag,
-			                              new RavenJObject
-			                              {
+			                                              new RavenJObject
+			                                              {
 			                              	{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)}
-			                              },
-			                              new RavenJObject
-			                              {
-			                              	{Constants.RavenReplicationConflict, true},
-			                              	{"@Http-Status-Code", 409},
-			                              	{"@Http-Status-Description", "Conflict"}
-			                              });
+			                                              },
+			                                              new RavenJObject
+			                                              {
+				                                              {Constants.RavenReplicationConflict, true},
+				                                              {"@Http-Status-Code", 409},
+				                                              {"@Http-Status-Description", "Conflict"}
+			                                              });
 		}
 
 		protected override void AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, JsonDocument existingItem)
@@ -62,13 +62,14 @@ namespace Raven.Bundles.Replication.Responders
 			Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
 		}
 
-		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Guid existingEtag)
+		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Guid existingEtag, out bool deleted)
 		{
 			var existingDoc = Actions.Documents.DocumentByKey(id, null);
 			if(existingDoc != null)
 			{
 				existingItem = existingDoc;
 				existingEtag = existingDoc.Etag.Value;
+				deleted = false;
 				return existingDoc.Metadata;
 			}
 
@@ -76,6 +77,7 @@ namespace Raven.Bundles.Replication.Responders
 			if(listItem != null)
 			{
 				existingEtag = listItem.Etag;
+				deleted = true;
 				existingItem = new JsonDocument
 				{
 					Etag = listItem.Etag,
@@ -87,6 +89,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			existingEtag = Guid.Empty;
 			existingItem = null;
+			deleted = false;
 			return null;
 
 		}

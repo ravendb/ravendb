@@ -15,7 +15,7 @@ namespace Raven.StressTests.Tenants
 {
 	public class ConcurrentlyOpenedTenantsUsingEsent : RavenTest
 	{
-		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.RunInMemory = false;
 			ravenConfiguration.DefaultStorageTypeName = "esent";

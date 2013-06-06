@@ -48,13 +48,20 @@ namespace Raven.Client.Extensions
 				var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
 				req.Write(doc.ToString(Formatting.Indented));
 				req.ExecuteRequest();
-
-				new RavenDocumentsByEntityName().Execute(serverClient.ForDatabase(name), new DocumentConvention());
 			}
 			catch (Exception)
 			{
 				if (ignoreFailures == false)
 					throw;
+			}
+
+			try
+			{
+				new RavenDocumentsByEntityName().Execute(serverClient.ForDatabase(name), new DocumentConvention());
+			}
+			catch (Exception)
+			{
+				// we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
 			}
 		}
 

@@ -185,7 +185,7 @@ namespace Raven.Studio.Models
 			{
 				var version = GetAssemblyVersion();
 
-				return version.Split('.')[2];
+				return version.Split('.').LastOrDefault(x=>x != "0");
 			}
 		}
 		public static List<IDatabaseChanges> ChangesToDispose { get; private set; }

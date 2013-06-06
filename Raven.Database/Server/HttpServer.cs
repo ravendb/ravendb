@@ -472,7 +472,14 @@ namespace Raven.Database.Server
 
 			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
 			{
-				HandleTooBusyError(ctx);
+				try
+				{
+					HandleTooBusyError(ctx);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not send a too busy error to the client", e);
+				}
 				return;
 			}
 			try
@@ -1305,6 +1312,8 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
+				if(prop.Value == null)
+					continue;
 				var bytes = Encoding.UTF8.GetBytes(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
 				var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
@@ -1322,6 +1331,8 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
+				if(prop.Value == null)
+					continue;
 				var bytes = Convert.FromBase64String(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
 				try

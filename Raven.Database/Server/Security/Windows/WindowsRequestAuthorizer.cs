@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Security.Windows
 								: new List<WindowsAuthData>();
 		}
 
-		public bool Authorize(IHttpContext ctx)
+		public bool Authorize(IHttpContext ctx, bool ignoreDb)
 		{
 			Action onRejectingRequest;
 			var databaseName = database().Name ?? Constants.SystemDatabase;
@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.None:
 					if (userCreated)
 					{
-						if (user.AdminDatabases.Contains(databaseName))
+						if (user.AdminDatabases.Contains(databaseName) || ignoreDb)
 							return true;
 						if (user.ReadWriteDatabases.Contains(databaseName))
 							return true;
@@ -187,16 +187,16 @@ namespace Raven.Database.Server.Security.Windows
 		}
 
 
-		public override List<string> GetApprovedDatabases(IHttpContext context)
+		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
-			var user = context.User as PrincipalWithDatabaseAccess;
-			if (user == null)
+			var winUser = user as PrincipalWithDatabaseAccess;
+			if (winUser == null)
 				return new List<string>();
 
 			var list = new List<string>();
-			list.AddRange(user.AdminDatabases);
-			list.AddRange(user.ReadOnlyDatabases);
-			list.AddRange(user.ReadWriteDatabases);
+			list.AddRange(winUser.AdminDatabases);
+			list.AddRange(winUser.ReadOnlyDatabases);
+			list.AddRange(winUser.ReadWriteDatabases);
 
 			return list;
 		}
@@ -204,6 +204,14 @@ namespace Raven.Database.Server.Security.Windows
 		public override void Dispose()
 		{
 			WindowsSettingsChanged -= UpdateSettings;
+		}
+
+		public IPrincipal GetUser(IHttpContext ctx)
+		{
+			Action onRejectingRequest;
+			var databaseName = database().Name ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
+			return userCreated ? ctx.User : null;
 		}
 	}
 }

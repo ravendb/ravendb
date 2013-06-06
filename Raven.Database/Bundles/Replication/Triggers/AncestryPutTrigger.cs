@@ -7,6 +7,7 @@ using System;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -38,7 +39,7 @@ namespace Raven.Bundles.Replication.Triggers
 				var documentMetadata = GetDocumentMetadata(key);
 				if (documentMetadata != null)
 				{
-					RavenJArray history = new RavenJArray(documentMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
+					RavenJArray history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
@@ -51,7 +52,7 @@ namespace Raven.Bundles.Replication.Triggers
 						});
 					}
 
-					if (history.Length > Constants.ChangeHistoryLength)
+					while (history.Length > Constants.ChangeHistoryLength)
 					{
 						history.RemoveAt(0);
 					}

@@ -162,6 +162,7 @@
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
+    <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
@@ -173,6 +174,11 @@
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
+    <Compile Include="Bundles\SqlReplication\ConversionScriptResult.cs" />
+    <Compile Include="Bundles\SqlReplication\ItemToReplicate.cs" />
+    <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
@@ -224,14 +230,15 @@
     <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Indexing\IndexingBatch.cs" />
     <Compile Include="Indexing\IndexingUtil.cs" />
-    <Compile Include="Indexing\LowerCaseKeywordTokenizer.cs" />
-    <Compile Include="Indexing\LowerCaseWhitespaceAnalyzer.cs" />
-    <Compile Include="Indexing\LowerCaseWhitespaceTokenizer.cs" />
+    <Compile Include="Indexing\Analyzers\LowerCaseKeywordTokenizer.cs" />
+    <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceAnalyzer.cs" />
+    <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceTokenizer.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
     <Compile Include="Indexing\PrefetchingBehavior.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\RecursivePrefixTreeStrategyThatSupportsWithin.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
+    <Compile Include="Linq\Ast\TransformGroupByExtensionMethodTransformer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
@@ -263,6 +270,8 @@
     <Compile Include="Server\Responders\BulkInsert.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
     <Compile Include="Server\Responders\DatabaseStorageSizes.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugChanges.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugConfig.cs" />
     <Compile Include="Server\Responders\Debugging\DebugDocReferences.cs" />
     <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
     <Compile Include="Server\Responders\Identity.cs" />
@@ -389,6 +398,7 @@
     <Compile Include="Server\Responders\RavenUI.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\IgnoreDb.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
@@ -571,7 +581,7 @@
     <Compile Include="Indexing\Collation\Cultures\ZuCollationAnalyzer.cs" />
     <Compile Include="Indexing\Collation\IndexableBinaryStringTools_UsingArrays.cs" />
     <Compile Include="Indexing\GatherAllCollector.cs" />
-    <Compile Include="Indexing\LowerCaseKeywordAnalyzer.cs" />
+    <Compile Include="Indexing\Analyzers\LowerCaseKeywordAnalyzer.cs" />
     <Compile Include="Indexing\RangeQueryParser.cs" />
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialIndex.cs" />
@@ -688,6 +698,7 @@
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
     <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
     <Compile Include="Storage\Esent\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\Esent\StorageActions\OptimizedDeleter.cs" />
     <Compile Include="Storage\Esent\StorageActions\OptimizedIndexReader.cs" />
     <Compile Include="Storage\Esent\StorageActions\Queue.cs" />
     <Compile Include="Storage\Esent\StorageActions\Staleness.cs" />

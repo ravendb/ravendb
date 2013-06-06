@@ -35,7 +35,7 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
             TaskCheckBox attachmentUI = taskModel.TaskInputs.FirstOrDefault(x => x.Name == "Include Attachments") as TaskCheckBox;
-            includeAttachments = attachmentUI != null && attachmentUI.Value;
+            includeAttachments = attachmentUI != null && (bool)attachmentUI.Value;
 
 			var saveFile = new SaveFileDialog
 			{

@@ -513,7 +513,6 @@ namespace Raven.Client.Document
 				Converters =
 					{
 						new JsonLuceneDateTimeConverter(),
-						new JsonFloatConverter(),
 						new JsonNumericConverter<int>(int.TryParse),
 						new JsonNumericConverter<long>(long.TryParse),
 						new JsonNumericConverter<decimal>(decimal.TryParse),

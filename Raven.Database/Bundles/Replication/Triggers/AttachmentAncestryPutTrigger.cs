@@ -7,6 +7,7 @@ using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -37,7 +38,7 @@ namespace Raven.Bundles.Replication.Triggers
 				var attachmentMetadata = GetAttachmentMetadata(key);
 				if (attachmentMetadata != null)
 				{
-					RavenJArray history = new RavenJArray(metadata.Value<RavenJArray>(Constants.RavenReplicationHistory));
+					RavenJArray history = new RavenJArray(ReplicationData.GetHistory(metadata));
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					if (attachmentMetadata.ContainsKey(Constants.RavenReplicationVersion) &&
@@ -50,7 +51,7 @@ namespace Raven.Bundles.Replication.Triggers
 						});
 					}
 
-					if (history.Length > Constants.ChangeHistoryLength)
+					while (history.Length > Constants.ChangeHistoryLength)
 					{
 						history.RemoveAt(0);
 					}

@@ -54,7 +54,7 @@ namespace Raven.Tests
 			}
 		}
 
-		protected override void ModifyConfiguration(RavenConfiguration configuration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/Esent/CircularLog"] = "false";
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;

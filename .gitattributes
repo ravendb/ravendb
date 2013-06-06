@@ -5,32 +5,34 @@
 # Custom for Visual Studio
 *.cs       text diff=csharp eol=crlf
 *.sln      text merge=union eol=crlf
-*.csproj   text merge=union
+*.csproj   text merge=union eol=crlf
 *.vbproj   text merge=union
 *.fsproj   text merge=union
 *.dbproj   text merge=union
-*.ascx     text
-*.cmd      text
-*.coffee   text
+*.ascx     text eol=crlf
+*.xaml     text eol=crlf
+*.cmd      text eol=crlf
+*.coffee   text eol=crlf
 *.config   text eol=crlf
-*.css      text
-*.scss     text
-*.cshtml   text
-*.htm      text
-*.html     text
-*.js       text
-*.ts       text
-*.msbuild  text
+*.css      text eol=crlf
+*.nuspec   text eol=crlf
+*.scss     text eol=crlf
+*.cshtml   text eol=crlf
+*.htm      text eol=crlf
+*.html     text eol=crlf
+*.js       text eol=crlf
+*.ts       text eol=crlf
+*.msbuild  text eol=crlf
 *.resx     text merge=union
 *.ruleset  text
 *.Stylecop text
-*.targets  text
+*.targets  text eol=crlf
 *.tt       text
-*.txt      text
-*.vb       text
-*.vbhtml   text
+*.txt      text eol=crlf
+*.vb       text eol=crlf
+*.vbhtml   text eol=crlf
 *.xml      text eol=crlf
-*.xunit    text
+*.xunit    text eol=crlf
 
 *.bmp binary
 *.gif binary
