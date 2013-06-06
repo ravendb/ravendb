@@ -10,7 +10,7 @@
                          xmlns:behaviors="clr-namespace:Raven.Studio.Behaviors"
                          xmlns:converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls" xmlns:Delay="clr-namespace:Delay"
                          mc:Ignorable="d"
                          Title="Documents"
                          Style="{StaticResource PageStyle}"
@@ -53,6 +53,11 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
         <ListBox ItemsSource="{Binding SortedCollectionsList.View}" SelectedItem="{Binding SelectedCollection.Value, Mode=TwoWay}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
@@ -87,9 +92,41 @@
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
-        </ListBox>
-        
-        <sdk:GridSplitter Grid.Column="1" VerticalAlignment="Stretch" HorizontalAlignment="Center" Width="6" Margin="-3,0,-3,0"/>
+                </ListBox>
+                <toolkit:DockPanel Background="#E9E6E3" Grid.Row="1" LastChildFill="False">
+                    <Delay:PopupButton Margin="4,0"
+                                       ToolTipService.ToolTip="Options" toolkit:DockPanel.Dock="Left"
+                                       VerticalPopupAlignment="Top">
+                            <Image Source="{StaticResource Image_Settings_Tiny}" Width="16" Height="16"/>
+
+                        <Delay:PopupButton.PopupContent>
+                            <Border Background="White"
+                                        BorderThickness="1"
+                                        BorderBrush="Gray"
+                                        Margin="0,0,0,0">
+                                <Border.Effect>
+                                    <DropShadowEffect Opacity="0.4" />
+                                </Border.Effect>
+                                <StackPanel>
+                                    <Border Background="{StaticResource Brush_ToolbarBackground}">
+                                        <TextBlock Text="Sorting" FontWeight="Bold" Margin="5,5"/>
+                                    </Border>
+                                    <ListBox ItemsSource="{Binding CollectionsSortingModes}" SelectedItem="{Binding SelectedCollectionSortingMode.Value, Mode=TwoWay}"
+                                                 Style="{StaticResource Style_ListBox_RadioButtons}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}"/>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </Border>
+                        </Delay:PopupButton.PopupContent>
+                    </Delay:PopupButton>
+                </toolkit:DockPanel>
+            </Grid>
+
+            <sdk:GridSplitter Grid.Column="1" VerticalAlignment="Stretch" HorizontalAlignment="Center" Width="6" Margin="-3,0,-3,0"/>
         
         <Documents:DocumentsView DataContext="{Binding Path=DocumentsModel}"
 								 Grid.Column="2" ShowHeader="False"/>

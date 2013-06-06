@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
@@ -26,7 +27,7 @@ namespace Raven.Studio.Models
 
 	    public CollectionViewSource SortedCollectionsList { get; private set; }
 
-		public Observable<bool> SortByName { get; set; } 
+		public Observable<string> SelectedCollectionSortingMode { get; set; } 
 
 	    private string GetSelectedCollectionName()
 	    {
@@ -74,7 +75,7 @@ namespace Raven.Studio.Models
 			ModelUrl = "/documents";
 		
 			ApplicationModel.Current.Server.Value.RawUrl = null;
-			SortByName = new Observable<bool>{Value = Settings.Instance.SortCollectionByName};
+            SelectedCollectionSortingMode = new Observable<string> { Value = Settings.Instance.CollectionSortingMode };
 
             collectionSource = new CollectionDocumentsCollectionSource();
             collectionDocumentsModel = new DocumentsModel(collectionSource)
@@ -130,27 +131,21 @@ namespace Raven.Studio.Models
 		        }
 		    };
 
-			SortByName.PropertyChanged += (sender, args) =>
+            SelectedCollectionSortingMode.PropertyChanged += (sender, args) =>
 			{
-				SortedCollectionsList = new CollectionViewSource
-				{
-					Source = Collections,
-					SortDescriptions =
-					{
-						GetSortDescription()
-					}
-				};
+			    using (SortedCollectionsList.DeferRefresh())
+			    {
+			        SortedCollectionsList.SortDescriptions.Clear();
+			        SortedCollectionsList.SortDescriptions.Add(GetSortDescription());
+			    }
 
-				Settings.Instance.SortCollectionByName = SortByName.Value;
-				var selected = SelectedCollection.Value;
-				SortedCollectionsList.View.Refresh();
-				SelectedCollection.Value = selected;
+				Settings.Instance.CollectionSortingMode = SelectedCollectionSortingMode.Value;
 			};
 		}
 
 	    private SortDescription GetSortDescription()
 	    {
-	        return SortByName.Value
+            return SelectedCollectionSortingMode.Value == "Name"
 	                   ? new SortDescription("Name", ListSortDirection.Ascending)
 	                   : new SortDescription("SortableCount", ListSortDirection.Descending);
 	    }
@@ -214,12 +209,17 @@ namespace Raven.Studio.Models
 			get
 			{
 				if (SelectedCollection.Value == null || string.IsNullOrEmpty(SelectedCollection.Value.Name))
-					return "Collections";
+					return "Documents";
 				return "Collection: " + SelectedCollection.Value.Name;
 			}
 		}
 
-        protected override void OnViewLoaded()
+	    public IList<string> CollectionsSortingModes
+	    {
+            get { return new[] {"Name", "Count"}; }
+	    }
+
+	    protected override void OnViewLoaded()
         {
             var databaseChanged = Database.ObservePropertyChanged()
                 .Select(_ => Unit.Default)

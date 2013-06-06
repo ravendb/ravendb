@@ -60,10 +60,10 @@ namespace Raven.Studio.Infrastructure
 			set { currentSettings["DocumentsTabSelection"] = value; }
 		}
 
-		public bool SortCollectionByName
+		public string CollectionSortingMode
 		{
-			get { return GetSettingAsBool("SortCollectionByName"); }
-			set { currentSettings["SortCollectionByName"] = value; }
+            get { return GetSettingAsString("CollectionSortingMode", "Name"); }
+            set { currentSettings["CollectionSortingMode"] = value; }
 		}
 
 		private string GetSettingAsString(string key, string defaultValue = "")

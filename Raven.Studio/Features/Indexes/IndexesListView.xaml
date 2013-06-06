@@ -88,7 +88,7 @@
 									<Delay:PopupButton 
                                         x:Name="LockModePopupButton"
                                         Grid.Column="3"
-													 VerticalAlignment="Center"
+													 VerticalPopupAlignment="Center"
 													 Padding="4"
 													 Margin="2"
 													 ToolTipService.ToolTip="Change Lock of index">
