@@ -109,7 +109,25 @@
                                                                        FrameComponent="TitleBar"/>
                         </i:Interaction.Behaviors>
                 <toolkit:DockPanel>
-                    <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Command="{Binding Back}"
+                            toolkit:DockPanel.Dock="Left"
+                            ToolTipService.ToolTip="Back"
+                            VerticalAlignment="Center"
+                            Margin="1"
+                                IsEnabled="{Binding IsBackEnabled}">
+                            <TextBlock Text="ç" FontFamily="Wingdings" FontSize="13" FontWeight="Bold" Foreground="White"/>
+                        </Button>
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
+                            Command="{Binding Forward}"
+                            toolkit:DockPanel.Dock="Left"
+                            ToolTipService.ToolTip="Forward"
+                            VerticalAlignment="Center"
+                                Margin="1"
+                                IsEnabled="{Binding IsForwardEnabled}">
+                            <TextBlock Text="è" FontFamily="Wingdings" FontSize="13" FontWeight="Bold" Foreground="White"/>
+                        </Button>
+                        <Button Style="{StaticResource Style_Button_MouseOverChrome}"
                             Command="{Binding Close}"
                             Margin="5"
                             toolkit:DockPanel.Dock="Right"
@@ -137,8 +155,12 @@
                             <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding DocumentIdSuggestions}"/>
                         </i:Interaction.Behaviors>
                     </sdk:AutoCompleteBox>
-                    <editors:JsonEditor BoundDocument="{Binding Document}" Grid.Row="2"/>
-                </Grid>
+                    <editors:JsonEditor BoundDocument="{Binding Document}" Grid.Row="2" />
+                    <TextBlock Text="{Binding StatusMessage}" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                   Grid.Row="2"
+                                   TextWrapping="Wrap"
+                               Visibility="{Binding IsDocumentLoaded, Converter={StaticResource BooleanToOppositeVisibility}}"/>
+            </Grid>
                 <Border HorizontalAlignment="Right" Width="5" Margin="0,0,-2,0" Background="Transparent">
                     <i:Interaction.Behaviors>
                         <Behaviors:ResizablePopupFrameBehavior Popup="{Binding (Behaviors:ResizablePopupFrameBehavior.ParentPopup), RelativeSource={RelativeSource AncestorType=UserControl}}"
