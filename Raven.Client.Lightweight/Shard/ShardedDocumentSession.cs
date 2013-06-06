@@ -526,6 +526,16 @@ namespace Raven.Client.Shard
 
 #region Queries
 
+		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
+		                                                                    RavenQueryStatistics ravenQueryStatistics,
+		                                                                    RavenQueryHighlightings highlightings)
+		{
+			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this,
+			                                         isMapReduce, shardStrategy,
+			                                         shardDbCommands.Values.ToList(), 
+													 null);
+		}
+
 		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce = false)
 		{
 			return LuceneQuery<T>(indexName, isMapReduce);
