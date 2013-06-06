@@ -310,6 +310,12 @@
     <Compile Include="Features\Documents\DocumentPadView.xaml.cs">
       <DependentUpon>DocumentPadView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\DocumentsListControls.xaml.cs">
+      <DependentUpon>DocumentsListControls.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\DocumentsListRefreshPanel.xaml.cs">
+      <DependentUpon>DocumentsListRefreshPanel.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
@@ -376,11 +382,13 @@
     <Compile Include="Infrastructure\AsyncCommand.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIndexConverter.cs" />
     <Compile Include="Infrastructure\Converters\BreakToLinesConverter.cs" />
+    <Compile Include="Infrastructure\Converters\DoubleToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
     <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
+    <Compile Include="Models\DocumentsPageModel.cs" />
     <Compile Include="Models\ReportingModel.cs" />
     <Compile Include="Infrastructure\SamplingInvoker.cs" />
     <Compile Include="Models\SpatialQueryModel.cs" />
@@ -1064,6 +1072,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\DocumentPadView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentsListControls.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentsListRefreshPanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

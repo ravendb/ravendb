@@ -1,0 +1,45 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Documents.DocumentsListControls"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:Delay="clr-namespace:Delay"
+             xmlns:Controls1="clr-namespace:Raven.Studio.Controls" xmlns:models="clr-namespace:Raven.Studio.Models"
+             mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance models:DocumentsModel}">
+
+    <StackPanel Orientation="Horizontal">
+        <Button Style="{StaticResource Style_Button_MouseOverChrome}" ToolTipService.ToolTip="Export to CSV" Command="{Binding ExportDetails}"
+                                Visibility="{Binding IsExportEnabled, Converter={StaticResource BooleanToVisibility}}" Margin="6,0">
+            <Image Source="{StaticResource Image_ExportDetails_Tiny}"
+								   Stretch="None"/>
+        </Button>
+        <Controls1:ViewSizeControl ViewSize="{Binding Path=Current.IndicatorPosition, Source={StaticResource DocumentSize}, Mode=TwoWay}" />
+        <Delay:PopupButton  ToolTipService.ToolTip="Settings" 
+                                PopupAlignment="Right">
+            <Delay:PopupButton.Content>
+                <Image Source="{StaticResource Image_Settings_Tiny}"
+						   Stretch="None"
+						   VerticalAlignment="Center" />
+            </Delay:PopupButton.Content>
+            <Delay:PopupButton.PopupContent>
+                <Border Background="#EFEFEF"
+                        BorderThickness="1"
+                        BorderBrush="Gray"
+                        Margin="0,0,0,0">
+                    <Border.Effect>
+                        <DropShadowEffect Opacity="0.4" />
+                    </Border.Effect>
+                    <Grid Margin="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <CheckBox IsChecked="{Binding AutoRefresh, Mode=TwoWay}" Content="Auto Refresh"/>
+
+                    </Grid>
+                </Border>
+            </Delay:PopupButton.PopupContent>
+        </Delay:PopupButton>
+    </StackPanel>
+</UserControl>

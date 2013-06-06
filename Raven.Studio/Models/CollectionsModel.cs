@@ -70,7 +70,6 @@ namespace Raven.Studio.Models
 			ModelUrl = "/collections";
 		
 			ApplicationModel.Current.Server.Value.RawUrl = null;
-			SortByName = new Observable<bool>{Value = Settings.Instance.SortCollectionByName};
             Collections = new BindableCollection<CollectionModel>(model => model.Name);
             SelectedCollection = new Observable<CollectionModel>();
 
@@ -112,7 +111,6 @@ namespace Raven.Studio.Models
 					}
 				};
 
-				Settings.Instance.SortCollectionByName = SortByName.Value;
 				var selected = SelectedCollection.Value;
 				SortedCollectionsList.View.Refresh();
 				OnPropertyChanged(() => SortedCollectionsList);
