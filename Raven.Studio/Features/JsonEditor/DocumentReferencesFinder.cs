@@ -14,6 +14,7 @@ using ActiproSoftware.Text;
 using ActiproSoftware.Text.Parsing;
 using ActiproSoftware.Text.Utility;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -37,19 +38,14 @@ namespace Raven.Studio.Features.JsonEditor
             // Note: if this proves to be too slow with large documents, we can potentially optimize the finding 
             // of references by only considering the parts of the AST which occur after the Offset at which the text change began
             // (we can find this by getting hold of the TextSnapshotChangedEventArgs)
-            var potentialReferences = FindPotentialReferences(document, idManager).ToList();
+            var potentialReferences = FindPotentialReferences(document).ToList();
             var newReferences = potentialReferences.Where(idManager.NeedsChecking).ToArray();
 
             if (newReferences.Any())
             {
-                ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(
-                    newReferences, null, metadataOnly: true)
-                                .ContinueOnSuccessInTheUIThread(results =>
+               DocumentIdCheckHelpers.GetActualIds(newReferences)
+                                .ContinueOnSuccessInTheUIThread(ids =>
                                 {
-                                    var ids =
-                                        results.Results.Where(r => r != null).Select(
-                                            r => r["@metadata"].SelectToken("@id").ToString()).ToList();
-
                                     idManager.AddKnownIds(ids);
                                     idManager.AddKnownInvalidIds(newReferences.Except(ids));
 
@@ -58,10 +54,10 @@ namespace Raven.Studio.Features.JsonEditor
             }
         }
 
-        private IEnumerable<string> FindPotentialReferences(ICodeDocument codeDocument, DocumentReferencedIdManager idManager)
+        private IEnumerable<string> FindPotentialReferences(ICodeDocument codeDocument)
         {
             var stringValueNodes = codeDocument.FindAllStringValueNodes();
-            return stringValueNodes.Select(n => n.Text).Distinct().Where(idManager.IsPotentialId);
+            return stringValueNodes.Select(n => n.Text).Distinct().Where(DocumentIdCheckHelpers.IsPotentialId);
         }
     }
 }

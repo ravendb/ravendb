@@ -53,17 +53,6 @@ namespace Raven.Studio.Features.JsonEditor
             }
         }
 
-        public bool IsPotentialId(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return false;
-            }
-
-            var pattern = @"\w+[/-]\w+";
-            return Regex.IsMatch(value, pattern);
-        }
-
         public bool IsId(string value)
         {
             lock (gate)

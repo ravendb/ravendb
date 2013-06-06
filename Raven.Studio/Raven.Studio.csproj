@@ -303,6 +303,7 @@
     <Compile Include="Features\Documents\ConvertingEnumerator.cs" />
     <Compile Include="Features\Documents\DocumentColumnsExtractor.cs" />
     <Compile Include="Features\Documents\DocumentDetailsColumnGenerator.cs" />
+    <Compile Include="Features\Documents\DocumentIdCheckHelpers.cs" />
     <Compile Include="Features\Documents\DocumentPadLayer.xaml.cs">
       <DependentUpon>DocumentPadLayer.xaml</DependentUpon>
     </Compile>

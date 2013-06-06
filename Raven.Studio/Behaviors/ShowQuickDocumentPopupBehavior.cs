@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -60,6 +61,16 @@ namespace Raven.Studio.Behaviors
         public static readonly DependencyProperty DocumentIdProperty =
             DependencyProperty.Register("DocumentId", typeof(string), typeof(ShowQuickDocumentPopupBehavior), new PropertyMetadata(null));
 
+        public string PotentialDocumentId
+        {
+            get { return (string)GetValue(PotentialDocumentIdProperty); }
+            set { SetValue(PotentialDocumentIdProperty, value); }
+        }
+
+        public static readonly DependencyProperty PotentialDocumentIdProperty =
+            DependencyProperty.Register("PotentialDocumentId", typeof(string), typeof(ShowQuickDocumentPopupBehavior), new PropertyMetadata(null));
+
+        
         private DispatcherTimer timer;
         private Popup popup;
         private FrameworkElement rootVisual;
@@ -119,7 +130,7 @@ namespace Raven.Studio.Behaviors
 
         private void HandleMouseEnter(object sender, MouseEventArgs e)
         {
-            if (string.IsNullOrEmpty(DocumentId))
+            if (string.IsNullOrEmpty(DocumentId) && string.IsNullOrEmpty(PotentialDocumentId))
             {
                 return;
             }
@@ -129,13 +140,19 @@ namespace Raven.Studio.Behaviors
             timer.Start();
         }
 
-        private void HandleTimerTick(object sender, EventArgs e)
+        private async void HandleTimerTick(object sender, EventArgs e)
         {
             StopTimer();
 
             if (popup == null)
             {
-                var quickDocumentView = new QuickDocumentView {DocumentId = DocumentId, Margin = new Thickness(2)};
+                var documentId = await GetDocumentId();
+                if (string.IsNullOrEmpty(documentId))
+                {
+                    return;
+                }
+
+                var quickDocumentView = new QuickDocumentView { DocumentId = documentId, Margin = new Thickness(2) };
                 quickDocumentView.DocumentShown += delegate { PositionPopup(); };
 
                 popup = new Popup()
@@ -162,6 +179,34 @@ namespace Raven.Studio.Behaviors
 
                 QuickDocumentViewOpening += HandleQuickDocumentViewOpening;
             }
+        }
+
+        private async Task<string> GetDocumentId()
+        {
+            if (!string.IsNullOrEmpty(DocumentId))
+            {
+                return DocumentId;
+            }
+
+            if (!DocumentIdCheckHelpers.IsPotentialId(PotentialDocumentId))
+            {
+                return null;
+            }
+
+            try
+            {
+                var ids = await DocumentIdCheckHelpers.GetActualIds(new[] {PotentialDocumentId});
+                if (ids.Count == 1)
+                {
+                    return PotentialDocumentId;
+                }
+            }
+            catch
+            {
+                // not bothered about exceptions here
+            }
+
+            return null;
         }
 
         private void PositionPopup()
