@@ -144,7 +144,6 @@ namespace Raven.Studio.Models
 				Settings.Instance.SortCollectionByName = SortByName.Value;
 				var selected = SelectedCollection.Value;
 				SortedCollectionsList.View.Refresh();
-				OnPropertyChanged(() => SortedCollectionsList);
 				SelectedCollection.Value = selected;
 			};
 		}

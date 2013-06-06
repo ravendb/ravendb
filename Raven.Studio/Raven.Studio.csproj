@@ -310,6 +310,12 @@
     <Compile Include="Features\Documents\DocumentPadView.xaml.cs">
       <DependentUpon>DocumentPadView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Documents\DocumentsListControls.xaml.cs">
+      <DependentUpon>DocumentsListControls.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\DocumentsListRefreshPanel.xaml.cs">
+      <DependentUpon>DocumentsListRefreshPanel.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\EmptyAsyncEnumerator.cs" />
     <Compile Include="Features\Documents\ReplicationSourceInfo.cs" />
     <Compile Include="Features\JsonEditor\DocumentReferencesFinder.cs" />
@@ -1065,6 +1071,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\DocumentPadView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentsListControls.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentsListRefreshPanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

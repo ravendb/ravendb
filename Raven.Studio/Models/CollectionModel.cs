@@ -61,8 +61,8 @@ namespace Raven.Studio.Models
             brush.GradientStops.Add(new GradientStop() { Color =Colors.Yellow,Offset = 0.33});
             brush.GradientStops.Add(new GradientStop() { Color =Colors.Green, Offset =0.50});
             brush.GradientStops.Add(new GradientStop() { Color =Colors.Blue, Offset =0.67});
-            brush.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(0,75,0,130),Offset = 0.84});
-            brush.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(0, 143, 0, 255), Offset = 1.00 });
+            brush.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(255,75,0,130),Offset = 0.84});
+            brush.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(255, 143, 0, 255), Offset = 1.00 });
             return brush;
         }
 

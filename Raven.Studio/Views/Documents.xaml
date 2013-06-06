@@ -16,11 +16,11 @@
                          Style="{StaticResource PageStyle}"
                          Infrastructure:ModelAttacher.AttachObservableModel="DocumentsPageModel">
 
-    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Path=Value}" 
+    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_SeparatedHeader}" Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding Path=Value}" 
                                     d:DataContext="{d:DesignInstance models:DocumentsPageModel}">
         <toolkit:HeaderedContentControl.Header>
-
-                <StackPanel Orientation="Horizontal">
+            <toolkit:DockPanel>
+                <StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Left">
                 <Image Style="{StaticResource Style_Image_DocumentsPageHeader}" />
                 <HyperlinkButton Content="Documents"
                                                  Style="{StaticResource Style_Link_Breadcrumb_Header}"
@@ -35,9 +35,12 @@
                                                  Margin="4,0" VerticalAlignment="Center"
                            Visibility="{Binding SelectedCollection.Value.Name, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
             </StackPanel>
+                <Documents:DocumentsListControls toolkit:DockPanel.Dock="Right" DataContext="{Binding DocumentsModel}" VerticalAlignment="Center"/>
+                <Documents:DocumentsListRefreshPanel DataContext="{Binding DocumentsModel}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </toolkit:DockPanel>
 
         </toolkit:HeaderedContentControl.Header>
-        <Grid Margin="{StaticResource Margin_ContentPage}">
+        <Grid Margin="0,5,0,0">
         <Grid.Resources>
             <converters:StringEmptyToGridLengthConverter ValueWhenEmpty="Auto" ValueWhenNonEmpty="15" x:Key="IndentWhenHasValue"/>
         </Grid.Resources>
@@ -45,12 +48,13 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="175"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         
-        <ListBox ItemsSource="{Binding SortedCollectionsList.View}" SelectedItem="{Binding SelectedCollection.Value, Mode=TwoWay}">
+        <ListBox ItemsSource="{Binding SortedCollectionsList.View}" SelectedItem="{Binding SelectedCollection.Value, Mode=TwoWay}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:CollectionModel">
                     <Grid>
@@ -85,10 +89,10 @@
             </ListBox.ItemTemplate>
         </ListBox>
         
-        <sdk:GridSplitter Grid.Column="1" VerticalAlignment="Stretch" HorizontalAlignment="Center"/>
+        <sdk:GridSplitter Grid.Column="1" VerticalAlignment="Stretch" HorizontalAlignment="Center" Width="6" Margin="-3,0,-3,0"/>
         
         <Documents:DocumentsView DataContext="{Binding Path=DocumentsModel}"
-								 Grid.Column="2" />
+								 Grid.Column="2" ShowHeader="False"/>
 	</Grid>
     </toolkit:HeaderedContentControl>
 </Infrastructure:PageView>
