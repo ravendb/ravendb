@@ -781,9 +781,6 @@
     <Compile Include="Controls\NotificationArea.xaml.cs">
       <DependentUpon>NotificationArea.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Collections\CollectionsListView.xaml.cs">
-      <DependentUpon>CollectionsListView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Collections\CollectionView.xaml.cs">
       <DependentUpon>CollectionView.xaml</DependentUpon>
     </Compile>
@@ -850,7 +847,6 @@
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
     <Compile Include="Infrastructure\PageViewModel.cs" />
-    <Compile Include="Models\AllDocumentsModel.cs" />
     <Compile Include="Models\DatabasesListModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
@@ -862,7 +858,6 @@
     <Compile Include="Infrastructure\Converters\LastItemInListConverter.cs" />
     <Compile Include="Infrastructure\Converters\MagnitudeToListConverter.cs" />
     <Compile Include="Models\CollectionModel.cs" />
-    <Compile Include="Models\CollectionsModel.cs" />
     <Compile Include="Features\Stats\IndexesErrorsStatusSectionModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />
     <Compile Include="Models\IndexListItem.cs" />
@@ -915,9 +910,6 @@
     <Compile Include="Models\ServerModel.cs" />
     <Compile Include="Features\Stats\StatisticsStatusSectionModel.cs" />
     <Compile Include="Models\TaskModel.cs" />
-    <Compile Include="Views\Collections.xaml.cs">
-      <DependentUpon>Collections.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Databases.xaml.cs">
       <DependentUpon>Databases.xaml</DependentUpon>
     </Compile>
@@ -1407,10 +1399,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Resource>
-    <Page Include="Features\Collections\CollectionsListView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Collections\CollectionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1443,10 +1431,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Resource>
-    <Page Include="Views\Collections.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Views\Edit.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

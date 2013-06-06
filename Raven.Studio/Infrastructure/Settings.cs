@@ -54,12 +54,6 @@ namespace Raven.Studio.Infrastructure
 			set { currentSettings["DocumentOutliningMode"] = value; }
 		}
 
-		public string DocumentsTabSelection
-		{
-			get { return GetSettingAsString("DocumentsTabSelection", "Documents"); }
-			set { currentSettings["DocumentsTabSelection"] = value; }
-		}
-
 		public string CollectionSortingMode
 		{
             get { return GetSettingAsString("CollectionSortingMode", "Name"); }
