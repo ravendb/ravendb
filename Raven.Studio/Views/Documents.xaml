@@ -11,6 +11,7 @@
                          xmlns:converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:controls="clr-namespace:Raven.Studio.Controls" xmlns:Delay="clr-namespace:Delay"
+                         xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
                          mc:Ignorable="d"
                          Title="Documents"
                          Style="{StaticResource PageStyle}"
@@ -96,7 +97,8 @@
                 <toolkit:DockPanel Background="#E9E6E3" Grid.Row="1" LastChildFill="False">
                     <Delay:PopupButton Margin="4,0"
                                        ToolTipService.ToolTip="Options" toolkit:DockPanel.Dock="Left"
-                                       VerticalPopupAlignment="Top">
+                                       VerticalPopupAlignment="Top"
+                                       x:Name="PopupButton">
                             <Image Source="{StaticResource Image_Settings_Tiny}" Width="16" Height="16"/>
 
                         <Delay:PopupButton.PopupContent>
@@ -113,6 +115,11 @@
                                     </Border>
                                     <ListBox ItemsSource="{Binding CollectionsSortingModes}" SelectedItem="{Binding SelectedCollectionSortingMode.Value, Mode=TwoWay}"
                                                  Style="{StaticResource Style_ListBox_RadioButtons}">
+                                        <i:Interaction.Triggers>
+                                            <behaviors:HandledMouseLeftButtonUpTrigger>
+                                                <behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                            </behaviors:HandledMouseLeftButtonUpTrigger>
+                                        </i:Interaction.Triggers>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding}"/>
