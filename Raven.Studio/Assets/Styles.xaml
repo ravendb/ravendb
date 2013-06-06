@@ -846,8 +846,8 @@
   <!-- LayoutRoot Grid Style -->
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
-<!--		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>-->
-		<!--<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>-->
+		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
 	</Style>
 
   <!-- Content Border Style -->
