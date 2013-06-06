@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Windows.Data;
+using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
@@ -24,6 +26,12 @@ namespace Raven.Studio.Models
 	    private DocumentsModel documentsModel;
 	    private DocumentsModel collectionDocumentsModel;
 	    private DocumentsModel allDocumentsDocumentsModel;
+	    private double collectionsListWidth;
+	    private ICommand collapseCollectionsListCommand;
+	    public static readonly double CollapsedCollectionsListWidth = 25;
+	    private const double DefaultCollectionsListWidth = 175;
+	    private double maximisedCollectionsListWidth;
+	    private ICommand expandCollectionsListCommand;
 
 	    public CollectionViewSource SortedCollectionsList { get; private set; }
 
@@ -141,6 +149,8 @@ namespace Raven.Studio.Models
 
 				Settings.Instance.CollectionSortingMode = SelectedCollectionSortingMode.Value;
 			};
+
+            CollectionsListWidth = DefaultCollectionsListWidth;
 		}
 
 	    private SortDescription GetSortDescription()
@@ -243,6 +253,47 @@ namespace Raven.Studio.Models
                     .ObserveOnDispatcher()
                     .Subscribe(__ => RefreshCollectionsList());
             }
+	    }
+
+        public double CollectionsListWidth
+        {
+            get { return collectionsListWidth; }
+            set
+            {
+                collectionsListWidth = value;
+                OnPropertyChanged(() => CollectionsListWidth);
+            }
+        }
+
+	    public ICommand CollapseCollectionsList
+	    {
+	        get
+	        {
+	            return collapseCollectionsListCommand ??
+	                   (collapseCollectionsListCommand = new ActionCommand(HandleCollapseCollectionsList));
+	        }
+	    }
+
+        public ICommand ExpandCollectionsList
+        {
+            get
+            {
+                return expandCollectionsListCommand ??
+                       (expandCollectionsListCommand = new ActionCommand(HandleExpandCollectionsList));
+            }
+        }
+
+	    private void HandleExpandCollectionsList()
+	    {
+	        CollectionsListWidth = maximisedCollectionsListWidth <= CollapsedCollectionsListWidth
+	                                   ? DefaultCollectionsListWidth
+	                                   : maximisedCollectionsListWidth;
+	    }
+
+	    private void HandleCollapseCollectionsList()
+	    {
+	        maximisedCollectionsListWidth = CollectionsListWidth;
+	        CollectionsListWidth = CollapsedCollectionsListWidth;
 	    }
 	}
 }
