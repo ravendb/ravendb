@@ -14,7 +14,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// A list of remaining terms in term sort order for terms that are outside of the MaxResults count.
         /// </summary>
-        public List<string> RemainingTerms { get; set; }
+		public List<string> RemainingTerms { get; set; }
         /// <summary>
         /// The number of remaining terms outside of those covered by the Values terms.
         /// </summary>
@@ -27,6 +27,7 @@ namespace Raven.Abstractions.Data
         public FacetResult()
         {
             Values = new List<FacetValue>();
+			RemainingTerms = new List<string>();
         }
     }
 }
