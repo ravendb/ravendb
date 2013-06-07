@@ -16,35 +16,39 @@ namespace Raven.Bundles.CascadeDelete
 			if (CascadeDeleteContext.IsInCascadeDeleteContext)
 				return;
 
-			using(Database.DisableAllTriggersForCurrentThread())
+			using (Database.DisableAllTriggersForCurrentThread())
 			using (CascadeDeleteContext.Enter())
 			{
-				var document = Database.Get(key, transactionInformation);
-				if (document == null)
-					return;
+				RecursiveDelete(key, transactionInformation);
+			}
+		}
 
+		private void RecursiveDelete(string key, TransactionInformation transactionInformation)
+		{
+			var document = Database.Get(key, transactionInformation);
+			if (document == null)
+				return;
 
-				var documentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.DocumentsToCascadeDelete);
-
-				if (documentsToDelete != null)
+			var documentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.DocumentsToCascadeDelete);
+			if (documentsToDelete != null)
+			{
+				foreach (var documentToDelete in documentsToDelete)
 				{
-					foreach (var documentToDelete in documentsToDelete)
+					var documentId = documentToDelete.Value<string>();
+					if (!CascadeDeleteContext.HasAlreadyDeletedDocument(documentId))
 					{
-						var documentId = documentToDelete.Value<string>();
-						if (!CascadeDeleteContext.HasAlreadyDeletedDocument(documentId))
-						{
-							CascadeDeleteContext.AddDeletedDocument(documentId);
-							Database.Delete(documentId, null, transactionInformation);
-						}
+						CascadeDeleteContext.AddDeletedDocument(documentId);
+						RecursiveDelete(documentId, transactionInformation);
+						Database.Delete(documentId, null, transactionInformation);
 					}
 				}
-
-				var attachmentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.AttachmentsToCascadeDelete);
-
-				if (attachmentsToDelete != null)
-					foreach (var attachmentToDelete in attachmentsToDelete)
-						Database.DeleteStatic(attachmentToDelete.Value<string>(), null);
 			}
+			var attachmentsToDelete = document.Metadata.Value<RavenJArray>(MetadataKeys.AttachmentsToCascadeDelete);
+
+			if (attachmentsToDelete != null)
+				foreach (var attachmentToDelete in attachmentsToDelete)
+					Database.DeleteStatic(attachmentToDelete.Value<string>(), null);
+			return;
 		}
 	}
 }
