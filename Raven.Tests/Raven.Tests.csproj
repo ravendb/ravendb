@@ -703,6 +703,7 @@
     <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
     <Compile Include="MailingList\Holt.cs" />
+    <Compile Include="MailingList\HttpIdTest.cs" />
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="MailingList\InIssues.cs" />
