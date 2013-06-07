@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
@@ -57,7 +56,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					BackupPath = backupPath
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
-				dataDumper.ImportData(smugglerOptions, true);
+				dataDumper.ImportData(smugglerOptions, true).Wait();
 
 				using (var session = store.OpenSession())
 				{
@@ -92,7 +91,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					if (jsonDocument == null)
 						return false;
 					var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
-					return periodicBackupStatus.LastDocsEtag != Guid.Empty;
+					return periodicBackupStatus.LastDocsEtag != Etag.Empty && periodicBackupStatus.LastDocsEtag != null;
 				});
 
 				var etagForBackups= store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag;
@@ -113,7 +112,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					BackupPath = backupPath
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
-				dataDumper.ImportData(smugglerOptions, true);
+				dataDumper.ImportData(smugglerOptions, true).Wait();
 
 				using (var session = store.OpenSession())
 				{

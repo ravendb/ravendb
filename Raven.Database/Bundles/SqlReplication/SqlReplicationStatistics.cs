@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Bundles.SqlReplication
 {

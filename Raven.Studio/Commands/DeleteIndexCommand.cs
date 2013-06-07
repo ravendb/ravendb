@@ -32,23 +32,23 @@ namespace Raven.Studio.Commands
 
 		private void DeleteIndex(string indexName)
 		{
-		    DatabaseCommands
-		        .DeleteIndexAsync(indexName)
-		        .ContinueOnUIThread(t =>
-		                                {
-		                                    if (t.IsFaulted)
-		                                    {
-		                                        ApplicationModel.Current.AddErrorNotification(t.Exception,"index " + indexName + " could not be deleted");
-		                                    }
-		                                    else
-		                                    {
-		                                        ApplicationModel.Current.AddInfoNotification("Index " + indexName + " successfully deleted");
-		                                        UrlUtil.Navigate("/indexes");
+			DatabaseCommands
+				.DeleteIndexAsync(indexName)
+				.ContinueOnUIThread(t =>
+				{
+					if (t.IsFaulted)
+					{
+						ApplicationModel.Current.AddErrorNotification(t.Exception, "index " + indexName + " could not be deleted");
+					}
+					else
+					{
+						ApplicationModel.Current.AddInfoNotification("Index " + indexName + " successfully deleted");
+						UrlUtil.Navigate("/indexes");
 
-		                                        var deletedItem = model.GroupedIndexes.OfType<IndexItem>().FirstOrDefault(item => item.Name == indexName);
-                                                model.GroupedIndexes.Remove(deletedItem);
-		                                    }
-		                                });
+						var deletedItem = model.GroupedIndexes.OfType<IndexItem>().FirstOrDefault(item => item.Name == indexName);
+						model.GroupedIndexes.Remove(deletedItem);
+					}
+				});
 		}
 	}
 }

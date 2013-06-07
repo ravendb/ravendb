@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Database.Indexing;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -17,8 +18,8 @@ namespace Raven.Database.Storage
 
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		void IncrementReduceKeyCounter(string view, string reduceKey, int val);
-		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
-		void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed);
+		void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed);
+		void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed);
 		void DeleteMappedResultsForView(string view);
 
 		IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take);
@@ -38,6 +39,7 @@ namespace Raven.Database.Storage
 		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
 		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, IEnumerable<string> keysToReduce, bool loadData);
+		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take);
 	}
 
 	public class GetItemsToReduceParams
@@ -104,7 +106,7 @@ namespace Raven.Database.Storage
 	public class ScheduledReductionInfo
 	{
 		public DateTime Timestamp { get; set; }
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 	}
 
 	public class ScheduledReductionDebugInfo
@@ -120,7 +122,7 @@ namespace Raven.Database.Storage
 	{
 		public string ReduceKey { get; set; }
 		public DateTime Timestamp { get; set; }
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		public RavenJObject Data { get; set; }
 		[JsonIgnore]

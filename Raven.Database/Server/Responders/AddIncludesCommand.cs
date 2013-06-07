@@ -6,12 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.Text.RegularExpressions;
 using Raven.Abstractions.Util;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
@@ -21,7 +17,7 @@ namespace Raven.Database.Server.Responders
 		public AddIncludesCommand(
 			DocumentDatabase database, 
 			TransactionInformation transactionInformation, 
-			Action<Guid, RavenJObject> add, 
+			Action<Etag, RavenJObject> add, 
 			string[] includes,
 			HashSet<string> loadedIds)
 		{
@@ -42,7 +38,7 @@ namespace Raven.Database.Server.Responders
 
 		private string[] Includes { get; set; }
 
-		private Action<Guid,RavenJObject> Add { get; set; }
+		private Action<Etag,RavenJObject> Add { get; set; }
 
 		private DocumentDatabase Database { get; set; }
 
@@ -75,7 +71,7 @@ namespace Raven.Database.Server.Responders
 				return;
 
 			Debug.Assert(includedDoc.Etag != null);
-			Add(includedDoc.Etag.Value, includedDoc.ToJson());
+			Add(includedDoc.Etag, includedDoc.ToJson());
 		}
 	}
 }

@@ -1,3 +1,4 @@
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -79,3 +80,4 @@ namespace Raven.Abstractions.Connection
 		}
 	}
 }
+#endif

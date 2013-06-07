@@ -112,10 +112,12 @@ namespace Raven.Tests.Document
 				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray(); // wait for the index to settle down
 			}
 
-			documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
-			                                                                            	{
-			                                                                            		Query = "Tag:[[Companies]]"
-			                                                                            	}, allowStale: false);
+			documentStore
+				.DatabaseCommands
+				.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+				                                              {
+					                                              Query = "Tag:[[Companies]]"
+				                                              }, allowStale: false).WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -127,10 +129,12 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_order_by_using_linq()
 		{
-			documentStore.DatabaseCommands.PutIndex("CompaniesByName", new IndexDefinition
-			                                                           	{
-			                                                           		Map = "from company in docs.Companies select new { company.Name, company.Phone }",
-			                                                           	});
+			documentStore
+				.DatabaseCommands
+				.PutIndex("CompaniesByName", new IndexDefinition
+				                             {
+					                             Map = "from company in docs.Companies select new { company.Name, company.Phone }",
+				                             });
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -285,7 +289,7 @@ namespace Raven.Tests.Document
 			                                                                            	   				Name = "Name",
 			                                                                            	   				Value = RavenJToken.FromObject("Another Company")
 			                                                                            	   			},
-			                                                                            	   	}, allowStale: false);
+			                                                                            	   	}, allowStale: false).WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -995,7 +999,7 @@ namespace Raven.Tests.Document
 
 				var expected =
 					SpatialIndexTestHelper.GetEvents()
-						.Count(e => Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+						.Count(e => SpatialIndexTest.GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
 
 				Assert.Equal(expected, events.Length);
 
@@ -1004,7 +1008,7 @@ namespace Raven.Tests.Document
 				double previous = 0;
 				foreach (var e in events)
 				{
-					double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+					double distance = SpatialIndexTest.GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude);
 					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 					Assert.True(distance < radiusInKm);
 					Assert.True(distance >= previous);
@@ -1280,6 +1284,129 @@ namespace Raven.Tests.Document
 			               		{"Content-Length", 100},
 			               	};
 			Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new MemoryStream(new byte[] {0, 1, 2}), metadata));
+		}
+
+		[Fact]
+		public void Can_patch_existing_document_when_present()
+		{
+			var company = new Company {Name = "Hibernating Rhinos"};
+
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+
+			documentStore.DatabaseCommands.Patch(
+				company.Id,
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject());
+
+			using (var session = documentStore.OpenSession())
+			{
+				var company2 = session.Load<Company>(company.Id);
+
+				Assert.NotNull(company2);
+				Assert.Equal(company2.Name, "Existing");
+			}
+		}
+
+		[Fact]
+		public void Can_patch_default_document_when_missing()
+		{
+			documentStore.DatabaseCommands.Patch(
+				"Company/1",
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject());
+
+			using (var session = documentStore.OpenSession())
+			{
+				var company = session.Load<Company>("Company/1");
+
+				Assert.NotNull(company);
+				Assert.Equal(company.Name, "New");
+			}
+		}
+
+		[Fact]
+		public void Should_not_throw_when_ignore_missing_true()
+		{
+			Assert.DoesNotThrow(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}));
+		
+			Assert.DoesNotThrow(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, true));
+		}
+
+		[Fact]
+		public void Should_throw_when_ignore_missing_false()
+		{
+			Assert.Throws<DocumentDoesNotExistsException>(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, false));
 		}
 	}
 }

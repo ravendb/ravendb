@@ -140,7 +140,7 @@ namespace Raven.Tests.Issues
 				}
 			});
 
-			Assert.Equal("Id covention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
+			Assert.Equal("Id convention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
 
 			exception = Assert.Throws<InvalidOperationException>(() =>
 			{
@@ -157,7 +157,7 @@ namespace Raven.Tests.Issues
 				}
 			});
 
-			Assert.Equal("Id covention for asynchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
+			Assert.Equal("Id convention for asynchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
 		}
 
 		[Fact]

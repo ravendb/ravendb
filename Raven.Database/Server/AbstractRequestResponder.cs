@@ -88,7 +88,7 @@ namespace Raven.Database.Server
 				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
 			return new TransactionInformation
 			{
-				Id = new Guid(parts[0]),
+				Id = parts[0],
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
 		}
@@ -114,7 +114,8 @@ namespace Raven.Database.Server
 				return;
 			}
 
-			if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
+			if (context.Response.BufferOutput && 
+				replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
 			{
 				context.Response.AddHeader(Constants.RavenForcePrimaryServerCheck, "True");
 			}

@@ -8,6 +8,7 @@ using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -72,7 +73,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
 			{
 				// first, delete all the rows that might already exist there
-				DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn,
+				DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
 				            identifiers);
 			}
 
@@ -155,7 +156,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		public void DeleteItems(string tableName, string pkName, List<string> identifiers)
+		public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers)
 		{
 			const int maxParams = 1000;
 			using (var cmd = connection.CreateCommand())
@@ -172,14 +173,21 @@ namespace Raven.Database.Bundles.SqlReplication
 
 					for (int j = i; j < Math.Min(i + maxParams, identifiers.Count); j++)
 					{
-						var dbParameter = cmd.CreateParameter();
-						dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, "p" + j);
-						dbParameter.Value = identifiers[j];
-						cmd.Parameters.Add(dbParameter);
 						if (i != j)
 							sb.Append(", ");
-
-						sb.Append(dbParameter.ParameterName);
+						if (doNotParameterize == false)
+						{
+							var dbParameter = cmd.CreateParameter();
+							dbParameter.ParameterName = GetParameterName(providerFactory, commandBuilder, "p" + j);
+							dbParameter.Value = identifiers[j];
+							cmd.Parameters.Add(dbParameter);
+							sb.Append(dbParameter.ParameterName);
+						}
+						else
+						{
+							sb.Append("'").Append(SanitizeSqlValue(identifiers[j])).Append("'");
+						}
+						
 					}
 					sb.Append(")");
 
@@ -199,6 +207,11 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 				}
 			}
+		}
+
+		public string SanitizeSqlValue(string sqlValue)
+		{
+			return sqlValue.Replace("'", "''");
 		}
 
 		private static string GetParameterName(DbProviderFactory providerFactory, DbCommandBuilder commandBuilder, string paramName)

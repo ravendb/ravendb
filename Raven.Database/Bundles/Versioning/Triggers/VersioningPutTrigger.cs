@@ -52,7 +52,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
 		}
 
-		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Guid etag, TransactionInformation transactionInformation)
+		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
@@ -143,7 +143,7 @@ namespace Raven.Bundles.Versioning.Triggers
 												   out VersioningConfiguration versioningConfiguration)
 		{
 			versioningConfiguration = null;
-			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			if (metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")

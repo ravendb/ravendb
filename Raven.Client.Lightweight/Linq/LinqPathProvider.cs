@@ -9,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Linq
 {
@@ -19,6 +20,7 @@ namespace Raven.Client.Linq
 			public Type MemberType;
 			public string Path;
 			public bool IsNestedPath;
+		    public PropertyInfo MaybeProperty;
 		}
 
 		private readonly DocumentConvention conventions;
@@ -34,10 +36,15 @@ namespace Raven.Client.Linq
 		public Result GetPath(Expression expression)
 		{
 			expression = SimplifyExpression(expression);
+
 			var callExpression = expression as MethodCallExpression;
 			if (callExpression != null)
 			{
-				if(callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
+				var customMethodResult = conventions.TranslateCustomQueryExpression(this, callExpression);
+				if (customMethodResult != null)
+					return customMethodResult;
+
+				if (callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
 				{
 					if(callExpression.Arguments.Count != 1)
 						throw new ArgumentException("Invalid computation: " + callExpression +
@@ -51,20 +58,28 @@ namespace Raven.Client.Linq
 						Path = target.Path + @".Count\(\)"
 					};
 				}
-				if (callExpression.Method.Name != "get_Item")
-					throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
 
-				var parent = GetPath(callExpression.Object);
-
-				return new Result
+				if (callExpression.Method.Name == "get_Item")
 				{
-					MemberType = callExpression.Method.ReturnType,
-					IsNestedPath = false,
-					Path = parent.Path + "." +
-					       GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
-				};
+					var parent = GetPath(callExpression.Object);
+
+					return new Result
+					       {
+						       MemberType = callExpression.Method.ReturnType,
+						       IsNestedPath = false,
+						       Path = parent.Path + "." +
+						              GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
+					       };
+				}
+
+				throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
 			}
+
 			var memberExpression = GetMemberExpression(expression);
+
+			var customMemberResult = conventions.TranslateCustomQueryExpression(this, memberExpression);
+			if (customMemberResult != null)
+				return customMemberResult;
 
 			// we truncate the nullable .Value because in json all values are nullable
 			if (memberExpression.Member.Name == "Value" &&
@@ -80,38 +95,43 @@ namespace Raven.Client.Linq
 			{
 				Path = memberExpression.ToString(),
 				IsNestedPath = memberExpression.Expression is MemberExpression,
-				MemberType = memberExpression.Member.GetMemberType()
+				MemberType = memberExpression.Member.GetMemberType(),
+                MaybeProperty = memberExpression.Member as PropertyInfo
 			};
 
-			var jsonPropAttributes = memberExpression.Member.GetCustomAttributes(false)
-				.Where(x => x.GetType().Name == "JsonPropertyAttribute")
-				.ToArray();
+			result.Path = HandlePropertyRenames(memberExpression.Member, result.Path);
+
+			return result;
+		}
+
+		public static string HandlePropertyRenames(MemberInfo member, string name)
+		{
+			var jsonPropAttributes = member.GetCustomAttributes(false)
+			                                         .Where(x => x.GetType().Name == "JsonPropertyAttribute")
+			                                         .ToArray();
 
 			if (jsonPropAttributes.Length != 0)
 			{
-				string propertyName = ((dynamic)jsonPropAttributes[0]).PropertyName;
+				string propertyName = ((dynamic) jsonPropAttributes[0]).PropertyName;
 				if (String.IsNullOrEmpty(propertyName) == false)
 				{
-					result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
-					              propertyName;
+					return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 				}
 			}
 
-			var dataMemberAttributes = memberExpression.Member.GetCustomAttributes(false)
-				.Where(x => x.GetType().Name == "DataMemberAttribute")
-				.ToArray();
+			var dataMemberAttributes = member.GetCustomAttributes(false)
+			                                           .Where(x => x.GetType().Name == "DataMemberAttribute")
+			                                           .ToArray();
 
 			if (dataMemberAttributes.Length != 0)
 			{
-				string propertyName = ((dynamic)dataMemberAttributes[0]).Name;
+				string propertyName = ((dynamic) dataMemberAttributes[0]).Name;
 				if (String.IsNullOrEmpty(propertyName) == false)
 				{
-					result.Path = result.Path.Substring(0, result.Path.Length - memberExpression.Member.Name.Length) +
-								  propertyName;
+					return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 				}
 			}
-			
-			return result;
+			return name;
 		}
 
 		private static Expression SimplifyExpression(Expression expression)
@@ -148,7 +168,7 @@ namespace Raven.Client.Linq
 					return value;
 
 				var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
-				if (value is Enum || nonNullableType.IsEnum)
+				if (value is Enum || nonNullableType.IsEnum())
 				{
 					if (value == null)
 						return null;

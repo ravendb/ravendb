@@ -31,8 +31,8 @@ namespace Raven.Bundles.Replication.Triggers
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) && // we don't deal with system documents
-				key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilos
+			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // we don't deal with system documents
+				key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilos
 				return;
 			using (Database.DisableAllTriggersForCurrentThread())
 			{

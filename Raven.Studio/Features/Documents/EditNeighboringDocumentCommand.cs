@@ -18,9 +18,7 @@ namespace Raven.Studio.Features.Documents
 				urlParser.SetQueryParam(friendly.IsProjection ? "projection" : "id", friendly.Id);
 				
 				if (friendly.NeighborsIds != null)
-				{
 					urlParser.SetQueryParam("neighbors", string.Join(",", friendly.NeighborsIds));
-				}
 			}
 
 			UrlUtil.Navigate(urlParser.BuildUrl());

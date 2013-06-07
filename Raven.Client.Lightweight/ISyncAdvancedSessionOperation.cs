@@ -3,11 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
-
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
@@ -63,6 +65,39 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
 		string GetDocumentUrl(object entity);
+
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query);
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation);
+
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query);
+
+		/// <summary>
+		/// Stream the results on the query to the client, converting them to 
+		/// CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation);
+
+		/// <summary>
+		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag = null, string startsWith = null, string matches = null,
+		                                        int start = 0, int pageSize = int.MaxValue);
 	}
 }
-#endif

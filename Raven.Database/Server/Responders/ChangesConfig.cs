@@ -81,6 +81,22 @@ namespace Raven.Database.Server.Responders
 			{
 				connectionState.UnwatchDocumentPrefix(name);
 			}
+			else if (Match(cmd, "watch-replication-conflicts"))
+			{
+				connectionState.WatchAllReplicationConflicts();
+			}
+			else if (Match(cmd, "unwatch-replication-conflicts"))
+			{
+				connectionState.UnwatchAllReplicationConflicts();
+			}
+			else if (Match(cmd, "watch-bulk-operation"))
+			{
+				connectionState.WatchBulkInsert(name);
+			}
+			else if (Match(cmd, "unwatch-bulk-operation"))
+			{
+				connectionState.UnwatchBulkInsert(name);
+			}
 			else
 			{
 				context.SetStatusToBadRequest();
@@ -93,7 +109,7 @@ namespace Raven.Database.Server.Responders
 
 		private bool Match(string x, string y)
 		{
-			return string.Equals(x, y, StringComparison.InvariantCultureIgnoreCase);
+			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
 		}
 	}
 }

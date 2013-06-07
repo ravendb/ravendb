@@ -15,14 +15,14 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		internal Func<IDisposable> disableAllCaching { get; set; }
 		private readonly string[] ids;
-		private readonly string[] includes;
+		private readonly KeyValuePair<string, Type>[] includes;
 		bool firstRequest = true;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
 
 		private Stopwatch sp;
 
-		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string[] ids, string[] includes)
+		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
@@ -61,11 +61,12 @@ namespace Raven.Client.Document.SessionOperations
 
 		public T[] Complete<T>()
 		{
-			foreach (var include in includeResults)
+			for (var i = 0; i < includeResults.Length; i++)
 			{
-				sessionOperations.TrackEntity<object>(include);
+				var include = includeResults[i];
+				var entityType = this.includes.Length > i ? this.includes[i].Value : typeof(object);
+				sessionOperations.TrackEntity(entityType, include);
 			}
-
 
 			var finalResults = SelectResults()
 				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))
@@ -73,11 +74,12 @@ namespace Raven.Client.Document.SessionOperations
 
 			for (var i = 0; i < finalResults.Length; i++)
 			{
-				if(ReferenceEquals(finalResults[i], null))
+				if (ReferenceEquals(finalResults[i], null))
 					sessionOperations.RegisterMissing(ids[i]);
 			}
 
-			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includes);
+			var includePaths = this.includes != null ? this.includes.Select(x => x.Key).ToArray() : null;
+			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includePaths);
 
 			return finalResults;
 		}
@@ -88,7 +90,7 @@ namespace Raven.Client.Document.SessionOperations
 				return results;
 
 			var finalResult = ids.Select(id => results.Where(r => r != null)
-			                                   	.FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase)));
+			                                   	.FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase)));
 			return finalResult;
 		}
 	}

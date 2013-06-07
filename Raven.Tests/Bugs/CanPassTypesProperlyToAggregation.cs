@@ -33,7 +33,7 @@ namespace Raven.Tests.Bugs
 
 			Assert.Equal(@"docs.GroupBy(y => y.Denomination).Select(g => new {
     Denomination = g.Key,
-    Cost = Enumerable.Sum(g, z => ((double)((double) z.Cost)))
+    Cost = Enumerable.Sum(g, z => ((double) z.Cost))
 })", code);
 		}
 
@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs
 
 			Assert.Equal(@"docs.GroupBy(y => y.Denomination).Select(g => new {
     Denomination = g.Key,
-    Cost = ((double) DynamicEnumerable.FirstOrDefault(g).Cost).ToString()
+    Cost = DynamicEnumerable.FirstOrDefault(g).Cost.ToString()
 })", code);
 		}
 	}

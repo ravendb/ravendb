@@ -27,12 +27,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 #if !NETFX_CORE
-using System.IO;
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -803,6 +802,7 @@ keyword such as type of business.""
         o.Children()["item"].Children()["title"].Values<string>().ToArray());
     }
 
+    [Test]
     public void UriGuidTimeSpanTestClassEmptyTest()
     {
       UriGuidTimeSpanTestClass c1 = new UriGuidTimeSpanTestClass();
@@ -824,6 +824,7 @@ keyword such as type of business.""
       Assert.AreEqual(c1.Uri, c2.Uri);
     }
 
+    [Test]
     public void UriGuidTimeSpanTestClassValuesTest()
     {
       UriGuidTimeSpanTestClass c1 = new UriGuidTimeSpanTestClass
@@ -851,5 +852,36 @@ keyword such as type of business.""
       Assert.AreEqual(c1.NullableTimeSpan, c2.NullableTimeSpan);
       Assert.AreEqual(c1.Uri, c2.Uri);
     }
+
+    [Test]
+    public void ParseWithPrecendingComments()
+    {
+      string json = @"/* blah */ {'hi':'hi!'}";
+      JObject o = JObject.Parse(json);
+      Assert.AreEqual("hi!", (string)o["hi"]);
+
+      json = @"/* blah */ ['hi!']";
+      JArray a = JArray.Parse(json);
+      Assert.AreEqual("hi!", (string)a[0]);
+    }
+
+#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
+    [Test]
+    public void ExceptionFromOverloadWithJValue()
+    {
+      dynamic name = new JValue("Matthew Doig");
+
+      IDictionary<string, string> users = new Dictionary<string, string>();
+
+      // unfortunatly there doesn't appear to be a way around this
+      ExceptionAssert.Throws<Microsoft.CSharp.RuntimeBinder.RuntimeBinderException>("The best overloaded method match for 'System.Collections.Generic.IDictionary<string,string>.Add(string, string)' has some invalid arguments",
+        () =>
+          {
+            users.Add("name2", name);
+
+            Assert.AreEqual(users["name2"], "Matthew Doig");
+          });
+    }
+#endif
   }
 }

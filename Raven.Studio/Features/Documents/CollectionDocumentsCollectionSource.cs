@@ -3,7 +3,10 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -41,18 +44,17 @@ namespace Raven.Studio.Features.Documents
 
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
-            return GetQueryResults(start, pageSize)
-                .ContinueWith(task =>
-                                  {
-                                      var documents =
-                                          SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
-                                              .Select(x => new ViewableDocument(x))
-                                              .ToArray();
+	        return GetQueryResults(start, pageSize)
+		        .ContinueWith(task =>
+		        {
+			        var documents = SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
+			                                           .Select(x => new ViewableDocument(x))
+			                                           .ToArray();
 
-                                      SetCount(task.Result.TotalResults - task.Result.SkippedResults);
+			        SetCount(task.Result.TotalResults - task.Result.SkippedResults);
 
-                                      return (IList<ViewableDocument>) documents;
-                                  });
+			        return (IList<ViewableDocument>) documents;
+		        });
         }
 
         private Task<QueryResult> GetQueryResults(int start, int pageSize)
@@ -64,16 +66,41 @@ namespace Raven.Studio.Features.Documents
             }
 
             if (string.IsNullOrEmpty(collectionName))
-            {
                 return TaskEx.FromResult(new QueryResult());
+
+	        return ApplicationModel.DatabaseCommands
+	                               .QueryAsync("Raven/DocumentsByEntityName",
+	                                           new IndexQuery
+	                                           {
+		                                           Start = start,
+		                                           PageSize = pageSize,
+		                                           Query = "Tag:" + collectionName
+	                                           },
+	                                           new string[] {},
+	                                           MetadataOnly)
+	                               .Catch();
+        }
+
+        public async override Task<IAsyncEnumerator<JsonDocument>> StreamAsync(Reference<long> totalResults)
+        {
+            string collectionName;
+            lock (_lockObject)
+            {
+                collectionName = CollectionName;
             }
 
-            return ApplicationModel.DatabaseCommands
-                .QueryAsync("Raven/DocumentsByEntityName",
-                            new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + collectionName},
-                            new string[] {}, 
-                            MetadataOnly)
-                .Catch();
+            var reference = new Reference<QueryHeaderInformation>();
+
+            var enumerator = await ApplicationModel.DatabaseCommands.StreamQueryAsync("Raven/DocumentsByEntityName",
+                                                                                      new IndexQuery
+                                                                                      {
+                                                                                          Query = "Tag:" + collectionName
+                                                                                      },
+                                                                                      reference);
+
+            totalResults.Value = reference.Value.TotalResults;
+
+            return new ConvertingEnumerator<JsonDocument, RavenJObject>(enumerator, doc => doc.ToJsonDocument());
         }
     }
 }

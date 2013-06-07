@@ -21,7 +21,7 @@ namespace Raven.Database.Config
 		{
 			foreach (var setting in values)
 			{
-				if (setting.Item1.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				if (setting.Item1.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 					Settings[setting.Item1] = setting.Item2;
 			}
 

@@ -50,20 +50,7 @@ namespace Raven.Studio.Models
 		{
 			this.name = name;
 			this.documentStore = documentStore;
-			Tasks = new BindableCollection<TaskModel>(x => x.Name)
-			{
-				new ImportTask(),
-				new ExportTask(),
-				new StartBackupTask(),
-				new IndexingTask(),
-				new SampleDataTask(),
-                new CsvImportTask()
-			};
 
-			if (name == null || name == Constants.SystemDatabase)
-				Tasks.Insert(3, new StartRestoreTask());
-
-			SelectedTask = new Observable<TaskModel> { Value = Tasks.FirstOrDefault() };
 			Statistics = new Observable<DatabaseStatistics>();
 			Status = new Observable<string>
 			{
@@ -95,7 +82,7 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => StatusImage);
 		}
 
-		public void UpdateDatabaseDocument()
+		public void Update()
 		{
 			if (ApplicationModel.Current != null)
 				ApplicationModel.Current.Server.Value.DocumentStore
@@ -113,6 +100,8 @@ namespace Raven.Studio.Models
 						};
 						OnPropertyChanged(() => HasReplication);
 					});
+
+            RefreshStatistics();
 		}
 
 		public bool HasReplication

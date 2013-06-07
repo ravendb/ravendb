@@ -24,6 +24,12 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
+	    public bool AutoRefreshDocumentLists
+	    {
+	        get { return GetSettingAsBool("AutoRefreshDocumentLists", true); }
+            set { currentSettings["AutoRefreshDocumentLists"] = value; }
+	    }
+
 		public int DocumentSize
 		{
 			get { return GetSettingAsInt("DocumentSize"); }
@@ -48,14 +54,25 @@ namespace Raven.Studio.Infrastructure
 			set { currentSettings["DocumentOutliningMode"] = value; }
 		}
 
-		private string GetSettingAsString(string key)
+		public string CollectionSortingMode
 		{
-		    return currentSettings.ContainsKey(key) ? (string) currentSettings[key] : "";
+            get { return GetSettingAsString("CollectionSortingMode", "Name"); }
+            set { currentSettings["CollectionSortingMode"] = value; }
+		}
+
+		private string GetSettingAsString(string key, string defaultValue = "")
+		{
+			return currentSettings.ContainsKey(key) ? (string)currentSettings[key] : defaultValue;
 		}
 
 	    private int GetSettingAsInt(string key)
 	    {
 	        return currentSettings.ContainsKey(key) ? Convert.ToInt32(currentSettings[key]) : 0;
 	    }
+
+        private bool GetSettingAsBool(string key, bool defaultValue = false)
+        {
+            return currentSettings.ContainsKey(key) ? Convert.ToBoolean(currentSettings[key]) : defaultValue;
+        }
 	}
 }

@@ -41,9 +41,13 @@ namespace Raven.Client.Changes
 			}
 		}
 
-		public event Action<DocumentChangeNotification> OnDocumentChangeNotification;
+		public event Action<DocumentChangeNotification> OnDocumentChangeNotification = delegate { };
+
+		public event Action<BulkInsertChangeNotification> OnBulkInsertChangeNotification = delegate { };
 
 		public event Action<IndexChangeNotification> OnIndexChangeNotification;
+
+		public event Action<ReplicationConflictNotification> OnReplicationConflictNotification;
 
 		public event Action<Exception> OnError;
 
@@ -59,6 +63,22 @@ namespace Raven.Client.Changes
 			var onOnIndexChangeNotification = OnIndexChangeNotification;
 			if (onOnIndexChangeNotification != null)
 				onOnIndexChangeNotification(indexChangeNotification);
+		}
+
+		public void Send(ReplicationConflictNotification replicationConflictNotification)
+		{
+			var onOnReplicationConflictNotification = OnReplicationConflictNotification;
+			if (onOnReplicationConflictNotification != null)
+				onOnReplicationConflictNotification(replicationConflictNotification);
+		}
+
+		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+		{
+			var onOnBulkInsertChangeNotification = OnBulkInsertChangeNotification;
+			if (onOnBulkInsertChangeNotification != null)
+				onOnBulkInsertChangeNotification(bulkInsertChangeNotification);
+
+			Send((DocumentChangeNotification)bulkInsertChangeNotification);
 		}
 
 		public void Error(Exception e)

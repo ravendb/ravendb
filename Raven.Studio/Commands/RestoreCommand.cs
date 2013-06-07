@@ -9,24 +9,25 @@ namespace Raven.Studio.Commands
 {
 	public class RestoreCommand : Command
 	{
-		private readonly StartRestoreTask startRestoreTask;
+		private readonly StartRestoreTaskSectionModel startRestoreTaskSectionModel;
 
-		public RestoreCommand(StartRestoreTask startRestoreTask)
+		public RestoreCommand(StartRestoreTaskSectionModel startRestoreTaskSectionModel)
 		{
-			this.startRestoreTask = startRestoreTask;
+			this.startRestoreTaskSectionModel = startRestoreTaskSectionModel;
 		}
 
 		public override void Execute(object parameter)
 		{
-			var backupLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Backup Location");
-			var databaseLocation = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Location");
-			var name = startRestoreTask.TaskInputs.FirstOrDefault(x => x.Name == "Database Name");
-
+			var backupLocation = startRestoreTaskSectionModel.TaskInputs.FirstOrDefault(x => x.Name == "Backup Location");
+			var databaseLocation = startRestoreTaskSectionModel.TaskInputs.FirstOrDefault(x => x.Name == "Database Location");
+			var name = startRestoreTaskSectionModel.TaskInputs.FirstOrDefault(x => x.Name == "Database Name");
+			var attachmentUI = startRestoreTaskSectionModel.TaskInputs.FirstOrDefault(x => x.Name == "Defrag") as TaskCheckBox;
+			var defrag = attachmentUI != null && (bool)attachmentUI.Value;
 			if (backupLocation == null || name == null || databaseLocation == null)
 				return;
 
-			startRestoreTask.TaskStatus = TaskStatus.Started;
-			startRestoreTask.CanExecute.Value = false;
+			startRestoreTaskSectionModel.TaskStatus = TaskStatus.Started;
+			startRestoreTaskSectionModel.CanExecute.Value = false;
 			DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync("Raven/Restore/Status")
 			                .ContinueOnSuccessInTheUIThread(() =>
 			                {
@@ -36,8 +37,8 @@ namespace Raven.Studio.Commands
 												.ContinueOnSuccess(() => UpdateStatus())
 				                                .Catch(exception =>
 				                                {
-													startRestoreTask.CanExecute.Value = true;
-													startRestoreTask.TaskStatus = TaskStatus.Ended;
+													startRestoreTaskSectionModel.CanExecute.Value = true;
+													startRestoreTaskSectionModel.TaskStatus = TaskStatus.Ended;
 				                                });
 			                });
 		}
@@ -51,9 +52,9 @@ namespace Raven.Studio.Commands
 				{
 					if (failCount >= 5)
 					{
-						startRestoreTask.CanExecute.Value = true;
-						startRestoreTask.TaskStatus = TaskStatus.Ended;
-						startRestoreTask.ReportError("Could not find restore status document, can not know if errors have accrued or if process was completed");
+						startRestoreTaskSectionModel.CanExecute.Value = true;
+						startRestoreTaskSectionModel.TaskStatus = TaskStatus.Ended;
+						startRestoreTaskSectionModel.ReportError("Could not find restore status document, can not know if errors have accrued or if process was completed");
 						return;
 					}
 					else
@@ -63,22 +64,22 @@ namespace Raven.Studio.Commands
 					}
 				}
 				var status = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
-				startRestoreTask.Output.Clear();
-				startRestoreTask.Output.AddRange(status);
+				startRestoreTaskSectionModel.Output.Clear();
+				startRestoreTaskSectionModel.Output.AddRange(status);
 				if (status.Last().Contains("The new database was created") == false && status.Last().Contains("Restore Canceled") == false)
 					Time.Delay(TimeSpan.FromMilliseconds(250)).ContinueOnSuccessInTheUIThread(UpdateStatus);
 				else
 				{
-					startRestoreTask.CanExecute.Value = true;
-					startRestoreTask.TaskStatus = TaskStatus.Ended;
+					startRestoreTaskSectionModel.CanExecute.Value = true;
+					startRestoreTaskSectionModel.TaskStatus = TaskStatus.Ended;
 				}
 			})
-			.Catch(exception =>
+			.Catch(exception => Infrastructure.Execute.OnTheUI(() =>
 			{
-				startRestoreTask.ReportError(exception);
-				startRestoreTask.CanExecute.Value = true;
-				startRestoreTask.TaskStatus = TaskStatus.Ended;
-			});
+				startRestoreTaskSectionModel.ReportError(exception);
+				startRestoreTaskSectionModel.CanExecute.Value = true;
+				startRestoreTaskSectionModel.TaskStatus = TaskStatus.Ended;
+			}));
 		}
 	}
 }

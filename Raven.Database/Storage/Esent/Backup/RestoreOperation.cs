@@ -238,6 +238,7 @@ namespace Raven.Storage.Esent.Backup
 		{
 			output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
 			Console.WriteLine("Esent Restore: {0} {1} {2}", snp, snt, data);
+
 			return JET_err.Success;
 		}
 

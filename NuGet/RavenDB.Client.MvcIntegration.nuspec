@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Client.MvcIntegration</id>
-		<version>1.2</version>
+		<version>{{version}}</version>
 		<title>RavenDB Client MvcIntegration</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>A visual profiler for RavenDB that you can use in your ASP.NET MVC application.</summary>

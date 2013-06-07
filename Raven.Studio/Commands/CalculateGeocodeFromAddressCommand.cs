@@ -11,31 +11,46 @@ namespace Raven.Studio.Commands
 {
 	public class CalculateGeocodeFromAddressCommand : Command
 	{
-		private readonly QueryModel queryModel;
+		private readonly SpatialQueryModel queryModel;
 
-		public CalculateGeocodeFromAddressCommand(QueryModel queryModel)
+		public CalculateGeocodeFromAddressCommand(SpatialQueryModel queryModel)
 		{
 			this.queryModel = queryModel;
 		}
 
 		public override void Execute(object parameter)
 		{
-			var url = "http://where.yahooapis.com/geocode?flags=JC&q=" + queryModel.Address;
+			if (string.IsNullOrWhiteSpace(queryModel.Address))
+				return;
+
+			var url = "http://dev.virtualearth.net/REST/v1/Locations?q=" + Uri.EscapeUriString(queryModel.Address) +
+					  "&key=Anlj2YMQu676uXmSj1QTSni66f8DjuBGToZ21t5z9E__lL8IHRhFP8LtF7umitL6";
 			var webRequest = WebRequest.Create(new Uri(url, UriKind.Absolute));
 			webRequest.GetResponseAsync().ContinueOnSuccessInTheUIThread(doc =>
 			{
 				RavenJObject jsonData;
 				using (var stream = doc.GetResponseStream())
+				using (var reader = new StreamReader(stream))
+				using (var jsonReader = new JsonTextReader(reader))
+					jsonData = RavenJObject.Load(jsonReader);
+
+				var set = jsonData["resourceSets"];
+
+				var item = set.Values().First().Values().ToList()[1].Values().ToList();
+				if (item.Count == 0)
 				{
-					jsonData = RavenJObject.Load(new JsonTextReader(new StreamReader(stream)));
+					ApplicationModel.Current.AddInfoNotification("Could not calculate the given address");
+					return;
 				}
 
-				var result = jsonData["ResultSet"].SelectToken("Results").Values().FirstOrDefault();
+				var result = item.First().SelectToken("point").SelectToken("coordinates").Values().ToList();
 
 				if (result != null)
 				{
-					queryModel.Latitude = double.Parse(result.Value<string>("latitude"));
-					queryModel.Longitude = double.Parse(result.Value<string>("longitude"));
+					var latitude = double.Parse(result[0].ToString());
+					var longitude = double.Parse(result[1].ToString());
+					var addressData = new AddressData { Address = queryModel.Address, Latitude = latitude, Longitude = longitude };
+					queryModel.UpdateResultsFromCalculate(addressData);
 				}
 
 			}).Catch();

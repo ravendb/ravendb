@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Data;
+using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -13,41 +15,19 @@ namespace Raven.Studio.Features.Documents
     /// </remarks>
     internal class DocumentColumnsExtractor
     {
-        private List<BoundValueExtractor> valueExtractors;
+        private IList<Func<JsonDocument, object>> valueExtractors;
 
         public DocumentColumnsExtractor(IList<ColumnDefinition> columns)
         {
-            valueExtractors = columns.Select(c =>
-            {
-                var extractor = new BoundValueExtractor();
-                extractor.SetBinding(BoundValueExtractor.ValueProperty, ColumnModelBindingExtensions.CreateBinding(c, "Document."));
-                return extractor;
-            })
-                                     .ToList();
+            valueExtractors = columns.Select(c => c.GetValueExtractor()).ToArray();
         }
 
-        public IList<object> GetValues(ViewableDocument document)
+        public IEnumerable<object> GetValues(JsonDocument document)
         {
-            var values = valueExtractors.Select(e =>
-            {
-                e.DataContext = document;
-                return e.Value;
-            }).ToArray();
+            var values = valueExtractors.Select(e => e(document));
 
             return values;
         } 
 
-        private class BoundValueExtractor : FrameworkElement
-        {
-            public static readonly DependencyProperty ValueProperty =
-                DependencyProperty.Register("Value", typeof (object), typeof (BoundValueExtractor),
-                                            new PropertyMetadata(default(Type)));
-
-            public object Value
-            {
-                get { return (object)GetValue(ValueProperty); }
-                set { SetValue(ValueProperty, value); }
-            }
-        }
     }
 }

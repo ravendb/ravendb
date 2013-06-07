@@ -6,6 +6,8 @@
 	<Converters:IntParamEqualityConverter x:Key="IntParamEquality"/>
 	<Converters:VisibilityByParamInEqualityConverter x:Key="VisibilityByParamInEquality"/>
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+	<Converters:HorizontalIfStringConverter x:Key="HorizontalIfString"/>
+	<Converters:BreakToLinesConverter x:Key="BreakToLines"/>
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
 	<Converters:StringToBooleanConverter x:Key="StringToBoolean"/>
 	<Converters:BooleanToStaleStatConverter x:Key="BooleanToStaleStatConverter" />
@@ -15,6 +17,7 @@
 	<Converters:TaskStatusConverter x:Key="TaskStatusConverter" />
 	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
 	<Converters:HiddenWhenStringEmptyOrNull x:Key="HiddenWhenStringEmptyOrNull" />
+	<Converters:VisibleWhenStringEmptyOrNull x:Key="VisibleWhenStringEmptyOrNull" />
 	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />
 	<Converters:HiddenWhenEmptyConverter x:Name="HiddenWhenEmpty" />
 	<Converters:HiddenWhenLessOrEqualToConverter x:Name="HiddenWhenLessOrEqualTo" />
@@ -34,12 +37,17 @@
 	<Converters:BooleanToGridLengthConverter x:Key="HiddenWhenFalseStarSizedWhenTrue"
 																					 ValueWhenFalse="0"
 																					 ValueWhenTrue="*"/>
+	<Converters:BooleanToIndexConverter x:Key="BooleanToIndex"/>
+	<Converters:PriorityToFontStyleConverter x:Key="PriorityToFontStyle"/>
+	<Converters:PriorityToFontColorConverter x:Key="PriorityToFontColor"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
 	<Converters:BundleNameToActiveConverter x:Key="BundleNameToActive"/>
 	<Converters:BundleNameToToolTipCoverter x:Key="BundleNameToToolTip"/>
 	<Converters:StringListToStringConverter x:Key="StringListToString"/>
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:TrueWhenAnalyzedConverter x:Key="TrueWhenAnalyzed"/>
+    <Converters:TrueWhenGeographyConverter x:Key="TrueWhenGeography"/>
+    <Converters:FalseWhenGeographyConverter x:Key="FalseWhenGeography"/>
 	<Converters:VisibleWhenDifferent x:Key="VisibleWhenDifferent" />
 	<Converters:VisibleWhenEqual x:Key="VisibleWhenEqual" />
 	<Converters:DisableIfDefaultVersioning x:Key="DisableIfDefaultVersioning"/>
@@ -52,4 +60,5 @@
 	<Models:DocumentSize x:Key="DocumentSize" />
 	<Converters:MillisecondsToMinutesConverter x:Key="MillisecondsToMinutes" />
 	<Converters:StringEmptyToValueConverter x:Key="StringEmptyToUnnamed" ValueWhenEmpty="Unnamed"/>
+    <Converters:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"></Converters:DoubleToGridLengthConverter>
 </ResourceDictionary>

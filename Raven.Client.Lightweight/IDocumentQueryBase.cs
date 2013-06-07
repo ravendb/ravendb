@@ -496,14 +496,14 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name = "cutOffEtag">The cut off etag.</param>
 		/// <returns></returns>
-		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+		TSelf WaitForNonStaleResultsAsOf(Etag cutOffEtag);
 
 		/// <summary>
 		///   Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
 		/// </summary>
 		/// <param name = "cutOffEtag">The cut off etag.</param>
 		/// <param name = "waitTimeout">The wait timeout.</param>
-		TSelf WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
+		TSelf WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -628,5 +628,32 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Select the default operator to use for this query
 		/// </summary>
 		TSelf UsingDefaultOperator(QueryOperator queryOperator);
+
+		/// <summary>
+		/// Disables tracking for queried entities by Raven's Unit of Work.
+		/// Usage of this option will prevent holding query results in memory.
+		/// </summary>
+		TSelf NoTracking();
+
+		/// <summary>
+		/// Disables caching for query results.
+		/// </summary>
+		TSelf NoCaching();
+
+		/// <summary>
+		/// Sets a transformer to use after executing a query
+		/// </summary>
+		/// <param name="resultsTransformer"></param>
+		TSelf SetResultTransformer(string resultsTransformer);
+
+		/// <summary>
+		/// Adds an ordering by score for a specific field to the query
+		/// </summary>
+		TSelf OrderByScore();
+
+		/// <summary>
+		/// Adds an ordering by score for a specific field to the query
+		/// </summary>
+		TSelf OrderByScoreDescending();
 	}
 }

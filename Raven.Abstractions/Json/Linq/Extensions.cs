@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
@@ -144,7 +145,7 @@ namespace Raven.Json.Linq
 
 			Type targetType = typeof(U);
 
-			if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+			if (targetType.IsGenericType() && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
 			{
 				if (value.Value == null)
 					return default(U);

@@ -67,7 +67,7 @@ namespace Raven.Bundles.Replication.Impl
 					if (document == null)
 					{
 						Database.Put(Constants.RavenReplicationVersionHiLo,
-									 Guid.Empty,
+									 Etag.Empty,
 									 // sending empty guid means - ensure the that the document does NOT exists
 									 RavenJObject.FromObject(RavenJObject.FromObject(new { Max = minNextMax + capacity })),
 									 new RavenJObject(),

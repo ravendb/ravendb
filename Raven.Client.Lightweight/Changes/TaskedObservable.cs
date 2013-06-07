@@ -41,8 +41,16 @@ namespace Raven.Client.Changes
 
 		public void Send(T msg)
 		{
-			if (filter(msg) == false)
+			try
+			{
+				if (filter(msg) == false)
+					return;
+			}
+			catch (Exception e)
+			{
+				Error(e);
 				return;
+			}
 
 			foreach (var subscriber in subscribers)
 			{

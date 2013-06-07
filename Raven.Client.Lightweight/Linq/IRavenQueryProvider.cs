@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
 {
@@ -27,6 +28,12 @@ namespace Raven.Client.Linq
 		/// Customizes the query using the specified action
 		/// </summary>
 		void Customize(Action<IDocumentQueryCustomization> action);
+
+        /// <summary>
+        /// The name of the transformer to use with this query
+        /// </summary>
+        /// <param name="transformerName"></param>
+	    void TransformWith(string transformerName);
 
 		/// <summary>
 		/// Gets the name of the index.
@@ -52,8 +59,12 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
-		/// <returns></returns>
 		IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
+
+        /// <summary>
+        /// Convert the linq query to a Lucene query
+        /// </summary>
+	    IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
 
 		/// <summary>
 		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluate
@@ -71,5 +82,22 @@ namespace Raven.Client.Linq
 		/// </summary>
 		HashSet<string> FieldsToFetch { get; }
 
+        /// <summary>
+        /// The result transformer to use
+        /// </summary>
+	    string ResultTransformer { get; }
+        
+
+        /// <summary>
+        /// Gets the query inputs being supplied to
+        /// </summary>
+        Dictionary<string, RavenJToken> QueryInputs { get; } 
+	    
+        /// <summary>
+        /// Adds input to this query via a key/value pair
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="foo"></param>
+        void AddQueryInput(string input, RavenJToken foo);
 	}
 }

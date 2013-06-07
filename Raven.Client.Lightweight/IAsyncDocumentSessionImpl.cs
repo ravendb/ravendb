@@ -3,8 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -15,6 +18,6 @@ namespace Raven.Client
 	{
 		DocumentConvention Conventions { get; }
 
-		Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes);
+		Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transfomer = null, Dictionary<string, RavenJToken> queryInputs = null);
 	}
 }

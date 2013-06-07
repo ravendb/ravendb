@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using System.Windows.Browser;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Impl;
 using Raven.Studio.Infrastructure;
@@ -25,6 +27,7 @@ namespace Raven.Studio.Models
 
 		private string buildNumber;
 		private Observable<bool> isConnected;
+		public UserInfo UserInfo { get; set; }
 
 		private string rawUrl;
 		public string RawUrl
@@ -36,7 +39,7 @@ namespace Raven.Studio.Models
 					rawUrl = null;
 				else
 				{
-					if(Url.EndsWith("/"))
+					if (Url.EndsWith("/"))
 						rawUrl = Url + value;
 					else
 						rawUrl = Url + "/" + value;
@@ -45,7 +48,6 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => RawUrl);
 			}
 		}
-
 		public DocumentConvention Conventions
 		{
 			get { return documentStore.Conventions; }
@@ -65,12 +67,12 @@ namespace Raven.Studio.Models
 		private ServerModel(string url)
 		{
 			Url = url;
-            Databases = new BindableCollection<string>(name => name);
+			Databases = new BindableCollection<string>(name => name);
 			RecentDocuments = new Dictionary<string, QueueModel<string>>();
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
-		    IsConnected = new Observable<bool>{Value = true};
-		    Initialize();
+			IsConnected = new Observable<bool> { Value = true };
+			Initialize();
 		}
 
 		private void Initialize()
@@ -94,9 +96,11 @@ namespace Raven.Studio.Models
 			// already gives the user a clear warning about the dangers of sending passwords in the clear. I think that 
 			// this is sufficient warning and we don't require an additional step, so we can disable this check safely.
 			documentStore.JsonRequestFactory.
-			              EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers
+						  EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers
 				=
 				true;
+
+			UpdateUserInfo();
 
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
 			{
@@ -104,7 +108,7 @@ namespace Raven.Studio.Models
 					onWebRequest(eventArgs.Request);
 			};
 
-			defaultDatabase = new[] {Constants.SystemDatabase};
+			defaultDatabase = new[] { Constants.SystemDatabase };
 			Databases.Set(defaultDatabase);
 			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
@@ -114,6 +118,21 @@ namespace Raven.Studio.Models
 			TimerTickedAsync();
 		}
 
+		private void UpdateUserInfo()
+		{
+			if (SelectedDatabase.Value == null)
+				return;
+			SelectedDatabase.Value
+			                .AsyncDatabaseCommands
+			                .CreateRequest(string.Format("/debug/user-info").NoCache(), "GET")
+			                .ReadResponseJsonAsync()
+			                .ContinueOnSuccessInTheUIThread(doc =>
+			                {
+				                UserInfo = DocumentStore.Conventions.CreateSerializer()
+				                                           .Deserialize<UserInfo>(new RavenJTokenReader(doc));
+			                });
+		}
+
 		public bool CreateNewDatabase { get; set; }
 		private static bool firstTick = true;
 
@@ -121,46 +140,37 @@ namespace Raven.Studio.Models
 		{
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
-				                   	{
-				                   		Databases.Match(defaultDatabase.Concat(names).ToArray());
-				                   		if (firstTick == false)
-				                   			return;
+									{
+										Databases.Match(defaultDatabase.Concat(names).ToArray());
+										if (firstTick == false)
+											return;
 
-				                   		firstTick = false;
+										firstTick = false;
+										if (UserInfo == null)
+											UpdateUserInfo();
 
-				                   		ApplicationModel.Current.Server.Value.DocumentStore
-				                   		                .AsyncDatabaseCommands
-				                   		                .ForSystemDatabase()
-				                   		                .GetAsync("Raven/StudioConfig")
-				                   		                .ContinueWith(task =>
-				                   		                {
-					                   		                if (task.IsFaulted == false)
-					                   		                {
-						                   		                Execute.OnTheUI(() =>
-						                   		                {
-							                   		                if (task.Result != null &&
-							                   		                    task.Result.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
-							                   		                {
-								                   		                if (task.Result.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") ==
-								                   		                    false)
-									                   		                UrlUtil.Navigate("/documents");
-							                   		                }
-						                   		                });
+										if (UserInfo != null && UserInfo.IsAdminGlobal)
+										{
+											ApplicationModel.Current.Server.Value.DocumentStore
+											                .AsyncDatabaseCommands
+											                .ForSystemDatabase()
+											                .GetAsync("Raven/StudioConfig")
+											                .ContinueOnSuccessInTheUIThread(doc =>
+											                {
+												                if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+												                {
+													                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+														                UrlUtil.Navigate("/documents");
+												                }
+											                });
+										}
 
-					                   		                }
-					                   		                else
-					                   		                {
-						                   		                GC.KeepAlive(task.Exception); // ignoring the exeption
-					                   		                }
-				                   		                });
-				                  
+										var url = new UrlParser(UrlUtil.Url);
 
-				                   		var url = new UrlParser(UrlUtil.Url);
+										if (url.QueryParams.ContainsKey("database") == false && (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase)))
+											CreateNewDatabase = true;
 
-				                   		if (url.QueryParams.ContainsKey("database") == false && (names.Length == 0 || (names.Length == 1 && names[0] == Constants.SystemDatabase)))
-				                   			CreateNewDatabase = true;
-
-				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase)) 
+										if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase))
 											return;
 
 										if (Settings.Instance.SelectedDatabase != null && names.Contains(Settings.Instance.SelectedDatabase))
@@ -171,17 +181,17 @@ namespace Raven.Studio.Models
 												SetCurrentDatabase(url);
 											}
 
-											if(string.IsNullOrWhiteSpace(url.Path))
+											if (string.IsNullOrWhiteSpace(url.Path))
 												UrlUtil.Navigate(Settings.Instance.LastUrl);
 										}
-				                   	})
+									})
 				.Catch();
 		}
 
-	    public IDocumentStore DocumentStore
-	    {
-	        get { return documentStore; }
-	    }
+		public IDocumentStore DocumentStore
+		{
+			get { return documentStore; }
+		}
 
 		public Observable<DatabaseModel> SelectedDatabase { get; private set; }
 		public BindableCollection<string> Databases { get; private set; }
@@ -197,14 +207,18 @@ namespace Raven.Studio.Models
 				return string.Empty;
 
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
+			{
+				if (HtmlPage.Document.DocumentUri.Query.Contains("fiddler"))
+					return "http://localhost.fiddler:8080";
 				return "http://localhost:8080";
-			
-            var localPath = HtmlPage.Document.DocumentUri.LocalPath;
+			}
+
+			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
 			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);
 			if (lastIndexOfRaven != -1)
 				localPath = localPath.Substring(0, lastIndexOfRaven);
-			
-            return new UriBuilder(HtmlPage.Document.DocumentUri)
+
+			return new UriBuilder(HtmlPage.Document.DocumentUri)
 			{
 				Path = localPath,
 				Fragment = ""
@@ -215,30 +229,30 @@ namespace Raven.Studio.Models
 		{
 			var databaseName = urlParser.GetQueryParam("database");
 
-            if (SelectedDatabase.Value != null 
+			if (SelectedDatabase.Value != null
 				&& (SelectedDatabase.Value.Name == databaseName || (SelectedDatabase.Value.Name == Constants.SystemDatabase && databaseName == null)))
-                return;
+				return;
 
-            if (SelectedDatabase.Value != null)
-                SelectedDatabase.Value.Dispose();
+			if (SelectedDatabase.Value != null)
+				SelectedDatabase.Value.Dispose();
 
-			SelectedDatabase.Value = databaseName == null 
-                ? new DatabaseModel(Constants.SystemDatabase, documentStore) : new DatabaseModel(databaseName, documentStore);
+			SelectedDatabase.Value = databaseName == null
+				? new DatabaseModel(Constants.SystemDatabase, documentStore) : new DatabaseModel(databaseName, documentStore);
 
-            SelectedDatabase.Value.AsyncDatabaseCommands
-                .EnsureSilverlightStartUpAsync()
+			SelectedDatabase.Value.AsyncDatabaseCommands
+				.EnsureSilverlightStartUpAsync()
 				.ContinueOnSuccess(() =>
 				{
 					if (databaseName != null && databaseName != Constants.SystemDatabase)
 						Settings.Instance.SelectedDatabase = databaseName;
 				})
-                .Catch(exception =>
-                {
-	                var webException = exception.ExtractSingleInnerException() as WebException;
+				.Catch(exception =>
+				{
+					var webException = exception.ExtractSingleInnerException() as WebException;
 					if (webException == null)
 						return false;
 
-	                var httpWebResponse = webException.Response as HttpWebResponse;
+					var httpWebResponse = webException.Response as HttpWebResponse;
 
 					if (httpWebResponse == null)
 						return false;
@@ -248,8 +262,8 @@ namespace Raven.Studio.Models
 
 					ApplicationModel.Current.Notifications.Add(new Notification("Database " + databaseName + " does not exist.", NotificationLevel.Error, webException));
 
-	                return true;
-                });
+					return true;
+				});
 		}
 
 		private void DisplayBuildNumber()
@@ -280,7 +294,7 @@ namespace Raven.Studio.Models
 		//		RawUrl = Url;
 		//}
 
-		public Dictionary<string, QueueModel<string>> RecentDocuments { get; set; } 
+		public Dictionary<string, QueueModel<string>> RecentDocuments { get; set; }
 
 		public Observable<LicensingStatus> License { get; private set; }
 		public Observable<bool> IsConnected

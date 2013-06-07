@@ -2,7 +2,7 @@
 <package>
 	<metadata>
 		<id>RavenDB.Database</id>
-		<version>1.2</version>
+		<version>{{version}}</version>
 		<title>RavenDB Database</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>This package allows you to extend RavenDB database.</summary>
@@ -12,6 +12,9 @@
 		<projectUrl>http://www.ravendb.net/</projectUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database</tags>
+		<dependencies>
+			<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version=""/>
+		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
 		</frameworkAssemblies>

@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
@@ -9,42 +11,46 @@ namespace Raven.Studio.Commands
 {
 	public class BackupCommand : Command
 	{
-		private readonly StartBackupTask startBackupTask;
-		public BackupCommand(StartBackupTask startBackupTask)
+		private readonly StartBackupTaskSectionModel startBackupTaskSectionModel;
+		public BackupCommand(StartBackupTaskSectionModel startBackupTaskSectionModel)
 		{
-			this.startBackupTask = startBackupTask;
+			this.startBackupTaskSectionModel = startBackupTaskSectionModel;
 		}
 
-		public override void Execute(object _)
+		protected override async Task ExecuteAsync(object _)
 		{
-			var location = startBackupTask.TaskInputs.FirstOrDefault(x => x.Name == "Location");
+			var location = startBackupTaskSectionModel.TaskInputs.FirstOrDefault(x => x.Name == "Location");
 
-			if(location == null)
+			if (location == null)
 				return;
 
-			ApplicationModel.Current.Server.Value.DocumentStore
-				.AsyncDatabaseCommands
-				.ForSystemDatabase()
-				.CreateRequest("/admin/databases/" + ApplicationModel.Database.Value.Name, "GET")
-				.ReadResponseJsonAsync()
-				.ContinueOnSuccessInTheUIThread(doc =>
+			var asyncDatabaseCommands = ApplicationModel.Current.Server.Value.DocumentStore
+			                                            .AsyncDatabaseCommands
+			                                            .ForSystemDatabase();
+
+			var httpJsonRequest = asyncDatabaseCommands.CreateRequest(
+				"/admin/databases/" + ApplicationModel.Database.Value.Name, "GET");
+
+			var doc = await httpJsonRequest.ReadResponseJsonAsync();
+			if (doc == null)
+				return;
+
+			var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
+			                                       .Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
+
+			try
+			{
+				await DatabaseCommands.StartBackupAsync(location.Value.ToString(), databaseDocument);
+				startBackupTaskSectionModel.Status= new BackupStatus
 				{
-					if (doc == null)
-						return;
-
-					var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
-						.Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
-
-					DatabaseCommands.StartBackupAsync(location.Value.ToString(), databaseDocument)
-						.ContinueWith(task =>
-						{
-							task.Wait(); // throws
-							startBackupTask.Status = new BackupStatus
-							{
-								IsRunning = true
-							};
-						}).Catch(exception => startBackupTask.ReportError(exception));
-				});
+					IsRunning = true
+				};
+			}
+			catch (Exception e)
+			{	
+					Infrastructure.Execute.OnTheUI(() => startBackupTaskSectionModel.ReportError(e));			
+					throw;
+			}
 		}
 	}
 }

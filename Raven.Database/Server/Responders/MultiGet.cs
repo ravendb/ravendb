@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -59,7 +60,7 @@ namespace Raven.Database.Server.Responders
 			// Need to create this here to preserve any current TLS data that we have to copy
 			var contexts = requests.Select(request => new MultiGetHttpContext(ravenHttpConfiguration, context, request, TenantId))
 				.ToArray();
-			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.InvariantCultureIgnoreCase))
+			if ("yes".Equals(context.Request.QueryString["parallel"], StringComparison.OrdinalIgnoreCase))
 			{
 				Parallel.For(0, requests.Length, position =>
 					HandleRequest(requests, results, position, context, ravenHttpConfiguration, contexts)
@@ -258,13 +259,14 @@ namespace Raven.Database.Server.Responders
 		public class MultiGetHttpResponse : IHttpResponse
 		{
 			private readonly GetResponse getResponse;
+			private bool bufferOutput;
 
 			public MultiGetHttpResponse(GetResponse getResponse, IHttpResponse response)
 			{
 				this.getResponse = getResponse;
 				RedirectionPrefix = response.RedirectionPrefix;
 				OutputStream = new MemoryStream();
-
+				bufferOutput = true;
 			}
 
 			public string RedirectionPrefix
@@ -304,6 +306,11 @@ namespace Raven.Database.Server.Responders
 				set;
 			}
 
+			public bool BufferOutput
+			{
+				get { return bufferOutput; }
+			}
+
 			public void Redirect(string url)
 			{
 				getResponse.Status = 301;
@@ -330,6 +337,12 @@ namespace Raven.Database.Server.Responders
 			public NameValueCollection GetHeaders()
 			{
 				throw new NotSupportedException();
+			}
+
+			public IDisposable Streaming()
+			{
+				bufferOutput = false;
+				return new DisposableAction(() => bufferOutput = true);
 			}
 
 			public Task WriteAsync(string data)

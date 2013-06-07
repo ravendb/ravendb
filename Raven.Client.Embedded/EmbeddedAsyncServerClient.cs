@@ -8,7 +8,9 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -18,7 +20,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
-	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands
+	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
 		private readonly IDatabaseCommands databaseCommands;
 
@@ -136,9 +138,9 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<JsonDocument>(databaseCommands.Get(key));
 		}
 
-		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false)
+		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
-			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, metadataOnly));
+			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes,transformer: transformer, queryInputs:queryInputs, metadataOnly: metadataOnly));
 		}
 
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
@@ -171,6 +173,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IndexDefinition[]>(databaseCommands.GetIndexes(start, pageSize));
 		}
 
+		public Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize)
+		{
+			return new CompletedTask<TransformerDefinition[]>(databaseCommands.GetTransformers(start, pageSize));
+		}
+
 		public Task ResetIndexAsync(string name)
 		{
 			databaseCommands.ResetIndex(name);
@@ -182,9 +189,19 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IndexDefinition>(databaseCommands.GetIndex(name));
 		}
 
+		public Task<TransformerDefinition> GetTransformerAsync(string name)
+		{
+			return new CompletedTask<TransformerDefinition>(databaseCommands.GetTransformer(name));
+		}
+
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
 			return new CompletedTask<string>(databaseCommands.PutIndex(name, indexDef, overwrite));
+		}
+
+		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition)
+		{
+			return new CompletedTask<string>(databaseCommands.PutTransformer(name, transformerDefinition));
 		}
 
 		public Task DeleteIndexAsync(string name)
@@ -199,15 +216,56 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
+		public Task DeleteTransformerAsync(string name)
+		{
+			databaseCommands.DeleteTransformer(name);
+			return new CompletedTask();
+		}
+
 		public Task DeleteDocumentAsync(string id)
 		{
 			databaseCommands.Delete(id, null);
 			return new CompletedTask();
 		}
 
-		public Task<PutResult> PutAsync(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
+		public Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			return new CompletedTask<PutResult>(databaseCommands.Put(key, etag, document, metadata));
+		}
+
+		public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, bool ignoreMissing)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.Patch(key, patches, ignoreMissing));
+		}
+
+		public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.Patch(key, patches, etag));
+		}
+
+		public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.Patch(key, patchesToExisting, patchesToDefault, defaultMetadata));
+		}
+
+		public Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, bool ignoreMissing)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.Patch(key, patch, ignoreMissing));
+		}
+
+		public Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, Etag etag)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.Patch(key, patch, etag));
+		}
+
+		public Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
+		{
+			return new CompletedTask<RavenJObject>(databaseCommands.Patch(key, patchExisting, patchDefault, defaultMetadata));
+		}
+
+		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false)
+		{
+			throw new NotImplementedException();
 		}
 
 		public IAsyncDatabaseCommands ForDatabase(string database)
@@ -235,7 +293,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<string[]>(databaseCommands.GetDatabaseNames(pageSize, start));
 		}
 
-		public Task PutAttachmentAsync(string key, Guid? etag, byte[] data, RavenJObject metadata)
+		public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
 		{
 			// Should the data paramater be changed to a Stream type so it matches IDatabaseCommands.PutAttachment?
 			var stream = new MemoryStream();
@@ -249,7 +307,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<Attachment>(databaseCommands.GetAttachment(key));
 		}
 
-		public Task DeleteAttachmentAsync(string key, Guid? etag)
+		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			databaseCommands.DeleteAttachment(key, etag);
 			return new CompletedTask();
@@ -286,6 +344,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<FacetResults>( databaseCommands.GetFacets( index, query, facetSetupDoc, start, pageSize ) );
 		}
 
+		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
+		{
+			return new CompletedTask<FacetResults>(databaseCommands.GetFacets(index, query, facets, start, pageSize));
+		}
+
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
 			// No sync equivalent on IDatabaseCommands.
@@ -305,6 +368,12 @@ namespace Raven.Client.Embedded
 		}
 
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
+		{
+			// No sync equivalent on IDatabaseCommands.
+			throw new NotSupportedException();
+		}
+
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
@@ -349,5 +418,59 @@ namespace Raven.Client.Embedded
 		{
 			return new CompletedTask<JsonDocumentMetadata>(databaseCommands.Head(key));
 		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		{
+			QueryHeaderInformation info;
+			var result = databaseCommands.StreamQuery(index, query, out info);
+			queryHeaderInfo.Value = info;
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(result));
+		}
+
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+		                            int pageSize = 2147483647)
+		{
+			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
+	
+		}
+
+
+		#region IAsyncGlobalAdminDatabaseCommands
+
+		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
+		{
+			get { return this; }
+		}
+
+		Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
+		{
+			throw new NotSupportedException();
+		}
+
+		#endregion
+
+		#region IAsyncAdminDatabaseCommands
+
+		public IAsyncAdminDatabaseCommands Admin
+		{
+			get { return this; }
+		}
+
+		#endregion
+
+		#region IAsyncInfoDatabaseCommands
+
+		public IAsyncInfoDatabaseCommands Info
+		{
+			get { return this; }
+		}
+
+		Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
+		{
+			throw new NotSupportedException();
+		}
+
+		#endregion
 	}
 }

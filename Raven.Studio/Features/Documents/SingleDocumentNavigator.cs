@@ -25,41 +25,49 @@ namespace Raven.Studio.Features.Documents
 
         public override Task<DocumentAndNavigationInfo> GetDocument()
         {
-            return DatabaseCommands.GetAsync(id).ContinueWith(t => new DocumentAndNavigationInfo()
-                                                                       {
-                                                                           Document = t.Result,
-                                                                           TotalDocuments = 1,
-                                                                           Index = 0,
-                                                                           ParentPath = GetParentPath(t.Result),
-                                                                       });
+            return DatabaseCommands.GetAsync(id).ContinueWith(t =>
+            {
+                var info = PopulateDocumentOrConflictsFromTask(t, id);
+
+                info.TotalDocuments = 1;
+                info.Index = 0;
+                info.ParentPath = GetParentPath(info);
+
+                return info;
+            });
         }
 
-        public override string GetUrlForCurrentIndex()
+        protected IList<PathSegment> GetParentPath(DocumentAndNavigationInfo info)
         {
-            return base.GetUrlForCurrentIndex();
-        }
+            if (info.IsConflicted)
+            {
+	            return new[]
+	            {
+		            new PathSegment {Name = "Documents", Url = "/documents"},
+		            new PathSegment {Name = "Conflicts", Url = "/conflicts"}
+	            };
+            }
 
-        protected IList<PathSegment> GetParentPath(JsonDocument result)
-        {
-            if (result == null)
+            if (info.Document == null)
             {
                 return null;
             }
-            var entityType = result.Metadata.IfPresent<string>(Constants.RavenEntityName);
+
+            var entityType = info.Document.Metadata.IfPresent<string>(Constants.RavenEntityName);
 
             if (entityType != null)
             {
-                return new[]
-                           {
-                               new PathSegment {Name = "Documents", Url = "/documents"},
-                               new PathSegment {Name = entityType, Url = "/collections?name=" + entityType}
-                           };
+	            return new[]
+	            {
+		            new PathSegment {Name = "Documents", Url = "/documents"},
+		            new PathSegment {Name = entityType, Url = "/collections?name=" + entityType}
+	            };
             }
 
-            return new[]
-                       {
-                           new PathSegment { Name = "Documents", Url = "/documents"}
-                       };
+	        return new[]
+	        {
+		        new PathSegment {Name = "Documents", Url = "/documents"}
+	        };
         }
     }
 }

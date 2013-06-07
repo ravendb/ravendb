@@ -1,22 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using System.Linq;
-using Raven.Tests.Bundles.PeriodicBackups;
-using Raven.Tests.Bundles.Replication.Bugs;
-using Raven.Tests.Bundles.Versioning;
+using Raven.Database;
+using Raven.Database.Config;
+using Raven.Tests.Issues;
 
-namespace Raven.Tryouts
+class Program
 {
-	class Program
+	static void Main(string[] args)
 	{
-		static void Main(string[] args)
-		{
-			var uri = new Uri("ftp://localhost/");
-			Console.WriteLine(uri.Port);
-		}
+		DocumentDatabase.Restore(new RavenConfiguration(), @"C:\Users\Ayende\AppData\Local\Temp\2013-04-01\2013-04-01", 
+			@"C:\Users\Ayende\AppData\Local\Temp\2013-04-01\2013-04-01.restored", Console.WriteLine, false);
 	}
 }

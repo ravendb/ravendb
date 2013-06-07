@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var txId = context.Request.QueryString["tx"];
-			context.WriteJson(new {Exists = Database.HasTransaction(new Guid(txId))});
+			context.WriteJson(new {Exists = Database.HasTransaction(txId)});
 		}
 	}
 }

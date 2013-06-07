@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System;
 using System.IO;
+using System.Security.Principal;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Data;
@@ -13,6 +15,14 @@ namespace Raven.Database.Server.Responders.Admin
 {
 	class AdminRestore : AdminResponder
 	{
+		protected override WindowsBuiltInRole[] AdditionalSupportedRoles
+		{
+			get
+			{
+				return new[] { WindowsBuiltInRole.BackupOperator };
+			}
+		}
+
 		public override void RespondToAdmin(IHttpContext context)
 		{
 			if (EnsureSystemDatabase(context) == false)
@@ -40,6 +50,17 @@ namespace Raven.Database.Server.Responders.Admin
 				});
 				return;
 			}
+
+            if (databaseName == Constants.SystemDatabase)
+            {
+                context.SetStatusToBadRequest();
+                context.WriteJson(new
+                {
+                    Error = "Cannot do an online restore for the <system> database"
+                });
+                return;
+            }
+
 
 			var ravenConfiguration = new RavenConfiguration()
 			{
@@ -72,27 +93,31 @@ namespace Raven.Database.Server.Responders.Admin
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 
 			var restoreStatus = new List<string>();
-			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, new TransactionInformation());
+			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 			var defrag = "true".Equals(context.Request.QueryString["defrag"], StringComparison.InvariantCultureIgnoreCase);
-			DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
-			                         msg =>
-			                         {
-				                         restoreStatus.Add(msg);
-				                         SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-											 RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
-			                         }, defrag);
 
-			if (databaseDocument == null)
-				return;
+			Task.Factory.StartNew(() =>
+			{
+				DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
+				                         msg =>
+				                         {
+					                         restoreStatus.Add(msg);
+					                         SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+					                                            RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
+				                         }, defrag);
 
-			databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
-			databaseDocument.Id = databaseName;
-			SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
+				if (databaseDocument == null)
+					return;
 
-			restoreStatus.Add("The new database was created");
-			SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-				RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+				databaseDocument.Id = databaseName;
+				SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
+				                   new RavenJObject(), null);
 
+				restoreStatus.Add("The new database was created");
+				SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+				                   RavenJObject.FromObject(new {restoreStatus}), new RavenJObject(), null);
+			}, TaskCreationOptions.LongRunning);
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)

@@ -6,10 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
@@ -96,6 +93,18 @@ namespace Raven.Client.Indexes
 		/// <value>The term vectors.</value>
 		public IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
 
+		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<Expression<Func<TReduceResult, object>>, SpatialOptions> SpatialIndexes { get; set; }
+
+		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
+
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
@@ -112,6 +121,8 @@ namespace Raven.Client.Indexes
 			AnalyzersStrings = new Dictionary<string, string>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
 			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
+			SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
 		}
 
 		/// <summary>
@@ -126,7 +137,7 @@ namespace Raven.Client.Indexes
 			if (Reduce != null)
 				IndexDefinitionHelper.ValidateReduce(Reduce);
 
-			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 			var indexDefinition = new IndexDefinition
 			{
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
@@ -136,7 +147,8 @@ namespace Raven.Client.Indexes
 				SortOptions = ConvertToStringDictionary(SortOptions),
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
-                TermVectors =  ConvertToStringDictionary(TermVectors)
+				TermVectors =  ConvertToStringDictionary(TermVectors),
+				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes)
 			};
 
 			foreach (var indexesString in IndexesStrings)
@@ -167,6 +179,13 @@ namespace Raven.Client.Indexes
 				indexDefinition.TermVectors.Add(termVectorString);
 			}
 
+			foreach (var spatialString in SpatialIndexesStrings)
+			{
+				if (indexDefinition.SpatialIndexes.ContainsKey(spatialString.Key))
+					throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
+				indexDefinition.SpatialIndexes.Add(spatialString);
+			}
+
 			if (Map != null)
 				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Map, convention,
 																													 querySource,
@@ -176,10 +195,11 @@ namespace Raven.Client.Indexes
 			return indexDefinition;
 		}
 
-		private static bool ContainsWhereEntityIs(Expression body)
+		private bool ContainsWhereEntityIs()
 		{
+		    if (Map == null) return false;
 			var whereEntityIsVisitor = new WhereEntityIsVisitor();
-			whereEntityIsVisitor.Visit(body);
+			whereEntityIsVisitor.Visit(Map.Body);
 			return whereEntityIsVisitor.HasWhereEntityIs;
 		}
 

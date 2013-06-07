@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <CustomAction Id="InstallRavenService_Cmd" Property="InstallRavenService"
+              Value="&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME]&quot; /install" Execute="immediate"/>
+  <CustomAction Id="InstallRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
+
+  <CustomAction Id="UninstallRavenService_Cmd" Property="UninstallRavenService"
+            Value="&quot;[INSTALLFOLDER]Raven.Server.exe&quot; /service-name=&quot;[SERVICE_NAME]&quot; /uninstall" Execute="immediate"/>
+  <CustomAction Id="UninstallRavenService" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="deferred" Return="check" Impersonate="no"/>
+
+  <CustomAction Id="SetInstallationTypeToService" Property="RAVEN_INSTALLATION_TYPE" Value="SERVICE" />
+
+  <InstallExecuteSequence>
+    <Custom Action="InstallRavenService_Cmd" After="CostFinalize">
+      <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
+    </Custom>
+    <Custom Action='InstallRavenService' Before='InstallFinalize'>
+      <![CDATA[(&Service=3) AND NOT(!Service=3)]]>
+    </Custom>
+
+    <Custom Action="UninstallRavenService_Cmd" After="CostFinalize">
+      <![CDATA[(&Service=2) AND (!Service=3)]]>
+    </Custom>
+    <Custom Action='UninstallRavenService' Before="RemoveFiles">
+      <![CDATA[(&Service=2) AND (!Service=3)]]>
+    </Custom>
+  </InstallExecuteSequence>
+</Include>

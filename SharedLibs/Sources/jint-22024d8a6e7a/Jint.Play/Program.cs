@@ -20,12 +20,13 @@ namespace Jint.Play
             sw.Reset();
 	        jint.SetMaxRecursions(50);
 	        jint.SetMaxSteps(10*1000);
+	        jint.SetParameter("val", double.NaN);
 
 			sw.Start();
 			try
 			{
 				Console.WriteLine(
-					jint.Run(File.ReadAllText(@"C:\Work\ravendb-2.0\SharedLibs\Sources\jint-22024d8a6e7a\Jint.Play\test.js")));
+					jint.Run(File.ReadAllText(@"C:\Work\ravendb-2.5\SharedLibs\Sources\jint-22024d8a6e7a\Jint.Play\test.js")));
 			}
 			catch (Exception e)
 			{

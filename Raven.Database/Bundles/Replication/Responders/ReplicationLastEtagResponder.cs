@@ -92,27 +92,34 @@ namespace Raven.Bundles.Replication.Responders
 
 				SourceReplicationInformation sourceReplicationInformation;
 
-				Guid? docEtag = null, attachmentEtag = null;
-				Guid val;
-				if(Guid.TryParse(context.Request.QueryString["docEtag"], out val))
+				Etag docEtag = null, attachmentEtag = null;
+				try
 				{
-					docEtag = val;
+					docEtag = Etag.Parse(context.Request.QueryString["docEtag"]);
 				}
-				if(Guid.TryParse(context.Request.QueryString["attachmentEtag"], out val))
+				catch
 				{
-					attachmentEtag = val;
+
+				}
+				try
+				{
+					attachmentEtag = Etag.Parse(context.Request.QueryString["attachmentEtag"]);
+				}
+				catch
+				{
+
 				}
 				Guid serverInstanceId;
 				if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
 					serverInstanceId = Database.TransactionalStorage.Id;
-				
+
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
 						ServerInstanceId = serverInstanceId,
-						LastAttachmentEtag = attachmentEtag ?? Guid.Empty,
-						LastDocumentEtag = docEtag??Guid.Empty,
+						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
+						LastDocumentEtag = docEtag ?? Etag.Empty,
 						Source = src
 					};
 				}
@@ -124,7 +131,7 @@ namespace Raven.Bundles.Replication.Responders
 					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
 				}
 
-				var etag = document == null ? Guid.Empty : document.Etag;
+				var etag = document == null ? Etag.Empty : document.Etag;
 				var metadata = document == null ? new RavenJObject() : document.Metadata;
 
 				var newDoc = RavenJObject.FromObject(sourceReplicationInformation);

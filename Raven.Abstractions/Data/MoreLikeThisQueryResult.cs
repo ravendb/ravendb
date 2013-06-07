@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Raven.Abstractions.Data
+﻿namespace Raven.Abstractions.Data
 {
 	public class MoreLikeThisQueryResult
 	{
@@ -11,6 +8,6 @@ namespace Raven.Abstractions.Data
 		}
 
 		public MultiLoadResult Result { get; set; }
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 	}
 }

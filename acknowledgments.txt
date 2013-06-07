@@ -1,4 +1,4 @@
-The Raven Datbase is making use of the following OSS projects:
+﻿The Raven Datbase is making use of the following OSS projects:
 
 * ManagedEsent project (http://codeplex.com/ManagedEsent) and is used under the MS PL license: http://managedesent.codeplex.com/license
 * ICSharpCode.NRefactory from the SharpDevelop project (http://sharpdevelop.net) and is used under the MIT X11 license: https://github.com/icsharpcode/NRefactory/blob/735cb8595e642bfb3afabc7bd0750b73c5c0ec18/doc/license.txt

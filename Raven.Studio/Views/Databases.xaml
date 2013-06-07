@@ -5,7 +5,9 @@
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
-                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" Title="Databases"
+                         xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls" Title="Databases"
                          Style="{StaticResource PageStyle}"
                          Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel">
 
@@ -96,7 +98,9 @@
                                     </HyperlinkButton.Content>
                                 </HyperlinkButton>
 
-                                <HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
+								<controls:GoToDatabaseControl Grid.Column="1" Margin="6,6,4,6" Width="200"/>
+								
+								<HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
                                                  CommandParameter="{Binding}"
                                                  Style="{StaticResource Style_Button_MouseOverChrome}"
                                                  VerticalAlignment="Center"

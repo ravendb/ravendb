@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Spatial;
 
 namespace Raven.Client
 {
@@ -63,14 +64,14 @@ namespace Raven.Client
 		/// Instructs the query to wait for non stale results as of the cutoff etag.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
-		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag);
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag);
 
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout);
+		IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout);
 
 		/// <summary>
 		/// EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -111,12 +112,22 @@ namespace Raven.Client
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
-		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
 
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
-		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+		
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits);
 
 		/// <summary>
 		/// Filter matches based on a given shape - only documents with the shape defined in fieldName that
@@ -127,6 +138,8 @@ namespace Raven.Client
 		/// <param name="rel">Spatial relation to check</param>
 		/// <returns></returns>
 		IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel);
+
+		IDocumentQueryCustomization Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
 		/// <summary>
 		/// When using spatial queries, instruct the query to sort by the distance from the origin point
@@ -193,5 +206,16 @@ namespace Raven.Client
 		/// <param name="preTags">Prefix tags.</param>
 		/// <param name="postTags">Postfix tags.</param>
 		IDocumentQueryCustomization SetHighlighterTags(string[] preTags, string[] postTags);
+
+		/// <summary>
+		/// Disables tracking for queried entities by Raven's Unit of Work.
+		/// Usage of this option will prevent holding query results in memory.
+		/// </summary>
+		IDocumentQueryCustomization NoTracking();
+
+		/// <summary>
+		/// Disables caching for query results.
+		/// </summary>
+		IDocumentQueryCustomization NoCaching();
 	}
 }

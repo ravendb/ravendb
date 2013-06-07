@@ -47,6 +47,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     /// <value>The <see cref="Type"/> of the collection items.</value>
     public Type CollectionItemType { get; private set; }
 
+    /// <summary>
+    /// Gets a value indicating whether the collection type is a multidimensional array.
+    /// </summary>
+    /// <value><c>true</c> if the collection type is a multidimensional array; otherwise, <c>false</c>.</value>
+    public bool IsMultidimensionalArray { get; private set; }
+
     private readonly bool _isCollectionItemTypeNullableType;
     private readonly Type _genericCollectionDefinitionType;
     private Type _genericWrapperType;
@@ -79,9 +85,13 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         _isCollectionItemTypeNullableType = ReflectionUtils.IsNullableType(CollectionItemType);
 
       if (IsTypeGenericCollectionInterface(UnderlyingType))
-      {
         CreatedType = ReflectionUtils.MakeGenericType(typeof(List<>), CollectionItemType);
-      }
+#if !(PORTABLE || NET20 || NET35 || WINDOWS_PHONE)
+      else if (IsTypeGenericSetnterface(UnderlyingType))
+        CreatedType = ReflectionUtils.MakeGenericType(typeof(HashSet<>), CollectionItemType);
+#endif
+
+      IsMultidimensionalArray = (UnderlyingType.IsArray && UnderlyingType.GetArrayRank() > 1);
     }
 
     internal IWrappedCollection CreateWrapper(object list)
@@ -144,5 +154,17 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
               || genericDefinition == typeof(ICollection<>)
               || genericDefinition == typeof(IEnumerable<>));
     }
+
+#if !(PORTABLE || NET20 || NET35 || WINDOWS_PHONE)
+    private bool IsTypeGenericSetnterface(Type type)
+    {
+      if (!type.IsGenericType())
+        return false;
+
+      Type genericDefinition = type.GetGenericTypeDefinition();
+
+      return (genericDefinition == typeof(ISet<>));
+    }
+#endif
   }
 }

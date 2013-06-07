@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -13,7 +14,6 @@ using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
-
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
 		public ReducingExecuter(WorkContext context)
@@ -176,7 +176,8 @@ namespace Raven.Database.Indexing
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
-						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
+
+						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Count);
 
 						var batchDuration = batchTimeWatcher.Elapsed;
 						Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration,
@@ -205,7 +206,7 @@ namespace Raven.Database.Indexing
 			var batchTimeWatcher = Stopwatch.StartNew();
 			var count = 0;
 			var size = 0;
-			var state = new ConcurrentQueue <Tuple<HashSet<string>, List<MappedResultInfo>>>();
+			var state = new ConcurrentQueue<Tuple<HashSet<string>, List<MappedResultInfo>>>();
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 			{
 				var localKeys = new HashSet<string>();
@@ -222,8 +223,8 @@ namespace Raven.Database.Indexing
 						Take = int.MaxValue// just get all, we do the rate limit when we load the number of keys to reduce, anyway
 					};
 					var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
-					
-					if (scheduledItems.Count == 0) 
+
+					if (scheduledItems.Count == 0)
 					{
 						if (Log.IsWarnEnabled)
 						{
@@ -283,18 +284,18 @@ namespace Raven.Database.Indexing
 				});
 			});
 
-			var reduceKeys = new HashSet<string>(state.SelectMany(x=>x.Item1));
+			var reduceKeys = new HashSet<string>(state.SelectMany(x => x.Item1));
 
-			var results = state.SelectMany(x=>x.Item2)
+			var results = state.SelectMany(x => x.Item2)
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
 			context.ReducedPerSecIncreaseBy(results.Length);
 
-			context.TransactionalStorage.Batch(actions => 
-				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys)
+			context.TransactionalStorage.Batch(actions =>
+				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))
 				);
-			
+
 			autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
 
 			foreach (var reduceKey in needToMoveToSingleStep)
@@ -305,8 +306,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
+			onlyFoundIdleWork.Value = false;
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
 
@@ -320,16 +322,26 @@ namespace Raven.Database.Indexing
 			context.IndexStorage.FlushReduceIndexes();
 		}
 
+		protected override Etag GetSynchronizationEtag()
+		{
+			return Etag.Empty;
+		}
+
+		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
+		{
+			return lastProcessedEtag;
+		}
+
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
 			{
 				IndexName = indexesStat.Name,
-				LastIndexedEtag = Guid.Empty
+				LastIndexedEtag = Etag.Empty
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn,
 				HandleReduceForIndex);

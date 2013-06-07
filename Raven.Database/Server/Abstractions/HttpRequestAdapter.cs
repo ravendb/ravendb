@@ -20,8 +20,7 @@ namespace Raven.Database.Server.Abstractions
 		    this.request = request;
 		    Url = this.request.Url;
 	        RawUrl = this.request.RawUrl;
-			this.queryString = System.Web.HttpUtility.ParseQueryString(Uri.UnescapeDataString(request.Url.Query));
-	       
+			queryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(request.Headers["Raven-Client-Version"], request.Url.Query);
 		}
 
 		public bool IsLocal

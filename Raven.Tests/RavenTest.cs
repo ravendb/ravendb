@@ -12,6 +12,7 @@ using Raven.Abstractions;
 using Raven.Database.Util;
 using Raven.Tests.Document;
 using Raven.Tests.Helpers;
+using System.Diagnostics;
 
 namespace Raven.Tests
 {
@@ -50,11 +51,11 @@ namespace Raven.Tests
 
 		public double Timer(Action action)
 		{
-			var startTime = SystemTime.UtcNow;
+			var timer = Stopwatch.StartNew();
 			action.Invoke();
-			var timeTaken = SystemTime.UtcNow.Subtract(startTime);
-			Console.WriteLine("Time take (ms)- " + timeTaken.TotalMilliseconds);
-			return timeTaken.TotalMilliseconds;
+            timer.Stop();
+            Console.WriteLine("Time take (ms)- " + timer.Elapsed.TotalMilliseconds);
+            return timer.Elapsed.TotalMilliseconds;
 		}
 	}
 }

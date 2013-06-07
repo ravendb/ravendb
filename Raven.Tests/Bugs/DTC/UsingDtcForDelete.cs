@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs.DTC
 
 				var transactionInformation = new TransactionInformation
 				{
-					Id = Guid.NewGuid()
+					Id = Guid.NewGuid().ToString()
 				};
 
 				store.DocumentDatabase.Put(documentKey, null, new RavenJObject(),
@@ -32,15 +32,17 @@ namespace Raven.Tests.Bugs.DTC
   ""Last-Modified"": ""Mon, 21 Mar 2011 19:59:58 GMT"",
   ""Non-Authoritative-Information"": false
 }"), transactionInformation);
+				store.DatabaseCommands.PrepareTransaction(transactionInformation.Id);
 				store.DatabaseCommands.Commit(transactionInformation.Id);
 
 
 				var deleteTx = new TransactionInformation
 				{
-					Id = Guid.NewGuid()
+                    Id = Guid.NewGuid().ToString()
 				};
 				store.DocumentDatabase.Delete(documentKey, null, deleteTx);
 
+				store.DatabaseCommands.PrepareTransaction(deleteTx.Id);
 				store.DocumentDatabase.Commit(deleteTx.Id);
 			}
 		}

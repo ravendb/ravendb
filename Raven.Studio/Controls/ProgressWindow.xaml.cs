@@ -25,6 +25,24 @@ namespace Raven.Studio.Controls
         public static readonly DependencyProperty ProgressProperty =
             DependencyProperty.Register("Progress", typeof (int), typeof (ProgressWindow), new PropertyMetadata(default(int)));
 
+        public static readonly DependencyProperty IsIndeterminateProperty =
+            DependencyProperty.Register("IsIndeterminate", typeof(bool), typeof(ProgressWindow), new PropertyMetadata(false));
+
+        public static readonly DependencyProperty CanCancelProperty =
+            DependencyProperty.Register("CanCancel", typeof(bool), typeof(ProgressWindow), new PropertyMetadata(true));
+
+        public bool CanCancel
+        {
+            get { return (bool)GetValue(CanCancelProperty); }
+            set { SetValue(CanCancelProperty, value); }
+        }
+
+        public bool IsIndeterminate
+        {
+            get { return (bool)GetValue(IsIndeterminateProperty); }
+            set { SetValue(IsIndeterminateProperty, value); }
+        }
+
         public int Progress
         {
             get { return (int) GetValue(ProgressProperty); }

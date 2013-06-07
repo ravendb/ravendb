@@ -36,6 +36,8 @@ namespace Raven.Database.Indexing
 			get { return false; }
 		}
 
+		public DateTime LastCommitPointStoreTime { get; private set; }
+
 		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
@@ -70,7 +72,8 @@ namespace Raven.Database.Indexing
 									exception);
 								context.AddError(name,
 								                 documentId,
-								                 exception.Message
+								                 exception.Message,
+                                                 "OnIndexEntryDeleted Trigger"
 									);
 							},
 							trigger => trigger.OnIndexEntryDeleted(documentId));
@@ -84,9 +87,10 @@ namespace Raven.Database.Indexing
 						.ToList();
 
 					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+					var indexes = new ConcurrentQueue<RavenIndexWriter>();
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
-						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
+						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition, viewGenerator);
 						var luceneDoc = new Document();
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
 						                                Field.Index.NOT_ANALYZED_NO_NORMS);
@@ -118,7 +122,8 @@ namespace Raven.Database.Indexing
 												exception);
 											context.AddError(name,
 															 indexingResult.NewDocId,
-															 exception.Message
+															 exception.Message,
+                                                             "OnIndexEntryCreated Trigger"
 												);
 										},
 										trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
@@ -147,7 +152,7 @@ namespace Raven.Database.Indexing
 						ex =>
 						{
 							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-							context.AddError(name, null, ex.Message);
+							context.AddError(name, null, ex.Message, "AnErrorOccured Trigger");
 						},
 						x => x.AnErrorOccured(e));
 					throw;
@@ -158,21 +163,89 @@ namespace Raven.Database.Indexing
 						e =>
 						{
 							logIndexing.WarnException("Failed to dispose on index update trigger", e);
-							context.AddError(name, null, e.Message);
+							context.AddError(name, null, e.Message, "Dispose Trigger");
 						},
 						x => x.Dispose());
 				}
-				return sourceCount;
+				return new IndexedItemsInfo
+				{
+					ChangedDocs = sourceCount,
+					HighestETag = batch.HighestEtagInBatch
+				};
 			});
+
 			AddindexingPerformanceStat(new IndexingPerformanceStats
 			{
 				OutputCount = count,
-				InputCount = sourceCount,
+				ItemsCount = sourceCount,
+				InputCount = batch.Docs.Count,
 				Duration = sw.Elapsed,
 				Operation = "Index",
 				Started = start
 			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
+		}
+
+		protected override bool IsUpToDateEnoughToWriteToDisk(Etag highestETag)
+		{
+			bool upToDate = false;
+			context.Database.TransactionalStorage.Batch(accessor =>
+			{
+				upToDate = accessor.Staleness.GetMostRecentDocumentEtag() == highestETag;
+			});
+			return upToDate;
+		}
+
+		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+		{
+			if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
+			{
+				context.IndexStorage.StoreCommitPoint(name, new IndexCommitPoint
+				{
+					HighestCommitedETag = itemsInfo.HighestETag,
+					TimeStamp = LastIndexTime,
+					SegmentsInfo = GetCurrentSegmentsInfo()
+				});
+
+				LastCommitPointStoreTime = SystemTime.UtcNow;
+			}
+			else if (itemsInfo.DeletedKeys != null && directory is RAMDirectory == false)
+			{
+				context.IndexStorage.AddDeletedKeysToCommitPoints(name, itemsInfo.DeletedKeys);
+			}
+		}
+
+		private IndexSegmentsInfo GetCurrentSegmentsInfo()
+		{
+			var segmentInfos = new SegmentInfos();
+			var result = new IndexSegmentsInfo();
+
+			try
+			{
+				segmentInfos.Read(directory);
+
+				result.Generation = segmentInfos.Generation;
+				result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
+				result.ReferencedFiles = segmentInfos.Files(directory, false);
+			}
+			catch (CorruptIndexException ex)
+			{
+				logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
+
+				result.IsIndexCorrupted = true;
+			}
+
+			return result;
+		}
+
+		private bool ShouldStoreCommitPoint()
+		{
+			if (directory is RAMDirectory) // no point in trying to store commits for ram index
+				return false;
+					// no often than specified indexing interval
+			return (LastIndexTime - PreviousIndexTime > context.Configuration.MinIndexingTimeIntervalToStoreCommitPoint ||
+					// at least once for specified time interval
+					LastIndexTime - LastCommitPointStoreTime > context.Configuration.MaxIndexCommitPointStoreTimeInterval); 
 		}
 
 		private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
@@ -258,7 +331,7 @@ namespace Raven.Database.Indexing
 								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
 								              name, key),
 								exception);
-							context.AddError(name, key, exception.Message);
+							context.AddError(name, key, exception.Message, "OnIndexEntryDeleted Trigger");
 						},
 						trigger => trigger.OnIndexEntryDeleted(key)));
 				writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
@@ -266,10 +339,37 @@ namespace Raven.Database.Indexing
 					e =>
 					{
 						logIndexing.WarnException("Failed to dispose on index update trigger", e);
-						context.AddError(name, null, e.Message);
+						context.AddError(name, null, e.Message, "Dispose Trigger");
 					},
 					batcher => batcher.Dispose());
-				return keys.Length;
+
+				IndexStats currentIndexStats = null;
+				context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(name));
+
+				return new IndexedItemsInfo
+				{
+					ChangedDocs = keys.Length,
+					HighestETag = currentIndexStats.LastIndexedEtag,
+					DeletedKeys = keys
+				};
+			});
+		}
+
+		/// <summary>
+		/// For index recovery purposes
+		/// </summary>
+		internal void RemoveDirectlyFromIndex(string[] keys)
+		{
+			Write((writer, analyzer, stats) =>
+			{
+				stats.Operation = IndexingWorkStats.Status.Ignore;
+
+				writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
+
+				return new IndexedItemsInfo // just commit, don't create commit point and add any infor about deleted keys
+				{
+					ChangedDocs = keys.Length
+				};
 			});
 		}
 	}

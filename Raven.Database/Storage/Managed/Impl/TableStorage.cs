@@ -46,6 +46,8 @@ namespace Raven.Storage.Managed.Impl
 			IndexingStats =
 				Add(new Table(x => x.Value<string>("index"), "IndexingStats"));
 
+			LastIndexedEtags =
+				Add(new Table(x => x.Value<string>("index"), "LastIndexedEtags"));
 
 			MappedResults = Add(new Table("MappedResults")
 			{
@@ -121,6 +123,8 @@ namespace Raven.Storage.Managed.Impl
 				{"ByRef", x=> x.Value<string>("ref")},
 				{"ByViewAndKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("key"))},
 			});
+
+			EtagSynchronization = Add(new Table(x => x.Value<string>("key"), "EtagSynchronization"));
 		}
 
 		public Table Lists { get; private set; }
@@ -139,6 +143,8 @@ namespace Raven.Storage.Managed.Impl
 
 		public Table IndexingStats { get; private set; }
 
+		public Table LastIndexedEtags { get; private set; }
+
 		public Table Transactions { get; private set; }
 
 		public Table DocumentsModifiedByTransactions { get; private set; }
@@ -152,5 +158,7 @@ namespace Raven.Storage.Managed.Impl
 		public Table ReduceKeys { get; private set; }
 
 		public Table DocumentReferences { get; private set; }
+
+		public Table EtagSynchronization { get; private set; }
 	}
 }

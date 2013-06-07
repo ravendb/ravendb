@@ -27,27 +27,11 @@ namespace Raven.Storage.Esent.StorageActions
 			get { return lists ?? (lists = new Table(session, dbid, "lists", OpenTableGrbit.None)); }
 		}
 
-		private Table transactions;
-		protected Table Transactions
-		{
-			get { return transactions ?? (transactions = new Table(session, dbid, "transactions", OpenTableGrbit.None)); }
-		}
 
 		private Table directories;
 		protected internal Table Directories
 		{
 			get { return directories ?? (directories = new Table(session, dbid, "directories", OpenTableGrbit.None)); }
-		}
-
-		private Table documentsModifiedByTransactions;
-		protected Table DocumentsModifiedByTransactions
-		{
-			get
-			{
-				return documentsModifiedByTransactions ??
-					(documentsModifiedByTransactions =
-						new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None));
-			}
 		}
 
 		private Table files;

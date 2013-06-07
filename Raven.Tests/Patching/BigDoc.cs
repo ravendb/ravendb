@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Database.Smuggler;
@@ -18,7 +19,7 @@ namespace Raven.Tests.Patching
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
 				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.Patching.failingdump11.ravendump"))
 				{
-					dataDumper.ImportData(stream, smugglerOptions);
+					dataDumper.ImportData(stream, smugglerOptions).Wait(TimeSpan.FromSeconds(15));
 				}
 
 				

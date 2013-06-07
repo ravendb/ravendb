@@ -15,6 +15,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public bool Disabled { get; set; }
 
+		public bool ParameterizeDeletesDisabled { get; set; }
+
 		public string RavenEntityName { get; set; }
 		public string Script { get; set; }
 		public string FactoryName { get; set; }

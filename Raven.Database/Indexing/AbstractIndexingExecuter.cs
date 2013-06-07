@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using System.Linq;
@@ -36,12 +38,17 @@ namespace Raven.Database.Indexing
 				Init();
 				var name = GetType().Name;
 				var workComment = "WORK BY " + name;
+			    bool isIdle = false;
 				while (context.RunIndexing)
 				{
 					bool foundWork;
 					try
 					{
-						foundWork = ExecuteIndexing();
+						bool onlyFoundIdleWork;
+						foundWork = ExecuteIndexing(isIdle, out onlyFoundIdleWork);
+						if (foundWork && onlyFoundIdleWork == false)
+							isIdle = false;
+
 						while (context.RunIndexing) // we want to drain all of the pending tasks before the next run
 						{
 							if (ExecuteTasks() == false)
@@ -90,7 +97,7 @@ namespace Raven.Database.Indexing
 					}
 					if (foundWork == false && context.RunIndexing)
 					{
-						context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, () =>
+						isIdle = context.WaitForWork(context.Configuration.TimeToWaitBeforeRunningIdleIndexes, ref workCounter, () =>
 						{
 							try
 							{
@@ -188,9 +195,16 @@ namespace Raven.Database.Indexing
 
 		protected abstract void FlushAllIndexes();
 
-		protected bool ExecuteIndexing()
+		protected abstract Etag GetSynchronizationEtag();
+
+		protected abstract Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag);
+
+		protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
 		{
+			Etag synchronizationEtag = null;
+
 			var indexesToWorkOn = new List<IndexToWorkOn>();
+			var localFoundOnlyIdleWork = new Reference<bool>{Value = true};
 			transactionalStorage.Batch(actions =>
 			{
 				foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
@@ -203,18 +217,22 @@ namespace Raven.Database.Indexing
 									   failureRate.FailureRate);
 						continue;
 					}
-					if (IsIndexStale(indexesStat, actions) == false)
+
+					synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
+
+					if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
 						continue;
 					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
 					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
-					if(index == null ||  // not there
-						index.CurrentMapIndexingTask != null)  // busy doing indexing work already, not relevant for this batch
+					if (index == null || // not there
+					    index.CurrentMapIndexingTask != null) // busy doing indexing work already, not relevant for this batch
 						continue;
+
 					indexToWorkOn.Index = index;
 					indexesToWorkOn.Add(indexToWorkOn);
 				}
 			});
-
+			onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
@@ -222,16 +240,21 @@ namespace Raven.Database.Indexing
 			context.CancellationToken.ThrowIfCancellationRequested();
 
 			using (context.IndexDefinitionStorage.CurrentlyIndexing())
-				ExecuteIndexingWork(indexesToWorkOn);
+			{
+				var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
+				var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
+
+				ExecuteIndexingWork(indexesToWorkOn, startEtag);
+			}
 
 			return true;
 		}
 
 		protected abstract IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat);
 
-		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
+		protected abstract bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork);
 
-		protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
+		protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag);
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
 	}

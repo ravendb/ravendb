@@ -11,24 +11,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml;
-using System.Xml.Linq;
+using Microsoft.Win32;
 using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Smuggler;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Responders.Admin;
 using Raven.Database.Util;
-using Raven.Smuggler;
 
 namespace Raven.Server
 {
@@ -48,18 +46,22 @@ namespace Raven.Server
 				}
 				catch (ReflectionTypeLoadException e)
 				{
-					var sb = new StringBuilder();
-					sb.AppendLine(e.ToString());
-					foreach (var loaderException in e.LoaderExceptions)
+					WaitForUserInputAndExitWithError(GetLoaderExceptions(e), args);
+				}
+				catch (InvalidOperationException e)
+				{
+					ReflectionTypeLoadException refEx = null;
+					if (e.InnerException != null)
 					{
-						sb.AppendLine("- - - -").AppendLine();
-						sb.AppendLine(loaderException.ToString());
+						refEx = e.InnerException.InnerException as ReflectionTypeLoadException;
 					}
+					var errorMessage = refEx != null ? GetLoaderExceptions(refEx) : e.ToString();
 
-					WaitForUserInputAndExitWithError(sb.ToString(), args);
+					WaitForUserInputAndExitWithError(errorMessage, args);
 				}
 				catch (Exception e)
 				{
+					
 					EmitWarningInRed();
 
 					WaitForUserInputAndExitWithError(e.ToString(), args);
@@ -70,6 +72,19 @@ namespace Raven.Server
 				// no try catch here, we want the exception to be logged by Windows
 				ServiceBase.Run(new RavenService());
 			}
+		}
+
+		private static string GetLoaderExceptions(ReflectionTypeLoadException exception)
+		{
+			var sb = new StringBuilder();
+			sb.AppendLine(exception.ToString());
+			foreach (var loaderException in exception.LoaderExceptions)
+			{
+				sb.AppendLine("- - - -").AppendLine();
+				sb.AppendLine(loaderException.ToString());
+			}
+
+			return sb.ToString();
 		}
 
 		private static bool RunningInInteractiveMode(string[] args)
@@ -85,15 +100,15 @@ namespace Raven.Server
 
 			Console.Error.WriteLine(msg);
 
-			if(args.Contains("--msgbox", StringComparer.InvariantCultureIgnoreCase) || 
-				args.Contains("/msgbox", StringComparer.InvariantCultureIgnoreCase))
-		{
+			if (args.Contains("--msgbox", StringComparer.OrdinalIgnoreCase) ||
+				args.Contains("/msgbox", StringComparer.OrdinalIgnoreCase))
+			{
 				MessageBox.Show(msg, "RavenDB Startup failure");
 			}
 			Console.WriteLine("Press any key to continue...");
 			try
 			{
-			Console.ReadKey(true);
+				Console.ReadKey(true);
 			}
 			catch
 			{
@@ -118,6 +133,7 @@ namespace Raven.Server
 			string theUser = null;
 			Action actionToTake = null;
 			bool launchBrowser = false;
+			bool noLog = false;
 			var ravenConfiguration = new RavenConfiguration();
 
 			OptionSet optionSet = null;
@@ -128,10 +144,13 @@ namespace Raven.Server
 					ravenConfiguration.Settings[key] = value;
 					ravenConfiguration.Initialize();
 				}},
-				{"config=", "The config {0:file} to use", path => ravenConfiguration.LoadFrom(path)},
+				{"nolog", "Don't use the default log", s => noLog=true},
+				{"config=", "The config {0:file} to use", ravenConfiguration.LoadFrom},
 				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart)},
 				{"user=", "Which user will be used", user=> theUser = user},
 				{"setup-perf-counters", "Setup the performance counters and the related permissions", key => actionToTake = ()=> AdminRequired(()=>SetupPerfCounters(theUser))},
+				{"allow-blank-password-use", "Allow to log on by using a Windows account that has a blank password", key => actionToTake = () => AdminRequired(() => SetLimitBlankPasswordUseRegValue(0))},
+				{"deny-blank-password-use", "Deny to log on by using a Windows account that has a blank password", key => actionToTake = () =>  AdminRequired(() => SetLimitBlankPasswordUseRegValue(1))},
 				{"service-name=", "The {0:service name} to use when installing or uninstalling the service, default to RavenDB", name => ProjectInstaller.SERVICE_NAME = name},
 				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall)},
 				{"start", "Starts the RavenDB service", key => actionToTake= () => AdminRequired(StartService)},
@@ -141,9 +160,9 @@ namespace Raven.Server
 				{
 					ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
 					ravenConfiguration.RunInMemory = true;
-					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.All, ravenConfiguration, launchBrowser);		
+					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);		
 				}},
-				{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser)},
+				{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog)},
 				{"browser|launchbrowser", "After the server starts, launches the browser", key => launchBrowser = true},
 				{"help", "Help about the command line interface", key =>
 				{
@@ -185,6 +204,14 @@ namespace Raven.Server
 				{"decrypt-config=", "Decrypt the specified {0:configuration file}", file =>
 						{
 							actionToTake = () => UnprotectConfiguration(file);
+						}},
+				{"installSSL={==}", "Bind X509 certificate specified in {0:option} with optional password from {1:option} with 'Raven/Port'.", (sslCertificateFile, sslCertificatePassword) =>
+						{
+							actionToTake = () => InstallSsl(sslCertificateFile, sslCertificatePassword, ravenConfiguration);
+						}},
+				{"uninstallSSL={==}", "Unbind X509 certificate specified in {0:option} with optional password from {2:option} from 'Raven/Port'.", (sslCertificateFile, sslCertificatePassword) =>
+						{
+							actionToTake = () => UninstallSsl(sslCertificateFile, sslCertificatePassword, ravenConfiguration);
 						}}
 			};
 
@@ -204,7 +231,7 @@ namespace Raven.Server
 			}
 
 			if (actionToTake == null)
-				actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser);
+				actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog);
 
 			actionToTake();
 
@@ -218,6 +245,30 @@ namespace Raven.Server
 			}
 		}
 
+		private static void InstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+		{
+			if (string.IsNullOrEmpty(sslCertificateFile))
+				throw new InvalidOperationException("X509 certificate path cannot be empty.");
+
+			var certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
+
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port, true);
+			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
+			NonAdminHttp.BindCertificate(configuration.Port, certificate);
+		}
+
+		private static void UninstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+		{
+			X509Certificate2 certificate = null;
+
+			if (!string.IsNullOrEmpty(sslCertificateFile))
+			{
+				certificate = !string.IsNullOrEmpty(sslCertificatePassword) ? new X509Certificate2(sslCertificateFile, sslCertificatePassword) : new X509Certificate2(sslCertificateFile);
+			}
+
+			NonAdminHttp.UnbindCertificate(configuration.Port, certificate);
+		}
+
 		private static void SetupPerfCounters(string user)
 		{
 			user = user ?? WindowsIdentity.GetCurrent().Name;
@@ -228,13 +279,41 @@ namespace Raven.Server
 			Console.Write("User {0} has been added to Performance Monitoring Users group. Please {1} to take an effect.", user, actionToTake);
 		}
 
+		private static void SetLimitBlankPasswordUseRegValue(int value)
+		{
+			// value == 0 - disable a limit
+			// value == 1 - enable a limit
+
+			if (value != 0 && value != 1)
+				throw new ArgumentException("Allowed arguments for 'LimitBlankPasswordUse' registry value are only 0 or 1", "value");
+
+			const string registryKey = @"SYSTEM\CurrentControlSet\Control\Lsa";
+			const string policyName = "Limit local account use of blank passwords to console logon only";
+
+			var lsaKey = Registry.LocalMachine.OpenSubKey(registryKey, true);
+			if (lsaKey != null)
+			{
+				lsaKey.SetValue("LimitBlankPasswordUse", value, RegistryValueKind.DWord);
+
+				if (value == 0)
+					Console.WriteLine("You have just disabled the following security policy: '{0}' on the local machine.", policyName);
+				else
+					Console.WriteLine("You have just enabled the following security policy: '{0}' on the local machine.", policyName);
+			}
+			else
+			{
+				Console.WriteLine("Error: Could not find the registry key '{0}' in order to disable '{1}' policy.", registryKey,
+				                  policyName);
+			}
+		}
+
 		private static void ProtectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
-			var names = new[] {"appSettings", "connectionStrings"};
+			var names = new[] { "appSettings", "connectionStrings" };
 
 			foreach (var section in names.Select(configuration.GetSection))
 			{
@@ -247,7 +326,7 @@ namespace Raven.Server
 
 		private static void UnprotectConfiguration(string file)
 		{
-			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
 				file = Path.GetFileNameWithoutExtension(file);
 
 			var configuration = ConfigurationManager.OpenExeConfiguration(file);
@@ -317,6 +396,14 @@ Configuration options:
 		{
 			try
 			{
+				for (var i = 0; i < cmdLineArgs.Length; i++)
+				{
+					if (cmdLineArgs[i].Contains(" "))
+					{
+						cmdLineArgs[i] = "\"" + cmdLineArgs[i] + "\"";
+					}
+				}
+
 				var process = Process.Start(new ProcessStartInfo
 				{
 					Arguments = string.Join(" ", cmdLineArgs),
@@ -332,11 +419,16 @@ Configuration options:
 			}
 		}
 
-		private static void RunInDebugMode(AnonymousUserAccessMode? anonymousUserAccessMode, RavenConfiguration ravenConfiguration, bool launchBrowser)
+		private static void RunInDebugMode(
+			AnonymousUserAccessMode? anonymousUserAccessMode,
+			RavenConfiguration ravenConfiguration,
+			bool launchBrowser,
+			bool noLog)
 		{
-			ConfigureDebugLogging();
+			if (noLog == false)
+				ConfigureDebugLogging();
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port, ravenConfiguration.UseSsl);
 			if (anonymousUserAccessMode.HasValue)
 				ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
 			while (RunServerInDebugMode(ravenConfiguration, launchBrowser))
@@ -368,7 +460,7 @@ Configuration options:
 				if (File.Exists(path))
 				{
 					Console.WriteLine("Loading data from: {0}", path);
-					new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerOptions {BackupPath = path});
+					//new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerOptions {BackupPath = path});
 				}
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
@@ -397,7 +489,7 @@ Configuration options:
 		private static bool InteractiveRun(RavenDbServer server)
 		{
 			bool? done = null;
-			var actions = new Dictionary<string,Action>
+			var actions = new Dictionary<string, Action>
 			{
 				{"cls", TryClearingConsole},
 				{
@@ -429,7 +521,7 @@ Configuration options:
 				var readLine = Console.ReadLine() ?? "";
 
 				Action value;
-				if(actions.TryGetValue(readLine, out value) == false)
+				if (actions.TryGetValue(readLine, out value) == false)
 				{
 					Console.WriteLine("Could not understand: {0}", readLine);
 					WriteInteractiveOptions(actions);
@@ -558,7 +650,7 @@ Enjoy...
 		static void SetRecoveryOptions(string serviceName)
 		{
 			int exitCode;
-			var arguments = string.Format("failure {0} reset= 500 actions= restart/60000", serviceName);
+			var arguments = string.Format("failure \"{0}\" reset= 500 actions= restart/60000", serviceName);
 			using (var process = new Process())
 			{
 				var startInfo = process.StartInfo;
@@ -578,7 +670,7 @@ Enjoy...
 
 			if (exitCode != 0)
 				throw new InvalidOperationException(
-					"Failed to set the service recovery policy. Command: " + Environment.NewLine+ "sc " + arguments + Environment.NewLine + "Exit code: " + exitCode);
-		} 
+					"Failed to set the service recovery policy. Command: " + Environment.NewLine + "sc " + arguments + Environment.NewLine + "Exit code: " + exitCode);
+		}
 	}
 }

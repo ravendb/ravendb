@@ -10,8 +10,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -268,6 +271,139 @@ namespace Raven.Tests.Document
 				var company = for_verifying.LoadAsync<Company>(entity.Id).Result;
 				Assert.Null(company);
 			}
-        }
-    }
+		}
+
+		[Fact]
+		public void Can_patch_existing_document_when_present()
+		{
+			var company = new Company { Name = "Hibernating Rhinos" };
+
+			using (var session = DocumentStore.OpenAsyncSession())
+			{
+				session.StoreAsync(company).Wait();
+				session.SaveChangesAsync().Wait();
+			}
+
+			DocumentStore.AsyncDatabaseCommands.PatchAsync(
+				company.Id,
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject()).Wait();
+
+			using (var session = DocumentStore.OpenAsyncSession())
+			{
+				var company2 = session.LoadAsync<Company>(company.Id).Result;
+
+				Assert.NotNull(company2);
+				Assert.Equal(company2.Name, "Existing");
+			}
+		}
+
+		[Fact]
+		public void Can_patch_default_document_when_missing()
+		{
+			DocumentStore.AsyncDatabaseCommands.PatchAsync(
+				"Company/1",
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject()).Wait();
+
+			using (var session = DocumentStore.OpenAsyncSession())
+			{
+				var company = session.LoadAsync<Company>("Company/1").Result;
+
+				Assert.NotNull(company);
+				Assert.Equal(company.Name, "New");
+			}
+		}
+
+		[Fact]
+		public void Should_not_throw_when_ignore_missing_true()
+		{
+			Assert.DoesNotThrow(
+				() => DocumentStore.AsyncDatabaseCommands.PatchAsync(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}).Wait());
+
+			Assert.DoesNotThrow(
+				() => DocumentStore.AsyncDatabaseCommands.PatchAsync(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, true).Wait());
+		}
+
+		[Fact]
+		public void Should_throw_when_ignore_missing_false()
+		{
+			Assert.Throws<DocumentDoesNotExistsException>(
+				() =>
+				{
+					try
+					{
+						DocumentStore.AsyncDatabaseCommands.PatchAsync(
+							"Company/1",
+							new[]
+							{
+								new PatchRequest
+								{
+									Type = PatchCommandType.Set,
+									Name = "Name",
+									Value = "Existing",
+								}
+							}, false).Wait();
+					}
+					catch (AggregateException e)
+					{
+						throw e.ExtractSingleInnerException();
+					}
+				});
+		}
+	}
 }

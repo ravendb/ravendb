@@ -25,10 +25,10 @@ namespace Raven.Database.Data
 		public DynamicSortInfo[] SortDescriptors { get; set; }
 		public DynamicQueryMappingItem[] Items { get; set; }
 		public AggregationOperation AggregationOperation { get; set; }
-		public string TemporaryIndexName { get; set; }
-		public string PermanentIndexName { get; set; }
 		public string[] HighlightedFields { get; set; }
 
+	    private List<Action<IndexDefinition>> extraActionsToPerform = new List<Action<IndexDefinition>>();
+ 
 		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
 
 		public DynamicQueryMapping()
@@ -248,11 +248,16 @@ namespace Raven.Database.Data
 			{
 				foreach (var sortedField in query.SortedFields)
 				{
-					if (sortedField.Field.StartsWith(Constants.RandomFieldName))
+					var field = sortedField.Field;
+					if (field.StartsWith(Constants.RandomFieldName))
 						continue;
-					if (sortedField.Field == Constants.TemporaryScoreValue)
+					if (field == Constants.TemporaryScoreValue)
 						continue;
-					fields.Add(Tuple.Create(sortedField.Field, sortedField.Field));
+
+					if (field.EndsWith("_Range"))
+						field = field.Substring(0, field.Length - "_Range".Length);
+				
+					fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
 				}
 			}
 
@@ -281,6 +286,52 @@ namespace Raven.Database.Data
 				dynamicSortInfo.Field = ReplaceInvalidCharactersForFields(dynamicSortInfo.Field);
 			}
 		}
+
+        public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
+        {
+            var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
+            if (abstractViewGenerator == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
+
+            this.Items = this.Items.Union(
+                abstractViewGenerator.Fields
+                   .Where(field => this.Items.All(item => item.From != field) && !field.StartsWith("__"))
+                   .Select(field => new DynamicQueryMappingItem()
+                   {
+                       From = field,
+                       To = ReplaceInvalidCharactersForFields(field),
+                       QueryFrom = EscapeParentheses(field)
+                   })
+           ).ToArray();
+
+            this.SortDescriptors = this.SortDescriptors.Union(
+                indexDefinition.SortOptions
+                    .Where(option => this.SortDescriptors.All(desc => desc.Field != option.Key))
+                    .Select(option => new DynamicSortInfo()
+                    {
+                        Field = option.Key,
+                        FieldType = option.Value
+                    })
+                ).ToArray();
+
+            foreach (var fieldStorage in abstractViewGenerator.Stores)
+            {
+                KeyValuePair<string, FieldStorage> storage = fieldStorage;
+                extraActionsToPerform.Add(def=> def.Stores[storage.Key] = storage.Value);
+            }
+
+            foreach (var fieldIndex in abstractViewGenerator.Indexes)
+            {
+                KeyValuePair<string, FieldIndexing> index = fieldIndex;
+                extraActionsToPerform.Add(def=> def.Indexes[index.Key] = index.Value);
+            }
+
+            foreach (var fieldTermVector in abstractViewGenerator.TermVectors)
+            {
+                KeyValuePair<string, FieldTermVector> vector = fieldTermVector;
+                extraActionsToPerform.Add(def=> def.TermVectors[vector.Key] = vector.Value);
+            }
+            this.FindIndexName(database, this, query);
+	    }
 
 		static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
 		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<Tuple<string, string>> fields)
@@ -418,11 +469,7 @@ namespace Raven.Database.Data
 					: string.Format("Temp/{0}/By{1}{2}", targetName, indexName, groupBy);
 
 
-			// If there is a permanent index, then use that without bothering anything else
-			var permanentIndex = database.GetIndexDefinition(permanentIndexName);
-			map.PermanentIndexName = permanentIndexName;
-			map.TemporaryIndexName = temporaryIndexName;
-			map.IndexName = permanentIndex != null ? permanentIndexName : temporaryIndexName;
+		    map.IndexName = permanentIndexName;
 		}
 
 		public class DynamicSortInfo

@@ -18,12 +18,16 @@ namespace Raven.Database.Server.Connections
         private readonly ConcurrentSet<string> matchingDocumentPrefixes =
             new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentSet<string> matchingBulkInserts =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
         private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
 
         private EventsTransport eventsTransport;
 
         private int watchAllDocuments;
         private int watchAllIndexes;
+        private int watchAllReplicationConflicts;
 
         public ConnectionState(EventsTransport eventsTransport)
         {
@@ -58,6 +62,16 @@ namespace Raven.Database.Server.Connections
             matchingIndexes.TryRemove(name);
         }
 
+		public void WatchBulkInsert(string operationId)
+		{
+			matchingBulkInserts.TryAdd(operationId);
+		}
+
+		public void UnwatchBulkInsert(string operationId)
+		{
+			matchingBulkInserts.TryRemove(operationId);
+		}
+
         public void WatchAllIndexes()
         {
             Interlocked.Increment(ref watchAllIndexes);
@@ -67,6 +81,16 @@ namespace Raven.Database.Server.Connections
         {
             Interlocked.Decrement(ref watchAllIndexes);
         }
+
+		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+		{
+			var value = new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" };
+
+			if (matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()) == false)
+				return;
+
+			Enqueue(value);
+		}
 
         public void Send(DocumentChangeNotification documentChangeNotification)
         {
@@ -109,6 +133,18 @@ namespace Raven.Database.Server.Connections
             Enqueue(value);
         }
 
+        public void Send(ReplicationConflictNotification replicationConflictNotification)
+        {
+            var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
+
+            if (watchAllReplicationConflicts <= 0)
+            {
+                return;
+            }
+
+            Enqueue(value);
+        }
+
         private void Enqueue(object msg)
         {
             if (eventsTransport == null || eventsTransport.Connected == false)
@@ -119,11 +155,11 @@ namespace Raven.Database.Server.Connections
 
             eventsTransport.SendAsync(msg)
                 .ContinueWith(task =>
-                                {
-                                    if (task.IsFaulted == false)
-                                        return;
-                                    pendingMessages.Enqueue(msg);
-                                });
+                {
+                    if (task.IsFaulted == false)
+                        return;
+                    pendingMessages.Enqueue(msg);
+                });
         }
 
         public void WatchAllDocuments()
@@ -156,6 +192,16 @@ namespace Raven.Database.Server.Connections
             matchingDocumentPrefixes.TryRemove(name);
         }
 
+        public void WatchAllReplicationConflicts()
+        {
+            Interlocked.Increment(ref watchAllReplicationConflicts);
+        }
+
+        public void UnwatchAllReplicationConflicts()
+        {
+            Interlocked.Decrement(ref watchAllReplicationConflicts);
+        }
+
         public void Reconnect(EventsTransport transport)
         {
             eventsTransport = transport;
@@ -168,14 +214,14 @@ namespace Raven.Database.Server.Connections
 
             eventsTransport.SendManyAsync(items)
                 .ContinueWith(task =>
-                                {
-                                    if (task.IsFaulted == false)
-                                        return;
-                                    foreach (var item in items)
-                                    {
-                                        pendingMessages.Enqueue(item);
-                                    }
-                                });
+                {
+                    if (task.IsFaulted == false)
+                        return;
+                    foreach (var item in items)
+                    {
+                        pendingMessages.Enqueue(item);
+                    }
+                });
         }
 
         public void Disconnect()

@@ -1,3 +1,4 @@
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -168,6 +169,9 @@ namespace Raven.Abstractions.Connection
 			{
 				try
 				{
+					if (WebRequest.Method != "GET" && postedData == null && postedStream == null && postedToken == null)
+						WebRequest.ContentLength = 0;
+						
 					using (var res = WebRequest.GetResponse())
 					{
 						action(res);
@@ -195,10 +199,13 @@ namespace Raven.Abstractions.Connection
 								ravenJObject = RavenJObject.Parse(error);
 							}
 							catch { }
-
+							e.Data["original-value"] = error;
 							if (ravenJObject == null)
 								throw;
-							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e);
+							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e)
+							{
+								Data = {{"original-value", error}}
+							};
 						}
 					}
 
@@ -244,3 +251,4 @@ namespace Raven.Abstractions.Connection
 
 	}
 }
+#endif

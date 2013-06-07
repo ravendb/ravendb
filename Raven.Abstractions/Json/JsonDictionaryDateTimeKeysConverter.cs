@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Abstractions.Json
 {
@@ -119,7 +120,7 @@ namespace Raven.Abstractions.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			if (objectType.IsGenericType == false)
+			if (objectType.IsGenericType() == false)
 				return false;
 			if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>))
 				return false;

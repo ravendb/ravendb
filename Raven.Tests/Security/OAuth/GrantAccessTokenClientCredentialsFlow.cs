@@ -8,6 +8,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Xunit;
@@ -37,7 +38,8 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
+            Authentication.EnableOnce(); 
+            ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
 		}
 
 		protected override void CreateDefaultIndexes(IDocumentStore documentStore)

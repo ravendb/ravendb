@@ -11,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Smuggler;
@@ -32,8 +33,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
 
-		private volatile PeriodicBackupSetup backupConfigs;
 		private volatile PeriodicBackupStatus backupStatus;
+		private volatile PeriodicBackupSetup backupConfigs;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -116,7 +117,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			{
 				if (currentTask != null)
 					return;
-				currentTask = Task.Factory.StartNew(() =>
+				currentTask = Task.Factory.StartNew(async () =>
 				{
 					var documentDatabase = Database;
 					if (documentDatabase == null)
@@ -147,11 +148,11 @@ namespace Raven.Database.Bundles.PeriodicBackups
 								LastAttachmentEtag = localBackupStatus.LastAttachmentsEtag
 							};
 							var dd = new DataDumper(documentDatabase, options);
-							var filePath = dd.ExportData(null, true);
+							var filePath = await dd.ExportData(null, null, true);
 
 							// No-op if nothing has changed
 							if (options.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-								options.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+							    options.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
 							{
 								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
@@ -166,13 +167,13 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
 							ravenJObject.Remove("Id");
 							var putResult = documentDatabase.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
-														 new RavenJObject(), null);
+							                             new RavenJObject(), null);
 
 							// this result in backupStatus being refreshed
 							localBackupStatus = backupStatus;
 							if (localBackupStatus != null)
 							{
-								if (Etag.Increment(localBackupStatus.LastDocsEtag, 1) == putResult.ETag) // the last etag is with just us
+								if (localBackupStatus.LastDocsEtag.IncrementBy(1) == putResult.ETag) // the last etag is with just us
 									localBackupStatus.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
 							}
 						}

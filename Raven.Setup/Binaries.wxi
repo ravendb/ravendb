@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <Binary Id="Raven.Setup.CustomActions.CA.dll" src="$(var.Raven.Setup.CustomActions.TargetDir)\$(var.Raven.Setup.CustomActions.ProjectName).CA.dll" />
+</Include>

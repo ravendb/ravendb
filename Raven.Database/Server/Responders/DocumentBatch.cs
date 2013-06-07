@@ -5,8 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
@@ -68,9 +70,29 @@ namespace Raven.Database.Server.Responders
 			var allowStale = context.GetAllowStale();
 			var indexQuery = context.GetIndexQueryFromHttpContext(maxPageSize: int.MaxValue);
 
-			var array = batchOperation(index, indexQuery, allowStale);
+			var status = new RavenJObject
+			{
+				{"State", null},
+				{"Completed", false}
+			};
+			var sp = Stopwatch.StartNew();
+			long id = 0;
 
-			context.WriteJson(array);
+			var task = Task.Factory.StartNew(() =>
+			{
+				var array = batchOperation(index, indexQuery, allowStale);
+				status["State"] = array;
+				status["Completed"] = true;
+
+				context.Log(log => log.Debug("\tBatch Operation worked on {0:#,#;;0} documents in {1}, task #: {2}", array.Length, sp.Elapsed, id));
+			});
+
+			Database.AddTask(task, status, out id);
+
+			context.WriteJson(new
+			{
+				OperationId = id
+			});
 		}
 		
 		private void Batch(IHttpContext context)

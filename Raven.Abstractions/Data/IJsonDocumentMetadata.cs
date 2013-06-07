@@ -29,7 +29,7 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		Guid? Etag { get; set; }
+		Etag Etag { get; set; }
 
 		/// <summary>
 		/// 	Gets or sets the last modified date for the document

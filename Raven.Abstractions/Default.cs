@@ -1,3 +1,4 @@
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -34,6 +35,7 @@ namespace Raven.Abstractions
 			new JsonToJsonConverter(),
 			new JsonDateTimeISO8601Converter(),
 			new JsonDateTimeOffsetConverter(),
+			new EtagJsonConverter(), 
 			new JsonDictionaryDateTimeKeysConverter(),
 		};
 	}

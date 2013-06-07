@@ -30,6 +30,11 @@ namespace Raven.Client.Document
 
 		public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
 		{
+			foreach (var extendedDocumentConversionListener in Listeners.ExtendedConversionListeners)
+			{
+				extendedDocumentConversionListener.BeforeConversionToDocument(key, entity, metadata);
+			}
+
 			var entityType = entity.GetType();
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 
@@ -46,6 +51,11 @@ namespace Raven.Client.Document
 				documentConversionListener.EntityToDocument(key, entity, objectAsJson, metadata);
 			}
 
+			foreach (var extendedDocumentConversionListener in Listeners.ExtendedConversionListeners)
+			{
+				extendedDocumentConversionListener.AfterConversionToDocument(key, entity, objectAsJson, metadata);
+			}
+
 			return objectAsJson;
 		}
 
@@ -55,7 +65,7 @@ namespace Raven.Client.Document
 		{
 			var jObject = entity as RavenJObject;
 			if (jObject != null)
-				return jObject;
+				return (RavenJObject)jObject.CloneToken();
 
 			if (CachedJsonDocs != null && CachedJsonDocs.TryGetValue(entity, out jObject))
 				return (RavenJObject)jObject.CreateSnapshot();
@@ -160,7 +170,7 @@ namespace Raven.Client.Document
 		}
 
 		private static Regex arrayEndRegex = new Regex(@"\[\], [\w\.-]+$",
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		                                               RegexOptions.Compiled
 #else
 													   RegexOptions.None	

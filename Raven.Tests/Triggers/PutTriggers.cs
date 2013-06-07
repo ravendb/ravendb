@@ -9,7 +9,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Tests.Storage;
 using Xunit;
 

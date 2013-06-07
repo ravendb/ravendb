@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -25,6 +26,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -53,7 +55,8 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
 			bool deleteDirectory = true,
-			bool deleteDirectoryOnDispose = true)
+			bool deleteDirectoryOnDispose = true,
+			bool enableAuthentication = false)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenTestBase)).CodeBase);
 			path = Path.Combine(path, DataDir).Substring(6);
@@ -84,6 +87,12 @@ namespace Raven.Tests.Helpers
 
 				documentStore.Initialize();
 
+				if (enableAuthentication)
+				{
+					EnableAuthentication(documentStore.DocumentDatabase);
+					ModifyConfiguration(documentStore.Configuration);
+				}
+
 				CreateDefaultIndexes(documentStore);
 
 				if (deleteDirectoryOnDispose)
@@ -103,12 +112,23 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
+		public static void EnableAuthentication(DocumentDatabase database)
+		{
+			var license = GetLicenseByReflection(database);
+			license.Error = false;
+			license.Status = "Commercial";
+
+			// rerun this startup task
+			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+		}
+
 		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
 			 bool deleteDirectoryAfter = true, 
 			 bool deleteDirectoryBefore = true,
-			 bool runInMemory = true)
+			 bool runInMemory = true,
+			 bool enableAuthentication = false)
 		{
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
@@ -148,14 +168,18 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data", bool runInMemory = true, bool deleteDirectory = true)
+		protected RavenDbServer GetNewServer(int port = 8079, 
+			string dataDirectory = "Data", 
+			bool runInMemory = true, 
+			bool deleteDirectory = true, 
+			bool enableAuthentication = false)
 		{
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
 				DataDirectory = dataDirectory,
 				RunInMemory = runInMemory,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
 			};
 
 			ModifyConfiguration(ravenConfiguration);
@@ -187,6 +211,13 @@ namespace Raven.Tests.Helpers
 				ravenDbServer.Dispose();
 				throw;
 			}
+
+			if (enableAuthentication)
+			{
+				EnableAuthentication(ravenDbServer.Database);
+				ModifyConfiguration(ravenConfiguration);
+			}
+
 			return ravenDbServer;
 		}
 
@@ -230,39 +261,53 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0);
+			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(10)));
+		}
+
+		public static void WaitForIndexing(DocumentDatabase db)
+		{
+			Assert.True(SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)));
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			while (server.Server.HasPendingRequests)
-			{
-				Thread.Sleep(25);
-			}
+			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
-			while (true)
+			WaitForBackup(key => db.Get(key, null), checkError);
+		}
+
+		protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
+		{
+			WaitForBackup(commands.Get, checkError);
+		}
+
+		private void WaitForBackup(Func<string, JsonDocument> getDocument, bool checkError)
+		{
+			var done = SpinWait.SpinUntil(() =>
 			{
-				var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+				var jsonDocument = getDocument(BackupStatus.RavenBackupStatusDocumentKey);
 				if (jsonDocument == null)
-					break;
+					return true;
 
 				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 				if (backupStatus.IsRunning == false)
 				{
 					if (checkError)
 					{
-						var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+						var firstOrDefault =
+							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
 						if (firstOrDefault != null)
 							Assert.False(true, firstOrDefault.Message);
 					}
 
-					return;
+					return true;
 				}
-				Thread.Sleep(50);
-			}
+				return false;
+			}, TimeSpan.FromMinutes(15));
+			Assert.True(done);
 		}
 
 		public static void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)
@@ -277,7 +322,7 @@ namespace Raven.Tests.Helpers
 											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
 											   new RavenJObject());
 
-			documentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.All;
+			documentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
 			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
 				server.StartListening();
@@ -374,6 +419,18 @@ namespace Raven.Tests.Helpers
 				Console.WriteLine(errors.First().Error);
 				throw;
 			}
+		}
+
+		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
+		{
+			var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			Assert.NotNull(field);
+			var validateLicense = field.GetValue(database);
+
+			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
+			Assert.NotNull(currentLicenseProp);
+
+			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
 	}
 }

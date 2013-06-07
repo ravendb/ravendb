@@ -24,6 +24,12 @@ namespace Raven.Abstractions.Replication
 		public string Id { get; set; }
 
 		/// <summary>
+		/// Gets or sets the Source.
+		/// </summary>
+		/// <value>The Source.</value>
+		public string Source { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="ReplicationDocument"/> class.
 		/// </summary>
 		public ReplicationDocument()

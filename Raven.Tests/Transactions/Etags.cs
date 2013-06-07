@@ -9,9 +9,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Database.Exceptions;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Transactions
@@ -38,7 +35,7 @@ namespace Raven.Tests.Transactions
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var doc = db.Get("ayende", null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			db.Commit(transactionInformation.Id);
 
@@ -51,7 +48,7 @@ namespace Raven.Tests.Transactions
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var doc = db.Get("ayende", null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			var docInTx = db.Get("ayende", transactionInformation);
 			db.Put("ayende", docInTx.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -65,7 +62,7 @@ namespace Raven.Tests.Transactions
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var doc = db.Get("ayende", null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			var docInTx = db.Get("ayende", transactionInformation);
 			db.Commit(transactionInformation.Id);
@@ -78,10 +75,10 @@ namespace Raven.Tests.Transactions
 		public void WhenUsingTransactionWillFailIfDocumentEtagDoesNotMatch()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			Assert.Throws<ConcurrencyException>(
 				() =>
-				db.Put("ayende", Guid.NewGuid(), RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(),
+				db.Put("ayende", Etag.InvalidEtag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(),
 					   transactionInformation));
 		}
 	}

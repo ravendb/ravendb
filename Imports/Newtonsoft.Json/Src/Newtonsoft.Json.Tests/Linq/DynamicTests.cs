@@ -33,9 +33,9 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Globalization;
@@ -73,6 +73,23 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
       JValue newValue2 = d.NewValue;
 
       Assert.IsTrue(ReferenceEquals(newValue1, newValue2));
+    }
+
+    [Test]
+    public void JObjectCount()
+    {
+      JObject o = new JObject();
+
+      dynamic d = o;
+
+      long? c1 = d.Count;
+
+      o["Count"] = 99;
+
+      long? c2 = d.Count;
+
+      Assert.AreEqual(null, c1);
+      Assert.AreEqual(99, c2);
     }
 
     [Test]
@@ -701,7 +718,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
       //   "Enabled": true,
       //   "Price": 2.45,
       //   "StockCount": 9000,
-      //   "StockValue": 22050.0
+      //   "StockValue": 22050.00
       // }
 
       Assert.AreEqual(@"{
@@ -709,7 +726,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
   ""Enabled"": true,
   ""Price"": 2.45,
   ""StockCount"": 9000,
-  ""StockValue"": 22050.0
+  ""StockValue"": 22050.00
 }", json);
     }
   }

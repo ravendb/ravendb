@@ -18,7 +18,7 @@ namespace Raven.Client.Document
 	public class AsyncMultiLoaderWithInclude<T> : IAsyncLoaderWithInclude<T>
 	{
 		private readonly IAsyncDocumentSessionImpl session;
-		private readonly List<string> includes = new List<string>();
+		private readonly List<KeyValuePair<string, Type>> includes = new List<KeyValuePair<string, Type>>();
 
 		/// <summary>
 		/// Begin a load while including the specified path 
@@ -27,7 +27,12 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public AsyncMultiLoaderWithInclude<T> Include(string path)
 		{
-			includes.Add(path);
+			return Include(path, typeof(object));
+		}
+
+		AsyncMultiLoaderWithInclude<T> Include(string path, Type type)
+		{
+			includes.Add(new KeyValuePair<string, Type>(path, type));
 			return this;
 		}
 
@@ -59,7 +64,7 @@ namespace Raven.Client.Document
 				id += "(" + idPrefix + ")";
 			}
 
-			return Include(id);
+			return Include(id, typeof(TInclude));
 		}
 
 		/// <summary>

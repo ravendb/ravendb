@@ -1,8 +1,11 @@
+using System.IO;
+using System.Threading.Tasks;
+
 namespace Raven.Abstractions.Smuggler
 {
 	public interface ISmugglerApi
 	{
-		string ExportData(SmugglerOptions options, bool incremental);
-		void ImportData(SmugglerOptions options, bool incremental);
+		Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental);
+		Task ImportData(Stream stream, SmugglerOptions options);
 	}
 }

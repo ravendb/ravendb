@@ -30,6 +30,7 @@ using System.Dynamic;
 using System.Linq.Expressions;
 #endif
 using System.IO;
+using System.Text;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Diagnostics;
 using System.Globalization;
@@ -60,6 +61,16 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
 
     private int? _lineNumber;
     private int? _linePosition;
+
+    private static readonly JTokenType[] BooleanTypes = new[] { JTokenType.Integer, JTokenType.Float, JTokenType.String, JTokenType.Comment, JTokenType.Raw, JTokenType.Boolean };
+    private static readonly JTokenType[] NumberTypes = new[] { JTokenType.Integer, JTokenType.Float, JTokenType.String, JTokenType.Comment, JTokenType.Raw, JTokenType.Boolean };
+    private static readonly JTokenType[] StringTypes = new[] { JTokenType.Date, JTokenType.Integer, JTokenType.Float, JTokenType.String, JTokenType.Comment, JTokenType.Raw, JTokenType.Boolean, JTokenType.Bytes, JTokenType.Guid, JTokenType.TimeSpan, JTokenType.Uri };
+    private static readonly JTokenType[] GuidTypes = new[] { JTokenType.String, JTokenType.Comment, JTokenType.Raw, JTokenType.Guid };
+    private static readonly JTokenType[] TimeSpanTypes = new[] { JTokenType.String, JTokenType.Comment, JTokenType.Raw, JTokenType.TimeSpan };
+    private static readonly JTokenType[] UriTypes = new[] { JTokenType.String, JTokenType.Comment, JTokenType.Raw, JTokenType.Uri };
+    private static readonly JTokenType[] CharTypes = new[] { JTokenType.Integer, JTokenType.Float, JTokenType.String, JTokenType.Comment, JTokenType.Raw };
+    private static readonly JTokenType[] DateTimeTypes = new[] { JTokenType.Date, JTokenType.String, JTokenType.Comment, JTokenType.Raw };
+    private static readonly JTokenType[] BytesTypes = new[] { JTokenType.Bytes, JTokenType.String, JTokenType.Comment, JTokenType.Raw };
 
     /// <summary>
     /// Gets a comparer that can compare two tokens for value equality.
@@ -378,39 +389,9 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       return token.Type.ToString();
     }
 
-    private static bool IsNullable(JToken o)
+    private static bool ValidateToken(JToken o, JTokenType[] validTypes, bool nullable)
     {
-      return (o.Type == JTokenType.Undefined || o.Type == JTokenType.Null);
-    }
-
-    private static bool ValidateFloat(JToken o, bool nullable)
-    {
-      return (o.Type == JTokenType.Float || o.Type == JTokenType.Integer || (nullable && IsNullable(o)));
-    }
-
-    private static bool ValidateInteger(JToken o, bool nullable)
-    {
-      return (o.Type == JTokenType.Integer || (nullable && IsNullable(o)));
-    }
-
-    private static bool ValidateDate(JToken o, bool nullable)
-    {
-      return (o.Type == JTokenType.Date || (nullable && IsNullable(o)));
-    }
-
-    private static bool ValidateBoolean(JToken o, bool nullable)
-    {
-      return (o.Type == JTokenType.Boolean || (nullable && IsNullable(o)));
-    }
-
-    private static bool ValidateString(JToken o)
-    {
-      return (o.Type == JTokenType.String || o.Type == JTokenType.Comment || o.Type == JTokenType.Raw || IsNullable(o));
-    }
-
-    private static bool ValidateBytes(JToken o)
-    {
-      return (o.Type == JTokenType.Bytes || IsNullable(o));
+      return (Array.IndexOf(validTypes, o.Type) != -1) || (nullable && (o.Type == JTokenType.Null || o.Type == JTokenType.Undefined));
     }
 
     #region Cast from operators
@@ -422,7 +403,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator bool(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateBoolean(v, false))
+      if (v == null || !ValidateToken(v, BooleanTypes, false))
         throw new ArgumentException("Can not convert {0} to Boolean.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToBoolean(v.Value, CultureInfo.InvariantCulture);
@@ -437,10 +418,14 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator DateTimeOffset(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateDate(v, false))
+      if (v == null || !ValidateToken(v, DateTimeTypes, false))
         throw new ArgumentException("Can not convert {0} to DateTimeOffset.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
-      return (DateTimeOffset)v.Value;
+      if (v.Value is DateTimeOffset)
+        return (DateTimeOffset)v.Value;
+      if (v.Value is string)
+        return DateTimeOffset.Parse((string)v.Value, CultureInfo.InvariantCulture);
+      return new DateTimeOffset(Convert.ToDateTime(v.Value, CultureInfo.InvariantCulture));
     }
 #endif
 
@@ -455,7 +440,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateBoolean(v, true))
+      if (v == null || !ValidateToken(v, BooleanTypes, true))
         throw new ArgumentException("Can not convert {0} to Boolean.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (bool?)Convert.ToBoolean(v.Value, CultureInfo.InvariantCulture) : null;
@@ -469,7 +454,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator long(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to Int64.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToInt64(v.Value, CultureInfo.InvariantCulture);
@@ -486,7 +471,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateDate(v, true))
+      if (v == null || !ValidateToken(v, DateTimeTypes, true))
         throw new ArgumentException("Can not convert {0} to DateTime.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (DateTime?)Convert.ToDateTime(v.Value, CultureInfo.InvariantCulture) : null;
@@ -504,10 +489,16 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateDate(v, true))
+      if (v == null || !ValidateToken(v, DateTimeTypes, true))
         throw new ArgumentException("Can not convert {0} to DateTimeOffset.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
-      return (DateTimeOffset?)v.Value;
+      if (v.Value == null)
+        return null;
+      if (v.Value is DateTimeOffset)
+        return (DateTimeOffset?)v.Value;
+      if (v.Value is string)
+        return DateTimeOffset.Parse((string)v.Value, CultureInfo.InvariantCulture);
+      return new DateTimeOffset(Convert.ToDateTime(v.Value, CultureInfo.InvariantCulture));
     }
 #endif
 
@@ -522,7 +513,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateFloat(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to Decimal.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (decimal?)Convert.ToDecimal(v.Value, CultureInfo.InvariantCulture) : null;
@@ -539,10 +530,27 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateFloat(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to Double.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
-      return (double?)v.Value;
+      return (v.Value != null) ? (double?)Convert.ToDouble(v.Value, CultureInfo.InvariantCulture) : null;
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="Nullable{Char}"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator char?(JToken value)
+    {
+      if (value == null)
+        return null;
+
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, CharTypes, true))
+        throw new ArgumentException("Can not convert {0} to Char.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      return (v.Value != null) ? (char?)Convert.ToChar(v.Value, CultureInfo.InvariantCulture) : null;
     }
 
     /// <summary>
@@ -553,7 +561,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator int(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to Int32.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToInt32(v.Value, CultureInfo.InvariantCulture);
@@ -567,7 +575,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator short(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to Int16.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToInt16(v.Value, CultureInfo.InvariantCulture);
@@ -582,10 +590,39 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator ushort(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to UInt16.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToUInt16(v.Value, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="System.Char"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    [CLSCompliant(false)]
+    public static explicit operator char(JToken value)
+    {
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, CharTypes, false))
+        throw new ArgumentException("Can not convert {0} to Char.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      return Convert.ToChar(v.Value, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="System.Byte"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator byte(JToken value)
+    {
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, NumberTypes, false))
+        throw new ArgumentException("Can not convert {0} to Byte.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      return Convert.ToByte(v.Value, CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -599,7 +636,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to Int32.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (int?)Convert.ToInt32(v.Value, CultureInfo.InvariantCulture) : null;
@@ -616,7 +653,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to Int16.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (short?)Convert.ToInt16(v.Value, CultureInfo.InvariantCulture) : null;
@@ -634,10 +671,27 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to UInt16.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
-      return (v.Value != null) ? (ushort?)Convert.ToInt16(v.Value, CultureInfo.InvariantCulture) : null;
+      return (v.Value != null) ? (ushort?)Convert.ToUInt16(v.Value, CultureInfo.InvariantCulture) : null;
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="Nullable{Byte}"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator byte?(JToken value)
+    {
+      if (value == null)
+        return null;
+
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, NumberTypes, true))
+        throw new ArgumentException("Can not convert {0} to Byte.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      return (v.Value != null) ? (byte?)Convert.ToByte(v.Value, CultureInfo.InvariantCulture) : null;
     }
 
     /// <summary>
@@ -648,7 +702,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator DateTime(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateDate(v, false))
+      if (v == null || !ValidateToken(v, DateTimeTypes, false))
         throw new ArgumentException("Can not convert {0} to DateTime.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToDateTime(v.Value, CultureInfo.InvariantCulture);
@@ -665,7 +719,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to Int64.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (long?)Convert.ToInt64(v.Value, CultureInfo.InvariantCulture) : null;
@@ -682,7 +736,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateFloat(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to Single.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (float?)Convert.ToSingle(v.Value, CultureInfo.InvariantCulture) : null;
@@ -696,7 +750,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator decimal(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateFloat(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to Decimal.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToDecimal(v.Value, CultureInfo.InvariantCulture);
@@ -714,7 +768,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to UInt32.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (uint?)Convert.ToUInt32(v.Value, CultureInfo.InvariantCulture) : null;
@@ -732,7 +786,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, true))
+      if (v == null || !ValidateToken(v, NumberTypes, true))
         throw new ArgumentException("Can not convert {0} to UInt64.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return (v.Value != null) ? (ulong?)Convert.ToUInt64(v.Value, CultureInfo.InvariantCulture) : null;
@@ -746,7 +800,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator double(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateFloat(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to Double.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToDouble(v.Value, CultureInfo.InvariantCulture);
@@ -760,7 +814,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator float(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateFloat(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to Single.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToSingle(v.Value, CultureInfo.InvariantCulture);
@@ -777,10 +831,15 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         return null;
 
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateString(v))
+      if (v == null || !ValidateToken(v, StringTypes, true))
         throw new ArgumentException("Can not convert {0} to String.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
-      return (v.Value != null) ? Convert.ToString(v.Value, CultureInfo.InvariantCulture) : null;
+      if (v.Value == null)
+        return null;
+      if (v.Value is byte[])
+        return Convert.ToBase64String((byte[]) v.Value);
+
+      return Convert.ToString(v.Value, CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -792,7 +851,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator uint(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to UInt32.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToUInt32(v.Value, CultureInfo.InvariantCulture);
@@ -807,7 +866,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public static explicit operator ulong(JToken value)
     {
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateInteger(v, false))
+      if (v == null || !ValidateToken(v, NumberTypes, false))
         throw new ArgumentException("Can not convert {0} to UInt64.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
       return Convert.ToUInt64(v.Value, CultureInfo.InvariantCulture);
@@ -820,11 +879,104 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <returns>The result of the conversion.</returns>
     public static explicit operator byte[](JToken value)
     {
+      if (value == null)
+        return null;
+
       JValue v = EnsureValue(value);
-      if (v == null || !ValidateBytes(v))
+      if (v == null || !ValidateToken(v, BytesTypes, false))
         throw new ArgumentException("Can not convert {0} to byte array.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
 
+      if (v.Value is string)
+        return Convert.FromBase64String(Convert.ToString(v.Value, CultureInfo.InvariantCulture));
       return (byte[])v.Value;
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="System.Guid"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator Guid(JToken value)
+    {
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, GuidTypes, false))
+        throw new ArgumentException("Can not convert {0} to Guid.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      return (v.Value is Guid) ? (Guid)v.Value : new Guid(Convert.ToString(v.Value, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="System.Guid"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator Guid?(JToken value)
+    {
+      if (value == null)
+        return null;
+
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, GuidTypes, true))
+        throw new ArgumentException("Can not convert {0} to Guid.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      if (v.Value == null)
+        return null;
+
+      return (v.Value is Guid) ? (Guid)v.Value : new Guid(Convert.ToString(v.Value, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="System.TimeSpan"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator TimeSpan(JToken value)
+    {
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, TimeSpanTypes, false))
+        throw new ArgumentException("Can not convert {0} to TimeSpan.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      return (v.Value is TimeSpan) ? (TimeSpan)v.Value : ConvertUtils.ParseTimeSpan(Convert.ToString(v.Value, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="System.TimeSpan"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator TimeSpan?(JToken value)
+    {
+      if (value == null)
+        return null;
+
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, TimeSpanTypes, true))
+        throw new ArgumentException("Can not convert {0} to TimeSpan.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      if (v.Value == null)
+        return null;
+
+      return (v.Value is TimeSpan) ? (TimeSpan)v.Value : ConvertUtils.ParseTimeSpan(Convert.ToString(v.Value, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Performs an explicit conversion from <see cref="Newtonsoft.Json.Linq.JToken"/> to <see cref="System.Uri"/>.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The result of the conversion.</returns>
+    public static explicit operator Uri(JToken value)
+    {
+      if (value == null)
+        return null;
+
+      JValue v = EnsureValue(value);
+      if (v == null || !ValidateToken(v, UriTypes, true))
+        throw new ArgumentException("Can not convert {0} to Uri.".FormatWith(CultureInfo.InvariantCulture, GetType(value)));
+
+      if (v.Value == null)
+        return null;
+
+      return (v.Value is Uri) ? (Uri)v.Value : new Uri(Convert.ToString(v.Value, CultureInfo.InvariantCulture));
     }
     #endregion
 
@@ -1100,6 +1252,56 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     {
       return new JValue(value);
     }
+
+    /// <summary>
+    /// Performs an implicit conversion from <see cref="T:System.Uri"/> to <see cref="Newtonsoft.Json.Linq.JToken"/>.
+    /// </summary>
+    /// <param name="value">The value to create a <see cref="JValue"/> from.</param>
+    /// <returns>The <see cref="JValue"/> initialized with the specified value.</returns>
+    public static implicit operator JToken(Uri value)
+    {
+      return new JValue(value);
+    }
+
+    /// <summary>
+    /// Performs an implicit conversion from <see cref="T:System.TimeSpan"/> to <see cref="Newtonsoft.Json.Linq.JToken"/>.
+    /// </summary>
+    /// <param name="value">The value to create a <see cref="JValue"/> from.</param>
+    /// <returns>The <see cref="JValue"/> initialized with the specified value.</returns>
+    public static implicit operator JToken(TimeSpan value)
+    {
+      return new JValue(value);
+    }
+
+    /// <summary>
+    /// Performs an implicit conversion from <see cref="Nullable{TimeSpan}"/> to <see cref="Newtonsoft.Json.Linq.JToken"/>.
+    /// </summary>
+    /// <param name="value">The value to create a <see cref="JValue"/> from.</param>
+    /// <returns>The <see cref="JValue"/> initialized with the specified value.</returns>
+    public static implicit operator JToken(TimeSpan? value)
+    {
+      return new JValue(value);
+    }
+
+    /// <summary>
+    /// Performs an implicit conversion from <see cref="T:System.Guid"/> to <see cref="Newtonsoft.Json.Linq.JToken"/>.
+    /// </summary>
+    /// <param name="value">The value to create a <see cref="JValue"/> from.</param>
+    /// <returns>The <see cref="JValue"/> initialized with the specified value.</returns>
+    public static implicit operator JToken(Guid value)
+    {
+      return new JValue(value);
+    }
+
+    /// <summary>
+    /// Performs an implicit conversion from <see cref="Nullable{Guid}"/> to <see cref="Newtonsoft.Json.Linq.JToken"/>.
+    /// </summary>
+    /// <param name="value">The value to create a <see cref="JValue"/> from.</param>
+    /// <returns>The <see cref="JValue"/> initialized with the specified value.</returns>
+    public static implicit operator JToken(Guid? value)
+    {
+      return new JValue(value);
+    }
     #endregion
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -1167,24 +1369,164 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     /// <summary>
     /// Creates the specified .NET type from the <see cref="JToken"/>.
     /// </summary>
+    /// <typeparam name="T">The object type that the token will be deserialized to.</typeparam>
     /// <returns>The new object created from the JSON value.</returns>
     public T ToObject<T>()
     {
-      return ToObject<T>(new JsonSerializer());
+      return (T)ToObject(typeof(T));
+    }
+
+    /// <summary>
+    /// Creates the specified .NET type from the <see cref="JToken"/>.
+    /// </summary>
+    /// <param name="objectType">The object type that the token will be deserialized to.</param>
+    /// <returns>The new object created from the JSON value.</returns>
+    public object ToObject(Type objectType)
+    {
+      return ToObject(objectType, false);
+    }
+
+    private object ToObject(Type objectType, bool isNullable)
+    {
+      TypeCode typeCode = ConvertUtils.GetTypeCode(objectType);
+
+      switch (typeCode)
+      {
+        case TypeCode.Object:
+          if (!isNullable && ReflectionUtils.IsNullableType(objectType))
+            return ToObject(Nullable.GetUnderlyingType(objectType), true);
+
+          // fall back to standard JsonSerializer
+          break;
+        case TypeCode.Boolean:
+          if (isNullable)
+            return (bool?) this;
+
+          return (bool) this;
+        case TypeCode.Char:
+          if (isNullable)
+            return (char?) this;
+
+          return (char) this;
+        case TypeCode.SByte:
+          if (isNullable)
+            return (sbyte?) this;
+
+          return (sbyte) this;
+        case TypeCode.Byte:
+          if (isNullable)
+            return (byte?) this;
+
+          return (byte) this;
+        case TypeCode.Int16:
+          if (isNullable)
+            return (short?) this;
+
+          return (short) this;
+        case TypeCode.UInt16:
+          if (isNullable)
+            return (ushort?) this;
+
+          return (ushort) this;
+        case TypeCode.Int32:
+          if (isNullable)
+            return (int?) this;
+
+          return (int) this;
+        case TypeCode.UInt32:
+          if (isNullable)
+            return (uint?) this;
+
+          return (uint) this;
+        case TypeCode.Int64:
+          if (isNullable)
+            return (long?) this;
+
+          return (long) this;
+        case TypeCode.UInt64:
+          if (isNullable)
+            return (ulong?) this;
+
+          return (ulong) this;
+        case TypeCode.Single:
+          if (isNullable)
+            return (float?) this;
+
+          return (float) this;
+        case TypeCode.Double:
+          if (isNullable)
+            return (double?) this;
+
+          return (double) this;
+        case TypeCode.Decimal:
+          if (isNullable)
+            return (decimal?) this;
+
+          return (decimal) this;
+        case TypeCode.DateTime:
+          if (isNullable)
+            return (DateTime?) this;
+
+          return (DateTime) this;
+        case TypeCode.String:
+          return (string) this;
+      }
+
+#if !PocketPC && !NET20
+      if (objectType == typeof (DateTimeOffset))
+      {
+        if (isNullable)
+          return (DateTimeOffset?) this;
+
+        return (DateTimeOffset) this;
+      }
+#endif
+      if (objectType == typeof (Guid))
+      {
+        if (isNullable)
+          return (Guid?) this;
+
+        return (Guid) this;
+      }
+      if (objectType == typeof (Uri))
+      {
+        return (Uri) this;
+      }
+      if (objectType == typeof (TimeSpan))
+      {
+        if (isNullable)
+          return (TimeSpan?) this;
+
+        return (TimeSpan) this;
+      }
+
+      return ToObject(objectType, new JsonSerializer());
     }
 
     /// <summary>
     /// Creates the specified .NET type from the <see cref="JToken"/> using the specified <see cref="JsonSerializer"/>.
     /// </summary>
+    /// <typeparam name="T">The object type that the token will be deserialized to.</typeparam>
     /// <param name="jsonSerializer">The <see cref="JsonSerializer"/> that will be used when creating the object.</param>
     /// <returns>The new object created from the JSON value.</returns>
     public T ToObject<T>(JsonSerializer jsonSerializer)
+    {
+      return (T)ToObject(typeof(T), jsonSerializer);
+    }
+
+    /// <summary>
+    /// Creates the specified .NET type from the <see cref="JToken"/> using the specified <see cref="JsonSerializer"/>.
+    /// </summary>
+    /// <param name="objectType">The object type that the token will be deserialized to.</param>
+    /// <param name="jsonSerializer">The <see cref="JsonSerializer"/> that will be used when creating the object.</param>
+    /// <returns>The new object created from the JSON value.</returns>
+    public object ToObject(Type objectType, JsonSerializer jsonSerializer)
     {
       ValidationUtils.ArgumentNotNull(jsonSerializer, "jsonSerializer");
 
       using (JTokenReader jsonReader = new JTokenReader(this))
       {
-        return jsonSerializer.Deserialize<T>(jsonReader);
+        return jsonSerializer.Deserialize(jsonReader, objectType);
       }
     }
 
@@ -1222,7 +1564,6 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
       if (!JsonReader.IsStartToken(reader.TokenType))
         return new JValue(reader.Value);
 
-      // TODO: loading constructor and parameters?
       throw JsonReaderException.Create(reader, "Error reading JToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
     }
 
@@ -1358,6 +1699,45 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public JToken DeepClone()
     {
       return CloneToken();
+    }
+
+    public string Path
+    {
+      get
+      {
+        IList<JToken> ancestors = Ancestors().Reverse().ToList();
+        ancestors.Add(this);
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ancestors.Count; i++)
+        {
+          JToken current = ancestors[i];
+          JToken next = (i + 1 < ancestors.Count) ? ancestors[i + 1] : null;
+          
+          if (next != null)
+          {
+            switch (current.Type)
+            {
+              case JTokenType.Property:
+                JProperty property = (JProperty) current;
+
+                if (sb.Length > 0)
+                  sb.Append(".");
+
+                sb.Append(property.Name);
+                break;
+              case JTokenType.Array:
+              case JTokenType.Constructor:
+                int index = ((IList<JToken>)current).IndexOf(next);
+
+                sb.Append("[" + index + "]");
+                break;
+            }
+          }
+        }
+
+        return sb.ToString();
+      }
     }
   }
 }

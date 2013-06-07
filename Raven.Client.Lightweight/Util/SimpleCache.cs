@@ -2,23 +2,28 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Raven.Abstractions;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 
 namespace Raven.Client.Util
 {
-	public class SimpleCache<T> : IDisposable
+	public class SimpleCache : IDisposable
 	{
-		readonly ConcurrentLruLSet<string> lruKeys;
-		readonly ConcurrentDictionary<string, T> actualCache;
+		private readonly ConcurrentLruLSet<string> lruKeys;
+		private readonly ConcurrentDictionary<string, CachedRequest> actualCache;
+
+		private readonly ConcurrentDictionary<string, DateTime> lastWritePerDb = new ConcurrentDictionary<string, DateTime>();
 
 		public SimpleCache(int maxNumberOfCacheEntries)
 		{
-			actualCache = new ConcurrentDictionary<string, T>();
+			actualCache = new ConcurrentDictionary<string, CachedRequest>();
 			lruKeys = new ConcurrentLruLSet<string>(maxNumberOfCacheEntries, key =>
 			{
-				T _;
+				CachedRequest _;
 				actualCache.TryRemove(key, out _);
 			});
 		}
@@ -35,7 +40,7 @@ namespace Raven.Client.Util
 		{
 			get
 			{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 				if (failedToGetAvailablePhysicalMemory)
 					return -1;
 
@@ -56,7 +61,7 @@ namespace Raven.Client.Util
 					failedToGetAvailablePhysicalMemory = true;
 					return -1;
 				}
-#if __MonoCS__
+#if __MonoCS__ || MONO
 				throw new PlatformNotSupportedException("This build can only run on Mono");
 #else
 				try
@@ -89,7 +94,7 @@ namespace Raven.Client.Util
 
 		private int memoryPressureCounterOnSet, memoryPressureCounterOnGet;
 
-		public void Set(string key, T val)
+		public void Set(string key, CachedRequest val)
 		{
 			if (Interlocked.Increment(ref memoryPressureCounterOnSet) % 25 == 0) // check every 25 sets
 			{
@@ -108,9 +113,9 @@ namespace Raven.Client.Util
 			}
 		}
 
-		public T Get(string key)
+		public CachedRequest Get(string key)
 		{
-			T value;
+			CachedRequest value;
 			if (actualCache.TryGetValue(key, out value))
 			{
 				lruKeys.Push(key);
@@ -119,13 +124,34 @@ namespace Raven.Client.Util
 					TryClearMemory();
 				}
 			}
+			if (value != null)
+			{
+				DateTime lastWrite;
+				if (lastWritePerDb.TryGetValue(value.Database, out lastWrite))
+				{
+					if (value.Time < lastWrite)
+						value.ForceServerCheck = true;
+				}
+			}
 			return value;
+		}
+
+		public int CurrentSize
+		{
+			get { return actualCache.Count; }
 		}
 
 		public void Dispose()
 		{
 			lruKeys.Clear();
 			actualCache.Clear();
+		}
+
+		internal void ForceServerCheckOfCachedItemsForDatabase(string databaseName)
+		{
+			var newTime = SystemTime.UtcNow;
+			lastWritePerDb.AddOrUpdate(databaseName, newTime,
+				(db, existingTime) => existingTime > newTime ? existingTime : newTime);
 		}
 	}
 }

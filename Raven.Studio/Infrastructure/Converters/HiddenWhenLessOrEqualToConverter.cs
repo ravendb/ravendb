@@ -9,11 +9,16 @@ namespace Raven.Studio.Infrastructure.Converters
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			int greaterThan;
-			if (value is int && int.TryParse(parameter as string, out greaterThan))
-				return ((int)value) > greaterThan ? Visibility.Visible : Visibility.Collapsed;
-
-			return Visibility.Visible;
+		    try
+		    {
+		        return System.Convert.ToDouble(value) > System.Convert.ToDouble(parameter)
+		                    ? Visibility.Visible
+		                    : Visibility.Collapsed;
+		    }
+		    catch (InvalidCastException)
+		    {
+		        return Visibility.Visible;
+		    }
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

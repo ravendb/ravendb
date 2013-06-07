@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Exceptions;
 using Raven.Client;
 using Raven.Client.Linq;
 using System.Collections.Generic;
@@ -81,7 +82,7 @@ namespace Raven.Tests.MailingList
 			{
 				Console.WriteLine("Document Store initialized - running in memory.");
 
-				Assert.Throws<InvalidOperationException>(() => new Users_NameAndPassportSearching_WithError().Execute(documentStore));
+				Assert.Throws<IndexCompilationException>(() => new Users_NameAndPassportSearching_WithError().Execute(documentStore));
 
 				var users = CreateFakeUsers();
 				var usersCount = users.Count();

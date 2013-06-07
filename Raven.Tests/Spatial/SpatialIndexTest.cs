@@ -8,12 +8,15 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Tests.Storage;
+using Spatial4n.Core.Context.Nts;
+using Spatial4n.Core.Shapes;
 using Xunit;
 using System.Linq;
+using SpatialRelation = Raven.Abstractions.Indexing.SpatialRelation;
 
 namespace Raven.Tests.Spatial
 {
@@ -76,7 +79,7 @@ namespace Raven.Tests.Spatial
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
 
-			var expected = events.Count(e => Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
+			var expected = events.Count(e => GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude) <= radiusInKm);
 
 			Assert.Equal(expected, queryResult.Results.Count);
 			Assert.Equal(7, queryResult.Results.Count);
@@ -86,7 +89,7 @@ namespace Raven.Tests.Spatial
 			{
 				Event e = r.JsonDeserialization<Event>();
 
-				double distance = Raven.Database.Indexing.SpatialIndex.GetDistance(lat, lng, e.Latitude, e.Longitude);
+				double distance = GetGeographicalDistance(lat, lng, e.Latitude, e.Longitude);
 				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
 
 				Assert.True(distance < radiusInKm);
@@ -252,6 +255,22 @@ namespace Raven.Tests.Spatial
 			}
 		}
 
+		/// <summary>
+		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
+		///
+		/// [1] http://en.wikipedia.org/wiki/Earth_radius
+		/// </summary>
+		private const double EarthMeanRadiusKm = 6371.0087714;
+		private const double DegreesToRadians = Math.PI / 180;
+		private const double RadiansToDegrees = 1 / DegreesToRadians;
 
+		public static double GetGeographicalDistance(double fromLat, double fromLng, double toLat, double toLng)
+		{
+			var Context = new NtsSpatialContext(true);
+			Point ptFrom = Context.MakePoint(fromLng, fromLat);
+			Point ptTo = Context.MakePoint(toLng, toLat);
+			var distance = Context.GetDistCalc().Distance(ptFrom, ptTo);
+			return (distance / RadiansToDegrees) * EarthMeanRadiusKm;
+		}
 	}
 }

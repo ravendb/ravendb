@@ -40,9 +40,6 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
   /// <summary>
   /// Converts an <see cref="Enum"/> to and from its name string value.
   /// </summary>
-  /// <summary>
-  /// Converts an <see cref="Enum"/> to and from its name string value.
-  /// </summary>
   public class StringEnumConverter : JsonConverter
   {
     private readonly Dictionary<Type, BidirectionalDictionary<string, string>> _enumMemberNamesPerType = new Dictionary<Type, BidirectionalDictionary<string, string>>();
@@ -156,7 +153,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
             string n1 = f.Name;
             string n2;
             
-#if !NET20
+#if !NET20 && !MONO
             n2 = f.GetCustomAttributes(typeof (EnumMemberAttribute), true)
                           .Cast<EnumMemberAttribute>()
                           .Select(a => a.Value)
@@ -172,7 +169,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
                 .FormatWith(CultureInfo.InvariantCulture, n2, t.Name));
             }
 
-            map.Add(n1, n2);
+            map.Set(n1, n2);
           }
 
           _enumMemberNamesPerType[t] = map;

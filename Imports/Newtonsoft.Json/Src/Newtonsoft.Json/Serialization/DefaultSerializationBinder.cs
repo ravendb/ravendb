@@ -119,7 +119,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       return _typeCache.Get(new TypeNameKey(assemblyName, typeName));
     }
 
-#if !(NET35 || NET20)
+#if !(NET35 || NET20 || MONO)
     /// <summary>
     /// When overridden in a derived class, controls the binding of a serialized object to a type.
     /// </summary>
