@@ -57,12 +57,12 @@ namespace Raven.Abstractions.Smuggler
 			SmugglerOptions = smugglerOptions;
 		}
 
-		public virtual Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental)
+		public virtual Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, PeriodicBackupStatus backupStatus = null)
 		{
-			return ExportData(stream, options, incremental, true);
+			return ExportData(stream, options, incremental, true, backupStatus);
 		}
 
-		public virtual async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		public virtual async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile, PeriodicBackupStatus backupStatus)
 		{
 			options = options ?? SmugglerOptions;
 			if (options == null)
@@ -81,7 +81,8 @@ namespace Raven.Abstractions.Smuggler
 						Directory.CreateDirectory(options.BackupPath);
 				}
 
-				if (lastEtagsFromFile) ReadLastEtagsFromFile(options);
+				if (lastEtagsFromFile && backupStatus == null) ReadLastEtagsFromFile(options);
+				if (backupStatus != null) ReadLastEtagsFromClass(options, backupStatus);
 
 				file = Path.Combine(options.BackupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(file))
@@ -150,6 +151,12 @@ namespace Raven.Abstractions.Smuggler
 				WriteLastEtagsFromFile(options);
 
 			return file;
+		}
+
+		private void ReadLastEtagsFromClass(SmugglerOptions options, PeriodicBackupStatus backupStatus)
+		{
+			options.LastAttachmentEtag = backupStatus.LastAttachmentsEtag;
+			options.LastDocsEtag = backupStatus.LastDocsEtag;
 		}
 
 		public static void ReadLastEtagsFromFile(SmugglerOptions options)
