@@ -29,13 +29,18 @@ namespace Raven.Studio.Models
 	    private double collectionsListWidth;
 	    private ICommand collapseCollectionsListCommand;
 	    public static readonly double CollapsedCollectionsListWidth = 25;
-	    private const double DefaultCollectionsListWidth = 175;
+	  //  private const double DefaultCollectionsListWidth = 175;
 	    private double maximisedCollectionsListWidth;
 	    private ICommand expandCollectionsListCommand;
 
 	    public CollectionViewSource SortedCollectionsList { get; private set; }
 
 		public Observable<string> SelectedCollectionSortingMode { get; set; } 
+
+		private double DefaultCollectionsListWidth
+		{
+			get { return Settings.Instance.CollectionWidth; }
+		}
 
 	    private string GetSelectedCollectionName()
 	    {
@@ -261,6 +266,7 @@ namespace Raven.Studio.Models
             set
             {
                 collectionsListWidth = value;
+	            Settings.Instance.CollectionWidth = value;
                 OnPropertyChanged(() => CollectionsListWidth);
             }
         }
@@ -288,6 +294,8 @@ namespace Raven.Studio.Models
 	        CollectionsListWidth = maximisedCollectionsListWidth <= CollapsedCollectionsListWidth
 	                                   ? DefaultCollectionsListWidth
 	                                   : maximisedCollectionsListWidth;
+		    if (Math.Abs(CollectionsListWidth - 0) < 25.5) // it is set to collapse
+			    CollectionsListWidth = 175; //Default
 	    }
 
 	    private void HandleCollapseCollectionsList()

@@ -24,6 +24,12 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
+		public double CollectionWidth
+		{
+			get { return GetSettingAsInt("CollectionWidth", 175); }
+			set { currentSettings["CollectionWidth"] = value; }
+		}
+
 	    public bool AutoRefreshDocumentLists
 	    {
 	        get { return GetSettingAsBool("AutoRefreshDocumentLists", true); }
@@ -65,9 +71,9 @@ namespace Raven.Studio.Infrastructure
 			return currentSettings.ContainsKey(key) ? (string)currentSettings[key] : defaultValue;
 		}
 
-	    private int GetSettingAsInt(string key)
+		private int GetSettingAsInt(string key, int defaultValue = 0)
 	    {
-	        return currentSettings.ContainsKey(key) ? Convert.ToInt32(currentSettings[key]) : 0;
+			return currentSettings.ContainsKey(key) ? Convert.ToInt32(currentSettings[key]) : defaultValue;
 	    }
 
         private bool GetSettingAsBool(string key, bool defaultValue = false)
