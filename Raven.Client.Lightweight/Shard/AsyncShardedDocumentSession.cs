@@ -18,6 +18,7 @@ using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
@@ -246,6 +247,19 @@ namespace Raven.Client.Shard
 		#endregion
 
 		#region Queries
+
+		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
+		                                                                    RavenQueryStatistics ravenQueryStatistics,
+		                                                                    RavenQueryHighlightings highlightings)
+		{
+#if !SILVERLIGHT
+			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
+				 null, 
+				 shardDbCommands.Values.ToList());
+#else
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
+#endif
+		}
 
 		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce)
 		{

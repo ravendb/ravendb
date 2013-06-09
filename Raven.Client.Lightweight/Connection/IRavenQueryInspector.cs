@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Connection.Async;
@@ -51,5 +52,25 @@ namespace Raven.Client.Connection
 		/// Get the index query for this query
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
+#if !SILVERLIGHT
+		/// <summary>
+		/// Get the facets as per the specified facet document with the given start and pageSize
+		/// </summary>
+		FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize);
+
+		/// <summary>
+		/// Get the facet results as per the specified facets with the given start and pageSize
+		/// </summary>
+		FacetResults GetFacets(List<Facet> facets, int start, int? pageSize);
+#endif
+		/// <summary>
+		/// Get the facets as per the specified facet document with the given start and pageSize
+		/// </summary>
+		Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize);
+
+		/// <summary>
+		/// Get the facet results as per the specified facets with the given start and pageSize
+		/// </summary>
+		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize);
 	}
 }

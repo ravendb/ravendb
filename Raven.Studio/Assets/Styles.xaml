@@ -846,8 +846,8 @@
   <!-- LayoutRoot Grid Style -->
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
-<!--		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>-->
-		<!--<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>-->
+		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
 	</Style>
 
   <!-- Content Border Style -->
@@ -3547,6 +3547,43 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+    <Style x:Key="Style_HeaderedContentControl_SeparatedHeader" TargetType="toolkit:HeaderedContentControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:HeaderedContentControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" MinHeight="30"/>
+                            <RowDefinition Height="*" MinHeight="40"/>
+                        </Grid.RowDefinitions>
+                        <Border BorderThickness="1" CornerRadius="4,4,0,0"  Margin="1,1,1,0" Background="{StaticResource Brush_HeaderBackground}" 
+                                BorderBrush="{StaticResource Brush_HeaderBorder}"/>
+                        <ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
+                        <ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_HeaderedContentControl_DocumentsView" TargetType="toolkit:HeaderedContentControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:HeaderedContentControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*" MinHeight="40"/>
+                        </Grid.RowDefinitions>
+                        <Border BorderThickness="1" CornerRadius="0,0,4,4" Grid.Row="1" BorderBrush="{StaticResource Brush_HeaderBorder}"/>
+                        <ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
+                        <ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <Style x:Key="Style_HeaderedContentControl_Settings" TargetType="toolkit:HeaderedContentControl">
         <Setter Property="Template">

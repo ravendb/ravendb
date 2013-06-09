@@ -36,7 +36,11 @@ namespace Raven.Database.Extensions
 			var deleteCommandData = self as DeleteCommandData;
 			if (deleteCommandData != null)
 			{
-				database.Delete(deleteCommandData.Key, deleteCommandData.Etag, deleteCommandData.TransactionInformation);
+				var result = database.Delete(deleteCommandData.Key, deleteCommandData.Etag, deleteCommandData.TransactionInformation);
+
+				if (batchResult != null)
+					batchResult.Deleted = result;
+
 				return;
 			}
 

@@ -129,14 +129,14 @@
 
 				<ContextMenu:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
-				<Delay:SplitHyperlinkButtonPopup Content="{Binding Settings.DocumentsTabSelection}"
+				<Delay:SplitHyperlinkButtonPopup Content="Documents"
 								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="{Binding Settings.DocumentsTabSelection, StringFormat='/{0}'}">
+								 CommandParameter="/documents">
 					<Behaviors:LinkHighlighter.AlternativeUris>
 						<Behaviors:StringCollection>
 							<System:String>/Edit</System:String>
-							<System:String>/collections</System:String>
 							<System:String>/patch</System:String>
+							<System:String>/conflicts</System:String>
 							<System:String>/conflicts</System:String>
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
@@ -146,10 +146,6 @@
                                 <HyperlinkButton Content="Documents"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/documents"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="Collections"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/collections"
 								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
                                 <HyperlinkButton Content="Conflicts"
 								 Command="{StaticResource NavigateToCommand}"

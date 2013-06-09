@@ -19,6 +19,7 @@ using Raven.Studio.Features.JsonEditor;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using Raven.Studio.Extensions;
+using System.Reactive.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -33,6 +34,11 @@ namespace Raven.Studio.Features.Documents
         private string statusMessage;
         private bool isDocumentLoaded;
         private ICommand closeCommand;
+        private Stack<string> backStack = new Stack<string>();
+        private Stack<string> forwardStack = new Stack<string>();
+        private ICommand backCommand;
+        private ICommand forwardCommand;
+        private string previousId;
 
         static DocumentPadModel()
         {
@@ -42,6 +48,16 @@ namespace Raven.Studio.Features.Documents
         public DocumentPadModel()
         {
             document = new EditorDocument() {Language = JsonLanguage};
+            ApplicationModel.Database.ObservePropertyChanged()
+                            .ObserveOnDispatcher()
+                            .Subscribe(_ =>
+                            {
+                                previousId = null;
+                                backStack.Clear();
+                                forwardStack.Clear();
+                                OnPropertyChanged(() => IsBackEnabled);
+                                OnPropertyChanged(() => IsForwardEnabled);
+                            });
         }
 
         public bool IsOpen
@@ -95,7 +111,77 @@ namespace Raven.Studio.Features.Documents
             get { return closeCommand ?? (closeCommand = new ActionCommand(() => IsOpen = false)); }
         }
 
+        public bool IsBackEnabled
+        {
+            get { return backStack.Count > 0; }
+        }
+
+        public bool IsForwardEnabled
+        {
+            get { return forwardStack.Count > 0; }
+        }
+
+        public ICommand Back
+        {
+            get { return backCommand ?? (backCommand = new AsyncActionCommand(HandleBack)); }
+        }
+
+        public ICommand Forward
+        {
+            get { return forwardCommand ?? (forwardCommand = new AsyncActionCommand(HandleForward)); }
+        }
+
+        private async Task HandleForward()
+        {
+            if (forwardStack.Count == 0)
+            {
+                return;
+            }
+
+            previousId = null;
+            backStack.Push(DocumentId);
+            DocumentId = forwardStack.Pop();
+
+            await LoadDocumentCore();
+            
+            OnPropertyChanged(() => IsBackEnabled);
+            OnPropertyChanged(() => IsForwardEnabled);
+        }
+
+        private async Task HandleBack()
+        {
+            if (backStack.Count == 0)
+            {
+                return;
+            }
+
+            previousId = null;
+            forwardStack.Push(DocumentId);
+            DocumentId = backStack.Pop();
+
+            await LoadDocumentCore();
+
+            OnPropertyChanged(() => IsBackEnabled);
+            OnPropertyChanged(() => IsForwardEnabled);
+        }
+
         private async Task HandleLoadDocument()
+        {
+            if (previousId != null)
+            {
+                backStack.Push(previousId);
+            }
+            forwardStack.Clear();
+
+            await LoadDocumentCore();
+
+            previousId = DocumentId;
+
+            OnPropertyChanged(() => IsBackEnabled);
+            OnPropertyChanged(() => IsForwardEnabled);
+        }
+
+        private async Task LoadDocumentCore()
         {
             try
             {
@@ -113,6 +199,7 @@ namespace Raven.Studio.Features.Documents
             }
             catch (Exception ex)
             {
+                Document.SetText("");
                 StatusMessage = "Failed to load document";
                 IsDocumentLoaded = false;
             }

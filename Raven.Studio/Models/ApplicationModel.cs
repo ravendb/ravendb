@@ -22,7 +22,8 @@ namespace Raven.Studio.Models
 {
 	public class ApplicationModel : NotifyPropertyChangedBase
 	{
-		public static ApplicationModel Current { get; private set; }
+	    private DocumentPadModel documentPadModel;
+	    public static ApplicationModel Current { get; private set; }
 
 		static ApplicationModel()
 		{
@@ -51,7 +52,6 @@ namespace Raven.Studio.Models
 
 			RegisterToAlerts();
 			State = new ApplicationState();
-		    DocumentPad = new DocumentPadModel();	
 		}
 
 		private void RegisterToAlerts()
@@ -119,7 +119,7 @@ namespace Raven.Studio.Models
 			rootVisual.DataContext = this;
 		}
 
-        public DocumentPadModel DocumentPad { get; private set; }
+        public DocumentPadModel DocumentPad { get { return documentPadModel ?? (documentPadModel = new DocumentPadModel()); } }
 
         public void ShowDocumentInDocumentPad(string documentId)
         {

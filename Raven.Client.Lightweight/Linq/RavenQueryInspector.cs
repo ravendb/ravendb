@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -176,6 +177,28 @@ namespace Raven.Client.Linq
 			}
 			var asyncLuceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
 			return asyncLuceneQuery.GetIndexQuery(true);
+		}
+
+#if !SILVERLIGHT
+		public virtual FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
+		{
+			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facetSetupDoc, start, pageSize);
+		}
+
+		public virtual FacetResults GetFacets(List<Facet> facets, int start, int? pageSize)
+		{
+			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facets, start, pageSize);
+		}
+#endif
+
+		public virtual Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize)
+		{
+			return asyncDatabaseCommands.GetFacetsAsync(indexName, GetIndexQuery(true), facetSetupDoc, start, pageSize);
+		}
+
+		public virtual Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize)
+		{
+			return asyncDatabaseCommands.GetFacetsAsync(indexName, GetIndexQuery(true), facets, start, pageSize);
 		}
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
