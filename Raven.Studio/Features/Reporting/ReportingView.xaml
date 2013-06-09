@@ -144,6 +144,7 @@
                     <TextBlock Text ="Group By" Style="{StaticResource Style_TextBlock_PagePartHeader}"
                                VerticalAlignment="Center"/>
                     <ComboBox SelectedItem="{Binding GroupByField.Value, Mode=TwoWay}" ItemsSource="{Binding IndexFields}" Margin="5,0,0,0"
+							  MaxDropDownHeight="150"
                               VerticalAlignment="Center" Width="150"/>
                 </StackPanel>
 
@@ -178,7 +179,7 @@
                                     </ItemsControl.ItemTemplate>
                                     <ItemsControl.Template>
                                         <ControlTemplate TargetType="ItemsControl">
-                                            <ScrollViewer x:Name="ScrollViewer" BorderThickness="0" Padding="0" VerticalScrollBarVisibility="Auto" >
+                                            <ScrollViewer x:Name="ScrollViewer" BorderThickness="0" Padding="0" VerticalScrollBarVisibility="Auto"  MaxHeight="150">
                                                 <ItemsPresenter/>
                                             </ScrollViewer>
                                         </ControlTemplate>
