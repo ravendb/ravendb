@@ -110,6 +110,16 @@ namespace Raven.Client.Document
 #endif
 			var operationUrl = CreateOperationUrl(options);
 			var token = await GetToken(operationUrl);
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(operationUrl, token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate, if you are useing raven in a service or in iis make sure you have anonymous access enabled",
+					e);
+			}
 
 			operationRequest = CreateOperationRequest(operationUrl, token);
 
@@ -160,6 +170,20 @@ namespace Raven.Client.Document
 #endif
 		}
 
+		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string operationUrl, string token)
+		{
+#if !SILVERLIGHT
+			var request = operationClient.CreateRequest("POST", operationUrl, disableRequestCompression: true);
+#else
+			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
+#endif
+			request.DisableAuthentication();
+			request.webRequest.ContentLength = 0;
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+			var result = await request.ReadResponseJsonAsync();
+			return result.Value<string>("Token");
+		}
+
 		private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
 		{
 #if !SILVERLIGHT
@@ -167,7 +191,7 @@ namespace Raven.Client.Document
 #else
 			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
 #endif
-
+			request.DisableAuthentication();
 			// the request may take a long time to process, so we need to set a large timeout value
 			request.PrepareForLongRequest();
 			request.AddOperationHeader("Single-Use-Auth-Token", token);

@@ -41,6 +41,7 @@ namespace Raven.Client.Silverlight.Connection
 		private byte[] postedData;
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
+		private bool disabledAuthRetries;
 
 		private string primaryUrl;
 
@@ -78,6 +79,13 @@ namespace Raven.Client.Silverlight.Connection
 				return taskCompletionSource.Task;
 			}
 			else return WriteAsync(postedData);
+		}
+
+		public void DisableAuthentication()
+		{
+			webRequest.Credentials = null;
+			webRequest.UseDefaultCredentials = false;
+			disabledAuthRetries = true;
 		}
 
 		private HttpJsonRequestFactory factory;
@@ -156,7 +164,7 @@ namespace Raven.Client.Silverlight.Connection
 		private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
 		{
 			var exception = task.Exception.ExtractSingleInnerException() as WebException;
-			if (exception == null || retries >= 3)
+			if (exception == null || retries >= 3 || disabledAuthRetries)
 				return task;
 
 			var webResponse = exception.Response as HttpWebResponse;
@@ -443,7 +451,7 @@ namespace Raven.Client.Silverlight.Connection
 				   .ContinueWith(task =>
 				   {
 					   var webException = task.Exception.ExtractSingleInnerException() as WebException;
-					   if (webException == null || retries >= 3)
+					   if (webException == null || retries >= 3 || disabledAuthRetries)
 						   return task;// effectively throw
 
 					   var httpWebResponse = webException.Response as HttpWebResponse;
