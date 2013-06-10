@@ -173,11 +173,11 @@ namespace Raven.Client.Document
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string operationUrl, string token)
 		{
 #if !SILVERLIGHT
-			var request = operationClient.CreateRequest("POST", operationUrl, disableRequestCompression: true);
+            var request = operationClient.CreateRequest("POST", operationUrl + "&op=generate-single-use-auth-token", disableRequestCompression: true);
 #else
-			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
+			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", disableRequestCompression: true);
 #endif
-			request.DisableAuthentication();
+            request.DisableAuthentication();
 			request.webRequest.ContentLength = 0;
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 			var result = await request.ReadResponseJsonAsync();
