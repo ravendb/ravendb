@@ -126,7 +126,7 @@ namespace Raven.Studio.Features.Tasks
 
 		public class ForwardtoUIBoundStream : Stream
 		{
-			readonly byte[] localBuffer = new byte[64 * 1024];
+			readonly byte[] localBuffer = new byte[4 * 1024 * 1024];
 			private int pos;
 
 			private readonly Stream inner;
