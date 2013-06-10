@@ -439,7 +439,8 @@ namespace Raven.Client.Changes
                                 {
                                     try
                                     {
-                                        connection.Dispose();
+                                        if (connection != null)
+                                            connection.Dispose();
                                     }
                                     catch (Exception e)
                                     {
