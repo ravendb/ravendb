@@ -105,8 +105,10 @@ namespace Raven.Abstractions.Smuggler
 			Mode = await GetMode();
 
 		    stream = stream ?? File.Create(file);
-		    using(var gZipStream = new GZipStream(stream, CompressionMode.Compress, 
+		    using(var gZipStream = new GZipStream(stream, CompressionMode.Compress,
+#if SILVERLIGHT
                     CompressionLevel.BestCompression,
+#endif
                     leaveOpen: true))
 		    using(var streamWriter = new StreamWriter(gZipStream))
 			{

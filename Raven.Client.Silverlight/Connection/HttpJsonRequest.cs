@@ -555,6 +555,8 @@ namespace Raven.Client.Silverlight.Connection
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 
 			requestSendToServer = true;
+		    webRequest.AllowReadStreamBuffering = false;
+		    webRequest.AllowWriteStreamBuffering = false;
 
 			return WaitForTask.ContinueWith(_ => webRequest
 													 .GetResponseAsync()
