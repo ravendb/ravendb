@@ -1411,6 +1411,10 @@
       <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Web\Raven.Web.csproj">
+      <Project>{f49c2ed0-1844-44b4-a595-5fd152853b9c}</Project>
+      <Name>Raven.Web</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">
