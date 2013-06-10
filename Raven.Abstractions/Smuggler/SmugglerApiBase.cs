@@ -104,60 +104,69 @@ namespace Raven.Abstractions.Smuggler
 #endif
 			Mode = await GetMode();
 
-		    stream = stream ?? File.Create(file);
-		    using(var gZipStream = new GZipStream(stream, CompressionMode.Compress,
+			bool ownedStream = stream == null;
+			try
+			{
+				stream = stream ?? File.Create(file);
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
 #if SILVERLIGHT
                     CompressionLevel.BestCompression,
 #endif
-                    leaveOpen: true))
-		    using(var streamWriter = new StreamWriter(gZipStream))
-			{
-				var jsonWriter = new JsonTextWriter(streamWriter)
-									 {
-										 Formatting = Formatting.Indented
-									 };
-				jsonWriter.WriteStartObject();
-				jsonWriter.WritePropertyName("Indexes");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Indexes) == ItemType.Indexes)
+				                                       leaveOpen: true))
+				using (var streamWriter = new StreamWriter(gZipStream))
 				{
-					await ExportIndexes(jsonWriter);
-				}
-				jsonWriter.WriteEndArray();
+					var jsonWriter = new JsonTextWriter(streamWriter)
+					{
+						Formatting = Formatting.Indented
+					};
+					jsonWriter.WriteStartObject();
+					jsonWriter.WritePropertyName("Indexes");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Indexes) == ItemType.Indexes)
+					{
+						await ExportIndexes(jsonWriter);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WritePropertyName("Docs");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
-				{
-					options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
-				}
-				jsonWriter.WriteEndArray();
+					jsonWriter.WritePropertyName("Docs");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
+					{
+						options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WritePropertyName("Attachments");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
-				{
-					options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
-				}
-				jsonWriter.WriteEndArray();
+					jsonWriter.WritePropertyName("Attachments");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
+					{
+						options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WritePropertyName("Transformers");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Transformers) == ItemType.Transformers)
-				{
-					await ExportTransformers(jsonWriter);
-				}
-				jsonWriter.WriteEndArray();
+					jsonWriter.WritePropertyName("Transformers");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Transformers) == ItemType.Transformers)
+					{
+						await ExportTransformers(jsonWriter);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WriteEndObject();
-				streamWriter.Flush();
-			}
+					jsonWriter.WriteEndObject();
+					streamWriter.Flush();
+				}
 
 #if !SILVERLIGHT
-			if (incremental && lastEtagsFromFile)
-				WriteLastEtagsFromFile(options);
+				if (incremental && lastEtagsFromFile)
+					WriteLastEtagsFromFile(options);
 #endif
-			return file;
+				return file;
+			}
+			finally
+			{
+				if (ownedStream && stream != null)
+					stream.Dispose();
+			}
 		}
 
 		private void ReadLastEtagsFromClass(SmugglerOptions options, PeriodicBackupStatus backupStatus)
