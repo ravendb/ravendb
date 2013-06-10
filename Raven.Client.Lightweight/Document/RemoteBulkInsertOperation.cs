@@ -117,7 +117,7 @@ namespace Raven.Client.Document
 			catch (Exception e)
 			{
 				throw new InvalidOperationException(
-					"Could not authenticate, if you are useing raven in a service or in iis make sure you have anonymous access enabled",
+					"Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
 					e);
 			}
 
