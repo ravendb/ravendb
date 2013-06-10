@@ -34,6 +34,8 @@ namespace Raven.ProjectRewriter
 				{"Raven.Client.Lightweight", "{E43AA81B-E924-4D7E-8C02-7EF691EBE9EC}"},
 				{"Raven.Database", "{FAEBA971-1A36-4D42-8E98-043E617F1FE5}"},
 				{"Raven.Client.Embedded", "{ACA1B0BD-3455-4EC4-9388-539EF7CFC945}"},
+				{"Raven.Server", "{516EAEEA-D566-4410-BB9F-8354E5611B58}"},
+				{"Raven.Tests.Helpers", "{41D3D8AD-9095-47C3-93BE-3023857574AF}"},
 			};
 
 			Generate45("Raven.Abstractions");
@@ -48,6 +50,17 @@ namespace Raven.ProjectRewriter
 			           "Raven.Abstractions",
 			           "Raven.Client.Lightweight",
 			           "Raven.Database");
+
+			Generate45("Raven.Server",
+					   "Raven.Abstractions",
+					   "Raven.Database");
+
+			Generate45("Raven.Tests.Helpers",
+			           "Raven.Abstractions",
+			           "Raven.Client.Lightweight",
+					   "Raven.Client.Embedded",
+					   "Raven.Database",
+					   "Raven.Server");
 
 		}
 
