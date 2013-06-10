@@ -103,9 +103,8 @@ namespace Raven.Studio.Features.Tasks
 	                                           DatabaseCommands,
 	                                           message => Report(message));
 
-				//var ms = new ForwardtoUIBoundStream(stream);
-				var ms = new MemoryStream();
-	            var taskGeneration = new Task<Task>(() => smuggler.ExportData(ms, new SmugglerOptions
+				var forwardtoUiBoundStream = new ForwardtoUIBoundStream(stream);
+	            var taskGeneration = new Task<Task>(() => smuggler.ExportData(forwardtoUiBoundStream, new SmugglerOptions
 	            {
 		            BatchSize = batchSize,
 		            Filters = filterSettings,
@@ -118,9 +117,8 @@ namespace Raven.Studio.Features.Tasks
 
 
 	            await taskGeneration.Unwrap();
-	            ms.Position = 0;
-				ms.CopyTo(stream);
-				ms.Flush();
+	            forwardtoUiBoundStream.Flush();
+                stream.Flush();
             }
 
 	        return DatabaseTaskOutcome.Succesful;
@@ -170,6 +168,7 @@ namespace Raven.Studio.Features.Tasks
 					var bytes = Math.Min(localBuffer.Length - pos, count);
 					Buffer.BlockCopy(buffer, offset, localBuffer, pos, bytes);
 					pos += bytes;
+				    offset += bytes;
 					count -= bytes;
 					if (pos == localBuffer.Length)
 						Flush();

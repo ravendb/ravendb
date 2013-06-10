@@ -104,7 +104,11 @@ namespace Raven.Abstractions.Smuggler
 #endif
 			Mode = await GetMode();
 
-			var streamWriter = new StreamWriter(new GZipStream(stream ?? File.Create(file), CompressionMode.Compress));
+		    stream = stream ?? File.Create(file);
+		    using(var gZipStream = new GZipStream(stream, CompressionMode.Compress, 
+                    CompressionLevel.BestCompression,
+                    leaveOpen: true))
+		    using(var streamWriter = new StreamWriter(gZipStream))
 			{
 				var jsonWriter = new JsonTextWriter(streamWriter)
 									 {
@@ -147,9 +151,10 @@ namespace Raven.Abstractions.Smuggler
 				streamWriter.Flush();
 			}
 
+#if !SILVERLIGHT
 			if (incremental && lastEtagsFromFile)
 				WriteLastEtagsFromFile(options);
-
+#endif
 			return file;
 		}
 
