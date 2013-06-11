@@ -20,7 +20,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
-	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
+	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
 		private readonly IDatabaseCommands databaseCommands;
 
@@ -457,9 +457,12 @@ namespace Raven.Client.Embedded
 
 		#region IAsyncAdminDatabaseCommands
 
+		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
 		public IAsyncAdminDatabaseCommands Admin
 		{
-			get { return this; }
+			get { throw new NotSupportedException("Multiple databases are not supported in the embedded API currently"); }
 		}
 
 		#endregion
@@ -477,5 +480,6 @@ namespace Raven.Client.Embedded
 		}
 
 		#endregion
+
 	}
 }

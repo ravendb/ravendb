@@ -110,6 +110,14 @@ namespace Raven.Client.Embedded
 		public NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
+		public IAdminDatabaseCommands Admin
+		{
+			get { throw new NotSupportedException("Multiple databases are not supported in the embedded API currently"); }
+		}
+
+		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false)

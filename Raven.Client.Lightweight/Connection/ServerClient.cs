@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Json;
 using Raven.Client.Changes;
 using Raven.Client.Listeners;
@@ -37,7 +38,7 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
-	public class ServerClient : IDatabaseCommands
+	public class ServerClient : IDatabaseCommands, IAdminDatabaseCommands
 	{
 		private readonly string url;
 		private readonly DocumentConvention convention;
@@ -119,7 +120,7 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
-	    /// <summary>
+		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false)
@@ -2162,6 +2163,31 @@ namespace Raven.Client.Connection
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
+
+		#region IAsyncAdminDatabaseCommands
+
+		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
+		public IAdminDatabaseCommands Admin
+		{
+			get { return this; }
+		}
+
+		public void CreateDatabase(DatabaseDocument databaseDocument)
+		{
+			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
+				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
+
+			var doc = RavenJObject.FromObject(databaseDocument);
+			doc.Remove("Id");
+
+			var req = CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
+			req.Write(doc.ToString(Formatting.Indented));
+			req.ExecuteRequest();
+		}
+
+		#endregion
 	}
 }
 #endif

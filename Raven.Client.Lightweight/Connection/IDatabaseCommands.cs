@@ -37,6 +37,11 @@ namespace Raven.Client.Connection
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
+		IAdminDatabaseCommands Admin { get; }
+
+		/// <summary>
 		/// Retrieves documents for the specified key prefix
 		/// </summary>
 		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,  bool metadataOnly = false);
@@ -495,6 +500,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
 		void PrepareTransaction(string txId);
+	}
+
+	public interface IAdminDatabaseCommands
+	{
+		void CreateDatabase(DatabaseDocument databaseDocument);
 	}
 }
 #endif

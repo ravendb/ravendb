@@ -72,7 +72,7 @@ namespace Raven.Studio.Commands
 
 				if (settingsModel.DatabaseDocument.Id == null)
 					settingsModel.DatabaseDocument.Id = databaseName;
-				await DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
+				await DatabaseCommands.Admin.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 			}
 
 		    var replicationSettings = settingsModel.GetSection<ReplicationSettingsSectionModel>();
@@ -366,7 +366,7 @@ namespace Raven.Studio.Commands
 
 			settingsModel.DatabaseDocument.Settings["Raven/ActiveBundles"] = activeBundles;
 
-			await DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
+			await DatabaseCommands.Admin.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 
 			session.Store(periodicBackup.PeriodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
 			needToSaveChanges = true;

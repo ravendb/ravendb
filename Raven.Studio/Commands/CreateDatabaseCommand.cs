@@ -81,21 +81,21 @@ namespace Raven.Studio.Commands
 							if (encryptionSettings != null)
 								encryptionKey = encryptionSettings.EncryptionKey.Text;
 
-							DatabaseCommands.CreateDatabaseAsync(databaseDocument).ContinueOnSuccess(
-								() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
-								.ContinueOnSuccessInTheUIThread(() =>
-								{
-									var model = parameter as DatabasesListModel;
-									if (model != null)
-										model.ForceTimerTicked();
-									ApplicationModel.Current.AddNotification(
-										new Notification("Database " + databaseName + " created"));
+							DatabaseCommands.Admin.CreateDatabaseAsync(databaseDocument)
+							                .ContinueOnSuccess(() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
+							                .ContinueOnSuccessInTheUIThread(() =>
+							                {
+								                var model = parameter as DatabasesListModel;
+								                if (model != null)
+									                model.ForceTimerTicked();
+								                ApplicationModel.Current.AddNotification(
+									                new Notification("Database " + databaseName + " created"));
 
-									HandleBundleAfterCreation(bundlesModel, databaseName, encryptionKey);
+								                HandleBundleAfterCreation(bundlesModel, databaseName, encryptionKey);
 
-									ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
-								})
-								.Catch();
+								                ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
+							                })
+							                .Catch();
 						});
 				})
 				.Catch();

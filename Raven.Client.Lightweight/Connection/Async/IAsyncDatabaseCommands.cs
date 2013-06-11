@@ -36,7 +36,12 @@ namespace Raven.Client.Connection.Async
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }
 		IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get; }
+
+		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
 		IAsyncAdminDatabaseCommands Admin { get; }
+		
 		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
@@ -427,7 +432,7 @@ namespace Raven.Client.Connection.Async
 	
 	public interface IAsyncAdminDatabaseCommands
 	{
-		
+		Task CreateDatabaseAsync(DatabaseDocument databaseDocument);
 	}
 
 	public interface IAsyncInfoDatabaseCommands

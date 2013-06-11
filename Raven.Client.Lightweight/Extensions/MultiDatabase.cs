@@ -12,18 +12,17 @@ namespace Raven.Client.Extensions
 	///</summary>
 	internal static class MultiDatabase
 	{
-		public static RavenJObject CreateDatabaseDocument(string name)
+		public static DatabaseDocument CreateDatabaseDocument(string name)
 		{
 			AssertValidName(name);
-			var doc = RavenJObject.FromObject(new DatabaseDocument
-			                                          	{
-			                                          		Settings =
-			                                          			{
-			                                          				{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))}
-			                                          			}
-			                                          	});
-			doc.Remove("Id");
-			return doc;
+			return new DatabaseDocument
+			{
+				Id = "Raven/Databases/" + name,
+				Settings =
+				{
+					{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))}
+				}
+			};
 		}
 
 		private static readonly string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
@@ -58,7 +57,7 @@ namespace Raven.Client.Extensions
 			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases != -1)
 			{
-				databaseUrl = databaseUrl.Substring(indexOfDatabases  + "/databases/".Length);
+				databaseUrl = databaseUrl.Substring(indexOfDatabases + "/databases/".Length);
 				return Regex.Match(databaseUrl, validDbNameChars).Value;
 			}
 

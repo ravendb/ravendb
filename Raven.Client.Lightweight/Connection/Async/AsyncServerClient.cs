@@ -1854,9 +1854,24 @@ namespace Raven.Client.Connection.Async
 
 		#region IAsyncAdminDatabaseCommands
 
+		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
 		public IAsyncAdminDatabaseCommands Admin
 		{
 			get { return this; }
+		}
+
+		public Task CreateDatabaseAsync(DatabaseDocument databaseDocument)
+		{
+			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
+				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
+
+			var doc = RavenJObject.FromObject(databaseDocument);
+			doc.Remove("Id");
+
+			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
+			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
 		}
 
 		#endregion
@@ -1879,5 +1894,6 @@ namespace Raven.Client.Connection.Async
 		}
 
 		#endregion
+
 	}
 }
