@@ -244,9 +244,9 @@ task Stable {
 	$global:uploadMode = "Stable"
 }
 
-task RunTests -depends Test,TestSilverlight
+task RunTests -depends Test,TestSilverlight,TestWinRT
 
-task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
+task RunAllTests -depends FullStorageTest,RunTests,StressTest
 
 task Release -depends RunTests,DoRelease
 
