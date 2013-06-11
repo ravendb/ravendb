@@ -8,7 +8,9 @@ using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Linq
@@ -107,26 +109,26 @@ namespace Raven.Client.Linq
 		public static string HandlePropertyRenames(MemberInfo member, string name)
 		{
 			var jsonPropAttributes = member.GetCustomAttributes(false)
-			                                         .Where(x => x.GetType().Name == "JsonPropertyAttribute")
+			                                         .OfType<JsonPropertyAttribute>()
 			                                         .ToArray();
 
 			if (jsonPropAttributes.Length != 0)
 			{
-				string propertyName = ((dynamic) jsonPropAttributes[0]).PropertyName;
-				if (String.IsNullOrEmpty(propertyName) == false)
+				string propertyName = jsonPropAttributes[0].PropertyName;
+				if (string.IsNullOrEmpty(propertyName) == false)
 				{
 					return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 				}
 			}
 
 			var dataMemberAttributes = member.GetCustomAttributes(false)
-			                                           .Where(x => x.GetType().Name == "DataMemberAttribute")
+													   .OfType<DataMemberAttribute>()
 			                                           .ToArray();
 
 			if (dataMemberAttributes.Length != 0)
 			{
 				string propertyName = ((dynamic) dataMemberAttributes[0]).Name;
-				if (String.IsNullOrEmpty(propertyName) == false)
+				if (string.IsNullOrEmpty(propertyName) == false)
 				{
 					return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 				}
