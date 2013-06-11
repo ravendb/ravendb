@@ -14,7 +14,6 @@ namespace Raven.Client.Extensions
 	{
 		public static DatabaseDocument CreateDatabaseDocument(string name)
 		{
-			AssertValidName(name);
 			return new DatabaseDocument
 			{
 				Id = "Raven/Databases/" + name,
@@ -25,12 +24,13 @@ namespace Raven.Client.Extensions
 			};
 		}
 
-		private static readonly string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
+		private const string ValidDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 
-		private static void AssertValidName(string name)
+		public static void AssertValidDatabaseName(string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");
-			var result = Regex.Matches(name, validDbNameChars);
+			name = name.Replace("Raven/Databases/", "");
+			var result = Regex.Matches(name, ValidDbNameChars);
 			if (result.Count == 0 || result[0].Value != name)
 			{
 				throw new InvalidOperationException("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + name);
@@ -58,7 +58,7 @@ namespace Raven.Client.Extensions
 			if (indexOfDatabases != -1)
 			{
 				databaseUrl = databaseUrl.Substring(indexOfDatabases + "/databases/".Length);
-				return Regex.Match(databaseUrl, validDbNameChars).Value;
+				return Regex.Match(databaseUrl, ValidDbNameChars).Value;
 			}
 
 			return Constants.SystemDatabase;

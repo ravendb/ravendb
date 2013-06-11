@@ -2179,6 +2179,7 @@ namespace Raven.Client.Connection
 			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
 
+			MultiDatabase.AssertValidDatabaseName(databaseDocument.Id);
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
 
