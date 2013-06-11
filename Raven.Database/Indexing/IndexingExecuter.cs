@@ -149,7 +149,7 @@ namespace Raven.Database.Indexing
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
 				{
 					prefetchingBehavior.CleanupDocuments(lastEtag);
-					UpdateAutoThrottler(jsonDocs, indexingDuration);
+					prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
 				}
 
 				prefetchingBehavior.BatchProcessingComplete();
@@ -342,13 +342,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
-		{
-			int futureLen;
-			int futureSize;
-			prefetchingBehavior.GetFutureStats(autoTuner.NumberOfItemsToIndexInSingleBatch, out futureLen, out futureSize);
-			autoTuner.AutoThrottleBatchSize(jsonDocs.Count + futureLen, futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
-		}
 
 		public class IndexingBatchForIndex
 		{
