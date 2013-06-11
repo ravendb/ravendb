@@ -269,12 +269,9 @@ namespace Raven.Client.Connection.Async
 				if (overwrite == false)
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			}
-			catch (AggregateException e)
+			catch (WebException e)
 			{
-				var we = e.ExtractSingleInnerException() as WebException;
-				if (we == null)
-					throw;
-				var response = we.Response as HttpWebResponse;
+				var response = e.Response as HttpWebResponse;
 				if (response == null || response.StatusCode != HttpStatusCode.NotFound)
 					throw;
 			}
@@ -291,31 +288,22 @@ namespace Raven.Client.Connection.Async
 				var result = await request.ReadResponseJsonAsync();
 				return result.Value<string>("Index");
 			}
-			catch (AggregateException e)
+			catch (WebException we)
 			{
-				var we = e.ExtractSingleInnerException() as WebException;
-				if (we == null)
-					throw;
-
 				var response = we.Response as HttpWebResponse;
-
-				if (response.StatusCode == HttpStatusCode.BadRequest)
+				if (response != null && response.StatusCode == HttpStatusCode.BadRequest)
 				{
 					var error = we.TryReadErrorResponseObject(
 						new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
 
 					if (error == null)
-					{
 						throw;
-					}
 
-					var compilationException = new IndexCompilationException(error.Message)
+					throw new IndexCompilationException(error.Message)
 					{
 						IndexDefinitionProperty = error.IndexDefinitionProperty,
 						ProblematicText = error.ProblematicText
 					};
-
-					throw compilationException;
 				}
 
 				throw;
@@ -341,32 +329,19 @@ namespace Raven.Client.Connection.Async
 				var result = await request.ReadResponseJsonAsync();
 				return result.Value<string>("Transformer");
 			}
-			catch (AggregateException e)
+			catch (WebException we)
 			{
-				var we = e.ExtractSingleInnerException() as WebException;
-				if (we == null)
-					throw;
-
 				var response = we.Response as HttpWebResponse;
-
-				if (response.StatusCode == HttpStatusCode.BadRequest)
+				if (response != null && response.StatusCode == HttpStatusCode.BadRequest)
 				{
-					var error = we.TryReadErrorResponseObject(
-						new {Error = "", Message = ""});
-
+					var error = we.TryReadErrorResponseObject(new {Error = "", Message = ""});
 					if (error == null)
-					{
 						throw;
-					}
 
-					var compilationException = new TransformCompilationException(error.Message);
-
-					throw compilationException;
+					throw new TransformCompilationException(error.Message);
 				}
-
 				throw;
 			}
-
 		}
 
 		/// <summary>
@@ -401,15 +376,11 @@ namespace Raven.Client.Connection.Async
 				{
 					await request.ExecuteRequestAsync();
 				}
-				catch (AggregateException aggregateException)
+				catch (WebException e)
 				{
-					var e = aggregateException.ExtractSingleInnerException() as WebException;
-					if (e != null)
-					{
-						var httpWebResponse = e.Response as HttpWebResponse;
-						if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-							throw new InvalidOperationException("There is no index named: " + indexName, e);
-					}
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						throw new InvalidOperationException("There is no index named: " + indexName, e);
 				}
 			});
 		}
@@ -610,11 +581,8 @@ namespace Raven.Client.Connection.Async
 				var result = await request.ReadResponseJsonAsync();
 				return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(result));
 			}
-			catch (AggregateException e)
+			catch (WebException we)
 			{
-				var we = e.ExtractSingleInnerException() as WebException;
-				if (we == null)
-					throw;
 				var httpWebResponse = we.Response as HttpWebResponse;
 				if (httpWebResponse == null ||
 				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
@@ -697,11 +665,8 @@ namespace Raven.Client.Connection.Async
 				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
 				return deserializeJsonDocument;
 			}
-			catch (AggregateException e)
+			catch (WebException we)
 			{
-				var we = e.ExtractSingleInnerException() as WebException;
-				if (we == null)
-					throw;
 				var httpWebResponse = we.Response as HttpWebResponse;
 				if (httpWebResponse == null)
 					throw;
@@ -788,11 +753,8 @@ namespace Raven.Client.Connection.Async
 
 				return RetryOperationBecauseOfConflict(opUrl, docResults, multiLoadResult, () => DirectGetAsync(opUrl, keys, includes, null, null, false));
 			}
-			catch (AggregateException e)
+			catch (WebException we)
 			{
-				var we = e.ExtractSingleInnerException() as WebException;
-				if (we == null)
-					throw;
 				var httpWebResponse = we.Response as HttpWebResponse;
 				if (httpWebResponse == null ||
 				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
@@ -1145,13 +1107,9 @@ namespace Raven.Client.Connection.Async
 			{
 				return process();
 			}
-			catch (AggregateException e)
+			catch (WebException we)
 			{
-				var webException = e.ExtractSingleInnerException() as WebException;
-				if (webException == null)
-					throw;
-
-				if (HandleException(webException))
+				if (HandleException(we))
 					return null;
 
 				throw;
@@ -1240,11 +1198,8 @@ namespace Raven.Client.Connection.Async
 					await req.WriteAsync(data);
 					response = (RavenJArray) await req.ReadResponseJsonAsync();
 				}
-				catch (AggregateException e)
+				catch (WebException we)
 				{
-					var we = e.ExtractSingleInnerException() as WebException;
-					if (we == null)
-						throw;
 					var httpWebResponse = we.Response as HttpWebResponse;
 					if (httpWebResponse == null ||
 					    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
@@ -1681,12 +1636,9 @@ namespace Raven.Client.Connection.Async
 				await request.ReadResponseJsonAsync();
 				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
 			}
-			catch (AggregateException e)
+			catch (WebException we)
 			{
-				var webException = e.ExtractSingleInnerException() as WebException;
-				if (webException == null)
-					throw;
-				var httpWebResponse = webException.Response as HttpWebResponse;
+				var httpWebResponse = we.Response as HttpWebResponse;
 				if (httpWebResponse == null)
 					throw;
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
@@ -1872,17 +1824,11 @@ namespace Raven.Client.Connection.Async
 			{
 				return await request.ReadResponseJsonAsync();
 			}
-			catch (AggregateException e)
+			catch (WebException e)
 			{
-				var webException = e.ExtractSingleInnerException() as WebException;
-				if (webException != null)
-				{
-					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					{
-						return null;
-					}
-				}
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					return null;
 				throw;
 			}
 		}
