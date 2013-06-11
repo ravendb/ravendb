@@ -1596,5 +1596,5 @@
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetDir)$(TargetName).xap" "$(SolutionDir)\Raven.Database\Server\WebUI"</PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\packages\Microsoft.Bcl.Build.1.0.6\tools\Microsoft.Bcl.Build.targets" />
+  <Import Project="..\packages\Microsoft.Bcl.Build.1.0.7\tools\Microsoft.Bcl.Build.targets" Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.7\tools\Microsoft.Bcl.Build.targets')" />
 </Project>
