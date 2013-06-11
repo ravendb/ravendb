@@ -74,6 +74,7 @@ namespace Raven.Database.Indexing
 		private SnapshotDeletionPolicy snapshotter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
+		private ConcurrentDictionary<string, IndexingPerformanceStats> currentlyIndexing = new ConcurrentDictionary<string, IndexingPerformanceStats>();
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
@@ -139,10 +140,27 @@ namespace Raven.Database.Indexing
 
 		public volatile bool IsMapIndexingInProgress;
 
+		protected void RecordCurrentBatch(string indexingStep, int size)
+		{
+			var performanceStats = new IndexingPerformanceStats
+			{
+				InputCount = size, 
+				Operation = indexingStep,
+				Started = SystemTime.UtcNow,
+			};
+			currentlyIndexing.AddOrUpdate(indexingStep, performanceStats, (s, stats) => performanceStats);
+		}
+
+		protected void BatchCompleted(string indexingStep)
+		{
+			IndexingPerformanceStats value;
+			currentlyIndexing.TryRemove(indexingStep, out value);
+		}
+
 		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
-			if (indexingPerformanceStats.Count > 25)
+			while (indexingPerformanceStats.Count > 25)
 				indexingPerformanceStats.TryDequeue(out stats);
 		}
 
@@ -1335,7 +1353,7 @@ namespace Raven.Database.Indexing
 
 		public IndexingPerformanceStats[] GetIndexingPerformance()
 		{
-			return indexingPerformanceStats.ToArray();
+			return currentlyIndexing.Values.Concat(indexingPerformanceStats).ToArray();
 		}
 
 		public void Backup(string backupDirectory, string path, string incrementalTag)

@@ -52,6 +52,7 @@ namespace Raven.Database.Indexing
 					.ToList();
 				try
 				{
+					RecordCurrentBatch("Current", batch.Docs.Count);
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
 					var documentsWrapped = batch.Docs.Select((doc,i) =>
 					{
@@ -166,6 +167,7 @@ namespace Raven.Database.Indexing
 							context.AddError(name, null, e.Message, "Dispose Trigger");
 						},
 						x => x.Dispose());
+					BatchCompleted("Current");
 				}
 				return new IndexedItemsInfo
 				{
