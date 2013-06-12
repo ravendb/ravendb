@@ -15,7 +15,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.CanGetDocumentsAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -36,7 +36,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.CanGetDocumentsWhoseIdStartsWithAPrefix");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -56,7 +56,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.CanGetAListOfDatabasesAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var names = await store.AsyncDatabaseCommands.GetDatabaseNamesAsync(25);
 				Assert.IsTrue(names.Contains(dbname));
@@ -69,13 +69,13 @@ namespace Raven.Tests.WinRT
 			var first = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.ShouldNotCacheTheListOfDatabases1");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(first);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(first);
 
 				var names = await store.AsyncDatabaseCommands.GetDatabaseNamesAsync(25);
 				Assert.IsTrue(names.Contains(first));
 
 				var second = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.ShouldNotCacheTheListOfDatabases2");
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(second);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(second);
 
 				var names2 = await store.AsyncDatabaseCommands.GetDatabaseNamesAsync(25);
 				Assert.IsTrue(names2.Contains(second));
@@ -88,7 +88,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.CanGetDeleteADocumentById");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1"};
 				using (var session = store.OpenAsyncSession(dbname))
@@ -113,7 +113,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.TheResponseForGettingDocumentsShouldNotBeCached");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{

@@ -1,9 +1,7 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {

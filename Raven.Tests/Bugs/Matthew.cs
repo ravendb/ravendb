@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("TESTS");
+				store.DatabaseCommands.Admin.EnsureDatabaseExists("TESTS");
 				store.Conventions.FindTypeTagName = type =>
 				{
 					if (typeof(Oil).IsAssignableFrom(type))

@@ -25,7 +25,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Statistics.CanRetrieveStatisticsForADatabase");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				await store.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
 				{
@@ -44,7 +44,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Statistics.StatisticsShouldNotBeCached");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var stats = await store.AsyncDatabaseCommands.ForDatabase(dbname).GetStatisticsAsync();
 

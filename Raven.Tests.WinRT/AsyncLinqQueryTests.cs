@@ -21,7 +21,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CallingToListRaisesAnException");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -42,7 +42,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanPerformASimpleWhere");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = store.OpenAsyncSession(dbname))
@@ -69,7 +69,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanGetTotalCount");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = store.OpenAsyncSession(dbname))
@@ -98,7 +98,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanUseAny");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
 				using (var session = store.OpenAsyncSession(dbname))
@@ -127,7 +127,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanGetTotalCountFromStats");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = store.OpenAsyncSession(dbname))
@@ -155,7 +155,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanQuerySpecificIndex");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				await store.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
 				{
@@ -191,7 +191,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanTestTwoConditionsInAWhereClause");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -218,7 +218,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanQueryOnNotEqual");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -244,7 +244,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanPerformAnOrderBy");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -275,7 +275,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanPerformAWhereStartsWith");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -303,7 +303,7 @@ namespace Raven.Tests.WinRT
 			using (var store = NewDocumentStore())
 			{
 				store.Conventions.AllowQueriesOnId = true;
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var customer = new Customer {Name = "Customer #1", Id = "customer/1", Email = "someone@customer.com"};
 				var order = new Order {Id = "orders/1", Note = "Hello", Customer = new DenormalizedReference {Id = customer.Id, Name = customer.Name}};
@@ -338,7 +338,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanPerformAProjectionInALinqQuery");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = store.OpenAsyncSession(dbname))
@@ -370,7 +370,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLinqQueryTests.CanPerformAnAny");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{

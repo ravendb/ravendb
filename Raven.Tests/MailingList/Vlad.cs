@@ -77,7 +77,7 @@ namespace Raven.Tests.MailingList
 			}.Initialize())
 			{
 
-				store.DatabaseCommands.EnsureDatabaseExists(dbName);
+				store.DatabaseCommands.Admin.EnsureDatabaseExists(dbName);
 				using (var session = store.OpenSession(dbName))
 				{
 					session.Store(new SampleDoc { Number = 1, Name = "Test 1" }, "SampleDocs/1");

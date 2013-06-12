@@ -136,8 +136,8 @@ namespace Raven.Tests.Issues
 			{
 				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
 
-				store.DatabaseCommands.EnsureDatabaseExists("Northwind_1");
-				store.DatabaseCommands.EnsureDatabaseExists("Northwind_2");
+				store.DatabaseCommands.Admin.EnsureDatabaseExists("Northwind_1");
+				store.DatabaseCommands.Admin.EnsureDatabaseExists("Northwind_2");
 
 				using (var session = store.OpenSession("Northwind_1"))
 				{

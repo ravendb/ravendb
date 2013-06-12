@@ -19,7 +19,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDocumentStoreServerTests.CanInsertAsyncAndMultiGetAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity1 = new Company {Name = "Async Company #1"};
 				var entity2 = new Company {Name = "Async Company #2"};
@@ -46,7 +46,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDocumentStoreServerTests.CanInsertAsyncAndLoadAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1"};
 				using (var session_for_storing = store.OpenAsyncSession(dbname))
@@ -69,7 +69,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDocumentStoreServerTests.CanInsertAsyncAndDeleteAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = store.OpenAsyncSession(dbname))
@@ -105,7 +105,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDocumentStoreServerTests.CanQueryByIndex");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = store.OpenAsyncSession(dbname))
@@ -146,7 +146,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncDocumentStoreServerTests.CanProjectValueFromCollection");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{

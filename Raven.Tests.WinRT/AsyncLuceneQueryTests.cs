@@ -24,7 +24,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLuceneQueryTests.CanQueryUsingAsyncSession");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -51,7 +51,7 @@ namespace Raven.Tests.WinRT
 			{
 				store.Conventions.AllowQueriesOnId = true;
 
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var customer = new Customer {Name = "Customer #1", Id = "customer/1", Email = "someone@customer.com"};
 				var order = new Order {Id = "orders/1", Note = "Hello", Customer = new DenormalizedReference {Id = customer.Id, Name = customer.Name}};
@@ -85,7 +85,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("AsyncLuceneQueryTests.QueryingAgainstANonindexedFieldRaisesAnException");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{

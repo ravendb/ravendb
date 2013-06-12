@@ -18,7 +18,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Collections.Can_get_collections_async");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{

@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs.Embedded
 				RunInMemory = true
 			}.Initialize())
 			{
-				var exception = Assert.Throws<InvalidOperationException>(() => embeddableDocumentStore.DatabaseCommands.EnsureDatabaseExists("test"));
+				var exception = Assert.Throws<InvalidOperationException>(() => embeddableDocumentStore.DatabaseCommands.Admin.EnsureDatabaseExists("test"));
 				Assert.Equal(exception.Message, "Multiple databases are not supported in the embedded API currently");
 			}
 		}

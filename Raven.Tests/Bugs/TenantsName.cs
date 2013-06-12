@@ -24,7 +24,7 @@ namespace Raven.Tests.Bugs
 			{
 				const string tenantName = "   Tenant with some    spaces     in it ";
 				// TODO: we better throw here.
-				Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName));	
+				Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.Admin.EnsureDatabaseExists(tenantName));	
 				
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
 				// TODO: we better throw here with a better error message than "tenant not found".

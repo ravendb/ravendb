@@ -105,7 +105,7 @@ namespace Raven.Tests.Security.OAuth
 					Conventions = {FailoverBehavior = FailoverBehavior.FailImmediately}
 				}.Initialize())
 				{
-					store.DatabaseCommands.EnsureDatabaseExists("test");
+					store.DatabaseCommands.Admin.EnsureDatabaseExists("test");
 				}
 
 				using (var store = new DocumentStore

@@ -16,7 +16,7 @@ namespace Raven.Tests.WinRT
 			using (var store = NewDocumentStore())
 			{
 				var dbname = GenerateNewDatabaseName("CanPutAndGetAnAttachment.CanPutAndGetAnAttachment");
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				const string someData = "The quick brown fox jumps over the lazy dog";
 				var encoding = new UTF8Encoding();
@@ -43,7 +43,7 @@ namespace Raven.Tests.WinRT
 			using (var store = NewDocumentStore())
 			{
 				var dbname = GenerateNewDatabaseName("CanPutAndGetAnAttachment.CanDeleteAnAttachment");
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				const string someData = "The quick brown fox jumps over the lazy dog";
 				var encoding = new UTF8Encoding();

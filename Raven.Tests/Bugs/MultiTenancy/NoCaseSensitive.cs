@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				})
 				{
 					documentStore.Initialize();
-					documentStore.DatabaseCommands.EnsureDatabaseExists("repro");
+					documentStore.DatabaseCommands.Admin.EnsureDatabaseExists("repro");
 					using (var session = documentStore.OpenSession("repro"))
 					{
 						session.Store(new Foo

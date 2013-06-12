@@ -69,7 +69,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Indexes.CanGetIndexNamesAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 				await store.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name}"
@@ -86,7 +86,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Indexes.CanGetIndexesAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				await store.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
 				{
@@ -104,7 +104,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Indexes.CanPutAnIndexAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				await store.AsyncDatabaseCommands
 				           .ForDatabase(dbname)
@@ -127,7 +127,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Indexes.CanDeleteAnIndexAsync");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				await store.AsyncDatabaseCommands
 				           .ForDatabase(dbname)
@@ -161,7 +161,7 @@ namespace Raven.Tests.WinRT
 			var dbname = GenerateNewDatabaseName("Indexes.CanGetASingleIndexByName");
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				await store.AsyncDatabaseCommands
 				           .ForDatabase(dbname)

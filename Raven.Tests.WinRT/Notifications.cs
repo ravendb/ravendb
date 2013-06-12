@@ -21,7 +21,7 @@ namespace Raven.Tests.WinRT
 			var tcs = new TaskCompletionSource<DocumentChangeNotification>();
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
 
 				var taskObservable = store.Changes(dbname);
 				await taskObservable.Task;
