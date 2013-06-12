@@ -14,7 +14,6 @@ import raven.abstractions.exceptions.JsonWriterException;
 
 public class RavenJValue extends RavenJToken {
 
-
   private JTokenType valueType;
   private Object value;
   private boolean snapshot;
@@ -45,11 +44,11 @@ public class RavenJValue extends RavenJToken {
       throw new IllegalStateException("Cannot modify a snapshot, this is probably a bug");
     }
 
-    Class<?> currentClass = (this.value != null) ? this.value.getClass() : null;
-    Class<?> newClass = (value != null) ? value.getClass() : null;
+    Class< ? > currentClass = (this.value != null) ? this.value.getClass() : null;
+    Class< ? > newClass = (value != null) ? value.getClass() : null;
 
     if (currentClass == null || !currentClass.equals(newClass)) {
-      valueType =  getValueType(valueType, value);
+      valueType = getValueType(valueType, value);
     }
 
     this.value = value;
@@ -166,15 +165,12 @@ public class RavenJValue extends RavenJToken {
 
     throw new IllegalArgumentException("Could not determine JSON object type for class " + value.getClass().getCanonicalName());
 
-
   }
 
   @Override
   public int hashCode() {
     return deepHashCode();
   }
-
-
 
   @Override
   public int deepHashCode() {
@@ -237,28 +233,28 @@ public class RavenJValue extends RavenJToken {
         writer.writeNull();
         return;
       case BOOLEAN:
-        writer.writeBoolean((Boolean)value);
+        writer.writeBoolean((Boolean) value);
         return;
       case BYTES:
         writer.writeBinary((byte[]) value);
         return;
       case FLOAT:
         if (value instanceof Double) {
-          writer.writeNumber((Double)value);
+          writer.writeNumber((Double) value);
         } else if (value instanceof BigDecimal) {
-          writer.writeNumber((BigDecimal)value);
+          writer.writeNumber((BigDecimal) value);
         } else {
           throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
         }
-        return ;
+        return;
       case INTEGER:
         if (value instanceof Long) {
-          writer.writeNumber((Long)value);
+          writer.writeNumber((Long) value);
         } else if (value instanceof Integer) {
-          writer.writeNumber((Integer)value);
+          writer.writeNumber((Integer) value);
         } else if (value instanceof BigInteger) {
-          writer.writeNumber((BigInteger)value);
-        } else  {
+          writer.writeNumber((BigInteger) value);
+        } else {
           throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
         }
 
@@ -277,12 +273,11 @@ public class RavenJValue extends RavenJToken {
 
   @Override
   public String toString() {
-    if (value == null){
+    if (value == null) {
       return "";
     }
     return value.toString();
   }
-
 
   /* (non-Javadoc)
    * @see raven.client.json.RavenJToken#deepEquals(raven.client.json.RavenJToken)
@@ -293,7 +288,7 @@ public class RavenJValue extends RavenJToken {
       return true;
     }
     RavenJValue other = (RavenJValue) node;
-    if (other ==null) {
+    if (other == null) {
       return false;
     }
     if (this == other) {
@@ -319,11 +314,11 @@ public class RavenJValue extends RavenJToken {
       if (v2.getType() != JTokenType.INTEGER && v2.getType() != JTokenType.FLOAT) {
         return false;
       }
-      return compareNumbers(v1,v2);
+      return compareNumbers(v1, v2);
 
     case STRING:
       if (v2.getType() == JTokenType.BYTES) {
-        return compareBytes(v1,v2);
+        return compareBytes(v1, v2);
       } else {
         return false;
       }
@@ -331,7 +326,7 @@ public class RavenJValue extends RavenJToken {
       if (v2.getType() != JTokenType.STRING && v2.getType() != JTokenType.BYTES) {
         return false;
       }
-      return compareBytes(v1,v2);
+      return compareBytes(v1, v2);
     }
 
     return false;
@@ -343,7 +338,6 @@ public class RavenJValue extends RavenJToken {
 
     return arr1 != null && arr2 != null && Arrays.equals(arr1, arr2);
   }
-
 
   private byte[] asBytesArray() {
     if (getType() == JTokenType.BYTES) {
@@ -364,7 +358,7 @@ public class RavenJValue extends RavenJToken {
 
   private static boolean compareNumbers(RavenJValue v1, RavenJValue v2) {
     if (v1.getType() == JTokenType.FLOAT || v2.getType() == JTokenType.FLOAT) {
-      return compareFloats(v1,v2);
+      return compareFloats(v1, v2);
     }
     // compare as integers
     Number ov1 = (Number) v1.getValue();
@@ -393,7 +387,7 @@ public class RavenJValue extends RavenJToken {
     if (value instanceof BigInteger) {
       return (BigInteger) value;
     } else if (value instanceof Long || value instanceof Integer || value instanceof Short) {
-      Number number  = (Number) value;
+      Number number = (Number) value;
       return BigInteger.valueOf(number.longValue());
     }
     return null;
@@ -410,7 +404,7 @@ public class RavenJValue extends RavenJToken {
     if (ov1 instanceof BigDecimal) {
       // do nothing
     } else if (ov1 instanceof BigInteger) {
-      ov1 = new BigDecimal((BigInteger)ov1);
+      ov1 = new BigDecimal((BigInteger) ov1);
     } else {
       ov1 = ov1.doubleValue();
     }
@@ -418,7 +412,7 @@ public class RavenJValue extends RavenJToken {
     if (ov2 instanceof BigDecimal) {
       // do nothing
     } else if (ov2 instanceof BigInteger) {
-      ov2 = new BigDecimal((BigInteger)ov2);
+      ov2 = new BigDecimal((BigInteger) ov2);
     } else {
       ov2 = ov2.doubleValue();
     }
@@ -439,13 +433,12 @@ public class RavenJValue extends RavenJToken {
     if (value instanceof BigDecimal) {
       return (BigDecimal) value;
     } else if (value instanceof Double) {
-      return new BigDecimal((double)value);
+      return new BigDecimal((double) value);
     } else if (value instanceof Float) {
       return new BigDecimal(number.doubleValue());
     } else {
       return new BigDecimal(asBigInteger());
     }
   }
-
 
 }

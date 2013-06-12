@@ -24,19 +24,14 @@ import raven.abstractions.json.linq.RavenJToken;
 
 public class SerializationHelper {
 
-
-
   public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, HttpJsonRequest jsonRequest) {
     RavenJObject jsonData = (RavenJObject) responseJson;
     RavenJObject meta = MetadataExtensions.filterHeaders(jsonRequest.getResponseHeaders());
     UUID etag = getEtag(jsonRequest.getResponseHeader("ETag"));
 
-    return new JsonDocument(jsonData, meta, docKey,
-        jsonRequest.getResponseCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(jsonRequest));
+    return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(jsonRequest));
 
   }
-
-
 
   private static UUID getEtag(String responseHeader) {
     return UUID.fromString(responseHeader);
@@ -79,7 +74,7 @@ public class SerializationHelper {
     List<JsonDocument> list = new ArrayList<>();
 
     RavenJArray jArray = (RavenJArray) responseJson;
-    for (RavenJToken token :jArray) {
+    for (RavenJToken token : jArray) {
       if (token == null) {
         list.add(null);
         continue;
@@ -88,15 +83,12 @@ public class SerializationHelper {
       RavenJObject metadata = (RavenJObject) tokenObject.get("@metadata");
       tokenObject.remove("@metadata");
 
-
       String id = extract(metadata, "@id", "", String.class);
       UUID etag = extract(metadata, "@etag", null, UUID.class);
-
 
       //TODO: filter metadata headers
       Date lastModified = null; //TODO: set me!
       boolean nonAuthoritativeInformation = extract(metadata, "Non-Authoritative-Information", Boolean.FALSE, Boolean.class);
-
 
       list.add(new JsonDocument(tokenObject, metadata, id, nonAuthoritativeInformation, etag, lastModified));
     }

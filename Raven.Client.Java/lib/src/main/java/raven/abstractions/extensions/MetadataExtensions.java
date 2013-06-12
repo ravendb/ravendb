@@ -1,6 +1,5 @@
 package raven.abstractions.extensions;
 
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -117,7 +116,7 @@ public class MetadataExtensions {
    */
   public static RavenJObject filterHeaders(Header[] headers) {
     RavenJObject metadata = new RavenJObject();
-    for (Header header: headers) {
+    for (Header header : headers) {
       if (header.getName().startsWith("Temp")) {
         continue;
       }
@@ -136,7 +135,7 @@ public class MetadataExtensions {
         metadata.add(headerName, getValue(values.iterator().next()));
       } else {
         List<RavenJToken> headerValues = new ArrayList<>();
-        for (String value: values) {
+        for (String value : values) {
           headerValues.add(getValue(value));
         }
         metadata.add(headerName, new RavenJArray(headerValues.subList(0, Math.min(15, headerValues.size()))));
@@ -144,6 +143,7 @@ public class MetadataExtensions {
     }
     return metadata;
   }
+
   private static RavenJToken getValue(String val) {
     if (val.startsWith("{")) {
       return RavenJObject.parse(val);
@@ -154,6 +154,7 @@ public class MetadataExtensions {
     //TODO: parse dates
     return RavenJToken.parse(val);
   }
+
   //TODO: public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
 
   /**
@@ -167,7 +168,7 @@ public class MetadataExtensions {
     }
 
     RavenJObject metadata = new RavenJObject();
-    for (Entry<String, RavenJToken> header: self) {
+    for (Entry<String, RavenJToken> header : self) {
       if (header.getKey().startsWith("Temp")) {
         continue;
       }
@@ -195,6 +196,5 @@ public class MetadataExtensions {
     }
     return sb.toString();
   }
-
 
 }

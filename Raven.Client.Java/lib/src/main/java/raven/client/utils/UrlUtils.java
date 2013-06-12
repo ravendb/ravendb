@@ -11,7 +11,6 @@ public class UrlUtils {
 
   private static Log log = LogFactory.getLog(UrlUtils.class.getCanonicalName());
 
-
   public static String escapeDataString(String input) {
     try {
       return URLEncoder.encode(input, "UTF-8");

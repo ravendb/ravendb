@@ -17,7 +17,7 @@ import raven.abstractions.exceptions.JsonReaderException;
 import raven.abstractions.exceptions.JsonWriterException;
 import raven.abstractions.extensions.JsonExtensions;
 
-public class RavenJObject extends RavenJToken implements Iterable<Entry<String, RavenJToken>>   {
+public class RavenJObject extends RavenJToken implements Iterable<Entry<String, RavenJToken>> {
 
   /**
    * Creates a {@link RavenJObject} from an object.
@@ -40,7 +40,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
     if (token != null && token.getType() != JTokenType.OBJECT)
       throw new IllegalArgumentException("Object serialized to " + token.getType() + ". RavenJObject instance expected.");
 
-    return (RavenJObject)token;
+    return (RavenJObject) token;
   }
 
   public static RavenJObject load(JsonParser parser) {
@@ -69,7 +69,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
           return o;
         case START_OBJECT:
           if (StringUtils.isNotEmpty(propName)) {
-            RavenJObject val =  RavenJObject.load(parser);
+            RavenJObject val = RavenJObject.load(parser);
             o.set(propName, val);
             propName = null;
           } else {
@@ -85,15 +85,15 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
             throw new JsonReaderException("The JsonReader should not be on a token of type " + parser.getCurrentToken());
           }
           break;
-          default:
-            if (StringUtils.isNotEmpty(propName)) {
-              RavenJValue val = (RavenJValue) RavenJToken.load(parser);
-              o.set(propName, val);
-              propName = null;
-            } else {
-              throw new JsonReaderException("The JsonReader should not be on a token of type " + parser.getCurrentToken());
-            }
-            break;
+        default:
+          if (StringUtils.isNotEmpty(propName)) {
+            RavenJValue val = (RavenJValue) RavenJToken.load(parser);
+            o.set(propName, val);
+            propName = null;
+          } else {
+            throw new JsonReaderException("The JsonReader should not be on a token of type " + parser.getCurrentToken());
+          }
+          break;
 
         }
       } while (parser.nextToken() != null);
@@ -101,7 +101,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
       throw new JsonReaderException("Error reading RavenJObject from JsonReader.");
 
     } catch (IOException e) {
-      throw new JsonWriterException(e.getMessage(),e);
+      throw new JsonWriterException(e.getMessage(), e);
     }
   }
 
@@ -192,7 +192,6 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
     return JTokenType.OBJECT;
   }
 
-
   @Override
   public boolean isSnapshot() {
     return properties.isSnapshot();
@@ -206,7 +205,6 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
     properties.put(propertyName, value);
   }
 
-
   /**
    * Writes this token to a {@link JsonGenerator}
    * @param writer A {@link JsonGenerator} into which this method will write.
@@ -217,7 +215,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
       writer.writeStartObject();
 
       if (properties != null) {
-        for (String key: properties.keySet()) {
+        for (String key : properties.keySet()) {
           writer.writeFieldName(key);
           RavenJToken value = properties.get(key);
           if (value == null) {
@@ -231,7 +229,6 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
     } catch (IOException e) {
       throw new JsonWriterException(e.getMessage(), e);
     }
-
 
   }
 
@@ -253,14 +250,14 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
       switch (ravenJToken.getType()) {
       case STRING:
         if (String.class.isAssignableFrom(clazz)) {
-          return (T) ((RavenJValue)ravenJToken).getValue();
+          return (T) ((RavenJValue) ravenJToken).getValue();
         } else if (UUID.class.isAssignableFrom(clazz)) {
           return (T) UUID.fromString((String) ravenValue.getValue());
         }
         break;
       case BOOLEAN:
         if (Boolean.class.isAssignableFrom(clazz)) {
-          return (T)ravenValue.getValue();
+          return (T) ravenValue.getValue();
         }
       }
     }
@@ -271,6 +268,5 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   public Iterator<Entry<String, RavenJToken>> iterator() {
     return properties.iterator();
   }
-
 
 }

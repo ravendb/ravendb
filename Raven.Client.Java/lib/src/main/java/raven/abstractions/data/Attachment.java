@@ -11,6 +11,7 @@ public class Attachment {
   private UUID etag;
   private String key;
   private boolean canGetData;
+
   /**
    * @return the data
    */
@@ -20,54 +21,63 @@ public class Attachment {
     }
     return data;
   }
+
   /**
    * @param data the data to set
    */
   public void setData(byte[] data) {
     this.data = data;
   }
+
   /**
    * @return the size
    */
   public int getSize() {
     return size;
   }
+
   /**
    * @param size the size to set
    */
   public void setSize(int size) {
     this.size = size;
   }
+
   /**
    * @return the metadata
    */
   public RavenJObject getMetadata() {
     return metadata;
   }
+
   /**
    * @param metadata the metadata to set
    */
   public void setMetadata(RavenJObject metadata) {
     this.metadata = metadata;
   }
+
   /**
    * @return the etag
    */
   public UUID getEtag() {
     return etag;
   }
+
   /**
    * @param etag the etag to set
    */
   public void setEtag(UUID etag) {
     this.etag = etag;
   }
+
   /**
    * @return the key
    */
   public String getKey() {
     return key;
   }
+
   /**
    * @param key the key to set
    */
@@ -84,8 +94,5 @@ public class Attachment {
     this.etag = etag;
     this.key = key;
   }
-
-
-
 
 }

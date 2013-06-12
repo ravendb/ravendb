@@ -53,16 +53,15 @@ public class HttpJsonRequest implements AutoCloseable {
     }
   }
 
-
   private UUID etagHeaderToGuid(Header responseHeader) {
     if (StringUtils.isEmpty(responseHeader.getValue())) {
       throw new IllegalStateException("Response didn't had an ETag header");
     }
     String value = responseHeader.getValue();
     if (value.startsWith("\"")) {
-      return UUID.fromString(value.substring(1, value.length() -2));
+      return UUID.fromString(value.substring(1, value.length() - 2));
     }
-    return  UUID.fromString(value);
+    return UUID.fromString(value);
   }
 
   public void executeRequest() throws HttpException, IOException {
@@ -85,8 +84,7 @@ public class HttpJsonRequest implements AutoCloseable {
   public RavenJToken getResponseAsJson(Integer... expectedStatus) throws IOException {
     respCode = httpClient.executeMethod(methodBase);
 
-    if (!Arrays.asList(expectedStatus).contains(respCode) && HttpStatus.SC_UNAUTHORIZED != respCode
-        && HttpStatus.SC_FORBIDDEN != respCode && HttpStatus.SC_PRECONDITION_FAILED != respCode) {
+    if (!Arrays.asList(expectedStatus).contains(respCode) && HttpStatus.SC_UNAUTHORIZED != respCode && HttpStatus.SC_FORBIDDEN != respCode && HttpStatus.SC_PRECONDITION_FAILED != respCode) {
       throw new HttpOperationException(methodBase);
     }
 
@@ -101,7 +99,6 @@ public class HttpJsonRequest implements AutoCloseable {
 
     return readJsonInternal();
   }
-
 
   public byte[] getResponseBytes() throws IOException {
     return methodBase.getResponseBody();
@@ -129,8 +126,6 @@ public class HttpJsonRequest implements AutoCloseable {
   public Header[] getResponseHeaders() {
     return methodBase.getResponseHeaders();
   }
-
-
 
   protected void handleForbiddenResponse() {
     throw new HttpOperationException(methodBase);
@@ -185,7 +180,5 @@ public class HttpJsonRequest implements AutoCloseable {
   public HttpMethodBase getWebRequest() {
     return methodBase;
   }
-
-
 
 }

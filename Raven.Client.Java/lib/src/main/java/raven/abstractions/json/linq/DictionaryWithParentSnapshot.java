@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-
 public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, Iterable<Map.Entry<String, RavenJToken>> {
 
   private static final RavenJToken DELETED_MARKER = new RavenJValue("*DeletedMarker*", JTokenType.NULL);
@@ -52,7 +51,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
    */
   @Override
   public boolean containsKey(Object keyObject) {
-    String key = (String)keyObject;
+    String key = (String) keyObject;
     RavenJToken token;
     if (localChanges.containsKey(key)) {
       token = localChanges.get(key);
@@ -63,9 +62,6 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
     }
     return (parentSnapshot != null && parentSnapshot.containsKey(key) && parentSnapshot.get(key) != DELETED_MARKER);
   }
-
-
-
 
   /* (non-Javadoc)
    * @see java.util.Map#keySet()
@@ -87,7 +83,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
         }
       }
     }
-    for(String key: localChanges.keySet()) {
+    for (String key : localChanges.keySet()) {
       if (localChanges.containsKey(key) && localChanges.get(key) != DELETED_MARKER) {
         ret.add(key);
       }
@@ -162,8 +158,8 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
    */
   @Override
   public Collection<RavenJToken> values() {
-    Collection<RavenJToken> tokens =new ArrayList<>();
-    for(String key: keySet()) {
+    Collection<RavenJToken> tokens = new ArrayList<>();
+    for (String key : keySet()) {
       tokens.add(get(key));
     }
     return tokens;
@@ -180,13 +176,12 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
     return new DictionaryWithParentSnapshot(this);
   }
 
-
   /* (non-Javadoc)
    * @see java.util.Map#clear()
    */
   @Override
   public void clear() {
-    for(String key: keySet()) {
+    for (String key : keySet()) {
       remove(key);
     }
   }
@@ -204,7 +199,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
    */
   @Override
   public void putAll(Map< ? extends String, ? extends RavenJToken> m) {
-    for (String key: m.keySet()) {
+    for (String key : m.keySet()) {
       put(key, m.get(key));
     }
   }
@@ -216,8 +211,6 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
   public boolean containsValue(Object value) {
     throw new IllegalStateException("Not implemeneted");
   }
-
-
 
   /* (non-Javadoc)
    * @see java.util.Map#entrySet()
@@ -258,7 +251,6 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
     private Iterator<java.util.Map.Entry<String, RavenJToken>> parentIterator;
     private Iterator<java.util.Map.Entry<String, RavenJToken>> localIterator;
 
-
     private Iterator<java.util.Map.Entry<String, RavenJToken>> getCurrentIterator() {
       if (!parentProcessed) {
         if (parentSnapshot != null) {
@@ -297,6 +289,5 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
     }
 
   }
-
 
 }

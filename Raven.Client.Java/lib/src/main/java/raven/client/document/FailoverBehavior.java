@@ -24,7 +24,6 @@ public enum FailoverBehavior {
 
   ALLOW_READS_FROM_SECONDARIES_AND_WRITES_TO_SECONDARIES(3),
 
-
   /** Immediately fail the request, without attempting any failover. This is true for both
    * reads and writes. The RavenDB client will not even check that you are using replication.
    *
@@ -44,7 +43,6 @@ public enum FailoverBehavior {
   READ_FROM_ALL_SERVERS(1024);
 
   private int value;
-
 
   /**
    * @return the value

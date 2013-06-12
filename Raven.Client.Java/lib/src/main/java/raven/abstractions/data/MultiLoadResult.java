@@ -9,7 +9,6 @@ public class MultiLoadResult {
   private List<RavenJObject> results;
   private List<RavenJObject> includes;
 
-
   /**
    * @return the results
    */
@@ -43,6 +42,5 @@ public class MultiLoadResult {
     results = new ArrayList<>();
     includes = new ArrayList<>();
   }
-
 
 }

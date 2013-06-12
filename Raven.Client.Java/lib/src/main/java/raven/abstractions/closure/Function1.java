@@ -1,6 +1,6 @@
 package raven.abstractions.closure;
 
-public interface Function1<F,T> {
+public interface Function1<F, T> {
   /**
    * Applies function
    * @param input

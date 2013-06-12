@@ -36,7 +36,4 @@ public class HttpOperationException extends RuntimeException {
     this.methodBase = methodBase;
   }
 
-
-
-
 }

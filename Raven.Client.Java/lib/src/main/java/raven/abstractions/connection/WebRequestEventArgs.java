@@ -17,5 +17,4 @@ public class WebRequestEventArgs {
     return request;
   }
 
-
 }

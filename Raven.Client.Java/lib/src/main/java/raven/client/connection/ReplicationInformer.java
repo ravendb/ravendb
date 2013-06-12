@@ -14,13 +14,14 @@ public class ReplicationInformer {
     // TODO Auto-generated method stub
 
   }
+
   //TODO: impl me
 
   public int getReadStripingBase() {
     return readStripingBase.incrementAndGet();
   }
 
-  public  <T> T executeWithReplication(HttpMethods method, String url, int currentRequest, int currentReadStripingBase, Function1<String, T> operation) throws ServerClientException {
+  public <T> T executeWithReplication(HttpMethods method, String url, int currentRequest, int currentReadStripingBase, Function1<String, T> operation) throws ServerClientException {
     return operation.apply(url);
     //TODO: implement me
   }
@@ -29,6 +30,5 @@ public class ReplicationInformer {
     // TODO Auto-generated method stub
     return 0;
   }
-
 
 }

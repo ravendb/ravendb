@@ -28,7 +28,6 @@ public class CreateHttpJsonRequestParams implements Serializable {
   private DocumentConvention convention;
   private boolean disableRequestCompression;
 
-
   public CreateHttpJsonRequestParams(ServerClient serverClient, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
     super();
     this.method = method;
@@ -48,10 +47,9 @@ public class CreateHttpJsonRequestParams implements Serializable {
   public CreateHttpJsonRequestParams addOperationHeaders(Map<String, String> operationsHeaders) {
     urlCached = null;
     operationsHeadersDictionary = operationsHeaders;
-    for (Entry<String, String> operationsHeader: operationsHeaders.entrySet()) {
-      operationHeadersHash = (operationHeadersHash*397) ^ operationsHeader.getKey().hashCode();
-      if (operationsHeader.getValue() != null)
-      {
+    for (Entry<String, String> operationsHeader : operationsHeaders.entrySet()) {
+      operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.getKey().hashCode();
+      if (operationsHeader.getValue() != null) {
         operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.getKey().hashCode();
       }
     }
@@ -66,13 +64,13 @@ public class CreateHttpJsonRequestParams implements Serializable {
   public CreateHttpJsonRequestParams addOperationHeadersMultiMap(Map<String, List<String>> operationsHeaders) {
     urlCached = null;
     operationsHeadersCollection = operationsHeaders;
-    for (String operationsHeader: operationsHeadersCollection.keySet()) {
+    for (String operationsHeader : operationsHeadersCollection.keySet()) {
       operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.hashCode();
       List<String> values = operationsHeaders.get(operationsHeader);
       if (values == null) {
         continue;
       }
-      for (String header: values) {
+      for (String header : values) {
         if (header != null) {
           operationHeadersHash = (operationHeadersHash * 397) ^ header.hashCode();
         }
@@ -81,12 +79,11 @@ public class CreateHttpJsonRequestParams implements Serializable {
     return this;
   }
 
-
   private String generateUrl() {
     if (operationHeadersHash == 0) {
       return url;
     }
-    return (url.contains("?") ? "&" : "?") +  "operationHeadersHash=" + operationHeadersHash;
+    return (url.contains("?") ? "&" : "?") + "operationHeadersHash=" + operationHeadersHash;
   }
 
   /**
@@ -200,12 +197,12 @@ public class CreateHttpJsonRequestParams implements Serializable {
 
   public void updateHeaders(HttpMethodBase webRequest) {
     if (operationsHeadersDictionary != null) {
-      for (Entry<String, String> kvp: operationsHeadersDictionary.entrySet()) {
+      for (Entry<String, String> kvp : operationsHeadersDictionary.entrySet()) {
         webRequest.addRequestHeader(kvp.getKey(), kvp.getValue());
       }
     }
     if (operationsHeadersCollection != null) {
-      for (Entry<String, List<String>> header: operationsHeadersCollection.entrySet()) {
+      for (Entry<String, List<String>> header : operationsHeadersCollection.entrySet()) {
         webRequest.addRequestHeader(header.getKey(), StringUtils.join(header.getValue(), ","));
       }
     }

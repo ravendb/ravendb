@@ -14,7 +14,7 @@ public class JsonExtensions {
         objectMapper = new ObjectMapper();
         jsonFactory = objectMapper.getJsonFactory();
       }
-     }
+    }
   }
 
   public static ObjectMapper getDefaultObjectMapper() {

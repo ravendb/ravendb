@@ -16,7 +16,6 @@ import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.JsonStreamContext;
 import org.codehaus.jackson.ObjectCodec;
 
-
 public class RavenJTokenWriter extends JsonGenerator {
 
   private RavenJToken token;
@@ -26,7 +25,7 @@ public class RavenJTokenWriter extends JsonGenerator {
   private String tempPropName;
 
   protected RavenJToken getCurrentToken() {
-    return (tokenStack.isEmpty())? null: tokenStack.peek();
+    return (tokenStack.isEmpty()) ? null : tokenStack.peek();
   }
 
   public RavenJToken getToken() {
@@ -36,7 +35,6 @@ public class RavenJTokenWriter extends JsonGenerator {
 
     return value;
   }
-
 
   @Override
   public JsonGenerator enable(Feature f) {
@@ -93,13 +91,13 @@ public class RavenJTokenWriter extends JsonGenerator {
 
     switch (currentToken.getType()) {
     case OBJECT:
-      ((RavenJObject)currentToken).set(tempPropName, token);
+      ((RavenJObject) currentToken).set(tempPropName, token);
       tempPropName = null;
       break;
     case ARRAY:
-      ((RavenJArray)currentToken).add(token);
+      ((RavenJArray) currentToken).add(token);
       break;
-    default :
+    default:
       throw new JsonGenerationException("Unexpected token: " + currentToken.getType());
     }
     tokenStack.push(token);
@@ -117,18 +115,17 @@ public class RavenJTokenWriter extends JsonGenerator {
       RavenJToken currentToken = getCurrentToken();
       switch (currentToken.getType()) {
       case OBJECT:
-        ((RavenJObject)currentToken).set(tempPropName, value);
+        ((RavenJObject) currentToken).set(tempPropName, value);
         tempPropName = null;
         break;
       case ARRAY:
-        ((RavenJArray)currentToken).add(value);
+        ((RavenJArray) currentToken).add(value);
         break;
-      default :
+      default:
         throw new JsonGenerationException("Unexpected token: " + type);
       }
     }
   }
-
 
   @Override
   public void writeEndObject() throws IOException, JsonGenerationException {
@@ -158,7 +155,7 @@ public class RavenJTokenWriter extends JsonGenerator {
 
   @Override
   public void writeString(char[] text, int offset, int len) throws IOException, JsonGenerationException {
-    writeString(new String(Arrays.copyOfRange(text, offset, offset+len)));
+    writeString(new String(Arrays.copyOfRange(text, offset, offset + len)));
   }
 
   @Override
@@ -168,7 +165,7 @@ public class RavenJTokenWriter extends JsonGenerator {
 
   @Override
   public void writeUTF8String(byte[] text, int offset, int length) throws IOException, JsonGenerationException {
-    writeString(new String(Arrays.copyOfRange(text, offset, offset+length), Charset.forName("UTF-8")));
+    writeString(new String(Arrays.copyOfRange(text, offset, offset + length), Charset.forName("UTF-8")));
   }
 
   @Override
@@ -208,7 +205,7 @@ public class RavenJTokenWriter extends JsonGenerator {
 
   @Override
   public void writeBinary(Base64Variant b64variant, byte[] data, int offset, int len) throws IOException, JsonGenerationException {
-    addValue(Arrays.copyOfRange(data, offset, offset + len) , JTokenType.BYTES);
+    addValue(Arrays.copyOfRange(data, offset, offset + len), JTokenType.BYTES);
   }
 
   @Override

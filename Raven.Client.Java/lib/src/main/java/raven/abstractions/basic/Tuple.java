@@ -1,16 +1,14 @@
 package raven.abstractions.basic;
 
 public class Tuple<T, S> {
-  public static <T,S> Tuple<T, S> create(T item1, S item2) {
-    return new Tuple<T,S>(item1, item2);
+  public static <T, S> Tuple<T, S> create(T item1, S item2) {
+    return new Tuple<T, S>(item1, item2);
   }
+
   private T item1;
-
-
-
   private S item2;
 
-  public  Tuple(T item1, S item2) {
+  public Tuple(T item1, S item2) {
     this.item1 = item1;
     this.item2 = item2;
   }
@@ -80,9 +78,5 @@ public class Tuple<T, S> {
   public void setItem2(S item2) {
     this.item2 = item2;
   }
-
-
-
-
 
 }

@@ -19,6 +19,7 @@ public interface IDatabaseCommands {
    * @param etag The etag.
    */
   public void delete(String key, UUID etag);
+
   /**
    * Deletes the attachment with the specified key
    * @param key The key.
@@ -142,6 +143,7 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    */
   public void putAttachment(String key, UUID etag, InputStream data, RavenJObject metadata);
+
   /**
    * Retrieves documents for the specified key prefix
    * @param keyPrefix
@@ -163,6 +165,7 @@ public interface IDatabaseCommands {
    * @return
    */
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly);
+
   /**
    *  Updates just the attachment with the specified key's metadata
    * @param key The key.
@@ -170,6 +173,7 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    */
   public void updateAttachmentMetadata(String key, UUID etag, RavenJObject metadata);
+
   /**
    * Get the full URL for the given document key
    * @param documentKey

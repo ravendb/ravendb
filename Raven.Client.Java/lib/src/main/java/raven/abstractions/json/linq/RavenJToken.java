@@ -85,7 +85,6 @@ public abstract class RavenJToken {
     }
   }
 
-
   public static RavenJToken readFrom(JsonParser parser) {
     try {
       if (parser.getCurrentToken() == null) {
@@ -153,7 +152,7 @@ public abstract class RavenJToken {
 
       if (curReader instanceof RavenJObject) {
         RavenJObject ravenJObject = (RavenJObject) curReader;
-        for (String key: ravenJObject.getProperties().keySet()) {
+        for (String key : ravenJObject.getProperties().keySet()) {
           RavenJToken value = ravenJObject.get(key);
           if (value == null || value.getType() == JTokenType.NULL) {
             curObject.addForCloning(key, RavenJValue.getNull());
@@ -172,7 +171,7 @@ public abstract class RavenJToken {
         }
       } else if (curObject instanceof RavenJArray) {
         RavenJArray ravenJArray = (RavenJArray) curReader;
-        for (RavenJToken token: ravenJArray) {
+        for (RavenJToken token : ravenJArray) {
           if (token == null || token.getType() == JTokenType.NULL) {
             curObject.addForCloning(null, null);
             continue;
@@ -212,7 +211,7 @@ public abstract class RavenJToken {
     if (!this.getClass().equals(obj.getClass())) {
       return false;
     }
-    return deepEquals((RavenJToken)obj);
+    return deepEquals((RavenJToken) obj);
   }
 
   public abstract RavenJToken createSnapshot();
@@ -267,7 +266,7 @@ public abstract class RavenJToken {
           for (String key : selfObj.getProperties().keySet()) {
             RavenJToken value = selfObj.get(key);
             RavenJToken token;
-             RavenJToken returnedValue = otherObj.get(key);
+            RavenJToken returnedValue = otherObj.get(key);
             if (returnedValue == null) {
               return false;
             }

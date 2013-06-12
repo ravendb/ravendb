@@ -35,7 +35,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
    * @param content The contents of the array;
    */
   public RavenJArray(Collection<RavenJToken> content) {
-    items =new ArrayList<>();
+    items = new ArrayList<>();
     if (content != null) {
       items.addAll(content);
     }
@@ -56,6 +56,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   public JTokenType getType() {
     return JTokenType.ARRAY;
   }
+
   /**
    * Gets the {@link RavenJToken} at the specified index.
    * @param index
@@ -85,7 +86,6 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   public RavenJArray cloneToken() {
     return (RavenJArray) cloneTokenImpl(new RavenJArray());
   }
-
 
   @Override
   public boolean isSnapshot() {
@@ -132,7 +132,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
 
       throw new JsonReaderException("Error reading RavenJArray from JsonReader.");
 
-    } catch (IOException e){
+    } catch (IOException e) {
       throw new JsonReaderException(e.getMessage(), e);
     }
   }
@@ -150,7 +150,6 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
       throw new JsonReaderException(e.getMessage(), e);
     }
   }
-
 
   /* (non-Javadoc)
    * @see java.lang.Iterable#iterator()
@@ -185,8 +184,6 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     items.add(index, item);
   }
 
-
-
   /* (non-Javadoc)
    * @see raven.client.json.RavenJToken#ensureCannotBeChangeAndEnableShapshotting()
    */
@@ -212,7 +209,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
       writer.writeStartArray();
 
       if (items != null) {
-        for (RavenJToken token: items) {
+        for (RavenJToken token : items) {
           token.writeTo(writer);
         }
       }
@@ -229,5 +226,3 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   }
 
 }
-
-

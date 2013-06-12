@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public class RavenUrlExtensions {
   public static String noCache(String url) {
-    return url +  (url.contains("?") ? "&":"?" ) + "noCache=" + UUID.randomUUID().hashCode();
+    return url + (url.contains("?") ? "&" : "?") + "noCache=" + UUID.randomUUID().hashCode();
   }
 
   public static String databases(String url, int pageSize, int start) {

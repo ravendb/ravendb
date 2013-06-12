@@ -39,20 +39,16 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     configureRequest.add(event);
   }
 
-
   public HttpJsonRequestFactory(int maxNumberOfCachedRequests) {
     super();
     this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
     resetCache();
   }
 
-
-
   private void resetCache() {
     // TODO Auto-generated method stub
 
   }
-
 
   public void addLogRequestEventHandler(EventHandler<RequestResultArgs> event) {
     logRequest.add(event);
@@ -74,8 +70,8 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     }
 
     HttpJsonRequest request = new HttpJsonRequest(createHttpJsonRequestParams, this);
-    request.setShouldCacheRequest(createHttpJsonRequestParams.isAvoidCachingRequest() == false &&
-        createHttpJsonRequestParams.getConvention().getShouldCacheRequest().apply(createHttpJsonRequestParams.getUrl()));
+    request.setShouldCacheRequest(createHttpJsonRequestParams.isAvoidCachingRequest() == false
+        && createHttpJsonRequestParams.getConvention().getShouldCacheRequest().apply(createHttpJsonRequestParams.getUrl()));
 
     if (request.getShouldCacheRequest() && createHttpJsonRequestParams.getMethod() == HttpMethods.GET && !getDisableHttpCaching()) {
       //TODO: pass headers method
@@ -85,27 +81,25 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     }
     EventHelper.invoke(configureRequest, createHttpJsonRequestParams.getServerClient(), new WebRequestEventArgs(request.getWebRequest()));
     return request;
-/* TODO: move to HttpJsonRequest
-    switch (params.getMethod()) {
-    case GET:
-      GetMethod getMethod = new GetMethod(params.getUrl());
-      return new HttpJsonRequest(httpClient, getMethod);
-    case POST:
-      PostMethod postMethod = new PostMethod(params.getUrl());
-      return new HttpJsonRequest(httpClient, postMethod);
-    case PUT:
-      PutMethod putMethod = new PutMethod(params.getUrl());
-      return new HttpJsonRequest(httpClient, putMethod);
-    case DELETE:
-      DeleteMethod deleteMethod = new DeleteMethod(params.getUrl());
-      return new HttpJsonRequest(httpClient, deleteMethod);
+    /* TODO: move to HttpJsonRequest
+        switch (params.getMethod()) {
+        case GET:
+          GetMethod getMethod = new GetMethod(params.getUrl());
+          return new HttpJsonRequest(httpClient, getMethod);
+        case POST:
+          PostMethod postMethod = new PostMethod(params.getUrl());
+          return new HttpJsonRequest(httpClient, postMethod);
+        case PUT:
+          PutMethod putMethod = new PutMethod(params.getUrl());
+          return new HttpJsonRequest(httpClient, putMethod);
+        case DELETE:
+          DeleteMethod deleteMethod = new DeleteMethod(params.getUrl());
+          return new HttpJsonRequest(httpClient, deleteMethod);
 
-    default:
-      throw new IllegalArgumentException("Unknown method: " + params.getMethod());
-    }*/
+        default:
+          throw new IllegalArgumentException("Unknown method: " + params.getMethod());
+        }*/
   }
-
-
 
   private CachedRequestOp configureCaching(String url, HttpJsonRequest request) {
     // TODO Auto-generated method stub

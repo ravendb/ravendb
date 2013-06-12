@@ -18,16 +18,12 @@ public class DocumentConvention {
     return shouldCacheRequest;
   }
 
-
-
   /**
    * @param shouldCacheRequest the shouldCacheRequest to set
    */
   public void setShouldCacheRequest(Function1<String, Boolean> shouldCacheRequest) {
     this.shouldCacheRequest = shouldCacheRequest;
   }
-
-
 
   /**
    * @return the failoverBehavior
@@ -36,8 +32,6 @@ public class DocumentConvention {
     return failoverBehavior;
   }
 
-
-
   /**
    * @param failoverBehavior the failoverBehavior to set
    */
@@ -45,12 +39,8 @@ public class DocumentConvention {
     this.failoverBehavior = failoverBehavior;
   }
 
-
-
   public int incrementRequestCount() {
     return requestCount.incrementAndGet();
   }
-
-
 
 }
