@@ -4,14 +4,53 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using System.Linq;
+using Raven.Abstractions.MEF;
+using Raven.Database.Config;
+using Raven.Database.Impl;
+using Raven.Database.Plugins;
+using Raven.Storage.Esent;
 
 namespace Raven.Database.Storage.Esent.Debug
 {
 	public class EsentUtil
 	{
+		public static void ReportOn(string path, string tableName)
+		{
+			using (var transactionalStorage = new TransactionalStorage(new RavenConfiguration
+			{
+				DataDirectory = path,
+				Settings =
+				{
+					{"Raven/Esent/LogFileSize", "1"}
+				}
+			}, () => { }))
+			{
+				transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
+
+				ReportOn(transactionalStorage, tableName, path);
+			}
+		}
+
+		private static void ReportOn(TransactionalStorage transactionalStorage, string tableName, string path)
+		{
+			var list = new List<string>();
+			transactionalStorage.Batch(accessor =>
+			{
+				var session = ((StorageActionsAccessor)accessor).Inner.Session;
+				var jetDbid = ((StorageActionsAccessor)accessor).Inner.Dbid;
+				using(var stream = new FileStream(Path.Combine(path, tableName + "Dump.csv"), FileMode.Create))
+				using (var table = new Table(session, jetDbid, tableName, OpenTableGrbit.None))
+				{
+					DumpTable(session, table, stream);
+					
+				}
+			});
+		}
+
 		public static void DumpTable(Session session, Table table, Stream stream)
 		{
 			var writer = new StreamWriter(stream);
@@ -66,5 +105,6 @@ namespace Raven.Database.Storage.Esent.Debug
 					throw new ArgumentOutOfRangeException("don't know how to handle coltype: " + col.Coltyp);
 			}
 		}
+
 	}
 }
