@@ -242,12 +242,17 @@ namespace Raven.Client.Shard
 			var highlightings = new RavenQueryHighlightings();
 #if !SILVERLIGHT
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
 #else
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, isMapReduce);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
 #endif
+			return CreateRavenQueryInspector(indexName, isMapReduce, provider, ravenQueryStatistics, highlightings);
 		}
+
+		protected abstract RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce,
+		                                                                              RavenQueryProvider<T> provider,
+		                                                                              RavenQueryStatistics
+			                                                                              ravenQueryStatistics,
+		                                                                              RavenQueryHighlightings highlightings);
 
 		/// <summary>
 		/// Query RavenDB dynamically using LINQ

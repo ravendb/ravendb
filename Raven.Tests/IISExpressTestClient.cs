@@ -22,6 +22,7 @@ namespace Raven.Tests
 			IOExtensions.DeleteDirectory(Path.GetFullPath(WebDirectory));
 
 			IOExtensions.CopyDirectory(GetRavenWebSource(), WebDirectory);
+			IOExtensions.CopyDirectory(@".\web\", Path.Combine(WebDirectory, @".\bin\"));
 
 			if (Directory.Exists(Path.Combine(WebDirectory, "Data")))
 			{

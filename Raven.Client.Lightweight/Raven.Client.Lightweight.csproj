@@ -61,6 +61,7 @@
     <Reference Include="System.Reactive.Interfaces">
       <HintPath>..\packages\Rx-Interfaces.2.1.30214.0\lib\Net45\System.Reactive.Interfaces.dll</HintPath>
     </Reference>
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
   </ItemGroup>
   <ItemGroup>
@@ -83,6 +84,7 @@
     <Compile Include="Document\ReplicationBehavior.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />
+    <Compile Include="Shard\ShardedRavenQueryInspector.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
     <Compile Include="Util\AsyncCountdownEvent.cs" />

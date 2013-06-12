@@ -19,6 +19,38 @@ namespace Delay
     [TemplatePart(Name = SplitElementName, Type = typeof(UIElement))]
     public class SplitButtonPopup : Button
     {
+        public PopupVerticalAlignment VerticalPopupAlignment
+        {
+            get { return (PopupVerticalAlignment)GetValue(VerticalPopupAlignmentProperty); }
+            set { SetValue(VerticalPopupAlignmentProperty, value); }
+        }
+
+        public static readonly DependencyProperty VerticalPopupAlignmentProperty =
+            DependencyProperty.Register("VerticalPopupAlignment", typeof(PopupVerticalAlignment), typeof(SplitButtonPopup), new PropertyMetadata(PopupVerticalAlignment.Bottom, HandleAlignmentPropertyChanged));
+
+        private static void HandleAlignmentPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            (d as SplitButtonPopup).HandleAlignmentPropertyChanged();
+        }
+
+        private void HandleAlignmentPropertyChanged()
+        {
+            SetPopupStates();
+        }
+
+        private void SetPopupStates()
+        {
+            if (VerticalPopupAlignment == PopupVerticalAlignment.Bottom)
+            {
+                VisualStateManager.GoToState(this, "Bottom", true);
+            }
+            else
+            {
+                VisualStateManager.GoToState(this, "Top", true);
+            }
+        }
+
+
         public static readonly DependencyProperty PopupContentProperty =
             DependencyProperty.Register("PopupContent", typeof (object), typeof (SplitButtonPopup), new PropertyMetadata(default(object)));
 
@@ -72,6 +104,7 @@ namespace Delay
         public SplitButtonPopup()
         {
             DefaultStyleKey = typeof(SplitButtonPopup);
+            Loaded += delegate { SetPopupStates(); };
         }
 
         /// <summary>
@@ -208,6 +241,11 @@ namespace Delay
             if (PopupAlignment == PopupHorizontalAlignment.Right)
             {
                 _popup.HorizontalOffset = -_popup.Child.DesiredSize.Width + ActualWidth;
+            }
+
+            if (VerticalPopupAlignment == PopupVerticalAlignment.Top)
+            {
+                _popup.VerticalOffset = -_popup.Child.DesiredSize.Height;
             }
         }
 

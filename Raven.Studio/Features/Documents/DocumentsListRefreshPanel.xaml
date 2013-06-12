@@ -1,0 +1,37 @@
+﻿<UserControl x:Class="Raven.Studio.Features.Documents.DocumentsListRefreshPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:behaviors="clr-namespace:RavenFS.Studio.Behaviors"
+             xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Media;assembly=Microsoft.Expression.Interactions"
+             xmlns:models="clr-namespace:Raven.Studio.Models"
+             mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance models:DocumentsModel}">
+
+    <Border x:Name="RefreshPanel"
+                            Opacity="0"
+                            Background="#FFC8CDEC" BorderBrush="#FFCCCFDC" CornerRadius="2" BorderThickness="1">
+        <Border.Resources>
+            <Storyboard x:Name="ShowRefreshPanel">
+                <DoubleAnimation Storyboard.TargetName="RefreshPanel" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.25"/>
+            </Storyboard>
+            <Storyboard x:Name="HideRefreshPanel">
+                <DoubleAnimation Storyboard.TargetName="RefreshPanel" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/>
+            </Storyboard>
+        </Border.Resources>
+        <i:Interaction.Triggers>
+            <behaviors:StudioDataTrigger Binding="{Binding HasChanges}" Value="True" Comparison="Equal">
+                <ei:ControlStoryboardAction Storyboard="{StaticResource ShowRefreshPanel}" ControlStoryboardOption="Play"/>
+            </behaviors:StudioDataTrigger>
+            <behaviors:StudioDataTrigger Binding="{Binding HasChanges}" Value="False" Comparison="Equal">
+                <ei:ControlStoryboardAction Storyboard="{StaticResource HideRefreshPanel}" ControlStoryboardOption="Play"/>
+            </behaviors:StudioDataTrigger>
+        </i:Interaction.Triggers>
+        <StackPanel Orientation="Horizontal" Margin="8,4" >
+            <TextBlock Text="Documents have changed" FontWeight="Bold" Margin="0,0,8,0"/>
+            <HyperlinkButton Content="Refresh" Command="{Binding RefreshView}" Foreground="White"/>
+        </StackPanel>
+    </Border>
+</UserControl>

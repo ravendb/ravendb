@@ -334,28 +334,6 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		public void GetFutureStats(int currentBatchSize, out int futureLen, out int futureSize)
-		{
-			futureLen = futureIndexBatches.Values.Sum(x =>
-			{
-				if (x.Task.IsCompleted)
-				{
-					return x.Task.Result.Count;
-				}
-				return currentBatchSize / 15;
-			});
-
-			futureSize = futureIndexBatches.Values.Sum(x =>
-			{
-				if (x.Task.IsCompleted)
-				{
-					List<JsonDocument> jsonResults = x.Task.Result;
-					return jsonResults.Sum(s => s.SerializedSizeOnDisk);
-				}
-				return currentBatchSize * 256;
-			});
-		}
-
 		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing || docs.Length == 0)
@@ -467,5 +445,32 @@ namespace Raven.Database.Prefetching
 		}
 
 		#endregion
+
+		public void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
+		{
+			int currentBatchSize = autoTuner.NumberOfItemsToIndexInSingleBatch;
+			int futureLen = futureIndexBatches.Values.Sum(x =>
+			{
+				if (x.Task.IsCompleted)
+				{
+					return x.Task.Result.Count;
+				}
+				return currentBatchSize / 15;
+			});
+
+			int futureSize = futureIndexBatches.Values.Sum(x =>
+			{
+				if (x.Task.IsCompleted)
+				{
+					var jsonResults = x.Task.Result;
+					return jsonResults.Sum(s => s.SerializedSizeOnDisk);
+				}
+				return currentBatchSize * 256;
+			});
+			autoTuner.AutoThrottleBatchSize(
+				jsonDocs.Count + futureLen, 
+				futureSize + jsonDocs.Sum(x => x.SerializedSizeOnDisk),
+			    indexingDuration);
+		}
 	}
 }

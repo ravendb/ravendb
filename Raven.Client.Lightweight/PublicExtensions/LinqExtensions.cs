@@ -79,9 +79,7 @@ namespace Raven.Client
 		public static FacetResults ToFacets<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
-
-			return ravenQueryInspector.DatabaseCommands.GetFacets( ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize );
+			return ravenQueryInspector.GetFacets(facetSetupDoc, start, pageSize );
 		}
 
         /// <summary>
@@ -98,9 +96,8 @@ namespace Raven.Client
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
-            return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, query, facetsList, start, pageSize);
+            return ravenQueryInspector.GetFacets(facetsList, start, pageSize);
         }
 
 		/// <summary>
@@ -111,9 +108,8 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
-			var indexQuery = query.GetIndexQuery(isAsync: false);
 			var documentQuery = ((DocumentQuery<T>) query);
-			return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetSetupDoc, start, pageSize);
+			return documentQuery.GetFacets(facetSetupDoc, start, pageSize);
 		}
 
         /// <summary>
@@ -129,10 +125,9 @@ namespace Raven.Client
             if (!facetsList.Any())
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-            var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = ((DocumentQuery<T>)query);
 
-            return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetsList, start, pageSize);
+            return documentQuery.GetFacets(facetsList, start, pageSize);
         }
 #endif
 
@@ -221,10 +216,8 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
-			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
-
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync( ravenQueryInspector.AsyncIndexQueried, query, facetSetupDoc, start, pageSize );
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize );
 		}
 
 		/// <summary>
@@ -240,10 +233,9 @@ namespace Raven.Client
 			if (!facetsList.Any())
 				throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.AsyncIndexQueried, query, facetsList, start, pageSize);
+			return ravenQueryInspector.GetFacetsAsync(facetsList, start, pageSize);
 		}
 
 		/// <summary>
@@ -254,10 +246,7 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
-			var ravenQueryInspector = ((AsyncDocumentQuery<T>)queryable);
-			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
-
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize);
+			return queryable.GetFacetsAsync(facetSetupDoc, start, pageSize);
 		}
 
 		/// <summary>

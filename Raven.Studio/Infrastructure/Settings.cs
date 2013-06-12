@@ -24,6 +24,12 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
+		public double CollectionWidth
+		{
+			get { return GetSettingAsInt("CollectionWidth", 175); }
+			set { currentSettings["CollectionWidth"] = value; }
+		}
+
 	    public bool AutoRefreshDocumentLists
 	    {
 	        get { return GetSettingAsBool("AutoRefreshDocumentLists", true); }
@@ -54,16 +60,10 @@ namespace Raven.Studio.Infrastructure
 			set { currentSettings["DocumentOutliningMode"] = value; }
 		}
 
-		public string DocumentsTabSelection
+		public string CollectionSortingMode
 		{
-			get { return GetSettingAsString("DocumentsTabSelection", "Documents"); }
-			set { currentSettings["DocumentsTabSelection"] = value; }
-		}
-
-		public bool SortCollectionByName
-		{
-			get { return GetSettingAsBool("SortCollectionByName"); }
-			set { currentSettings["SortCollectionByName"] = value; }
+            get { return GetSettingAsString("CollectionSortingMode", "Name"); }
+            set { currentSettings["CollectionSortingMode"] = value; }
 		}
 
 		private string GetSettingAsString(string key, string defaultValue = "")
@@ -71,9 +71,9 @@ namespace Raven.Studio.Infrastructure
 			return currentSettings.ContainsKey(key) ? (string)currentSettings[key] : defaultValue;
 		}
 
-	    private int GetSettingAsInt(string key)
+		private int GetSettingAsInt(string key, int defaultValue = 0)
 	    {
-	        return currentSettings.ContainsKey(key) ? Convert.ToInt32(currentSettings[key]) : 0;
+			return currentSettings.ContainsKey(key) ? Convert.ToInt32(currentSettings[key]) : defaultValue;
 	    }
 
         private bool GetSettingAsBool(string key, bool defaultValue = false)

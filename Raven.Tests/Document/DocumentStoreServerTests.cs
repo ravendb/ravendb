@@ -1408,5 +1408,29 @@ namespace Raven.Tests.Document
 						}
 					}, false));
 		}
+
+		[Fact]
+		public void Should_return_false_on_batch_delete_when_document_missing()
+		{
+			BatchResult[] batchResult = documentStore.DatabaseCommands.Batch(new[] { new DeleteCommandData { Key = "Company/1" } });
+
+			Assert.NotNull(batchResult);
+			Assert.Equal(1, batchResult.Length);
+			Assert.NotNull(batchResult[0].Deleted);
+			Assert.False(batchResult[0].Deleted ?? true);
+		}
+
+		[Fact]
+		public void Should_return_true_on_batch_delete_when_document_present()
+		{
+			documentStore.DatabaseCommands.Put("Company/1", null, new RavenJObject(), new RavenJObject());
+			
+			BatchResult[] batchResult = documentStore.DatabaseCommands.Batch(new[] { new DeleteCommandData { Key = "Company/1" } });
+
+			Assert.NotNull(batchResult);
+			Assert.Equal(1, batchResult.Length);
+			Assert.NotNull(batchResult[0].Deleted);
+			Assert.True(batchResult[0].Deleted ?? false);
+		}
 	}
 }

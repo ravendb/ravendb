@@ -131,14 +131,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 				var localReplicationStatus = GetReplicationStatus();
-				var leastReplicatedEtag = GetLeastReplicatedEtag(config, localReplicationStatus);
-
-				if (leastReplicatedEtag == null)
-				{
-					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
-					continue;
-				}
-
+				
 				var relevantConfigs = config.Where(x =>
 				{
 					if (x.Disabled)
@@ -156,8 +149,16 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
+				var leastReplicatedEtag = GetLeastReplicatedEtag(config, localReplicationStatus);
 
+				if (leastReplicatedEtag == null)
+				{
+					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+					continue;
+				}
+
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
+				var replicationDuration = Stopwatch.StartNew();
 				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
 
 				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
@@ -253,6 +254,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					AfterReplicationCompleted(successes.Count);
 					var lastMinReplicatedEtag = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray())).ToEtag();
 					prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
+					prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
 				}
 			}
 		}

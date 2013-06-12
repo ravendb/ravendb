@@ -587,6 +587,31 @@ namespace Raven.Client.Document
 			var indexQuery = GenerateIndexQuery(query);
 			return indexQuery;
 		}
+#if !SILVERLIGHT
+		public FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(false);
+			return DatabaseCommands.GetFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+		}
+
+		public FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(false);
+			return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
+		}
+#endif
+
+		public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(true);
+			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+		}
+
+		public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(true);
+			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize);
+		}
 
 #if !SILVERLIGHT  && !NETFX_CORE
 		/// <summary>

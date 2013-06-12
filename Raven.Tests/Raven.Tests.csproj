@@ -705,6 +705,7 @@
     <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
     <Compile Include="MailingList\Holt.cs" />
+    <Compile Include="MailingList\HttpIdTest.cs" />
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="MailingList\InIssues.cs" />
@@ -743,6 +744,7 @@
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOn_A_Prefix.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
+    <Compile Include="MailingList\QueryOnItems.cs" />
     <Compile Include="MailingList\RacielRod.cs" />
     <Compile Include="MailingList\RavenCountTest.cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
@@ -754,7 +756,9 @@
     <Compile Include="MailingList\RavenDB_Stream_SelectFields_Test.cs" />
     <Compile Include="MailingList\RavenDeserializationBug.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
+    <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
+    <Compile Include="MailingList\ShardedFacets.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\SnapshotBug.cs" />
     <Compile Include="MailingList\SortingOnMapReduce.cs" />
@@ -1409,6 +1413,10 @@
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Web\Raven.Web.csproj">
+      <Project>{f49c2ed0-1844-44b4-a595-5fd152853b9c}</Project>
+      <Name>Raven.Web</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public override string UrlPattern
 		{
-			get { return "^/transformers(/.+)?$"; }
+			get { return "^/transformers/?(.+)?$"; }
 		}
 
 		public override string[] SupportedVerbs
@@ -28,7 +28,13 @@ namespace Raven.Database.Server.Responders
 				case "GET":
 					if (string.IsNullOrEmpty(transformer) == false && transformer != "/")
 					{
-						context.WriteJson(RavenJObject.FromObject(Database.GetTransformerDefinition(transformer)));
+					    var transformerDefinition = Database.GetTransformerDefinition(transformer);
+                        if (transformerDefinition == null)
+                        {
+                            context.SetStatusToNotFound();
+                            return;
+                        }
+					    context.WriteJson(RavenJObject.FromObject(transformerDefinition));
 						break;
 					}
 

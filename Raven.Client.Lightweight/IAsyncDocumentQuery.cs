@@ -48,5 +48,15 @@ namespace Raven.Client
 		IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
 		IAsyncDocumentQuery<T> Spatial(string name, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+		/// <summary>
+		/// Get the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize);
+
+		/// <summary>
+		/// Get the facets as per the specified facets with the given start and pageSize
+		/// </summary>
+		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize);
 	}
 }

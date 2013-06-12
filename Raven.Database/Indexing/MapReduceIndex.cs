@@ -51,8 +51,8 @@ namespace Raven.Database.Indexing
 
 			public override bool CanConvert(Type objectType)
 			{
-				return typeof (IFieldable).IsAssignableFrom(objectType) ||
-				       typeof (IEnumerable<AbstractField>).IsAssignableFrom(objectType);
+				return typeof(IFieldable).IsAssignableFrom(objectType) ||
+					   typeof(IEnumerable<AbstractField>).IsAssignableFrom(objectType);
 			}
 		}
 
@@ -73,14 +73,6 @@ namespace Raven.Database.Indexing
 			get { return true; }
 		}
 
-		private class MapResultItem
-		{
-			public string DocId;
-			public RavenJObject Data;
-			public string ReduceKey;
-			public int Bucket;
-		}
-
 		public override void IndexDocuments(
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
@@ -92,6 +84,7 @@ namespace Raven.Database.Indexing
 			var sw = Stopwatch.StartNew();
 			var start = SystemTime.UtcNow;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
+			RecordCurrentBatch("Current Map", batch.Docs.Count);
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
 				sourceCount++;
@@ -189,6 +182,7 @@ namespace Raven.Database.Indexing
 				Duration = sw.Elapsed,
 				Started = start
 			});
+			BatchCompleted("Current Map");
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
@@ -440,7 +434,7 @@ namespace Raven.Database.Indexing
 				MergeArrays(jsonDocument);
 
 				// remove _, __, etc fields
-				foreach (var prop in jsonDocument.Where(x=>x.Key.All(ch=>ch == '_')).ToArray())
+				foreach (var prop in jsonDocument.Where(x => x.Key.All(ch => ch == '_')).ToArray())
 				{
 					jsonDocument.Remove(prop.Key);
 				}
@@ -490,6 +484,7 @@ namespace Raven.Database.Indexing
 					stats.Operation = IndexingWorkStats.Status.Reduce;
 					try
 					{
+						parent.RecordCurrentBatch("Current Reduce #" + Level, MappedResultsByBucket.Sum(x => x.Count()));
 						if (Level == 2)
 						{
 							RemoveExistingReduceKeysFromIndex(indexWriter);
@@ -549,6 +544,7 @@ namespace Raven.Database.Indexing
 								},
 								x => x.Dispose());
 						}
+						parent.BatchCompleted("Current Reduce #" + Level);
 					}
 					return new IndexedItemsInfo
 					{

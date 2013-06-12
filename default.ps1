@@ -29,7 +29,7 @@ properties {
 	$web_dlls = ( @( "Raven.Web.???" ) + $core_db_dlls) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
-			return "$build_dir\$_"
+			return "$build_dir\web\$_"
 		}
 	
 	$web_files = @("..\DefaultConfigs\web.config" )
@@ -229,14 +229,14 @@ task ReleaseNoTests -depends Stable,DoRelease {
 
 }
 
-task Vnext {
+task Vnext3 {
 	$global:uploadCategory = "RavenDB-Unstable"
-	$global:uploadMode = "Vnext"
+	$global:uploadMode = "Vnext3"
 }
 
 task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
-	$global:uploadMode = "-Unstable"
+	$global:uploadMode = "Unstable"
 }
 
 task Stable {
@@ -454,7 +454,7 @@ task UploadStable -depends Stable, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
-task UploadVnext -depends Vnext, DoRelease, Upload
+task UploadVnext3 -depends Vnext3, DoRelease, Upload
 
 task CreateNugetPackages -depends Compile {
 
@@ -530,13 +530,15 @@ task CreateNugetPackages -depends Compile {
 	
 	New-Item $nuget_dir\RavenDB.AspNetHost\content -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net40 -Type directory | Out-Null
-	@("Raven.Web.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.AspNetHost\lib\net40 }
+	@("Raven.Web.???") |% { Copy-Item "$build_dir\web\$_" $nuget_dir\RavenDB.AspNetHost\lib\net40 }
 	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
 	Copy-Item $base_dir\DefaultConfigs\NuGet.AspNetHost.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
 	
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\lib\net40 -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Tests.Helpers\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Tests.Helpers.nuspec $nuget_dir\RavenDB.Tests.Helpers\RavenDB.Tests.Helpers.nuspec
-	@("Raven.Tests.Helpers.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net40 }
+	@("Raven.Tests.Helpers.???", "Raven.Server.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net40 }
+	@("Raven.Tests.Helpers-4.5.???", "Raven.Server-4.5.???") |% { Copy-Item "$build_dir\net45\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net45 }
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
@@ -563,15 +565,9 @@ task CreateNugetPackages -depends Compile {
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	$sourceFeed = "https://nuget.org/"
 	
-	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+	if ($global:uploadMode -eq "Vnext3") {
 		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
-		
-		if ($global:uploadMode -eq "Vnext") {
-			$sourceFeed = "http://www.myget.org/F/ravendbvnext/api/v2/package"
-		} 
-		else {
-			$sourceFeed = "http://www.myget.org/F/ravendb/api/v2/package"
-		}
+		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
 	}
 	
 	if ( (Test-Path $accessPath) ) {

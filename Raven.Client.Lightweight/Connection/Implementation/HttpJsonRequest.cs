@@ -58,7 +58,7 @@ namespace Raven.Client.Connection
 		private Stream postedStream;
 		private bool writeCalled;
 		public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
-
+		private bool disabledAuthRetries;
 		private string primaryUrl;
 
 		private string operationUrl;
@@ -96,6 +96,13 @@ namespace Raven.Client.Connection
 			webRequest.Headers.Add("Raven-Client-Version", ClientVersion);
 			WriteMetadata(requestParams.Metadata);
 			requestParams.UpdateHeaders(webRequest);
+		}
+
+		public void DisableAuthentication()
+		{
+			webRequest.Credentials = null;
+			webRequest.UseDefaultCredentials = false;
+			disabledAuthRetries = true;
 		}
 
 		public Task ExecuteRequestAsync()
@@ -138,7 +145,7 @@ namespace Raven.Client.Connection
 				}
 				catch (WebException e)
 				{
-					if (++retries >= 3)
+					if (++retries >= 3 || disabledAuthRetries)
 						throw;
 
 					httpWebResponse = e.Response as HttpWebResponse;
@@ -224,7 +231,7 @@ namespace Raven.Client.Connection
 				}
 				catch (WebException e)
 				{
-					if (++retries >= 3)
+					if (++retries >= 3 || disabledAuthRetries)
 						throw;
 
 					var httpWebResponse = e.Response as HttpWebResponse;
@@ -810,7 +817,7 @@ namespace Raven.Client.Connection
 				}
 				catch (WebException e)
 				{
-					if (++retries >= 3)
+					if (++retries >= 3 || disabledAuthRetries)
 						throw;
 
 					httpWebResponse = e.Response as HttpWebResponse;

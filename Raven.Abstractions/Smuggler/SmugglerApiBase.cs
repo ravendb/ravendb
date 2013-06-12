@@ -57,12 +57,12 @@ namespace Raven.Abstractions.Smuggler
 			SmugglerOptions = smugglerOptions;
 		}
 
-		public virtual Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental)
+		public virtual Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, PeriodicBackupStatus backupStatus = null)
 		{
-			return ExportData(stream, options, incremental, true);
+			return ExportData(stream, options, incremental, true, backupStatus);
 		}
 
-		public virtual async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile)
+		public virtual async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile, PeriodicBackupStatus backupStatus)
 		{
 			options = options ?? SmugglerOptions;
 			if (options == null)
@@ -81,7 +81,8 @@ namespace Raven.Abstractions.Smuggler
 						Directory.CreateDirectory(options.BackupPath);
 				}
 
-				if (lastEtagsFromFile) ReadLastEtagsFromFile(options);
+				if (lastEtagsFromFile && backupStatus == null) ReadLastEtagsFromFile(options);
+				if (backupStatus != null) ReadLastEtagsFromClass(options, backupStatus);
 
 				file = Path.Combine(options.BackupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(file))
@@ -103,53 +104,75 @@ namespace Raven.Abstractions.Smuggler
 #endif
 			Mode = await GetMode();
 
-			using (var streamWriter = new StreamWriter(new GZipStream(stream ?? File.Create(file), CompressionMode.Compress)))
+			bool ownedStream = stream == null;
+			try
 			{
-				var jsonWriter = new JsonTextWriter(streamWriter)
-									 {
-										 Formatting = Formatting.Indented
-									 };
-				jsonWriter.WriteStartObject();
-				jsonWriter.WritePropertyName("Indexes");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Indexes) == ItemType.Indexes)
+				stream = stream ?? File.Create(file);
+				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
+#if SILVERLIGHT
+                    CompressionLevel.BestCompression,
+#endif
+				                                       leaveOpen: true))
+				using (var streamWriter = new StreamWriter(gZipStream))
 				{
-					await ExportIndexes(jsonWriter);
-				}
-				jsonWriter.WriteEndArray();
+					var jsonWriter = new JsonTextWriter(streamWriter)
+					{
+						Formatting = Formatting.Indented
+					};
+					jsonWriter.WriteStartObject();
+					jsonWriter.WritePropertyName("Indexes");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Indexes) == ItemType.Indexes)
+					{
+						await ExportIndexes(jsonWriter);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WritePropertyName("Docs");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
-				{
-					options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
-				}
-				jsonWriter.WriteEndArray();
+					jsonWriter.WritePropertyName("Docs");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
+					{
+						options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WritePropertyName("Attachments");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
-				{
-					options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
-				}
-				jsonWriter.WriteEndArray();
+					jsonWriter.WritePropertyName("Attachments");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
+					{
+						options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WritePropertyName("Transformers");
-				jsonWriter.WriteStartArray();
-				if ((options.OperateOnTypes & ItemType.Transformers) == ItemType.Transformers)
-				{
-					await ExportTransformers(jsonWriter);
-				}
-				jsonWriter.WriteEndArray();
+					jsonWriter.WritePropertyName("Transformers");
+					jsonWriter.WriteStartArray();
+					if ((options.OperateOnTypes & ItemType.Transformers) == ItemType.Transformers)
+					{
+						await ExportTransformers(jsonWriter);
+					}
+					jsonWriter.WriteEndArray();
 
-				jsonWriter.WriteEndObject();
-				streamWriter.Flush();
+					jsonWriter.WriteEndObject();
+					streamWriter.Flush();
+				}
+
+#if !SILVERLIGHT
+				if (incremental && lastEtagsFromFile)
+					WriteLastEtagsFromFile(options);
+#endif
+				return file;
 			}
+			finally
+			{
+				if (ownedStream && stream != null)
+					stream.Dispose();
+			}
+		}
 
-			if (incremental && lastEtagsFromFile)
-				WriteLastEtagsFromFile(options);
-
-			return file;
+		private void ReadLastEtagsFromClass(SmugglerOptions options, PeriodicBackupStatus backupStatus)
+		{
+			options.LastAttachmentEtag = backupStatus.LastAttachmentsEtag;
+			options.LastDocsEtag = backupStatus.LastDocsEtag;
 		}
 
 		public static void ReadLastEtagsFromFile(SmugglerOptions options)
@@ -218,18 +241,18 @@ namespace Raven.Abstractions.Smuggler
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
-
+			var errorcount = 0;
 			ShowProgress("Exporting Documents");
 
 			while (true)
 			{
-				var watch = Stopwatch.StartNew();
 				using (var documents = await GetDocuments(lastEtag))
 				{
-					watch.Stop();
+					var watch = Stopwatch.StartNew();					
 
 					while (await documents.MoveNextAsync())
 					{
+					
 						var document = documents.Current;
 
 						if (!options.MatchFilters(document))
@@ -237,10 +260,9 @@ namespace Raven.Abstractions.Smuggler
 
 						if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
 							continue;
-
 						document.WriteTo(jsonWriter);
 						totalCount++;
-
+						
 						if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
 						{
 							ShowProgress("Exported {0} documents", totalCount);
@@ -248,6 +270,9 @@ namespace Raven.Abstractions.Smuggler
 						}
 
 						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+						if (watch.ElapsedMilliseconds > 100)
+							errorcount++;
+						watch.Start();
 					}
 				}
 

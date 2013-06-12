@@ -147,7 +147,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					catch (Exception e)
 					{
 						log.WarnException(
-							"Failure to replicate changes to relational database for: " + cfg.Name + ", will continue trying." +
+							"Failure to replicate changes to relational database for: " + cfg.Name + " (doc: "+  itemToReplicate.DocumentId +" ), will continue trying." +
 							Environment.NewLine + cmd.CommandText, e);
 						replicationStatistics.RecordWriteError(e, database);
 						hadErrors = true;
