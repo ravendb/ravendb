@@ -14,6 +14,7 @@ properties {
 	$global:configuration = "Release"
 	
 	$core_db_dlls = @(
+		"..\DefaultConfigs\NLog.Ignored.config",
         "Raven.Abstractions.???", 
         (Get-DependencyPackageFiles 'NLog.2'), 
         (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
