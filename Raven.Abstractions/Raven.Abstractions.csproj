@@ -73,25 +73,25 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\*.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Converters\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Converters\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Linq\*.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Linq\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Schema\*.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Schema\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\*.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Serialization\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Serialization\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
-      <Link>Imports\Imports\Newtonsoft.Json\%(FileName)</Link>
+      <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
     </Compile>
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
@@ -280,6 +280,9 @@
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
+      <Link>Imports\Newtonsoft.Json\Dynamic.snk</Link>
+    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>

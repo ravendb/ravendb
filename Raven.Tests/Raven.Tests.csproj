@@ -1060,7 +1060,7 @@
     <Compile Include="MailingList\linmouhong.cs" />
     <Compile Include="MailingList\LinusK.cs" />
     <Compile Include="MailingList\LuceneScoreTests.cs" />
-    <Compile Include="MailingList\Marcus.cs" />
+    <Compile Include="MailingList\JsonNetRequiresUsToHaveTheDynamicSnkFileAsAnEmbeddedResource.cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\Maverix.cs" />
