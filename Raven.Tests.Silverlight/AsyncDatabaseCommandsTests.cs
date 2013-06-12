@@ -23,9 +23,9 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Hai"});
-					session.Store(new Company {Name = "I can haz cheezburgr?"});
-					session.Store(new Company {Name = "lol"});
+					yield return session.StoreAsync(new Company { Name = "Hai" });
+					yield return session.StoreAsync(new Company { Name = "I can haz cheezburgr?" });
+					yield return session.StoreAsync(new Company { Name = "lol" });
 					yield return session.SaveChangesAsync();
 				}
 
@@ -47,8 +47,8 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Something with the desired prefix"});
-					session.Store(new Contact {Surname = "Something without the desired prefix"});
+					yield return session.StoreAsync(new Company { Name = "Something with the desired prefix" });
+					yield return session.StoreAsync(new Contact { Surname = "Something without the desired prefix" });
 					yield return session.SaveChangesAsync();
 				}
 
@@ -114,7 +114,7 @@ namespace Raven.Tests.Silverlight
 				var entity = new Company {Name = "Async Company #1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 
 					yield return ((AsyncDocumentSession)session).AsyncDatabaseCommands
@@ -142,9 +142,9 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Hai"});
-					session.Store(new Company {Name = "I can haz cheezburgr?"});
-					session.Store(new Company {Name = "lol"});
+					yield return session.StoreAsync(new Company { Name = "Hai" });
+					yield return session.StoreAsync(new Company { Name = "I can haz cheezburgr?" });
+					yield return session.StoreAsync(new Company { Name = "lol" });
 					yield return session.SaveChangesAsync();
 				}
 

@@ -61,7 +61,7 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Change the Stats, Inc."});
+					yield return session.StoreAsync(new Company { Name = "Change the Stats, Inc." });
 					yield return session.SaveChangesAsync();
 				}
 

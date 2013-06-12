@@ -26,8 +26,8 @@ namespace Raven.Tests.Silverlight
 				var entity2 = new Company {Name = "Async Company #2"};
 				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
 				{
-					session_for_storing.Store(entity1);
-					session_for_storing.Store(entity2);
+					yield return session_for_storing.StoreAsync(entity1);
+					yield return session_for_storing.StoreAsync(entity2);
 					yield return session_for_storing.SaveChangesAsync();
 				}
 
@@ -53,7 +53,7 @@ namespace Raven.Tests.Silverlight
 				var entity = new Company {Name = "Async Company #1"};
 				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
 				{
-					session_for_storing.Store(entity);
+					yield return session_for_storing.StoreAsync(entity);
 					yield return session_for_storing.SaveChangesAsync();
 				}
 
@@ -78,7 +78,7 @@ namespace Raven.Tests.Silverlight
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 				}
 
@@ -119,7 +119,7 @@ namespace Raven.Tests.Silverlight
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return (session.SaveChangesAsync());
 				}
 
@@ -160,7 +160,7 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company
+					yield return session.StoreAsync(new Company
 					              	{
 					              		Name = "Project Value Company",
 					              		Contacts = new List<Contact>

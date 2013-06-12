@@ -42,7 +42,7 @@ namespace Raven.Tests.Silverlight
 				var entity1 = new Company { Name = "Async Company #1" };
 				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
 				{
-					session_for_storing.Store(entity1,"companies/1");
+					yield return session_for_storing.StoreAsync(entity1, "companies/1");
 					yield return session_for_storing.SaveChangesAsync();
 				}
 

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.Composition.Hosting;
+using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
@@ -26,16 +27,15 @@ namespace Raven.Tests.Silverlight
 			var store = new DocumentStore {Url = Url + Port};
 			store.Initialize();
 
-
 			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = store.OpenAsyncSession(dbname))
 			{
-				Enumerable.Range(0, 25).ToList()
-					.ForEach(i => session.Store(new Company {Id = "Companies/" + i, Name = i.ToString()}));
-
-				Enumerable.Range(0, 25).ToList()
-					.ForEach(i => session.Store(new Order {Id = "Orders/" + i, Note = i.ToString()}));
+				foreach (var i in Enumerable.Range(0, 25))
+				{
+					yield return session.StoreAsync(new Company {Id = "Companies/" + i, Name = i.ToString(CultureInfo.InvariantCulture)});
+					yield return session.StoreAsync(new Order { Id = "Orders/" + i, Note = i.ToString(CultureInfo.InvariantCulture) });
+				}
 
 				yield return session.SaveChangesAsync();
 			}
@@ -45,7 +45,7 @@ namespace Raven.Tests.Silverlight
 			do
 			{
 				task = store.AsyncDatabaseCommands.ForDatabase(dbname)
-					.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 25);
+				            .GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 25);
 				yield return task;
 				if (task.Result.Length == 0)
 					yield return TaskEx.Delay(100);
