@@ -1,10 +1,7 @@
 package raven.abstractions.extensions;
 
-import static org.mockito.Matchers.contains;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -18,6 +15,9 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 
+/**
+ * Extensions for handling metadata
+ */
 public class MetadataExtensions {
   public final static Set<String> HEADERS_TO_IGNORE_CLIENT = new HashSet<>();
   static {
