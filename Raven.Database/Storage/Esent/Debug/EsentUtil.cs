@@ -66,5 +66,6 @@ namespace Raven.Database.Storage.Esent.Debug
 					throw new ArgumentOutOfRangeException("don't know how to handle coltype: " + col.Coltyp);
 			}
 		}
+
 	}
 }
