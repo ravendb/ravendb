@@ -10,8 +10,8 @@ import raven.abstractions.json.linq.RavenJObject;
  * - Data / Projection
  * - Etag
  * - Metadata
- *
  */
+//TODO: finish me
 public class JsonDocument {
   private RavenJObject dataAsJson;
   private RavenJObject metadata;

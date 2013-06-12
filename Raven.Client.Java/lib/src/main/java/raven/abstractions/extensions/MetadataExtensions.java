@@ -17,6 +17,7 @@ import raven.abstractions.json.linq.RavenJToken;
 /**
  * Extensions for handling metadata
  */
+//TODO: finish me
 public class MetadataExtensions {
   public final static Set<String> HEADERS_TO_IGNORE_CLIENT = new HashSet<>();
   static {

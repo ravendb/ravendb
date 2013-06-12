@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import raven.abstractions.closure.Function1;
 
+//TODO: finish me
 public class DocumentConvention {
   private AtomicInteger requestCount = new AtomicInteger(0);
 

@@ -35,6 +35,7 @@ import raven.client.extensions.MultiDatabase;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 
+//TODO: finish me
 public class ServerClient implements IDatabaseCommands {
 
   private String url;

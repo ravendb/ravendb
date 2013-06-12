@@ -6,6 +6,7 @@ import raven.abstractions.closure.Function1;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.ServerClientException;
 
+//TODO: finish me
 public class ReplicationInformer {
 
   protected static AtomicInteger readStripingBase = new AtomicInteger(0);

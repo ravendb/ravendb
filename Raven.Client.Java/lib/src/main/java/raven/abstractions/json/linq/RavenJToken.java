@@ -17,6 +17,7 @@ import raven.abstractions.extensions.JsonExtensions;
 /**
  * Represents an abstract JSON token.
  */
+//TODO: review me
 public abstract class RavenJToken {
 
   public static boolean deepEquals(RavenJToken t1, RavenJToken t2) {

@@ -18,6 +18,7 @@ import raven.abstractions.extensions.JsonExtensions;
 /**
  * Represents a JSON array.
  */
+//TODO: review me
 public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   private boolean snapshot;
 

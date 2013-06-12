@@ -2,6 +2,7 @@ package raven.client.connection;
 
 import java.util.UUID;
 
+//TODO: finish me
 public class RavenUrlExtensions {
   public static String noCache(String url) {
     return url + (url.contains("?") ? "&" : "?") + "noCache=" + UUID.randomUUID().hashCode();

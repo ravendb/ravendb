@@ -1,5 +1,6 @@
 package raven.abstractions.data;
 
+//TODO: finish me
 public class Constants {
   public final static String DOCUMENT_ID_FIELD_NAME = "__document_id";
   public final static String RAVEN_LAST_MODIFIED = "Raven-Last-Modified";

@@ -13,17 +13,32 @@ public class PutResult {
   }
 
   /**
+   * @return the eTag
+   */
+  public UUID getEtag() {
+    return etag;
+  }
+
+  /**
    * @return the key
    */
   public String getKey() {
     return key;
   }
 
+
   /**
-   * @return the eTag
+   * @param etag the etag to set
    */
-  public UUID getEtag() {
-    return etag;
+  public void setEtag(UUID etag) {
+    this.etag = etag;
+  }
+
+  /**
+   * @param key the key to set
+   */
+  public void setKey(String key) {
+    this.key = key;
   }
 
   /* (non-Javadoc)

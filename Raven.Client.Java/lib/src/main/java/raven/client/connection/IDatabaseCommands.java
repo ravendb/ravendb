@@ -12,6 +12,7 @@ import raven.abstractions.data.PutResult;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.json.linq.RavenJObject;
 
+//TODO: expose all methods
 public interface IDatabaseCommands {
   /**
    * Deletes the document with the specified key

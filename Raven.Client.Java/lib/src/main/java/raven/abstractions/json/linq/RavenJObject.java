@@ -17,6 +17,7 @@ import raven.abstractions.exceptions.JsonReaderException;
 import raven.abstractions.exceptions.JsonWriterException;
 import raven.abstractions.extensions.JsonExtensions;
 
+//TODO: review me
 public class RavenJObject extends RavenJToken implements Iterable<Entry<String, RavenJToken>> {
 
   /**
