@@ -51,7 +51,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 this.forEntityNames = forEntityNames;
             }
 
-            public override void OnIndexEntryCreated(string entryKey, Lucene.Net.Documents.Document document)
+            public override void OnIndexEntryCreated(string entryKey, Document document)
             {
                 created.Add(entryKey, CreateJsonDocumentFromLuceneDocument(document));
                 removed.Remove(entryKey);
@@ -64,7 +64,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void Dispose()
             {
-                var patcher = new ScriptedIndexResultsJsonPatcher(database);
+                var patcher = new ScriptedIndexResultsJsonPatcher(database, forEntityNames);
 
                 if (string.IsNullOrEmpty(scriptedIndexResults.DeleteScript) == false)
                 {
