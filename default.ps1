@@ -14,7 +14,6 @@ properties {
 	$global:configuration = "Release"
 	
 	$core_db_dlls = @(
-		"..\DefaultConfigs\NLog.Ignored.config",
         "Raven.Abstractions.???", 
         (Get-DependencyPackageFiles 'NLog.2'), 
         (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
@@ -27,15 +26,15 @@ properties {
 				"AWS.Extensions.???", "AWSSDK.???" ,
 				"Microsoft.CompilerServices.AsyncTargetingPack.Net4.???" ) 
 	
-	$web_dlls = ( @( "Raven.Web.???" ) + $core_db_dlls) |
+	$web_dlls = ( @( "Raven.Web.???"  ) + $core_db_dlls) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\web\$_"
 		}
 	
-	$web_files = @("..\DefaultConfigs\web.config" )
+	$web_files = @("..\DefaultConfigs\web.config", "..\DefaultConfigs\NLog.Ignored.config" )
 	
-	$server_files = ( @( "Raven.Server.???") + $core_db_dlls ) |
+	$server_files = ( @( "Raven.Server.???", "..\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
