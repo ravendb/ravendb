@@ -63,50 +63,55 @@
 													<TextBlock Grid.Row="1" 
 															   Grid.Column="1" 
 															   Text="{Binding Value}"/>
-
 												</Grid>
 											</DataTemplate>
 										</ListBox.ItemTemplate>
 									</ListBox>
-
-									<toolkit:Chart Grid.Row="2" 
-												   Visibility="{Binding ShowChart, Converter={StaticResource BooleanToVisibility}}"
-												   Width="500"
-												   Height="250"
-												   Title="Performance"
-												   Margin="5">
-										<toolkit:LineSeries ItemsSource="{Binding IndexData}" 
+									<Grid Grid.Row="2"
+										  Visibility="{Binding ShowChart, Converter={StaticResource BooleanToVisibility}}">
+										<toolkit:Chart Visibility="{Binding DataContext.StatisticsCount, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=1}"
+													   Width="500"
+													   Height="250"
+													   Title="Performance"
+													   Margin="5">
+											<toolkit:LineSeries ItemsSource="{Binding IndexData}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
 															DataPointStyle="{StaticResource LineDataPointStylePerformanceDeepSkyBlue}"
 															Title="Index"/>
-										
-										<toolkit:LineSeries ItemsSource="{Binding MapData}" 
+
+											<toolkit:LineSeries ItemsSource="{Binding MapData}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
 															DataPointStyle="{StaticResource LineDataPointStylePerformanceGreen}"
 															Title="Map"/>
 
-										<toolkit:LineSeries ItemsSource="{Binding Level0Data}" 
+											<toolkit:LineSeries ItemsSource="{Binding Level0Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
 															DataPointStyle="{StaticResource LineDataPointStylePerformanceRed}"
 															Title="Reduce 0"/>
 
-										<toolkit:LineSeries ItemsSource="{Binding Level1Data}" 
+											<toolkit:LineSeries ItemsSource="{Binding Level1Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
 															DataPointStyle="{StaticResource LineDataPointStylePerformancePurple}"
 															Title="Reduce 1"/>
-										
-										<toolkit:LineSeries ItemsSource="{Binding Level2Data}" 
+
+											<toolkit:LineSeries ItemsSource="{Binding Level2Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
 															DataPointStyle="{StaticResource LineDataPointStylePerformanceOrange}"
 															Title="Reduce 2">
-										</toolkit:LineSeries>
-									</toolkit:Chart>
-
+											</toolkit:LineSeries>
+										</toolkit:Chart>
+								
+										<HyperlinkButton Content="Performance Statistics Chart" 
+														 Command="{Binding DataContext.GoToIndexCommand, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}}"
+														 CommandParameter="{Binding Title}"
+														 Visibility="{Binding DataContext.StatisticsCount, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}, Converter={StaticResource VisibleWhenDifferent}, ConverterParameter=1}">
+										</HyperlinkButton>
+									</Grid>
 								</Grid>
 							</Grid>
 						</DataTemplate>
@@ -117,7 +122,6 @@
 	</UserControl.Resources>
 
 	<Grid>
-
 		<ScrollViewer BorderThickness="1"
 					  BorderBrush="#FFEAE7E4"
                       Background="{StaticResource Brush_SubtleBackground2}"
