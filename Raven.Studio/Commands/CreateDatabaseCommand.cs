@@ -181,7 +181,7 @@ namespace Raven.Studio.Commands
 
 			var versioningSection = settingsModel.GetSection<VersioningSettingsSectionModel>();
 			if (versioningSection != null)
-				StoreVersioningData(versioningSection.VersioningConfigurations, session);
+				await StoreVersioningData(versioningSection.VersioningConfigurations, session);
 
 			var replicationSection = settingsModel.GetSection<ReplicationSettingsSectionModel>();
 			if (replicationSection != null)
@@ -213,7 +213,7 @@ namespace Raven.Studio.Commands
 				new ShowEncryptionMessage(encryptionKey).Show();
 		}
 
-		private void StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)
+		private async Task StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)
 		{
 			foreach (var data in versioningData)
 			{
@@ -229,9 +229,9 @@ namespace Raven.Studio.Commands
 			{
 				{
 					Constants.RavenDataDir, newDatabase.ShowAdvanced.IsChecked == true
-					                 	? newDatabase.DbPath.Text
-					                 	: Path.Combine("~", Path.Combine("Databases", newDatabase.DbName.Text))
-					},
+						                        ? newDatabase.DbPath.Text
+						                        : Path.Combine("~", Path.Combine("Databases", newDatabase.DbName.Text))
+				},
 				{Constants.ActiveBundles, string.Join(";", bundles.Bundles)}
 			};
 
