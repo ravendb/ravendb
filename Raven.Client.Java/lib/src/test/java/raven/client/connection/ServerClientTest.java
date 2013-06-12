@@ -42,7 +42,8 @@ public class ServerClientTest extends RavenDBAwareTests {
   @Ignore
   //TODO: remove this test - as it breaks one test one functionality principal
   public void testDatabaseChanges() throws Exception {
-    ServerClient client = new ServerClient(DEFAULT_SERVER_URL);
+    ServerClient client = null;
+    //new ServerClient(DEFAULT_SERVER_URL);
     IDatabaseCommands systemDatabaseClient = client.forSystemDatabase();
     assertSame(systemDatabaseClient, client);
 

@@ -31,7 +31,7 @@ public class Sandbox {
 
   }
 
-  @Test
+ /* @Test
   public void testGet() throws ServerClientException {
     ServerClient client = new ServerClient("http://localhost:8123");
     JsonDocument jsonDocument = client.get("users/ayende");
@@ -52,5 +52,5 @@ public class Sandbox {
     client.delete("no-such", null);
     client.delete("persons/20", null);
 
-  }
+  }*/
 }

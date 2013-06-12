@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.Map.Entry;
 
+import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
@@ -15,7 +16,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import raven.abstractions.exceptions.JsonReaderException;
 import raven.abstractions.exceptions.JsonWriterException;
 import raven.abstractions.extensions.JsonExtensions;
-import raven.client.utils.StringUtils;
 
 public class RavenJObject extends RavenJToken implements Iterable<Entry<String, RavenJToken>>   {
 
@@ -68,7 +68,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
         case END_OBJECT:
           return o;
         case START_OBJECT:
-          if (StringUtils.isNotNullOrEmpty(propName)) {
+          if (StringUtils.isNotEmpty(propName)) {
             RavenJObject val =  RavenJObject.load(parser);
             o.set(propName, val);
             propName = null;
@@ -77,7 +77,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
           }
           break;
         case START_ARRAY:
-          if (StringUtils.isNotNullOrEmpty(propName)) {
+          if (StringUtils.isNotEmpty(propName)) {
             RavenJArray val = RavenJArray.load(parser);
             o.set(propName, val);
             propName = null;
@@ -86,7 +86,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
           }
           break;
           default:
-            if (StringUtils.isNotNullOrEmpty(propName)) {
+            if (StringUtils.isNotEmpty(propName)) {
               RavenJValue val = (RavenJValue) RavenJToken.load(parser);
               o.set(propName, val);
               propName = null;

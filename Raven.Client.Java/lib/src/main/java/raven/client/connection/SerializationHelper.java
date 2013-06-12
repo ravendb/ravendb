@@ -4,26 +4,23 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
+import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.Constants;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
-import raven.abstractions.data.Constants;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
-import raven.client.utils.StringUtils;
 
 public class SerializationHelper {
 
@@ -48,7 +45,7 @@ public class SerializationHelper {
   private static Date getLastModifiedDate(HttpJsonRequest jsonRequest) {
 
     String ravenLastModified = jsonRequest.getResponseHeader(Constants.RAVEN_LAST_MODIFIED);
-    if (StringUtils.isNotNullOrEmpty(ravenLastModified)) {
+    if (StringUtils.isNotEmpty(ravenLastModified)) {
       try {
         return new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORAT).parse(ravenLastModified);
       } catch (ParseException e) {
@@ -56,7 +53,7 @@ public class SerializationHelper {
       }
     }
     String lastModified = jsonRequest.getResponseHeader(Constants.LAST_MODIFIED);
-    if (StringUtils.isNotNullOrEmpty(lastModified)) {
+    if (StringUtils.isNotEmpty(lastModified)) {
       try {
         return DateUtil.parseDate(lastModified);
       } catch (DateParseException e) {

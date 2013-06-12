@@ -14,11 +14,13 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
 import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
-import raven.client.utils.StringUtils;
+import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
+import raven.client.document.FailoverBehavior;
 
 //TODO: review me
 public class HttpJsonRequest implements AutoCloseable {
@@ -133,7 +135,7 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   private UUID etagHeaderToGuid(Header responseHeader) {
-    if (StringUtils.isNullOrEmpty(responseHeader.getValue())) {
+    if (StringUtils.isEmpty(responseHeader.getValue())) {
       throw new IllegalStateException("Response didn't had an ETag header");
     }
     String value = responseHeader.getValue();
@@ -144,6 +146,12 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public RavenJObject filterHeadersAttachment() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public HttpJsonRequest addReplicationStatusHeaders(String url, String serverUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior,
+      HandleReplicationStatusChangesCallback handleReplicationStatusChangesCallback) {
     // TODO Auto-generated method stub
     return null;
   }
