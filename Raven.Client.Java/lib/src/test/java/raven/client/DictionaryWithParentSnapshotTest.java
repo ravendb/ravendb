@@ -6,10 +6,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -164,9 +167,13 @@ public class DictionaryWithParentSnapshotTest {
     snapshot.put("ch1", RavenJValue.parse("7"));
     snapshot.put("ch2", RavenJValue.parse("17"));
 
-    for (Entry<String, RavenJToken> entry: map) {
-      System.out.println(entry);
+    Set<String> keys = new HashSet<>();
+    for (Entry<String, RavenJToken> entry: snapshot) {
+      keys.add(entry.getKey());
     }
+
+    Set<String> expectedKeys = new HashSet<>(Arrays.asList("p1", "p2", "@id", "ch2", "ch1"));
+    assertEquals(expectedKeys, keys);
 
   }
 }

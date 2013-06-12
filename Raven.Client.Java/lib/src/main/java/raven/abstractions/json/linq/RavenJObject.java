@@ -1,9 +1,11 @@
 package raven.abstractions.json.linq;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Map.Entry;
 
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
@@ -15,7 +17,7 @@ import raven.abstractions.exceptions.JsonWriterException;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.client.utils.StringUtils;
 
-public class RavenJObject extends RavenJToken   {
+public class RavenJObject extends RavenJToken implements Iterable<Entry<String, RavenJToken>>   {
 
   /**
    * Creates a {@link RavenJObject} from an object.
@@ -265,7 +267,10 @@ public class RavenJObject extends RavenJToken   {
     throw new IllegalArgumentException("Unsupported conversion. From:" + ravenJToken.getType() + " to " + clazz.getCanonicalName());
   }
 
-
+  @Override
+  public Iterator<Entry<String, RavenJToken>> iterator() {
+    return properties.iterator();
+  }
 
 
 }

@@ -1,11 +1,20 @@
 package raven.abstractions.extensions;
 
+import static org.mockito.Matchers.contains;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.commons.httpclient.Header;
+import org.apache.commons.httpclient.HeaderElement;
 
 import raven.abstractions.data.Constants;
+import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 
@@ -118,11 +127,34 @@ public class MetadataExtensions {
       if (HEADERS_TO_IGNORE_CLIENT.contains(header.getName())) {
         continue;
       }
-      metadata.add(header.getName(), RavenJToken.fromObject(header.getValue()));
-      //TODO: capture header name and values
+      Set<String> values = new HashSet<>();
+      for (HeaderElement headerElement : header.getElements()) {
+        values.add(headerElement.getValue());
+      }
+      String headerName = captureHeaderName(header.getName());
+      if (values.size() == 1) {
+        metadata.add(headerName, getValue(values.iterator().next()));
+      } else {
+        List<RavenJToken> headerValues = new ArrayList<>();
+        for (String value: values) {
+          headerValues.add(getValue(value));
+        }
+        metadata.add(headerName, new RavenJArray(headerValues.subList(0, Math.min(15, headerValues.size()))));
+      }
     }
     return metadata;
   }
+  private static RavenJToken getValue(String val) {
+    if (val.startsWith("{")) {
+      return RavenJObject.parse(val);
+    }
+    if (val.startsWith("[")) {
+      return RavenJArray.parse(val);
+    }
+    //TODO: parse dates
+    return RavenJToken.parse(val);
+  }
+  //TODO: public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
 
   /**
    * Filters headers from unwanted headers
@@ -135,9 +167,33 @@ public class MetadataExtensions {
     }
 
     RavenJObject metadata = new RavenJObject();
+    for (Entry<String, RavenJToken> header: self) {
+      if (header.getKey().startsWith("Temp")) {
+        continue;
+      }
+      if (header.getKey().equals(Constants.DOCUMENT_ID_FIELD_NAME)) {
+        continue;
+      }
+      if (HEADERS_TO_IGNORE_CLIENT.contains(header.getKey())) {
+        continue;
+      }
+      String headerName = captureHeaderName(header.getKey());
+      metadata.add(headerName, header.getValue());
+    }
+    return metadata;
+  }
 
-    //TODO: impl me
-    return null;
+  private static String captureHeaderName(String header) {
+    boolean lastWasDash = true;
+    StringBuilder sb = new StringBuilder(header.length());
+
+    for (int i = 0; i < header.length(); i++) {
+      char ch = header.charAt(i);
+      sb.append(lastWasDash ? Character.toUpperCase(ch) : ch);
+      lastWasDash = ch == '-';
+
+    }
+    return sb.toString();
   }
 
 
