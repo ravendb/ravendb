@@ -13,7 +13,6 @@ namespace Raven.ProjectRewriter
 	class Program
 	{
 		static XNamespace xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
-		private static Dictionary<string, string> net45Guids;
 
 		private static void Main(string[] args)
 		{
@@ -29,15 +28,7 @@ namespace Raven.ProjectRewriter
 			                     @"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");*/
 
 			/* In RavenDB 3.0 we already using .NET 4.5
-			net45Guids = new Dictionary<string, string>
-			{
-				{"Raven.Abstractions", "{B903FE56-0230-46FE-9458-AEFFEE294179}"},
-				{"Raven.Client.Lightweight", "{E43AA81B-E924-4D7E-8C02-7EF691EBE9EC}"},
-				{"Raven.Database", "{FAEBA971-1A36-4D42-8E98-043E617F1FE5}"},
-				{"Raven.Client.Embedded", "{ACA1B0BD-3455-4EC4-9388-539EF7CFC945}"},
-				{"Raven.Server", "{516EAEEA-D566-4410-BB9F-8354E5611B58}"},
-				{"Raven.Tests.Helpers", "{41D3D8AD-9095-47C3-93BE-3023857574AF}"},
-			};
+			
 
 			Generate45("Raven.Abstractions");
 
@@ -67,6 +58,16 @@ namespace Raven.ProjectRewriter
 
 		private static void Generate45(string assemblyName, params string[] references)
 		{
+			var net45Guids = new Dictionary<string, string>
+			{
+				{"Raven.Abstractions", "{B903FE56-0230-46FE-9458-AEFFEE294179}"},
+				{"Raven.Client.Lightweight", "{E43AA81B-E924-4D7E-8C02-7EF691EBE9EC}"},
+				{"Raven.Database", "{FAEBA971-1A36-4D42-8E98-043E617F1FE5}"},
+				{"Raven.Client.Embedded", "{ACA1B0BD-3455-4EC4-9388-539EF7CFC945}"},
+				{"Raven.Server", "{516EAEEA-D566-4410-BB9F-8354E5611B58}"},
+				{"Raven.Tests.Helpers", "{41D3D8AD-9095-47C3-93BE-3023857574AF}"},
+			};
+
 			string srcPath = assemblyName + @"\" + assemblyName + ".csproj";
 			string destFile= assemblyName + @"\" + assemblyName + ".g.45.csproj";
 
