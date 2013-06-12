@@ -452,7 +452,7 @@ task UploadStable -depends Stable, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
-task UploadVnext -depends Vnext, DoRelease, Upload
+task UploadVnext3 -depends Vnext3, DoRelease, Upload
 
 task CreateNugetPackages -depends Compile {
 
