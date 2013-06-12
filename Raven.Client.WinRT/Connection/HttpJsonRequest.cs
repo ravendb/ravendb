@@ -128,7 +128,6 @@ namespace Raven.Client.WinRT.Connection
 				response = await httpClient.SendAsync(requestMessage)
 											 .ConvertSecurityExceptionToServerNotFound()
 											 .AddUrlIfFaulting(url);
-				response.EnsureSuccessStatusCode();
 			}
 
 			return await ReadStringInternal(() => response ?? writeResponse)
