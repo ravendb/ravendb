@@ -1,4 +1,4 @@
-package raven.abstractions.json.lang;
+package raven.abstractions.exceptions;
 
 import org.apache.commons.httpclient.HttpMethodBase;
 

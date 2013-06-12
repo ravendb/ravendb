@@ -6,7 +6,7 @@ import java.util.Map;
 
 import raven.abstractions.closure.Action3;
 import raven.abstractions.data.HttpMethods;
-import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.linq.RavenJObject;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
 

@@ -18,10 +18,10 @@ import raven.abstractions.data.Attachment;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.Constants;
-import raven.abstractions.json.JTokenType;
-import raven.abstractions.json.RavenJArray;
-import raven.abstractions.json.RavenJObject;
-import raven.abstractions.json.RavenJToken;
+import raven.abstractions.json.linq.JTokenType;
+import raven.abstractions.json.linq.RavenJArray;
+import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
 import raven.client.utils.StringUtils;
 
 public class SerializationHelper {

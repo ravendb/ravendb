@@ -1,4 +1,4 @@
-package raven.abstractions.json;
+package raven.abstractions.json.linq;
 
 import java.io.IOException;
 import java.util.Map;
@@ -10,9 +10,9 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.ObjectMapper;
 
-import raven.abstractions.json.lang.JsonReaderException;
-import raven.abstractions.json.lang.JsonWriterException;
-import raven.client.common.extensions.JsonExtensions;
+import raven.abstractions.exceptions.JsonReaderException;
+import raven.abstractions.exceptions.JsonWriterException;
+import raven.abstractions.extensions.JsonExtensions;
 import raven.client.utils.StringUtils;
 
 public class RavenJObject extends RavenJToken   {
@@ -117,18 +117,18 @@ public class RavenJObject extends RavenJToken   {
     }
   }
 
-  private MapWithParentSnapshot properties = new MapWithParentSnapshot();
+  private DictionaryWithParentSnapshot properties = new DictionaryWithParentSnapshot();
 
   public RavenJObject() {
     // empty by design
   }
 
-  public RavenJObject(MapWithParentSnapshot snapshot) {
+  public RavenJObject(DictionaryWithParentSnapshot snapshot) {
     properties = snapshot;
   }
 
   public RavenJObject(RavenJObject other) {
-    properties = new MapWithParentSnapshot();
+    properties = new DictionaryWithParentSnapshot();
     for (Map.Entry<String, RavenJToken> kv : other.getProperties().entrySet()) {
       properties.put(kv.getKey(), kv.getValue());
     }
@@ -181,7 +181,7 @@ public class RavenJObject extends RavenJToken   {
   /**
    * @return the properties
    */
-  public MapWithParentSnapshot getProperties() {
+  public DictionaryWithParentSnapshot getProperties() {
     return properties;
   }
 

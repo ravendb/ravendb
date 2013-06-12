@@ -3,7 +3,7 @@ package raven.abstractions.data;
 import java.util.Date;
 import java.util.UUID;
 
-import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.linq.RavenJObject;
 
 public class JsonDocumentMetadata {
 

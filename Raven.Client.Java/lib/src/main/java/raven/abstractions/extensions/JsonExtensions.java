@@ -1,4 +1,4 @@
-package raven.client.common.extensions;
+package raven.abstractions.extensions;
 
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;

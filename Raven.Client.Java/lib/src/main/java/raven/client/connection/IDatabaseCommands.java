@@ -8,9 +8,9 @@ import raven.abstractions.data.Attachment;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
-import raven.abstractions.json.PutResult;
-import raven.abstractions.json.RavenJObject;
-import raven.abstractions.json.lang.ServerClientException;
+import raven.abstractions.data.PutResult;
+import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.json.linq.RavenJObject;
 
 public interface IDatabaseCommands {
   /**

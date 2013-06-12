@@ -1,4 +1,4 @@
-package raven.abstractions.json;
+package raven.abstractions.json.linq;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -11,9 +11,9 @@ import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
-import raven.abstractions.json.lang.JsonReaderException;
-import raven.abstractions.json.lang.JsonWriterException;
-import raven.client.common.extensions.JsonExtensions;
+import raven.abstractions.exceptions.JsonReaderException;
+import raven.abstractions.exceptions.JsonWriterException;
+import raven.abstractions.extensions.JsonExtensions;
 
 /**
  * Represents a JSON array.

@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.HttpMethods;
-import raven.abstractions.json.lang.ServerClientException;
+import raven.abstractions.exceptions.ServerClientException;
 
 public class ReplicationInformer {
 

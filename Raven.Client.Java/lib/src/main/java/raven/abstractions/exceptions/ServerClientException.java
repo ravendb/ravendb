@@ -1,4 +1,4 @@
-package raven.abstractions.json.lang;
+package raven.abstractions.exceptions;
 
 public class ServerClientException extends RuntimeException {
 

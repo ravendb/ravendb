@@ -1,6 +1,6 @@
 package raven.abstractions.data;
 
-import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.linq.RavenJObject;
 
 import java.util.ArrayList;
 import java.util.List;

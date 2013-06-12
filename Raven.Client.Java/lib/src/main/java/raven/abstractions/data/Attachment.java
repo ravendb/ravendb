@@ -2,7 +2,7 @@ package raven.abstractions.data;
 
 import java.util.UUID;
 
-import raven.abstractions.json.RavenJObject;
+import raven.abstractions.json.linq.RavenJObject;
 
 public class Attachment {
   private byte[] data;

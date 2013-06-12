@@ -1,4 +1,4 @@
-package raven.abstractions.json;
+package raven.abstractions.data;
 
 import java.util.UUID;
 

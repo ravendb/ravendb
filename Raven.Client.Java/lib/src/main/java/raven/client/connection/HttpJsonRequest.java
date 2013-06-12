@@ -15,9 +15,9 @@ import org.apache.commons.httpclient.methods.EntityEnclosingMethod;
 import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
 
-import raven.abstractions.json.RavenJObject;
-import raven.abstractions.json.RavenJToken;
-import raven.abstractions.json.lang.HttpOperationException;
+import raven.abstractions.exceptions.HttpOperationException;
+import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
 import raven.client.utils.StringUtils;
 
 //TODO: review me

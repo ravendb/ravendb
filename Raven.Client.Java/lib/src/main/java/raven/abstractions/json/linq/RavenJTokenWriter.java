@@ -1,4 +1,4 @@
-package raven.abstractions.json;
+package raven.abstractions.json.linq;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -15,6 +15,7 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.JsonStreamContext;
 import org.codehaus.jackson.ObjectCodec;
+
 
 public class RavenJTokenWriter extends JsonGenerator {
 

@@ -1,4 +1,4 @@
-package raven.abstractions.json;
+package raven.abstractions.json.linq;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -7,11 +7,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class MapWithParentSnapshot implements Map<String, RavenJToken> {
+
+public class DictionaryWithParentSnapshot implements Map<String, RavenJToken> {
 
   private static final RavenJToken DELETED_MARKER = new RavenJValue("*DeletedMarker*", JTokenType.NULL);
 
-  private final MapWithParentSnapshot parentSnapshot;
+  private final DictionaryWithParentSnapshot parentSnapshot;
   private int count;
   private Map<String, RavenJToken> localChanges = new HashMap<>();
   private String snapshotMsg;
@@ -21,11 +22,11 @@ public class MapWithParentSnapshot implements Map<String, RavenJToken> {
     return localChanges;
   }
 
-  public MapWithParentSnapshot() {
+  public DictionaryWithParentSnapshot() {
     this(null);
   }
 
-  public MapWithParentSnapshot(MapWithParentSnapshot previous) {
+  public DictionaryWithParentSnapshot(DictionaryWithParentSnapshot previous) {
     this.parentSnapshot = previous;
   }
 
@@ -171,11 +172,11 @@ public class MapWithParentSnapshot implements Map<String, RavenJToken> {
     return snapshot;
   }
 
-  public MapWithParentSnapshot createSnapshot() {
+  public DictionaryWithParentSnapshot createSnapshot() {
     if (!isSnapshot()) {
       throw new IllegalStateException("Cannot create snapshot without previously calling EnsureSnapshot");
     }
-    return new MapWithParentSnapshot(this);
+    return new DictionaryWithParentSnapshot(this);
   }
 
 
