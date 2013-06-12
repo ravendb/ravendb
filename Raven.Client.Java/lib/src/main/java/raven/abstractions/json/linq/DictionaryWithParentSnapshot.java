@@ -4,11 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
 
-public class DictionaryWithParentSnapshot implements Map<String, RavenJToken> {
+public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, Iterable<Map.Entry<String, RavenJToken>> {
 
   private static final RavenJToken DELETED_MARKER = new RavenJValue("*DeletedMarker*", JTokenType.NULL);
 
@@ -245,5 +246,57 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken> {
     snapshot = true;
     snapshotMsg = msg;
   }
+
+  @Override
+  public Iterator<java.util.Map.Entry<String, RavenJToken>> iterator() {
+    return new DictionaryInterator();
+  }
+
+  class DictionaryInterator implements Iterator<java.util.Map.Entry<String, RavenJToken>> {
+
+    private boolean parentProcessed = false;
+    private Iterator<java.util.Map.Entry<String, RavenJToken>> parentIterator;
+    private Iterator<java.util.Map.Entry<String, RavenJToken>> localIterator;
+
+
+    private Iterator<java.util.Map.Entry<String, RavenJToken>> getCurrentIterator() {
+      if (!parentProcessed) {
+        if (parentSnapshot != null) {
+          if (parentIterator == null) {
+            parentIterator = parentSnapshot.iterator();
+          }
+          if (parentIterator.hasNext()) {
+            return parentIterator;
+          } else {
+            //no more elements in parent iterator
+            parentProcessed = true;
+          }
+        } else {
+          parentProcessed = true;
+        }
+      }
+      if (localIterator == null) {
+        localIterator = localChanges.entrySet().iterator();
+      }
+      return localIterator;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return getCurrentIterator().hasNext();
+    }
+
+    @Override
+    public java.util.Map.Entry<String, RavenJToken> next() {
+      return getCurrentIterator().next();
+    }
+
+    @Override
+    public void remove() {
+      throw new IllegalStateException("Deleting elements in iterator is not implemneted!");
+    }
+
+  }
+
 
 }

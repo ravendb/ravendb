@@ -36,13 +36,13 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.junit.Test;
 
-import raven.abstractions.json.JTokenType;
-import raven.abstractions.json.RavenJArray;
-import raven.abstractions.json.RavenJObject;
-import raven.abstractions.json.RavenJToken;
-import raven.abstractions.json.RavenJValue;
-import raven.abstractions.json.lang.JsonWriterException;
-import raven.client.common.extensions.JsonExtensions;
+import raven.abstractions.exceptions.JsonWriterException;
+import raven.abstractions.extensions.JsonExtensions;
+import raven.abstractions.json.linq.JTokenType;
+import raven.abstractions.json.linq.RavenJArray;
+import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJValue;
 import raven.client.utils.StringUtils;
 
 public class RavenJObjectsTest {

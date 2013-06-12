@@ -12,9 +12,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.abstractions.data.JsonDocument;
-import raven.abstractions.json.PutResult;
-import raven.abstractions.json.RavenJObject;
-import raven.abstractions.json.RavenJValue;
+import raven.abstractions.data.PutResult;
+import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
 
 public class ServerClientTest extends RavenDBAwareTests {

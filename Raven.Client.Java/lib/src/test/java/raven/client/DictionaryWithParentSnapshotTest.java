@@ -9,18 +9,19 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.junit.Test;
 
-import raven.abstractions.json.JTokenType;
-import raven.abstractions.json.MapWithParentSnapshot;
-import raven.abstractions.json.RavenJToken;
-import raven.abstractions.json.RavenJValue;
+import raven.abstractions.json.linq.DictionaryWithParentSnapshot;
+import raven.abstractions.json.linq.JTokenType;
+import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJValue;
 
-public class MapWithParentSnapshotTest {
+public class DictionaryWithParentSnapshotTest {
   @Test
   public void baseTest() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.put("name", new RavenJValue("Marcin"));
 
     assertFalse(map.isEmpty());
@@ -42,14 +43,14 @@ public class MapWithParentSnapshotTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void canDuplicateKeys() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.put("name", RavenJValue.parse("5"));
     map.put("name", RavenJValue.parse("5"));
   }
 
   @Test
   public void testClear() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.put("name1", RavenJValue.parse("5"));
     map.put("name2", RavenJValue.parse("5"));
     map.clear();
@@ -58,21 +59,21 @@ public class MapWithParentSnapshotTest {
 
   @Test(expected = IllegalStateException.class)
   public void testCannotModifySnapshot() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.ensureSnapshot();
     map.put("key", RavenJToken.fromObject("a"));
   }
 
   @Test
   public void testValues() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.put("name1", RavenJValue.parse("5"));
     map.put("test", RavenJValue.parse("null"));
     map.put("@id", RavenJValue.fromObject("c"));
     map.remove("@id");
     map.ensureSnapshot("snap!");
 
-    MapWithParentSnapshot snapshot = map.createSnapshot();
+    DictionaryWithParentSnapshot snapshot = map.createSnapshot();
     snapshot.remove("name1");
     Collection<RavenJToken> collection = snapshot.values();
     assertEquals(1, collection.size());
@@ -81,19 +82,19 @@ public class MapWithParentSnapshotTest {
 
   @Test(expected =  IllegalStateException.class)
   public void testContainsValue() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.containsValue("any");
   }
 
   @Test(expected =  IllegalStateException.class)
   public void testEntrySet() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.entrySet();
   }
 
   @Test
   public void testPutAll() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     Map<String, RavenJToken> toInsert = new HashMap<>();
     toInsert.put("#id", RavenJValue.parse("null"));
     map.putAll(toInsert);
@@ -102,22 +103,22 @@ public class MapWithParentSnapshotTest {
 
   @Test
   public void testEmptyKeyset() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     assertTrue(map.keySet().isEmpty());
     map.ensureSnapshot();
-    MapWithParentSnapshot snapshot = map.createSnapshot();
+    DictionaryWithParentSnapshot snapshot = map.createSnapshot();
     assertTrue(snapshot.keySet().isEmpty());
   }
 
   @Test
   public void testWithParents() {
-    MapWithParentSnapshot map = new MapWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
     map.put("name1", RavenJValue.parse("5"));
     map.put("@id", RavenJValue.fromObject("c"));
     map.remove("@id");
     map.ensureSnapshot("snap!");
 
-    MapWithParentSnapshot snapshot = map.createSnapshot();
+    DictionaryWithParentSnapshot snapshot = map.createSnapshot();
 
     assertFalse(snapshot.isEmpty());
     assertEquals(1, snapshot.size());
@@ -148,7 +149,24 @@ public class MapWithParentSnapshotTest {
 
     assertFalse(map.containsKey("@id"));
 
+  }
 
+  @Test
+  public void testIteration() {
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    map.put("p1", RavenJValue.parse("5"));
+    map.put("@id", RavenJValue.fromObject("c"));
+    map.remove("@id");
+    map.put("p2", RavenJValue.parse("5"));
+    map.ensureSnapshot("snap!");
+
+    DictionaryWithParentSnapshot snapshot = map.createSnapshot();
+    snapshot.put("ch1", RavenJValue.parse("7"));
+    snapshot.put("ch2", RavenJValue.parse("17"));
+
+    for (Entry<String, RavenJToken> entry: map) {
+      System.out.println(entry);
+    }
 
   }
 }
