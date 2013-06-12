@@ -11,6 +11,7 @@ using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Linq
 {
@@ -205,7 +206,16 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(user => user.Name.Any(char.IsUpper));
 
 			var exception = Assert.Throws<NotSupportedException>(() => q.ToString());
-			Assert.Equal("Method not supported: Delegate.CreateDelegate. Expression: CreateDelegate(System.Func`2[System.Char,System.Boolean], null, Boolean IsUpper(Char)).", exception.Message);
+			try
+			{
+				// In .NET 4.5
+				Assert.Equal("Method not supported: MethodInfo.CreateDelegate. Expression: Boolean IsUpper(Char).CreateDelegate(System.Func`2[System.Char,System.Boolean], null).", exception.Message);
+			}
+			catch (EqualException)
+			{
+				// In .NET 4.0
+				Assert.Equal("Method not supported: Delegate.CreateDelegate. Expression: CreateDelegate(System.Func`2[System.Char,System.Boolean], null, Boolean IsUpper(Char)).", exception.Message);
+			}
 		}
 
 		[Fact]
