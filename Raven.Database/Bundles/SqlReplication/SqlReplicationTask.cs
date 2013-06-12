@@ -396,9 +396,9 @@ namespace Raven.Database.Bundles.SqlReplication
 				try
 				{
 					DocumentRetriever.EnsureIdInMetadata(jsonDocument);
-					jsonDocument.Metadata[Constants.DocumentIdFieldName] = jsonDocument.Key;
 					var document = jsonDocument.ToJson();
-					patcher.Apply(document, new ScriptedPatchRequest
+                    document[Constants.DocumentIdFieldName] = jsonDocument.Key;
+                    patcher.Apply(document, new ScriptedPatchRequest
 					{
 						Script = cfg.Script
 					}, jsonDocument.SerializedSizeOnDisk);
