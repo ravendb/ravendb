@@ -23,7 +23,11 @@ namespace Raven.Database.Storage.Esent.Debug
 		{
 			using (var transactionalStorage = new TransactionalStorage(new RavenConfiguration
 			{
-				DataDirectory = path
+				DataDirectory = path,
+				Settings =
+				{
+					{"Raven/Esent/LogFileSize", "1"}
+				}
 			}, () => { }))
 			{
 				transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
