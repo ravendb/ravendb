@@ -10,11 +10,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-	using Linq;
-
 	/// <summary>
 	/// Interface for document session using async approaches
 	/// </summary>
