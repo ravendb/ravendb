@@ -28,6 +28,7 @@ namespace Raven.ProjectRewriter
 			/*GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
 			                     @"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");*/
 
+			/* In RavenDB 3.0 we already using .NET 4.5
 			net45Guids = new Dictionary<string, string>
 			{
 				{"Raven.Abstractions", "{B903FE56-0230-46FE-9458-AEFFEE294179}"},
@@ -49,7 +50,7 @@ namespace Raven.ProjectRewriter
 			Generate45("Raven.Client.Embedded",
 			           "Raven.Abstractions",
 			           "Raven.Client.Lightweight",
-			           "Raven.Database");*/
+			           "Raven.Database");
 
 			Generate45("Raven.Server",
 					   "Raven.Abstractions",
@@ -61,7 +62,7 @@ namespace Raven.ProjectRewriter
 					   "Raven.Client.Embedded",
 					   "Raven.Database",
 					   "Raven.Server");
-
+			 */
 		}
 
 		private static void Generate45(string assemblyName, params string[] references)
