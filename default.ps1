@@ -227,14 +227,14 @@ task ReleaseNoTests -depends Stable,DoRelease {
 
 }
 
-task Vnext {
+task Vnext3 {
 	$global:uploadCategory = "RavenDB-Unstable"
-	$global:uploadMode = "Vnext"
+	$global:uploadMode = "Vnext3"
 }
 
 task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
-	$global:uploadMode = "-Unstable"
+	$global:uploadMode = "Unstable"
 }
 
 task Stable {
@@ -563,15 +563,9 @@ task CreateNugetPackages -depends Compile {
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	$sourceFeed = "https://nuget.org/"
 	
-	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+	if ($global:uploadMode -eq "Vnext3") {
 		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
-		
-		if ($global:uploadMode -eq "Vnext") {
-			$sourceFeed = "http://www.myget.org/F/ravendbvnext/api/v2/package"
-		} 
-		else {
-			$sourceFeed = "http://www.myget.org/F/ravendb/api/v2/package"
-		}
+		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
 	}
 	
 	if ( (Test-Path $accessPath) ) {
