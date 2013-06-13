@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -37,13 +39,43 @@ namespace Raven.Studio.Models
 	        get { return Count; }
 	    }
 	}
+	public class RavenDocumentsCollectionModel : CollectionModel
+	{
+		List<object> ravenDocs;
+
+		public RavenDocumentsCollectionModel()
+		{
+			Name = "0";
+		}
+
+		public override long SortableCount
+		{
+			get
+			{
+				return int.MaxValue - 1;
+			}
+		}
+
+		public override string DisplayName
+		{
+			get { return "System Documents"; }
+		}
+
+		public override Brush Fill
+		{
+			get
+			{
+				return new SolidColorBrush(Colors.Blue);
+			}
+		}
+	}
 
     public class AllDocumentsCollectionModel : CollectionModel
     {
         public AllDocumentsCollectionModel()
         {
             Name = "";
-        }
+		}
 
         public override Brush Fill
         {

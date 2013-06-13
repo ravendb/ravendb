@@ -9,9 +9,13 @@ using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Extensions;
+using Raven.Studio.Messages;
+using Notification = Raven.Studio.Messages.Notification;
 
 namespace Raven.Studio.Models
 {
@@ -25,7 +29,8 @@ namespace Raven.Studio.Models
 	    private CollectionDocumentsCollectionSource collectionSource; 
 	    private DocumentsModel documentsModel;
 	    private DocumentsModel collectionDocumentsModel;
-	    private DocumentsModel allDocumentsDocumentsModel;
+		private DocumentsModel allDocumentsDocumentsModel;
+		private DocumentsModel ravenDocumentsDocumentsModel;
 	    private double collectionsListWidth;
 	    private ICommand collapseCollectionsListCommand;
 	    public static readonly double CollapsedCollectionsListWidth = 25;
@@ -112,9 +117,14 @@ namespace Raven.Studio.Models
 
             allDocumentsDocumentsModel.SetChangesObservable(d => d.DocumentChanges.Select(s => Unit.Default));
 
+			ravenDocumentsDocumentsModel = new DocumentsModel(new CollectionDocumentsCollectionSource());
+
+			ravenDocumentsDocumentsModel.SetChangesObservable(d => d.DocumentChanges.Select(s => Unit.Default));
+
             Collections = new BindableCollection<CollectionModel>(model => model.Name)
             {
-                new AllDocumentsCollectionModel()
+                new AllDocumentsCollectionModel(),
+				new RavenDocumentsCollectionModel()
             };
 
             SelectedCollection = new Observable<CollectionModel>();
@@ -127,6 +137,10 @@ namespace Raven.Studio.Models
                 {
                     DocumentsModel = allDocumentsDocumentsModel;
                 }
+				else if (selectedCollectionName == "Raven Documents")
+				{
+					DocumentsModel = ravenDocumentsDocumentsModel;
+				}
                 else
                 {
                     collectionSource.CollectionName = selectedCollectionName;
@@ -180,11 +194,12 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccess(collections =>
 				                   	{
 										var collectionModels = 
-                                            new[] { new AllDocumentsCollectionModel() { Count = (int)Database.Value.Statistics.Value.CountOfDocuments}, }.Concat(
+                                            new CollectionModel[] { new AllDocumentsCollectionModel { Count = (int)Database.Value.Statistics.Value.CountOfDocuments}, new RavenDocumentsCollectionModel()}
+											.Concat(
                                             collections
 											.Where(x=>x.Count > 0)
 											.Select(col => new CollectionModel { Name = col.Name, Count = col.Count }))
-											.ToArray();
+											.ToList();
 
                                         Collections.Match(collectionModels, () => AfterUpdate(collectionModels));
 				                   	})
@@ -197,7 +212,7 @@ namespace Raven.Studio.Models
 				                           	});
 		}
 
-		private void AfterUpdate(CollectionModel[] collectionDocumentsCount)
+		private void AfterUpdate(IEnumerable<CollectionModel> collectionDocumentsCount)
 		{
             // update documents count
 		    var nameToCount = collectionDocumentsCount.ToDictionary(i => i.Name, i => i.Count);
@@ -288,8 +303,37 @@ namespace Raven.Studio.Models
                        (expandCollectionsListCommand = new ActionCommand(HandleExpandCollectionsList));
             }
         }
+		public ICommand DeleteSelectedCollection
+		{
+			get { return new ActionCommand(() =>
+			{
+				if(SelectedCollection.Value == null)
+					return;
+				if (SelectedCollection.Value.Name == "")
+				{
+					ApplicationModel.Current.Notifications.Add(new Notification("Can not delete all documents"));
+					return;
+				}
 
-	    private void HandleExpandCollectionsList()
+				if (SelectedCollection.Value.Name == "0")
+				{
+					ApplicationModel.Current.Notifications.Add(new Notification("Can not delete all system documents"));
+					return;
+				}
+
+				AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure that you want to delete all of the documents of this collection? ({0})", SelectedCollection.Value.DisplayName))
+				.ContinueWhenTrue(() => DeleteDocuments(SelectedCollection.Value.DisplayName));
+
+				
+			});}
+		}
+
+		private void DeleteDocuments(string name)
+		{
+			DatabaseCommands.DeleteByIndexAsync("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:" + name }, allowStale: true);
+		}
+
+		private void HandleExpandCollectionsList()
 	    {
 	        CollectionsListWidth = maximisedCollectionsListWidth <= CollapsedCollectionsListWidth
 	                                   ? DefaultCollectionsListWidth
