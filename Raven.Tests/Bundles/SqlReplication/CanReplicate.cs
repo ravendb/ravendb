@@ -251,15 +251,17 @@ CREATE TABLE [dbo].[Orders]
 					session.SaveChanges();
 				}
 
-				SetupSqlReplication(store, @"this is nonesense");
+				SetupSqlReplication(store, @"output ('Tralala');asdfsadf
+var nameArr = this.StepName.split('.');");
 
 				eventSlim.Wait(TimeSpan.FromMinutes(5));
-
+				
 				var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
-				var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.FirstOrDefault(x=>x.LoggerName == typeof(SqlReplicationTask).FullName);
+				var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x=>x.LoggerName == typeof(SqlReplicationTask).FullName);
 				Assert.Equal("Could parse SQL Replication script for OrdersAndLines", foo.FormattedMessage);
 			}
 		}
+
 		private static void AssertCounts(int ordersCount, int orderLineCounts)
 		{
 			var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
