@@ -22,7 +22,7 @@ properties {
 				"Microsoft.Data.Edm.???",
 				"Microsoft.WindowsAzure.Storage.???",
 				"Microsoft.Data.OData.???",
-				"Microsoft.WindowsAzure.ConfigurationManager.??",
+				"Microsoft.WindowsAzure.ConfigurationManager.???",
 				"Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", 
 				"ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", 
 				"Esent.Interop.???", 
