@@ -42,17 +42,24 @@
 							<ColumnDefinition Width="Auto"/>
 						</Grid.ColumnDefinitions>
 
-						<ComboBox SelectedIndex="{Binding SelectedOption.Value, Mode=TwoWay}" VerticalAlignment="Center" Width="150">
+						<ComboBox SelectedIndex="{Binding SelectedOption.Value, Mode=TwoWay}" VerticalAlignment="Center" Width="170">
 							<ComboBox.ItemsSource>
 								<Behaviors:StringCollection>
 									<System:String>File System Folder:</System:String>
 									<System:String>Glacier Vault Name:</System:String>
 									<System:String>S3 Bucket Name:</System:String>
+                                    <System:String>Azure Storage Container:</System:String>
 								</Behaviors:StringCollection>
 							</ComboBox.ItemsSource>
 						</ComboBox>
 
-						<TextBox Grid.Column="1"
+                        <TextBox Grid.Column="1"
+			 				 Margin="5"
+			 				 Text="{Binding PeriodicBackupSetup.LocalFolderName, Mode=TwoWay}"
+			 				 VerticalAlignment="Center"
+			 				 Visibility="{Binding SelectedOption.Value, Converter={StaticResource IntParamEquality}, ConverterParameter=0 }"/>
+                        
+                        <TextBox Grid.Column="1"
                              Margin="5"
                              Text="{Binding PeriodicBackupSetup.GlacierVaultName, Mode=TwoWay}"
                              VerticalAlignment="Center"
@@ -64,13 +71,14 @@
                              VerticalAlignment="Center"
                              Visibility="{Binding SelectedOption.Value, Converter={StaticResource IntParamEquality}, ConverterParameter=2 }"/>
 
-						<TextBox Grid.Column="1"
-															Margin="5"
-															Text="{Binding PeriodicBackupSetup.LocalFolderName, Mode=TwoWay}"
-															VerticalAlignment="Center"
-															Visibility="{Binding SelectedOption.Value, Converter={StaticResource IntParamEquality}, ConverterParameter=0 }"/>
+                        <TextBox Grid.Column="1"
+                             Margin="5"
+                             Text="{Binding PeriodicBackupSetup.AzureStorageContainer, Mode=TwoWay}"
+                             VerticalAlignment="Center"
+                             Visibility="{Binding SelectedOption.Value, Converter={StaticResource IntParamEquality}, ConverterParameter=3 }"/>
 
-						<TextBlock Grid.Row="2" Text="Interval: " VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Row="2" Text="Interval: " VerticalAlignment="Center"/>
 						<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 							<toolkit:NumericUpDown Margin="5" Value="{Binding PeriodicBackupSetup.IntervalMilliseconds, Mode=TwoWay, Converter={StaticResource MillisecondsToMinutes}}" Maximum="214748364" VerticalAlignment="Center"/>
 							<TextBlock Text="in Minutes" VerticalAlignment="Center"/>
@@ -89,15 +97,15 @@
 						<RowDefinition Height="Auto"/>
 					</Grid.RowDefinitions>
 
-					<TextBlock Text="AWS Access Key: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
-					<TextBox Grid.Column="1" Margin="5"  Text="{Binding AwsAccessKey, Mode=TwoWay}" VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+                    <TextBlock Text="AWS Access Key: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByAnyParamEquality}, ConverterParameter='1,2' }"/>
+                    <TextBox Grid.Column="1" Margin="5"  Text="{Binding AwsAccessKey, Mode=TwoWay}" VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByAnyParamEquality}, ConverterParameter='1,2' }"/>
 
-					<TextBlock Grid.Row="1" Text="AWS Secret Key: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
-					<PasswordBox Grid.Row="1" Grid.Column="1" Margin="5"  Password="{Binding AwsSecretKey, Mode=TwoWay}"  VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+                    <TextBlock Grid.Row="1" Text="AWS Secret Key: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByAnyParamEquality}, ConverterParameter='1,2' }"/>
+                    <PasswordBox Grid.Row="1" Grid.Column="1" Margin="5"  Password="{Binding AwsSecretKey, Mode=TwoWay}"  VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByAnyParamEquality}, ConverterParameter='1,2' }"/>
 
-					<TextBlock Grid.Row="2" Text="Aws Region Endpoint: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }"/>
+                    <TextBlock Grid.Row="2" Text="Aws Region Endpoint: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByAnyParamEquality}, ConverterParameter='1,2' }"/>
 					<ComboBox Grid.Row="2" Grid.Column="1" Margin="5" SelectedValue="{Binding SelectedAwsRegionEndpoint, Mode=TwoWay}"
-							  Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByParamInEquality}, ConverterParameter=0 }">
+							  Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibilityByAnyParamEquality}, ConverterParameter='1,2' }">
 						<ComboBoxItem Tag="us-east-1">US East (Virginia)</ComboBoxItem>
 						<ComboBoxItem Tag="us-west-1">US West (N. California)</ComboBoxItem>
 						<ComboBoxItem Tag="us-west-2">US West (Oregon)</ComboBoxItem>
@@ -106,10 +114,16 @@
 						<ComboBoxItem Tag="ap-southeast-1">Asia Pacific (Singapore)</ComboBoxItem>
 						<ComboBoxItem Tag="sa-east-1">South America (Sao Paulo)</ComboBoxItem>
 					</ComboBox>
-				</Grid>
+
+                    <TextBlock Text="Azure Storage Account: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=3 }"/>
+                    <TextBox Grid.Column="1" Margin="5"  Text="{Binding AzureStorageAccount, Mode=TwoWay}" VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=3 }"/>
+                    
+                    <TextBlock Grid.Row="1" Text="Azure Storage Key: " VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=3 }"/>
+                    <PasswordBox Grid.Row="1" Grid.Column="1" Margin="5"  Password="{Binding AzureStorageKey, Mode=TwoWay}"  VerticalAlignment="Center" Visibility="{Binding SelectedOption.Value, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=3 }"/>
+                </Grid>
 			</Grid>
 			<Grid Visibility="{Binding ShowPeriodicBackup.Value, Converter={StaticResource BooleanToOppositeVisibility}}">
-				<TextBlock Text="Your license does not allow the use of periodic backups, to enable this feature you need to perchuse a license with periodic backups bundle"/>
+				<TextBlock Text="Your license does not allow the use of periodic backups, to enable this feature you need to purchase a license with periodic backups bundle"/>
 			</Grid>
 		</Grid>
 

@@ -342,19 +342,29 @@ namespace Raven.Studio.Commands
 				case 0:
 					periodicBackup.PeriodicBackupSetup.GlacierVaultName = null;
 					periodicBackup.PeriodicBackupSetup.S3BucketName = null;
+                    periodicBackup.PeriodicBackupSetup.AzureStorageContainer = null;
 					break;
 				case 1:
 					periodicBackup.PeriodicBackupSetup.LocalFolderName = null;
 					periodicBackup.PeriodicBackupSetup.S3BucketName = null;
+                    periodicBackup.PeriodicBackupSetup.AzureStorageContainer = null;
 					break;
 				case 2:
 					periodicBackup.PeriodicBackupSetup.GlacierVaultName = null;
 					periodicBackup.PeriodicBackupSetup.LocalFolderName = null;
+                    periodicBackup.PeriodicBackupSetup.AzureStorageContainer = null;
 					break;
+                case 3:
+					periodicBackup.PeriodicBackupSetup.GlacierVaultName = null;
+			        periodicBackup.PeriodicBackupSetup.S3BucketName = null;
+					periodicBackup.PeriodicBackupSetup.LocalFolderName = null;
+			        break;
 			}
 
             settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
 			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
+            settingsModel.DatabaseDocument.SecuredSettings["Raven/AzureStorageKey"] = periodicBackup.AzureStorageKey;
+            settingsModel.DatabaseDocument.Settings["Raven/AzureStorageAccount"] = periodicBackup.AzureStorageAccount;
 
 			string activeBundles;
 			settingsModel.DatabaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
