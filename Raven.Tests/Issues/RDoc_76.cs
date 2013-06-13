@@ -110,40 +110,38 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
+		public async Task ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
 		{
-			var exception = Assert.Throws<InvalidOperationException>(() =>
+			using (var store = NewRemoteDocumentStore())
 			{
-				using (var store = NewRemoteDocumentStore())
-				{
-					store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, cmds, r) => new CompletedTask<string>("b/" + r.Sth));
+				store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, cmds, r) => new CompletedTask<string>("b/" + r.Sth));
 
-					using (var session = store.OpenSession())
+				using (var session = store.OpenSession())
+				{
+					var exception = Assert.Throws<InvalidOperationException>(() =>
 					{
-						session.Store(new Bedroom { Sth = "3" });
+						session.Store(new Bedroom {Sth = "3"});
 						session.SaveChanges();
-					}
+					});
+					Assert.Equal("Id convention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
 				}
-			});
+			}
 
-			Assert.Equal("Id convention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
 
-			exception = Assert.Throws<InvalidOperationException>(() =>
+			using (var store = NewRemoteDocumentStore())
 			{
-				using (var store = NewRemoteDocumentStore())
+				store.Conventions.RegisterIdConvention<Bedroom>((dbName, cmds, r) => "b/" + r.Sth);
+
+				using (var session = store.OpenAsyncSession())
 				{
-					store.Conventions.RegisterIdConvention<Bedroom>((dbName, cmds, r) => "b/" + r.Sth);
-
-					using (var session = store.OpenAsyncSession())
+					var exception = await AssertAsync.Throws<InvalidOperationException>(async () =>
 					{
-						session.StoreAsync(new Bedroom {Sth = "3"});
-
-						session.SaveChangesAsync().Wait();
-					}
+						 await session.StoreAsync(new Bedroom {Sth = "3"});
+						 await session.SaveChangesAsync();
+					});
+					Assert.Equal("Id convention for asynchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
 				}
-			});
-
-			Assert.Equal("Id convention for asynchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
+			}
 		}
 
 		[Fact]

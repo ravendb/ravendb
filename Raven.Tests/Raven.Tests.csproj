@@ -560,6 +560,7 @@
     <Compile Include="Indexes\Recovery\MapRecoveryTestIndex.cs" />
     <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
+    <Compile Include="AssertAsync.cs" />
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\BulkInsertDatabaseUrl.cs" />
