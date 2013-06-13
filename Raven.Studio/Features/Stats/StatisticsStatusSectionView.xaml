@@ -70,38 +70,48 @@
 									<Grid Grid.Row="2"
 										  Visibility="{Binding ShowChart, Converter={StaticResource BooleanToVisibility}}">
 										<toolkit:Chart Visibility="{Binding DataContext.StatisticsCount, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=1}"
-													   Width="500"
+													   Style="{StaticResource PerformanceChart}"
+                                                       Width="500"
 													   Height="250"
 													   Title="Performance"
 													   Margin="5">
+                                            <toolkit:Chart.Axes>
+                                                <toolkit:LinearAxis Orientation="Y" Style="{StaticResource AxisStyle}"/>
+                                                <toolkit:DateTimeAxis Orientation="X" Style="{StaticResource TimeAxisStyle}"/>
+                                            </toolkit:Chart.Axes>
 											<toolkit:LineSeries ItemsSource="{Binding IndexData}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceDeepSkyBlue}"
+															DataPointStyle="{StaticResource IndexSeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Index"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding MapData}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceGreen}"
+															DataPointStyle="{StaticResource MapSeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Map"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding Level0Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceRed}"
+															DataPointStyle="{StaticResource Reduce1SeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Reduce 0"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding Level1Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformancePurple}"
+															DataPointStyle="{StaticResource Reduce2SeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Reduce 1"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding Level2Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceOrange}"
+															DataPointStyle="{StaticResource Reduce3SeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Reduce 2">
 											</toolkit:LineSeries>
 										</toolkit:Chart>
