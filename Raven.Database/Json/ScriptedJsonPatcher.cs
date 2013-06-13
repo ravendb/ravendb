@@ -356,38 +356,43 @@ function ExecutePatchScript(docInner){{
                 Key = key,
                 DataAsJson = ToRavenJObject(doc)
             };
-            CreatedDocs.Add(newDocument);
-
-
+            
 	        if (meta == null)
 	        {
-		        RavenJToken value;
-		        if (newDocument.DataAsJson.TryGetValue("@metadata", out value))
-		        {
-			        newDocument.DataAsJson.Remove("@metadata");
-			        newDocument.Metadata = (RavenJObject)value;
-		        }
-		        return;
-	        }
-
-		    foreach (var etagKeyName in EtagKeyNames)
-	        {
-	            JsInstance result;
-	            if (!meta.TryGetProperty(etagKeyName, out result)) 
-	                continue;
-	            string etag = result.ToString();
-                meta.Delete(etagKeyName);
-	            if (string.IsNullOrEmpty(etag))
-	                continue;
-	            Etag newDocumentEtag;
-	            if (Etag.TryParse(etag, out newDocumentEtag) == false)
+	            RavenJToken value;
+	            if (newDocument.DataAsJson.TryGetValue("@metadata", out value))
 	            {
-	                throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'",
-	                                                                  etag, key));
+	                newDocument.DataAsJson.Remove("@metadata");
+	                newDocument.Metadata = (RavenJObject) value;
 	            }
-	            newDocument.Etag = newDocumentEtag;
 	        }
-	        newDocument.Metadata = ToRavenJObject(meta);
+	        else
+	        {
+	            foreach (var etagKeyName in EtagKeyNames)
+	            {
+	                JsInstance result;
+	                if (!meta.TryGetProperty(etagKeyName, out result))
+	                    continue;
+	                string etag = result.ToString();
+	                meta.Delete(etagKeyName);
+	                if (string.IsNullOrEmpty(etag))
+	                    continue;
+	                Etag newDocumentEtag;
+	                if (Etag.TryParse(etag, out newDocumentEtag) == false)
+	                {
+	                    throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'",
+	                                                                      etag, key));
+	                }
+	                newDocument.Etag = newDocumentEtag;
+	            }
+	            newDocument.Metadata = ToRavenJObject(meta);
+	        }
+	        ValidateDocument(newDocument);
+            CreatedDocs.Add(newDocument);
+	    }
+
+	    protected virtual void ValidateDocument(JsonDocument newDocument)
+	    {
 	    }
 
 	    private static string NormalizeLineEnding(string script)

@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Database.Server.Responders;
@@ -206,6 +208,78 @@ namespace Raven.Tests.Bundles.Replication
 				Thread.Sleep(100);
 			}
 			Assert.Null(deletedCompany);
+		}
+
+		[Fact]
+		public void Will_remove_tombstones_when_deleting_and_creating_new_item_with_same_id()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+
+			TellFirstInstanceToReplicateToSecondInstance();
+			var item = new Company {Name = "Hibernating Rhinos"};
+			using (var session = store1.OpenSession())
+			{
+				session.Store(item);
+				session.SaveChanges();
+			}
+
+			Company company = null;
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				using (var session = store2.OpenSession())
+				{
+					company = session.Load<Company>("companies/1");
+					if (company != null)
+						break;
+					Thread.Sleep(100);
+				}
+			}
+			Assert.NotNull(company);
+			Assert.Equal("Hibernating Rhinos", company.Name);
+
+			using (var session = store1.OpenSession())
+			{
+				session.Delete(session.Load<Company>("companies/1"));
+				session.SaveChanges();
+			}
+
+
+			Company deletedCompany = null;
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				using (var session = store2.OpenSession())
+					deletedCompany = session.Load<Company>("companies/1");
+				if (deletedCompany == null)
+					break;
+				Thread.Sleep(100);
+			}
+			Assert.Null(deletedCompany);
+
+			using (var session = store1.OpenSession())
+			{
+				session.Store(item);
+				session.SaveChanges();
+			}
+
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				using (var session = store2.OpenSession())
+				{
+					company = session.Load<Company>("companies/1");
+					if (company != null)
+						break;
+					Thread.Sleep(100);
+				}
+			}
+			Assert.NotNull(company);
+			Assert.Equal("Hibernating Rhinos", company.Name);
+
+			foreach (var ravenDbServer in servers)
+			{
+				ravenDbServer.Database.TransactionalStorage.Batch(
+					accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
+			}
 		}
 	}
 }

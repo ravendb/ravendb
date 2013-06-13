@@ -108,6 +108,11 @@ namespace Raven.Abstractions.Logging
 			ILogManager logManager = CurrentLogManager;
 			return logManager == null ? new DisposableAction(() => {}) : logManager.OpenMappedContext(key, value);
 		}
+
+		public static void ClearTargets()
+		{
+			targets.Clear();
+		}
 	}
 
 	public abstract class Target

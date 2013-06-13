@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -98,6 +100,20 @@ namespace Raven.Studio.Features.Stats
 			}
 
 			OnPropertyChanged(() => StatisticsToView);
+		}
+
+		public ICommand GoToIndexCommand
+		{
+			get{return new ActionCommand(GoToIndex);}
+		}
+
+		private void GoToIndex(object parameter)
+		{
+			var index = parameter as string;
+			if (string.IsNullOrWhiteSpace(index))
+				return;
+
+			SelectedViewOption.Value = index;
 		}
 
 		private void UpdateStatistics()
@@ -323,7 +339,6 @@ namespace Raven.Studio.Features.Stats
 
 			if (data.Count < maxSize)
 				return data;
-
 			return data.OrderBy(pair => pair.Key)
 			           .Skip(data.Count - trimToSize)
 			           .ToDictionary(pair => pair.Key, pair => pair.Value);
@@ -332,6 +347,7 @@ namespace Raven.Studio.Features.Stats
 		public Observable<DatabaseStatistics> StatsData { get; set; }
 		public Dictionary<string, StatInfo> Statistics { get; set; }
 		public Dictionary<string, StatInfo> StatisticsToView { get; set; }
+		public int StatisticsCount { get { return StatisticsToView.Count; } }
 		public List<string> ViewOptions { get; set; }
 		public Dictionary<string, PerformanceStats> IndexesGraphData { get; set; } 
 		public Observable<string> SelectedViewOption { get; set; }

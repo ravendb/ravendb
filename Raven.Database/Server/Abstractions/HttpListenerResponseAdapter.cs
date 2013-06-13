@@ -87,7 +87,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void Close()
 		{
-			var exceptionAggregator = new ExceptionAggregator(log, "Failed to close response");
+			var exceptionAggregator = new ExceptionAggregator(log, "Failed to close response", LogLevel.Info);
 			exceptionAggregator.Execute(OutputStream.Flush);
 			exceptionAggregator.Execute(OutputStream.Dispose);
 			if (StreamsToDispose != null)

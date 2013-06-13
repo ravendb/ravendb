@@ -31,6 +31,7 @@ namespace Raven.Bundles.Replication.Responders
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, RavenJObject incoming)
 		{
 			Database.Put(id, etag, incoming, metadata, null);
+			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 		}
 
 		protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId, 

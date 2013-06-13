@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
@@ -19,6 +20,8 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
     [ExportMetadata("Bundle", "ScriptedIndexResults")]
     public class ScriptedIndexResultsIndexTrigger : AbstractIndexUpdateTrigger
     {
+        private static ILog log = LogManager.GetCurrentClassLogger();
+
         public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
         {
             //Only apply the trigger if there is a setup doc for this particular index
@@ -26,24 +29,29 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
             if (jsonSetupDoc == null)
                 return null;
             var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();
-            return new Batcher(Database, scriptedIndexResults);
+            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
+            if (abstractViewGenerator == null)
+                throw new InvalidOperationException("Could not find view generator for: " + indexName);
+            return new Batcher(Database, scriptedIndexResults, abstractViewGenerator.ForEntityNames);
         }
 
         public class Batcher : AbstractIndexUpdateTriggerBatcher
         {
             private readonly DocumentDatabase database;
             private readonly Abstractions.Data.ScriptedIndexResults scriptedIndexResults;
+            private readonly HashSet<string> forEntityNames;
 
             private readonly Dictionary<string, RavenJObject> created = new Dictionary<string, RavenJObject>(StringComparer.InvariantCultureIgnoreCase);
             private readonly HashSet<string> removed = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-            public Batcher(DocumentDatabase database, Abstractions.Data.ScriptedIndexResults scriptedIndexResults)
+            public Batcher(DocumentDatabase database, Abstractions.Data.ScriptedIndexResults scriptedIndexResults, HashSet<string> forEntityNames)
             {
                 this.database = database;
                 this.scriptedIndexResults = scriptedIndexResults;
+                this.forEntityNames = forEntityNames;
             }
 
-            public override void OnIndexEntryCreated(string entryKey, Lucene.Net.Documents.Document document)
+            public override void OnIndexEntryCreated(string entryKey, Document document)
             {
                 created.Add(entryKey, CreateJsonDocumentFromLuceneDocument(document));
                 removed.Remove(entryKey);
@@ -56,7 +64,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void Dispose()
             {
-                var patcher = new ScriptedIndexResultsJsonPatcher(database);
+                var patcher = new ScriptedIndexResultsJsonPatcher(database, forEntityNames);
 
                 if (string.IsNullOrEmpty(scriptedIndexResults.DeleteScript) == false)
                 {
@@ -77,14 +85,21 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 {
                     foreach (var kvp in created)
                     {
-                        patcher.Apply(kvp.Value, new ScriptedPatchRequest
+                        try
                         {
-                            Script = scriptedIndexResults.IndexScript,
-                            Values =
-							{
-								{"key", kvp.Key}
-							}
-                        });
+                            patcher.Apply(kvp.Value, new ScriptedPatchRequest
+                            {
+                                Script = scriptedIndexResults.IndexScript,
+                                Values =
+                                {
+                                    {"key", kvp.Key}
+                                }
+                            });
+                        }
+                        catch (Exception e)
+                        {
+                            log.Warn("Could not apply index script " + scriptedIndexResults.Id + " to index result with key: " + kvp.Key, e);
+                        }
                     }
                 }
 
@@ -108,9 +123,12 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public class ScriptedIndexResultsJsonPatcher : ScriptedJsonPatcher
             {
-                public ScriptedIndexResultsJsonPatcher(DocumentDatabase database)
+                private readonly HashSet<string> entityNames;
+
+                public ScriptedIndexResultsJsonPatcher(DocumentDatabase database, HashSet<string> entityNames)
                     : base(database)
                 {
+                    this.entityNames = entityNames;
                 }
 
                 public HashSet<string> DocumentsToDelete = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -123,6 +141,31 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 protected override void RemoveEngineCustomizations(Jint.JintEngine jintEngine)
                 {
                     jintEngine.RemoveParameter("DeleteDocument");
+                }
+
+                protected override void ValidateDocument(JsonDocument newDocument)
+                {
+                    if (newDocument.Metadata == null)
+                        return;
+                    var entityName = newDocument.Metadata.Value<string>(Constants.RavenEntityName);
+                    if (string.IsNullOrEmpty(entityName))
+                    {
+                        if (entityNames.Count == 0)
+                            throw new InvalidOperationException(
+                                "Invalid Script Index Results Recursion!\r\n"+
+                                "The scripted index result doesn't have an entity name, but the index apply to all documents.\r\n" +
+                                "Scripted Index Results cannot create documents that will be indexed by the same document that created them, " +
+                                "since that would create a infinite loop of indexing/creating documents.");
+                        return;
+                    }
+                    if (entityNames.Contains(entityName))
+                    {
+                        throw new InvalidOperationException(
+                            "Invalid Script Index Results Recursion!\r\n" +
+                            "The scripted index result have an entity name of "+entityName + ", but the index apply to documents with that entity name.\r\n" +
+                            "Scripted Index Results cannot create documents that will be indexed by the same document that created them, " +
+                            "since that would create a infinite loop of indexing/creating documents.");
+                    }
                 }
             }
 
