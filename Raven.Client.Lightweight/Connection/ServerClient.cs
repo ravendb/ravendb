@@ -2171,7 +2171,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IAdminDatabaseCommands Admin
 		{
-			get { return this; }
+			get { return (IAdminDatabaseCommands)ForSystemDatabase(); }
 		}
 
 		public void CreateDatabase(DatabaseDocument databaseDocument)
