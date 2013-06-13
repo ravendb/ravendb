@@ -293,7 +293,7 @@ namespace Raven.Client.Indexes
 		{
 			var memberType = GetMemberType(member);
 			var nonNullable = Nullable.GetUnderlyingType(memberType);
-			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum == false && TypeExistsOnServer(nonNullable))
+			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum() == false && TypeExistsOnServer(nonNullable))
 			{
 				Out(")");
 			}
@@ -305,7 +305,7 @@ namespace Raven.Client.Indexes
 			// foo.NullableDatetime.GetValueOrDefault().Date
 			var memberType = GetMemberType(member);
 			var nonNullable = Nullable.GetUnderlyingType(memberType);
-			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum == false && TypeExistsOnServer(nonNullable))
+			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum() == false && TypeExistsOnServer(nonNullable))
 			{
 				Out("((");
 				Out(ConvertTypeToCSharpKeyword(nonNullable));
