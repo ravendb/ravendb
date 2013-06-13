@@ -48,10 +48,11 @@ namespace Raven.Client.Document
 		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		private readonly IList<Tuple<Type, Func<string, IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
 			new List<Tuple<Type, Func<string, IDatabaseCommands, object, string>>>();
 #endif
+
 		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
 			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
@@ -312,7 +313,7 @@ namespace Raven.Client.Document
 				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
 				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
@@ -469,7 +470,7 @@ namespace Raven.Client.Document
 		public bool ShouldSaveChangesForceAggresiveCacheCheck { get; set; }
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
