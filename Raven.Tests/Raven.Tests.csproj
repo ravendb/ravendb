@@ -706,6 +706,7 @@
     <Compile Include="MailingList\HttpIdTest.cs" />
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
+    <Compile Include="MailingList\IndexWithEnumNullableFailingUnitTest.cs" />
     <Compile Include="MailingList\InIssues.cs" />
     <Compile Include="MailingList\InQueries.cs" />
     <Compile Include="MailingList\IssueTest.cs" />
