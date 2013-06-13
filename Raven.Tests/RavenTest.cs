@@ -18,10 +18,14 @@ namespace Raven.Tests
 {
 	public class RavenTest : RavenTestBase
 	{
+		static RavenTest()
+		{
+			LogManager.RegisterTarget<DatabaseMemoryTarget>();
+		}
+
 		public RavenTest()
 		{
 			SystemTime.UtcDateTime = () => DateTime.UtcNow;
-			LogManager.ClearTargets();
 		}
 
 		protected void Consume(object o)
