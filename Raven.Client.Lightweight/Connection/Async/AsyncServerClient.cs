@@ -1867,11 +1867,12 @@ namespace Raven.Client.Connection.Async
 			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
 
-			MultiDatabase.AssertValidDatabaseName(databaseDocument.Id);
+			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
+			MultiDatabase.AssertValidDatabaseName(dbname);
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
 
-			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
+			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
 			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
 		}
 

@@ -27,7 +27,6 @@ namespace Raven.Client.Extensions
 		public static void AssertValidDatabaseName(string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");
-			name = name.Replace("Raven/Databases/", "");
 			var result = Regex.Matches(name, ValidDbNameChars);
 			if (result.Count == 0 || result[0].Value != name)
 			{
