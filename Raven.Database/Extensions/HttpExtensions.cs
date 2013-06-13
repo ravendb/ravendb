@@ -114,7 +114,6 @@ namespace Raven.Database.Extensions
 			else
 			{
 				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-
 			}
 
 			if (minimal)
