@@ -7,8 +7,8 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using Raven.Tests.Document;
 using Raven.Tests.Helpers;
@@ -18,24 +18,10 @@ namespace Raven.Tests
 {
 	public class RavenTest : RavenTestBase
 	{
-		static RavenTest()
-		{
-			File.Delete("test.log");
-		}
-
 		public RavenTest()
 		{
-			DatabaseMemoryTarget databaseMemoryTarget = null;
-			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
-			{
-				databaseMemoryTarget = LogManager.Configuration.AllTargets.OfType<DatabaseMemoryTarget>().FirstOrDefault();
-			}
-			if (databaseMemoryTarget != null)
-			{
-				databaseMemoryTarget.ClearAll();
-			}
-
 			SystemTime.UtcDateTime = () => DateTime.UtcNow;
+			LogManager.ClearTargets();
 		}
 
 		protected void Consume(object o)
