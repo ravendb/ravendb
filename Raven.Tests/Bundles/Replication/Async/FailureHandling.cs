@@ -46,7 +46,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			TellInstanceToReplicateToAnotherInstance(1, 2);
 
-			var aggregateException = Assert.Throws<AggregateException>(async () =>
+			var aggregateException = await AssertAsync.Throws<AggregateException>(async () =>
 			{
 				for (int i = 0; i < RetriesCount; i++)
 				{

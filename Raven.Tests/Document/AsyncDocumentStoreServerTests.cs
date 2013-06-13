@@ -366,9 +366,9 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-		public void Should_throw_when_ignore_missing_false()
+		public async Task Should_throw_when_ignore_missing_false()
 		{
-			Assert.Throws<DocumentDoesNotExistsException>(async () =>
+			await AssertAsync.Throws<DocumentDoesNotExistsException>(async () =>
 			{
 				await DocumentStore.AsyncDatabaseCommands.PatchAsync("Company/1",
 				                                                     new[]

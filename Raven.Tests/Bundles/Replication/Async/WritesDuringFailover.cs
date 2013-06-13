@@ -64,7 +64,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				Assert.Throws<AggregateException>(async () => await session.LoadAsync<Company>("companies/1"));
+				await AssertAsync.Throws<AggregateException>(async () => await session.LoadAsync<Company>("companies/1"));
 			}
 		}
 
@@ -94,7 +94,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 				var company = await session.LoadAsync<Company>("companies/1");
 				Assert.NotNull(company);
 				company.Name = "different";
-				var aggregateException = Assert.Throws<AggregateException>(async () => await session.SaveChangesAsync());
+				var aggregateException = await AssertAsync.Throws<AggregateException>(async () => await session.SaveChangesAsync());
 				var invalidOperationException = Assert.IsType<InvalidOperationException>(aggregateException.Flatten().InnerException);
 				Assert.Equal("Could not replicate POST operation to secondary node, failover behavior is: AllowReadsFromSecondaries",
 					invalidOperationException.Message);
