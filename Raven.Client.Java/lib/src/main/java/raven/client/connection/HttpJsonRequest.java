@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.httpclient.Header;
@@ -31,6 +32,11 @@ public class HttpJsonRequest implements AutoCloseable {
 
   public HttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams, HttpJsonRequestFactory httpJsonRequestFactory) {
     // TODO Auto-generated constructor stub
+  }
+
+  public CachedRequest getCachedRequestDetails() {
+    //TODO:
+    return null;
   }
 
   @Deprecated
@@ -123,8 +129,10 @@ public class HttpJsonRequest implements AutoCloseable {
    * @return
    * @see org.apache.commons.httpclient.HttpMethodBase#getResponseHeaders()
    */
-  public Header[] getResponseHeaders() {
-    return methodBase.getResponseHeaders();
+  public Map<String, String> getResponseHeaders() {
+    //TODO: get only one time and be able to modify those headers!
+//    return methodBase.getResponseHeaders();
+    return null;
   }
 
   protected void handleForbiddenResponse() {
@@ -179,6 +187,16 @@ public class HttpJsonRequest implements AutoCloseable {
    */
   public HttpMethodBase getWebRequest() {
     return methodBase;
+  }
+
+  public void setResponseStatusCode(int scNotModified) {
+    // TODO Auto-generated method stub
+
+  }
+
+  public void setResponseHeaders(Map<String, String> map) {
+    // TODO Auto-generated method stub
+
   }
 
 }

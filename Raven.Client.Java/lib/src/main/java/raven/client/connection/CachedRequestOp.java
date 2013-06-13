@@ -4,6 +4,16 @@ public class CachedRequestOp {
   private CachedRequest cachedRequest;
   private boolean skipServerCheck;
 
+  public CachedRequestOp() {
+    super();
+  }
+
+  public CachedRequestOp(CachedRequest cachedRequest, boolean skipServerCheck) {
+    super();
+    this.cachedRequest = cachedRequest;
+    this.skipServerCheck = skipServerCheck;
+  }
+
   /**
    * @return the cachedRequest
    */

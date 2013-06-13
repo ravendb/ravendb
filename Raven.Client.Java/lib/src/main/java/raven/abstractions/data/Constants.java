@@ -8,4 +8,6 @@ public class Constants {
   public final static String RAVEN_LAST_MODIFIED_DATE_FORAT = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSX";
   public final static String SYSTEM_DATABASE = "<system>";
 
+  public final static String RAVEN_FORCE_PRIMARY_SERVER_CHECK = "Raven-Force-Primary-Server-Check";
+
 }

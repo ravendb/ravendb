@@ -1,17 +1,29 @@
 package raven.client.connection;
 
 import java.util.Date;
-
-import org.apache.commons.collections.MultiMap;
+import java.util.Map;
 
 import raven.abstractions.json.linq.RavenJToken;
 
 public class CachedRequest {
   private RavenJToken data;
   private Date time;
-  private MultiMap headers;
+  private Map<String, String> headers;
   private String database;
   private boolean forceServerCheck;
+
+
+  public CachedRequest() {
+    super();
+  }
+  public CachedRequest(RavenJToken data, Date time, Map<String, String> headers, String database, boolean forceServerCheck) {
+    super();
+    this.data = data;
+    this.time = time;
+    this.headers = headers;
+    this.database = database;
+    this.forceServerCheck = forceServerCheck;
+  }
   /**
    * @return the data
    */
@@ -39,13 +51,13 @@ public class CachedRequest {
   /**
    * @return the headers
    */
-  public MultiMap getHeaders() {
+  public Map<String, String> getHeaders() {
     return headers;
   }
   /**
    * @param headers the headers to set
    */
-  public void setHeaders(MultiMap headers) {
+  public void setHeaders(Map<String, String> headers) {
     this.headers = headers;
   }
   /**
