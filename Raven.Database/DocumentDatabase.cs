@@ -384,7 +384,6 @@ namespace Raven.Database
                         typeof(IAlterConfiguration)
                         ),
                 };
-
                 TransactionalStorage.Batch(actions =>
                 {
                     result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
@@ -406,12 +405,20 @@ namespace Raven.Database
                 {
                     foreach (var index in result.Indexes)
                     {
-                        index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
-                        index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
-                        index.IsOnRam = IndexStorage.IndexOnRam(index.Name);
-						var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Name);
-						if (indexDefinition != null)
-							index.LockMode = indexDefinition.LockMode;
+	                    try
+	                    {
+		                    index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
+		                    index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
+		                    index.IsOnRam = IndexStorage.IndexOnRam(index.Name);
+		                    var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Name);
+		                    if (indexDefinition != null)
+			                    index.LockMode = indexDefinition.LockMode;
+	                    }
+	                    catch (Exception)
+	                    {
+		                    // might happen if the index was deleted mid operation
+							// we don't really care for that, so we ignore this
+	                    }
                     }
                 }
 
