@@ -9,9 +9,11 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Configuration;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -247,7 +249,21 @@ namespace Raven.Database.Bundles.SqlReplication
 					}
 
 					var obj = RavenJObject.FromObject(localReplicationStatus);
-					Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+					var retries = 15;
+					while(true)
+					{
+						try
+						{
+							Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+							return;
+						}
+						catch (ConcurrencyException)
+						{
+							if (retries-- <= 0)
+								throw;
+							Thread.Sleep(100);
+						}
+					}
 				}
 				finally
 				{
