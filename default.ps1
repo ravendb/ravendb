@@ -186,7 +186,7 @@ task TestSilverlight -depends Compile, CopyServer {
 	
 		$statLight = Get-PackagePath StatLight
 		$statLight = "$statLight\tools\StatLight.exe"
-		&$statLight "--XapPath=.\build\sl5\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\Raven.Tests.Silverlight.Results.xml" 
+		&$statLight "--XapPath=.\build\sl5\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\sl5\Raven.Tests.Silverlight.Results.xml" 
 	}
 	finally
 	{
@@ -205,17 +205,17 @@ task TestWinRT -depends Compile, CopyServer {
 		$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
 	
 		@("Raven.Tests.WinRT.dll") | ForEach-Object { 
-			Write-Host "Testing $build_dir\$_"
+			Write-Host "Testing $build_dir\winrt\$_"
 			
 			if($global:full_storage_test) {
 				$env:raventest_storage_engine = 'esent';
-				Write-Host "Testing $build_dir\$_ (esent)"
-				&"$xUnit" "$build_dir\$_"
+				Write-Host "Testing $build_dir\winrt\$_ (esent)"
+				&"$xUnit" "$build_dir\winrt\$_"
 			}
 			else {
 				$env:raventest_storage_engine = $null;
-				Write-Host "Testing $build_dir\$_ (default)"
-				&"$xUnit" "$build_dir\$_"
+				Write-Host "Testing $build_dir\winrt\$_ (default)"
+				&"$xUnit" "$build_dir\winrt\$_"
 			}
 		}
 	}
