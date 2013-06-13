@@ -89,7 +89,7 @@
 				<Grid Grid.Column="2" Visibility="{Binding HasDocument, Converter={StaticResource BooleanToVisibility}}">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="Auto"/>
-						<ColumnDefinition Width="150"/>
+						<ColumnDefinition Width="300"/>
 					</Grid.ColumnDefinitions>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>

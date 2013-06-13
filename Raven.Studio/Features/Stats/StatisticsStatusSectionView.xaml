@@ -27,10 +27,12 @@
 				<ListBox Grid.Column="1"
 						 Visibility="{Binding Value.IsList, Converter={StaticResource BooleanToVisibility}}"
 						 ItemsSource="{Binding Value.ListItems}"
-						 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}">
+						 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}"
+                         BorderThickness="0">
 					<ListBox.ItemTemplate>
 						<DataTemplate>
-							<Grid>
+                            <Border BorderBrush="{StaticResource Brush_ControlBorder}" BorderThickness="1">
+							<Grid Margin="10">
 								<Grid Visibility="{Binding ItemType, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='System.String'}">
 									<HyperlinkButton Content="{Binding Item}"
 													 Click="IndexClicked"/>
@@ -46,7 +48,8 @@
 
 									<ListBox Grid.Row="1"
 											 ItemsSource="{Binding ItemData}"
-											 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}">
+											 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}"
+                                             BorderThickness="0">
 										<ListBox.ItemTemplate>
 											<DataTemplate>
 												<Grid>
@@ -70,38 +73,48 @@
 									<Grid Grid.Row="2"
 										  Visibility="{Binding ShowChart, Converter={StaticResource BooleanToVisibility}}">
 										<toolkit:Chart Visibility="{Binding DataContext.StatisticsCount, RelativeSource={RelativeSource AncestorType=Infrastructure:PageView}, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=1}"
-													   Width="500"
+													   Style="{StaticResource PerformanceChart}"
+                                                       Width="500"
 													   Height="250"
 													   Title="Performance"
 													   Margin="5">
+                                            <toolkit:Chart.Axes>
+                                                <toolkit:LinearAxis Orientation="Y" Style="{StaticResource AxisStyle}"/>
+                                                <toolkit:DateTimeAxis Orientation="X" Style="{StaticResource TimeAxisStyle}"/>
+                                            </toolkit:Chart.Axes>
 											<toolkit:LineSeries ItemsSource="{Binding IndexData}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceDeepSkyBlue}"
+															DataPointStyle="{StaticResource IndexSeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Index"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding MapData}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceGreen}"
+															DataPointStyle="{StaticResource MapSeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Map"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding Level0Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceRed}"
+															DataPointStyle="{StaticResource Reduce1SeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Reduce 0"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding Level1Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformancePurple}"
+															DataPointStyle="{StaticResource Reduce2SeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Reduce 1"/>
 
 											<toolkit:LineSeries ItemsSource="{Binding Level2Data}" 
 															DependentValueBinding="{Binding Path=Value.DurationMilliseconds}" 
 															IndependentValueBinding="{Binding Path=Key}"
-															DataPointStyle="{StaticResource LineDataPointStylePerformanceOrange}"
+															DataPointStyle="{StaticResource Reduce3SeriesDataPointStyle}"
+                                                                LegendItemStyle="{StaticResource LegendItemStyle}"
 															Title="Reduce 2">
 											</toolkit:LineSeries>
 										</toolkit:Chart>
@@ -114,7 +127,8 @@
 									</Grid>
 								</Grid>
 							</Grid>
-						</DataTemplate>
+                            </Border>
+                        </DataTemplate>
 					</ListBox.ItemTemplate>
 				</ListBox>
 			</Grid>
@@ -122,11 +136,6 @@
 	</UserControl.Resources>
 
 	<Grid>
-		<ScrollViewer BorderThickness="1"
-					  BorderBrush="#FFEAE7E4"
-                      Background="{StaticResource Brush_SubtleBackground2}"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
@@ -137,17 +146,17 @@
 					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 
-				<ComboBox x:Name="ViewSelect" ItemsSource="{Binding ViewOptions}" SelectedValue="{Binding SelectedViewOption.Value, Mode=TwoWay}"/>
+				<ComboBox x:Name="ViewSelect" ItemsSource="{Binding ViewOptions}" SelectedValue="{Binding SelectedViewOption.Value, Mode=TwoWay}" Margin="0,5" Width="300"/>
 
 				<ListBox Grid.Row="1"
 						 Grid.ColumnSpan="2"
 						 ItemsSource="{Binding StatisticsToView}"
 						 ItemTemplate="{StaticResource Statistics_Item_Tamplate}"
 						 ItemContainerStyle="{StaticResource Style_ListBox_Disable_Selection}"
-						 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+						 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         Style="{StaticResource Style_ListBox_NoVirtualization}">
 				</ListBox>
 			</Grid>
-
-		</ScrollViewer>
 	</Grid>
 </Infrastructure:PageView>
