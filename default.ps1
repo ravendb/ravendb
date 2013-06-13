@@ -201,8 +201,7 @@ task TestWinRT -depends Compile, CopyServer {
 		
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
 	
-		$xUnit = Get-PackagePath xunit.runners
-		$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
+		$testRunner = "C:\Program Files (x86)\Microsoft Visual Studio 11.0\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
 	
 		@("Raven.Tests.WinRT.dll") | ForEach-Object { 
 			Write-Host "Testing $build_dir\winrt\$_"
@@ -210,12 +209,12 @@ task TestWinRT -depends Compile, CopyServer {
 			if($global:full_storage_test) {
 				$env:raventest_storage_engine = 'esent';
 				Write-Host "Testing $build_dir\winrt\$_ (esent)"
-				&"$xUnit" "$build_dir\winrt\$_"
+				&"$testRunner" "$build_dir\winrt\$_"
 			}
 			else {
 				$env:raventest_storage_engine = $null;
 				Write-Host "Testing $build_dir\winrt\$_ (default)"
-				&"$xUnit" "$build_dir\winrt\$_"
+				&"$testRunner" "$build_dir\winrt\$_"
 			}
 		}
 	}
