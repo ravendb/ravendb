@@ -6,104 +6,42 @@
     xmlns:primitives="clr-namespace:System.Windows.Controls.DataVisualization.Charting.Primitives;assembly=System.Windows.Controls.DataVisualization.Toolkit">
 
 
-    <Style x:Key="Reduce1SeriesDataPointStyle" TargetType="toolkit:LineDataPoint">
+    <Style x:Key="SeriesDataPointStyle" TargetType="toolkit:LineDataPoint">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Width" Value="6" />
+        <Setter Property="Height" Value="6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:LineDataPoint">
+                    <Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}" StrokeThickness="0">
+                        <ToolTipService.ToolTip>
+                            <ContentControl Content="{Binding Value}"/>
+                        </ToolTipService.ToolTip>
+                    </Ellipse>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Key="Reduce1SeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
         <Setter Property="Background" Value="#55172C"/>
-        <Setter Property="BorderBrush" Value="White"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="IsTabStop" Value="False"/>
-        <Setter Property="Width" Value="8" />
-        <Setter Property="Height" Value="8" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="toolkit:LineDataPoint">
-                    <Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}" StrokeThickness="0">
-                            <ToolTipService.ToolTip>
-                                <ContentControl Content="{Binding Value}"/>
-                            </ToolTipService.ToolTip>
-                        </Ellipse>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
     </Style>
 
-    <Style x:Key="Reduce2SeriesDataPointStyle" TargetType="toolkit:LineDataPoint">
+    <Style x:Key="Reduce2SeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
         <Setter Property="Background" Value="#BF426C"/>
-        <Setter Property="BorderBrush" Value="White"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="IsTabStop" Value="False"/>
-        <Setter Property="Width" Value="8" />
-        <Setter Property="Height" Value="8" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="toolkit:LineDataPoint">
-                    <Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}" StrokeThickness="0">
-                        <ToolTipService.ToolTip>
-                            <ContentControl Content="{Binding Value}"/>
-                        </ToolTipService.ToolTip>
-                    </Ellipse>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
     </Style>
 
-    <Style x:Key="Reduce3SeriesDataPointStyle" TargetType="toolkit:LineDataPoint">
+    <Style x:Key="Reduce3SeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
         <Setter Property="Background" Value="#F090B0"/>
-        <Setter Property="BorderBrush" Value="White"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="IsTabStop" Value="False"/>
-        <Setter Property="Width" Value="8" />
-        <Setter Property="Height" Value="8" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="toolkit:LineDataPoint">
-                    <Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}" StrokeThickness="0">
-                        <ToolTipService.ToolTip>
-                            <ContentControl Content="{Binding Value}"/>
-                        </ToolTipService.ToolTip>
-                    </Ellipse>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
     </Style>
 
-    <Style x:Key="MapSeriesDataPointStyle" TargetType="toolkit:LineDataPoint">
+    <Style x:Key="MapSeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
         <Setter Property="Background" Value="#BF8112"/>
-        <Setter Property="BorderBrush" Value="White"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="IsTabStop" Value="False"/>
-        <Setter Property="Width" Value="8" />
-        <Setter Property="Height" Value="8" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="toolkit:LineDataPoint">
-                    <Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}" StrokeThickness="0">
-                        <ToolTipService.ToolTip>
-                            <ContentControl Content="{Binding Value}"/>
-                        </ToolTipService.ToolTip>
-                    </Ellipse>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
     </Style>
 
-    <Style x:Key="IndexSeriesDataPointStyle" TargetType="toolkit:LineDataPoint">
+    <Style x:Key="IndexSeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
         <Setter Property="Background" Value="#1C697E"/>
-        <Setter Property="BorderBrush" Value="#F7F7F7"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="IsTabStop" Value="False"/>
-        <Setter Property="Width" Value="8" />
-        <Setter Property="Height" Value="8" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="toolkit:LineDataPoint">
-                    <Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}" StrokeThickness="0">
-                        <ToolTipService.ToolTip>
-                            <ContentControl Content="{Binding Value}"/>
-                        </ToolTipService.ToolTip>
-                    </Ellipse>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
     </Style>
 
     <Style x:Key="LegendItemStyle" TargetType="toolkit:LegendItem">
@@ -113,7 +51,7 @@
                     <StackPanel Orientation="Horizontal">
                         <Grid>
                             <Rectangle Height="2" Width="25" Fill="{Binding Background}" VerticalAlignment="Center"/>
-                            <Ellipse Stroke="{Binding BorderBrush}" StrokeThickness="0" Fill="{Binding Background}" VerticalAlignment="Center"  Width="8" Height="8" HorizontalAlignment="Center"/>
+                            <Ellipse Stroke="{Binding BorderBrush}" StrokeThickness="0" Fill="{Binding Background}" VerticalAlignment="Center"  Width="6" Height="6" HorizontalAlignment="Center"/>
                         </Grid>
                         <dataVisualization:Title Content="{TemplateBinding Content}" Margin="3,0,10,0" FontSize="10"/>
                     </StackPanel>
@@ -193,7 +131,15 @@
         </Setter>
     </Style>
 
+    <Style x:Key="TitleStyle" TargetType="dataVisualization:Title">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="5"/>
+    </Style>
+    
     <Style x:Key="PerformanceChart" TargetType="toolkit:Chart">
+        <Setter Property="TitleStyle" Value="{StaticResource TitleStyle}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="toolkit:Chart">
