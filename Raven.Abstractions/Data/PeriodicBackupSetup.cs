@@ -15,6 +15,7 @@ namespace Raven.Abstractions.Data
 		public string GlacierVaultName { get; set; }
 		public string S3BucketName { get; set; }
 		public string AwsRegionEndpoint { get; set; }
+        public string AzureStorageContainer { get; set; }
 
 		public string LocalFolderName { get; set; }
 

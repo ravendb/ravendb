@@ -5,6 +5,7 @@
 
 	<Converters:IntParamEqualityConverter x:Key="IntParamEquality"/>
 	<Converters:VisibilityByParamInEqualityConverter x:Key="VisibilityByParamInEquality"/>
+    <Converters:VisibilityByAnyParamEqualityConverter x:Key="VisibilityByAnyParamEquality"/>
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:HorizontalIfStringConverter x:Key="HorizontalIfString"/>
 	<Converters:BreakToLinesConverter x:Key="BreakToLines"/>
