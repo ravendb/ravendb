@@ -248,20 +248,19 @@ namespace Raven.Database.Bundles.SqlReplication
 						}
 					}
 
-					var obj = RavenJObject.FromObject(localReplicationStatus);
-					var retries = 15;
-					while(true)
+					int retries = 5;
+					while (retries >0)
 					{
+						retries--;
 						try
 						{
+							var obj = RavenJObject.FromObject(localReplicationStatus);
 							Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
-							return;
+							break;
 						}
 						catch (ConcurrencyException)
 						{
-							if (retries-- <= 0)
-								throw;
-							Thread.Sleep(100);
+							Thread.Sleep(50);
 						}
 					}
 				}
