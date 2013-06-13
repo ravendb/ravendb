@@ -297,27 +297,27 @@ namespace Raven.Studio.Features.Stats
 		{
 			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].IndexData)
 			{
-				statInfoItem.IndexData.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+				statInfoItem.IndexData[indexingPerformanceStats.Started] = indexingPerformanceStats;
 			}
 
 			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].MapData)
 			{
-				statInfoItem.MapData.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+				statInfoItem.MapData[indexingPerformanceStats.Started] = indexingPerformanceStats;
 			}
 
 			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].Level0Data)
 			{
-				statInfoItem.Level0Data.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+				statInfoItem.Level0Data[indexingPerformanceStats.Started] = indexingPerformanceStats;
 			}
 
 			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].Level1Data)
 			{
-				statInfoItem.Level1Data.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+				statInfoItem.Level1Data[indexingPerformanceStats.Started] = indexingPerformanceStats;
 			}
 
 			foreach (var indexingPerformanceStats in IndexesGraphData[statInfoItem.Title].Level2Data)
 			{
-				statInfoItem.Level2Data.Add(indexingPerformanceStats.Started, indexingPerformanceStats);
+				statInfoItem.Level2Data[indexingPerformanceStats.Started] = indexingPerformanceStats;
 			}
 
 			TrimDictionaries(statInfoItem);
