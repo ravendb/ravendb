@@ -13,6 +13,7 @@
                          xmlns:controls="clr-namespace:Raven.Studio.Controls" xmlns:Delay="clr-namespace:Delay"
                          xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
                          xmlns:markupExtensions="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions"
+                         xmlns:contextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
                          mc:Ignorable="d"
                          Title="Documents"
                          Style="{StaticResource PageStyle}"
@@ -31,8 +32,8 @@
                                                  VerticalAlignment="Center" VerticalContentAlignment="Center"
                                                  Margin="6"/>
                     <controls:NavTriangle Visibility="{Binding SelectedCollection.Value.Name, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
-                    <TextBlock Text="{Binding SelectedCollection.Value.Name}"
-                                                 ToolTipService.ToolTip="{Binding SelectedCollection.Value.Name}"
+                    <TextBlock Text="{Binding SelectedCollection.Value.DisplayName}"
+                                                 ToolTipService.ToolTip="{Binding SelectedCollection.Value.DisplayName}"
                                                  Style="{StaticResource Style_TextBlock_Breadcrumb}"
                                                  Margin="4,0" VerticalAlignment="Center"
                            Visibility="{Binding SelectedCollection.Value.Name, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
@@ -98,7 +99,23 @@
                 </Grid.RowDefinitions>
                 <ListBox ItemsSource="{Binding SortedCollectionsList.View}" SelectedItem="{Binding SelectedCollection.Value, Mode=TwoWay}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemTemplate>
+
+					<i:Interaction.Behaviors>
+						<behaviors:SelectItemOnRightClick />
+						<Infrastructure:ProvideVisibleItemRangeFromItemsControlBehavior/>
+						<behaviors:BindSelectedItemsBehavior Target="{Binding SelectedCollection}"/>
+					</i:Interaction.Behaviors>
+					<contextMenu:ContextMenuService.ContextMenu>
+						<contextMenu:ContextMenu x:Name="DocumentsContextMenu">
+							<contextMenu:MenuItem Header="Delete Collection"
+												  Command="{Binding DeleteSelectedCollection}">
+								<contextMenu:MenuItem.Icon>
+									<Image Source="{StaticResource Image_Delete_Tiny}"/>
+								</contextMenu:MenuItem.Icon>
+							</contextMenu:MenuItem>
+						</contextMenu:ContextMenu>
+					</contextMenu:ContextMenuService.ContextMenu>
+					<ListBox.ItemTemplate>
                         <DataTemplate DataType="models:CollectionModel">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -121,13 +138,24 @@
                                                        RadiusX="1"
                                                        RadiusY="1">
                                     </Rectangle>
-                                    <TextBlock Margin="10,0,0,0" behaviors:FadeTrimming.IsEnabled="True" behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True" VerticalAlignment="Center">
-                                <Run Text="{Binding DisplayName}" />
-                                <Run Text=""/>
-                                <Run Text="{Binding Count, StringFormat='({0:#,#;;0})'}" Foreground="DarkGray"/>
-                                    </TextBlock>
-                                </Grid>
+									<TextBlock Margin="10,0,0,0" behaviors:FadeTrimming.IsEnabled="True" 
+											   behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True" 
+											   VerticalAlignment="Center"
+											   Visibility="{Binding Count, Converter={StaticResource VisibleWhenDifferent}, ConverterParameter=0}">
+										<Run Text="{Binding DisplayName}" />
+										<Run Text=""/>
+										<Run Text="{Binding Count, StringFormat='({0:#,#;;0})'}" Foreground="DarkGray"/>
+									</TextBlock>
+
+									<TextBlock Margin="10,0,0,0" behaviors:FadeTrimming.IsEnabled="True" 
+											   behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True" 
+											   VerticalAlignment="Center"
+											   Visibility="{Binding Count, Converter={StaticResource VisibleWhenEqual}, ConverterParameter=0}">
+										<Run Text="{Binding DisplayName}"/>
+									</TextBlock>
+								</Grid>
                             </Grid>
+							
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
