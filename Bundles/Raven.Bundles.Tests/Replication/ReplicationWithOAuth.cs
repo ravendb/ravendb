@@ -1,8 +1,8 @@
 ﻿extern alias database;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
@@ -30,7 +30,7 @@ namespace Raven.Bundles.Tests.Replication
 		}
 
 		[Fact]
-		public void CanReplicateDocumentWithOAuth()
+		public async Task CanReplicateDocumentWithOAuth()
 		{
 			var store1 = CreateStore(enableAuthorization:true);
 			var store2 = CreateStore(enableAuthorization: true);
@@ -50,14 +50,14 @@ namespace Raven.Bundles.Tests.Replication
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Item());
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Item());
+				await session.SaveChangesAsync();
 			}
 
 			JsonDocument item = null;
 			for (int i = 0; i < RetriesCount; i++)
 			{
-				item = store2.DatabaseCommands.Get("items/1");
+				item = await store2.AsyncDatabaseCommands.GetAsync("items/1");
 				if (item != null)
 					break;
 				Thread.Sleep(100);
