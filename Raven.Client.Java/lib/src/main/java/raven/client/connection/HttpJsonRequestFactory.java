@@ -28,7 +28,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
   private List<EventHandler<RequestResultArgs>> logRequest = new ArrayList<>();
 
   private final int maxNumberOfCachedRequests;
-  private SimpleCache<CachedRequest> cache;
+  private SimpleCache cache;
   protected int numOfCachedRequests;
   private boolean enableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers;
   private ThreadLocal<Long> aggressiveCacheDuration = new ThreadLocal<>();
