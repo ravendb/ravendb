@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.DecompressingHttpClient;
@@ -30,7 +31,9 @@ import raven.client.util.SimpleCache;
  */
 public class HttpJsonRequestFactory implements AutoCloseable {
 
-  private HttpClient httpClient;
+  private DefaultHttpClient httpClient;
+
+  private DecompressingHttpClient gzipHttpClient;
 
   private List<EventHandler<WebRequestEventArgs>> configureRequest = new ArrayList<>();
 
@@ -48,9 +51,9 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
   public HttpJsonRequestFactory(int maxNumberOfCachedRequests) {
     super();
-    DefaultHttpClient innerClient = new DefaultHttpClient();
-    this.httpClient = new DecompressingHttpClient(innerClient);
-    innerClient.setHttpRequestRetryHandler(new StandardHttpRequestRetryHandler(0, false));
+    this.httpClient = new DefaultHttpClient();
+    this.gzipHttpClient = new DecompressingHttpClient(this.httpClient);
+    this.httpClient.setHttpRequestRetryHandler(new StandardHttpRequestRetryHandler(0, false));
     this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
     resetCache();
   }
@@ -64,6 +67,14 @@ public class HttpJsonRequestFactory implements AutoCloseable {
   public void addLogRequestEventHandler(EventHandler<RequestResultArgs> event) {
     logRequest.add(event);
   }
+
+  /**
+   * @return the gzipHttpClient
+   */
+  public HttpClient getGzipHttpClient() {
+    return gzipHttpClient;
+  }
+
 
   /**
    * @return the httpClient
@@ -93,7 +104,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     cache.close();
   }
 
-  private CachedRequestOp configureCaching(String url, HttpJsonRequest request) {
+  private CachedRequestOp configureCaching(String url, HttpRequest request) {
     CachedRequest cachedRequest = cache.get(url);
     if (cachedRequest == null) {
       return new CachedRequestOp(null, false);
@@ -102,7 +113,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     if (getAggressiveCacheDuration() != null) {
       long totalSeconds = getAggressiveCacheDuration() / 1000;
       if (totalSeconds > 0) {
-        request.getWebRequest().addHeader("Cache-Control", "max-age=" + totalSeconds);
+        request.addHeader("Cache-Control", "max-age=" + totalSeconds);
       }
 
       if (cachedRequest.isForceServerCheck() == false && (new Date().getTime() - cachedRequest.getTime().getTime() < getAggressiveCacheDuration())) { //can serve directly from local cache
@@ -110,7 +121,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
       }
       cachedRequest.setForceServerCheck(false);
     }
-    request.getWebRequest().addHeader("If-None-Match", cachedRequest.getHeaders().get("ETag"));
+    request.addHeader("If-None-Match", cachedRequest.getHeaders().get("ETag"));
     return new CachedRequestOp(cachedRequest, skipServerCheck);
   }
 
@@ -124,8 +135,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
         && createHttpJsonRequestParams.getConvention().getShouldCacheRequest().apply(createHttpJsonRequestParams.getUrl()));
 
     if (request.getShouldCacheRequest() && createHttpJsonRequestParams.getMethod() == HttpMethods.GET && !getDisableHttpCaching()) {
-      //TODO: pass headers method
-      CachedRequestOp cachedRequestDetails = configureCaching(createHttpJsonRequestParams.getUrl(), request);
+      CachedRequestOp cachedRequestDetails = configureCaching(createHttpJsonRequestParams.getUrl(), request.getWebRequest());
       request.setCachedRequestDetails(cachedRequestDetails.getCachedRequest());
       request.setSkipServerCheck(cachedRequestDetails.isSkipServerCheck());
     }

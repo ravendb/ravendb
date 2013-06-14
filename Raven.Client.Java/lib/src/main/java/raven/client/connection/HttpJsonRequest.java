@@ -99,20 +99,13 @@ public class HttpJsonRequest implements AutoCloseable {
     this.owner = requestParams.getOwner();
     this.conventions = requestParams.getConvention();
     this.method = requestParams.getMethod();
-    this.httpClient = factory.getHttpClient();
     this.webRequest = createWebRequest(requestParams);
     if (factory.isDisableRequestCompression() == false && requestParams.isDisableRequestCompression() == false) {
-      switch (requestParams.getMethod()) {
-      case POST:
-      case PUT:
-      case PATCH:
-      case EVAL:
-        webRequest.addHeader("Content-Encoding", "gzip");
-        break;
-      }
+      /* Content-Encoding and Accept-Encoding Parameters are handled by HttpClient */
+      this.httpClient = factory.getGzipHttpClient();
+    } else {
+      this.httpClient = factory.getHttpClient();
     }
-    //TODO: now client works only as GZIP!
-    webRequest.addHeader("Accept-Encoding", "gzip");
     // content type is set in RequestEntity
     //TODO: header client version
     writeMetadata(requestParams.getMetadata());
@@ -224,13 +217,13 @@ public class HttpJsonRequest implements AutoCloseable {
     HttpResponse httpResponse = null;
     try {
       httpResponse = httpClient.execute(webRequest);
-      if (httpResponse.getStatusLine().getStatusCode() >= 400) {
-        throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
-      }
-      return httpResponse;
-    } catch(Exception e) {
+    } catch (Exception e) {
       throw new RuntimeException(e.getMessage(), e);
     }
+    if (httpResponse.getStatusLine().getStatusCode() >= 400) {
+      throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
+    }
+    return httpResponse;
   }
 
   /**
@@ -338,8 +331,6 @@ public class HttpJsonRequest implements AutoCloseable {
       responseStatusCode = response.getStatusLine().getStatusCode();
 
       //TODO: HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
-      //TODO: do we need gzip decoder ?
-      //TODO: close responseStream?
 
       RavenJToken data = RavenJToken.parse(responseStream); //TODO replace with try load
 
