@@ -49,7 +49,6 @@ namespace Raven.Database.Bundles.SqlReplication
 		private PrefetchingBehavior prefetchingBehavior;
 
 		private EtagSynchronizer etagSynchronizer;
-		private Etag lastStatusEtag;
 		private Etag lastLatestEtag;
 
 		public void Execute(DocumentDatabase database)
@@ -135,7 +134,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 				var localReplicationStatus = GetReplicationStatus();
-				
+
 				var relevantConfigs = config.Where(x =>
 				{
 					if (x.Disabled)
@@ -286,9 +285,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				try
 				{
 					var obj = RavenJObject.FromObject(localReplicationStatus);
-					var putResult = Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+					Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
 
-					lastStatusEtag = putResult.ETag;
 					lastLatestEtag = latestEtag;
 					break;
 				}
@@ -382,7 +380,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			var calculateSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
 
 			if (calculateSynchronizationEtag == lastLatestEtag)
-				return lastStatusEtag;
+				return calculateSynchronizationEtag.IncrementBy(1);
 
 			return calculateSynchronizationEtag;
 		}
@@ -442,8 +440,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					DocumentRetriever.EnsureIdInMetadata(jsonDocument);
 					var document = jsonDocument.ToJson();
-                    document[Constants.DocumentIdFieldName] = jsonDocument.Key;
-                    patcher.Apply(document, new ScriptedPatchRequest
+					document[Constants.DocumentIdFieldName] = jsonDocument.Key;
+					patcher.Apply(document, new ScriptedPatchRequest
 					{
 						Script = cfg.Script
 					}, jsonDocument.SerializedSizeOnDisk);
