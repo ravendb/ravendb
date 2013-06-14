@@ -23,5 +23,16 @@ public enum HttpMethods {
   /**
    * HEAD method
    */
-  HEAD;
+  HEAD,
+
+  /**
+   * PATCH method
+   */
+  PATCH,
+
+  /**
+   * EVAL method
+   */
+  EVAL;
 }
+

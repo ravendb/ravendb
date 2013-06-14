@@ -10,6 +10,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import org.apache.commons.httpclient.URI;
+import org.apache.commons.httpclient.URIException;
 import org.junit.Test;
 
 import raven.abstractions.data.Constants;
@@ -21,6 +23,7 @@ import raven.client.RavenJObjectsTest.Person;
 import raven.client.connection.ServerClient;
 
 public class Sandbox {
+
 
   @Test
   public void testParseRavenLastModifiedDate() throws ParseException {

@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
+import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.basic.EventHandler;
@@ -26,6 +29,8 @@ import raven.client.util.SimpleCache;
  */
 public class HttpJsonRequestFactory implements AutoCloseable {
 
+  private HttpClient httpClient;
+
   private List<EventHandler<WebRequestEventArgs>> configureRequest = new ArrayList<>();
 
   private List<EventHandler<RequestResultArgs>> logRequest = new ArrayList<>();
@@ -42,6 +47,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
   public HttpJsonRequestFactory(int maxNumberOfCachedRequests) {
     super();
+    this.httpClient = new HttpClient();
     this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
     resetCache();
   }
@@ -53,6 +59,13 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
   public void addLogRequestEventHandler(EventHandler<RequestResultArgs> event) {
     logRequest.add(event);
+  }
+
+  /**
+   * @return the httpClient
+   */
+  public HttpClient getHttpClient() {
+    return httpClient;
   }
 
   protected void cacheResponse(String url, RavenJToken data, Map<String, String> headers) {
@@ -112,26 +125,8 @@ public class HttpJsonRequestFactory implements AutoCloseable {
       request.setCachedRequestDetails(cachedRequestDetails.getCachedRequest());
       request.setSkipServerCheck(cachedRequestDetails.isSkipServerCheck());
     }
-    EventHelper.invoke(configureRequest, createHttpJsonRequestParams.getServerClient(), new WebRequestEventArgs(request.getWebRequest()));
+    EventHelper.invoke(configureRequest, createHttpJsonRequestParams.getOwner(), new WebRequestEventArgs(request.getWebRequest()));
     return request;
-    /* TODO: move to HttpJsonRequest
-        switch (params.getMethod()) {
-        case GET:
-          GetMethod getMethod = new GetMethod(params.getUrl());
-          return new HttpJsonRequest(httpClient, getMethod);
-        case POST:
-          PostMethod postMethod = new PostMethod(params.getUrl());
-          return new HttpJsonRequest(httpClient, postMethod);
-        case PUT:
-          PutMethod putMethod = new PutMethod(params.getUrl());
-          return new HttpJsonRequest(httpClient, putMethod);
-        case DELETE:
-          DeleteMethod deleteMethod = new DeleteMethod(params.getUrl());
-          return new HttpJsonRequest(httpClient, deleteMethod);
-
-        default:
-          throw new IllegalArgumentException("Unknown method: " + params.getMethod());
-        }*/
   }
 
   public AutoCloseable disableAllCaching() {

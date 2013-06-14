@@ -1,13 +1,14 @@
 package raven.abstractions.extensions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HeaderElement;
+import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.data.Constants;
 import raven.abstractions.json.linq.RavenJArray;
@@ -115,23 +116,21 @@ public class MetadataExtensions {
    * @param headers
    * @return
    */
-  public static RavenJObject filterHeaders(Header[] headers) {
+  public static RavenJObject filterHeaders(Map<String, String> headers) {
     RavenJObject metadata = new RavenJObject();
-    for (Header header : headers) {
-      if (header.getName().startsWith("Temp")) {
+    for (Entry<String, String> header : headers.entrySet()) {
+      if (header.getKey().startsWith("Temp")) {
         continue;
       }
-      if (header.getName().equals(Constants.DOCUMENT_ID_FIELD_NAME)) {
+      if (header.getKey().equals(Constants.DOCUMENT_ID_FIELD_NAME)) {
         continue;
       }
-      if (HEADERS_TO_IGNORE_CLIENT.contains(header.getName())) {
+      if (HEADERS_TO_IGNORE_CLIENT.contains(header.getKey())) {
         continue;
       }
       Set<String> values = new HashSet<>();
-      for (HeaderElement headerElement : header.getElements()) {
-        values.add(headerElement.getValue());
-      }
-      String headerName = captureHeaderName(header.getName());
+      values.addAll(Arrays.asList(StringUtils.split(header.getValue(),",")));
+      String headerName = captureHeaderName(header.getKey());
       if (values.size() == 1) {
         metadata.add(headerName, getValue(values.iterator().next()));
       } else {

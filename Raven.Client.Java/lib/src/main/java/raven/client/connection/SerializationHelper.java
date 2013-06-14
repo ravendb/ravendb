@@ -30,7 +30,7 @@ public class SerializationHelper {
     RavenJObject meta = MetadataExtensions.filterHeaders(jsonRequest.getResponseHeaders());
     UUID etag = getEtag(jsonRequest.getResponseHeader("ETag"));
 
-    return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(jsonRequest));
+    return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseStatusCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(jsonRequest));
 
   }
 

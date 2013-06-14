@@ -21,7 +21,6 @@ public class RequestResultArgs extends EventArgs {
   private int httpResult;
   private String result;
 
-
   /**
    * Any additional information that might be required
    * @return the additionalInformation

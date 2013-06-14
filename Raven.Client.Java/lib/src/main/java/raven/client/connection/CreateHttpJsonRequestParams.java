@@ -18,7 +18,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   private int operationHeadersHash;
   private Map<String, List<String>> operationsHeadersCollection;
   private Map<String, String> operationsHeadersDictionary = new HashMap<>();
-  private ServerClient serverClient;
+  private ServerClient owner;
   private String url;
   private String urlCached;
   private boolean avoidCachingRequest;
@@ -28,11 +28,11 @@ public class CreateHttpJsonRequestParams implements Serializable {
   private DocumentConvention convention;
   private boolean disableRequestCompression;
 
-  public CreateHttpJsonRequestParams(ServerClient serverClient, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
+  public CreateHttpJsonRequestParams(ServerClient owner, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
     super();
     this.method = method;
     this.url = url;
-    this.serverClient = serverClient;
+    this.owner = owner;
     this.metadata = metadata;
     this.credentials = credentials;
     this.convention = convention;
@@ -114,11 +114,12 @@ public class CreateHttpJsonRequestParams implements Serializable {
     return method;
   }
 
+
   /**
-   * @return the serverClient
+   * @return the owner
    */
-  public ServerClient getServerClient() {
-    return serverClient;
+  public ServerClient getOwner() {
+    return owner;
   }
 
   /**
@@ -189,10 +190,10 @@ public class CreateHttpJsonRequestParams implements Serializable {
   }
 
   /**
-   * @param serverClient the serverClient to set
+   * @param owner the owner to set
    */
-  public void setServerClient(ServerClient serverClient) {
-    this.serverClient = serverClient;
+  public void setOwner(ServerClient owner) {
+    this.owner = owner;
   }
 
   public void updateHeaders(HttpMethodBase webRequest) {

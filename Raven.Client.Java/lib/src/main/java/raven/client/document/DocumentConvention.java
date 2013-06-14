@@ -12,6 +12,17 @@ public class DocumentConvention {
 
   private Function1<String, Boolean> shouldCacheRequest;
 
+  public DocumentConvention() {
+    //TODO:
+    shouldCacheRequest = new Function1<String, Boolean>() {
+
+      @Override
+      public Boolean apply(String input) {
+        return true;
+      }
+    };
+  }
+
   /**
    * @return the shouldCacheRequest
    */

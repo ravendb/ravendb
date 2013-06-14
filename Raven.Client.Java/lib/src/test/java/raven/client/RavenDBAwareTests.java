@@ -1,10 +1,12 @@
 package raven.client;
 
+import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.httpclient.params.HttpMethodParams;
 
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
@@ -24,6 +26,7 @@ public abstract class RavenDBAwareTests {
     PutMethod put = null;
     try {
       put = new PutMethod(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
+      put.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler(0, false));
       put.setRequestEntity(new StringRequestEntity(getCreateDbDocument(dbName), "application/json", "utf-8"));
       int statusCode = client.executeMethod(put);
       if (statusCode != HttpStatus.SC_OK) {

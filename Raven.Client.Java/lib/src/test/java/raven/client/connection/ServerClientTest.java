@@ -16,6 +16,8 @@ import raven.abstractions.data.PutResult;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
+import raven.client.document.DocumentConvention;
+import raven.client.listeners.IDocumentConflictListener;
 
 public class ServerClientTest extends RavenDBAwareTests {
 
@@ -37,13 +39,12 @@ public class ServerClientTest extends RavenDBAwareTests {
 
   }
 
-
   @Test
-  @Ignore
   //TODO: remove this test - as it breaks one test one functionality principal
   public void testDatabaseChanges() throws Exception {
-    ServerClient client = null;
-    //new ServerClient(DEFAULT_SERVER_URL);
+    HttpJsonRequestFactory factory = new HttpJsonRequestFactory(10);
+
+    ServerClient client = new ServerClient(DEFAULT_SERVER_URL, new DocumentConvention(), null, new ReplicationInformer(), factory, null, new IDocumentConflictListener[0]);
     IDatabaseCommands systemDatabaseClient = client.forSystemDatabase();
     assertSame(systemDatabaseClient, client);
 
