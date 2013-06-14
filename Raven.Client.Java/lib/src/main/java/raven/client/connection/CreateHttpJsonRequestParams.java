@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.methods.HttpRequestBase;
 
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJObject;
@@ -196,15 +196,15 @@ public class CreateHttpJsonRequestParams implements Serializable {
     this.owner = owner;
   }
 
-  public void updateHeaders(HttpMethodBase webRequest) {
+  public void updateHeaders(HttpRequestBase webRequest) {
     if (operationsHeadersDictionary != null) {
       for (Entry<String, String> kvp : operationsHeadersDictionary.entrySet()) {
-        webRequest.addRequestHeader(kvp.getKey(), kvp.getValue());
+        webRequest.addHeader(kvp.getKey(), kvp.getValue());
       }
     }
     if (operationsHeadersCollection != null) {
       for (Entry<String, List<String>> header : operationsHeadersCollection.entrySet()) {
-        webRequest.addRequestHeader(header.getKey(), StringUtils.join(header.getValue(), ","));
+        webRequest.addHeader(header.getKey(), StringUtils.join(header.getValue(), ","));
       }
     }
   }

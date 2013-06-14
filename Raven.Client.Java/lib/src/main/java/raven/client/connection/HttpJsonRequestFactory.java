@@ -7,11 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.impl.client.DecompressingHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.StandardHttpRequestRetryHandler;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
@@ -47,10 +48,13 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
   public HttpJsonRequestFactory(int maxNumberOfCachedRequests) {
     super();
-    this.httpClient = new HttpClient();
+    DefaultHttpClient innerClient = new DefaultHttpClient();
+    this.httpClient = new DecompressingHttpClient(innerClient);
+    innerClient.setHttpRequestRetryHandler(new StandardHttpRequestRetryHandler(0, false));
     this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
     resetCache();
   }
+
 
   public void addConfgureRequestEventHandler(EventHandler<WebRequestEventArgs> event) {
     configureRequest.add(event);
@@ -98,7 +102,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     if (getAggressiveCacheDuration() != null) {
       long totalSeconds = getAggressiveCacheDuration() / 1000;
       if (totalSeconds > 0) {
-        request.getWebRequest().addRequestHeader("Cache-Control", "max-age=" + totalSeconds);
+        request.getWebRequest().addHeader("Cache-Control", "max-age=" + totalSeconds);
       }
 
       if (cachedRequest.isForceServerCheck() == false && (new Date().getTime() - cachedRequest.getTime().getTime() < getAggressiveCacheDuration())) { //can serve directly from local cache
@@ -106,7 +110,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
       }
       cachedRequest.setForceServerCheck(false);
     }
-    request.getWebRequest().addRequestHeader("If-None-Match", cachedRequest.getHeaders().get("ETag"));
+    request.getWebRequest().addHeader("If-None-Match", cachedRequest.getHeaders().get("ETag"));
     return new CachedRequestOp(cachedRequest, skipServerCheck);
   }
 
@@ -179,6 +183,10 @@ public class HttpJsonRequestFactory implements AutoCloseable {
   }
 
   public boolean getDisableHttpCaching() {
+    Boolean value = disableHttpCaching.get();
+    if (value == null) {
+      return false;
+    }
     return disableHttpCaching.get();
   }
 

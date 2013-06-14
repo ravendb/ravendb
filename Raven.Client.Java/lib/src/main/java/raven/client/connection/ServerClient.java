@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
 
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Function1;
@@ -39,7 +39,6 @@ import raven.client.utils.UrlUtils;
 public class ServerClient implements IDatabaseCommands {
 
   private String url;
-  private HttpClient httpClient;
   private final HttpJsonRequestFactory jsonRequestFactory;
 
   private final DocumentConvention convention;
@@ -66,7 +65,6 @@ public class ServerClient implements IDatabaseCommands {
     }
     this.convention = convention;
 
-    httpClient = new HttpClient();
     replicationInformer.updateReplicationInformationIfNeeded(this);
     this.readStripingBase = replicationInformer.getReadStripingBase();
 
@@ -175,7 +173,7 @@ public class ServerClient implements IDatabaseCommands {
         .addReplicationStatusHeaders(url, serverUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback())) {
       RavenJToken responseJson = jsonRequest.readResponseJson();
 
-      String docKey = jsonRequest.getResponseHeader(Constants.DOCUMENT_ID_FIELD_NAME);
+      String docKey = jsonRequest.getResponseHeaders().get(Constants.DOCUMENT_ID_FIELD_NAME);
       if (docKey == null) {
         docKey = key;
       }
@@ -210,10 +208,10 @@ public class ServerClient implements IDatabaseCommands {
       jsonRequest.executeRequest();
 
       if (HttpMethods.GET == method) {
-        byte[] responseBytes = jsonRequest.getResponseBytes();
-        return new Attachment(true, responseBytes, responseBytes.length, jsonRequest.filterHeadersAttachment(), jsonRequest.getEtagHeader(), key);
+        byte[] responseBytes = jsonRequest.readResponseBytes();
+        return new Attachment(true, responseBytes, responseBytes.length, jsonRequest.filterHeadersAttachment(), HttpExtensions.getEtagHeader(jsonRequest), key);
       } else {
-        return new Attachment(false, null, Integer.valueOf(jsonRequest.getResponseHeader("Content-Length")), jsonRequest.filterHeadersAttachment(), jsonRequest.getEtagHeader(), key);
+        return new Attachment(false, null, Integer.valueOf(jsonRequest.getResponseHeaders().get("Content-Length")), jsonRequest.filterHeadersAttachment(), HttpExtensions.getEtagHeader(jsonRequest), key);
       }
 
       //TODO: HandleReplicationStatusChanges(webRequest.ResponseHeaders, Url, operationUrl);
@@ -304,7 +302,7 @@ public class ServerClient implements IDatabaseCommands {
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try {
-        IOUtils.copy(e.getMethodBase().getResponseBodyAsStream(), baos);
+        IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
       } catch (IOException e1) {
         throw new ServerClientException(e1);
       }
@@ -354,7 +352,7 @@ public class ServerClient implements IDatabaseCommands {
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try {
-        IOUtils.copy(e.getMethodBase().getResponseBodyAsStream(), baos);
+        IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
       } catch (IOException e1) {
         throw new ServerClientException(e1);
       }
@@ -600,13 +598,6 @@ public class ServerClient implements IDatabaseCommands {
         }
       }
     });
-  }
-
-  /**
-   * @return the httpClient
-   */
-  protected HttpClient getHttpClient() {
-    return httpClient;
   }
 
   /**

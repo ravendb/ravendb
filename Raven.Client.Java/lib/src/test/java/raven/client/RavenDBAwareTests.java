@@ -1,12 +1,16 @@
 package raven.client;
 
-import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.DeleteMethod;
-import org.apache.commons.httpclient.methods.PutMethod;
-import org.apache.commons.httpclient.methods.StringRequestEntity;
-import org.apache.commons.httpclient.params.HttpMethodParams;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.HttpParams;
 
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
@@ -16,21 +20,20 @@ public abstract class RavenDBAwareTests {
 
   public final static String DEFAULT_SERVER_URL = "http://localhost:8123";
 
-  private HttpClient client = new HttpClient();
+  private HttpClient client = new DefaultHttpClient();
 
   public String getServerUrl() {
     return DEFAULT_SERVER_URL;
   }
 
   protected void createDb(String dbName) throws Exception {
-    PutMethod put = null;
+    HttpPut put = null;
     try {
-      put = new PutMethod(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
-      put.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler(0, false));
-      put.setRequestEntity(new StringRequestEntity(getCreateDbDocument(dbName), "application/json", "utf-8"));
-      int statusCode = client.executeMethod(put);
-      if (statusCode != HttpStatus.SC_OK) {
-        throw new IllegalStateException("Invalid response on put:" + statusCode);
+      put = new HttpPut(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
+      put.setEntity(new StringEntity(getCreateDbDocument(dbName), ContentType.APPLICATION_JSON));
+      HttpResponse httpResponse = client.execute(put);
+      if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
       }
     } finally {
       if (put != null) {
@@ -53,13 +56,13 @@ public abstract class RavenDBAwareTests {
 
   protected void deleteDb(String dbName) throws Exception {
 
-    DeleteMethod deleteMethod = null;
+    HttpDelete deleteMethod = null;
     try {
-      deleteMethod = new DeleteMethod(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
-      deleteMethod.setQueryString("hard-delete=true");
-      int statusCode = client.executeMethod(deleteMethod);
-      if (statusCode != HttpStatus.SC_OK) {
-        throw new IllegalStateException("Invalid response on put:" + statusCode);
+
+      deleteMethod = new HttpDelete(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName) + "?hard-delete=true");
+      HttpResponse httpResponse = client.execute(deleteMethod);
+      if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
       }
     } finally {
       if (deleteMethod != null) {

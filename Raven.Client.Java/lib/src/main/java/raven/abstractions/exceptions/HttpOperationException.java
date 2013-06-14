@@ -1,39 +1,46 @@
 package raven.abstractions.exceptions;
 
-import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpRequestBase;
+
 
 public class HttpOperationException extends RuntimeException {
-  private HttpMethodBase methodBase;
-
+  private HttpRequestBase webRequest;
+  private HttpResponse httpResponse;
   /**
-   * @return the methodBase
+   * @return the webRequest
    */
-  public HttpMethodBase getMethodBase() {
-    return methodBase;
+  public HttpRequestBase getWebRequest() {
+    return webRequest;
+  }
+  /**
+   * @param webRequest the webRequest to set
+   */
+  public void setWebRequest(HttpRequestBase webRequest) {
+    this.webRequest = webRequest;
+  }
+  /**
+   * @return the httpResponse
+   */
+  public HttpResponse getHttpResponse() {
+    return httpResponse;
+  }
+  /**
+   * @param httpResponse the httpResponse to set
+   */
+  public void setHttpResponse(HttpResponse httpResponse) {
+    this.httpResponse = httpResponse;
   }
 
-  public HttpOperationException(HttpMethodBase methodBase) {
-    super("statusCode = " + methodBase.getStatusCode());
-    this.methodBase = methodBase;
+  public HttpOperationException(String message, Throwable cause, HttpRequestBase webRequest, HttpResponse httpResponse) {
+    super(message, cause);
+    this.webRequest = webRequest;
+    this.httpResponse = httpResponse;
   }
 
   public int getStatusCode() {
-    return methodBase.getStatusCode();
+    return httpResponse.getStatusLine().getStatusCode();
   }
 
-  public HttpOperationException(String message, Throwable cause, HttpMethodBase methodBase) {
-    super("statusCode = " + methodBase.getStatusCode() + message, cause);
-    this.methodBase = methodBase;
-  }
-
-  public HttpOperationException(String message, HttpMethodBase methodBase) {
-    super("statusCode = " + methodBase.getStatusCode() + message);
-    this.methodBase = methodBase;
-  }
-
-  public HttpOperationException(Throwable cause, HttpMethodBase methodBase) {
-    super(cause);
-    this.methodBase = methodBase;
-  }
 
 }

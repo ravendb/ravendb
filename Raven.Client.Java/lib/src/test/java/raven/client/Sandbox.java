@@ -2,6 +2,9 @@ package raven.client;
 
 import static org.junit.Assert.assertNull;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -10,8 +13,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.httpclient.URI;
-import org.apache.commons.httpclient.URIException;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Test;
 
 import raven.abstractions.data.Constants;
@@ -24,7 +30,11 @@ import raven.client.connection.ServerClient;
 
 public class Sandbox {
 
+  public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {
 
+    URI uri = new URI("http://localhost:8123/dafdsf?d=54&d=b");
+    System.out.println(uri.getPath() + uri.getQuery());
+  }
   @Test
   public void testParseRavenLastModifiedDate() throws ParseException {
     String dateString = "2013-05-10T11:33:04.6708000Z";

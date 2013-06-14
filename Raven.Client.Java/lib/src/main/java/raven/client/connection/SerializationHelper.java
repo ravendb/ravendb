@@ -7,10 +7,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.util.DateParseException;
-import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.impl.cookie.DateParseException;
+import org.apache.http.impl.cookie.DateUtils;
 
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.Constants;
@@ -28,7 +28,7 @@ public class SerializationHelper {
   public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, HttpJsonRequest jsonRequest) {
     RavenJObject jsonData = (RavenJObject) responseJson;
     RavenJObject meta = MetadataExtensions.filterHeaders(jsonRequest.getResponseHeaders());
-    UUID etag = getEtag(jsonRequest.getResponseHeader("ETag"));
+    UUID etag = getEtag(jsonRequest.getResponseHeaders().get("ETag"));
 
     return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseStatusCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(jsonRequest));
 
@@ -40,7 +40,7 @@ public class SerializationHelper {
 
   private static Date getLastModifiedDate(HttpJsonRequest jsonRequest) {
 
-    String ravenLastModified = jsonRequest.getResponseHeader(Constants.RAVEN_LAST_MODIFIED);
+    String ravenLastModified = jsonRequest.getResponseHeaders().get(Constants.RAVEN_LAST_MODIFIED);
     if (StringUtils.isNotEmpty(ravenLastModified)) {
       try {
         return new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORAT).parse(ravenLastModified);
@@ -48,10 +48,10 @@ public class SerializationHelper {
         throw new IllegalArgumentException(e.getMessage(), e);
       }
     }
-    String lastModified = jsonRequest.getResponseHeader(Constants.LAST_MODIFIED);
+    String lastModified = jsonRequest.getResponseHeaders().get(Constants.LAST_MODIFIED);
     if (StringUtils.isNotEmpty(lastModified)) {
       try {
-        return DateUtil.parseDate(lastModified);
+        return DateUtils.parseDate(lastModified);
       } catch (DateParseException e) {
         throw new IllegalArgumentException(e.getMessage(), e);
       }
