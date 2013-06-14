@@ -49,6 +49,8 @@ namespace Raven.Database.Bundles.SqlReplication
 		private PrefetchingBehavior prefetchingBehavior;
 
 		private EtagSynchronizer etagSynchronizer;
+		private Etag lastStatusEtag;
+		private Etag lastLatestEtag;
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -168,7 +170,6 @@ namespace Raven.Database.Bundles.SqlReplication
 				var replicationDuration = Stopwatch.StartNew();
 				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
 
-
 				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
 
 				foreach (var relevantConfig in relevantConfigs)
@@ -187,7 +188,20 @@ namespace Raven.Database.Bundles.SqlReplication
 				// No documents AND there aren't any deletes to replicate
 				if (documents.Count == 0 && deletedDocsByConfig.Sum(x => x.Value.Count) == 0)
 				{
-					Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+					if (latestEtag != null)
+					{
+						// so we filtered some documents, let us update the etag about that.
+						foreach (var lastReplicatedEtag in localReplicationStatus.LastReplicatedEtags)
+						{
+							if (lastReplicatedEtag.LastDocEtag == leastReplicatedEtag)
+								lastReplicatedEtag.LastDocEtag = latestEtag;
+						}
+						SaveNewReplicationStatus(localReplicationStatus, latestEtag);
+					}
+					else // no point in waiting if we just saved a new doc
+					{
+						Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+					}
 					continue;
 				}
 
@@ -251,21 +265,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						}
 					}
 
-					int retries = 5;
-					while (retries >0)
-					{
-						retries--;
-						try
-						{
-							var obj = RavenJObject.FromObject(localReplicationStatus);
-							Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
-							break;
-						}
-						catch (ConcurrencyException)
-						{
-							Thread.Sleep(50);
-						}
-					}
+					SaveNewReplicationStatus(localReplicationStatus, latestEtag);
 				}
 				finally
 				{
@@ -273,6 +273,28 @@ namespace Raven.Database.Bundles.SqlReplication
 					var lastMinReplicatedEtag = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray())).ToEtag();
 					prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
 					prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
+				}
+			}
+		}
+
+		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
+		{
+			int retries = 5;
+			while (retries > 0)
+			{
+				retries--;
+				try
+				{
+					var obj = RavenJObject.FromObject(localReplicationStatus);
+					var putResult = Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+
+					lastStatusEtag = putResult.ETag;
+					lastLatestEtag = latestEtag;
+					break;
+				}
+				catch (ConcurrencyException)
+				{
+					Thread.Sleep(50);
 				}
 			}
 		}
@@ -357,7 +379,12 @@ namespace Raven.Database.Bundles.SqlReplication
 				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
-			return etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
+			var calculateSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
+
+			if (calculateSynchronizationEtag == lastLatestEtag)
+				return lastStatusEtag;
+
+			return calculateSynchronizationEtag;
 		}
 
 		private bool ReplicateChangesToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
