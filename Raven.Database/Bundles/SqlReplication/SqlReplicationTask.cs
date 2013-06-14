@@ -160,13 +160,16 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 
 				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
-				var replicationDuration = Stopwatch.StartNew();
-				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
 
-				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
 				Etag latestEtag = null;
 				if (documents.Count != 0)
 					latestEtag = documents[documents.Count - 1].Etag;
+
+				var replicationDuration = Stopwatch.StartNew();
+				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
+
+
+				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
 
 				foreach (var relevantConfig in relevantConfigs)
 				{
