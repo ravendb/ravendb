@@ -751,7 +751,13 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderBy(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
+			var orderByfields = propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray();
+			OrderBy(orderByfields);
+			for (int index = 0; index < orderByfields.Length; index++)
+			{
+				var fld = orderByfields[index];
+				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].Type));
+			}
 			return this;
 		}
 
