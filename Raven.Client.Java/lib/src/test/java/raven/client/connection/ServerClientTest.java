@@ -42,49 +42,51 @@ public class ServerClientTest extends RavenDBAwareTests {
   @Test
   //TODO: remove this test - as it breaks one test one functionality principal
   public void testDatabaseChanges() throws Exception {
-    HttpJsonRequestFactory factory = new HttpJsonRequestFactory(10);
+    try {
+      HttpJsonRequestFactory factory = new HttpJsonRequestFactory(10);
 
-    ServerClient client = new ServerClient(DEFAULT_SERVER_URL, new DocumentConvention(), null, new ReplicationInformer(), factory, null, new IDocumentConflictListener[0]);
-    IDatabaseCommands systemDatabaseClient = client.forSystemDatabase();
-    assertSame(systemDatabaseClient, client);
+      ServerClient client = new ServerClient(DEFAULT_SERVER_URL, new DocumentConvention(), null, new ReplicationInformer(), factory, null, new IDocumentConflictListener[0]);
+      IDatabaseCommands systemDatabaseClient = client.forSystemDatabase();
+      assertSame(systemDatabaseClient, client);
 
-    createDb("db1");
+      createDb("db1");
 
-    List<String> databaseNames = systemDatabaseClient.getDatabaseNames(20, 0);
-    System.out.println(databaseNames);
+      List<String> databaseNames = systemDatabaseClient.getDatabaseNames(20, 0);
+      System.out.println(databaseNames);
 
-    IDatabaseCommands db1Commands = client.forDatabase("db1");
-    Person person1 = new Person();
-    person1.setFirstname("John");
-    person1.setLastname("Smith");
-    PutResult putResult = db1Commands.put("users/marcin", null, RavenJObject.fromObject(person1), null);
-    assertNotNull(putResult.getEtag());
+      IDatabaseCommands db1Commands = client.forDatabase("db1");
+      Person person1 = new Person();
+      person1.setFirstname("John");
+      person1.setLastname("Smith");
+      PutResult putResult = db1Commands.put("users/marcin", null, RavenJObject.fromObject(person1), null);
+      assertNotNull(putResult.getEtag());
 
-    assertNull("Object was created in different db!", client.get("users/marcin"));
-    JsonDocument jsonDocument = db1Commands.get("users/marcin");
-    assertNotNull(jsonDocument);
+      assertNull("Object was created in different db!", client.get("users/marcin"));
+      JsonDocument jsonDocument = db1Commands.get("users/marcin");
+      assertNotNull(jsonDocument);
 
-    assertEquals(putResult.getEtag(), jsonDocument.getEtag());
-    assertEquals(new RavenJValue("John"), jsonDocument.getDataAsJson().get("firstname"));
+      assertEquals(putResult.getEtag(), jsonDocument.getEtag());
+      assertEquals(new RavenJValue("John"), jsonDocument.getDataAsJson().get("firstname"));
 
-    Person person2 = new Person();
-    person2.setFirstname("Albert");
-    person2.setLastname("Einstein");
-    PutResult albertPutResult = db1Commands.put("users/albert", null, RavenJObject.fromObject(person2), null);
+      Person person2 = new Person();
+      person2.setFirstname("Albert");
+      person2.setLastname("Einstein");
+      PutResult albertPutResult = db1Commands.put("users/albert", null, RavenJObject.fromObject(person2), null);
 
-    List<JsonDocument> jsonDocuments = db1Commands.startsWith("users", "", 0, 10, false);
-    assertEquals(2, jsonDocuments.size());
+      List<JsonDocument> jsonDocuments = db1Commands.startsWith("users", "", 0, 10, false);
+      assertEquals(2, jsonDocuments.size());
 
 
-    List<JsonDocument> documents = db1Commands.getDocuments(0, 20, false);
-    assertEquals(2, documents.size());
-    //TODO: test for all fields!
+      List<JsonDocument> documents = db1Commands.getDocuments(0, 20, false);
+      assertEquals(2, documents.size());
+      //TODO: test for all fields!
 
-    db1Commands.delete("users/albert", albertPutResult.getEtag());
-    db1Commands.delete("users/albert", UUID.randomUUID());
+      db1Commands.delete("users/albert", albertPutResult.getEtag());
+      db1Commands.delete("users/albert", UUID.randomUUID());
 
-    assertEquals(1,  db1Commands.getDocuments(0, 20, false).size());
-
-    deleteDb("db1");
+      assertEquals(1,  db1Commands.getDocuments(0, 20, false).size());
+    } finally {
+      deleteDb("db1");
+    }
   }
 }

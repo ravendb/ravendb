@@ -4,18 +4,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
-
-import javax.management.RuntimeErrorException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.http.Header;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
@@ -25,15 +22,12 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.params.HttpClientParams;
-import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.params.HttpParams;
-import org.apache.http.params.HttpParamsNames;
 import org.apache.http.util.EntityUtils;
 
+import raven.abstractions.closure.Action1;
 import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.HttpOperationException;
@@ -57,6 +51,8 @@ import raven.client.document.FailoverBehavior;
  *
  */
 public class HttpJsonRequest implements AutoCloseable {
+
+  public static final String clientVersion = "JvmClient-1.0-SNAPSHOT"; ///TODO: use some maven props (?)
 
   private final String url;
   private final HttpMethods method;
@@ -107,7 +103,7 @@ public class HttpJsonRequest implements AutoCloseable {
       this.httpClient = factory.getHttpClient();
     }
     // content type is set in RequestEntity
-    //TODO: header client version
+    webRequest.addHeader("Raven-Client-Version", clientVersion);
     writeMetadata(requestParams.getMetadata());
     requestParams.updateHeaders(webRequest);
 
@@ -119,9 +115,7 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public void disableAuthentication() {
-    //TODO: webRequest.setDoAuthentication(false);
-    //TODO: httpClient.getState().clearCredentials();
-    disabledAuthRetries = true;
+    //TODO: rewrite and test!
   }
 
   /* TODO:
@@ -188,21 +182,17 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public byte[] readResponseBytes() throws IOException {
-    if (writeCalled == false) {
-      //TODO:  content length set to 0
-    }
     HttpResponse httpResponse = null;
     try {
       httpResponse = getResponse();
-      try (InputStream response = httpResponse.getEntity().getContent()) {
-        //TODO: do we need http decompression ?
-        responseHeaders = extractHeaders(httpResponse.getAllHeaders());
-        return IOUtils.toByteArray(response);
-      }
+      InputStream response = httpResponse.getEntity().getContent();
+      responseHeaders = extractHeaders(httpResponse.getAllHeaders());
+      return IOUtils.toByteArray(response);
     } finally {
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
+      if (httpResponse != null) {
+        EntityUtils.consumeQuietly(httpResponse.getEntity());
+      }
     }
-
   }
 
   private Map<String, String> extractHeaders(Header[] httpResponseHeaders) {
@@ -221,6 +211,7 @@ public class HttpJsonRequest implements AutoCloseable {
       throw new RuntimeException(e.getMessage(), e);
     }
     if (httpResponse.getStatusLine().getStatusCode() >= 400) {
+      EntityUtils.consumeQuietly(httpResponse.getEntity());
       throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
     }
     return httpResponse;
@@ -257,26 +248,31 @@ public class HttpJsonRequest implements AutoCloseable {
     int retries = 0;
     while (true) {
       try {
-        if (writeCalled == false) {
-          //TODO: set content length
-        }
         return readJsonInternal();
-      } catch (HttpOperationException e) {
+      } catch (Exception e) {
         if (++retries >= 3 || disabledAuthRetries) {
           throw e;
         }
-        if (e.getStatusCode() != HttpStatus.SC_UNAUTHORIZED &&
-            e.getStatusCode() != HttpStatus.SC_FORBIDDEN &&
-            e.getStatusCode() != HttpStatus.SC_PRECONDITION_FAILED) {
+
+        if (e instanceof HttpOperationException) {
+          HttpOperationException httpOpException = (HttpOperationException) e ;
+          if (httpOpException.getStatusCode() != HttpStatus.SC_UNAUTHORIZED &&
+              httpOpException.getStatusCode() != HttpStatus.SC_FORBIDDEN &&
+              httpOpException.getStatusCode() != HttpStatus.SC_PRECONDITION_FAILED) {
+            throw e;
+          }
+          if (httpOpException.getStatusCode() == HttpStatus.SC_FORBIDDEN) {
+            handleForbiddenResponse(httpOpException.getHttpResponse());
+            throw e;
+          }
+          if (handleUnauthorizedResponse(httpOpException.getHttpResponse()) == false) {
+            throw e;
+          }
+        } else {
           throw e;
         }
-        if (e.getStatusCode() == HttpStatus.SC_FORBIDDEN) {
-          handleForbiddenResponse();
-          throw e;
-        }
-        if (handleUnauthorizedResponse() == false) {
-          throw e;
-        }
+
+
       }
     }
   }
@@ -300,14 +296,27 @@ public class HttpJsonRequest implements AutoCloseable {
     return responseHeaders;
   }
 
-  protected void handleForbiddenResponse() {
-    //TODO:
-    throw new RuntimeException();
+  protected void handleForbiddenResponse(HttpResponse forbiddenResponse) {
+    if (conventions.getHandleForbiddenResponse() == null)
+      return;
+
+    conventions.getHandleForbiddenResponse().apply(forbiddenResponse);
   }
 
-  private boolean handleUnauthorizedResponse() {
-    //TODO: finish me
-    throw new RuntimeException();
+  private boolean handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
+    if (conventions.getHandleUnauthorizedResponse() == null)
+      return false;
+
+    Action1<HttpRequest> handleUnauthorizedResponse = conventions.getHandleUnauthorizedResponse().apply(unauthorizedResponse);
+    if (handleUnauthorizedResponse == null)
+      return false;
+
+    recreateWebRequest(handleUnauthorizedResponse);
+    return true;
+  }
+
+  private void recreateWebRequest(Action1<HttpRequest> action) {
+    // TODO Auto-generated method stub
   }
 
   private RavenJToken readJsonInternal() {
@@ -315,9 +324,16 @@ public class HttpJsonRequest implements AutoCloseable {
     InputStream responseStream = null;
     try {
       try {
-        response = getResponse(); //TODO: we double throw httpOperationException
+        response = getResponse();
         responseStream = response.getEntity().getContent();
         sp.stop();
+      } catch (HttpOperationException e) {
+        sp.stop();
+        RavenJToken result = handleErrors(e);
+        if (result == null) {
+          throw e;
+        }
+        return result;
       } catch (Exception e) {
         sp.stop();
         RavenJToken result = handleErrors(e);
@@ -349,8 +365,6 @@ public class HttpJsonRequest implements AutoCloseable {
 
       factory.invokeLogRequest(owner, args);
 
-      //TODO: invoke log request
-
       return data;
     } finally {
       if (response != null) {
@@ -359,7 +373,51 @@ public class HttpJsonRequest implements AutoCloseable {
     }
   }
   private RavenJToken handleErrors(Exception e) {
-    // TODO Auto-generated method stub
+    if (e instanceof HttpOperationException) {
+      HttpOperationException httpWebException = (HttpOperationException) e;
+      HttpResponse httpWebResponse = httpWebException.getHttpResponse();
+      if (httpWebResponse == null ||
+          httpWebException.getStatusCode() == HttpStatus.SC_UNAUTHORIZED ||
+          httpWebException.getStatusCode() == HttpStatus.SC_NOT_FOUND ||
+          httpWebException.getStatusCode() == HttpStatus.SC_CONFLICT) {
+        int httpResult = httpWebException.getStatusCode();
+
+        RequestResultArgs requestResultArgs = new RequestResultArgs();
+        requestResultArgs.setDurationMilliseconds(calculateDuration());
+        requestResultArgs.setMethod(method);
+        requestResultArgs.setHttpResult(httpResult);
+        requestResultArgs.setStatus(RequestStatus.ERROR_ON_SERVER);
+        requestResultArgs.setResult(e.getMessage());
+        requestResultArgs.setUrl(getPathAndQuery(webRequest.getURI()));
+        requestResultArgs.setPostedData(postedData);
+
+        factory.invokeLogRequest(owner, requestResultArgs);
+
+        return null;
+
+      }
+
+      if (httpWebException.getStatusCode() == HttpStatus.SC_NOT_MODIFIED
+          && cachedRequestDetails != null) {
+        factory.updateCacheTime(this);
+        RavenJToken result = factory.getCachedResponse(this, extractHeaders(httpWebResponse.getAllHeaders()));
+        //TODO: HandleReplicationStatusChanges(httpWebResponse.Headers, primaryUrl, operationUrl);
+
+        RequestResultArgs requestResultArgs = new RequestResultArgs();
+        requestResultArgs.setDurationMilliseconds(calculateDuration());
+        requestResultArgs.setMethod(method);
+        requestResultArgs.setStatus(RequestStatus.CACHED);
+        requestResultArgs.setResult(e.getMessage());
+        requestResultArgs.setUrl(getPathAndQuery(webRequest.getURI()));
+        requestResultArgs.setPostedData(postedData);
+        factory.invokeLogRequest(owner, requestResultArgs);
+
+        return result;
+      }
+    }
+
+    //TODO: finish this method
+
     throw new IllegalStateException("Not implemented yet!", e);
   }
 

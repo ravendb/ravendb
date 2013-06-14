@@ -1,5 +1,8 @@
 package raven.client.extensions;
 
+import static org.mockito.Matchers.matches;
+
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import raven.abstractions.data.Constants;
@@ -11,7 +14,7 @@ import raven.abstractions.json.linq.RavenJObject;
  */
 public class MultiDatabase {
 
-  private static final String VALID_DB_NAME_CHARS = "([A-Za-z0-9_\\-\\.]+)";
+  private static final String VALID_DB_NAME_CHARS = "[A-Za-z0-9_\\-\\.]+";
 
   public static RavenJObject createDatabaseDocument(String name) {
     assertValidName(name);
@@ -50,7 +53,10 @@ public class MultiDatabase {
     int indexOfDatabases = databaseUrl.indexOf("/databases/");
     if (indexOfDatabases != -1) {
       databaseUrl = databaseUrl.substring(indexOfDatabases + "/databases/".length());
-      return Pattern.compile(VALID_DB_NAME_CHARS).matcher(databaseUrl).group();
+      Matcher matcher = Pattern.compile(VALID_DB_NAME_CHARS).matcher(databaseUrl);
+      if (matcher.find()) {
+        return matcher.group();
+      }
     }
     return Constants.SYSTEM_DATABASE;
   }

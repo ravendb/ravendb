@@ -2,6 +2,10 @@ package raven.client.document;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+
+import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
 
 //TODO: finish me
@@ -11,6 +15,39 @@ public class DocumentConvention {
   private FailoverBehavior failoverBehavior;
 
   private Function1<String, Boolean> shouldCacheRequest;
+
+  private Function1<HttpResponse, Action1<HttpRequest>> handleForbiddenResponse;
+
+  private Function1<HttpResponse, Action1<HttpRequest>> handleUnauthorizedResponse;
+
+
+  /**
+   * @return the handleUnauthorizedResponse
+   */
+  public Function1<HttpResponse, Action1<HttpRequest>> getHandleUnauthorizedResponse() {
+    return handleUnauthorizedResponse;
+  }
+
+  /**
+   * @param handleUnauthorizedResponse the handleUnauthorizedResponse to set
+   */
+  public void setHandleUnauthorizedResponse(Function1<HttpResponse, Action1<HttpRequest>> handleUnauthorizedResponse) {
+    this.handleUnauthorizedResponse = handleUnauthorizedResponse;
+  }
+
+  /**
+   * @return the handleForbiddenResponse
+   */
+  public Function1<HttpResponse, Action1<HttpRequest>> getHandleForbiddenResponse() {
+    return handleForbiddenResponse;
+  }
+
+  /**
+   * @param handleForbiddenResponse the handleForbiddenResponse to set
+   */
+  public void setHandleForbiddenResponse(Function1<HttpResponse, Action1<HttpRequest>> handleForbiddenResponse) {
+    this.handleForbiddenResponse = handleForbiddenResponse;
+  }
 
   public DocumentConvention() {
     //TODO:

@@ -28,14 +28,10 @@ public class SerializationHelper {
   public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, HttpJsonRequest jsonRequest) {
     RavenJObject jsonData = (RavenJObject) responseJson;
     RavenJObject meta = MetadataExtensions.filterHeaders(jsonRequest.getResponseHeaders());
-    UUID etag = getEtag(jsonRequest.getResponseHeaders().get("ETag"));
+    UUID etag = HttpExtensions.getEtagHeader(jsonRequest);
 
     return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseStatusCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(jsonRequest));
 
-  }
-
-  private static UUID getEtag(String responseHeader) {
-    return UUID.fromString(responseHeader);
   }
 
   private static Date getLastModifiedDate(HttpJsonRequest jsonRequest) {

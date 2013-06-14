@@ -12,7 +12,6 @@ import java.util.UUID;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
 
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Function1;
