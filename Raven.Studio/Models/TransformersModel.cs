@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Features.Input;
@@ -21,13 +22,23 @@ namespace Raven.Studio.Models
 			Transformers = new ObservableCollection<TransformerDefinition>();
 			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
-																	   "/transformers";
+																	   "/transformers";	
+		}
 
+		public override Task TimerTickedAsync()
+		{
+			return DatabaseCommands
+				.GetStatisticsAsync()
+				.ContinueOnSuccessInTheUIThread(UpdateTransformersList);
+		}
+
+		protected  void UpdateTransformersList()
+		{
 			DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
 			{
 				Transformers = new ObservableCollection<TransformerDefinition>(transformers);
 				OnPropertyChanged(() => Transformers);
-			} );
+			});
 		}
 
 		private class DeleteTransformerCommand : Command
