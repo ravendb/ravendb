@@ -1005,7 +1005,7 @@ namespace Raven.Client.Indexes
 
 		    var nonNullable = Nullable.GetUnderlyingType(node.Type);
 		    Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type));
-            if(nonNullable != null)
+            if(nonNullable != null && nonNullable != typeof(Guid))
                 Out("?");
 
 			Out(")");
