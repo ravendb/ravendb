@@ -526,8 +526,9 @@ namespace Raven.Client.Connection
 						sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
 					}
 
-					sb.AppendLine()
-						.AppendLine(ravenJObject.Value<string>("Error"));
+					if (sb.Length > 0)
+						sb.AppendLine();
+					sb.Append(ravenJObject.Value<string>("Error"));
 
 					throw new InvalidOperationException(sb.ToString(), e);
 				}
