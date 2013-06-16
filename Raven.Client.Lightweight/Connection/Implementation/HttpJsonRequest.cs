@@ -475,7 +475,6 @@ namespace Raven.Client.Connection
 			}
 
 
-
 			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
 			{
 				var readToEnd = sr.ReadToEnd();
@@ -737,50 +736,6 @@ namespace Raven.Client.Connection
 				dataStream.Flush();
 			}
 		}
-
-
-		private class ImmediateCompletionResult : IAsyncResult, IDisposable
-		{
-			private ManualResetEvent manualResetEvent;
-
-			public bool IsCompleted
-			{
-				get { return true; }
-			}
-
-			public WaitHandle AsyncWaitHandle
-			{
-				get
-				{
-					if (manualResetEvent == null)
-					{
-						lock (this)
-						{
-							if (manualResetEvent == null)
-								manualResetEvent = new ManualResetEvent(true);
-						}
-					}
-					return manualResetEvent;
-				}
-			}
-
-			public object AsyncState
-			{
-				get { return null; }
-			}
-
-			public bool CompletedSynchronously
-			{
-				get { return true; }
-			}
-
-			public void Dispose()
-			{
-				if (manualResetEvent != null)
-					manualResetEvent.Close();
-			}
-		}
-
 		public void Write(Stream streamToWrite)
 		{
 			writeCalled = true;
@@ -870,7 +825,7 @@ namespace Raven.Client.Connection
 
 		public Task WriteAsync(string serializeObject)
 		{
-			return Task.Factory.FromAsync(BeginWrite, EndWrite, serializeObject, null);
+			throw new NotImplementedException();
 		}
 
 		public Task<Stream> GetRawRequestStream()
