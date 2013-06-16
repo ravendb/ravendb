@@ -194,7 +194,7 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccess(collections =>
 				                   	{
 										var collectionModels = 
-                                            new CollectionModel[] { new AllDocumentsCollectionModel { Count = (int)Database.Value.Statistics.Value.CountOfDocuments}, new RavenDocumentsCollectionModel()}
+                                            new CollectionModel[] { new AllDocumentsCollectionModel { Count = Database.Value.Statistics.Value == null ? 0 : (int)Database.Value.Statistics.Value.CountOfDocuments}, new RavenDocumentsCollectionModel()}
 											.Concat(
                                             collections
 											.Where(x=>x.Count > 0)
