@@ -1,5 +1,8 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.Reactive;
+using System.Reactive.Linq;
 using Raven.Abstractions.Data;
+using Raven.Studio.Extensions;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 
@@ -13,17 +16,34 @@ namespace Raven.Studio.Models
 			ModelUrl = "/Tasks";
         }
 
+		private bool firstLoad = true;
+
         public string CurrentDatabase
         {
             get { return ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name; }
         }
 
+		private void RegisterToDatabaseChange()
+		{
+			var databaseChanged = Database.ObservePropertyChanged()
+										  .Select(_ => Unit.Default)
+										  .TakeUntil(Unloaded);
+
+			databaseChanged
+				.Subscribe(_ => OnViewLoaded());
+		}
+
         protected override void OnViewLoaded()
         {
+			if (firstLoad)
+				RegisterToDatabaseChange();
+
+			firstLoad = false;
+
 			var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
 
-			
-
+			OnPropertyChanged(() => CurrentDatabase);
+			Tasks.Sections.Clear();
 	        var import = new ImportTaskSectionModel();
 			Tasks.Sections.Add(import);
 			Tasks.SelectedSection.Value = import;

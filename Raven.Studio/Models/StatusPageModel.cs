@@ -1,4 +1,8 @@
-﻿using Raven.Studio.Features.Stats;
+﻿using System;
+using System.Reactive;
+using System.Reactive.Linq;
+using Raven.Studio.Extensions;
+using Raven.Studio.Features.Stats;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -11,13 +15,34 @@ namespace Raven.Studio.Models
 			ModelUrl = "/Status";
         }
 
+		private bool firstLoad = true;
+
         public string CurrentDatabase
         {
             get { return ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name; }
         }
 
-	    protected override void OnViewLoaded()
+		private void RegisterToDatabaseChange()
+		{
+			var databaseChanged = Database.ObservePropertyChanged()
+										  .Select(_ => Unit.Default)
+										  .TakeUntil(Unloaded);
+
+			databaseChanged
+				.Subscribe(_ => OnViewLoaded());
+		}
+
+	    protected override async void OnViewLoaded()
 	    {
+			if (firstLoad)
+				RegisterToDatabaseChange();
+
+			firstLoad = false;
+
+			Status.Sections.Clear();
+			OnPropertyChanged(() => CurrentDatabase);
+		    await DatabaseCommands.GetStatisticsAsync();
+
 		    Status.Sections.Add(new StatisticsStatusSectionModel());
 			Status.Sections.Add(new LogsStatusSectionModel());
 			Status.Sections.Add(new AlertsStatusSectionModel());
