@@ -330,12 +330,13 @@ namespace Raven.Client.Indexes
 			var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 			if (asyncServerClient == null)
 				return new CompletedTask();
-			return asyncServerClient.GetAsync("Raven/Replication/Destinations").ContinueWith(doc =>
+			return asyncServerClient.GetAsync("Raven/Replication/Destinations").ContinueWith(task =>
 			{
+				JsonDocument doc = task.Result;
 				if (doc == null)
 					return new CompletedTask();
 				var replicationDocument =
-					documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.Result.DataAsJson));
+					documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
 				if (replicationDocument == null)
 					return new CompletedTask();
 				var tasks = new List<Task>();
