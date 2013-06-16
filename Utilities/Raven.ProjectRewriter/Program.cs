@@ -36,6 +36,7 @@ namespace Raven.ProjectRewriter
 				{"Raven.Client.Embedded", "{ACA1B0BD-3455-4EC4-9388-539EF7CFC945}"},
 				{"Raven.Server", "{516EAEEA-D566-4410-BB9F-8354E5611B58}"},
 				{"Raven.Tests.Helpers", "{41D3D8AD-9095-47C3-93BE-3023857574AF}"},
+				{"Raven.Client.UniqueConstraints", "{1E6AA09C-B1FC-45BC-86E5-99C3FC1CF0ED}"},
 			};
 
 			Generate45("Raven.Abstractions");
@@ -62,12 +63,17 @@ namespace Raven.ProjectRewriter
 					   "Raven.Database",
 					   "Raven.Server");
 
+			Generate45("Bundles/Raven.Client.UniqueConstraints",
+					   "Raven.Abstractions",
+					   "Raven.Client.Lightweight");
 		}
 
 		private static void Generate45(string assemblyName, params string[] references)
 		{
-			string srcPath = assemblyName + @"\" + assemblyName + ".csproj";
-			string destFile= assemblyName + @"\" + assemblyName + ".g.45.csproj";
+			var folder = assemblyName;
+			assemblyName = assemblyName.Replace("Bundles/", "");
+			string srcPath = folder + @"\" + assemblyName + ".csproj";
+			string destFile = folder + @"\" + assemblyName + ".g.45.csproj";
 
 			var database = XDocument.Load(srcPath);
 			foreach (var element in database.Root.Descendants(xmlns + "DefineConstants").ToArray())
