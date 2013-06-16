@@ -696,6 +696,7 @@
     <Compile Include="MailingList\FailingProjection.cs" />
     <Compile Include="MailingList\Failing_lucene_query_where_in_tests.cs" />
     <Compile Include="MailingList\FilteredIndexTest.cs" />
+    <Compile Include="MailingList\FirstOrDefaultNullableDate.cs" />
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
     <Compile Include="MailingList\Garrett.cs" />

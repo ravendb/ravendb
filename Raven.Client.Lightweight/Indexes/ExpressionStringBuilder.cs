@@ -1002,7 +1002,12 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitDefault(DefaultExpression node)
 		{
 			Out("default(");
-			Out(node.Type.Name);
+
+		    var nonNullable = Nullable.GetUnderlyingType(node.Type);
+		    Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type));
+            if(nonNullable != null)
+                Out("?");
+
 			Out(")");
 			return node;
 		}
@@ -1518,9 +1523,8 @@ namespace Raven.Client.Indexes
 					case "SingleOrDefault":
 					case "ElementAt":
 					case "ElementAtOrDefault":
-						Out(" ?? default(");
-						Out(ConvertTypeToCSharpKeyword(node.Type));
-						Out(")");
+                        Out(" ?? ");
+				        VisitDefault(Expression.Default(node.Type));
 						break;
 				}
 			}
