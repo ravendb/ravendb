@@ -61,11 +61,7 @@ namespace Raven.Database.Server.Responders
 			var operationId = ExtractOperationId(context);
 			var sp = Stopwatch.StartNew();
 
-			var status = new RavenJObject
-			{
-				{"Documents", 0},
-				{"Completed", false}
-			};
+			var status = new BulkInsertStatus();
 
 			int documents = 0;
 			var mre = new ManualResetEventSlim(false);
@@ -74,8 +70,8 @@ namespace Raven.Database.Server.Responders
 			var task = Task.Factory.StartNew(() =>
 			{
 				currentDatbase.BulkInsert(options, YieldBatches(context, mre, batchSize => documents += batchSize), operationId);
-				status["Documents"] = documents;
-				status["Completed"] = true;
+			    status.Documents = documents;
+			    status.Completed = true;
 			});
 
 			long id;
@@ -162,5 +158,12 @@ namespace Raven.Database.Server.Responders
 				increaseDocumentsCount(count);
 			}
 		}
+
+        public class BulkInsertStatus
+        {
+            public int Documents { get; set; }
+            public bool Completed { get; set; }
+        }
 	}
+
 }
