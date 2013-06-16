@@ -5,6 +5,9 @@ using System.Threading;
 using Amazon;
 using Amazon.Glacier.Transfer;
 using Amazon.S3.Model;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -22,7 +25,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Bundles.PeriodicBackups
 {
-	[InheritedExport(typeof(IStartupTask))]
+    [InheritedExport(typeof(IStartupTask))]
 	[ExportMetadata("Bundle", "PeriodicBackup")]
 	public class PeriodicBackupTask : IStartupTask, IDisposable
 	{
@@ -32,6 +35,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private volatile Task currentTask;
 		private string awsAccessKey, awsSecretKey;
+        private string azureStorageAccount, azureStorageKey;
 
 		private volatile PeriodicBackupStatus backupStatus;
 		private volatile PeriodicBackupSetup backupConfigs;
@@ -84,6 +88,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
+                    azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
+                    azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
 
 					var interval = TimeSpan.FromMilliseconds(backupConfigs.IntervalMilliseconds);
 					logger.Info("Periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
@@ -203,19 +209,23 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			}
 		}
 
-		private void UploadToServer(string backupPath, PeriodicBackupSetup localBackupConfigs)
-		{
-			if (!string.IsNullOrWhiteSpace(localBackupConfigs.GlacierVaultName))
-			{
-				UploadToGlacier(backupPath, localBackupConfigs);
-			}
-			else if (!string.IsNullOrWhiteSpace(localBackupConfigs.S3BucketName))
-			{
-				UploadToS3(backupPath, localBackupConfigs);
-			}
-		}
+	    private void UploadToServer(string backupPath, PeriodicBackupSetup localBackupConfigs)
+	    {
+	        if (!string.IsNullOrWhiteSpace(localBackupConfigs.GlacierVaultName))
+	        {
+	            UploadToGlacier(backupPath, localBackupConfigs);
+	        }
+	        else if (!string.IsNullOrWhiteSpace(localBackupConfigs.S3BucketName))
+	        {
+	            UploadToS3(backupPath, localBackupConfigs);
+	        }
+	        else if (!string.IsNullOrWhiteSpace(localBackupConfigs.AzureStorageContainer))
+	        {
+	            UploadToAzure(backupPath, localBackupConfigs);
+	        }
+	    }
 
-		private void UploadToS3(string backupPath, PeriodicBackupSetup localBackupConfigs)
+	    private void UploadToS3(string backupPath, PeriodicBackupSetup localBackupConfigs)
 		{
 			var awsRegion = RegionEndpoint.GetBySystemName(localBackupConfigs.AwsRegionEndpoint) ?? RegionEndpoint.USEast1;
 
@@ -246,7 +256,30 @@ namespace Raven.Database.Bundles.PeriodicBackups
 									  archiveId));
 		}
 
-		private string GetArchiveDescription()
+	    private void UploadToAzure(string backupPath, PeriodicBackupSetup localBackupConfigs)
+	    {
+	        StorageCredentials storageCredentials = new StorageCredentials(azureStorageAccount, azureStorageKey);
+	        CloudStorageAccount storageAccount = new CloudStorageAccount(storageCredentials, true);
+	        CloudBlobClient blobClient = new CloudBlobClient(storageAccount.BlobEndpoint, storageCredentials);
+	        CloudBlobContainer backupContainer = blobClient.GetContainerReference(localBackupConfigs.AzureStorageContainer);
+	        backupContainer.CreateIfNotExists();
+	        using (var fileStream = File.OpenRead(backupPath))
+	        {
+	            var key = Path.GetFileName(backupPath);
+	            CloudBlockBlob backupBlob = backupContainer.GetBlockBlobReference(key);
+	            backupBlob.Metadata.Add("Description", this.GetArchiveDescription());
+	            backupBlob.UploadFromStream(fileStream);
+	            backupBlob.SetMetadata();
+
+	            this.logger.Info(string.Format(
+	                "Successfully uploaded backup {0} to Azure container {1}, with key {2}",
+	                Path.GetFileName(backupPath),
+	                localBackupConfigs.AzureStorageContainer,
+	                key));
+	        }
+	    }
+
+	    private string GetArchiveDescription()
 		{
 			return "Periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + DateTime.UtcNow;
 		}

@@ -137,7 +137,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private class FailureCounter
+		public class FailureCounter
 		{
 			public long Value;
 			public DateTime LastCheck;
@@ -235,7 +235,7 @@ namespace Raven.Client.Connection
 												conventions.FailoverBehavior);
 		}
 
-		private FailureCounter GetHolder(string operationUrl)
+		protected FailureCounter GetHolder(string operationUrl)
 		{
 #if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());

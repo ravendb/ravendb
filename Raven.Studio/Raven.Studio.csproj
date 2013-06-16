@@ -402,6 +402,7 @@
     <Compile Include="Infrastructure\Converters\DoubleToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\HorizontalIfStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringEmptyToValueConverter.cs" />
+    <Compile Include="Infrastructure\Converters\VisibilityByAnyParamEqualityConverter.cs" />
     <Compile Include="Infrastructure\Converters\VisibleWhenStringEmptyOrNull.cs" />
     <Compile Include="Features\Tasks\BasicTaskSectionModel.cs" />
     <Compile Include="Features\Settings\NoSettingsSectionModel.cs" />
@@ -959,6 +960,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Assets\ChartStyles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Assets\ComboBoxStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

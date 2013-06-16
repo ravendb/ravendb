@@ -14,6 +14,11 @@
 		<tags>nosql ravendb raven document database</tags>
 		<dependencies>
 			<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version=""/>
+			<dependency id="System.Spatial" version="5.2"/>
+			<dependency id="WindowsAzure.Storage" version="2.0"/>
+			<dependency id="Microsoft.Data.Edm" version="5.2" />
+		  	<dependency id="Microsoft.Data.OData" version="5.2" />
+		  	<dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="1.8" />
 		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
