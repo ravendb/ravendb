@@ -626,11 +626,21 @@ namespace Raven.Client.Indexes
 
 			SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
 			{
+				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+				{
+					Out("((");
+					Out(ConvertTypeToCSharpKeyword(rightOp.Type));
+					Out(")");
+				}
 				Visit(leftOp, innerPrecedence);
 				Out(' ');
 				Out(str);
 				Out(' ');
 				Visit(rightOp, innerPrecedence);
+				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+				{
+					Out(")");
+				}
 			});
 
 			return node;
