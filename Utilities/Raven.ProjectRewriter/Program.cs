@@ -38,6 +38,7 @@ namespace Raven.ProjectRewriter
 				{"Raven.Tests.Helpers", "{41D3D8AD-9095-47C3-93BE-3023857574AF}"},
 				{"Raven.Client.UniqueConstraints", "{1E6AA09C-B1FC-45BC-86E5-99C3FC1CF0ED}"},
 				{"Raven.Client.Authorization", "{5544CF05-1662-487A-97E8-7F122CF3B50B}"},
+				{"Raven.Client.MvcIntegration", "{C15B86DA-033A-48FE-ACFE-65D5E34A1D18}"},
 			};
 
 			Generate45("Raven.Abstractions");
@@ -63,6 +64,10 @@ namespace Raven.ProjectRewriter
 					   "Raven.Client.Embedded",
 					   "Raven.Database",
 					   "Raven.Server");
+
+			Generate45("Raven.Client.MvcIntegration",
+					   "Raven.Abstractions",
+					   "Raven.Client.Lightweight");
 
 			Generate45("Bundles/Raven.Client.UniqueConstraints",
 					   "Raven.Abstractions",
