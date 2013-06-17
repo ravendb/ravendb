@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.util.Stack;
 
+import org.codehaus.jackson.FormatSchema;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -35,6 +36,10 @@ public abstract class RavenJToken {
    */
   public static RavenJToken fromObject(Object o) {
     return fromObjectInternal(o, JsonExtensions.getDefaultObjectMapper());
+  }
+
+  private static RavenJToken fromObject(Object o, ObjectMapper objectMapper) {
+    return fromObjectInternal(o, objectMapper);
   }
 
   protected static RavenJToken fromObjectInternal(Object o, ObjectMapper objectMapper) {
@@ -77,7 +82,7 @@ public abstract class RavenJToken {
    * @param json
    * @return
    */
-  public static RavenJToken parse(InputStream json) throws JsonReaderException {
+  public static RavenJToken tryLoad(InputStream json) throws JsonReaderException {
     try {
       JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
       return load(jsonParser);
@@ -95,21 +100,21 @@ public abstract class RavenJToken {
       }
 
       switch (parser.getCurrentToken()) {
-      case START_OBJECT:
-        return RavenJObject.load(parser);
-      case START_ARRAY:
-        return RavenJArray.load(parser);
-      case VALUE_STRING:
-        return new RavenJValue(parser.getText(), JTokenType.STRING);
-      case VALUE_NUMBER_FLOAT:
-        return new RavenJValue(parser.getNumberValue(), JTokenType.FLOAT);
-      case VALUE_NUMBER_INT:
-        return new RavenJValue(parser.getNumberValue(), JTokenType.INTEGER);
-      case VALUE_FALSE:
-      case VALUE_TRUE:
-        return new RavenJValue(parser.getBooleanValue(), JTokenType.BOOLEAN);
-      case VALUE_NULL:
-        return new RavenJValue(null, JTokenType.NULL);
+        case START_OBJECT:
+          return RavenJObject.load(parser);
+        case START_ARRAY:
+          return RavenJArray.load(parser);
+        case VALUE_STRING:
+          return new RavenJValue(parser.getText(), JTokenType.STRING);
+        case VALUE_NUMBER_FLOAT:
+          return new RavenJValue(parser.getNumberValue(), JTokenType.FLOAT);
+        case VALUE_NUMBER_INT:
+          return new RavenJValue(parser.getNumberValue(), JTokenType.INTEGER);
+        case VALUE_FALSE:
+        case VALUE_TRUE:
+          return new RavenJValue(parser.getBooleanValue(), JTokenType.BOOLEAN);
+        case VALUE_NULL:
+          return new RavenJValue(null, JTokenType.NULL);
       }
     } catch (IOException e) {
       throw new JsonReaderException("Error reading RavenJToken from JsonParser" + e.getMessage(), e);
@@ -138,6 +143,11 @@ public abstract class RavenJToken {
     } catch (IOException e) {
       throw new JsonWriterException(e.getMessage(), e);
     }
+  }
+
+  public String toString(FormatSchema schema, Object[] converters) {
+    //implement me
+    return null;
   }
 
   protected RavenJToken cloneTokenImpl(RavenJToken newObject) {
@@ -239,58 +249,56 @@ public abstract class RavenJToken {
       RavenJToken curOtherReader = otherStack.pop();
       RavenJToken curThisReader = thisStack.pop();
 
-      if (curOtherReader == null && curThisReader == null)
-        continue; // shouldn't happen, but we got an error report from a user about this
-      if (curOtherReader == null || curThisReader == null)
-        return false;
+      if (curOtherReader == null && curThisReader == null) continue; // shouldn't happen, but we got an error report from a user about this
+      if (curOtherReader == null || curThisReader == null) return false;
 
       if (curThisReader.getClass().equals(curOtherReader.getClass())) {
         switch (curOtherReader.getType()) {
-        case ARRAY:
-          RavenJArray selfArray = (RavenJArray) curThisReader;
-          RavenJArray otherArray = (RavenJArray) curOtherReader;
-          if (selfArray.size() != otherArray.size()) {
-            return false;
-          }
-          for (int i = 0; i < selfArray.size(); i++) {
-            thisStack.push(selfArray.get(i));
-            otherStack.push(otherArray.get(i));
-          }
-          break;
-        case OBJECT:
-          RavenJObject selfObj = (RavenJObject) curThisReader;
-          RavenJObject otherObj = (RavenJObject) curOtherReader;
-
-          if (selfObj.getCount() != otherObj.getCount()) {
-            return false;
-          }
-          for (String key : selfObj.getProperties().keySet()) {
-            RavenJToken value = selfObj.get(key);
-            RavenJToken token;
-            RavenJToken returnedValue = otherObj.get(key);
-            if (returnedValue == null) {
+          case ARRAY:
+            RavenJArray selfArray = (RavenJArray) curThisReader;
+            RavenJArray otherArray = (RavenJArray) curOtherReader;
+            if (selfArray.size() != otherArray.size()) {
               return false;
             }
-            token = returnedValue;
-            switch (value.getType()) {
-            case ARRAY:
-            case OBJECT:
-              otherStack.push(token);
-              thisStack.push(value);
-              break;
-            default:
-              if (!value.deepEquals(token)) {
+            for (int i = 0; i < selfArray.size(); i++) {
+              thisStack.push(selfArray.get(i));
+              otherStack.push(otherArray.get(i));
+            }
+            break;
+          case OBJECT:
+            RavenJObject selfObj = (RavenJObject) curThisReader;
+            RavenJObject otherObj = (RavenJObject) curOtherReader;
+
+            if (selfObj.getCount() != otherObj.getCount()) {
+              return false;
+            }
+            for (String key : selfObj.getProperties().keySet()) {
+              RavenJToken value = selfObj.get(key);
+              RavenJToken token;
+              RavenJToken returnedValue = otherObj.get(key);
+              if (returnedValue == null) {
                 return false;
               }
-              break;
+              token = returnedValue;
+              switch (value.getType()) {
+                case ARRAY:
+                case OBJECT:
+                  otherStack.push(token);
+                  thisStack.push(value);
+                  break;
+                default:
+                  if (!value.deepEquals(token)) {
+                    return false;
+                  }
+                  break;
+              }
             }
-          }
-          break;
-        default:
-          if (!curOtherReader.deepEquals(curThisReader)) {
-            return false;
-          }
-          break;
+            break;
+          default:
+            if (!curOtherReader.deepEquals(curThisReader)) {
+              return false;
+            }
+            break;
         }
       }
     }
@@ -324,6 +332,27 @@ public abstract class RavenJToken {
     return ret;
   }
 
+  public RavenJToken selectToken(String path, boolean errorWhenNoMatch) throws Exception {
+    RavenJPath p = new RavenJPath(path);
+    return p.evaluate(this, errorWhenNoMatch);
+  }
+
+  public RavenJToken selectToken(RavenJPath path) throws Exception {
+    return selectToken(path, false);
+  }
+
+  public RavenJToken selectToken(RavenJPath path, boolean errorWhenNoMatch) throws Exception {
+    return path.evaluate(this, errorWhenNoMatch);
+  }
+
+  public Iterable<RavenJToken> values() {
+    throw new UnsupportedOperationException();
+  }
+
+  public <T> Iterable<T> values(Class<T> clazz) {
+    throw new UnsupportedOperationException();
+  }
+
   public abstract void ensureCannotBeChangeAndEnableShapshotting();
 
   /**
@@ -339,4 +368,5 @@ public abstract class RavenJToken {
   public <T> T value(Class<T> clazz, String key) {
     throw new IllegalStateException("Unsupported operation!");
   }
+
 }

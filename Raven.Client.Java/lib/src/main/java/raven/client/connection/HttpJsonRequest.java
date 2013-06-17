@@ -348,7 +348,7 @@ public class HttpJsonRequest implements AutoCloseable {
 
       //TODO: HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
-      RavenJToken data = RavenJToken.parse(responseStream); //TODO replace with try load
+      RavenJToken data = RavenJToken.tryLoad(responseStream); //TODO replace with try load
 
       if (HttpMethods.GET == method && shouldCacheRequest) {
         factory.cacheResponse(url, data, responseHeaders);

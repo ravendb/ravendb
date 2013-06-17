@@ -266,6 +266,18 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   }
 
   @Override
+  public Iterable<RavenJToken> values()
+  {
+      return properties.values();
+  }
+
+  @Override
+  public <T> Iterable<T> values(Class<T> clazz)
+  {
+      return Extensions.convert(clazz, properties.values());
+  }
+
+  @Override
   public Iterator<Entry<String, RavenJToken>> iterator() {
     return properties.iterator();
   }
