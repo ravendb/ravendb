@@ -172,7 +172,7 @@ namespace Raven.Tests.Bugs
 						session.Store(item);
 					session.SaveChanges();
 				}
-
+				
 				using (var session = store.OpenSession())
 				{
 					var items = session

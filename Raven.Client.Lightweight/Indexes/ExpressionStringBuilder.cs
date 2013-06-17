@@ -630,7 +630,7 @@ namespace Raven.Client.Indexes
 				{
 					Out("((");
 					Out(ConvertTypeToCSharpKeyword(rightOp.Type));
-					Out(")");
+					Out(")(");
 				}
 				Visit(leftOp, innerPrecedence);
 				Out(' ');
@@ -639,7 +639,7 @@ namespace Raven.Client.Indexes
 				Visit(rightOp, innerPrecedence);
 				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
 				{
-					Out(")");
+					Out("))");
 				}
 			});
 
