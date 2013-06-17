@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Browser;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -313,6 +314,8 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			get { return webRequest.RequestUri.ToString(); }
 		}
+
+		public HttpResponseMessage Response { get; set; }
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
