@@ -2,13 +2,12 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Connection
 {
-#if !NETFX_CORE
+#if !NETFX_CORE && !SILVERLIGHT
 	[Serializable]
 #endif
 	public class ErrorResponseException : Exception
@@ -45,10 +44,10 @@ namespace Raven.Client.Connection
 			Response = response;
 		}
 
-#if !NETFX_CORE
+#if !NETFX_CORE && !SILVERLIGHT
 		protected ErrorResponseException(
-			SerializationInfo info,
-			StreamingContext context) : base(info, context)
+			System.Runtime.Serialization.SerializationInfo info,
+			System.Runtime.Serialization.StreamingContext context) : base(info, context)
 		{
 		}
 #endif
