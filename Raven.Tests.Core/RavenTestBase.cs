@@ -36,7 +36,7 @@ namespace Raven.Tests.Core
 
 			return generateNewDatabaseName
 				.Substring(0, generateNewDatabaseName.IndexOf(">"))
-				.Replace("Raven.Tests.Silverlight.", string.Empty) + SystemTime.UtcNow.Ticks;
+				.Replace("Raven.Tests.Core.", string.Empty) + SystemTime.UtcNow.Ticks;
 		}
 
 		protected IDocumentStore NewDocumentStore()
