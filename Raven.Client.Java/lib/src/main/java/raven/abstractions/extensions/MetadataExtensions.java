@@ -155,7 +155,10 @@ public class MetadataExtensions {
     return RavenJToken.parse(val);
   }
 
-  //TODO: public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
+  public static RavenJObject filterHeadersAttachment(Map<String, String> input) {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
   /**
    * Filters headers from unwanted headers

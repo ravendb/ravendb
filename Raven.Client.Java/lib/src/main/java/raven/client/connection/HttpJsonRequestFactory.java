@@ -59,6 +59,8 @@ public class HttpJsonRequestFactory implements AutoCloseable {
   }
 
 
+
+
   public void addConfgureRequestEventHandler(EventHandler<WebRequestEventArgs> event) {
     configureRequest.add(event);
   }

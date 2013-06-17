@@ -1,14 +1,14 @@
 package raven.abstractions.connection;
 
 
-import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpUriRequest;
 
 import raven.abstractions.basic.EventArgs;
 
 public class WebRequestEventArgs extends EventArgs {
-  private HttpRequestBase request;
+  private HttpUriRequest request;
 
-  public WebRequestEventArgs(HttpRequestBase request) {
+  public WebRequestEventArgs(HttpUriRequest request) {
     super();
     this.request = request;
   }
@@ -16,7 +16,7 @@ public class WebRequestEventArgs extends EventArgs {
   /**
    * @return the request
    */
-  public HttpRequestBase getRequest() {
+  public HttpUriRequest getRequest() {
     return request;
   }
 

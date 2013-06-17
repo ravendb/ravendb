@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.HttpRequestBase;
 
 import raven.abstractions.data.HttpMethods;
@@ -196,7 +197,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
     this.owner = owner;
   }
 
-  public void updateHeaders(HttpRequestBase webRequest) {
+  public void updateHeaders(HttpRequest webRequest) {
     if (operationsHeadersDictionary != null) {
       for (Entry<String, String> kvp : operationsHeadersDictionary.entrySet()) {
         webRequest.addHeader(kvp.getKey(), kvp.getValue());

@@ -25,6 +25,7 @@ import raven.abstractions.data.PutResult;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -208,9 +209,12 @@ public class ServerClient implements IDatabaseCommands {
 
       if (HttpMethods.GET == method) {
         byte[] responseBytes = jsonRequest.readResponseBytes();
-        return new Attachment(true, responseBytes, responseBytes.length, jsonRequest.filterHeadersAttachment(), HttpExtensions.getEtagHeader(jsonRequest), key);
+        return new Attachment(true, responseBytes, responseBytes.length,
+            MetadataExtensions.filterHeadersAttachment(jsonRequest.getResponseHeaders()),
+            HttpExtensions.getEtagHeader(jsonRequest), key);
       } else {
-        return new Attachment(false, null, Integer.valueOf(jsonRequest.getResponseHeaders().get("Content-Length")), jsonRequest.filterHeadersAttachment(), HttpExtensions.getEtagHeader(jsonRequest), key);
+        return new Attachment(false, null, Integer.valueOf(jsonRequest.getResponseHeaders().get("Content-Length")),
+            MetadataExtensions.filterHeadersAttachment(jsonRequest.getResponseHeaders()), HttpExtensions.getEtagHeader(jsonRequest), key);
       }
 
       //TODO: HandleReplicationStatusChanges(webRequest.ResponseHeaders, Url, operationUrl);

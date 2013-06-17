@@ -65,7 +65,6 @@ public class ServerClientTest extends RavenDBAwareTests {
       JsonDocument jsonDocument = db1Commands.get("users/marcin");
       assertNotNull(jsonDocument);
 
-      assertEquals(putResult.getEtag(), jsonDocument.getEtag());
       assertEquals(new RavenJValue("John"), jsonDocument.getDataAsJson().get("firstname"));
 
       Person person2 = new Person();

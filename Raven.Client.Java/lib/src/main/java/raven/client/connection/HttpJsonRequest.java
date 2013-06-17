@@ -4,12 +4,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Map.Entry;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.http.Header;
 import org.apache.http.HttpRequest;
@@ -21,16 +22,23 @@ import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
 import raven.abstractions.closure.Action1;
+import raven.abstractions.closure.Action3;
+import raven.abstractions.closure.Actions;
+import raven.abstractions.connection.HttpRequestHelper;
 import raven.abstractions.connection.profiling.RequestResultArgs;
+import raven.abstractions.data.Constants;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.HttpOperationException;
+import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
@@ -38,26 +46,14 @@ import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
 
-//TODO: review me
-/**
- * TODO:
- *
- * How to set content type (in POST / PUT)
- * How to set request timeout
- * request - ifModifiedSince
- * request.Accept
- * request.Connection
- * requset.SendChunked
- *
- */
 public class HttpJsonRequest implements AutoCloseable {
 
-  public static final String clientVersion = "JvmClient-1.0-SNAPSHOT"; ///TODO: use some maven props (?)
+  public static final String clientVersion = Constants.VERSION;
 
   private final String url;
   private final HttpMethods method;
 
-  private volatile HttpRequestBase webRequest;
+  private volatile HttpUriRequest webRequest;
   private CachedRequest cachedRequestDetails;
   private final HttpJsonRequestFactory factory;
   private final ServerClient owner;
@@ -76,8 +72,7 @@ public class HttpJsonRequest implements AutoCloseable {
   private HttpClient httpClient;
   private int responseStatusCode;
 
-
-  //TODO: public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
+  private Action3<Map<String, String>, String, String> handleReplicationStatusChanges = Actions.delegate3();
 
   /**
    * @return the skipServerCheck
@@ -95,7 +90,7 @@ public class HttpJsonRequest implements AutoCloseable {
     this.owner = requestParams.getOwner();
     this.conventions = requestParams.getConvention();
     this.method = requestParams.getMethod();
-    this.webRequest = createWebRequest(requestParams);
+    this.webRequest = createWebRequest(requestParams.getUrl(), requestParams.getMethod());
     if (factory.isDisableRequestCompression() == false && requestParams.isDisableRequestCompression() == false) {
       /* Content-Encoding and Accept-Encoding Parameters are handled by HttpClient */
       this.httpClient = factory.getGzipHttpClient();
@@ -110,28 +105,47 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   private void writeMetadata(RavenJObject metadata) {
-    // TODO Auto-generated method stub
+    if (metadata == null || metadata.getCount() == 0) {
+      return;
+    }
 
+    for (Entry<String, RavenJToken> prop: metadata) {
+      if (prop.getValue() == null) {
+        continue;
+      }
+
+      if (prop.getValue().getType() == JTokenType.OBJECT || prop.getValue().getType() == JTokenType.ARRAY) {
+        continue;
+      }
+
+      String headerName = prop.getKey();
+      if ("ETag".equals(headerName)) {
+        headerName = "If-None-Match";
+      }
+
+      String value = null; //TODO: prop.Value.Value<object>().ToString();
+
+      switch (headerName) {
+      case "Content-Type":
+        // content type is handled outside
+        break;
+        //TODO: list other custom headers that needs special treatment
+        default:
+          webRequest.addHeader(headerName, value);
+      }
+    }
   }
 
   public void disableAuthentication() {
     //TODO: rewrite and test!
   }
 
-  /* TODO:
-   * Async methods:
-   * public Task ExecuteRequestAsync()
-   * public async Task<RavenJToken> ReadResponseJsonAsync()
-   * public async Task<byte[]> ReadResponseBytesAsync()
-   */
+  private HttpUriRequest createWebRequest(String url, HttpMethods method) {
 
-  private HttpRequestBase createWebRequest(CreateHttpJsonRequestParams requestParams) {
-
-    String url = requestParams.getUrl();
-    HttpRequestBase baseMethod = null;
+    HttpUriRequest baseMethod = null;
 
 
-    switch (requestParams.getMethod()) {
+    switch (method) {
     case GET:
       baseMethod = new HttpGet(url);
       break;
@@ -145,7 +159,7 @@ public class HttpJsonRequest implements AutoCloseable {
       baseMethod = new HttpDelete(url);
       break;
     default:
-      throw new IllegalArgumentException("Unknown method: " + requestParams.getMethod());
+      throw new IllegalArgumentException("Unknown method: " + method);
     }
 
     /*TODO
@@ -164,17 +178,6 @@ public class HttpJsonRequest implements AutoCloseable {
   @Override
   public void close() throws Exception {
 
-  }
-
-  private UUID etagHeaderToGuid(Header responseHeader) {
-    if (StringUtils.isEmpty(responseHeader.getValue())) {
-      throw new IllegalStateException("Response didn't had an ETag header");
-    }
-    String value = responseHeader.getValue();
-    if (value.startsWith("\"")) {
-      return UUID.fromString(value.substring(1, value.length() - 2));
-    }
-    return UUID.fromString(value);
   }
 
   public void executeRequest() throws IOException {
@@ -278,13 +281,7 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   private double calculateDuration() {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  public RavenJObject filterHeadersAttachment() {
-    // TODO Auto-generated method stub
-    return null;
+    return sp.getTime();
   }
 
 
@@ -316,7 +313,22 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   private void recreateWebRequest(Action1<HttpRequest> action) {
-    // TODO Auto-generated method stub
+    // we now need to clone the request, since just calling getRequest again wouldn't do anything
+
+    HttpUriRequest newWebRequest = createWebRequest(this.url, this.method);
+    HttpRequestHelper.copyHeaders(webRequest, newWebRequest);
+    //TODO:newWebRequest.UseDefaultCredentials = webRequest.UseDefaultCredentials;
+    //TODO: newWebRequest.Credentials = webRequest.Credentials;
+
+    action.apply(newWebRequest);
+    if (postedData != null) {
+      HttpRequestHelper.writeDataToRequest(newWebRequest, postedData, factory.isDisableRequestCompression());
+    }
+    if (postedStream != null) {
+      //TODO: copy stream
+    }
+    webRequest = newWebRequest;
+
   }
 
   private RavenJToken readJsonInternal() {
@@ -325,7 +337,9 @@ public class HttpJsonRequest implements AutoCloseable {
     try {
       try {
         response = getResponse();
-        responseStream = response.getEntity().getContent();
+        if (response.getEntity() != null) {
+          responseStream = response.getEntity().getContent();
+        }
         sp.stop();
       } catch (HttpOperationException e) {
         sp.stop();
@@ -346,9 +360,9 @@ public class HttpJsonRequest implements AutoCloseable {
       responseHeaders = extractHeaders(response.getAllHeaders());
       responseStatusCode = response.getStatusLine().getStatusCode();
 
-      //TODO: HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
+      handleReplicationStatusChanges.apply(extractHeaders(response.getAllHeaders()), primaryUrl, operationUrl);
 
-      RavenJToken data = RavenJToken.tryLoad(responseStream); //TODO replace with try load
+      RavenJToken data = RavenJToken.tryLoad(responseStream);
 
       if (HttpMethods.GET == method && shouldCacheRequest) {
         factory.cacheResponse(url, data, responseHeaders);
@@ -401,7 +415,7 @@ public class HttpJsonRequest implements AutoCloseable {
           && cachedRequestDetails != null) {
         factory.updateCacheTime(this);
         RavenJToken result = factory.getCachedResponse(this, extractHeaders(httpWebResponse.getAllHeaders()));
-        //TODO: HandleReplicationStatusChanges(httpWebResponse.Headers, primaryUrl, operationUrl);
+        handleReplicationStatusChanges.apply(extractHeaders(httpWebResponse.getAllHeaders()), primaryUrl, operationUrl);
 
         RequestResultArgs requestResultArgs = new RequestResultArgs();
         requestResultArgs.setDurationMilliseconds(calculateDuration());
@@ -421,14 +435,21 @@ public class HttpJsonRequest implements AutoCloseable {
     throw new IllegalStateException("Not implemented yet!", e);
   }
 
-  //TODO: private void RecreateWebRequest(Action<HttpWebRequest> action)
-  //TODO:public HttpJsonRequest AddOperationHeaders(IDictionary<string, string> operationsHeaders)
-  //TODO: public HttpJsonRequest AddOperationHeader(string key, string value)
+  public HttpJsonRequest addOperationHeaders(Map<String, String> operationsHeaders) {
+    for (Entry<String, String> header: operationsHeaders.entrySet()) {
+      webRequest.addHeader(header.getKey(), header.getValue());
+    }
+    return this;
+  }
+
+  public HttpJsonRequest addOperationHeader(String key, String value) {
+    webRequest.addHeader(key, value);
+    return this;
+  }
 
   public void write(InputStream is) {
     writeCalled = true;
     postedStream = is;
-    //TODO: interceptors to handle gzip compression
     HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
     InputStreamEntity streamEntity = new InputStreamEntity(is, 0, ContentType.APPLICATION_JSON);
     streamEntity.setChunked(true);
@@ -436,18 +457,27 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public void prepareForLongRequest() {
-    setTimeout(6 * 3600);
+    setTimeout(6 * 3600 * 1000);
     //TODO: webRequest.AllowWriteStreamBuffering = false;
   }
 
 
-  private void setTimeout(int seconds) {
-    // TODO Auto-generated method stub
-
-  }
-
-  public void rawExecuteRequest() {
-    //TODO: implemenent me!
+  /**
+   * Remember to release resources in HttpResponse entity!
+   */
+  public HttpResponse rawExecuteRequest() {
+    //TODO: include exception from remote server
+    HttpResponse httpResponse = null;
+    try {
+      httpResponse = httpClient.execute(webRequest);
+    } catch (Exception e) {
+      throw new RuntimeException(e.getMessage(), e);
+    }
+    if (httpResponse.getStatusLine().getStatusCode() >= 400) {
+      EntityUtils.consumeQuietly(httpResponse.getEntity());
+      throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
+    }
+    return httpResponse;
   }
 
   public void write(String data) throws UnsupportedEncodingException {
@@ -457,7 +487,7 @@ public class HttpJsonRequest implements AutoCloseable {
     HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
     requestMethod.setEntity(new StringEntity(data, ContentType.APPLICATION_JSON));
 
-    //TODO: use HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression); (compression)
+    // we don't use HttpRequestHelper.WriteDataToRequest here - gzip in handled in HttpClient internals
   }
 
   public void setShouldCacheRequest(boolean b) {
@@ -479,24 +509,50 @@ public class HttpJsonRequest implements AutoCloseable {
   /**
    * @return the methodBase
    */
-  public HttpRequestBase getWebRequest() {
+  public HttpUriRequest getWebRequest() {
     return webRequest;
   }
 
-  public void setResponseStatusCode(int scNotModified) {
-    // TODO Auto-generated method stub
-
+  public void setResponseStatusCode(int statusCode) {
+    this.responseStatusCode = statusCode;
   }
 
   public void setResponseHeaders(Map<String, String> map) {
     this.responseHeaders = map;
   }
 
-  public HttpJsonRequest addReplicationStatusHeaders(String primaryUrl, String currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior,
+  public HttpJsonRequest addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior,
       HandleReplicationStatusChangesCallback handleReplicationStatusChangesCallback) {
-    // TODO Auto-generated method stub
+
+    if (thePrimaryUrl.equalsIgnoreCase(currentUrl)) {
+      return this;
+    }
+    if (replicationInformer.getFailureCount(thePrimaryUrl) <= 0) {
+      return this; // not because of failover, no need to do this.
+    }
+
+    Date lastPrimaryCheck = replicationInformer.getFailureLastCheck(thePrimaryUrl);
+    webRequest.addHeader(Constants.RAVEN_CLIENT_PRIMARY_SERVER_URL, toRemoteUrl(thePrimaryUrl));
+
+    SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_S_DATE_FORAT);
+    webRequest.addHeader(Constants.RAVEN_CLIENT_PRIMARY_SERVER_LAST_CHECK, sdf.format(lastPrimaryCheck));
+
+    primaryUrl = thePrimaryUrl;
+    operationUrl = currentUrl;
+
+    this.handleReplicationStatusChanges = handleReplicationStatusChangesCallback;
     return this;
   }
 
+  private String toRemoteUrl(String thePrimaryUrl) {
+    //TODO: replace localhost and 127.0.0.1 with host name
+    return thePrimaryUrl;
+  }
+
+  public void setTimeout(int timeoutInMilis) {
+    HttpParams httpParams = webRequest.getParams();
+    HttpConnectionParams.setSoTimeout(httpParams, timeoutInMilis);
+    HttpConnectionParams.setConnectionTimeout(httpParams, timeoutInMilis);
+  }
 
 }

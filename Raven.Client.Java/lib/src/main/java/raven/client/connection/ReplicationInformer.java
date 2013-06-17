@@ -1,5 +1,6 @@
 package raven.client.connection;
 
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import raven.abstractions.closure.Function1;
@@ -30,6 +31,11 @@ public class ReplicationInformer {
   public int getFailureCount(String url) {
     // TODO Auto-generated method stub
     return 0;
+  }
+
+  public Date getFailureLastCheck(String operationUrl) {
+    //TODO:
+    return null;
   }
 
 }

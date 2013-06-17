@@ -1,22 +1,22 @@
 package raven.abstractions.exceptions;
 
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpRequestBase;
 
 
 public class HttpOperationException extends RuntimeException {
-  private HttpRequestBase webRequest;
+  private HttpRequest webRequest;
   private HttpResponse httpResponse;
   /**
    * @return the webRequest
    */
-  public HttpRequestBase getWebRequest() {
+  public HttpRequest getWebRequest() {
     return webRequest;
   }
   /**
    * @param webRequest the webRequest to set
    */
-  public void setWebRequest(HttpRequestBase webRequest) {
+  public void setWebRequest(HttpRequest webRequest) {
     this.webRequest = webRequest;
   }
   /**
@@ -32,7 +32,7 @@ public class HttpOperationException extends RuntimeException {
     this.httpResponse = httpResponse;
   }
 
-  public HttpOperationException(String message, Throwable cause, HttpRequestBase webRequest, HttpResponse httpResponse) {
+  public HttpOperationException(String message, Throwable cause, HttpRequest webRequest, HttpResponse httpResponse) {
     super(message, cause);
     this.webRequest = webRequest;
     this.httpResponse = httpResponse;

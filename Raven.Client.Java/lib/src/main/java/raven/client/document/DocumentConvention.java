@@ -7,6 +7,7 @@ import org.apache.http.HttpResponse;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
+import raven.abstractions.closure.Functions;
 
 //TODO: finish me
 public class DocumentConvention {
@@ -51,13 +52,7 @@ public class DocumentConvention {
 
   public DocumentConvention() {
     //TODO:
-    shouldCacheRequest = new Function1<String, Boolean>() {
-
-      @Override
-      public Boolean apply(String input) {
-        return true;
-      }
-    };
+    shouldCacheRequest = Functions.alwaysTrue();
   }
 
   /**
