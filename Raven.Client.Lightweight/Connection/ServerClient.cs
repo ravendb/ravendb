@@ -1792,11 +1792,10 @@ namespace Raven.Client.Connection
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-
 			try
 			{
 				request.ExecuteRequest();
-				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
+				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.Response.Headers, request.ResponseStatusCode);
 			}
 			catch (WebException e)
 			{

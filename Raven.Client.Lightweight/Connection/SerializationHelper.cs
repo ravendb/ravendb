@@ -13,6 +13,7 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -158,6 +159,26 @@ namespace Raven.Client.Connection
 		/// Deserialize a request to a JsonDocument
 		/// </summary>
 		public static JsonDocument DeserializeJsonDocument(string key, RavenJToken requestJson,
+														   HttpResponseHeaders headers,
+														   HttpStatusCode statusCode)
+		{
+			var jsonData = (RavenJObject)requestJson;
+			var meta = headers.FilterHeaders();
+
+			var etag = headers.ETag.Tag;
+
+			return new JsonDocument
+			{
+				DataAsJson = jsonData,
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				Key = key,
+				Etag = HttpExtensions.EtagHeaderToEtag(etag),
+				LastModified = GetLastModifiedDate(headers),
+				Metadata = meta
+			};
+		}
+
+		public static JsonDocument DeserializeJsonDocument(string key, RavenJToken requestJson,
 														   NameValueCollection headers,
 														   HttpStatusCode statusCode)
 		{
@@ -188,11 +209,22 @@ namespace Raven.Client.Connection
 			return DateTime.ParseExact(lastModified[0], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 		}
 
+		private static DateTime? GetLastModifiedDate(HttpResponseHeaders headers)
+		{
+			var lastModified = headers.GetValues(Constants.RavenLastModified).ToArray();
+			if (lastModified == null || lastModified.Length != 1)
+			{
+				var dt = DateTime.ParseExact(headers.GetValues(Constants.LastModified).FirstOrDefault(), new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+				return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+			}
+			return DateTime.ParseExact(lastModified[0], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+		}
+
 		/// <summary>
 		/// Deserialize a request to a JsonDocument
 		/// </summary>
 		public static JsonDocumentMetadata DeserializeJsonDocumentMetadata(string key,
-																		   NameValueCollection headers,
+																		   HttpResponseHeaders headers,
 																		   HttpStatusCode statusCode)
 		{
 			RavenJObject meta = null;
@@ -204,8 +236,8 @@ namespace Raven.Client.Connection
 			{
 				throw new JsonReaderException("Invalid Json Response", jre);
 			}
-			var etag = headers["ETag"];
-			string lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
+			var etag = headers.ETag.Tag;
+			string lastModified = headers.GetValues(Constants.RavenLastModified).FirstOrDefault() ?? headers.GetValues(Constants.LastModified).FirstOrDefault();
 			var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 

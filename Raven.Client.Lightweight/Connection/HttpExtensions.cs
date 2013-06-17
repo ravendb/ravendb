@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Net;
+using System.Net.Http;
 using Raven.Abstractions.Data;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
@@ -25,6 +26,11 @@ namespace Raven.Client.Connection
 #endif
 		}
 
+		public static Etag GetEtagHeader(this HttpResponseMessage response)
+		{
+			return EtagHeaderToEtag(response.Headers.ETag.Tag);
+		}
+
 		public static Etag GetEtagHeader(this GetResponse response)
 		{
 			return EtagHeaderToEtag(response.Headers["ETag"]);
@@ -33,7 +39,7 @@ namespace Raven.Client.Connection
 
 		public static Etag GetEtagHeader(this HttpJsonRequest request)
 		{
-			return EtagHeaderToEtag(request.ResponseHeaders["ETag"]);
+			return EtagHeaderToEtag(request.Response.Headers.ETag.Tag);
 		}
 
 		internal static Etag EtagHeaderToEtag(string responseHeader)

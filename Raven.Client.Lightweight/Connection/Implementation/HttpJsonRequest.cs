@@ -20,6 +20,7 @@ using System.IO.Compression;
 using Raven.Client.WinRT.Connection;
 #endif
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -614,11 +615,10 @@ namespace Raven.Client.Connection
 
 		public TimeSpan Timeout
 		{
-			set
-			{
-				webRequest.Timeout = (int)value.TotalMilliseconds;
-			}
+			set { webRequest.Timeout = (int) value.TotalMilliseconds; }
 		}
+
+		public HttpResponseMessage Response { get; private set; }
 
 		private void WriteMetadata(RavenJObject metadata)
 		{

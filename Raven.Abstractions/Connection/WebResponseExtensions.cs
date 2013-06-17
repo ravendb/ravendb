@@ -7,10 +7,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-#if NETFX_CORE
 using System.Net.Http;
 using System.Threading.Tasks;
-#endif
 
 namespace Raven.Abstractions.Connection
 {
@@ -54,7 +52,6 @@ namespace Raven.Abstractions.Connection
 		}
 #endif
 
-#if NETFX_CORE
 		/// <summary>
 		/// Gets the response stream with HTTP decompression.
 		/// </summary>
@@ -70,7 +67,5 @@ namespace Raven.Abstractions.Connection
 				stream = new System.IO.Compression.DeflateStream(stream, System.IO.Compression.CompressionMode.Decompress);
 			return stream;
 		}
-#endif
-
 	}
 }

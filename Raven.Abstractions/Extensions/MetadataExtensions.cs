@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
@@ -211,6 +212,52 @@ namespace Raven.Abstractions.Extensions
 			return filterHeaders;
 		}
 
+		public static RavenJObject FilterHeadersAttachment(this HttpResponseHeaders self)
+		{
+			var filterHeaders = self.FilterHeaders();
+
+			string contentType = self.GetValues("Content-Type").FirstOrDefault();
+			if (contentType != null)
+				filterHeaders["Content-Type"] = contentType;
+
+			return filterHeaders;
+		}
+
+		/// <summary>
+		/// Filters the headers from unwanted headers
+		/// </summary>
+		/// <param name="self">The self.</param>
+		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this HttpResponseHeaders self)
+		{
+			var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
+			foreach (var a in self)
+			{
+				var header = a.Key;
+				try
+				{
+					if(header.StartsWith("Temp"))
+						continue;
+					if (headersToIgnoreClient.Contains(header))
+						continue;
+					var valuesNonDistinct = self.GetValues(header);
+					if(valuesNonDistinct == null)
+						continue;
+					var values = new HashSet<string>(valuesNonDistinct);
+					var headerName = CaptureHeaderName(header);
+					if (values.Count == 1)
+						metadata[headerName] = GetValue(values.First());
+					else
+						metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
+				}
+				catch (Exception exc)
+				{
+					throw new JsonReaderException(string.Concat("Unable to Filter Header: ", header), exc);
+				}
+			}
+			return metadata;
+		}
+
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
@@ -223,12 +270,12 @@ namespace Raven.Abstractions.Extensions
 			{
 				try
 				{
-					if(header.StartsWith("Temp"))
+					if (header.StartsWith("Temp"))
 						continue;
 					if (headersToIgnoreClient.Contains(header))
 						continue;
 					var valuesNonDistinct = self.GetValues(header);
-					if(valuesNonDistinct == null)
+					if (valuesNonDistinct == null)
 						continue;
 					var values = new HashSet<string>(valuesNonDistinct);
 					var headerName = CaptureHeaderName(header);
