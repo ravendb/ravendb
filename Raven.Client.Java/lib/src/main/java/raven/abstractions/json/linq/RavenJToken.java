@@ -369,4 +369,8 @@ public abstract class RavenJToken {
     throw new IllegalStateException("Unsupported operation!");
   }
 
+
+  public <T> T value(Class<T> clazz) {
+    throw new IllegalStateException("Unsupported operation!");
+  }
 }
