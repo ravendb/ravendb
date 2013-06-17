@@ -1,7 +1,5 @@
 package raven.client.extensions;
 
-import static org.mockito.Matchers.matches;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

@@ -3,7 +3,10 @@ package raven.client.connection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -23,6 +26,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
@@ -123,15 +127,15 @@ public class HttpJsonRequest implements AutoCloseable {
         headerName = "If-None-Match";
       }
 
-      String value = null; //TODO: prop.Value.Value<object>().ToString();
+      String value = prop.getValue().value(Object.class).toString();
 
       switch (headerName) {
       case "Content-Type":
         // content type is handled outside
         break;
         //TODO: list other custom headers that needs special treatment
-        default:
-          webRequest.addHeader(headerName, value);
+      default:
+        webRequest.addHeader(headerName, value);
       }
     }
   }
@@ -170,8 +174,7 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public CachedRequest getCachedRequestDetails() {
-    //TODO:
-    return null;
+    return this.cachedRequestDetails;
   }
 
 
@@ -545,8 +548,17 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   private String toRemoteUrl(String thePrimaryUrl) {
-    //TODO: replace localhost and 127.0.0.1 with host name
-    return thePrimaryUrl;
+    try {
+      URIBuilder uriBuilder = new URIBuilder(thePrimaryUrl);
+      if ("localhost".equals(uriBuilder.getHost()) || "127.0.0.1".equals(uriBuilder.getHost())) {
+        uriBuilder.setHost(InetAddress.getLocalHost().getHostName());
+      }
+      return uriBuilder.toString();
+    } catch (URISyntaxException e) {
+      throw new RuntimeException("Invalid URI:" + thePrimaryUrl, e);
+    } catch (UnknownHostException e) {
+      throw new RuntimeException("Unable to fetch hostname", e);
+    }
   }
 
   public void setTimeout(int timeoutInMilis) {
