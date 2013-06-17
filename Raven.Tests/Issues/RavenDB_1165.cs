@@ -2,35 +2,27 @@
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
 using Raven.Client.Document;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System;
 using Xunit;
 
-namespace Test.RavenTests
+namespace Raven.Tests.Issues
 {
-	public class Personnel
-	{
-		public string Id { get; set; }
-
-		public string FirstName { get; set; }
-		public string MiddleName { get; set; }
-		public string LastName { get; set; }
-
-		public string OrganizationalUnitId { get; set; }
-		public string FinancialUnitId { get; set; }
-		public string PersonnelTypeId { get; set; }
-	}
-
 	public class CanTransformAndStream : RavenTestBase
 	{
-		public CanTransformAndStream()
+		public class Personnel
 		{
-			
+			public string Id { get; set; }
+
+			public string FirstName { get; set; }
+			public string MiddleName { get; set; }
+			public string LastName { get; set; }
+
+			public string OrganizationalUnitId { get; set; }
+			public string FinancialUnitId { get; set; }
+			public string PersonnelTypeId { get; set; }
 		}
-		public CanTransformAndStream(DocumentStore store)
-		{
-		}
+
 
 		public class PersonnelAchievementsMatrixAll
 		   : AbstractMultiMapIndexCreationTask<PersonnelAchievementsMatrixAll.Mapping>
