@@ -125,14 +125,14 @@ namespace Raven.Client.WinRT.Connection
 				throw new ErrorResponseException(Response);
 
 			return await ReadStringInternal(Response)
-				             .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
-				             .Unwrap();
+				            /* .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
+				             .Unwrap()*/
+							 ;
 		}
 
-		private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
+		/*private Task<T> RetryIfNeedTo<T>(HttpResponseMessage response, Func<Task<T>> generator)
 		{
-			var exception = task.Exception.ExtractSingleInnerException() as WebException;
-			if (exception == null || retries >= 3)
+			if (retries >= 3)
 				return task;
 
 			var webResponse = exception.Response as HttpWebResponse;
@@ -162,9 +162,9 @@ namespace Raven.Client.WinRT.Connection
 					return generator();
 				})
 				.Unwrap();
-		}
+		}*/
 
-		private void HandleForbiddenResponseAsync(HttpWebResponse forbiddenResponse)
+		private void HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
@@ -172,7 +172,7 @@ namespace Raven.Client.WinRT.Connection
 			conventions.HandleForbiddenResponseAsync(forbiddenResponse);
 		}
 
-		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
+		public Task HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return null;
@@ -324,52 +324,53 @@ namespace Raven.Client.WinRT.Connection
 			return this;
 		}
 
-		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
+		public async Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
-				httpClient.DefaultRequestHeaders.Add("Requires-Big-Initial-Download", "True");
-			return httpClient.GetAsync(url)
-			                 .ContinueWith(task =>
-			                 {
-				                 var stream = task.Result.Content.ReadAsStreamAsync().Result;
-				                 var observableLineStream = new ObservableLineStream(stream, () =>
-				                 {
-					                 httpClient.CancelPendingRequests();
-				                 });
-				                 observableLineStream.Start();
-				                 return (IObservable<string>) observableLineStream;
-			                 })
-			                 .ContinueWith(task =>
-			                 {
-				                 var webException = task.Exception.ExtractSingleInnerException() as WebException;
-				                 if (webException == null || retries >= 3)
-					                 return task; // effectively throw
+			httpClient.DefaultRequestHeaders.Add("Requires-Big-Initial-Download", "True");
+			var result = await httpClient.GetAsync(url);
+			var stream = await result.Content.ReadAsStreamAsync();
+			var observableLineStream = new ObservableLineStream(stream, () =>
+			{
+				httpClient.CancelPendingRequests();
+			});
+			observableLineStream.Start();
+			return (IObservable<string>) observableLineStream;
 
-				                 var httpWebResponse = webException.Response as HttpWebResponse;
-				                 if (httpWebResponse == null ||
-				                     (httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
-				                      httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
-				                      httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
-					                 return task; // effectively throw
+			/*try
+			{
 
-				                 if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
-				                 {
-					                 HandleForbiddenResponseAsync(httpWebResponse);
-					                 return task;
-				                 }
+			}
+			catch (HttpWebResponse)
+			{
+				if (retries >= 3)
+					return task; // effectively throw
+			var httpWebResponse = webException.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
+					 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
+					 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+					return task; // effectively throw
 
-				                 var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+				if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+				{
+					HandleForbiddenResponseAsync(httpWebResponse);
+					return task;
+				}
 
-				                 if (authorizeResponse == null)
-					                 return task; // effectively throw
+				var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
 
-				                 return authorizeResponse
-					                 .ContinueWith(_ =>
-					                 {
-						                 _.Wait(); //throw on error
-						                 return ServerPullAsync(retries + 1);
-					                 })
-					                 .Unwrap();
-			                 }).Unwrap();
+				if (authorizeResponse == null)
+					return task; // effectively throw
+
+				return authorizeResponse
+					.ContinueWith(_ =>
+					{
+						_.Wait(); //throw on error
+						return ServerPullAsync(retries + 1);
+					})
+					.Unwrap();
+				throw;
+			}*/
 		}
 
 		public Task ExecuteWriteAsync(string data)

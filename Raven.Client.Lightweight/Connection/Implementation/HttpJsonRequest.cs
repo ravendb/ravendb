@@ -168,7 +168,7 @@ namespace Raven.Client.Connection
 						{
 							sp.Stop();
 						}
-						CheckForErrors();
+						await CheckForErrors();
 					}
 					return await ReadJsonInternalAsync();
 				}
@@ -196,7 +196,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private void CheckForErrors()
+		private async Task CheckForErrors()
 		{
 			if (Response.IsSuccessStatusCode == false)
 			{
@@ -237,7 +237,7 @@ namespace Raven.Client.Connection
 						PostedData = postedData
 					});
 
-					return result;
+					// return result;
 				}
 
 
@@ -836,43 +836,39 @@ namespace Raven.Client.Connection
 			int retries = 0;
 			while (true)
 			{
-				WebException webException;
-				HttpWebResponse httpWebResponse;
+				ErrorResponseException webException;
 
 				try
 				{
-					var response = await webRequest.GetResponseAsync();
-					var stream = response.GetResponseStreamWithHttpDecompression();
+					Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url));
+					var stream = await Response.GetResponseStreamWithHttpDecompression();
 					var observableLineStream = new ObservableLineStream(stream, () =>
 					{
-						webRequest.Abort();
-						response.Close();
+						
 					});
 					observableLineStream.Start();
 					return (IObservable<string>) observableLineStream;
 				}
-				catch (WebException e)
+				catch (ErrorResponseException e)
 				{
 					if (++retries >= 3 || disabledAuthRetries)
 						throw;
 
-					httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-						(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
-						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
-						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+					if (e.StatusCode != HttpStatusCode.Unauthorized &&
+					    e.StatusCode != HttpStatusCode.Forbidden &&
+					    e.StatusCode != HttpStatusCode.PreconditionFailed)
 						throw;
 
 					webException = e;
 				}
 
-				if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
+				if (webException.StatusCode == HttpStatusCode.Forbidden)
 				{
-					await HandleForbiddenResponseAsync(httpWebResponse);
+					await HandleForbiddenResponseAsync(webException.Response);
 					await new CompletedTask(webException).Task; // Throws, preserving original stack
 				}
 
-				if (await HandleUnauthorizedResponseAsync(httpWebResponse) == false)
+				if (await HandleUnauthorizedResponseAsync(webException.Response) == false)
 					await new CompletedTask(webException).Task; // Throws, preserving original stack
 			}
 		}
