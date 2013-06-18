@@ -23,7 +23,8 @@ namespace Raven.Tests.Core
 				}
 
 				var documents = await store.AsyncDatabaseCommands.ForDatabase(dbname).GetDocumentsAsync(0, 25);
-				Assert.Equal(3, documents.Length);
+				// 4 because we have also the HiLo document.
+				Assert.Equal(4, documents.Length);
 			}
 		}
 

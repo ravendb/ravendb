@@ -523,7 +523,7 @@ namespace Raven.Client.Connection
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
-					factory.CacheResponse(Url, data, ResponseHeaders);
+					factory.CacheResponse(Url, data, Response.Headers);
 				}
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs

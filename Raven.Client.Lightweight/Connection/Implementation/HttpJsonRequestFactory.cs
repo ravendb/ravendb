@@ -265,6 +265,23 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		internal void CacheResponse(string url, RavenJToken data, HttpResponseHeaders headers)
+		{
+			if (string.IsNullOrEmpty(headers.ETag.Tag))
+				return;
+
+			var clone = data.CloneToken();
+			clone.EnsureCannotBeChangeAndEnableSnapshotting();
+
+			cache.Set(url, new CachedRequest
+			{
+				Data = clone,
+				Time = SystemTime.UtcNow,
+				Headers = new NameValueCollection(),// TODO: Use headers
+				Database = MultiDatabase.GetDatabaseName(url)
+			});
+		}
+
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
