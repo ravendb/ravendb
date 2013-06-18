@@ -77,7 +77,7 @@ public class Extensions {
   }
 
   public static <U> U convert(Class<U> clazz, RavenJToken token, boolean cast) {
-    if (cast) {
+    if (cast || Object.class.equals(clazz)) {
       // HACK
       return (U) (Object) token;
     }

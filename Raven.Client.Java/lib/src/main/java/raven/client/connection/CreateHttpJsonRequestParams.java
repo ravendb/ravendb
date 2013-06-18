@@ -83,7 +83,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
     if (operationHeadersHash == 0) {
       return url;
     }
-    return (url.contains("?") ? "&" : "?") + "operationHeadersHash=" + operationHeadersHash;
+    return url + (url.contains("?") ? "&" : "?") + "operationHeadersHash=" + operationHeadersHash;
   }
 
   /**

@@ -4,15 +4,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.endsWith;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
@@ -94,6 +94,98 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
   }
 
   @Test
+  public void testDelete() throws Exception {
+    try {
+      createDb("db1");
+      RavenJToken putResult = putSampleDocument(new HashMap<String, String>());
+      UUID etag = putResult.value(UUID.class, "ETag");
+      assertNotNull(etag);
+
+      RavenJObject ravenJObject = new RavenJObject();
+      ravenJObject.add("ETag", RavenJToken.fromObject(UUID.randomUUID()));
+
+      Map<String, String> operationHeaders = new HashMap<>();
+
+      responseQueue.clear();
+      requestQueue.clear();
+      requestResultArgs.clear();
+
+      // try with invalid ETag
+      try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.DELETE,
+         ravenJObject , null, convention).addOperationHeaders(operationHeaders))) {
+
+        jsonRequest.executeRequest();
+        fail("request should throw");
+      } catch (HttpOperationException e) {
+        assertEquals(HttpStatus.SC_CONFLICT, responseQueue.get(0).getStatusLine().getStatusCode());
+
+        RavenJToken conflictObject = RavenJObject.tryLoad(responseQueue.get(0).getEntity().getContent());
+        assertNotNull(conflictObject);
+      }
+
+      // now retry with valid ETag
+      ravenJObject = new RavenJObject();
+      ravenJObject.add("ETag", RavenJToken.fromObject(etag));
+
+      responseQueue.clear();
+      requestQueue.clear();
+      requestResultArgs.clear();
+
+      // try with invalid ETag
+      try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.DELETE,
+         ravenJObject , null, convention).addOperationHeaders(operationHeaders))) {
+
+        jsonRequest.executeRequest();
+        assertEquals(HttpStatus.SC_NO_CONTENT, responseQueue.get(0).getStatusLine().getStatusCode());
+      }
+
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
+  @Test
+  public void testAggresiveCache() throws Exception {
+    Map<String, String> operationHeaders = new HashMap<>();
+
+    try {
+      createDb("db1");
+
+      putSampleDocument(operationHeaders);
+
+      getSampleDocument(operationHeaders);
+
+      jsonRequestFactory.setAggressiveCacheDuration(1000l);
+
+      requestResultArgs.clear();
+      requestQueue.clear();
+
+      getSampleDocument(operationHeaders);
+
+      assertEquals(0, requestQueue.size());
+      assertEquals(1, requestResultArgs.size());
+      RequestResultArgs resultArgs = requestResultArgs.get(0);
+      requestResultArgs.clear();
+
+      assertEquals(RequestStatus.AGGRESSIVELY_CACHED, resultArgs.getStatus());
+
+    } finally {
+      deleteDb("db1");
+    }
+
+  }
+
+  private void getSampleDocument(Map<String, String> operationHeaders) throws IOException, Exception {
+    try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.GET,
+        new RavenJObject(), null, convention).addOperationHeaders(operationHeaders))) {
+
+      RavenJToken responseJson = jsonRequest.readResponseJson();
+      assertNotNull(responseJson);
+    }
+  }
+
+  @Test
   public void testPutAndCache() throws Exception {
 
     Map<String, String> operationHeaders = new HashMap<>();
@@ -104,15 +196,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       /*
        * put sample document
        */
-      try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.PUT,
-          new RavenJObject(), null, convention).addOperationHeaders(operationHeaders))) {
-
-        Person person = new Person("5", "John", "Smith");
-
-        jsonRequest.write(RavenJObject.fromObject(person).toString());
-        RavenJToken responseJson = jsonRequest.readResponseJson();
-        assertNotNull(responseJson);
-      }
+      putSampleDocument(operationHeaders);
 
       Map<String, String> expectedRequestHeaders = new HashMap<>();
       expectedRequestHeaders.put("Accept-Encoding", "gzip,deflate");
@@ -140,12 +224,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
        * Get inserted document
        */
 
-      try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.GET,
-          new RavenJObject(), null, convention).addOperationHeaders(operationHeaders))) {
-
-        RavenJToken responseJson = jsonRequest.readResponseJson();
-        assertNotNull(responseJson);
-      }
+      getSampleDocument(new HashMap<String, String>());
 
       expectedRequestHeaders = new HashMap<>();
       expectedRequestHeaders.put("Accept-Encoding", "gzip,deflate");
@@ -166,15 +245,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
       assertEquals(RequestStatus.SEND_TO_SERVER, resultArgs.getStatus());
 
-      /*
-       * Get inserted document (should go from cache)
-       */
-      try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.GET,
-          new RavenJObject(), null, convention).addOperationHeaders(operationHeaders))) {
-
-        RavenJToken responseJson = jsonRequest.readResponseJson();
-        assertNotNull(responseJson);
-      }
+      getSampleDocument(new HashMap<String, String>());
 
       expectedRequestHeaders = new HashMap<>();
       expectedRequestHeaders.put("Accept-Encoding", "gzip,deflate");
@@ -198,12 +269,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
        */
 
       try (AutoCloseable closable = jsonRequestFactory.disableAllCaching()) {
-        try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.GET,
-            new RavenJObject(), null, convention).addOperationHeaders(operationHeaders))) {
-
-          RavenJToken responseJson = jsonRequest.readResponseJson();
-          assertNotNull(responseJson);
-        }
+        getSampleDocument(new HashMap<String, String>());
 
         requestQueue.clear();
         responseQueue.clear();
@@ -219,6 +285,97 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       deleteDb("db1");
     }
 
+  }
+
+  @Test
+  public void testPutWithOutGzip() throws Exception {
+
+    Map<String, String> operationHeaders = new HashMap<>();
+    jsonRequestFactory.setDisableRequestCompression(true);
+
+    try {
+      createDb("db1");
+
+      /*
+       * put sample document
+       */
+      putSampleDocument(operationHeaders);
+
+      Map<String, String> expectedRequestHeaders = new HashMap<>();
+      expectedRequestHeaders.put("Content-Type", "application/json; charset=UTF-8");
+      expectedRequestHeaders.put("Transfer-Encoding", "chunked");
+      expectedRequestHeaders.put("Expect", "100-continue");
+
+      Map<String, String> requestHeaders = HttpJsonRequest.extractHeaders(requestQueue.get(0).getAllHeaders());
+      assertTrue("Accept-Encoding must not be present! Headers: " + requestHeaders, !requestHeaders.containsKey("Accept-Encoding"));
+      assertTrue("Content-Encoding must not be present! Headers: " + requestHeaders, !requestHeaders.containsKey("Content-Encoding"));
+
+      verifyRequestHeaders(expectedRequestHeaders, true);
+
+      Map<String, String> expectedResponseHeaders = new HashMap<>();
+      expectedResponseHeaders.put("Transfer-Encoding", "chunked");
+      expectedResponseHeaders.put("Content-Type", "application/json; charset=utf-8");
+      // content encoding is returned by removed by DecompressingHttpClient expectedResponseHeaders.put("Content-Encoding", "gzip");
+      expectedResponseHeaders.put("Location", "/docs/persons/1");
+      verifyResponseHeaders(expectedResponseHeaders, true);
+
+
+      assertEquals(1, requestResultArgs.size());
+      RequestResultArgs resultArgs = requestResultArgs.get(0);
+      requestResultArgs.clear();
+
+      assertEquals(RequestStatus.SEND_TO_SERVER, resultArgs.getStatus());
+
+      /*
+       * Get inserted document
+       */
+
+      getSampleDocument(new HashMap<String, String>());
+
+      expectedRequestHeaders = new HashMap<>();
+      verifyRequestHeaders(expectedRequestHeaders, true);
+
+      String etag = responseQueue.get(0).getFirstHeader("ETag").getValue();
+
+      expectedResponseHeaders = new HashMap<>();
+      expectedResponseHeaders.put("Transfer-Encoding", "chunked");
+      expectedResponseHeaders.put("Content-Type", "application/json; charset=utf-8");
+      // content encoding is returned by removed by DecompressingHttpClient expectedResponseHeaders.put("Content-Encoding", "gzip");
+      expectedResponseHeaders.put("__document_id", "persons/1");
+      verifyResponseHeaders(expectedResponseHeaders, true);
+
+      assertEquals(1, requestResultArgs.size());
+      resultArgs = requestResultArgs.get(0);
+      requestResultArgs.clear();
+
+      assertEquals(RequestStatus.SEND_TO_SERVER, resultArgs.getStatus());
+
+      getSampleDocument(new HashMap<String, String>());
+
+      expectedRequestHeaders = new HashMap<>();
+      expectedRequestHeaders.put("If-None-Match", etag);
+      verifyRequestHeaders(expectedRequestHeaders, true);
+
+
+
+    } finally {
+      deleteDb("db1");
+      jsonRequestFactory.setDisableRequestCompression(false);
+    }
+
+  }
+
+  private RavenJToken putSampleDocument(Map<String, String> operationHeaders) throws UnsupportedEncodingException, IOException, Exception {
+    try (HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.PUT,
+        new RavenJObject(), null, convention).addOperationHeaders(operationHeaders))) {
+
+      Person person = new Person("5", "John", "Smith");
+
+      jsonRequest.write(RavenJObject.fromObject(person).toString());
+      RavenJToken responseJson = jsonRequest.readResponseJson();
+      assertNotNull(responseJson);
+      return responseJson;
+    }
   }
 
   private void verifyResponseHeaders(Map<String, String> expectedResponseHeaders, boolean drop) {

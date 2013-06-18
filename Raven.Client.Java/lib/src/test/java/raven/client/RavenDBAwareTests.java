@@ -58,7 +58,6 @@ public abstract class RavenDBAwareTests {
 
     HttpDelete deleteMethod = null;
     try {
-
       deleteMethod = new HttpDelete(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName) + "?hard-delete=true");
       HttpResponse httpResponse = client.execute(deleteMethod);
       if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {

@@ -8,6 +8,7 @@ import java.util.Stack;
 import org.codehaus.jackson.FormatSchema;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import raven.abstractions.basic.Tuple;
@@ -85,6 +86,12 @@ public abstract class RavenJToken {
   public static RavenJToken tryLoad(InputStream json) throws JsonReaderException {
     try {
       JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      if (!jsonParser.hasCurrentToken()) {
+        if (jsonParser.nextToken() == null) {
+          return null;
+        }
+      }
+
       return load(jsonParser);
     } catch (IOException e) {
       throw new JsonReaderException(e.getMessage(), e);
@@ -369,8 +376,7 @@ public abstract class RavenJToken {
     throw new IllegalStateException("Unsupported operation!");
   }
 
-
   public <T> T value(Class<T> clazz) {
-    throw new IllegalStateException("Unsupported operation!");
+    return Extensions.value(clazz, this);
   }
 }

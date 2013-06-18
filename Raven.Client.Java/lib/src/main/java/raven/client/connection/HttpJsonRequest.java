@@ -63,6 +63,7 @@ public class HttpJsonRequest implements AutoCloseable {
   private final HttpMethods method;
 
   private volatile HttpUriRequest webRequest;
+  private volatile HttpResponse httpResponse;
   private CachedRequest cachedRequestDetails;
   private final HttpJsonRequestFactory factory;
   private final ServerClient owner;
@@ -191,7 +192,9 @@ public class HttpJsonRequest implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-
+    if (httpResponse != null && httpResponse.getEntity() != null) {
+      EntityUtils.consumeQuietly(httpResponse.getEntity());
+    }
   }
 
   public void executeRequest() throws IOException {
@@ -199,17 +202,10 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public byte[] readResponseBytes() throws IOException {
-    HttpResponse httpResponse = null;
-    try {
-      httpResponse = getResponse();
-      InputStream response = httpResponse.getEntity().getContent();
-      responseHeaders = extractHeaders(httpResponse.getAllHeaders());
-      return IOUtils.toByteArray(response);
-    } finally {
-      if (httpResponse != null) {
-        EntityUtils.consumeQuietly(httpResponse.getEntity());
-      }
-    }
+    innerExecuteHttpClient();
+    InputStream response = httpResponse.getEntity().getContent();
+    responseHeaders = extractHeaders(httpResponse.getAllHeaders());
+    return IOUtils.toByteArray(response);
   }
 
   public static Map<String, String> extractHeaders(Header[] httpResponseHeaders) {
@@ -220,18 +216,15 @@ public class HttpJsonRequest implements AutoCloseable {
     return result;
   }
 
-  private HttpResponse getResponse() {
-    HttpResponse httpResponse = null;
+  private void innerExecuteHttpClient() {
     try {
       httpResponse = httpClient.execute(webRequest);
     } catch (Exception e) {
       throw new RuntimeException(e.getMessage(), e);
     }
     if (httpResponse.getStatusLine().getStatusCode() >= 300) {
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
       throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
     }
-    return httpResponse;
   }
 
   /**
@@ -354,59 +347,52 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   private RavenJToken readJsonInternal() {
-    HttpResponse response = null;
     InputStream responseStream = null;
     try {
-      try {
-        response = getResponse();
-        if (response.getEntity() != null) {
-          responseStream = response.getEntity().getContent();
-        }
-        sp.stop();
-      } catch (HttpOperationException e) {
-        sp.stop();
-        RavenJToken result = handleErrors(e);
-        if (result == null) {
-          throw e;
-        }
-        return result;
-      } catch (Exception e) {
-        sp.stop();
-        RavenJToken result = handleErrors(e);
-        if (result == null) {
-          throw new RuntimeException(e.getMessage(), e);
-        }
-        return result;
+      innerExecuteHttpClient();
+      if (httpResponse.getEntity() != null) {
+        responseStream = httpResponse.getEntity().getContent();
       }
-
-      responseHeaders = extractHeaders(response.getAllHeaders());
-      responseStatusCode = response.getStatusLine().getStatusCode();
-
-      handleReplicationStatusChanges.apply(extractHeaders(response.getAllHeaders()), primaryUrl, operationUrl);
-
-      RavenJToken data = RavenJToken.tryLoad(responseStream);
-
-      if (HttpMethods.GET == method && shouldCacheRequest) {
-        factory.cacheResponse(url, data, responseHeaders);
+      sp.stop();
+    } catch (HttpOperationException e) {
+      sp.stop();
+      RavenJToken result = handleErrors(e);
+      if (result == null) {
+        throw e;
       }
-
-      RequestResultArgs args = new RequestResultArgs();
-      args.setDurationMilliseconds(calculateDuration());
-      args.setMethod(method);
-      args.setHttpResult(getResponseStatusCode());
-      args.setStatus(RequestStatus.SEND_TO_SERVER);
-      args.setResult(data.toString());
-      args.setUrl(getPathAndQuery(webRequest.getURI()));
-      args.setPostedData(postedData);
-
-      factory.invokeLogRequest(owner, args);
-
-      return data;
-    } finally {
-      if (response != null) {
-        EntityUtils.consumeQuietly(response.getEntity());
+      return result;
+    } catch (Exception e) {
+      sp.stop();
+      RavenJToken result = handleErrors(e);
+      if (result == null) {
+        throw new RuntimeException(e.getMessage(), e);
       }
+      return result;
     }
+
+    responseHeaders = extractHeaders(httpResponse.getAllHeaders());
+    responseStatusCode = httpResponse.getStatusLine().getStatusCode();
+
+    handleReplicationStatusChanges.apply(extractHeaders(httpResponse.getAllHeaders()), primaryUrl, operationUrl);
+
+    RavenJToken data = RavenJToken.tryLoad(responseStream);
+
+    if (HttpMethods.GET == method && shouldCacheRequest) {
+      factory.cacheResponse(url, data, responseHeaders);
+    }
+
+    RequestResultArgs args = new RequestResultArgs();
+    args.setDurationMilliseconds(calculateDuration());
+    args.setMethod(method);
+    args.setHttpResult(getResponseStatusCode());
+    args.setStatus(RequestStatus.SEND_TO_SERVER);
+    args.setResult((data!= null) ? data.toString() :"");
+    args.setUrl(getPathAndQuery(webRequest.getURI()));
+    args.setPostedData(postedData);
+
+    factory.invokeLogRequest(owner, args);
+
+    return data;
   }
   private RavenJToken handleErrors(Exception e) {
     if (e instanceof HttpOperationException) {
@@ -545,7 +531,6 @@ public class HttpJsonRequest implements AutoCloseable {
    * Remember to release resources in HttpResponse entity!
    */
   public HttpResponse rawExecuteRequest() {
-    HttpResponse httpResponse = null;
     try {
       httpResponse = httpClient.execute(webRequest);
     } catch (Exception e) {
@@ -554,8 +539,6 @@ public class HttpJsonRequest implements AutoCloseable {
     if (httpResponse.getStatusLine().getStatusCode() >= 300) {
       try {
         String rawResponse = IOUtils.toString(httpResponse.getEntity().getContent());
-
-        EntityUtils.consumeQuietly(httpResponse.getEntity());
         throw new HttpOperationException("Server error response:" + httpResponse.getStatusLine().getStatusCode() + rawResponse, null, webRequest, httpResponse);
       } catch (IOException e) {
         throw new RuntimeException("Unable to read response", e);
