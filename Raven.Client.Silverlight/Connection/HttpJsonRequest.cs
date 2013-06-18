@@ -131,10 +131,10 @@ namespace Raven.Client.Silverlight.Connection
 			}
 		}
 
-		public Task<RavenJToken> ReadResponseJsonAsync()
+		public async Task<RavenJToken> ReadResponseJsonAsync()
 		{
-			return ReadResponseStringAsync()
-				.ContinueWith(task => RavenJToken.Parse(task.Result));
+			var result = await ReadResponseStringAsync();
+			return RavenJToken.Parse(result);
 		}
 
 		public Task ExecuteRequestAsync()
@@ -477,28 +477,16 @@ namespace Raven.Client.Silverlight.Connection
 				.Unwrap();*/
 		}
 
-		public Task ExecuteWriteAsync(string data)
+		public async Task ExecuteWriteAsync(string data)
 		{
-			return WriteAsync(data)
-				.ContinueWith(task =>
-								{
-									if (task.IsFaulted)
-										return task;
-									return ExecuteRequestAsync();
-								})
-				.Unwrap();
+			await WriteAsync(data);
+			await ExecuteRequestAsync();
 		}
 
-		public Task ExecuteWriteAsync(byte[] data)
+		public async Task ExecuteWriteAsync(byte[] data)
 		{
-			return WriteAsync(data)
-				.ContinueWith(task =>
-				{
-					if (task.IsFaulted)
-						return task;
-					return ExecuteRequestAsync();
-				})
-				.Unwrap();
+			await WriteAsync(data);
+			await ExecuteRequestAsync();
 		}
 
 		public double CalculateDuration()
