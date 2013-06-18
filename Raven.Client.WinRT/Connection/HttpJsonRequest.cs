@@ -124,7 +124,7 @@ namespace Raven.Client.WinRT.Connection
 			if (Response.IsSuccessStatusCode == false)
 				throw new ErrorResponseException(Response);
 
-			return await ReadStringInternal(Response)
+			return await ReadStringInternal()
 				            /* .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
 				             .Unwrap()*/
 							 ;
@@ -212,9 +212,9 @@ namespace Raven.Client.WinRT.Connection
 			}
 		}
 
-		private async Task<string> ReadStringInternal(HttpResponseMessage response)
+		private async Task<string> ReadStringInternal()
 		{
-			var responseStream = await response.GetResponseStreamWithHttpDecompression();
+			var responseStream = await Response.GetResponseStreamWithHttpDecompression();
 			var reader = new StreamReader(responseStream);
 			var text = reader.ReadToEnd();
 			return text;
