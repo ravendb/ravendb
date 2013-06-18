@@ -55,11 +55,6 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
-		public HttpResponseHeaders Headers
-		{
-			get { return Response.Headers; }
-		}
-
 		private async Task RecreateWebRequest(Action<HttpClient> result)
 		{
 			retries++;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -60,7 +61,7 @@ namespace Raven.Studio.Infrastructure
 				if (timeFromLastRefresh < refreshRate)
 					return;
 
-				using(OnWebRequest(request => request.Headers["Raven-Timer-Request"] = "true"))
+				using(OnWebRequest(request => request.DefaultRequestHeaders.Add("Raven-Timer-Request", "true")))
 					currentTask = TimerTickedAsync();
 
 				if (currentTask == null)
@@ -92,9 +93,9 @@ namespace Raven.Studio.Infrastructure
 		}
 
 	    [ThreadStatic] 
-		protected static Action<WebRequest> onWebRequest;
+		protected static Action<HttpClient> onWebRequest;
 
-		public static IDisposable OnWebRequest(Action<WebRequest> action)
+		public static IDisposable OnWebRequest(Action<HttpClient> action)
 		{
 			onWebRequest += action;
 			return new DisposableAction(() => onWebRequest = null);
