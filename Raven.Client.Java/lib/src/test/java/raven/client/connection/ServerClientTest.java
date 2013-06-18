@@ -40,6 +40,7 @@ public class ServerClientTest extends RavenDBAwareTests {
   }
 
   @Test
+  @Ignore
   //TODO: remove this test - as it breaks one test one functionality principal
   public void testDatabaseChanges() throws Exception {
     try {

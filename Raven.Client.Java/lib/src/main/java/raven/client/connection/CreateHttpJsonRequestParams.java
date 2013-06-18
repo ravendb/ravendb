@@ -8,7 +8,6 @@ import java.util.Map.Entry;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpRequest;
-import org.apache.http.client.methods.HttpRequestBase;
 
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJObject;

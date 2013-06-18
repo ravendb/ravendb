@@ -1,5 +1,6 @@
 package raven.client.connection;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -12,10 +13,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.http.Header;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -29,7 +33,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.entity.StringEntity;
+import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
@@ -41,6 +45,7 @@ import raven.abstractions.connection.HttpRequestHelper;
 import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.HttpMethods;
+import raven.abstractions.exceptions.BadRequestException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
@@ -66,12 +71,12 @@ public class HttpJsonRequest implements AutoCloseable {
   private final StopWatch sp;
   boolean shouldCacheRequest;
   private InputStream postedStream;
-  private boolean writeCalled;
   private boolean disabledAuthRetries;
   private String primaryUrl;
   private String operationUrl;
   private Map<String, String> responseHeaders;
   private boolean skipServerCheck;
+  private boolean gzipRequest;
 
   private HttpClient httpClient;
   private int responseStatusCode;
@@ -96,10 +101,15 @@ public class HttpJsonRequest implements AutoCloseable {
     this.method = requestParams.getMethod();
     this.webRequest = createWebRequest(requestParams.getUrl(), requestParams.getMethod());
     if (factory.isDisableRequestCompression() == false && requestParams.isDisableRequestCompression() == false) {
-      /* Content-Encoding and Accept-Encoding Parameters are handled by HttpClient */
+      if (method == HttpMethods.POST || method == HttpMethods.PUT || method == HttpMethods.PATCH || method == HttpMethods.EVAL) {
+        webRequest.addHeader("Content-Encoding", "gzip");
+      }
+      // Accept-Encoding Parameters are handled by HttpClient
       this.httpClient = factory.getGzipHttpClient();
+      this.gzipRequest = true;
     } else {
       this.httpClient = factory.getHttpClient();
+      this.gzipRequest = false;
     }
     // content type is set in RequestEntity
     webRequest.addHeader("Raven-Client-Version", clientVersion);
@@ -148,16 +158,17 @@ public class HttpJsonRequest implements AutoCloseable {
 
     HttpUriRequest baseMethod = null;
 
-
     switch (method) {
     case GET:
       baseMethod = new HttpGet(url);
       break;
     case POST:
       baseMethod = new HttpPost(url);
+      baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, true);
       break;
     case PUT:
       baseMethod = new HttpPut(url);
+      baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, true);
       break;
     case DELETE:
       baseMethod = new HttpDelete(url);
@@ -201,7 +212,7 @@ public class HttpJsonRequest implements AutoCloseable {
     }
   }
 
-  private Map<String, String> extractHeaders(Header[] httpResponseHeaders) {
+  public static Map<String, String> extractHeaders(Header[] httpResponseHeaders) {
     Map<String, String> result = new HashMap<>();
     for (Header header: httpResponseHeaders) {
       result.put(header.getName(), header.getValue());
@@ -216,7 +227,7 @@ public class HttpJsonRequest implements AutoCloseable {
     } catch (Exception e) {
       throw new RuntimeException(e.getMessage(), e);
     }
-    if (httpResponse.getStatusLine().getStatusCode() >= 400) {
+    if (httpResponse.getStatusLine().getStatusCode() >= 300) {
       EntityUtils.consumeQuietly(httpResponse.getEntity());
       throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
     }
@@ -328,7 +339,15 @@ public class HttpJsonRequest implements AutoCloseable {
       HttpRequestHelper.writeDataToRequest(newWebRequest, postedData, factory.isDisableRequestCompression());
     }
     if (postedStream != null) {
-      //TODO: copy stream
+      try {
+        postedStream.reset();
+        HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
+        InputStreamEntity streamEntity = new InputStreamEntity(postedStream, 0, ContentType.APPLICATION_JSON);
+        streamEntity.setChunked(true);
+        requestMethod.setEntity(streamEntity);
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to reset input stream", e  );
+      }
     }
     webRequest = newWebRequest;
 
@@ -431,11 +450,63 @@ public class HttpJsonRequest implements AutoCloseable {
 
         return result;
       }
+
+      try {
+        HttpEntity httpEntity = httpWebException.getHttpResponse().getEntity();
+        String readToEnd = IOUtils.toString(httpEntity.getContent());
+
+
+        RequestResultArgs requestResultArgs = new RequestResultArgs();
+        requestResultArgs.setDurationMilliseconds(calculateDuration());
+        requestResultArgs.setMethod(method);
+        requestResultArgs.setHttpResult(httpWebResponse.getStatusLine().getStatusCode());
+        requestResultArgs.setStatus(RequestStatus.CACHED);
+        requestResultArgs.setResult(readToEnd);
+        requestResultArgs.setUrl(getPathAndQuery(webRequest.getURI()));
+        requestResultArgs.setPostedData(postedData);
+        factory.invokeLogRequest(owner, requestResultArgs);
+
+        if (StringUtils.isBlank(readToEnd)) {
+          return null; //throws
+        }
+
+        RavenJObject ravenJObject = null;
+        try {
+          ravenJObject = RavenJObject.parse(readToEnd);
+        } catch (Exception parseEx) {
+          throw new IllegalStateException(readToEnd, e);
+        }
+
+        //TODO: if (ravenJObject.ContainsKey("IndexDefinitionProperty")) { ... }
+
+        if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_BAD_REQUEST && ravenJObject.containsKey("Message")) {
+          throw new BadRequestException(ravenJObject.value(String.class, "Message"), e);
+        }
+
+        if (ravenJObject.containsKey("Error")) {
+          StringBuilder sb = new StringBuilder();
+          for (Entry<String, RavenJToken> prop: ravenJObject) {
+            if ("Error".equals(prop.getKey())) {
+              continue;
+            }
+            sb.append(prop.getKey()).append(": ").append(prop.getValue().toString());
+          }
+
+          sb.append("\n");
+          sb.append(ravenJObject.value(String.class, "Error"));
+          sb.append("\n");
+
+          throw new IllegalStateException(sb.toString(), e);
+        }
+        throw new IllegalStateException(readToEnd, e);
+
+      } catch (IOException ee) {
+        throw new RuntimeException("Unable to get web response", ee);
+      }
     }
 
-    //TODO: finish this method
+    throw new RuntimeException(e);
 
-    throw new IllegalStateException("Not implemented yet!", e);
   }
 
   public HttpJsonRequest addOperationHeaders(Map<String, String> operationsHeaders) {
@@ -451,12 +522,17 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
   public void write(InputStream is) {
-    writeCalled = true;
-    postedStream = is;
-    HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
-    InputStreamEntity streamEntity = new InputStreamEntity(is, 0, ContentType.APPLICATION_JSON);
-    streamEntity.setChunked(true);
-    requestMethod.setEntity(streamEntity);
+    postedStream = new BufferedInputStream(is);
+    postedStream.mark(Integer.MAX_VALUE);
+    try {
+      //TODO: test me!
+      HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
+      InputStreamEntity streamEntity = new InputStreamEntity(new GZIPInputStream(is), -1, ContentType.APPLICATION_JSON);
+      streamEntity.setChunked(true);
+      requestMethod.setEntity(streamEntity);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to write gzip data", e);
+    }
   }
 
   public void prepareForLongRequest() {
@@ -469,28 +545,28 @@ public class HttpJsonRequest implements AutoCloseable {
    * Remember to release resources in HttpResponse entity!
    */
   public HttpResponse rawExecuteRequest() {
-    //TODO: include exception from remote server
     HttpResponse httpResponse = null;
     try {
       httpResponse = httpClient.execute(webRequest);
     } catch (Exception e) {
       throw new RuntimeException(e.getMessage(), e);
     }
-    if (httpResponse.getStatusLine().getStatusCode() >= 400) {
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
-      throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
+    if (httpResponse.getStatusLine().getStatusCode() >= 300) {
+      try {
+        String rawResponse = IOUtils.toString(httpResponse.getEntity().getContent());
+
+        EntityUtils.consumeQuietly(httpResponse.getEntity());
+        throw new HttpOperationException("Server error response:" + httpResponse.getStatusLine().getStatusCode() + rawResponse, null, webRequest, httpResponse);
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to read response", e);
+      }
     }
     return httpResponse;
   }
 
   public void write(String data) throws UnsupportedEncodingException {
-    writeCalled = true;
     postedData = data;
-
-    HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
-    requestMethod.setEntity(new StringEntity(data, ContentType.APPLICATION_JSON));
-
-    // we don't use HttpRequestHelper.WriteDataToRequest here - gzip in handled in HttpClient internals
+    HttpRequestHelper.writeDataToRequest(webRequest, data, factory.isDisableRequestCompression());
   }
 
   public void setShouldCacheRequest(boolean b) {
@@ -537,7 +613,7 @@ public class HttpJsonRequest implements AutoCloseable {
     Date lastPrimaryCheck = replicationInformer.getFailureLastCheck(thePrimaryUrl);
     webRequest.addHeader(Constants.RAVEN_CLIENT_PRIMARY_SERVER_URL, toRemoteUrl(thePrimaryUrl));
 
-    SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_S_DATE_FORAT);
+    SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_S_DATE_FORMAT);
     webRequest.addHeader(Constants.RAVEN_CLIENT_PRIMARY_SERVER_LAST_CHECK, sdf.format(lastPrimaryCheck));
 
     primaryUrl = thePrimaryUrl;

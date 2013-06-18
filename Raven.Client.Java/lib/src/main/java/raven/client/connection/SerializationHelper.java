@@ -39,7 +39,7 @@ public class SerializationHelper {
     String ravenLastModified = jsonRequest.getResponseHeaders().get(Constants.RAVEN_LAST_MODIFIED);
     if (StringUtils.isNotEmpty(ravenLastModified)) {
       try {
-        return new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORAT).parse(ravenLastModified);
+        return new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT).parse(ravenLastModified);
       } catch (ParseException e) {
         throw new IllegalArgumentException(e.getMessage(), e);
       }
