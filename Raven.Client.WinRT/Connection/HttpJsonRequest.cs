@@ -287,6 +287,7 @@ namespace Raven.Client.WinRT.Connection
 		/// </summary>
 		public async Task WriteAsync(byte[] byteArray)
 		{
+			writeCalled = true;
 			postedData = byteArray;
 
 			using (var stream = new MemoryStream(byteArray))

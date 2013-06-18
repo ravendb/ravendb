@@ -9,6 +9,7 @@ using System.IO;
 using System.Net;
 using System.Net.Browser;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,7 +39,12 @@ namespace Raven.Client.Silverlight.Connection
 	{
 		private readonly string url;
 		private readonly DocumentConvention conventions;
+
 		internal volatile HttpWebRequest webRequest;
+
+		private bool writeCalled;
+		internal HttpClient httpClient;
+
 		private byte[] postedData;
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof (HttpJsonRequest).Assembly.FullName).Version.ToString();
@@ -115,16 +121,26 @@ namespace Raven.Client.Silverlight.Connection
 
 			webRequest.Headers["Raven-Client-Version"] = ClientVersion;
 
+			var handler = new HttpClientHandler();
+			httpClient = new HttpClient(handler);
+			httpClient.DefaultRequestHeaders.Add("Raven-Client-Version", ClientVersion);
+
 			WriteMetadata(requestParams.Metadata);
 			webRequest.Method = requestParams.Method;
 			if (requestParams.Method != "GET")
+			{
 				webRequest.ContentType = "application/json; charset=utf-8";
+				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
+			}
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
 				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
 				    requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+				{
 					webRequest.Headers["Content-Encoding"] = "gzip";
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
+				}
 			}
 		}
 
@@ -368,36 +384,36 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			await WaitForTask;
 
-			var stream = await webRequest.GetRequestStreamAsync();
+			writeCalled = true;
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), url)
+			{
+				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
+			});
 
-			var dataStream = factory.DisableRequestCompression == false
-				                 ? new GZipStream(stream, CompressionMode.Compress)
-				                 : stream;
-
-			var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
-			await streamWriter.WriteAsync(data);
-
-			streamWriter.Dispose();
-			dataStream.Dispose();
-			stream.Dispose();
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 		}
 
 
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		public Task WriteAsync(byte[] byteArray)
+		public async Task WriteAsync(byte[] byteArray)
 		{
+			writeCalled = true;
 			postedData = byteArray;
-			return WaitForTask.ContinueWith(_ => webRequest.GetRequestStreamAsync().ContinueWith(t =>
+
+			using (var stream = new MemoryStream(byteArray))
+			using (var dataStream = new GZipStream(stream, CompressionMode.Compress))
 			{
-				var dataStream = new GZipStream(t.Result, CompressionMode.Compress);
-				using (dataStream)
+				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), url)
 				{
-					dataStream.Write(byteArray, 0, byteArray.Length);
-					dataStream.Close();
-				}
-			})).Unwrap();
+					Content = new StreamContent(dataStream)
+				});
+
+				if (Response.IsSuccessStatusCode == false)
+					throw new ErrorResponseException(Response);
+			}
 		}
 
 		/// <summary>
