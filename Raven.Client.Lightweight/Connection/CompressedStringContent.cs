@@ -1,9 +1,14 @@
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+
+#if SILVERLIGHT
+using Ionic.Zlib;
+#else
+using System.IO.Compression;
+#endif
 
 namespace Raven.Client.Connection
 {
@@ -28,7 +33,11 @@ namespace Raven.Client.Connection
 			if (disableRequestCompression == false)
 				stream = new GZipStream(stream, CompressionMode.Compress, true);
 
-			using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096, true))
+			using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096
+#if !SILVERLIGHT
+				, true
+#endif
+				))
 			{
 				await streamWriter.WriteAsync(data);
 				await streamWriter.FlushAsync();

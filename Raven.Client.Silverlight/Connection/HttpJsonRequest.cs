@@ -157,12 +157,12 @@ namespace Raven.Client.Silverlight.Connection
                                                     .MaterializeBadRequestAsException()
 				                                     .AddUrlIfFaulting(webRequest.RequestUri)
 				                                     .ContinueWith(t => ReadStringInternal(() => t.Result))
-				                                     .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
-				                                     .Unwrap())
+												//	 .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync)).Unwrap()
+				                                     )
 			                  .Unwrap();
 		}
 
-		private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
+		/*private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
 		{
 			var exception = task.Exception.ExtractSingleInnerException() as WebException;
 			if (exception == null || retries >= 3 || disabledAuthRetries)
@@ -197,9 +197,9 @@ namespace Raven.Client.Silverlight.Connection
 					return generator();
 				})
 				.Unwrap();
-		}
+		}*/
 
-		private void HandleForbiddenResponseAsync(HttpWebResponse forbiddenResponse)
+		private void HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
@@ -207,7 +207,7 @@ namespace Raven.Client.Silverlight.Connection
 			conventions.HandleForbiddenResponseAsync(forbiddenResponse);
 		}
 
-		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
+		public Task HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return null;
@@ -227,8 +227,8 @@ namespace Raven.Client.Silverlight.Connection
 				                                     .ConvertSecurityExceptionToServerNotFound()
 				                                     .AddUrlIfFaulting(webRequest.RequestUri)
 				                                     .ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
-				                                     .ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
-				                                     .Unwrap())
+				                                     //.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync)).Unwrap()
+													 )
 			                  .Unwrap();
 		}
 
@@ -424,7 +424,8 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
-			return WaitForTask.ContinueWith(__ =>
+			throw new NotImplementedException();
+			/*return WaitForTask.ContinueWith(__ =>
 			{
 				webRequest.AllowReadStreamBuffering = false;
 				webRequest.AllowWriteStreamBuffering = false;
@@ -481,7 +482,7 @@ namespace Raven.Client.Silverlight.Connection
 						   .Unwrap();
 				   }).Unwrap();
 			})
-				.Unwrap();
+				.Unwrap();*/
 		}
 
 		public Task ExecuteWriteAsync(string data)
