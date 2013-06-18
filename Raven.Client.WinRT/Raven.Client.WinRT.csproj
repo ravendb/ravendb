@@ -274,7 +274,6 @@
     <Compile Include="..\Raven.Client.Silverlight\MissingFromSilverlight\*.cs">
       <Link>Imports\MissingFromSilverlight\(%(FileName)))</Link>
     </Compile>
-    <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\ReplicationInformerLocalCache.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />

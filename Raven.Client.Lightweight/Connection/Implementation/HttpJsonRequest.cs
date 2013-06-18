@@ -873,35 +873,45 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public Task ExecuteWriteAsync(string data)
+		public async Task ExecuteWriteAsync(string data)
 		{
-			try
+			await WriteAsync(data);
+			await ExecuteRequestAsync();
+		}
+
+		public async Task ExecuteWriteAsync(byte[] data)
+		{
+			await WriteAsync(new MemoryStream(data));
+			await ExecuteRequestAsync();
+		}
+
+		private async Task WriteAsync(Stream streamToWrite)
+		{
+			postedStream = streamToWrite;
+
+			using (postedStream)
+			using (var dataStream = new GZipStream(postedStream, CompressionMode.Compress))
 			{
-				Write(data);
-				return ExecuteRequestAsync();
-			}
-			catch (Exception e)
-			{
-				return new CompletedTask(e);
+				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
+				{
+					Content = new StreamContent(dataStream)
+				});
+
+				if (Response.IsSuccessStatusCode == false)
+					throw new ErrorResponseException(Response);
 			}
 		}
 
-		public Task ExecuteWriteAsync(byte[] data)
+		public async Task WriteAsync(string data)
 		{
-			try
+			writeCalled = true;
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Write(new MemoryStream(data));
-				return ExecuteRequestAsync();
-			}
-			catch (Exception e)
-			{
-				return new CompletedTask(e);
-			}
-		}
+				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
+			});
 
-		public Task WriteAsync(string serializeObject)
-		{
-			throw new NotImplementedException();
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 		}
 
 		public Task<Stream> GetRawRequestStream()

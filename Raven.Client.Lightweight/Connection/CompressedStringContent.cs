@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Client.WinRT.Connection
+namespace Raven.Client.Connection
 {
 	public class CompressedStringContent : HttpContent
 	{
