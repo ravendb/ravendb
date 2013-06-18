@@ -128,7 +128,7 @@ public class Extensions {
       return (U) (Object) value.getValue().toString();
     }
     if (clazz.equals(Date.class) && value.getValue().getClass().equals(String.class)) {
-      SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_S_DATE_FORAT);
+      SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_S_DATE_FORMAT);
       try {
         return (U) (Object) sdf.parse((String) value.getValue());
       } catch (ParseException e) {
