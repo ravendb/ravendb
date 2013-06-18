@@ -101,7 +101,7 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="toolkit:AxisLabel">
-                                <TextBlock Text="{Binding StringFormat='{0:#,#}'}" Margin="5,0" FontSize="10"/>
+                                <TextBlock Text="{Binding StringFormat='\{0:#,#;;0\}'}" Margin="5,0" FontSize="10"/>
                             </ControlTemplate>
                         </Setter.Value>
                     </Setter>
