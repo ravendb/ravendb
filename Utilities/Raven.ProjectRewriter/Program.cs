@@ -43,6 +43,7 @@ namespace Raven.ProjectRewriter
 				{"Raven.Bundles.CascadeDelete", "{9C057FC4-C118-4AF9-8F6F-4F9AD35DED60}"},
 				{"Raven.Bundles.IndexReplication", "{2E969670-3F50-4C78-88D3-709BC71B7D82}"},
 				{"Raven.Bundles.UniqueConstraints", "{2B7E14D7-770F-43DE-A1D1-EC2B01F68A55}"},
+				{"Raven.Web", "{6BB5ECF3-48FE-4FF7-B522-ABBAC1E259D4}"},
 			};
 
 			Generate45("Raven.Abstractions");
@@ -94,6 +95,10 @@ namespace Raven.ProjectRewriter
 					   "Raven.Database");
 
 			Generate45("Bundles/Raven.Bundles.UniqueConstraints",
+					   "Raven.Abstractions",
+					   "Raven.Database");
+
+			Generate45("Raven.Web",
 					   "Raven.Abstractions",
 					   "Raven.Database");
 		}
