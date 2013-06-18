@@ -98,69 +98,74 @@ namespace Raven.Client.Document
 			return GetNextMaxAsyncInner(databaseCommands);
 		}
 
-		private Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
+		private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
 		{
 			var minNextMax = Range.Max;
-			return GetDocumentAsync(databaseCommands)
-				.ContinueWith(task =>
+			try
+			{
+				JsonDocument document = null;
+				ConflictException conflictException = null;
+				try
 				{
-					try
+					document = await GetDocumentAsync(databaseCommands);
+				}
+				catch (ConflictException e)
+				{
+					conflictException = e;
+				}
+				if (conflictException != null)
+				{
+					// resolving the conflict by selecting the highest number
+					var highestMax = conflictException.ConflictedVersionIds
+					                                  .Select(async conflictedVersionId =>
+					                                  {
+						                                  var doc = await databaseCommands.GetAsync(conflictedVersionId);
+						                                  return GetMaxFromDocument(doc, minNextMax);
+					                                  })
+					                                  .AggregateAsync(Enumerable.Max);
+
+					await PutDocumentAsync(databaseCommands, new JsonDocument
 					{
-						JsonDocument document;
-						try
-						{
-							document = task.Result;
-						}
-						catch (ConflictException e)
-						{
-							// resolving the conflict by selecting the highest number
-							var highestMax = e.ConflictedVersionIds
-								.Select(conflictedVersionId => databaseCommands.GetAsync(conflictedVersionId)
-								                               	.ContinueWith(t => GetMaxFromDocument(t.Result, minNextMax)))
-								.AggregateAsync(Enumerable.Max);
+						Etag = conflictException.Etag,
+						Metadata = new RavenJObject(),
+						DataAsJson = RavenJObject.FromObject(new {Max = highestMax}),
+						Key = HiLoDocumentKey
+					});
 
-							return highestMax
-								.ContinueWith(t => PutDocumentAsync(databaseCommands, new JsonDocument
-								{
-									Etag = e.Etag,
-									Metadata = new RavenJObject(),
-									DataAsJson = RavenJObject.FromObject(new {Max = t.Result}),
-									Key = HiLoDocumentKey
-								}))
-								.Unwrap()
-								.ContinueWithTask(() => GetNextRangeAsync(databaseCommands));
-						}
+					return await GetNextRangeAsync(databaseCommands);
+				}
 
-						long min, max;
-						if (document == null)
-						{
-							min = minNextMax + 1;
-							max = minNextMax + capacity;
-							document = new JsonDocument
-							{
-								Etag = Etag.Empty,
-								// sending empty etag means - ensure the that the document does NOT exists
-								Metadata = new RavenJObject(),
-								DataAsJson = RavenJObject.FromObject(new {Max = max}),
-								Key = HiLoDocumentKey
-							};
-						}
-						else
-						{
-							var oldMax = GetMaxFromDocument(document, minNextMax);
-							min = oldMax + 1;
-							max = oldMax + capacity;
-
-							document.DataAsJson["Max"] = max;
-						}
-
-						return PutDocumentAsync(databaseCommands, document).WithResult(new RangeValue(min, max));
-					}
-					catch (ConcurrencyException)
+				long min, max;
+				if (document == null)
+				{
+					min = minNextMax + 1;
+					max = minNextMax + capacity;
+					document = new JsonDocument
 					{
-						return GetNextMaxAsyncInner(databaseCommands);
-					}
-				}).Unwrap();
+						Etag = Etag.Empty,
+						// sending empty etag means - ensure the that the document does NOT exists
+						Metadata = new RavenJObject(),
+						DataAsJson = RavenJObject.FromObject(new { Max = max }),
+						Key = HiLoDocumentKey
+					};
+				}
+				else
+				{
+					var oldMax = GetMaxFromDocument(document, minNextMax);
+					min = oldMax + 1;
+					max = oldMax + capacity;
+
+					document.DataAsJson["Max"] = max;
+				}
+
+				return await PutDocumentAsync(databaseCommands, document).WithResult(new RangeValue(min, max));
+			}
+			catch (ConcurrencyException)
+			{
+				// We will retry the operation. Since we have here just one catch clause, 
+				// we can just continue to the next line without using a flag like retry = true
+			}
+			return await GetNextMaxAsyncInner(databaseCommands);
 		}
 
 		private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
