@@ -436,7 +436,7 @@ namespace Raven.Client.Util
 					} while ((parser_pos < input.Length) && (c != "#") && (c != "="));
 					if (c == "#")
 					{
-						return new string[] { sharp, "TK_WORD" }; ;
+						return new string[] { sharp, "TK_WORD" };
 					}
 					else
 					{
