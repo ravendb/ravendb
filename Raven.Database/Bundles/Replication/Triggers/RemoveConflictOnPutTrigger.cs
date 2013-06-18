@@ -70,7 +70,7 @@ namespace Raven.Bundles.Replication.Triggers
                     foreach (var deletedMetadata in list)
 			        {
                         // add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
-			            if (deletedMetadata.Length < index)
+			            if (index < deletedMetadata.Length)
 			            {
 			                history.Add(deletedMetadata[index]);
 			                added = true;
