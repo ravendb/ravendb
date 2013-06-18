@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
@@ -605,13 +606,13 @@ namespace Raven.Client.Document
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
-		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
+		public Func<HttpResponseMessage, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
 
 		/// <summary>
 		/// Begins handling of forbidden responses
 		/// in async manner
 		/// </summary>
-		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
+		public Func<HttpResponseMessage, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
 
 		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls

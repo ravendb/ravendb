@@ -6,6 +6,7 @@ using Raven.Client.Silverlight.MissingFromSilverlight;
 using System.Collections.Specialized;
 #endif
 using System.Net;
+using System.Net.Http.Headers;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -197,7 +198,7 @@ namespace Raven.Client.Connection
 		private volatile bool disposed;
 		private volatile int numberOfCacheResets;
 
-		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders = null)
+		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders)
 		{
 			if (httpJsonRequest.CachedRequestDetails == null)
 				throw new InvalidOperationException("Cannot get cached response from a request that has no cached information");
@@ -208,6 +209,35 @@ namespace Raven.Client.Connection
 			{
 				httpJsonRequest.ResponseHeaders.Add(Constants.RavenForcePrimaryServerCheck, additionalHeaders[Constants.RavenForcePrimaryServerCheck]);
 			}
+
+			IncrementCachedRequests();
+			return httpJsonRequest.CachedRequestDetails.Data.CloneToken();
+		}
+
+		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, HttpResponseHeaders additionalHeaders)
+		{
+			if (httpJsonRequest.CachedRequestDetails == null)
+				throw new InvalidOperationException("Cannot get cached response from a request that has no cached information");
+			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
+			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
+
+			if (additionalHeaders != null)
+			{
+				string forcePrimaryServerCHeck = additionalHeaders.GetValues(Constants.RavenForcePrimaryServerCheck).FirstOrDefault();
+				if (forcePrimaryServerCHeck != null)
+					httpJsonRequest.ResponseHeaders.Add(Constants.RavenForcePrimaryServerCheck, forcePrimaryServerCHeck);
+			}
+
+			IncrementCachedRequests();
+			return httpJsonRequest.CachedRequestDetails.Data.CloneToken();
+		}
+
+		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest)
+		{
+			if (httpJsonRequest.CachedRequestDetails == null)
+				throw new InvalidOperationException("Cannot get cached response from a request that has no cached information");
+			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
+			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
 
 			IncrementCachedRequests();
 			return httpJsonRequest.CachedRequestDetails.Data.CloneToken();
