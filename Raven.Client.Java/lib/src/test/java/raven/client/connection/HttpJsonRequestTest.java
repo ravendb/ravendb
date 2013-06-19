@@ -249,6 +249,14 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
     assertNotNull(responseJson);
   }
 
+
+  @Test(expected = IllegalStateException.class)
+  public void testBadRequest() throws IOException {
+    HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/admin/noSuchEndpoint", HttpMethods.GET,
+        new RavenJObject() , null, convention).addOperationHeaders(new HashMap<String, String>()));
+    jsonRequest.readResponseJson();
+  }
+
   @Test
   public void testPutAndCache() throws Exception {
 
