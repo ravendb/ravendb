@@ -1369,7 +1369,7 @@ namespace Raven.Database
                 return results.Select(x => x.ToJson());
 
             var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson())).ToArray();
-            var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
+            var robustEnumerator = new RobustEnumerator(workContext.CancellationToken, dynamicJsonObjects.Length)
             {
                 OnError =
                     (exception, o) =>
