@@ -519,24 +519,34 @@ task CreateNugetPackages -depends Compile {
 	}
 	
 	New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net40 -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Authorization.nuspec $nuget_dir\RavenDB.Bundles.Authorization\RavenDB.Bundles.Authorization.nuspec
 	@("Raven.Bundles.Authorization.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Authorization\lib\net40 }
+	@("Raven.Bundles.Authorization-4.5.???") |% { Copy-Item "$build_dir\net45\$_" $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 }
 	
 	New-Item $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net40 -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.CascadeDelete.nuspec $nuget_dir\RavenDB.Bundles.CascadeDelete\RavenDB.Bundles.CascadeDelete.nuspec
 	@("Raven.Bundles.CascadeDelete.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net40 }
+	@("Raven.Bundles.CascadeDelete-4.5.???") |% { Copy-Item "$build_dir\net45\$_" $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net45 }
 	
 	New-Item $nuget_dir\RavenDB.Bundles.IndexReplication\lib\net40 -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Bundles.IndexReplication\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.IndexReplication.nuspec $nuget_dir\RavenDB.Bundles.IndexReplication\RavenDB.Bundles.IndexReplication.nuspec
 	@("Raven.Bundles.IndexReplication.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.IndexReplication\lib\net40 }
+	@("Raven.Bundles.IndexReplication-4.5.???") |% { Copy-Item "$build_dir\net45\$_" $nuget_dir\RavenDB.Bundles.IndexReplication\lib\net45 }
 
 	New-Item $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net40 -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.UniqueConstraints.nuspec $nuget_dir\RavenDB.Bundles.UniqueConstraints\RavenDB.Bundles.UniqueConstraints.nuspec
 	@("Raven.Bundles.UniqueConstraints.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net40 }
+	@("Raven.Bundles.UniqueConstraints-4.5.???") |% { Copy-Item "$build_dir\net45\$_" $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net45 }
 	
 	New-Item $nuget_dir\RavenDB.AspNetHost\content -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net40 -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net45 -Type directory | Out-Null
 	@("Raven.Web.???") |% { Copy-Item "$build_dir\web\$_" $nuget_dir\RavenDB.AspNetHost\lib\net40 }
+	@("Raven.Web-4.5.???") |% { Copy-Item "$build_dir\web\net45\$_" $nuget_dir\RavenDB.AspNetHost\lib\net45 }
 	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
 	Copy-Item $base_dir\DefaultConfigs\NuGet.AspNetHost.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
 	
