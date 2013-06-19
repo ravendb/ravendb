@@ -36,6 +36,7 @@ import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 
 //TODO: finish me
+//TODO: review GetResponseStreamWithHttpDecompression use and resource release
 public class ServerClient implements IDatabaseCommands {
 
   private String url;

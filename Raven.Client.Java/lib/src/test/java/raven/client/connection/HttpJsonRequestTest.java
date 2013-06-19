@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,12 +16,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpResponseInterceptor;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
@@ -72,6 +76,40 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       }
     });
   }
+
+  @Test
+  public void testAttachment() throws Exception {
+
+    Map<String, String> operationHeaders = new HashMap<>();
+
+    try (InputStream ravenImage = this.getClass().getResourceAsStream("/raven.png")){
+      assertNotNull(ravenImage);
+      createDb("db1");
+
+      RavenJObject metadata = new RavenJObject();
+      metadata.add("Content-Type", RavenJToken.fromObject("image/png"));
+
+      HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/static/images/ravendb.png", HttpMethods.PUT,
+          metadata, null, convention).addOperationHeaders(operationHeaders));
+
+      jsonRequest.write(ravenImage);
+      jsonRequest.executeRequest();
+
+      // and now verify attachment using plain client.
+
+      HttpGet get = new HttpGet(DEFAULT_SERVER_URL + "/databases/db1/static/images/ravendb.png");
+      HttpClient httpClient = jsonRequestFactory.getHttpClient();
+      HttpResponse httpResponse = httpClient.execute(get);
+      byte[] imageBytes = IOUtils.toByteArray(httpResponse.getEntity().getContent());
+      assertEquals(7642, imageBytes.length);
+
+      EntityUtils.consumeQuietly(httpResponse.getEntity());
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
 
   @Test
   public void testTryGetNotExistingDocument() throws Exception {

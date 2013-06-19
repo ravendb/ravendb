@@ -1,6 +1,8 @@
 package raven.client.connection;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -13,7 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -54,6 +56,7 @@ import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallba
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
+import raven.java.http.client.GzipHttpEntity;
 
 public class HttpJsonRequest {
 
@@ -77,7 +80,6 @@ public class HttpJsonRequest {
   private String operationUrl;
   private Map<String, String> responseHeaders;
   private boolean skipServerCheck;
-  private boolean gzipRequest;
 
   private HttpClient httpClient;
   private int responseStatusCode;
@@ -107,10 +109,8 @@ public class HttpJsonRequest {
       }
       // Accept-Encoding Parameters are handled by HttpClient
       this.httpClient = factory.getGzipHttpClient();
-      this.gzipRequest = true;
     } else {
       this.httpClient = factory.getHttpClient();
-      this.gzipRequest = false;
     }
     // content type is set in RequestEntity
     webRequest.addHeader("Raven-Client-Version", clientVersion);
@@ -141,10 +141,7 @@ public class HttpJsonRequest {
       String value = prop.getValue().value(Object.class).toString();
 
       switch (headerName) {
-      case "Content-Type":
-        // content type is handled outside
-        break;
-        //TODO: list other custom headers that needs special treatment
+      //TODO: list other custom headers that needs special treatment
       default:
         webRequest.addHeader(headerName, value);
       }
@@ -348,7 +345,11 @@ public class HttpJsonRequest {
     try {
       innerExecuteHttpClient();
       if (httpResponse.getEntity() != null) {
-        responseStream = httpResponse.getEntity().getContent();
+        try {
+          responseStream = httpResponse.getEntity().getContent();
+        } catch (EOFException e) {
+          // ignore
+        }
       }
       sp.stop();
     } catch (HttpOperationException e) {
@@ -515,17 +516,22 @@ public class HttpJsonRequest {
   }
 
   public void write(InputStream is) {
-    postedStream = new BufferedInputStream(is);
-    postedStream.mark(Integer.MAX_VALUE);
-    try {
-      //TODO: test me!
-      HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
-      InputStreamEntity streamEntity = new InputStreamEntity(new GZIPInputStream(is), -1, ContentType.APPLICATION_JSON);
-      streamEntity.setChunked(true);
-      requestMethod.setEntity(streamEntity);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to write gzip data", e);
+    this.postedStream = is;
+
+    ContentType contentType = ContentType.APPLICATION_JSON;
+    Header firstHeader = webRequest.getFirstHeader("Content-Type");
+    if (firstHeader != null) {
+      String contentValue = firstHeader.getValue();
+      if (StringUtils.isNotBlank(contentValue)) {
+        contentType = ContentType.create(contentValue);
+      }
     }
+
+    HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
+    InputStreamEntity innerEntity = new InputStreamEntity(this.postedStream, -1, contentType);
+    HttpEntity entity = new GzipHttpEntity(innerEntity);
+    innerEntity.setChunked(true);
+    requestMethod.setEntity(entity);
   }
 
   public void prepareForLongRequest() {
