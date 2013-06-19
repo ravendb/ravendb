@@ -55,7 +55,7 @@ import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
 
-public class HttpJsonRequest implements AutoCloseable {
+public class HttpJsonRequest {
 
   public static final String clientVersion = Constants.VERSION;
 
@@ -190,22 +190,19 @@ public class HttpJsonRequest implements AutoCloseable {
   }
 
 
-  @Override
-  public void close() throws Exception {
-    if (httpResponse != null && httpResponse.getEntity() != null) {
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
-    }
-  }
-
   public void executeRequest() throws IOException {
     readResponseJson();
   }
 
   public byte[] readResponseBytes() throws IOException {
-    innerExecuteHttpClient();
-    InputStream response = httpResponse.getEntity().getContent();
-    responseHeaders = extractHeaders(httpResponse.getAllHeaders());
-    return IOUtils.toByteArray(response);
+    try {
+      innerExecuteHttpClient();
+      InputStream response = httpResponse.getEntity().getContent();
+      responseHeaders = extractHeaders(httpResponse.getAllHeaders());
+      return IOUtils.toByteArray(response);
+    } finally {
+      EntityUtils.consumeQuietly(httpResponse.getEntity());
+    }
   }
 
   public static Map<String, String> extractHeaders(Header[] httpResponseHeaders) {
@@ -375,24 +372,30 @@ public class HttpJsonRequest implements AutoCloseable {
 
     handleReplicationStatusChanges.apply(extractHeaders(httpResponse.getAllHeaders()), primaryUrl, operationUrl);
 
-    RavenJToken data = RavenJToken.tryLoad(responseStream);
+    try {
+      RavenJToken data = RavenJToken.tryLoad(responseStream);
 
-    if (HttpMethods.GET == method && shouldCacheRequest) {
-      factory.cacheResponse(url, data, responseHeaders);
+      if (HttpMethods.GET == method && shouldCacheRequest) {
+        factory.cacheResponse(url, data, responseHeaders);
+      }
+
+      RequestResultArgs args = new RequestResultArgs();
+      args.setDurationMilliseconds(calculateDuration());
+      args.setMethod(method);
+      args.setHttpResult(getResponseStatusCode());
+      args.setStatus(RequestStatus.SEND_TO_SERVER);
+      args.setResult((data!= null) ? data.toString() :"");
+      args.setUrl(getPathAndQuery(webRequest.getURI()));
+      args.setPostedData(postedData);
+
+      factory.invokeLogRequest(owner, args);
+
+      return data;
+    } finally {
+      if (httpResponse != null && httpResponse.getEntity() != null) {
+        EntityUtils.consumeQuietly(httpResponse.getEntity());
+      }
     }
-
-    RequestResultArgs args = new RequestResultArgs();
-    args.setDurationMilliseconds(calculateDuration());
-    args.setMethod(method);
-    args.setHttpResult(getResponseStatusCode());
-    args.setStatus(RequestStatus.SEND_TO_SERVER);
-    args.setResult((data!= null) ? data.toString() :"");
-    args.setUrl(getPathAndQuery(webRequest.getURI()));
-    args.setPostedData(postedData);
-
-    factory.invokeLogRequest(owner, args);
-
-    return data;
   }
   private RavenJToken handleErrors(Exception e) {
     if (e instanceof HttpOperationException) {
@@ -488,6 +491,10 @@ public class HttpJsonRequest implements AutoCloseable {
 
       } catch (IOException ee) {
         throw new RuntimeException("Unable to get web response", ee);
+      } finally {
+        if (httpWebResponse != null && httpWebResponse.getEntity() != null) {
+          EntityUtils.consumeQuietly(httpWebResponse.getEntity());
+        }
       }
     }
 
@@ -542,6 +549,10 @@ public class HttpJsonRequest implements AutoCloseable {
         throw new HttpOperationException("Server error response:" + httpResponse.getStatusLine().getStatusCode() + rawResponse, null, webRequest, httpResponse);
       } catch (IOException e) {
         throw new RuntimeException("Unable to read response", e);
+      } finally {
+        if (httpResponse != null && httpResponse.getEntity() != null) {
+          EntityUtils.consumeQuietly(httpResponse.getEntity());
+        }
       }
     }
     return httpResponse;
