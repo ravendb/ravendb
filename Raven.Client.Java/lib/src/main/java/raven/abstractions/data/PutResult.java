@@ -1,12 +1,10 @@
 package raven.abstractions.data;
 
-import java.util.UUID;
-
 public class PutResult {
   private String key;
-  private UUID etag;
+  private Etag etag;
 
-  public PutResult(String key, UUID etag) {
+  public PutResult(String key, Etag etag) {
     super();
     this.key = key;
     this.etag = etag;
@@ -15,7 +13,7 @@ public class PutResult {
   /**
    * @return the eTag
    */
-  public UUID getEtag() {
+  public Etag getEtag() {
     return etag;
   }
 
@@ -30,7 +28,7 @@ public class PutResult {
   /**
    * @param etag the etag to set
    */
-  public void setEtag(UUID etag) {
+  public void setEtag(Etag etag) {
     this.etag = etag;
   }
 

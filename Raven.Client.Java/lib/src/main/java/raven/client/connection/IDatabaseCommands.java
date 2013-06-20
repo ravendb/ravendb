@@ -2,9 +2,9 @@ package raven.client.connection;
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.UUID;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
@@ -19,14 +19,14 @@ public interface IDatabaseCommands {
    * @param key The key.
    * @param etag The etag.
    */
-  public void delete(String key, UUID etag);
+  public void delete(String key, Etag etag);
 
   /**
    * Deletes the attachment with the specified key
    * @param key The key.
    * @param etag The etag.
    */
-  public void deleteAttachment(String key, UUID etag);
+  public void deleteAttachment(String key, Etag etag);
 
   /**
    * Create a new instance of {@link IDatabaseCommands} that will interacts with the specified database
@@ -47,22 +47,6 @@ public interface IDatabaseCommands {
    */
   public JsonDocument get(String key) throws ServerClientException;
 
-  /**
-   * Gets the results for the specified ids.
-   * @param ids The ids.
-   * @param includes The includes.
-   * @return
-   */
-  MultiLoadResult get(String[] ids, String[] includes);
-
-  /**
-   * Gets the results for the specified ids.
-   * @param ids The ids.
-   * @param includes The includes.
-   * @param metadataOnly Load just the document metadata.
-   * @return
-   */
-  public MultiLoadResult get(String[] ids, String[] includes, boolean metadataOnly);
 
   /**
    * Gets the attachment by the specified key
@@ -134,7 +118,7 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    * @return PutResult
    */
-  public PutResult put(String key, UUID guid, RavenJObject document, RavenJObject metadata);
+  public PutResult put(String key, Etag guid, RavenJObject document, RavenJObject metadata);
 
   /**
    * Puts a byte array as attachment with the specified key
@@ -143,7 +127,7 @@ public interface IDatabaseCommands {
    * @param data The data.
    * @param metadata The metadata.
    */
-  public void putAttachment(String key, UUID etag, InputStream data, RavenJObject metadata);
+  public void putAttachment(String key, Etag etag, InputStream data, RavenJObject metadata);
 
   /**
    * Retrieves documents for the specified key prefix
@@ -173,7 +157,7 @@ public interface IDatabaseCommands {
    * @param etag The etag.
    * @param metadata The metadata.
    */
-  public void updateAttachmentMetadata(String key, UUID etag, RavenJObject metadata);
+  public void updateAttachmentMetadata(String key, Etag etag, RavenJObject metadata);
 
   /**
    * Get the full URL for the given document key

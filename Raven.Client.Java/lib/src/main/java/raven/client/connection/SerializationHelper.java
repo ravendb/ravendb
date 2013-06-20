@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
@@ -25,14 +26,6 @@ import raven.abstractions.json.linq.RavenJToken;
 //TODO: finish me
 public class SerializationHelper {
 
-  public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, HttpJsonRequest jsonRequest) {
-    RavenJObject jsonData = (RavenJObject) responseJson;
-    RavenJObject meta = MetadataExtensions.filterHeaders(jsonRequest.getResponseHeaders());
-    UUID etag = HttpExtensions.getEtagHeader(jsonRequest);
-
-    return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseStatusCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(jsonRequest));
-
-  }
 
   private static Date getLastModifiedDate(HttpJsonRequest jsonRequest) {
 
@@ -92,12 +85,39 @@ public class SerializationHelper {
     return list;
   }
 
+  /**
+   * Java only
+   * @param responseJson
+   * @return
+   */
   public static List<Attachment> deserializeAttachements(RavenJToken responseJson) {
     // TODO Auto-generated method stub
     return null;
   }
 
   public static JsonDocumentMetadata deserializeJsonDocumentMetadata(RavenJToken responseJson) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public static JsonDocument ravenJObjectToJsonDocument(RavenJObject ravenJObject) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, Map<String, String> headers, int responseStatusCode) {
+    /* TODO: update me!
+     * RavenJObject jsonData = (RavenJObject) responseJson;
+     *
+    RavenJObject meta = MetadataExtensions.filterHeaders(headers);
+    UUID etag = HttpExtensions.getEtagHeader(jsonRequest);
+
+    return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseStatusCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(headers));*/
+    return null;
+
+  }
+
+  public static JsonDocument toJsonDocument(RavenJObject r) {
     // TODO Auto-generated method stub
     return null;
   }
