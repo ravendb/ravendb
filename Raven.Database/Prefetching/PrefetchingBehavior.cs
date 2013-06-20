@@ -340,7 +340,7 @@ namespace Raven.Database.Prefetching
 				return;
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
-				context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing)
 				return;
 
 			foreach (var jsonDocument in docs)
