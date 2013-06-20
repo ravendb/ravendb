@@ -188,19 +188,11 @@ namespace Raven.Database.Prefetching
 					.ToList();
 			});
 
-			if (untilEtag == null) // TODO check this case
+			if (untilEtag == null)
 			{
 				MaybeAddFutureBatch(jsonDocs);
 			}
 			return jsonDocs;
-		}
-
-		private Etag GetFirstEtagInQueue()
-		{
-			JsonDocument result;
-			if (prefetchingQueue.TryPeek(out result) == false)
-				return null;
-			return result.Etag;
 		}
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
