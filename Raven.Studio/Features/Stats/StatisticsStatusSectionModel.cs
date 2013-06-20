@@ -158,12 +158,20 @@ namespace Raven.Studio.Features.Stats
 								ToolTipData = "No Stale Indexes"
 							});
 						}
-						else
+						else if (list.Count > 1)
 						{
 							Statistics.Add(propertyInfo.Name, new StatInfo
 							{
-								Message = string.Format("There are {0} Stale indexes", list.Count),
+								Message = string.Format("There are {0} Stale Indexes", list.Count),
 								ToolTipData = string.Join(", ", list)
+							});
+						}
+						else // only one item
+						{
+							Statistics.Add(propertyInfo.Name, new StatInfo
+							{
+								Message = "There is 1 Stale Index",
+								ToolTipData = list[0].ToString() // only one item, no need to call string.Join()
 							});
 						}
 
