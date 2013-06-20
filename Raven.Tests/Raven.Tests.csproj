@@ -1357,6 +1357,7 @@
     <Compile Include="Triggers\ReadTriggers.cs" />
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
+    <Compile Include="Utils\SettingsDat.cs" />
     <Compile Include="Util\IISConfig.cs" />
     <Compile Include="Util\IISExpressDriver.cs" />
     <Compile Include="Util\ProcessDriver.cs" />
