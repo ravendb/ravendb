@@ -1291,7 +1291,7 @@ namespace Raven.Client.Connection
 				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
-				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
 	        if (!string.IsNullOrEmpty(transformer))
 	            path += "&transformer=" + transformer;
