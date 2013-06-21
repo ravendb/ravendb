@@ -519,7 +519,7 @@ namespace Raven.Client.Embedded
 			if (query.PageSizeSet == false)
 				query.PageSize = int.MaxValue;
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var items = new BlockingCollection<RavenJObject>();
+			var items = new BlockingCollection<RavenJObject>(1024);
 			using (var waitForHeaders = new ManualResetEventSlim(false))
 			{
 				Exception e = null;
@@ -557,7 +557,7 @@ namespace Raven.Client.Embedded
 			if(fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
-			var items = new BlockingCollection<RavenJObject>();
+			var items = new BlockingCollection<RavenJObject>(1024);
 			var task = Task.Factory.StartNew(() =>
 			{
 				if (string.IsNullOrEmpty(startsWith))
