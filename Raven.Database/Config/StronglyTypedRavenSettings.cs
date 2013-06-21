@@ -86,6 +86,9 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/RedirectStudioUrl"], (string) null);
 			DisableDocumentPreFetchingForIndexing =
 				new BooleanSetting(settings["Raven/DisableDocumentPreFetchingForIndexing"], false);
+			MaxNumberOfItemsToPreFetchForIndexing =
+				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToPreFetchForIndexing"],
+										  defaultMaxNumberOfItemsToIndexInSingleBatch, 128);
 			WebDir =
 				new StringSetting(settings["Raven/WebDir"], GetDefaultWebDir);
 			PluginsDirectory =
@@ -198,6 +201,8 @@ namespace Raven.Database.Config
 		public StringSetting RedirectStudioUrl { get; private set; }
 
 		public BooleanSetting DisableDocumentPreFetchingForIndexing { get; private set; }
+
+		public IntegerSettingWithMin MaxNumberOfItemsToPreFetchForIndexing { get; private set; }
 
 		public StringSetting WebDir { get; private set; }
 
