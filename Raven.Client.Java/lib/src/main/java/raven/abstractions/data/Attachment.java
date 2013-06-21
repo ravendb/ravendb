@@ -1,14 +1,12 @@
 package raven.abstractions.data;
 
-import java.util.UUID;
-
 import raven.abstractions.json.linq.RavenJObject;
 
 public class Attachment {
   private byte[] data;
   private int size;
   private RavenJObject metadata;
-  private UUID etag;
+  private Etag etag;
   private String key;
   private boolean canGetData;
 
@@ -60,14 +58,14 @@ public class Attachment {
   /**
    * @return the etag
    */
-  public UUID getEtag() {
+  public Etag getEtag() {
     return etag;
   }
 
   /**
    * @param etag the etag to set
    */
-  public void setEtag(UUID etag) {
+  public void setEtag(Etag etag) {
     this.etag = etag;
   }
 
@@ -85,7 +83,7 @@ public class Attachment {
     this.key = key;
   }
 
-  public Attachment(boolean canGetData, byte[] data, int size, RavenJObject metadata, UUID etag, String key) {
+  public Attachment(boolean canGetData, byte[] data, int size, RavenJObject metadata, Etag etag, String key) {
     super();
     this.canGetData = canGetData;
     this.data = data;

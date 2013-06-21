@@ -1,5 +1,6 @@
 package raven.client.connection;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -416,7 +417,7 @@ public class ServerClient implements IDatabaseCommands {
       if (e instanceof HttpOperationException) {
         HttpOperationException httpException = (HttpOperationException) e;
         if (httpException.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          throw throwConcurrencyException(e);
+          throw throwConcurrencyException(httpException);
         }
       }
       throw new ServerClientException(e);
@@ -736,26 +737,21 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-  private ConcurrencyException throwConcurrencyException(Exception e) {
-    /* FIXME:
-    using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
-    {
-      var text = sr.ReadToEnd();
-      var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-      {
-        url = (string)null,
-        actualETag = Etag.Empty,
-        expectedETag = Etag.Empty,
-        error = (string)null
-      });
-      return new ConcurrencyException(errorResults.error)
-      {
-        ActualETag = errorResults.actualETag,
-        ExpectedETag = errorResults.expectedETag
-      };
-    }*/
+  private ConcurrencyException throwConcurrencyException(HttpOperationException e) {
 
-    return null;
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+      IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+    } catch (IOException e1) {
+      throw new ServerClientException(e1);
+    } finally {
+      EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+    }
+
+    RavenJToken ravenJToken = RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+
+    return new ConcurrencyException(ravenJToken.value(Etag.class, "expectedETag"), ravenJToken.value(Etag.class, "actualETag"), ravenJToken.value(String.class, "error"), e);
+
   }
 
   //TODO: public string PutIndex(string name, IndexDefinition definition)

@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.connection.profiling.RequestResultArgs;
+import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.json.linq.RavenJObject;
@@ -162,7 +163,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
     try {
       createDb("db1");
       RavenJToken putResult = putSampleDocument(new HashMap<String, String>());
-      UUID etag = putResult.value(UUID.class, "ETag");
+      Etag etag = putResult.value(Etag.class, "ETag");
       assertNotNull(etag);
 
       RavenJObject ravenJObject = new RavenJObject();

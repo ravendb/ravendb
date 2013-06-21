@@ -2,7 +2,9 @@ package raven.client;
 
 import static org.junit.Assert.assertNull;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
@@ -12,11 +14,15 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Test;
 
@@ -32,13 +38,14 @@ public class Sandbox {
 
   public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {
 
-    URI uri = new URI("http://localhost:8123/dafdsf?d=54&d=b");
-    System.out.println(uri.getPath() + uri.getQuery());
+    String text = "this is sample text";
+    byte[] textBytes = text.getBytes();
+
   }
   @Test
   public void testParseRavenLastModifiedDate() throws ParseException {
     String dateString = "2013-05-10T11:33:04.6708000Z";
-    SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORAT);
+    SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT);
     Date date = sdf.parse(dateString);
     System.out.println(date);
 

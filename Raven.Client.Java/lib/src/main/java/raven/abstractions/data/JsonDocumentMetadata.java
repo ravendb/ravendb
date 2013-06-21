@@ -1,7 +1,6 @@
 package raven.abstractions.data;
 
 import java.util.Date;
-import java.util.UUID;
 
 import raven.abstractions.json.linq.RavenJObject;
 
@@ -10,13 +9,13 @@ public class JsonDocumentMetadata {
   private RavenJObject metadata;
   private String key;
   private Boolean monAuthoritativeInformation;
-  private UUID etag;
+  private Etag etag;
   private Date lastModified;
 
   /**
    * @return the etag
    */
-  public UUID getEtag() {
+  public Etag getEtag() {
     return etag;
   }
 
@@ -51,7 +50,7 @@ public class JsonDocumentMetadata {
   /**
    * @param etag the etag to set
    */
-  public void setEtag(UUID etag) {
+  public void setEtag(Etag etag) {
     this.etag = etag;
   }
 

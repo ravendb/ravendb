@@ -15,6 +15,7 @@ import org.apache.http.impl.cookie.DateUtils;
 
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.extensions.MetadataExtensions;
@@ -74,7 +75,7 @@ public class SerializationHelper {
       tokenObject.remove("@metadata");
 
       String id = extract(metadata, "@id", "", String.class);
-      UUID etag = extract(metadata, "@etag", null, UUID.class);
+      Etag etag = extract(metadata, "@etag", null, Etag.class);
 
       //TODO: filter metadata headers
       Date lastModified = null; //TODO: set me!

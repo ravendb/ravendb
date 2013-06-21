@@ -1,28 +1,28 @@
 package raven.abstractions.exceptions;
 
-import java.util.UUID;
+import raven.abstractions.data.Etag;
 
 public class ConcurrencyException extends RuntimeException {
 
-  private UUID expectedEtag;
-  private UUID actualEtag;
+  private Etag expectedEtag;
+  private Etag actualEtag;
 
   /**
    * @return the expectedEtag
    */
-  public UUID getExpectedEtag() {
+  public Etag getExpectedEtag() {
     return expectedEtag;
   }
 
   /**
    * @return the actualEtag
    */
-  public UUID getActualEtag() {
+  public Etag getActualEtag() {
     return actualEtag;
   }
 
-  public ConcurrencyException(UUID expectedEtag, UUID actualEtag, Throwable cause) {
-    super("Expected Etag:" + expectedEtag + ", actual:" + actualEtag + cause.getMessage(), cause);
+  public ConcurrencyException(Etag expectedEtag, Etag actualEtag, String error, Throwable cause) {
+    super("Expected Etag:" + expectedEtag + ", actual:" + actualEtag + error + cause.getMessage(), cause);
     this.expectedEtag = expectedEtag;
     this.actualEtag = actualEtag;
   }
