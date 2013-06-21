@@ -364,8 +364,6 @@ namespace Raven.Database.Indexing
 			var lastEtag = last.Etag;
 			var lastModified = last.LastModified.Value;
 
-			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
-
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers, context.Database.InFlightTransactionalState);
 
 			var filteredDocs =

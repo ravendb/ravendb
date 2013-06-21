@@ -68,12 +68,20 @@ namespace Raven.Database.Prefetching
 			var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			for (int i = results.Count - 1; i >= 0; i--)
 			{
-				if(ids.Add(results[i].Key) == false)
+				if(CanBeConsideredAsDuplicate(results[i]) && ids.Add(results[i].Key) == false)
 				{
 					results.RemoveAt(i);
 				}
 			}
 			return results;
+		}
+
+		private bool CanBeConsideredAsDuplicate(JsonDocument document)
+		{
+			if (document.Metadata[Constants.RavenReplicationConflict] != null)
+				return false;
+
+			return true;
 		}
 
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
