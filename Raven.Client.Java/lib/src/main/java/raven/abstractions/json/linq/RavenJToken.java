@@ -8,7 +8,6 @@ import java.util.Stack;
 import org.codehaus.jackson.FormatSchema;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import raven.abstractions.basic.Tuple;
@@ -19,7 +18,6 @@ import raven.abstractions.extensions.JsonExtensions;
 /**
  * Represents an abstract JSON token.
  */
-//TODO: review me
 public abstract class RavenJToken {
 
   public static boolean deepEquals(RavenJToken t1, RavenJToken t2) {
@@ -154,7 +152,7 @@ public abstract class RavenJToken {
 
   public String toString(FormatSchema schema, Object[] converters) {
     //implement me
-    return null;
+    return toString();
   }
 
   protected RavenJToken cloneTokenImpl(RavenJToken newObject) {

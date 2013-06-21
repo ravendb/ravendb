@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
@@ -361,6 +362,41 @@ public class RavenJObjectsTest {
 
     value1.setValue(12.2f);
     assertEquals(JTokenType.FLOAT, value1.getType());
+  }
+
+  @Test
+  public void testValues() {
+    //RavenJObject complexObject = RavenJObject.parse("{ \"a\" : 5, \"b\" : [1,2,3], \"c\" : { \"d\" : null} , \"d\" : null, \"e\": false, \"f\" : \"string\"}");
+
+    RavenJObject complexObject = RavenJObject.parse("{ \"a\" : 5,  \"e\": true, \"f\" : \"string\"}");
+
+    List<String> valuesString = (List<String>) complexObject.values(String.class);
+    assertEquals("5", valuesString.get(2));
+    assertEquals("true", valuesString.get(1));
+    assertEquals("string", valuesString.get(0));
+
+    List<Integer> valuesInt = (List<Integer>) complexObject.values(Integer.class);
+    assertEquals(new Integer(5), valuesInt.get(2));
+    assertEquals(new Integer(1), valuesInt.get(1));
+    assertEquals(new Integer(0), valuesInt.get(0));
+
+    List<Boolean> valuesBool = (List<Boolean>) complexObject.values(Boolean.class);
+    assertEquals(Boolean.FALSE, valuesBool.get(2));
+    assertEquals(Boolean.TRUE, valuesBool.get(1));
+    assertEquals(Boolean.FALSE, valuesBool.get(0));
+
+    complexObject = RavenJObject.parse("{ \"b\" : [1,2,3]}");
+    List<RavenJArray>valuesArray = (List<RavenJArray>) complexObject.values(RavenJArray.class);
+    assertEquals(3, valuesArray.get(0).size());
+    valuesInt = (List<Integer>) valuesArray.get(0).values(Integer.class);
+    assertEquals(new Integer(1), valuesInt.get(0));
+    assertEquals(new Integer(2), valuesInt.get(1));
+    assertEquals(new Integer(3), valuesInt.get(2));
+
+    RavenJToken token = RavenJToken.fromObject("String");
+    assertEquals("String", token.value(String.class));
+    token = RavenJToken.fromObject(new Integer(5));
+    assertEquals(new Integer(5), token.value(Integer.class));
   }
 
   @Test(expected = IllegalArgumentException.class)

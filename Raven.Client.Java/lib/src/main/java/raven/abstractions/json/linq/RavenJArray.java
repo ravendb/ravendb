@@ -18,8 +18,8 @@ import raven.abstractions.extensions.JsonExtensions;
 /**
  * Represents a JSON array.
  */
-//TODO: review me
 public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
+
   private boolean snapshot;
 
   private List<RavenJToken> items;
@@ -31,14 +31,23 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     items = new ArrayList<>();
   }
 
-  /**
-   * Initializes a new instance of the {@link RavenJArray} class with the specified content.
-   * @param content The contents of the array;
-   */
-  public RavenJArray(Collection<RavenJToken> content) {
+  public RavenJArray(Collection content) {
     items = new ArrayList<>();
-    if (content != null) {
-      items.addAll(content);
+    if (content == null) {
+      return;
+    }
+
+    if (content instanceof RavenJToken && ((RavenJToken) content).getType().equals(JTokenType.ARRAY)) {
+
+      items.add((RavenJToken) content);
+    } else {
+      for (Object item : content) {
+        if (item instanceof RavenJToken) {
+          items.add((RavenJToken) item);
+        }
+
+        items.add(new RavenJValue(item));
+      }
     }
   }
 
@@ -105,7 +114,9 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
         }
       }
       if (parser.getCurrentToken() != JsonToken.START_ARRAY) {
-        throw new JsonReaderException("Error reading RavenJArray from JsonParser. Current JsonReader item is not an array: " + parser.getCurrentToken());
+        throw new JsonReaderException(
+          "Error reading RavenJArray from JsonParser. Current JsonReader item is not an array: "
+            + parser.getCurrentToken());
       }
       // advance to next token
       parser.nextToken();
@@ -114,20 +125,20 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
       RavenJToken val = null;
       do {
         switch (parser.getCurrentToken()) {
-        case END_ARRAY:
-          return ar;
-        case START_OBJECT:
-          val = RavenJObject.load(parser);
-          ar.add(val);
-          break;
-        case START_ARRAY:
-          val = RavenJArray.load(parser);
-          ar.add(val);
-          break;
-        default:
-          val = RavenJValue.load(parser);
-          ar.add(val);
-          break;
+          case END_ARRAY:
+            return ar;
+          case START_OBJECT:
+            val = RavenJObject.load(parser);
+            ar.add(val);
+            break;
+          case START_ARRAY:
+            val = RavenJArray.load(parser);
+            ar.add(val);
+            break;
+          default:
+            val = RavenJValue.load(parser);
+            ar.add(val);
+            break;
         }
       } while (parser.nextToken() != null);
 
@@ -226,17 +237,14 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     add(token);
   }
 
-
   @Override
-  public Iterable<RavenJToken> values()
-  {
-      return items;
+  public Iterable<RavenJToken> values() {
+    return items;
   }
 
   @Override
-  public <T> Iterable<T> values(Class<T> clazz)
-  {
-      return Extensions.convert(clazz, items);
+  public <T> Iterable<T> values(Class<T> clazz) {
+    return Extensions.convert(clazz, items);
   }
 
 }

@@ -8,6 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.beanutils.ConvertUtils;
+
 import raven.abstractions.data.Constants;
 
 public class Extensions {
@@ -147,7 +149,7 @@ public class Extensions {
         return default(U);
     }*/
     //return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
-    return null;
+    return (U) ConvertUtils.convert(value.getValue(), clazz);
   }
 
   private static class RavenJTokenIterable<U> implements Iterable<U> {

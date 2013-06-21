@@ -89,77 +89,63 @@ public class RavenJPath {
     this.parts.add(Integer.parseInt(indexer));
   }
 
-  public RavenJToken evaluate(RavenJToken root, boolean errorWhenNoMatch) throws Exception
-  {
+  public RavenJToken evaluate(RavenJToken root, boolean errorWhenNoMatch) throws Exception {
     RavenJToken current = root;
 
-      for (Object part : parts)
-      {
-          String propertyName = (String) part;
-          if (propertyName != null)
-          {
-            RavenJObject o = (RavenJObject) current;
-              if (o != null)
-              {
-                  current = o.get(propertyName);
+    for (Object part : parts) {
+      String propertyName = (String) part;
+      if (propertyName != null) {
+        RavenJObject o = (RavenJObject) current;
+        if (o != null) {
+          current = o.get(propertyName);
 
-                  if (current == null && errorWhenNoMatch)
-                      throw new Exception("Property '" + propertyName + "' does not exist on RavenJObject.");
-              }
-              else
-              {
-                RavenJArray array = (RavenJArray) current;
-                  if(array != null)
-                  {
-                      switch (propertyName)
-                      {
-                          case "Count":
-                          case "count":
-                          case "Length":
-                          case "length":
-                              //TODO: ???? current = array.size();
-                              break;
-                          default:
-                              if (errorWhenNoMatch)
-                                  throw new Exception("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
-                              break;
-                      }
-                      continue;
-                  }
-                  if (errorWhenNoMatch)
-                      throw new Exception("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
-
-                  return null;
-              }
+          if (current == null && errorWhenNoMatch)
+            throw new Exception("Property '" + propertyName + "' does not exist on RavenJObject.");
+        } else {
+          RavenJArray array = (RavenJArray) current;
+          if (array != null) {
+            switch (propertyName) {
+              case "Count":
+              case "count":
+              case "Length":
+              case "length":
+                //TODO: ???? current = array.size();
+                break;
+              default:
+                if (errorWhenNoMatch)
+                  throw new Exception("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
+                break;
+            }
+            continue;
           }
-          else
-          {
-              int index = (int) part;
+          if (errorWhenNoMatch)
+            throw new Exception("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
 
-              RavenJArray a = (RavenJArray) current;
+          return null;
+        }
+      } else {
+        int index = (int) part;
 
-              if (a != null)
-              {
-                  if (a.size() <= index)
-                  {
-                      if (errorWhenNoMatch)
-                          throw new IndexOutOfBoundsException ("Index " + index + " outside the bounds of RavenJArray.");
+        RavenJArray a = (RavenJArray) current;
 
-                      return null;
-                  }
+        if (a != null) {
+          if (a.size() <= index) {
+            if (errorWhenNoMatch)
+              throw new IndexOutOfBoundsException("Index " + index + " outside the bounds of RavenJArray.");
 
-                  current = a.get(index);
-              }
-              else
-              {
-                  if (errorWhenNoMatch)
-                      throw new Exception("Index " + index + " not valid on "+ current.getType().name() + ".");
-
-                  return null;
-              }
+            return null;
           }
+
+          current = a.get(index);
+        } else {
+          if (errorWhenNoMatch)
+            throw new Exception("Index " + index + " not valid on " + current.getType().name() + ".");
+
+          return null;
+        }
       }
+    }
 
-      return current;
+    return current;
   }
 }

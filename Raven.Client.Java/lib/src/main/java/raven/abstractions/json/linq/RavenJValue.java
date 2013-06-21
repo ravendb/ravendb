@@ -12,8 +12,6 @@ import org.codehaus.jackson.JsonGenerator;
 
 import raven.abstractions.exceptions.JsonWriterException;
 
-
-//TODO: review me
 public class RavenJValue extends RavenJToken {
 
   private JTokenType valueType;
@@ -442,6 +440,5 @@ public class RavenJValue extends RavenJToken {
       return new BigDecimal(asBigInteger());
     }
   }
-
 
 }
