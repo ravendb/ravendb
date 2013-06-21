@@ -522,16 +522,27 @@ namespace Raven.Client.Embedded
 			var items = new BlockingCollection<RavenJObject>();
 			using (var waitForHeaders = new ManualResetEventSlim(false))
 			{
+				Exception e = null;
 				QueryHeaderInformation localQueryHeaderInfo = null;
 				var task = Task.Factory.StartNew(() =>
 				{
-					database.Query(index, query, information =>
+					try
 					{
-						localQueryHeaderInfo = information;
+						database.Query(index, query, information =>
+						{
+							localQueryHeaderInfo = information;
+							waitForHeaders.Set();
+						}, items.Add);
+					}
+					catch (Exception ex)
+					{
+						e = ex;
 						waitForHeaders.Set();
-					}, items.Add);
-				});
+					}
+				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
+				if (e != null)
+					throw new InvalidOperationException("Could not query server", e);
 				queryHeaderInfo = localQueryHeaderInfo;
 				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
 			}
