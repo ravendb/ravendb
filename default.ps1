@@ -339,6 +339,15 @@ task CopyServer -depends CreateOutpuDirectories {
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
+task CopyInstaller {
+	if($env:buildlabel -eq 13)
+	{
+	  return
+	}
+
+	Copy-Item $build_dir\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
+}
+
 task CreateDocs {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
@@ -410,6 +419,7 @@ task DoRelease -depends Compile, `
 	CopyRootFiles, `
 	CopySamples, `
 	ZipOutput, `
+	CopyInstaller, `
 	CreateNugetPackages, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
@@ -426,25 +436,32 @@ task Upload -depends DoRelease {
 		
 		$log = $log.Replace('"','''') # avoid problems because of " escaping the output
 		
-		$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
-		write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
+		$zipFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
+		$installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
 		
-		$uploadTryCount = 0
-		while ($uploadTryCount -lt 5){
-			$uploadTryCount += 1
-			Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
+		$files = @($zipFile, $installerFile)
+		
+		foreach ($file in $files)
+		{
+			write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
+			
+			$uploadTryCount = 0
+			while ($uploadTryCount -lt 5){
+				$uploadTryCount += 1
+				Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
+				
+				if ($lastExitCode -ne 0) {
+					write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
+				}
+				else {
+					break
+				}
+			}
 			
 			if ($lastExitCode -ne 0) {
-				write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
+				write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount. Build will fail."
+				throw "Error: Failed to publish build"
 			}
-			else {
-				break
-			}
-		}
-		
-		if ($lastExitCode -ne 0) {
-			write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount. Build will fail."
-			throw "Error: Failed to publish build"
 		}
 	}
 	else {
