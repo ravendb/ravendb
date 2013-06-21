@@ -285,8 +285,8 @@ namespace Raven.Abstractions.Extensions
 				DateTimeOffset dateTimeOffset;
 				if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
 					return new RavenJValue(dateTimeOffset);
-				
-				return new RavenJValue(val);
+
+				return new RavenJValue(Uri.UnescapeDataString(val));
 
 			}
 			catch (Exception exc)

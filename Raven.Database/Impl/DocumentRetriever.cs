@@ -36,6 +36,7 @@ namespace Raven.Database.Impl
 		private readonly InFlightTransactionalState inFlightTransactionalState;
 		private readonly Dictionary<string, RavenJToken> queryInputs;
 	    private readonly HashSet<string> itemsToInclude;
+		private bool disableCache;
 
 		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
 			InFlightTransactionalState inFlightTransactionalState,
@@ -202,14 +203,22 @@ namespace Raven.Database.Impl
 			if (key == null)
 				return null;
 			JsonDocument doc;
-			if (cache.TryGetValue(key, out doc))
+			if (disableCache == false && cache.TryGetValue(key, out doc))
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
 			EnsureIdInMetadata(doc);
 			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
 			if (nonAuthoritativeInformationBehavior != null)
 				doc = nonAuthoritativeInformationBehavior(doc);
-			cache[key] = doc;
+			if(disableCache == false)
+				cache[key] = doc;
+			if (cache.Count > 2048)
+			{
+				// we are probably doing a stream here, no point in trying to cache things, we might be
+				// going through the entire db here!
+				disableCache = true;
+				cache.Clear();
+			}
 			return doc;
 		}
 
