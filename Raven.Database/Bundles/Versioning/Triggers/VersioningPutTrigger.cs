@@ -102,8 +102,14 @@ namespace Raven.Bundles.Versioning.Triggers
 						if (latestRevisionsDoc != null)
 						{
 							var id = latestRevisionsDoc["@metadata"].Value<string>("@id");
-							var revisionNum = id.Substring((key + "/revisions/").Length);
-							revision = Int32.Parse(revisionNum) + 1;
+							if(id.StartsWith(key))
+							{
+								var revisionNum = id.Substring((key + "/revisions/").Length);
+								int result;
+								if (int.TryParse(revisionNum, out result))
+									revision = result + 1;
+							}
+							
 						}
 					}
 
