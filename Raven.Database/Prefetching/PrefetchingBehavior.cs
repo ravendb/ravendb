@@ -78,10 +78,10 @@ namespace Raven.Database.Prefetching
 
 		private bool CanBeConsideredAsDuplicate(JsonDocument document)
 		{
-			if (document.Metadata[Constants.RavenReplicationConflict] == null)
-				return true;
+			if (document.Metadata[Constants.RavenReplicationConflict] != null)
+				return false;
 
-			return false;
+			return true;
 		}
 
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
