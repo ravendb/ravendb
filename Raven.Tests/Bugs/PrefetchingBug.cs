@@ -57,16 +57,12 @@ namespace Raven.Tests.Bugs
 				var putResult2 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
 				var putResult3 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
 
-				// here we are expecting only 1 document because we limited MaxNumberOfItemsToIndexInSingleBatch
-				Assert.Equal(1,
-				             store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer)
-				                  .GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty)
-				                  .Count);
+				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
 
-				// the updated doc
-				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).GetDocumentsBatchFrom(putResult1.ETag);
-				Assert.Equal(1, docs.Count);
-				Assert.Equal(putResult3.ETag, docs[0].Etag);
+				Assert.Equal(2, docs.Count);
+				Assert.Equal(putResult1.ETag, docs[0].Etag); // the document taken from memory
+
+				Assert.Equal(putResult3.ETag, docs[1].Etag); // the updated doc loaded from disk because we limited MaxNumberOfItemsToIndexInSingleBatch
 			}
 		}
 
