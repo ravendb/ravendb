@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -29,7 +30,7 @@ namespace Raven.Client.Changes
 		private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
         private bool watchAllDocs;
         private bool watchAllIndexes;
-
+		private Timer clientSideHeartbeatTimer;
         private readonly string url;
         private readonly ICredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
@@ -39,6 +40,7 @@ namespace Raven.Client.Changes
 		private readonly Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.OrdinalIgnoreCase);
 		private IDisposable connection;
+	    private DateTime lastHeartbeat;
 
         private static int connectionCounter;
         private readonly string id;
@@ -71,75 +73,107 @@ namespace Raven.Client.Changes
                 });
         }
 
-        private Task EstablishConnection()
+        private async Task EstablishConnection()
         {
-            if (disposed)
-                return new CompletedTask();
+	        if (disposed)
+		        return;
+
+			if (clientSideHeartbeatTimer != null)
+			{
+				clientSideHeartbeatTimer.Dispose();
+				clientSideHeartbeatTimer = null;
+			}
+
+	        var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials,
+	                                                            conventions)
+	        {
+		        AvoidCachingRequest = true
+	        };
+
+	        logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);
+	        bool retry = false;
+	        IObservable<string> serverEvents = null;
+	        try
+	        {
+		        serverEvents = await jsonRequestFactory.CreateHttpJsonRequest(requestParams).ServerPullAsync();
+	        }
+	        catch (Exception e)
+	        {
+				logger.WarnException("Could not connect to server: " + url + " and id " + id, e);
+		        Connected = false;
+		        ConnectionStatusChanged(this, EventArgs.Empty);
+		    
+		        if (disposed)
+			        return;
+
+				 bool timeout;
+		        if (replicationInformer.IsServerDown(e, out timeout) == false)
+			        return;
 
 
-            
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
-                                    {
-                                        AvoidCachingRequest = true
-                                    };
+		        if (replicationInformer.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden))
+			        return;
 
-            logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);
+				logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
+		        retry = true;
+	        }
 
-            return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
-                .ServerPullAsync()
-                .ContinueWith(task =>
-                                {
-									if(disposed)
-                                        throw new ObjectDisposedException("RemoteDatabaseChanges");
-                                    if (task.IsFaulted)
-                                    {
-                                        logger.WarnException("Could not connect to server: " + url + " and id " + id, task.Exception);
-                                        Connected = false;
-                                        ConnectionStatusChanged(this, EventArgs.Empty);
+			if (retry)
+			{
+				await Time.Delay(TimeSpan.FromSeconds(15));
+		        await EstablishConnection();
+				return;
+			}
+	        if (disposed)
+	        {
+		        Connected = false;
+				ConnectionStatusChanged(this, EventArgs.Empty);
+		        throw new ObjectDisposedException("RemoteDatabaseChanges");
+	        }
 
-                                        if (disposed)
-                                            return task;
+	        Connected = true;
+	        ConnectionStatusChanged(this, EventArgs.Empty);
+	        connection = (IDisposable)serverEvents;
+	        serverEvents.Subscribe(this);
+			clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
 
+	        if (watchAllDocs)
+		        await Send("watch-docs", null);
 
-										bool timeout;
-										if (replicationInformer.IsServerDown(task.Exception, out timeout) == false)
-                                            return task;
+	        if (watchAllIndexes)
+		        await Send("watch-indexes", null);
 
-										if(replicationInformer.IsHttpStatus(task.Exception, 
-                                                HttpStatusCode.NotFound,
-                                                HttpStatusCode.Forbidden))
-                                            return task;
+	        foreach (var watchedDoc in watchedDocs)
+	        {
+		        await Send("watch-doc", watchedDoc);
+	        }
 
-                                        logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
-                                        return Time.Delay(TimeSpan.FromSeconds(15))
-                                            .ContinueWith(_ => EstablishConnection())
-                                            .Unwrap();
-                                    }
+	        foreach (var watchedPrefix in watchedPrefixes)
+	        {
+		        await Send("watch-prefix", watchedPrefix);
+	        }
+			foreach (var watchedIndex in watchedIndexes)
+			{
+				await Send("watch-indexes", watchedIndex);
+			}
 
-                                    Connected = true;
-                                    ConnectionStatusChanged(this, EventArgs.Empty);
-                                    connection = (IDisposable)task.Result;
-                                    task.Result.Subscribe(this);
+	        foreach (var watchedBulkInsert in watchedBulkInserts)
+	        {
+		        await Send("watch-bulk-operation", watchedBulkInsert);
+	        }
 
-                                    Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
-
-                                    if (watchAllIndexes)
-                                        prev = prev.ContinueWith(_ => Send("watch-indexes", null));
-
-                                    prev = watchedDocs.Aggregate(prev, (cur, docId) => cur.ContinueWith(task1 => Send("watch-doc", docId)));
-
-                                    prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
-
-                                    prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
-
-									prev = watchedBulkInserts.Aggregate(prev, (cur, bulkInsert) => cur.ContinueWith(task1 => Send("watch-bulk-operation", bulkInsert)));
-
-                                    return prev;
-                                })
-                .Unwrap();
         }
 
-        public bool Connected { get; private set; }
+	    private void ClientSideHeartbeat(object _)
+	    {
+		    TimeSpan elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
+		    if (elapsedTimeSinceHeartbeat.TotalSeconds < 45)
+			    return;
+			OnError(new TimeoutException("Over 45 seconds have passed since we got a server heartbeat, even though we should get one every 10 seconds or so.\r\n" +
+			                             "This connection is now presumed dead, and will attempt reconnection"));
+	    }
+
+	    public bool Connected { get; private set; }
         public event EventHandler ConnectionStatusChanged;
 
         private void LogOnConnectionStatusChanged(object sender, EventArgs eventArgs)
@@ -434,6 +468,10 @@ namespace Raven.Client.Changes
             disposed = true;
             onDispose();
 
+	        if (clientSideHeartbeatTimer != null)
+		        clientSideHeartbeatTimer.Dispose();
+	        clientSideHeartbeatTimer = null;
+
             return Send("disconnect", null).
                 ContinueWith(_ =>
                                 {
@@ -452,6 +490,8 @@ namespace Raven.Client.Changes
 
         public void OnNext(string dataFromConnection)
         {
+	        lastHeartbeat = SystemTime.UtcNow;
+
             var ravenJObject = RavenJObject.Parse(dataFromConnection);
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
