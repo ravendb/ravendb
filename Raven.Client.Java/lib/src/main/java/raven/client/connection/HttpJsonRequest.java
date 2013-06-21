@@ -464,7 +464,16 @@ public class HttpJsonRequest {
           throw new IllegalStateException(readToEnd, e);
         }
 
-        //TODO: if (ravenJObject.ContainsKey("IndexDefinitionProperty")) { ... }
+        /*TODO:
+         * if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
+        {
+          throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
+          {
+            IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
+            ProblematicText = ravenJObject.Value<string>("ProblematicText")
+          };
+        }
+         */
 
         if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_BAD_REQUEST && ravenJObject.containsKey("Message")) {
           throw new BadRequestException(ravenJObject.value(String.class, "Message"), e);

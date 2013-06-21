@@ -15,8 +15,8 @@ public class HttpExtensions {
       throw new IllegalArgumentException("Response didn't had an ETag header.");
     }
     if (responseHeader.charAt(0) == '"') {
-      return Etag.fromString(responseHeader.substring(1, responseHeader.length() - 2));
+      return Etag.parse(responseHeader.substring(1, responseHeader.length() - 2));
     }
-    return Etag.fromString(responseHeader);
+    return Etag.parse(responseHeader);
   }
 }
