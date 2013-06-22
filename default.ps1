@@ -439,16 +439,18 @@ task Upload -depends DoRelease {
 		$zipFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		$installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
 		
-		$files = @($zipFile, $installerFile)
+		$files = @(@($installerFile, "$env:buildlabel Installer") , @($zipFile, $env:buildlabel))
 		
-		foreach ($file in $files)
+		foreach ($obj in $files)
 		{
+			$file = $obj[0]
+			$label = $obj[1]
 			write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
 			
 			$uploadTryCount = 0
 			while ($uploadTryCount -lt 5){
 				$uploadTryCount += 1
-				Exec { &$uploader "$uploadCategory" "$env:buildlabel" $file "$log" }
+				Exec { &$uploader "$uploadCategory" "$label" $file "$log" }
 				
 				if ($lastExitCode -ne 0) {
 					write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
