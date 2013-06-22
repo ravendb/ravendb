@@ -528,11 +528,17 @@ namespace Raven.Client.Embedded
 				{
 					try
 					{
-						database.Query(index, query, information =>
+						// we may be sending a LOT of documents to the user, and most 
+						// of them aren't going to be relevant for other ops, so we are going to skip
+						// the cache for that, to avoid filling it up very quickly
+						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 						{
-							localQueryHeaderInfo = information;
-							waitForHeaders.Set();
-						}, items.Add);
+							database.Query(index, query, information =>
+							{
+								localQueryHeaderInfo = information;
+								waitForHeaders.Set();
+							}, items.Add);
+						}
 					}
 					catch (Exception ex)
 					{
@@ -560,19 +566,25 @@ namespace Raven.Client.Embedded
 			var items = new BlockingCollection<RavenJObject>(1024);
 			var task = Task.Factory.StartNew(() =>
 			{
-				if (string.IsNullOrEmpty(startsWith))
+				// we may be sending a LOT of documents to the user, and most 
+				// of them aren't going to be relevant for other ops, so we are going to skip
+				// the cache for that, to avoid filling it up very quickly
+				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
-					database.GetDocuments(start, pageSize, fromEtag,
-					                      items.Add);
-				}
-				else
-				{
-					database.GetDocumentsWithIdStartingWith(
-						startsWith,
-						matches,
-						start,
-						pageSize,
-						items.Add);
+					if (string.IsNullOrEmpty(startsWith))
+					{
+						database.GetDocuments(start, pageSize, fromEtag,
+											  items.Add);
+					}
+					else
+					{
+						database.GetDocumentsWithIdStartingWith(
+							startsWith,
+							matches,
+							start,
+							pageSize,
+							items.Add);
+					}
 				}
 			});
 			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);

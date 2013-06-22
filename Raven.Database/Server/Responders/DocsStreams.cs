@@ -1,6 +1,7 @@
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -37,19 +38,25 @@ namespace Raven.Database.Server.Responders
 						if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
 							pageSize = int.MaxValue;
 
-						if (string.IsNullOrEmpty(startsWith))
+						// we may be sending a LOT of documents to the user, and most 
+						// of them aren't going to be relevant for other ops, so we are going to skip
+						// the cache for that, to avoid filling it up very quickly
+						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 						{
-							Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(),
-							                      doc => doc.WriteTo(writer));
-						}
-						else
-						{
-							Database.GetDocumentsWithIdStartingWith(
-								startsWith,
-								context.Request.QueryString["matches"],
-								context.GetStart(),
-								pageSize,
-								doc => doc.WriteTo(writer));
+							if (string.IsNullOrEmpty(startsWith))
+							{
+								Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(),
+													  doc => doc.WriteTo(writer));
+							}
+							else
+							{
+								Database.GetDocumentsWithIdStartingWith(
+									startsWith,
+									context.Request.QueryString["matches"],
+									context.GetStart(),
+									pageSize,
+									doc => doc.WriteTo(writer));
+							}
 						}
 					});
 
