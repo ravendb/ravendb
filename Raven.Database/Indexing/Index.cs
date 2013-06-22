@@ -1232,7 +1232,7 @@ namespace Raven.Database.Indexing
 			{
 				var sort = indexQuery.GetSort(parent.indexDefinition, parent.viewGenerator);
 
-				if (pageSize == Int32.MaxValue) // we want all docs
+				if (pageSize == Int32.MaxValue && sort == null) // we want all docs, no sorting required
 				{
 					var gatherAllCollector = new GatherAllCollector();
 					indexSearcher.Search(luceneQuery, gatherAllCollector);
