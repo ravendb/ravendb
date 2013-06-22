@@ -522,10 +522,10 @@ namespace Raven.Client.Embedded
 			var items = new BlockingCollection<RavenJObject>(1024);
 			using (var waitForHeaders = new ManualResetEventSlim(false))
 			{
-				Exception e = null;
 				QueryHeaderInformation localQueryHeaderInfo = null;
 				var task = Task.Factory.StartNew(() =>
 				{
+					bool setWaitHandle = true;
 					try
 					{
 						// we may be sending a LOT of documents to the user, and most 
@@ -537,18 +537,18 @@ namespace Raven.Client.Embedded
 							{
 								localQueryHeaderInfo = information;
 								waitForHeaders.Set();
+								setWaitHandle = false;
 							}, items.Add);
 						}
 					}
-					catch (Exception ex)
+					catch (Exception)
 					{
-						e = ex;
-						waitForHeaders.Set();
+						if (setWaitHandle)
+							waitForHeaders.Set();
+						throw;
 					}
 				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
-				if (e != null)
-					throw new InvalidOperationException("Could not query server", e);
 				queryHeaderInfo = localQueryHeaderInfo;
 				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
 			}
