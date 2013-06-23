@@ -87,8 +87,9 @@ select new {
 			Assert.Equal(@"{""blog_id"":3,""comments_length"":3}", q.Results[0].ToString(Formatting.None));
 
 			var index = db.Statistics.Indexes[0];
-			Assert.True(1024 >= index.ReduceIndexingAttempts,
-				"1024 >= " + index.ReduceIndexingAttempts + " failed");
+			// we add 100 because we might have reduces running in the middle of the operation
+			Assert.True((1024 + 100) >= index.ReduceIndexingAttempts,
+				"1024 + 100 >= " + index.ReduceIndexingAttempts + " failed");
 		}
 
 	    private QueryResult GetUnstableQueryResult(string query)
