@@ -803,6 +803,7 @@
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
+    <Compile Include="Spatial\Clustering.cs" />
     <Compile Include="Spatial\GeoJsonConverterTests.cs" />
     <Compile Include="Spatial\GeoJsonTests.cs" />
     <Compile Include="Spatial\GeoJsonWktConverterTests.cs" />

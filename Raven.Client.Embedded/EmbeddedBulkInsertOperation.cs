@@ -149,6 +149,11 @@ namespace Raven.Client.Embedded
 		/// Report on the progress of the operation
 		/// </summary>
 		public event Action<string> Report;
+
+		/// <summary>
+		/// Provides the observer with new data.
+		/// </summary>
+		/// <param name="value">The current notification information.</param>
 		public void OnNext(BulkInsertChangeNotification value)
 		{
 			if (value.Type == DocumentChangeTypes.BulkInsertError)
@@ -157,11 +162,18 @@ namespace Raven.Client.Embedded
 			}
 		}
 
+		/// <summary>
+		/// Notifies the observer that the provider has experienced an error condition.
+		/// </summary>
+		/// <param name="error">An object that provides additional information about the error.</param>
 		public void OnError(Exception error)
 		{
 			
 		}
 
+		/// <summary>
+		/// Notifies the observer that the provider has finished sending push-based notifications.
+		/// </summary>
 		public void OnCompleted()
 		{
 			
