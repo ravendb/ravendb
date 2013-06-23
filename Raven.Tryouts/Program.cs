@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Orders;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
+using Raven.Client;
 
 namespace Raven.Tryouts
 {
@@ -11,73 +15,160 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			var emptyDB = !Directory.Exists("MyData2");
-			using (var documentStore = new EmbeddableDocumentStore
+			using (var store = new DocumentStore
 			{
-				Configuration =
-				{
-					DataDirectory = "MyData2",
-				},
-				UseEmbeddedHttpServer = true
-			})
+				DefaultDatabase = "nw",
+				Url = "http://localhost:8080"
+			}.Initialize())
 			{
-				documentStore.Initialize();
-				if (emptyDB) SetupSampleData(documentStore);
-				
-				using (var session = documentStore.OpenSession())
+				var company = "companies/1";
+				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Foo>(new FooIndex().IndexName);
+					var result = session.Query<OrderTotalResult>("Orders/Totals")
+					       .Where(x => x.Company == company)
+					       .AggregateBy(x => x.Employee,"Sales By Employee")
+					       .SumOn(x => x.Total)
+					       .ToList();
 
-					// Docs are stored in session by default!!!
-					// query.NoTracking();
-
-					QueryHeaderInformation stats;
-					var enumerator = session.Advanced.Stream(query, out stats);
-					var count = 0;
-					while (enumerator.MoveNext())
+					foreach (var facetResult in result.Results)
 					{
-						count++;
-						if (count % 100 == 0) Console.WriteLine(count);
-
-						// If we don't consume the docs fast enough, they will eat all your memory
-						// Thread.Sleep(1000);
+						Console.WriteLine(facetResult.Key);
+						foreach (var singleResult in facetResult.Value.Values)
+						{
+							Console.WriteLine("\t{0}: {1}", singleResult.Range, singleResult.Sum);
+						}
 					}
-				}
-			}
-			Console.ReadLine();
-		}
 
-		private static void SetupSampleData(EmbeddableDocumentStore documentStore)
-		{
-			new FooIndex().Execute(documentStore);
-
-			for (var j = 0; j < 1000; j++)
-			{
-				using (var session = documentStore.OpenSession())
-				{
-					for (var i = 0; i < 128; i++)
-					{
-						var foo = new Foo { Something = new Guid().ToString(), Payload = new string('x', 10 * 1024) };
-						session.Store(foo);
-					}
-					session.SaveChanges();
 				}
 			}
 		}
+	}
 
-		public class FooIndex : AbstractIndexCreationTask<Foo>
-		{
-			public FooIndex()
-			{
-				Map = foos => from foo in foos select new { foo.Something };
-			}
-		}
+	public class OrderTotalResult
+	{
+		public string Employee, Company;
+		public decimal Total;
+	}
+}
 
-		public class Foo
-		{
-			public string Id { get; set; }
-			public string Something { get; set; }
-			public string Payload { get; set; }
-		}
+namespace Orders
+{
+	public class Company
+	{
+		public string Id { get; set; }
+		public string ExternalId { get; set; }
+		public string Name { get; set; }
+		public Contact Contact { get; set; }
+		public Address Address { get; set; }
+		public string Phone { get; set; }
+		public string Fax { get; set; }
+	}
+
+	public class Address
+	{
+		public string Line1 { get; set; }
+		public string Line2 { get; set; }
+		public string City { get; set; }
+		public string Region { get; set; }
+		public string PostalCode { get; set; }
+		public string Country { get; set; }
+	}
+
+	public class Contact
+	{
+		public string Name { get; set; }
+		public string Title { get; set; }
+	}
+
+	public class Category
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public string Description { get; set; }
+	}
+
+	public class Order
+	{
+		public string Id { get; set; }
+		public string Company { get; set; }
+		public string Employee { get; set; }
+		public DateTime OrderedAt { get; set; }
+		public DateTime RequireAt { get; set; }
+		public DateTime? ShippedAt { get; set; }
+		public Address ShipTo { get; set; }
+		public string ShipVia { get; set; }
+		public decimal Freight { get; set; }
+		public List<OrderLine> Lines { get; set; }
+	}
+
+	public class OrderLine
+	{
+		public string Product { get; set; }
+		public string ProductName { get; set; }
+		public decimal PricePerUnit { get; set; }
+		public int Quantity { get; set; }
+		public decimal Discount { get; set; }
+	}
+
+	public class Product
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public string Supplier { get; set; }
+		public string Category { get; set; }
+		public string QuantityPerUnit { get; set; }
+		public decimal PricePerUser { get; set; }
+		public int UnitsInStock { get; set; }
+		public int UnitsOnOrder { get; set; }
+		public bool Discontinued { get; set; }
+		public int ReorderLevel { get; set; }
+	}
+
+	public class Supplier
+	{
+		public string Id { get; set; }
+		public Contact Contact { get; set; }
+		public string Name { get; set; }
+		public Address Address { get; set; }
+		public string Phone { get; set; }
+		public string Fax { get; set; }
+		public string HomePage { get; set; }
+	}
+
+	public class Employee
+	{
+		public string Id { get; set; }
+		public string LastName { get; set; }
+		public string FirstName { get; set; }
+		public string Title { get; set; }
+		public Address Address { get; set; }
+		public DateTime HiredAt { get; set; }
+		public DateTime Birthday { get; set; }
+		public string HomePhone { get; set; }
+		public string Extension { get; set; }
+		public string ReportsTo { get; set; }
+		public List<string> Notes { get; set; }
+
+		public List<string> Territories { get; set; }
+	}
+
+	public class Region
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public List<Territory> Territories { get; set; }
+	}
+
+	public class Territory
+	{
+		public string Code { get; set; }
+		public string Name { get; set; }
+	}
+
+	public class Shipper
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public string Phone { get; set; }
 	}
 }
