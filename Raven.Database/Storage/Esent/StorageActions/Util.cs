@@ -30,7 +30,7 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				if (existingEtag != etag)
 				{
-					if (etag == Etag.InvalidEtag)
+					if (etag == Etag.Empty)
 					{
 						var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 						if (metadata.ContainsKey(Constants.RavenDeleteMarker) &&
