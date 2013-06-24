@@ -16,6 +16,7 @@ using System.Linq;
 using Raven.Abstractions.Linq;
 using Raven.Database.Indexing;
 using Spatial4n.Core.Shapes;
+using Spatial4n.Core.Util;
 
 namespace Raven.Database.Linq
 {
@@ -191,6 +192,24 @@ namespace Raven.Database.Linq
 		#region Spatial index
 
 		private ConcurrentDictionary<string, SpatialField> SpatialFields { get; set; }
+
+		public IEnumerable<IFieldable> SpatialClustering(string fieldName, double? lat, double? lng, 
+			int minPrecision = 3,
+			int maxPrecision = 8)
+		{
+			if (string.IsNullOrEmpty(fieldName))
+				throw new ArgumentNullException("fieldName");
+			if (lng == null || double.IsNaN(lng.Value))
+				yield break;
+			if (lat == null || double.IsNaN(lat.Value))
+				yield break;
+
+			for (int i = minPrecision; i < (maxPrecision + 1); i++)
+			{
+				var geohash = GeohashUtils.EncodeLatLon(lat.Value, lng.Value, i);
+				yield return new Field(fieldName + "_" + i, geohash, Field.Store.NO, Field.Index.NOT_ANALYZED, Field.TermVector.NO);
+			}
+		}
 
 		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
 		{

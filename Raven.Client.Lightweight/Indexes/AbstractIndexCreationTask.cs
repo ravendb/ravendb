@@ -86,6 +86,24 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Generate field with values that can be used for spatial clustering on the lat/lng coordinates
+		/// </summary>
+		public object SpatialClustering(string fieldName, double? lat, double? lng)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
+		/// Generate field with values that can be used for spatial clustering on the lat/lng coordinates
+		/// </summary>
+		public object SpatialClustering(string fieldName, double? lat, double? lng,
+		                                                 int minPrecision,
+		                                                 int maxPrecision)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
 		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 		/// </summary>
 		/// <param name="fieldName">The field name, will be used for querying</param>
