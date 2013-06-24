@@ -58,6 +58,7 @@ namespace Raven.Bundles.Replication.Responders
 			if (ReplicationTask != null) 
 				ReplicationTask.HandleHeartbeat(src);
 			using (Database.DisableAllTriggersForCurrentThread())
+			using(Database.PutSerialLock())
 			{
 				Database.TransactionalStorage.Batch(actions =>
 				{

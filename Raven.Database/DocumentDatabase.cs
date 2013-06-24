@@ -126,6 +126,9 @@ namespace Raven.Database
 		/// </summary>
 		private readonly object putSerialLock = new object();
 
+		private readonly IDisposable exitSerialLock;
+
+
 		/// <summary>
 		/// Requires to avoid having serialize writes to the same attachments
 		/// </summary>
@@ -151,6 +154,7 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration)
 		{
+			exitSerialLock = new DisposableAction(() => Monitor.Exit(putSerialLock));
 			this.configuration = configuration;
 
 			using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
@@ -677,6 +681,12 @@ namespace Raven.Database
 				actions.Documents.PutDocumentMetadata(key, metadata);
 				workContext.ShouldNotifyAboutWork(() => "PUT (metadata) " + key);
 			});
+		}
+
+		internal IDisposable PutSerialLock()
+		{
+			Monitor.Enter(putSerialLock);
+			return exitSerialLock;
 		}
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
