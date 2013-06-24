@@ -37,6 +37,7 @@ namespace Raven.Tests.Transactions
 			var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
 
@@ -65,6 +66,7 @@ namespace Raven.Tests.Transactions
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			var docInTx = db.Get("ayende", transactionInformation);
+			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 			var docAfterTx = db.Get("ayende", null);
 

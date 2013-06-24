@@ -8,8 +8,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Transactions
@@ -57,6 +55,7 @@ namespace Raven.Tests.Transactions
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Delete("ayende", null, transactionInformation);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
 			Assert.Equal("rahien", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
@@ -69,6 +68,7 @@ namespace Raven.Tests.Transactions
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Delete("ayende", null, transactionInformation);
+			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
 			Assert.Null(db.Get("ayende", null));
