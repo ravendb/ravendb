@@ -18,7 +18,7 @@ namespace Raven.Database.Json
 			public ConcurrentQueue<Jint.JintEngine> Queue;
 		}
 
-		private const int CacheMaxSize = 250;
+		private const int CacheMaxSize = 25;
 
 		private readonly ConcurrentDictionary<ScriptedPatchRequest, CachedResult> cacheDic =
 			new ConcurrentDictionary<ScriptedPatchRequest, CachedResult>();
@@ -81,7 +81,7 @@ namespace Raven.Database.Json
 				foreach (var source in cacheDic
 					.OrderByDescending(x => x.Value.Usage)
 					.ThenBy(x => x.Value.Timestamp)
-					.Skip(CacheMaxSize))
+					.Skip(CacheMaxSize - CacheMaxSize/10))
 				{
 					if (Equals(source.Key, request))
 						continue; // we don't want to remove the one we just added
