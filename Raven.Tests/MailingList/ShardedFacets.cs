@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Tests.Helpers;
@@ -19,8 +20,10 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void FacetTest()
 		{
-			using (var ds1 = this.NewDocumentStore())
-			using (var ds2 = this.NewDocumentStore())
+			using (GetNewServer(8079, dataDirectory:"Data1"))
+			using (GetNewServer(8078, dataDirectory: "Data2"))
+			using (var ds1 = CreateDocumentStore(8079))
+			using (var ds2 = CreateDocumentStore(8078))
 			{
 				var sharded = new ShardedDocumentStore(
 					new ShardStrategy(
@@ -59,6 +62,18 @@ namespace Raven.Tests.MailingList
 							.ToFacets(new[] { new Facet { Name = "Name" } }).Results);
 				}
 			}
+		}
+
+		private static IDocumentStore CreateDocumentStore(int port)
+		{
+			return new DocumentStore
+			{
+				Url = string.Format("http://localhost:{0}/", port),
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
+			};
 		}
 
 		public class Tags_ByName : AbstractIndexCreationTask<Tag>
