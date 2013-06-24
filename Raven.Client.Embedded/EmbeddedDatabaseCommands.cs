@@ -592,15 +592,28 @@ namespace Raven.Client.Embedded
 
 		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
 		{
-			task.ContinueWith(_ => items.Add(null));
-			while (true)
+			try
 			{
-				var ravenJObject = items.Take();
-				if (ravenJObject == null)
-					break;
-				yield return ravenJObject;
+				task.ContinueWith(_ => items.Add(null));
+				while (true)
+				{
+					var ravenJObject = items.Take();
+					if (ravenJObject == null)
+						break;
+					yield return ravenJObject;
+				}
 			}
-			task.Wait();
+			finally
+			{
+				try
+				{
+					task.Wait();
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			}
+			
 		}
 
 		/// <summary>
