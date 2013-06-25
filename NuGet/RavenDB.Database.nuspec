@@ -27,6 +27,7 @@
 		<references>
 			<reference file="Raven.Abstractions.dll" />
 			<reference file="Raven.Database.dll" />
+			<reference file="Raven.Database-4.5.dll" />
 		</references>
 	</metadata>
 </package>
