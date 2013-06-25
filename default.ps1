@@ -439,13 +439,13 @@ task Upload -depends DoRelease {
 		$zipFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		$installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
 		
-		$files = @(@($installerFile, $installUploadCategory.Replace("RavenDB", "RavenDB Installer")) , @($zipFile, "$uploadCategory"))
+		$files = @(@($installerFile, $uploadCategory.Replace("RavenDB", "RavenDB Installer")) , @($zipFile, "$uploadCategory"))
 		
 		foreach ($obj in $files)
 		{
 			$file = $obj[0]
 			$currentUploadCategory = $obj[1]
-			write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
+			write-host "Executing: $uploader ""$currentUploadCategory"" ""$env:buildlabel"" $file ""$log"""
 			
 			$uploadTryCount = 0
 			while ($uploadTryCount -lt 5){
