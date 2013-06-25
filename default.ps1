@@ -439,18 +439,18 @@ task Upload -depends DoRelease {
 		$zipFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		$installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
 		
-		$files = @(@($installerFile, "$env:buildlabel Installer") , @($zipFile, $env:buildlabel))
+		$files = @(@($installerFile, $installUploadCategory.Replace("RavenDB", "RavenDB Installer")) , @($zipFile, "$uploadCategory"))
 		
 		foreach ($obj in $files)
 		{
 			$file = $obj[0]
-			$label = $obj[1]
+			$currentUploadCategory = $obj[1]
 			write-host "Executing: $uploader ""$global:uploadCategory"" ""$env:buildlabel"" $file ""$log"""
 			
 			$uploadTryCount = 0
 			while ($uploadTryCount -lt 5){
 				$uploadTryCount += 1
-				Exec { &$uploader "$uploadCategory" "$label" $file "$log" }
+				Exec { &$uploader "$currentUploadCategory" "$env:buildlabel" $file "$log" }
 				
 				if ($lastExitCode -ne 0) {
 					write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
