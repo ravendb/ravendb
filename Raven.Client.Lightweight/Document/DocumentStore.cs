@@ -653,14 +653,19 @@ namespace Raven.Client.Document
 #endif
 
 #if SILVERLIGHT
+			WebRequest.RegisterPrefix("http://", WebRequestCreator.ClientHttp);
+			WebRequest.RegisterPrefix("https://", WebRequestCreator.ClientHttp);
+			
 			// required to ensure just a single auth dialog
 			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
 				.ExecuteRequestAsync();
+			
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{
 				args.JsonRequest.WaitForTask = task;
 			};
 #endif
+
 			asyncDatabaseCommandsGenerator = () =>
 			{
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, Credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);

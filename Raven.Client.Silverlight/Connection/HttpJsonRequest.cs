@@ -11,6 +11,7 @@ using System.Net.Browser;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Ionic.Zlib;
 using Raven.Abstractions.Util;
@@ -100,12 +101,11 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			Url = requestParams.Url;
 			Method = requestParams.Method;
-			this.conventions = requestParams.Convention;
+			conventions = requestParams.Convention;
 			this.factory = factory;
 			
 			noopWaitForTask = new CompletedTask();
 			WaitForTask = noopWaitForTask;
-
 
 			handler = new HttpClientHandler
 			{
@@ -153,11 +153,28 @@ namespace Raven.Client.Silverlight.Connection
 
 			if (writeCalled == false)
 			{
-				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
-				                           .ConvertSecurityExceptionToServerNotFound()
-				                           .MaterializeBadRequestAsException()
-				                           .AddUrlIfFaulting(new Uri(Url));
+				Task<HttpResponseMessage> sendTask;
+				try
+				{
+					sendTask = httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url));
+				}
+				catch (Exception e)
+				{
+					throw;
+				}
+				try
+				{
+					Response = await sendTask;
+				}
+				catch (Exception e)
+				{
+					throw;
+				}
+				/* .ConvertSecurityExceptionToServerNotFound()
+											   .MaterializeBadRequestAsException()
+											   .AddUrlIfFaulting(new Uri(Url));*/
 			}
+
 
 			if (Response.IsSuccessStatusCode == false)
 				throw new ErrorResponseException(Response);
@@ -339,10 +356,10 @@ namespace Raven.Client.Silverlight.Connection
 					case "Content-Length":
 						break;
 					case "Content-Type":
-						//webRequest.ContentType = value;
+						httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
 						break;
 					default:
-						//webRequest.Headers[headerName] = value;
+						httpClient.DefaultRequestHeaders.Add(headerName, value);
 						break;
 				}
 			}
