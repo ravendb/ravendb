@@ -4,21 +4,31 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.utils.URIUtils;
 import org.apache.http.util.EntityUtils;
 
+import raven.abstractions.basic.CollectionUtils;
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.Holder;
 import raven.abstractions.closure.Action3;
+import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.Constants;
@@ -807,76 +817,124 @@ public class ServerClient implements IDatabaseCommands {
   }
 
 
-  protected MultiLoadResult directGet(String[] ids, String operationUrl, String[] includes, String transformer, Map<String, RavenJToken> queryInputs, boolean metadataOnly) {
-   /*FIXME
-    * var path = operationUrl + "/queries/?";
+  protected MultiLoadResult directGet(final String[] ids, final String operationUrl, final String[] includes, final String transformer, final Map<String, RavenJToken> queryInputs, final boolean metadataOnly) {
+
+    try {
+      String path = operationUrl + "/queries/?";
+
       if (metadataOnly)
         path += "&metadata-only=true";
-      if (includes != null && includes.Length > 0)
-      {
-        path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
+      if (includes != null && includes.length > 0) {
+        List<String> tokens = new ArrayList<>();
+        for (String include: includes) {
+          tokens.add("include=" + include);
+        }
+        path += StringUtils.join(tokens, "&");
       }
-          if (!string.IsNullOrEmpty(transformer))
-              path += "&transformer=" + transformer;
-
-
-      if (queryInputs != null)
-      {
-        path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+      if (StringUtils.isNotEmpty(transformer)) {
+        path += "&transformer=" + transformer;
       }
-        var metadata = new RavenJObject();
-      AddTransactionInformation(metadata);
-        var uniqueIds = new HashSet<string>(ids);
+
+      if (queryInputs != null) {
+        for (Entry<String, RavenJToken> queryInput: queryInputs.entrySet()) {
+          path += String.format("&qp-%s=%s", queryInput.getKey(), queryInput.getValue());
+        }
+      }
+
+      RavenJObject metadata = new RavenJObject();
+      addTransactionInformation(metadata);
+      Set<String> uniqueIds = new HashSet<>(Arrays.asList(ids));
       // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
       // we are fine with that, requests to load that many items are probably going to be rare
       HttpJsonRequest request;
-      if (uniqueIds.Sum(x => x.Length) < 1024)
-      {
-        path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-        request = jsonRequestFactory.CreateHttpJsonRequest(
-            new CreateHttpJsonRequestParams(this, path, "GET", metadata, credentials, convention)
-              .AddOperationHeaders(OperationsHeaders))
-              .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-      }
-      else
-      {
-        request = jsonRequestFactory.CreateHttpJsonRequest(
-            new CreateHttpJsonRequestParams(this, path, "POST", metadata, credentials, convention)
-              .AddOperationHeaders(OperationsHeaders))
-              .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-        request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
+      int uniqueIdsSum = 0;
+      for (String id: ids) {
+        uniqueIdsSum += id.length();
       }
 
+      if (uniqueIdsSum < 1024) {
+        for (String uniqueId: uniqueIds) {
+          path += "&id=" + UrlUtils.escapeDataString(uniqueId);
+        }
+        request = jsonRequestFactory.createHttpJsonRequest(
+            new CreateHttpJsonRequestParams(this, path, HttpMethods.GET, metadata, credentials, convention)
+            .addOperationHeaders(operationsHeaders))
+            .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
-      var result = (RavenJObject)request.ReadResponseJson();
-
-      var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
-          var multiLoadResult = new MultiLoadResult
-          {
-              Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList()
-          };
-
-            if(String.IsNullOrEmpty(transformer)) {
-                multiLoadResult.Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase))).ToList();
+      } else {
+        request = jsonRequestFactory.createHttpJsonRequest(
+            new CreateHttpJsonRequestParams(this, path, HttpMethods.POST, metadata, credentials, convention)
+            .addOperationHeaders(operationsHeaders))
+            .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+        request.write(RavenJArray.fromObject(uniqueIds).toString());
       }
-            else
-            {
-                multiLoadResult.Results = results;
+
+      RavenJObject result = (RavenJObject)request.readResponseJson();
+
+      Collection<RavenJObject> results = result.value(RavenJArray.class, "Results").values(RavenJObject.class);
+      MultiLoadResult multiLoadResult = new MultiLoadResult();
+      multiLoadResult.setIncludes(new ArrayList<RavenJObject>(result.value(RavenJArray.class, "Includes").values(RavenJObject.class)));
+
+      if (StringUtils.isEmpty(transformer)) {
+        List<RavenJObject> values = new ArrayList<>();
+        outerFor:
+        for (String id : ids) {
+
+          for (RavenJObject jObject : results) {
+            if (StringUtils.equals(id, jObject.get("@metadata").value(String.class, "@id"))) {
+              values.add(jObject);
+              continue outerFor;
             }
+          }
+          values.add(null);
+        }
+        multiLoadResult.setResults(values);
+      } else {
+        multiLoadResult.setResults(new ArrayList<RavenJObject>(results));
+      }
 
+      List<RavenJObject> docResults = new ArrayList<>();
+      docResults.addAll(multiLoadResult.getResults());
+      docResults.addAll(multiLoadResult.getIncludes());
 
-      var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
-
-      return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, transformer, queryInputs, metadataOnly));
-
-    */
-    return null;
+      return retryOperationBecauseOfConflict(docResults, multiLoadResult, new Function0<MultiLoadResult>() {
+        @Override
+        public MultiLoadResult apply() {
+          return directGet(ids, operationUrl, includes, transformer, queryInputs, metadataOnly);
+        }
+      });
+    } catch (IOException e) {
+      throw new ServerClientException(e);
+    }
   }
 
 
-  //TODO: private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+  private <T> T retryOperationBecauseOfConflict(List<RavenJObject> docResults, T currentResult, Function0<T> nextTry) {
+
+    /*FIXME:
+     *
+     *
+     * bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
+      if (!requiresRetry)
+        return currentResult;
+
+      if (resolvingConflictRetries)
+        throw new InvalidOperationException(
+          "Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+      resolvingConflictRetries = true;
+      try
+      {
+        return nextTry();
+      }
+      finally
+      {
+        resolvingConflictRetries = false;
+      }
+     *
+     */
+    return null;
+  }
 
   //TODO :private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
 
@@ -975,7 +1033,7 @@ public class ServerClient implements IDatabaseCommands {
   protected Long directNextIdentityFor(String name, String operationUrl) {
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
         new CreateHttpJsonRequestParams(this, operationUrl + "/identity/next?name=" + UrlUtils.escapeDataString(name),
-        HttpMethods.POST, new RavenJObject(), credentials, convention)
+            HttpMethods.POST, new RavenJObject(), credentials, convention)
         .addOperationHeaders(operationsHeaders));
     try {
       RavenJToken ravenJToken = jsonRequest.readResponseJson();
@@ -1052,7 +1110,9 @@ public class ServerClient implements IDatabaseCommands {
   //TODO: public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
 
 
-  //FIXME: public IDisposable DisableAllCaching()
+  public AutoCloseable disableAllCaching() {
+    return jsonRequestFactory.disableAllCaching();
+  }
 
   /**
    * @return the profilingInformation
@@ -1061,7 +1121,25 @@ public class ServerClient implements IDatabaseCommands {
     return profilingInformation;
   }
 
-  //TODO:public RavenJToken GetOperationStatus(long id)
+
+  public RavenJToken getOperationStatus(long id) {
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders));
+    try
+    {
+      return request.readResponseJson();
+    }
+    catch (HttpOperationException e)
+    {
+      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        return null;
+      }
+      throw e;
+    } catch (IOException e ){
+      throw new ServerClientException(e);
+    }
+  }
 
   //TODO: public IDisposable Expect100Continue()
 

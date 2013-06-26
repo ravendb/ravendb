@@ -6,6 +6,8 @@ import org.junit.Test;
 
 public class EtagTest {
 
+
+  //TODO: finish tests
   @Test
   public void testEmpty() {
     assertEquals("00000000-0000-0000-0000-000000000000", Etag.empty().toString());

@@ -10,6 +10,8 @@ import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
@@ -30,6 +32,7 @@ import raven.abstractions.data.Constants;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.client.RavenJObjectsTest.Person;
 import raven.client.connection.ServerClient;
@@ -40,6 +43,12 @@ public class Sandbox {
 
     String text = "this is sample text";
     byte[] textBytes = text.getBytes();
+
+    Set<String> s1 =new HashSet<>();
+    s1.add("df");
+    s1.add("aa");
+    String string = RavenJArray.fromObject(s1).toString();
+    System.out.println(string);
 
   }
   @Test
