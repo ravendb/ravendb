@@ -2,6 +2,7 @@ package raven.client.connection;
 
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpResponse;
 
 import raven.abstractions.data.Etag;
 
@@ -10,7 +11,8 @@ public class HttpExtensions {
     return etagHeaderToEtag(request.getResponseHeaders().get("ETag"));
   }
 
-  private static Etag etagHeaderToEtag(String responseHeader) {
+
+  static Etag etagHeaderToEtag(String responseHeader) {
     if (StringUtils.isEmpty(responseHeader)) {
       throw new IllegalArgumentException("Response didn't had an ETag header.");
     }
@@ -18,5 +20,9 @@ public class HttpExtensions {
       return Etag.parse(responseHeader.substring(1, responseHeader.length() - 2));
     }
     return Etag.parse(responseHeader);
+  }
+
+  public static Etag getEtagHeader(HttpResponse httpResponse) {
+    return etagHeaderToEtag(httpResponse.getFirstHeader("Etag").getValue());
   }
 }

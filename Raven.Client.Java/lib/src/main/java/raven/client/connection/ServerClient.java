@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -17,14 +16,11 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.utils.URIUtils;
 import org.apache.http.util.EntityUtils;
 
-import raven.abstractions.basic.CollectionUtils;
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.Holder;
 import raven.abstractions.closure.Action3;
@@ -238,33 +234,40 @@ public class ServerClient implements IDatabaseCommands {
       return SerializationHelper.deserializeJsonDocument(docKey, responseJson, request.getResponseHeaders(), request.getResponseStatusCode());
 
     } catch (HttpOperationException e) {
-      HttpOperationException httpException = e;
       HttpResponse httpWebResponse = e.getHttpResponse();
       if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_NOT_FOUND) {
         return null;
       } else if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_CONFLICT) {
-        /*FIXME: rewrite
-        var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-        var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
-        var etag = httpWebResponse.GetEtagHeader();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
 
-        var concurrencyException = TryResolveConflictOrCreateConcurrencyException(key, conflictsDoc, etag);
-        if (concurrencyException == null)
-        {
-          if (resolvingConflictRetries)
-            throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+          RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+          Etag etag = HttpExtensions.getEtagHeader(e.getHttpResponse());
 
-          resolvingConflictRetries = true;
-          try
-          {
-            return DirectGet(serverUrl, key);
+          ConflictException concurrencyException = tryResolveConflictOrCreateConcurrencyException(key, conflictsDoc, etag);
+
+          if (concurrencyException == null) {
+            if (resolvingConflictRetries) {
+              throw new IllegalStateException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+            }
+
+            resolvingConflictRetries = true;
+            try {
+              return directGet(serverUrl, key);
+            } finally {
+              resolvingConflictRetries = false;
+            }
           }
-          finally
-          {
-            resolvingConflictRetries = false;
-          }
+          throw concurrencyException;
+
+
+        } catch (IOException e1) {
+          throw new ServerClientException(e1);
+        } finally {
+          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
-        throw concurrencyException;*/
+
       }
       throw new ServerClientException(e);
     } catch (Exception e) {
@@ -273,17 +276,14 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   private void handleReplicationStatusChanges(Map<String, String> headers, String primaryUrl, String currentUrl) {
-    /* FIXME: rewrite me
-     * if (!primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
-      {
-        var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
-        bool shouldForceCheck;
-        if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
-        {
-          this.replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
-        }
+    if (!primaryUrl.equalsIgnoreCase(currentUrl)) {
+      String forceCheck = headers.get(Constants.RAVEN_FORCE_PRIMARY_SERVER_CHECK);
+      boolean shouldForceCheck;
+      if (StringUtils.isNotEmpty(forceCheck)) {
+        shouldForceCheck = Boolean.valueOf(forceCheck);
+        replicationInformer.forceCheck(primaryUrl, shouldForceCheck);
       }
-     */
+    }
   }
 
   private ConflictException tryResolveConflictOrCreateConcurrencyException(String key, RavenJObject conflictsDoc, Etag etag) {
@@ -912,31 +912,44 @@ public class ServerClient implements IDatabaseCommands {
 
   private <T> T retryOperationBecauseOfConflict(List<RavenJObject> docResults, T currentResult, Function0<T> nextTry) {
 
-    /*FIXME:
-     *
-     *
-     * bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
-      if (!requiresRetry)
-        return currentResult;
+    boolean requiresRetry = false;
+    for (RavenJObject docResult: docResults) {
+      requiresRetry |= assertNonConflictedDocumentAndCheckIfNeedToReload(docResult);
+    }
+    if (!requiresRetry) {
+      return currentResult;
+    }
 
-      if (resolvingConflictRetries)
-        throw new InvalidOperationException(
-          "Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
-      resolvingConflictRetries = true;
-      try
-      {
-        return nextTry();
+    if (resolvingConflictRetries) {
+      throw new IllegalStateException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+    }
+    resolvingConflictRetries = true;
+    try {
+      return nextTry.apply();
+    } finally {
+      resolvingConflictRetries = false;
+    }
+  }
+  private boolean assertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult) {
+    if (docResult == null) {
+      return false;
+    }
+    RavenJToken metadata = docResult.get(Constants.METADATA);
+    if (metadata == null) {
+      return false;
+    }
+
+    if (metadata.value(Integer.class, "@Http-Status-Code") == 409) {
+      ConflictException concurrencyException = tryResolveConflictOrCreateConcurrencyException(metadata.value(String.class, "@id"), docResult, HttpExtensions.etagHeaderToEtag(metadata.value(String.class, "@etag")));
+      if (concurrencyException == null) {
+        return true;
       }
-      finally
-      {
-        resolvingConflictRetries = false;
-      }
-     *
-     */
-    return null;
+      throw concurrencyException;
+    }
+    return false;
   }
 
-  //TODO :private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
+
 
   //TODO: public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 
@@ -1075,7 +1088,12 @@ public class ServerClient implements IDatabaseCommands {
       if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
         return null;
       } else if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
-        //TODO: throw conflict exception
+        ConflictException conflictException = new ConflictException("Conflict detected on " + key +
+            ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because" +
+            " a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true);
+        conflictException.setEtag(HttpExtensions.getEtagHeader(e.getHttpResponse()));
+
+        throw conflictException;
       }
       throw new ServerClientException(e);
     } catch (Exception e) {

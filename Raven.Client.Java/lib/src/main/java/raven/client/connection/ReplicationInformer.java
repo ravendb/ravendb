@@ -81,4 +81,9 @@ public class ReplicationInformer {
 
   }
 
+  public void forceCheck(String primaryUrl, boolean shouldForceCheck) {
+    // TODO Auto-generated method stub
+
+  }
+
 }

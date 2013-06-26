@@ -2,7 +2,7 @@ package raven.client.exceptions;
 
 import raven.abstractions.data.Etag;
 
-public class ConflictException extends Exception {
+public class ConflictException extends RuntimeException {
   private String[] conflictedVersionIds;
   private Etag etag;
   /**
