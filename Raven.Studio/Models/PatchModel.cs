@@ -454,10 +454,8 @@ namespace Raven.Studio.Models
 
         public void HandlePatchError(AggregateException exception)
         {
-            var actualException = exception.ExtractSingleInnerException();
-
-            var message = actualException.TryReadResponseIfWebException().TryReadErrorPropertyFromJson();
-            PatchScriptErrorMessage.Value = string.IsNullOrEmpty(message) ? actualException.Message : message;
+			var message = exception.TryReadResponseIfWebException().Result.TryReadErrorPropertyFromJson();
+			PatchScriptErrorMessage.Value = string.IsNullOrEmpty(message) ? exception.ExtractSingleInnerException().Message : message;
             IsErrorVisible.Value = true;
         }
         

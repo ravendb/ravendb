@@ -951,16 +951,11 @@ namespace Raven.Client.Connection
 
                 if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
                 {
-                    var error = e.TryReadErrorResponseObject(
-                        new { Error = "", Message = "" });
+                    var error = e.TryReadErrorResponseObject(new { Error = "", Message = "" });
+	                if (error == null)
+		                throw;
 
-                    if (error == null)
-                    {
-                        throw;
-                    }
-
-                    var compilationException = new TransformCompilationException(error.Message);
-
+	                var compilationException = new TransformCompilationException(error.Message);
                     throw compilationException;
                 }
 

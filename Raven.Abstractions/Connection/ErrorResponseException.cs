@@ -3,9 +3,8 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 
-namespace Raven.Client.Connection
+namespace Raven.Abstractions.Connection
 {
 #if !NETFX_CORE && !SILVERLIGHT
 	[Serializable]

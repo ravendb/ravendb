@@ -45,6 +45,7 @@ namespace Raven.Abstractions.Extensions
 			             .Unwrap();
 		}
 
+#if !SILVERLIGHT && !NETFX_CORE
         public static Task<T> MaterializeBadRequestAsException<T>(this Task<T> parent)
         {
             return parent.ContinueWith(t =>
@@ -71,6 +72,7 @@ namespace Raven.Abstractions.Extensions
                 }
             });
         }
+#endif
 
 		public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
 		{
