@@ -3,6 +3,8 @@ package raven.abstractions.json.linq;
 import java.util.ArrayList;
 import java.util.List;
 
+import raven.abstractions.exceptions.RavenJPathEvaluationException;
+
 public class RavenJPath {
 
   private String expression;
@@ -89,7 +91,7 @@ public class RavenJPath {
     this.parts.add(Integer.parseInt(indexer));
   }
 
-  public RavenJToken evaluate(RavenJToken root, boolean errorWhenNoMatch) throws Exception {
+  public RavenJToken evaluate(RavenJToken root, boolean errorWhenNoMatch) {
     RavenJToken current = root;
 
     for (Object part : parts) {
@@ -100,7 +102,7 @@ public class RavenJPath {
           current = o.get(propertyName);
 
           if (current == null && errorWhenNoMatch)
-            throw new Exception("Property '" + propertyName + "' does not exist on RavenJObject.");
+            throw new RavenJPathEvaluationException("Property '" + propertyName + "' does not exist on RavenJObject.");
         } else {
           RavenJArray array = (RavenJArray) current;
           if (array != null) {
@@ -109,17 +111,20 @@ public class RavenJPath {
               case "count":
               case "Length":
               case "length":
-                //TODO: ???? current = array.size();
+              case "Size":
+              case "size":
+                current = new RavenJValue(array.size());
                 break;
               default:
-                if (errorWhenNoMatch)
-                  throw new Exception("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
+                if (errorWhenNoMatch){
+                  throw new RavenJPathEvaluationException("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
+                }
                 break;
             }
             continue;
           }
           if (errorWhenNoMatch)
-            throw new Exception("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
+            throw new RavenJPathEvaluationException("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
 
           return null;
         }
@@ -139,7 +144,7 @@ public class RavenJPath {
           current = a.get(index);
         } else {
           if (errorWhenNoMatch)
-            throw new Exception("Index " + index + " not valid on " + current.getType().name() + ".");
+            throw new RavenJPathEvaluationException("Index " + index + " not valid on " + current.getType().name() + ".");
 
           return null;
         }

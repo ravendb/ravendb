@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.apache.commons.beanutils.ConvertUtils;
 
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.Etag;
 
 public class Extensions {
 
@@ -34,7 +35,6 @@ public class Extensions {
     return values(source, null);
   }
 
-  //TODO: fixme
   private static <U> Iterable<U> values(Class<U> clazz, Iterable<RavenJToken> source, String key) {
     return new RavenJTokenIterable(clazz, source, key);
   }
@@ -52,7 +52,7 @@ public class Extensions {
     return convert(clazzU, token);
   }
 
-  private static <U> U convert(Class<U> clazz, RavenJToken token) {
+  public static <U> U convert(Class<U> clazz, RavenJToken token) {
     if (token instanceof RavenJArray && RavenJObject.class.equals(clazz)) {
       RavenJArray ar = (RavenJArray) token;
       RavenJObject o = new RavenJObject();
@@ -98,18 +98,10 @@ public class Extensions {
       return (U) value.getValue();
     }
 
-    //Type targetType = typeof(U);
-    //TODO: fixme
     if (!clazz.isPrimitive()) {
       if (value.getValue() == null) {
-        try {
-          return clazz.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-          //TODO: implement
-        }
+        return null;
       }
-
-      //targetType = Nullable.GetUnderlyingType(targetType);
     }
     if (clazz.equals(UUID.class)) {
       //is it needed?
@@ -119,13 +111,15 @@ public class Extensions {
 
       return (U) UUID.fromString(value.getValue().toString());
     }
+    if (clazz.equals(Etag.class)) {
+      if (value.getValue() == null) {
+        return (U) new Etag();
+      }
+      return (U) Etag.parse(value.getValue().toString());
+    }
     if (clazz.equals(String.class)) {
       if (value.getValue() == null) {
-        try {
-          return clazz.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-          //TODO: implement
-        }
+        return (U) new String();
       }
       return (U) (Object) value.getValue().toString();
     }
@@ -176,7 +170,6 @@ public class Extensions {
 
       @Override
       public boolean hasNext() {
-        // TODO Auto-generated method stub
         return sourceIterator.hasNext();
       }
 
@@ -208,7 +201,5 @@ public class Extensions {
     }
 
   }
-
-
 
 }

@@ -245,28 +245,12 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   @SuppressWarnings("unchecked")
   @Override
   public <T> T value(Class<T> clazz, String key) {
-    //TODO: finish me!
-    // externalize converter
-
     if (!containsKey(key)) {
       throw new IllegalArgumentException("Object does not contain key: " + key);
     }
     RavenJToken ravenJToken = get(key);
     if (ravenJToken != null) {
-      RavenJValue ravenValue = (RavenJValue) ravenJToken;
-      switch (ravenJToken.getType()) {
-        case STRING:
-          if (String.class.isAssignableFrom(clazz)) {
-            return (T) ((RavenJValue) ravenJToken).getValue();
-          } else if (UUID.class.isAssignableFrom(clazz)) {
-            return (T) UUID.fromString((String) ravenValue.getValue());
-          }
-          break;
-        case BOOLEAN:
-          if (Boolean.class.isAssignableFrom(clazz)) {
-            return (T) ravenValue.getValue();
-          }
-      }
+      return Extensions.convert(clazz, ravenJToken);
     }
     throw new IllegalArgumentException("Unsupported conversion. From:" + ravenJToken.getType() + " to "
       + clazz.getCanonicalName());
