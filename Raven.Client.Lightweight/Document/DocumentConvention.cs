@@ -229,7 +229,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
-			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
+			return conventions.FindTypeTagName(entity.GetType()) + "/";
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
