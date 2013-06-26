@@ -160,8 +160,8 @@ namespace Raven.Storage.Esent.StorageActions
 		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
 		{
 			var hasResult = false;
-            var result = new ScheduledReductionInfo();
-            if (itemsToDelete != null)
+			var result = new ScheduledReductionInfo();
+		    if (itemsToDelete != null)
 		    {
 		        var currentEtagBinary = Guid.Empty.ToByteArray();
 		        foreach (OptimizedDeleter reader in itemsToDelete)
