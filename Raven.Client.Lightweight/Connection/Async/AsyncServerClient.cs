@@ -1098,7 +1098,7 @@ namespace Raven.Client.Connection.Async
 				request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				var result = (RavenJObject) await request.ReadResponseJsonAsync();
-				return AttemptToProcessResponse(() => SerializationHelper.ToQueryResult(result, request.GetEtagHeader(), request.Response.Headers.GetValues("Temp-Request-Time").FirstOrDefault()));
+				return AttemptToProcessResponse(() => SerializationHelper.ToQueryResult(result, request.GetEtagHeader(), request.Response.Headers.GetFirstValue("Temp-Request-Time")));
 			});
 		}
 
