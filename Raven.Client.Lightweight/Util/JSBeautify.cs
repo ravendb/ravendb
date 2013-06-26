@@ -440,7 +440,7 @@ namespace Raven.Client.Util
 					}
 					else
 					{
-						return new string[] { sharp, "TK_OPERATOR" }; ;
+						return new string[] { sharp, "TK_OPERATOR" };
 					}
 				}
 			}
@@ -449,7 +449,7 @@ namespace Raven.Client.Util
 			if ((c == "<") && (input.Substring(parser_pos - 1, 3) == "<!--"))
 			{
 				parser_pos += 3;
-				return new string[] { "<!--", "TK_COMMENT" }; ;
+				return new string[] { "<!--", "TK_COMMENT" };
 			}
 
 			if ((c == "-") && (input.Substring(parser_pos - 1, 2) == "-->"))
