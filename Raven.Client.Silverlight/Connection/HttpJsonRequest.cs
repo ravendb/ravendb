@@ -402,20 +402,13 @@ namespace Raven.Client.Silverlight.Connection
 			writeCalled = true;
 			postedData = byteArray;
 
-			try
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
-				{
-					Content = new CompressedStreamContent(byteArray)
-				});
+				Content = new CompressedStreamContent(byteArray)
+			});
 
-				if (Response.IsSuccessStatusCode == false)
-					throw new ErrorResponseException(Response);
-			}
-			catch (Exception e)
-			{
-				throw;
-			}
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 		}
 
 		/// <summary>

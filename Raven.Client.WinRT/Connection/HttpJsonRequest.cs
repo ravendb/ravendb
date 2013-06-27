@@ -290,17 +290,13 @@ namespace Raven.Client.WinRT.Connection
 			writeCalled = true;
 			postedData = byteArray;
 
-			using (var stream = new MemoryStream(byteArray))
-			using (var dataStream = new GZipStream(stream, CompressionMode.Compress))
+			Response = await httpClient.SendAsync(new HttpRequestMessage(method, url)
 			{
-				Response = await httpClient.SendAsync(new HttpRequestMessage(method, url)
-				{
-					Content = new StreamContent(dataStream)
-				});
+				Content = new CompressedStreamContent(byteArray)
+			});
 
-				if (Response.IsSuccessStatusCode == false)
-					throw new ErrorResponseException(Response);
-			}
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 		}
 
 		/// <summary>
