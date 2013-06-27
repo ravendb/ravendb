@@ -52,7 +52,7 @@ namespace Raven.Tests.WinRT
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
-					await session.StoreAsync(new Company {Name = "Change the Stats, Inc."});
+					await session.StoreAsync(new Company {Id = "companies/1", Name = "Change the Stats, Inc."});
 					await session.SaveChangesAsync();
 				}
 
