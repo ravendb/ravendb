@@ -92,13 +92,9 @@ namespace Raven.Abstractions.Connection
 #if SILVERLIGHT
 		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
 		{
-			var rsa = new RSA.RSACrypto();
-			rsa.ImportParameters(new RSA.RSAParameters
-			{
-				E = exponent,
-				N = modulus
-			});
-			return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray());
+			// http://msdn.microsoft.com/en-us/library/cc265159(v=vs.95).aspx
+			// http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsacryptoserviceprovider(v=vs.95).aspx
+			return null;
 		}
 #elif NETFX_CORE
 		
