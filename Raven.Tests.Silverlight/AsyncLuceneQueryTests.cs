@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Silverlight.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -117,7 +118,7 @@ namespace Raven.Tests.Silverlight
 
 					if (query.Exception != null)
 					{
-						Assert.IsInstanceOfType(query.Exception.ExtractSingleInnerException(), typeof (WebException));
+						Assert.IsInstanceOfType(query.Exception.ExtractSingleInnerException(), typeof (ErrorResponseException));
 						yield break;
 					}
 
