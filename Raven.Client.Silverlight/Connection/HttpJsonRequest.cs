@@ -156,7 +156,10 @@ namespace Raven.Client.Silverlight.Connection
 				Task<HttpResponseMessage> sendTask;
 				try
 				{
-					sendTask = httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url));
+					sendTask = httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
+						.ConvertSecurityExceptionToServerNotFound()
+						// .MaterializeBadRequestAsException()
+						.AddUrlIfFaulting(new Uri(Url));
 				}
 				catch (Exception e)
 				{
@@ -170,9 +173,6 @@ namespace Raven.Client.Silverlight.Connection
 				{
 					throw;
 				}
-				/* .ConvertSecurityExceptionToServerNotFound()
-											   .MaterializeBadRequestAsException()
-											   .AddUrlIfFaulting(new Uri(Url));*/
 			}
 
 
