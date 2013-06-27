@@ -398,16 +398,12 @@ namespace Raven.Client.Connection.Async
 		/// <param name="id">The id.</param>
 		public Task DeleteDocumentAsync(string id)
 		{
-#if !SILVERLIGHT
-			throw new NotImplementedException();
-#else
 			return ExecuteWithReplication("DELETE", url =>
 			{
-			    return url.Docs(id)
-			        .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-			        .ExecuteRequestAsync();
+				return url.Doc(id)
+					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+					.ExecuteRequestAsync();
 			});
-#endif
 		}
 
 		/// <summary>
