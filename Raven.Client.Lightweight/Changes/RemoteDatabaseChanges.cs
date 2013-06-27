@@ -30,7 +30,9 @@ namespace Raven.Client.Changes
 		private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
 		private bool watchAllDocs;
 		private bool watchAllIndexes;
+#if !NETFX_CORE
 		private Timer clientSideHeartbeatTimer;
+#endif
 		private readonly string url;
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
@@ -78,11 +80,13 @@ namespace Raven.Client.Changes
 			if (disposed)
 				return;
 
+#if !NETFX_CORE
 			if (clientSideHeartbeatTimer != null)
 			{
 				clientSideHeartbeatTimer.Dispose();
 				clientSideHeartbeatTimer = null;
 			}
+#endif
 
 			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials,
 																conventions)
@@ -135,7 +139,10 @@ namespace Raven.Client.Changes
 			ConnectionStatusChanged(this, EventArgs.Empty);
 			connection = (IDisposable)serverEvents;
 			serverEvents.Subscribe(this);
+			
+#if !NETFX_CORE
 			clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+#endif
 
 			if (watchAllDocs)
 				await Send("watch-docs", null);
@@ -468,9 +475,11 @@ namespace Raven.Client.Changes
 			disposed = true;
 			onDispose();
 
+#if !NETFX_CORE
 			if (clientSideHeartbeatTimer != null)
 				clientSideHeartbeatTimer.Dispose();
 			clientSideHeartbeatTimer = null;
+#endif
 
 			return Send("disconnect", null).
 				ContinueWith(_ =>
