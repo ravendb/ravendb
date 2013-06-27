@@ -83,6 +83,7 @@
     <Compile Include="BasicSessionApiTests.cs" />
     <Compile Include="AsyncDatabaseCommandsTests.cs" />
     <Compile Include="Company.cs" />
+    <Compile Include="Indexes.cs" />
     <Compile Include="RavenTestBase.cs" />
   </ItemGroup>
   <Choose>

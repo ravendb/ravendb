@@ -267,7 +267,7 @@ namespace Raven.Client.Connection
 
 		internal void CacheResponse(string url, RavenJToken data, HttpResponseHeaders headers)
 		{
-			if (string.IsNullOrEmpty(headers.ETag.Tag))
+			if (headers.ETag == null || string.IsNullOrEmpty(headers.ETag.Tag))
 				return;
 
 			var clone = data.CloneToken();
