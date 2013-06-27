@@ -103,6 +103,7 @@
     <Compile Include="Connection\HttpRavenRequest.cs" />
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
+    <Compile Include="Connection\HttpResponseHeadersExtensions.cs" />
     <Compile Include="Connection\OAuthHelper.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />

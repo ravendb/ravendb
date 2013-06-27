@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -251,7 +252,7 @@ namespace Raven.Abstractions.Extensions
 		{
 			var filterHeaders = self.FilterHeaders();
 
-			string contentType = self.GetValues("Content-Type").FirstOrDefault();
+			string contentType = self.GetFirstValue("Content-Type");
 			if (contentType != null)
 				filterHeaders["Content-Type"] = contentType;
 
@@ -275,7 +276,7 @@ namespace Raven.Abstractions.Extensions
 						continue;
 					if (headersToIgnoreClient.Contains(header))
 						continue;
-					var valuesNonDistinct = self.GetValues(header);
+					var valuesNonDistinct = a.Value;
 					if (valuesNonDistinct == null)
 						continue;
 					var values = new HashSet<string>(valuesNonDistinct);

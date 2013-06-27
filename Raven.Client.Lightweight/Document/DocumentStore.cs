@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
@@ -542,7 +543,7 @@ namespace Raven.Client.Document
 
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
-				var oauthSource = unauthorizedResponse.Headers.GetValues("OAuth-Source").FirstOrDefault();
+				var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
@@ -588,7 +589,7 @@ namespace Raven.Client.Document
 			if (Credentials == null)
 				return;
 
-			var authHeaders = response.Headers.GetValues("WWW-Authenticate").FirstOrDefault();
+			var authHeaders = response.Headers.GetFirstValue("WWW-Authenticate");
 			if (authHeaders == null ||
 				(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
 				)
@@ -607,7 +608,7 @@ namespace Raven.Client.Document
 			if (Credentials == null)
 				return;
 
-			var requiredAuth = response.Headers.GetValues("Raven-Required-Auth").FirstOrDefault();
+			var requiredAuth = response.Headers.GetFirstValue("Raven-Required-Auth");
 			if (requiredAuth == "Windows")
 			{
 				// we are trying to do windows auth, but we didn't get the windows auth headers

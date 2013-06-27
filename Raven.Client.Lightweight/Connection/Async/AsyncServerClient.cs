@@ -654,7 +654,7 @@ namespace Raven.Client.Connection.Async
 			try
 			{
 				var requestJson = await request.ReadResponseJsonAsync();
-				var docKey = request.Response.Headers.GetValues(Constants.DocumentIdFieldName).FirstOrDefault() ?? key;
+				var docKey = request.Response.Headers.GetFirstValue(Constants.DocumentIdFieldName) ?? key;
 				docKey = Uri.UnescapeDataString(docKey);
 				request.Response.Headers.Remove(Constants.DocumentIdFieldName);
 				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.Response.Headers, request.Response.StatusCode);
@@ -1095,7 +1095,7 @@ namespace Raven.Client.Connection.Async
 				try
 				{
 					var result = (RavenJObject)await request.ReadResponseJsonAsync();
-					return SerializationHelper.ToQueryResult(result, request.GetEtagHeader(), request.Response.Headers.GetFirstValue("Temp-Request-Time"));
+					return SerializationHelper.ToQueryResult(result, request.Response.GetEtagHeader(), request.Response.Headers.GetFirstValue("Temp-Request-Time"));
 				}
 				catch (ErrorResponseException e)
 				{
@@ -1312,7 +1312,7 @@ namespace Raven.Client.Connection.Async
 					{
 						Data = () => memoryStream,
 						Size = result.Length,
-						Etag = request.GetEtagHeader(),
+						Etag = request.Response.GetEtagHeader(),
 						Metadata = request.Response.Headers.FilterHeadersAttachment()
 					};
 				}

@@ -77,7 +77,6 @@
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
-    <Compile Include="Connection\HttpResponseHeadersExtensions.cs" />
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />

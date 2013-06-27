@@ -223,7 +223,7 @@ namespace Raven.Client.Connection
 
 			if (additionalHeaders != null)
 			{
-				string forcePrimaryServerCHeck = additionalHeaders.GetValues(Constants.RavenForcePrimaryServerCheck).FirstOrDefault();
+				string forcePrimaryServerCHeck = additionalHeaders.GetFirstValue(Constants.RavenForcePrimaryServerCheck);
 				if (forcePrimaryServerCHeck != null)
 					httpJsonRequest.ResponseHeaders.Add(Constants.RavenForcePrimaryServerCheck, forcePrimaryServerCHeck);
 			}

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Connection;
 #if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
@@ -211,10 +212,10 @@ namespace Raven.Client.Connection
 
 		private static DateTime? GetLastModifiedDate(HttpResponseHeaders headers)
 		{
-			var lastModified = headers.GetValues(Constants.RavenLastModified).ToArray();
+			var lastModified = headers.GetAllValues(Constants.RavenLastModified);
 			if (lastModified == null || lastModified.Length != 1)
 			{
-				var dt = DateTime.ParseExact(headers.GetValues(Constants.LastModified).FirstOrDefault(), new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+				var dt = DateTime.ParseExact(headers.GetFirstValue(Constants.LastModified), new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 				return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
 			}
 			return DateTime.ParseExact(lastModified[0], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
@@ -237,7 +238,38 @@ namespace Raven.Client.Connection
 				throw new JsonReaderException("Invalid Json Response", jre);
 			}
 			var etag = headers.ETag.Tag;
-			string lastModified = headers.GetValues(Constants.RavenLastModified).FirstOrDefault() ?? headers.GetValues(Constants.LastModified).FirstOrDefault();
+			string lastModified = headers.GetFirstValue(Constants.RavenLastModified) ?? headers.GetFirstValue(Constants.LastModified);
+			var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+
+			return new JsonDocumentMetadata
+			{
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				Key = key,
+				Etag = HttpExtensions.EtagHeaderToEtag(etag),
+				LastModified = lastModifiedDate,
+				Metadata = meta
+			};
+		}
+
+		/// <summary>
+		/// Deserialize a request to a JsonDocument
+		/// </summary>
+		public static JsonDocumentMetadata DeserializeJsonDocumentMetadata(string key,
+																		   NameValueCollection headers,
+																		   HttpStatusCode statusCode)
+		{
+			RavenJObject meta = null;
+			try
+			{
+				meta = headers.FilterHeaders();
+			}
+			catch (JsonReaderException jre)
+			{
+				throw new JsonReaderException("Invalid Json Response", jre);
+			}
+			var etag = headers["ETag"];
+			string lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
 			var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 			var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
 
