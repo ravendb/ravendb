@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Net.Browser;
@@ -15,7 +16,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ionic.Zlib;
 using Raven.Abstractions.Util;
-using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;

@@ -6,11 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Connection;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-#endif
 using System.Globalization;
 using System.Linq;
 using System.Net;
