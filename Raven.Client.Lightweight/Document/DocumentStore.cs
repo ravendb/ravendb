@@ -730,8 +730,7 @@ namespace Raven.Client.Document
 		{
 			AssertInitialized();
 
-			return databaseChanges.GetOrAdd(database ?? DefaultDatabase,
-				CreateDatabaseChanges);
+			return databaseChanges.GetOrAdd(database ?? DefaultDatabase, CreateDatabaseChanges);
 		}
 
 		protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
