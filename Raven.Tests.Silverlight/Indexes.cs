@@ -172,9 +172,9 @@ namespace Raven.Tests.Silverlight
 				yield return documentStore.AsyncDatabaseCommands
 					.ForDatabase(dbname)
 					.PutIndexAsync("Test", new IndexDefinition
-					                       	{
-					                       		Map = "from doc in docs.Companies select new { doc.Name }"
-					                       	}, true);
+					{
+						Map = "from doc in docs.Companies select new { doc.Name }"
+					}, true);
 
 				var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexAsync("Test");
 				yield return task;
