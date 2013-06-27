@@ -1790,7 +1790,7 @@ namespace Raven.Client.Connection
 			try
 			{
 				request.ExecuteRequest();
-				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.Response.Headers, request.ResponseStatusCode);
+				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
 			}
 			catch (WebException e)
 			{

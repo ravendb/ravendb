@@ -36,11 +36,12 @@ namespace Raven.Client.Connection
 			return EtagHeaderToEtag(response.Headers["ETag"]);
 		}
 
-
+#if !SILVERLIGHT && !NETFX_CORE
 		public static Etag GetEtagHeader(this HttpJsonRequest request)
 		{
-			return EtagHeaderToEtag(request.Response.Headers.ETag.Tag);
+			return EtagHeaderToEtag(request.ResponseHeaders["ETag"]);
 		}
+#endif
 
 		internal static Etag EtagHeaderToEtag(string responseHeader)
 		{
