@@ -139,10 +139,10 @@ namespace Raven.Tests.WinRT
 				using (var session = store.OpenAsyncSession(dbname))
 				{
 					RavenQueryStatistics stats;
-					var companies = session.Query<Company>()
-					                   .Statistics(out stats)
-					                   .Where(x => x.Name == "Async Company #1")
-					                   .ToListAsync();
+					var companies = await session.Query<Company>()
+						.Statistics(out stats)
+						.Where(x => x.Name == "Async Company #1")
+						.ToListAsync();
 
 					Assert.AreEqual(1, stats.TotalResults);
 				}
