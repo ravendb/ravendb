@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -117,7 +118,10 @@ namespace Raven.Tests.WinRT
 					}
 					catch (AggregateException e)
 					{
-						Assert.IsInstanceOfType(e.ExtractSingleInnerException(), typeof(WebException));
+						var actualException = e.ExtractSingleInnerException();
+						Assert.ThrowsException<ErrorResponseException>(() => { throw actualException; });
+						Assert.IsTrue(actualException.Message.Contains("System.ArgumentException: The field 'NonIndexedField' is not indexed, cannot query on fields that are not indexed"));
+						return;
 					}
 
 					break;
