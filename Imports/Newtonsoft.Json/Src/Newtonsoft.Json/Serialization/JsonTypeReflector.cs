@@ -439,7 +439,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
         return LateBoundReflectionDelegateFactory.Instance;
 #elif !(PORTABLE40)
-        return ExpressionReflectionDelegateFactory.Instance;
+        return LateBoundReflectionDelegateFactory.Instance;
 #else
         return LateBoundReflectionDelegateFactory.Instance;
 #endif
