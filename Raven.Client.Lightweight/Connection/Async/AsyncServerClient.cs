@@ -151,8 +151,12 @@ namespace Raven.Client.Connection.Async
 
 				var json = (RavenJArray) await request.ReadResponseJsonAsync();
 				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-				return json.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject) x)["definition"].ToString(), new JsonToJsonConverter()))
-				           .ToArray();
+				return json.Select(x =>
+				{
+					var value = ((RavenJObject) x)["definition"].ToString();
+					return JsonConvert.DeserializeObject<IndexDefinition>(value, new JsonToJsonConverter());
+				})
+					.ToArray();
 			});
 		}
 
