@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Runtime.CompilerServices;
 using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
 using Raven.Abstractions;
 using Raven.Client;
@@ -22,9 +23,9 @@ namespace Raven.Tests.WinRT
 				      : "http://localhost:8079";
 		}
 
-		protected static string GenerateNewDatabaseName(string name)
+		protected static string GenerateNewDatabaseName([CallerMemberName] string memberName = "")
 		{
-			return name + "-" + SystemTime.UtcNow.Ticks;
+			return memberName + "-" + SystemTime.UtcNow.Ticks;
 		}
 
 		protected IDocumentStore NewDocumentStore()

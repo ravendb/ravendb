@@ -86,7 +86,7 @@ namespace Raven.Tests.WinRT
 		[TestMethod]
 		public async Task CanGetDeleteADocumentById()
 		{
-			var dbname = GenerateNewDatabaseName("AsyncDatabaseCommandsTests.CanGetDeleteADocumentById");
+			var dbname = GenerateNewDatabaseName();
 			using (var store = NewDocumentStore())
 			{
 				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
