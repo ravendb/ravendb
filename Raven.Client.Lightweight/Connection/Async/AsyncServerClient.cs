@@ -1322,7 +1322,7 @@ namespace Raven.Client.Connection.Async
 				}
 				catch (ErrorResponseException e)
 				{
-					if (e.StatusCode == HttpStatusCode.NotModified)
+					if (e.StatusCode == HttpStatusCode.NotFound)
 						return null;
 					if (e.StatusCode != HttpStatusCode.Conflict)
 						throw;

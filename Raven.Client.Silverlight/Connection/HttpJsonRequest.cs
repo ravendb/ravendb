@@ -351,16 +351,27 @@ namespace Raven.Client.Silverlight.Connection
 				    headerName == Constants.LastModified ||
 				    headerName == Constants.RavenLastModified)
 					continue;
-				switch (headerName)
+
+				try
 				{
-					case "Content-Length":
-						break;
-					case "Content-Type":
-						httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
-						break;
-					default:
-						httpClient.DefaultRequestHeaders.Add(headerName, value);
-						break;
+					switch (headerName)
+					{
+						case "If-None-Match":
+							httpClient.DefaultRequestHeaders.IfNoneMatch.Add(new EntityTagHeaderValue("\"" + value + "\""));
+							break;
+						case "Content-Length":
+							break;
+						case "Content-Type":
+							httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
+							break;
+						default:
+							httpClient.DefaultRequestHeaders.TryAddWithoutValidation(headerName, value);
+							break;
+					}
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Make sure to set the header correctly.", e);
 				}
 			}
 		}
@@ -391,16 +402,19 @@ namespace Raven.Client.Silverlight.Connection
 			writeCalled = true;
 			postedData = byteArray;
 
-			using (var stream = new MemoryStream(byteArray))
-			using (var dataStream = new GZipStream(stream, CompressionMode.Compress))
+			try
 			{
 				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 				{
-					Content = new StreamContent(dataStream)
+					Content = new CompressedStreamContent(byteArray)
 				});
 
 				if (Response.IsSuccessStatusCode == false)
 					throw new ErrorResponseException(Response);
+			}
+			catch (Exception e)
+			{
+				throw;
 			}
 		}
 
