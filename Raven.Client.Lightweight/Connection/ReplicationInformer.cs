@@ -452,7 +452,7 @@ namespace Raven.Client.Connection
 
 			if (ShouldExecuteUsing(primaryUrl, currentRequest, method, true))
 			{
-				if (TryOperation(operation, primaryUrl, !timeoutThrown, out result, out timeoutThrown))
+				if (TryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.Count > 0, out result, out timeoutThrown))
 					return result;
 				if (!timeoutThrown && IsFirstFailure(primaryUrl) &&
 				    TryOperation(operation, primaryUrl, localReplicationDestinations.Count > 0, out result, out timeoutThrown))

@@ -16,7 +16,7 @@ namespace Raven.Client.Embedded
 	/// <summary>
 	/// The embedded database command for bulk inserts
 	/// </summary>
-	public class EmbeddedBulkInsertOperation : ILowLevelBulkInsertOperation
+	public class EmbeddedBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
 	{
 		private CancellationTokenSource cancellationTokenSource;
 
@@ -54,13 +54,7 @@ namespace Raven.Client.Embedded
 		{
 			changes
 				.ForBulkInsert(OperationId)
-				.Subscribe(change =>
-				{
-					if (change.Type == DocumentChangeTypes.BulkInsertError)
-					{
-						cancellationTokenSource.Cancel();
-					}
-				});
+				.Subscribe(this);
 		}
 
 		private IEnumerable<IEnumerable<JsonDocument>> YieldDocuments(CancellationToken cancellationToken)
@@ -155,5 +149,34 @@ namespace Raven.Client.Embedded
 		/// Report on the progress of the operation
 		/// </summary>
 		public event Action<string> Report;
+
+		/// <summary>
+		/// Provides the observer with new data.
+		/// </summary>
+		/// <param name="value">The current notification information.</param>
+		public void OnNext(BulkInsertChangeNotification value)
+		{
+			if (value.Type == DocumentChangeTypes.BulkInsertError)
+			{
+				cancellationTokenSource.Cancel();
+			}
+		}
+
+		/// <summary>
+		/// Notifies the observer that the provider has experienced an error condition.
+		/// </summary>
+		/// <param name="error">An object that provides additional information about the error.</param>
+		public void OnError(Exception error)
+		{
+			
+		}
+
+		/// <summary>
+		/// Notifies the observer that the provider has finished sending push-based notifications.
+		/// </summary>
+		public void OnCompleted()
+		{
+			
+		}
 	}
 }

@@ -68,7 +68,7 @@ namespace Raven.Database.Prefetching
 			var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			for (int i = results.Count - 1; i >= 0; i--)
 			{
-				if(ids.Add(results[i].Key) == false)
+				if(CanBeConsideredAsDuplicate(results[i]) && ids.Add(results[i].Key) == false)
 				{
 					results.RemoveAt(i);
 				}
@@ -76,20 +76,40 @@ namespace Raven.Database.Prefetching
 			return results;
 		}
 
+		private bool CanBeConsideredAsDuplicate(JsonDocument document)
+		{
+			if (document.Metadata[Constants.RavenReplicationConflict] != null)
+				return false;
+
+			return true;
+		}
+
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
 		{
-			var nextEtagToIndex = GetNextDocEtag(etag);
-			var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
-
-			if (nextEtagToIndex != firstEtagInQueue)
+			var result = new List<JsonDocument>();
+			bool docsLoaded;
+			do
 			{
-				if (TryLoadDocumentsFromFutureBatches(nextEtagToIndex) == false)
-				{
-					LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
-				}
-			}
+				var nextEtagToIndex = GetNextDocEtag(etag);
+				var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
-			return GetDocumentsFromQueue(nextEtagToIndex);
+				if (nextEtagToIndex != firstEtagInQueue)
+				{
+					if (TryLoadDocumentsFromFutureBatches(nextEtagToIndex) == false)
+					{
+						LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
+					}
+				}
+
+				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, ref result);
+
+				if (docsLoaded)
+					etag = result[result.Count - 1].Etag;
+
+			} while (result.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && docsLoaded);
+			
+
+			return result;
 		}
 
 		private void LoadDocumentsFromDisk(Etag etag, Etag untilEtag)
@@ -102,14 +122,14 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		private List<JsonDocument> GetDocumentsFromQueue(Etag nextDocEtag)
+		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, ref List<JsonDocument> items)
 		{
-			var items = new List<JsonDocument>();
 			JsonDocument result;
 
 			nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
+			bool hasDocs = false;
 
-			while (prefetchingQueue.TryPeek(out result) && nextDocEtag.CompareTo(result.Etag) >= 0)
+			while (items.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && prefetchingQueue.TryPeek(out result) && nextDocEtag.CompareTo(result.Etag) >= 0)
 			{
 				// safe to do peek then dequeue because we are the only one doing the dequeues
 				// and here we are single threaded
@@ -119,11 +139,13 @@ namespace Raven.Database.Prefetching
 					continue;
 
 				items.Add(result);
+				hasDocs = true;
+
 				nextDocEtag = EtagUtil.Increment(nextDocEtag, 1);
 				nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
 			}
 
-			return items;
+			return hasDocs;
 		}
 
 		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag)
@@ -174,19 +196,11 @@ namespace Raven.Database.Prefetching
 					.ToList();
 			});
 
-			if (untilEtag == null) // TODO check this case
+			if (untilEtag == null)
 			{
 				MaybeAddFutureBatch(jsonDocs);
 			}
 			return jsonDocs;
-		}
-
-		private Etag GetFirstEtagInQueue()
-		{
-			JsonDocument result;
-			if (prefetchingQueue.TryPeek(out result) == false)
-				return null;
-			return result.Etag;
 		}
 
 		private void MaybeAddFutureBatch(List<JsonDocument> past)
@@ -340,7 +354,7 @@ namespace Raven.Database.Prefetching
 				return;
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
-				context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing)
 				return;
 
 			foreach (var jsonDocument in docs)

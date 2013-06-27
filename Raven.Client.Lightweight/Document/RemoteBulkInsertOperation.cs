@@ -42,7 +42,7 @@ namespace Raven.Client.Document
 		event Action<string> Report;
 	}
 
-	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation
+	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
 	{
 		private CancellationTokenSource cancellationTokenSource;
 
@@ -91,13 +91,7 @@ namespace Raven.Client.Document
 		{
 			changes
 				.ForBulkInsert(OperationId)
-				.Subscribe(change =>
-				{
-					if (change.Type == DocumentChangeTypes.BulkInsertError)
-					{
-						cancellationTokenSource.Cancel();
-					}
-				});
+				.Subscribe(this);
 		}
 #endif
 
@@ -367,6 +361,22 @@ namespace Raven.Client.Document
 			var onReport = Report;
 			if (onReport != null)
 				onReport(string.Format(format, args));
+		}
+
+		public void OnNext(BulkInsertChangeNotification value)
+		{
+			if (value.Type == DocumentChangeTypes.BulkInsertError)
+			{
+				cancellationTokenSource.Cancel();
+			}
+		}
+
+		public void OnError(Exception error)
+		{
+		}
+
+		public void OnCompleted()
+		{
 		}
 	}
 }

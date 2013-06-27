@@ -23,7 +23,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly HashSet<KeyValuePair<string, Type>> sortByHints;
 		private readonly Action<string, string> setOperationHeaders;
 		private readonly bool waitForNonStaleResults;
-		private readonly bool disableEntitiesTracking;
+		private bool disableEntitiesTracking;
 		private readonly TimeSpan timeout;
 		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
 		private readonly HashSet<string> includes;
@@ -152,7 +152,13 @@ namespace Raven.Client.Document.SessionOperations
 			return transformResults(indexQuery, list.Cast<object>()).Cast<T>().ToList();
 		}
 
-	    public T Deserialize<T>(RavenJObject result)
+		public bool DisableEntitiesTracking
+		{
+			get { return disableEntitiesTracking; }
+			set { disableEntitiesTracking = value; }
+		}
+
+		public T Deserialize<T>(RavenJObject result)
 		{
 			var metadata = result.Value<RavenJObject>("@metadata");
 			if ((projectionFields == null || projectionFields.Length <= 0)  &&

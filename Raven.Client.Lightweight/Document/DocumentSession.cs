@@ -585,7 +585,8 @@ namespace Raven.Client.Document
         private static IEnumerator<StreamResult<T>> YieldQuery<T>(IDocumentQuery<T> query, IEnumerator<RavenJObject> enumerator)
 	    {
 	        var queryOperation = ((DocumentQuery<T>) query).InitializeQueryOperation(null);
-	        while (enumerator.MoveNext())
+			queryOperation.DisableEntitiesTracking = true; 
+			while (enumerator.MoveNext())
 	        {
 	            var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
 

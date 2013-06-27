@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -253,7 +254,12 @@ namespace Raven.Database.Extensions
 		private static string UnescapeStringIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
-				return Regex.Unescape(str.Substring(1, str.Length - 2));
+				str =  Regex.Unescape(str.Substring(1, str.Length - 2));
+			if (str.Any(ch => ch > 127))
+			{
+				// contains non ASCII chars, needs encoding
+				return Uri.EscapeDataString(str);
+			}
 			return str;
 		}
 

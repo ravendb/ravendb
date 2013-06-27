@@ -33,8 +33,8 @@ namespace Raven.Tests.Issues
 							);
 
 						SystemTime.UtcDateTime = () => DateTime.Today.AddDays(15);
-						Assert.False(
-							store.DatabaseCommands.Get("test").NonAuthoritativeInformation.Value
+						Assert.Null(
+							store.DatabaseCommands.Get("test").NonAuthoritativeInformation
 							);
 					}
 				}

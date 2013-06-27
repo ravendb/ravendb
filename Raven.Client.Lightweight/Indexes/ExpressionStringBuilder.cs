@@ -626,11 +626,21 @@ namespace Raven.Client.Indexes
 
 			SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
 			{
+				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+				{
+					Out("((");
+					Out(ConvertTypeToCSharpKeyword(rightOp.Type));
+					Out(")(");
+				}
 				Visit(leftOp, innerPrecedence);
 				Out(' ');
 				Out(str);
 				Out(' ');
 				Visit(rightOp, innerPrecedence);
+				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+				{
+					Out("))");
+				}
 			});
 
 			return node;
@@ -1002,7 +1012,12 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitDefault(DefaultExpression node)
 		{
 			Out("default(");
-			Out(node.Type.Name);
+
+		    var nonNullable = Nullable.GetUnderlyingType(node.Type);
+		    Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type));
+            if(nonNullable != null && nonNullable != typeof(Guid))
+                Out("?");
+
 			Out(")");
 			return node;
 		}
@@ -1518,9 +1533,8 @@ namespace Raven.Client.Indexes
 					case "SingleOrDefault":
 					case "ElementAt":
 					case "ElementAtOrDefault":
-						Out(" ?? default(");
-						Out(ConvertTypeToCSharpKeyword(node.Type));
-						Out(")");
+                        Out(" ?? ");
+				        VisitDefault(Expression.Default(node.Type));
 						break;
 				}
 			}

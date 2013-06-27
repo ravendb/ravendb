@@ -83,6 +83,8 @@ namespace Raven.Client.Document.Async
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
 			var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
+			queryOperation.DisableEntitiesTracking = true;
+
 			return new QueryYieldStream<T>(this, enumerator, queryOperation);
 		}
 

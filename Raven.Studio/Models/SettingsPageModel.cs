@@ -1,8 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Extensions;
 using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -12,6 +16,8 @@ namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
+	    private bool firstLoad = true;
+
         public SettingsPageModel()
         {
             Settings = new SettingsModel();
@@ -24,8 +30,14 @@ namespace Raven.Studio.Models
 
 	    protected override async void OnViewLoaded()
 	    {
-		    var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			if(firstLoad)
+				RegisterToDatabaseChange();
 
+		    firstLoad = false;
+
+		    var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			Settings.Sections.Clear();
+			OnPropertyChanged(() => CurrentDatabase);
 		    if (databaseName == Constants.SystemDatabase)
 		    {
 			    var apiKeys = new ApiKeysSectionModel();
@@ -113,7 +125,17 @@ namespace Raven.Studio.Models
 				Settings.SelectedSection.Value = Settings.Sections[0];
 	    }
 
-		private void AddModel(SettingsSectionModel model)
+	    private void RegisterToDatabaseChange()
+	    {
+		    var databaseChanged = Database.ObservePropertyChanged()
+		                                  .Select(_ => Unit.Default)
+		                                  .TakeUntil(Unloaded);
+
+		    databaseChanged
+			    .Subscribe(_ => OnViewLoaded());
+	    }
+
+	    private void AddModel(SettingsSectionModel model)
 		{
 			Settings.Sections.Add(model);
 			model.LoadFor(null);

@@ -167,23 +167,8 @@ namespace Raven.Storage.Managed
 				Key = readResult.Key.Value<string>("key"),
 				Etag = etag,
 				Metadata = metadata,
-				LastModified = readResult.Key.Value<DateTime>("modified"),
-				NonAuthoritativeInformation = IsModifiedByTransaction(resultInTx)
+				LastModified = readResult.Key.Value<DateTime>("modified")
 			});
-		}
-
-		private bool IsModifiedByTransaction(Table.ReadResult resultInTx)
-		{
-			if (resultInTx == null)
-				return false;
-			var txId = resultInTx.Key.Value<string>("txId");
-			var tx = storage.Transactions.Read(new RavenJObject
-			{
-				{"txId", txId}
-			});
-			if (tx == null)
-				return false;
-			return SystemTime.UtcNow < tx.Key.Value<DateTime>("timeout");
 		}
 
 		private Tuple<MemoryStream, RavenJObject, int> ReadMetadata(string key, Etag etag, Func<byte[]> getData, out RavenJObject metadata)

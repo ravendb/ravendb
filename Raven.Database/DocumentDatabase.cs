@@ -111,7 +111,7 @@ namespace Raven.Database
         private class PendingTaskAndState
         {
             public Task Task;
-            public RavenJToken State;
+            public object State;
         }
 
         /// <summary>
@@ -1369,7 +1369,7 @@ namespace Raven.Database
                 return results.Select(x => x.ToJson());
 
             var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson())).ToArray();
-            var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
+            var robustEnumerator = new RobustEnumerator(workContext.CancellationToken, dynamicJsonObjects.Length)
             {
                 OnError =
                     (exception, o) =>
@@ -2395,7 +2395,7 @@ namespace Raven.Database
             return info;
         }
 
-        public void AddTask(Task task, RavenJToken state, out long id)
+        public void AddTask(Task task, object state, out long id)
         {
             if (task.Status == TaskStatus.Created)
                 throw new ArgumentException("Task must be started before it gets added to the database.", "task");
@@ -2407,7 +2407,7 @@ namespace Raven.Database
             });
         }
 
-        public RavenJToken GetTaskState(long id)
+        public object GetTaskState(long id)
         {
             PendingTaskAndState value;
             if (pendingTasks.TryGetValue(id, out value))

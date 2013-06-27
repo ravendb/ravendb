@@ -527,18 +527,35 @@ namespace Raven.Client.Embedded
 			if (query.PageSizeSet == false)
 				query.PageSize = int.MaxValue;
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var items = new BlockingCollection<RavenJObject>();
+			var items = new BlockingCollection<RavenJObject>(1024);
 			using (var waitForHeaders = new ManualResetEventSlim(false))
 			{
 				QueryHeaderInformation localQueryHeaderInfo = null;
 				var task = Task.Factory.StartNew(() =>
 				{
-					database.Query(index, query, information =>
+					bool setWaitHandle = true;
+					try
 					{
-						localQueryHeaderInfo = information;
-						waitForHeaders.Set();
-					}, items.Add);
-				});
+						// we may be sending a LOT of documents to the user, and most 
+						// of them aren't going to be relevant for other ops, so we are going to skip
+						// the cache for that, to avoid filling it up very quickly
+						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+						{
+							database.Query(index, query, information =>
+							{
+								localQueryHeaderInfo = information;
+								waitForHeaders.Set();
+								setWaitHandle = false;
+							}, items.Add);
+						}
+					}
+					catch (Exception)
+					{
+						if (setWaitHandle)
+							waitForHeaders.Set();
+						throw;
+					}
+				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
 				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
@@ -554,22 +571,28 @@ namespace Raven.Client.Embedded
 			if(fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
-			var items = new BlockingCollection<RavenJObject>();
+			var items = new BlockingCollection<RavenJObject>(1024);
 			var task = Task.Factory.StartNew(() =>
 			{
-				if (string.IsNullOrEmpty(startsWith))
+				// we may be sending a LOT of documents to the user, and most 
+				// of them aren't going to be relevant for other ops, so we are going to skip
+				// the cache for that, to avoid filling it up very quickly
+				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
-					database.GetDocuments(start, pageSize, fromEtag,
-					                      items.Add);
-				}
-				else
-				{
-					database.GetDocumentsWithIdStartingWith(
-						startsWith,
-						matches,
-						start,
-						pageSize,
-						items.Add);
+					if (string.IsNullOrEmpty(startsWith))
+					{
+						database.GetDocuments(start, pageSize, fromEtag,
+											  items.Add);
+					}
+					else
+					{
+						database.GetDocumentsWithIdStartingWith(
+							startsWith,
+							matches,
+							start,
+							pageSize,
+							items.Add);
+					}
 				}
 			});
 			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
@@ -577,15 +600,28 @@ namespace Raven.Client.Embedded
 
 		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
 		{
-			task.ContinueWith(_ => items.Add(null));
-			while (true)
+			try
 			{
-				var ravenJObject = items.Take();
-				if (ravenJObject == null)
-					break;
-				yield return ravenJObject;
+				task.ContinueWith(_ => items.Add(null));
+				while (true)
+				{
+					var ravenJObject = items.Take();
+					if (ravenJObject == null)
+						break;
+					yield return ravenJObject;
+				}
 			}
-			task.Wait();
+			finally
+			{
+				try
+				{
+					task.Wait();
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			}
+			
 		}
 
 		/// <summary>

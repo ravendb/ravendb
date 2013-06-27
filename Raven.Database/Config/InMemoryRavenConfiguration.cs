@@ -189,6 +189,8 @@ namespace Raven.Database.Config
 
 			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
 
+			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
+
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
 
@@ -677,6 +679,8 @@ namespace Raven.Database.Config
 		}
 
 		public bool DisableDocumentPreFetchingForIndexing { get; set; }
+
+		public int MaxNumberOfItemsToPreFetchForIndexing { get; set; }
 
 		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }

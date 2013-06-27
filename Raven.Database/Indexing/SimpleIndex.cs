@@ -88,7 +88,7 @@ namespace Raven.Database.Indexing
 						.ToList();
 
 					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
-					var indexes = new ConcurrentQueue<RavenIndexWriter>();
+
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
 						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition, viewGenerator);

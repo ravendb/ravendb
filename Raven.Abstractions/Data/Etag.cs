@@ -41,7 +41,9 @@ namespace Raven.Abstractions.Data
 
 		public Etag(string str)
 		{
-			Parse(str);
+			var etag = Parse(str);
+			restarts = etag.restarts;
+			changes = etag.changes;
 		}
 
 		public Etag(UuidType type, long restarts, long changes)

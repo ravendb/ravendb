@@ -65,7 +65,8 @@ namespace Raven.Tests.Issues
 				}
 				catch (Exception e)
 				{
-					Assert.True(e.GetBaseException().Message.StartsWith("Cannot insert"));
+					Assert.True(e.GetBaseException().Message.StartsWith("Cannot insert") || // munin
+						e.GetBaseException().Message.StartsWith("Illegal duplicate key")); // esent
 				}
 			}
 

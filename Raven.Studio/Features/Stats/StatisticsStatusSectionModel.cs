@@ -13,6 +13,7 @@ using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Stats
@@ -116,6 +117,7 @@ namespace Raven.Studio.Features.Stats
 			SelectedViewOption.Value = index;
 		}
 
+		private int retries = 3;
 		private void UpdateStatistics()
 		{
 			StatsData = ApplicationModel.Database.Value.Statistics;
@@ -126,10 +128,17 @@ namespace Raven.Studio.Features.Stats
 
 			if (StatsData.Value == null)
 			{
+				if (retries-- == 0)
+				{
+					ApplicationModel.Current.Notifications.Add(new Notification("Could not load settings for database " + ApplicationModel.Database.Value.Name));
+					return;
+				}
 				Thread.Sleep(100);
 				UpdateStatistics();
 				return;
 			}
+
+			retries = 3;
 
 			foreach (var propertyInfo in StatsData.Value.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
 			{
@@ -149,12 +158,20 @@ namespace Raven.Studio.Features.Stats
 								ToolTipData = "No Stale Indexes"
 							});
 						}
-						else
+						else if (list.Count > 1)
 						{
 							Statistics.Add(propertyInfo.Name, new StatInfo
 							{
-								Message = string.Format("There are {0} Stale indexes", list.Count),
+								Message = string.Format("There are {0} Stale Indexes", list.Count),
 								ToolTipData = string.Join(", ", list)
+							});
+						}
+						else // only one item
+						{
+							Statistics.Add(propertyInfo.Name, new StatInfo
+							{
+								Message = "There is 1 Stale Index",
+								ToolTipData = list[0].ToString() // only one item, no need to call string.Join()
 							});
 						}
 

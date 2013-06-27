@@ -40,9 +40,6 @@ namespace Raven.Storage.Managed.Impl
 					{"ByTxId", x => new ComparableByteArray(x.Value<byte[]>("txId"))}
 				});
 
-			Transactions =
-				Add(new Table(x => x.Value<byte[]>("txId"), "Transactions"));
-
 			IndexingStats =
 				Add(new Table(x => x.Value<string>("index"), "IndexingStats"));
 
@@ -144,8 +141,6 @@ namespace Raven.Storage.Managed.Impl
 		public Table IndexingStats { get; private set; }
 
 		public Table LastIndexedEtags { get; private set; }
-
-		public Table Transactions { get; private set; }
 
 		public Table DocumentsModifiedByTransactions { get; private set; }
 
