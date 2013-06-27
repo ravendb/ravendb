@@ -38,6 +38,7 @@ import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.extensions.MetadataExtensions;
+import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -49,6 +50,7 @@ import raven.client.exceptions.ConflictException;
 import raven.client.extensions.MultiDatabase;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
+import raven.imports.json.JsonConvert;
 
 //TODO: finish me
 public class ServerClient implements IDatabaseCommands {
@@ -764,15 +766,111 @@ public class ServerClient implements IDatabaseCommands {
 
   }
 
-  //TODO: public string PutIndex(string name, IndexDefinition definition)
+  public String putIndex(String name, IndexDefinition definition) {
+    return putIndex(name, definition, false);
+  }
 
   //TODO: public string PutTransformer(string name, TransformerDefinition indexDef)
 
-  //TODO: public string PutIndex(string name, IndexDefinition definition, bool overwrite)
+  public String putIndex(final String name, final IndexDefinition definition, final boolean overwrite) {
+    ensureIsNotNullOrEmpty(name, "name");
+    return executeWithReplication(HttpMethods.PUT, new Function1<String, String>() {
+      @Override
+      public String apply(String operationUrl) {
+        return directPutIndex(name, operationUrl, overwrite, definition);
+      }
+    });
+  }
 
   //TODO: public string DirectPutTransformer(string name, string operationUrl, TransformerDefinition definition)
 
-  //TODO: public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
+  public String directPutIndex(String name, String operationUrl, boolean overwrite, IndexDefinition definition) {
+    String requestUri = operationUrl + "/indexes/" + name;
+
+    HttpJsonRequest checkIndexExists = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.HEAD,new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      // If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
+      checkIndexExists.executeRequest();
+      if (!overwrite) {
+        throw new IllegalStateException("Cannot put index: " + name + ", index already exists");
+      }
+    } catch (HttpOperationException e) {
+      /*
+       * TODO
+       *   var httpWebResponse = e.Response as HttpWebResponse;
+              if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+                  throw;
+
+              if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+              {
+                  var error = e.TryReadErrorResponseObject(
+                      new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+                  if (error == null)
+                  {
+                      throw;
+                  }
+
+                  var compilationException = new IndexCompilationException(error.Message)
+                  {
+                      IndexDefinitionProperty = error.IndexDefinitionProperty,
+                      ProblematicText = error.ProblematicText
+                  };
+
+                  throw compilationException;
+              }
+       */
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.PUT, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      request.write(JsonConvert.serializeObject(definition)); //we don't use default converters
+
+      try {
+        RavenJToken responseJson = request.readResponseJson();
+        return responseJson.value(String.class, "Index");
+      } catch (HttpOperationException e) {
+        /*TODO:
+        var httpWebResponse = e.Response as HttpWebResponse;
+        if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+            throw;
+
+        if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var error = e.TryReadErrorResponseObject(
+                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+            if (error == null)
+            {
+                throw;
+            }
+
+            var compilationException = new IndexCompilationException(error.Message)
+            {
+                IndexDefinitionProperty = error.IndexDefinitionProperty,
+                ProblematicText = error.ProblematicText
+            };
+
+            throw compilationException;
+        }
+
+        throw;
+    }*/
+      }
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+    return null;
+  }
 
   //TODO: public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 
@@ -788,9 +886,29 @@ public class ServerClient implements IDatabaseCommands {
 
   //TODO: private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly, bool includeEntries)
 
-  //TODO: public void DeleteIndex(string name)
+  public void deleteIndex(final String name) {
+    ensureIsNotNullOrEmpty(name, "name");
+    executeWithReplication(HttpMethods.DELETE, new Function1<String, Void>() {
+      @Override
+      public Void apply(String operationUrl) {
+        directDeleteIndex(name, operationUrl);
+        return null;
+      }
+    });
+  }
 
-  //TODO: private void DirectDeleteIndex(string name, string operationUrl)
+  private void directDeleteIndex(String name, String operationUrl) {
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, HttpMethods.DELETE, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      request.executeRequest();
+    } catch (Exception e) {
+      throw new ServerClientException("Unable to delete index", e);
+    }
+  }
 
 
 
@@ -879,16 +997,16 @@ public class ServerClient implements IDatabaseCommands {
       if (StringUtils.isEmpty(transformer)) {
         List<RavenJObject> values = new ArrayList<>();
         outerFor:
-        for (String id : ids) {
+          for (String id : ids) {
 
-          for (RavenJObject jObject : results) {
-            if (StringUtils.equals(id, jObject.get("@metadata").value(String.class, "@id"))) {
-              values.add(jObject);
-              continue outerFor;
+            for (RavenJObject jObject : results) {
+              if (StringUtils.equals(id, jObject.get("@metadata").value(String.class, "@id"))) {
+                values.add(jObject);
+                continue outerFor;
+              }
             }
+            values.add(null);
           }
-          values.add(null);
-        }
         multiLoadResult.setResults(values);
       } else {
         multiLoadResult.setResults(new ArrayList<RavenJObject>(results));
