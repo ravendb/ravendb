@@ -11,13 +11,12 @@ public class HttpExtensions {
     return etagHeaderToEtag(request.getResponseHeaders().get("ETag"));
   }
 
-
-  static Etag etagHeaderToEtag(String responseHeader) {
+  public static Etag etagHeaderToEtag(String responseHeader) {
     if (StringUtils.isEmpty(responseHeader)) {
       throw new IllegalArgumentException("Response didn't had an ETag header.");
     }
     if (responseHeader.charAt(0) == '"') {
-      return Etag.parse(responseHeader.substring(1, responseHeader.length() - 2));
+      return Etag.parse(responseHeader.substring(1, responseHeader.length() - 1));
     }
     return Etag.parse(responseHeader);
   }
