@@ -11,8 +11,6 @@ namespace Raven.Tests.WinRT
 	public class Collections : RavenTestBase
 	{
 		[TestMethod]
-		[Ignore]
-		//NOTE: This expects a certain index to be present that is currently only created when Studio accesses a database 
 		public async Task Can_get_collections_async()
 		{
 			var dbname = GenerateNewDatabaseName("Collections.Can_get_collections_async");
