@@ -103,6 +103,7 @@ namespace Raven.ProjectRewriter
 			Generate45("Raven.Web",
 					   "Raven.Abstractions",
 					   "Raven.Database");
+			 */
 		}
 
 		private static void Generate45(string assemblyName, params string[] references)
