@@ -96,6 +96,7 @@ public class Etag {
 }
 
   public static Etag parse(String str) {
+
     if (StringUtils.isEmpty(str)) {
       throw new IllegalArgumentException("Str cannot be empty or null");
     }

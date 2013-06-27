@@ -28,9 +28,9 @@ import raven.abstractions.json.linq.RavenJToken;
 public class SerializationHelper {
 
 
-  private static Date getLastModifiedDate(HttpJsonRequest jsonRequest) {
+  private static Date getLastModifiedDate(Map<String, String> headers) {
 
-    String ravenLastModified = jsonRequest.getResponseHeaders().get(Constants.RAVEN_LAST_MODIFIED);
+    String ravenLastModified = headers.get(Constants.RAVEN_LAST_MODIFIED);
     if (StringUtils.isNotEmpty(ravenLastModified)) {
       try {
         return new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT).parse(ravenLastModified);
@@ -38,7 +38,7 @@ public class SerializationHelper {
         throw new IllegalArgumentException(e.getMessage(), e);
       }
     }
-    String lastModified = jsonRequest.getResponseHeaders().get(Constants.LAST_MODIFIED);
+    String lastModified = headers.get(Constants.LAST_MODIFIED);
     if (StringUtils.isNotEmpty(lastModified)) {
       try {
         return DateUtils.parseDate(lastModified);
@@ -107,14 +107,14 @@ public class SerializationHelper {
   }
 
   public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, Map<String, String> headers, int responseStatusCode) {
-    /* TODO: update me!
-     * RavenJObject jsonData = (RavenJObject) responseJson;
-     *
-    RavenJObject meta = MetadataExtensions.filterHeaders(headers);
-    UUID etag = HttpExtensions.getEtagHeader(jsonRequest);
+    /* TODO: update me! */
+    RavenJObject jsonData = (RavenJObject) responseJson;
 
-    return new JsonDocument(jsonData, meta, docKey, jsonRequest.getResponseStatusCode() == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(headers));*/
-    return null;
+    RavenJObject meta = MetadataExtensions.filterHeaders(headers);
+    Etag etag = HttpExtensions.etagHeaderToEtag(headers.get("ETag"));
+
+    return new JsonDocument(jsonData, meta, docKey, responseStatusCode == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(headers));
+    //return null;
 
   }
 
@@ -122,4 +122,5 @@ public class SerializationHelper {
     // TODO Auto-generated method stub
     return null;
   }
+
 }
