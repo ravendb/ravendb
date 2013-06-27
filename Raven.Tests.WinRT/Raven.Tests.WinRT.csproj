@@ -132,7 +132,6 @@
     <Compile Include="Entities\Order.cs" />
     <Compile Include="Entities\OrderLine.cs" />
     <Compile Include="Entities\TheCompanyName.cs" />
-    <Compile Include="Generate.cs" />
     <Compile Include="Indexes.cs" />
     <Compile Include="Notifications.cs" />
     <Compile Include="SerializationHelperTests.cs" />
