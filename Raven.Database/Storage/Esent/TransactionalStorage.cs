@@ -515,10 +515,10 @@ namespace Raven.Storage.Esent
                         {
                             using (var recoverInstance = new Instance("Recovery instance for: " + database))
                             {
-                                recoverInstance.Init();
+								new TransactionalStorageConfigurator(configuration, this).ConfigureInstance(recoverInstance.JetInstance, path);
+								recoverInstance.Init();
                                 using (var recoverSession = new Session(recoverInstance))
                                 {
-                                    new TransactionalStorageConfigurator(configuration, this).ConfigureInstance(recoverInstance.JetInstance, path);
                                     Api.JetAttachDatabase(recoverSession, database,
                                                           AttachDatabaseGrbit.DeleteCorruptIndexes);
                                     Api.JetDetachDatabase(recoverSession, database);
