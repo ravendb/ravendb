@@ -686,7 +686,7 @@ public class ServerClient implements IDatabaseCommands {
       metadata.add("ETag", RavenJToken.fromObject(etag.toString()));
     }
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-        new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + UrlUtils.escapeDataString(key), HttpMethods.DELETE, metadata, credentials, convention))
+        new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, HttpMethods.DELETE, metadata, credentials, convention))
         .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     try {
       jsonRequest.executeRequest();
