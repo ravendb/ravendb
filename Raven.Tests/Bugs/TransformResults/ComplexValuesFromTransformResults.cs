@@ -171,7 +171,8 @@ namespace Raven.Tests.Bugs.TransformResults
                                 results.OfType<dynamic>().GroupBy(r => r.VoteTotal)
                                 .Select(g => new AnswerViewItem { UserDisplayName = "From TransformResults", VoteTotal = g.Key, DecimalTotal = g.Count() })
                             );
-                        });
+                        })
+						.ToList();
 
                     Assert.NotNull(answers);
                     // Expecting two results, one with VoteTotal = 20 (DecimalTotal = 2) and one with VoteTotal = 30 (DecimalTotal = 1)
