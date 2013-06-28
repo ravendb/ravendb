@@ -161,28 +161,31 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			var hasResult = false;
 			var result = new ScheduledReductionInfo();
-			var currentEtagBinary = Guid.Empty.ToByteArray();
-			foreach (OptimizedDeleter reader in itemsToDelete)
-			{
-				foreach (var sortedBookmark in reader.GetSortedBookmarks())
-				{
-					Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
-					var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
-														tableColumnsCache.ScheduledReductionColumns["etag"]);
-					if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
-					{
-						hasResult = true;
-						var timestamp =
-							Api.RetrieveColumnAsInt64(session, ScheduledReductions,
-														 tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
-						result.Etag = Etag.Parse(etagBinary);
-						result.Timestamp = DateTime.FromBinary(timestamp);
-					}
+		    if (itemsToDelete != null)
+		    {
+		        var currentEtagBinary = Guid.Empty.ToByteArray();
+		        foreach (OptimizedDeleter reader in itemsToDelete)
+		        {
+		            foreach (var sortedBookmark in reader.GetSortedBookmarks())
+		            {
+		                Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
+		                var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
+		                                                    tableColumnsCache.ScheduledReductionColumns["etag"]);
+		                if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
+		                {
+		                    hasResult = true;
+		                    var timestamp =
+		                        Api.RetrieveColumnAsInt64(session, ScheduledReductions,
+		                                                  tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
+		                    result.Etag = Etag.Parse(etagBinary);
+		                    result.Timestamp = DateTime.FromBinary(timestamp);
+		                }
 
-					Api.JetDelete(session, ScheduledReductions);
-				}
-			}
-			return hasResult ? result : null;
+		                Api.JetDelete(session, ScheduledReductions);
+		            }
+		        }
+		    }
+		    return hasResult ? result : null;
 		}
 
 		public void DeleteScheduledReduction(string indexName, int level, string reduceKey)
