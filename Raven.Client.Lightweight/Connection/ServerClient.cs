@@ -1595,11 +1595,15 @@ namespace Raven.Client.Connection
 				}
 
 				// Be compitable with the resopnse from v2.0 server
-				var serverBuild = request.ResponseHeaders.GetAsInt("Raven-Server-Build");
-				if (serverBuild < 2500)
+				if (jsonResponse == null || jsonResponse.Type != JTokenType.Object)
 					return null;
 
-				return new Operation(this, jsonResponse.Value<long>("OperationId"));
+				var opId = ((RavenJObject)jsonResponse)["OperationId"];
+
+				if (opId == null || opId.Type != JTokenType.Integer)
+					return null;
+				
+				return new Operation(this, opId.Value<long>());
 			});
 		}
 

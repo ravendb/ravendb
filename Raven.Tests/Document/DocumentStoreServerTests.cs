@@ -112,12 +112,12 @@ namespace Raven.Tests.Document
 				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray(); // wait for the index to settle down
 			}
 
-			documentStore
-				.DatabaseCommands
-				.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
-				                                              {
-					                                              Query = "Tag:[[Companies]]"
-				                                              }, allowStale: false).WaitForCompletion();
+			var operation = documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+			{
+				Query = "Tag:[[Companies]]"
+			}, allowStale: false);
+
+			operation.WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
