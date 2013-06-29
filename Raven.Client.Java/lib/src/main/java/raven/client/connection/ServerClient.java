@@ -37,6 +37,7 @@ import raven.abstractions.data.PutResult;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJArray;
@@ -695,9 +696,39 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-  //TODO: public string[] GetIndexNames(int start, int pageSize)
+  public Collection<String> getIndexNames(final int start, final int pageSize) {
+    return executeWithReplication(HttpMethods.GET, new Function1<String, Collection<String>>() {
+      @Override
+      public Collection<String> apply(String u) {
+        return directGetIndexNames(start, pageSize, u);
+      }
+    });
+  }
 
-  //TODO: public IndexDefinition[] GetIndexes(int start, int pageSize)
+  public Collection<IndexDefinition> getIndexes(final int start, final int pageSize) {
+    return executeWithReplication(HttpMethods.GET, new Function1<String, Collection<IndexDefinition>>() {
+      @Override
+      public Collection<IndexDefinition> apply(String operationUrl) {
+        return directGetIndexes(start, pageSize, operationUrl);
+      }
+    });
+  }
+
+  protected Collection<IndexDefinition> directGetIndexes(int start, int pageSize, String operationUrl) {
+    String url2 = RavenUrlExtensions.noCache(operationUrl + "/indexes/?start=" + start + "&pageSize=" + pageSize);
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), credentials, convention));
+    request.addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      RavenJArray json = (RavenJArray) request.readResponseJson();
+
+      return JsonConvert.deserializeObject(json, IndexDefinition.class, "definition");
+
+    } catch (Exception e) {
+      throw new ServerClientException("Unable to get indexes", e);
+    }
+  }
+
 
   //TODO: public TransformerDefinition[] GetTransformers(int start, int pageSize)
 
@@ -709,16 +740,81 @@ public class ServerClient implements IDatabaseCommands {
 
   //TODO: private TransformerDefinition DirectGetTransformer(string transformerName, string operationUrl)
 
-  //TODO: public void ResetIndex(string name)
+  @Override
+  public void resetIndex(final String name) {
+    executeWithReplication(HttpMethods.RESET, new Function1<String, Void>() {
+      @Override
+      public Void apply(String u) {
+        directResetIndex(name, u);
+        return null;
+      }
+    });
+  }
 
-  //TODO: private object DirectResetIndex(string name, string operationUrl)
+  private void directResetIndex(String name, String operationUrl) {
+    HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, HttpMethods.RESET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
-  //TODO: private string[] DirectGetIndexNames(int start, int pageSize, string operationUrl)
 
-  //TODO: public IndexDefinition GetIndex(string name)
+    try {
+      httpJsonRequest.readResponseJson();
+    } catch (IOException e) {
+      throw new ServerClientException(e);
+    }
+  }
 
-  //TODO: private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
+  private Collection<String> directGetIndexNames(int start, int pageSize, String operationUrl) {
+    try {
+      HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+          new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, HttpMethods.GET, new RavenJObject(), credentials, convention)
+          .addOperationHeaders(operationsHeaders))
+          .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
+
+      RavenJArray responseJson = (RavenJArray) httpJsonRequest.readResponseJson();
+      return responseJson.values(String.class);
+    } catch (IOException e) {
+      throw new ServerClientException(e);
+    }
+  }
+
+  public IndexDefinition getIndex(final String name) {
+    ensureIsNotNullOrEmpty(name, "name");
+    return executeWithReplication(HttpMethods.GET, new Function1<String, IndexDefinition>() {
+      @Override
+      public IndexDefinition apply(String u) {
+        return directGetIndex(name, u);
+      }
+    });
+  }
+
+
+  private IndexDefinition directGetIndex(String indexName, String operationUrl) {
+    HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + indexName + "?definition=yes", HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    RavenJToken indexDef;
+    try {
+      indexDef = httpJsonRequest.readResponseJson();
+    } catch (HttpOperationException e) {
+      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        return null;
+      }
+      throw e;
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+    RavenJObject value = indexDef.value(RavenJObject.class, "Index");
+    try {
+      return JsonExtensions.getDefaultObjectMapper().readValue(value.toString(), IndexDefinition.class);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
 
   private void directDelete(String serverUrl, String key, Etag etag) throws ServerClientException {
     RavenJObject metadata = new RavenJObject();

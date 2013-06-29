@@ -1,13 +1,20 @@
 package raven.client.connection;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.omg.CORBA.OMGVMCID;
 
 import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Attachment;
@@ -16,6 +23,7 @@ import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.UuidType;
+import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.client.RavenDBAwareTests;
 import raven.client.document.DocumentConvention;
@@ -283,6 +291,44 @@ public class ServerClientTest extends RavenDBAwareTests {
     } finally {
       deleteDb("db1");
     }
+  }
+
+  @Test
+  public void testIndexes() throws Exception {
+
+    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    try {
+      createDb("db1");
+
+      IndexDefinition index1 = new IndexDefinition();
+      index1.setMap("from company in docs.Companies from partner in company.Partners select new { Partner = partner }");
+
+      db1Commands.putIndex("firstIndex", index1);
+
+      assertNotNull(db1Commands.getIndex("firstIndex"));
+
+      db1Commands.resetIndex("firstIndex");
+
+      Collection<String> indexNames = db1Commands.getIndexNames(0, 10);
+      List<String> expectedIndexNames = Arrays.asList("firstIndex");
+      assertEquals(expectedIndexNames, indexNames);
+
+      Collection<IndexDefinition> collection = db1Commands.getIndexes(0, 10);
+      assertEquals(1, collection.size());
+
+      db1Commands.deleteIndex("firstIndex");
+
+
+      IndexDefinition complexIndex = new IndexDefinition();
+      //TODO: set all fields create index, get index and compare properties
+
+      assertEquals(new ArrayList<String>(), db1Commands.getIndexNames(0, 10));
+
+
+    } finally {
+      deleteDb("db1");
+    }
+
   }
 
   //@Test

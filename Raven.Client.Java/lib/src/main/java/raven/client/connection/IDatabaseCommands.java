@@ -1,6 +1,7 @@
 package raven.client.connection;
 
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 
 import raven.abstractions.data.Attachment;
@@ -10,6 +11,7 @@ import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
 
 //TODO: expose all methods
@@ -29,6 +31,12 @@ public interface IDatabaseCommands {
   public void deleteAttachment(String key, Etag etag);
 
   /**
+   * Delete index
+   * @param name
+   */
+  public void deleteIndex(final String name);
+
+  /**
    * Create a new instance of {@link IDatabaseCommands} that will interacts with the specified database
    * @param database
    * @return
@@ -40,13 +48,13 @@ public interface IDatabaseCommands {
    */
   public IDatabaseCommands forSystemDatabase();
 
+
   /**
    * Retrieves the document for the specified key
    * @param key The key
    * @return
    */
   public JsonDocument get(String key) throws ServerClientException;
-
 
   /**
    * Gets the attachment by the specified key
@@ -97,6 +105,13 @@ public interface IDatabaseCommands {
   public List<JsonDocument> getDocuments(int start, int pageSize, boolean metadataOnly);
 
   /**
+   * Checks if the document exists for the specified key
+   * @param key The key.
+   * @return
+   */
+  public JsonDocumentMetadata head(String key);
+
+  /**
    * Retrieves the attachment metadata with the specified key, not the actual attachment
    * @param key
    * @return
@@ -119,6 +134,28 @@ public interface IDatabaseCommands {
    * @return PutResult
    */
   public PutResult put(String key, Etag guid, RavenJObject document, RavenJObject metadata);
+  /**
+   * Returns {@link IndexDefinition}s
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Collection<IndexDefinition> getIndexes(final int start, final int pageSize);
+
+  /**
+   * Gets the index definition for the specified name
+   * @param name
+   * @return
+   */
+  public IndexDefinition getIndex(String name);
+
+  /**
+   * Gets the index names from the server
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Collection<String> getIndexNames(final int start, final int pageSize) ;
 
   /**
    * Puts a byte array as attachment with the specified key
@@ -128,6 +165,23 @@ public interface IDatabaseCommands {
    * @param metadata The metadata.
    */
   public void putAttachment(String key, Etag etag, InputStream data, RavenJObject metadata);
+
+  /**
+   * Puts index with given definition
+   * @param name
+   * @param definition
+   * @return
+   */
+  public String putIndex(String name, IndexDefinition definition);
+
+  /**
+   * Puts the index.
+   * @param name
+   * @param definition
+   * @param overwrite
+   * @return
+   */
+  public String putIndex(final String name, final IndexDefinition definition, final boolean overwrite);
 
   /**
    * Retrieves documents for the specified key prefix
@@ -167,10 +221,9 @@ public interface IDatabaseCommands {
   public String urlFor(String documentKey);
 
   /**
-   * Checks if the document exists for the specified key
-   * @param key The key.
-   * @return
+   * Resets the specified index
+   * @param name
    */
-  public JsonDocumentMetadata head(String key);
+  void resetIndex(String name);
 
 }

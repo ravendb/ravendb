@@ -33,6 +33,10 @@ public enum HttpMethods {
   /**
    * EVAL method
    */
-  EVAL;
+  EVAL,
+  /**
+   * RESET method
+   */
+  RESET;
 }
 
