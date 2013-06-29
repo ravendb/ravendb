@@ -678,6 +678,7 @@
     <Compile Include="MailingList\AsyncSpatial.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BooleanAndDateTimeNullables.cs" />
+    <Compile Include="MailingList\BoundingBox.cs" />
     <Compile Include="MailingList\BulkInsertTest.cs" />
     <Compile Include="MailingList\BulkInsertWithChanges.cs" />
     <Compile Include="MailingList\CanExcludeNullItems.cs" />
