@@ -571,19 +571,25 @@ namespace Raven.Client.Embedded
 				// the cache for that, to avoid filling it up very quickly
 				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
-					if (string.IsNullOrEmpty(startsWith))
+					try
 					{
-						database.GetDocuments(start, pageSize, fromEtag,
-											  items.Add);
+						if (string.IsNullOrEmpty(startsWith))
+						{
+							database.GetDocuments(start, pageSize, fromEtag,
+							                      items.Add);
+						}
+						else
+						{
+							database.GetDocumentsWithIdStartingWith(
+								startsWith,
+								matches,
+								start,
+								pageSize,
+								items.Add);
+						}
 					}
-					else
+					catch (ObjectDisposedException)
 					{
-						database.GetDocumentsWithIdStartingWith(
-							startsWith,
-							matches,
-							start,
-							pageSize,
-							items.Add);
 					}
 				}
 			});
