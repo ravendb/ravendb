@@ -41,8 +41,6 @@ namespace Raven.Abstractions.Connection
 		[ThreadStatic]
 		private static SHA1 sha1;
 #endif
-		
-
 
 		/**** Cryptography *****/
 
