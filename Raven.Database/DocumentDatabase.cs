@@ -1913,7 +1913,7 @@ namespace Raven.Database
 						{
 							try
 							{
-								Put(docId, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+								Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
 
 								var docsCreatedInPatch = getDocsCreatedInPatch();
 								if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
