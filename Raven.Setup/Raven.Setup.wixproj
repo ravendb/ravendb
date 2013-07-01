@@ -38,6 +38,7 @@
     <Compile Include="UI\InstallationType.wxs" />
     <Compile Include="UI\LicenseFileChooser.wxs" />
     <Compile Include="UI\Service\Settings.wxs" />
+    <Compile Include="UI\TargetEnvironment.wxs" />
     <Compile Include="UI\Wizard.wxs" />
   </ItemGroup>
   <ItemGroup>
