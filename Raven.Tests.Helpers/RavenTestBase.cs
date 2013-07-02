@@ -171,8 +171,8 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079, 
-			string dataDirectory = "Data", 
+		protected RavenDbServer GetNewServer(int port = 8079,
+			string dataDirectory = null, 
 			bool runInMemory = true, 
 			bool deleteDirectory = true, 
 			bool enableAuthentication = false)
@@ -180,7 +180,7 @@ namespace Raven.Tests.Helpers
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
-				DataDirectory = dataDirectory,
+				DataDirectory = dataDirectory ?? DataDir,
 				RunInMemory = runInMemory,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
 			};
