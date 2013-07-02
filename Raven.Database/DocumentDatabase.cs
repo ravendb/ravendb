@@ -803,6 +803,8 @@ namespace Raven.Database
                                     Etag = newEtag,
                                 }, metadata);
                             });
+
+						workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                     }
                     else
                     {
@@ -814,7 +816,6 @@ namespace Raven.Database
                                                                                           : doc.Etag,
                                                                                       sequentialUuidGenerator);
                     }
-                    workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                 });
 
                 log.Debug("Put document {0} with etag {1}", key, newEtag);
@@ -1079,8 +1080,9 @@ namespace Raven.Database
                 try
                 {
 		            inFlightTransactionalState.Commit(txId);
-		            log.Debug("Commit of tx {0} completed", txId);
-                }
+					log.Debug("Commit of tx {0} completed", txId);
+					workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
+				}
                 finally
                 {
                     inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
