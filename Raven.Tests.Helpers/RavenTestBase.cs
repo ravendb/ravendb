@@ -37,7 +37,7 @@ namespace Raven.Tests.Helpers
 {
 	public class RavenTestBase : IDisposable
 	{
-		protected readonly string DataDir = string.Format(@".\TestDatabase-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"));
+		protected readonly string DataDir = Path.GetFullPath(string.Format(@".\TestDatabase-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss")));
 
 		private string path;
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
@@ -123,12 +123,15 @@ namespace Raven.Tests.Helpers
 		}
 
 		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
-			 bool deleteDirectoryAfter = true, 
-			 bool deleteDirectoryBefore = true,
-			 bool runInMemory = true,
-			 bool enableAuthentication = false)
+			bool deleteDirectoryAfter = true,
+			bool deleteDirectoryBefore = true,
+			bool runInMemory = true,
+			string requestedStorage = null,
+			bool enableAuthentication = false)
 		{
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, deleteDirectory: deleteDirectoryBefore, enableAuthentication: enableAuthentication);
+			var storageType = GetDefaultStorageType(requestedStorage);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+				deleteDirectory: deleteDirectoryBefore, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
