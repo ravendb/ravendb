@@ -26,18 +26,8 @@ namespace Raven.Tests.Bugs
 					try
 					{
 						using (var scope = new TransactionScope())
-						using (var conn = new SqlConnection(@"Data Source=.\sqlexpress;Initial Catalog=DB1;Integrated Security=True;"))
 						using (var session = store.OpenSession())
 						{
-							conn.Open();
-
-							var cmd = conn.CreateCommand();
-							cmd.CommandText = "select top 1 id from TransactionTest";
-
-							using (var reader = cmd.ExecuteReader())
-								while (reader.Read())
-									Console.WriteLine("test {0}", reader.GetInt32(0));
-
 							session.Store(new Foo {Bar = "aaa"});
 							session.SaveChanges();
 
