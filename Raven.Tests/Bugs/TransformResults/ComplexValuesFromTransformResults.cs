@@ -143,47 +143,48 @@ namespace Raven.Tests.Bugs.TransformResults
 			}
 		}
 
-        [Fact]
-        public void will_work_normally_when_specifying_transformresults_through_customize()
+		[Fact]
+		public void will_work_normally_when_specifying_transformresults_through_customize()
 		{
-			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
 				new Answers_ByQuestion_NoTransformResults().Execute(documentStore);
 
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-                    var vote1 = new AnswerVote { QuestionId = @"question/257", Delta = 20 };
+					var vote1 = new AnswerVote {QuestionId = @"question/257", Delta = 20};
 					session.Store(vote1);
-                    var vote2 = new AnswerVote { QuestionId = @"question/258", Delta = 30 };
-                    session.Store(vote2);
-                    var vote3 = new AnswerVote { QuestionId = @"question/259", Delta = 20 };
-                    session.Store(vote3);
+					var vote2 = new AnswerVote {QuestionId = @"question/258", Delta = 30};
+					session.Store(vote2);
+					var vote3 = new AnswerVote {QuestionId = @"question/259", Delta = 20};
+					session.Store(vote3);
 
 					session.SaveChanges();
 				}
 
-				using (IDocumentSession session = documentStore.OpenSession())
+				using (var session = documentStore.OpenSession())
 				{
-                    var answers = session.Query<AnswerViewItem, Answers_ByQuestion_NoTransformResults>()
-                        .Customize(x => {
-                            x.WaitForNonStaleResultsAsOfNow();
-                            x.TransformResults((database, results) =>
-                                results.OfType<dynamic>().GroupBy(r => r.VoteTotal)
-                                .Select(g => new AnswerViewItem { UserDisplayName = "From TransformResults", VoteTotal = g.Key, DecimalTotal = g.Count() })
-                            );
-                        })
+					var answers = session.Query<AnswerViewItem, Answers_ByQuestion_NoTransformResults>()
+						.Customize(x =>
+						{
+							x.WaitForNonStaleResultsAsOfNow();
+							x.TransformResults((database, results) =>
+								results.OfType<dynamic>().GroupBy(r => r.VoteTotal)
+									.Select(g => new AnswerViewItem {UserDisplayName = "From TransformResults", VoteTotal = g.Key, DecimalTotal = g.Count()})
+								);
+						})
 						.ToList();
 
-                    Assert.NotNull(answers);
-                    // Expecting two results, one with VoteTotal = 20 (DecimalTotal = 2) and one with VoteTotal = 30 (DecimalTotal = 1)
-                    Assert.Equal(2, answers.Count());
+					Assert.NotNull(answers);
+					// Expecting two results, one with VoteTotal = 20 (DecimalTotal = 2) and one with VoteTotal = 30 (DecimalTotal = 1)
+					Assert.Equal(2, answers.Count());
 
-                    var first = answers.First();
-                    Assert.Equal(20, first.VoteTotal);
-                    Assert.Equal(2, first.DecimalTotal);
+					var first = answers.First();
+					Assert.Equal(20, first.VoteTotal);
+					Assert.Equal(2, first.DecimalTotal);
 				}
 			}
-		}        
+		}
 
 		[Fact]
 		public void write_then_read_from_stack_over_flow_types()
