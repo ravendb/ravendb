@@ -41,8 +41,7 @@ namespace Raven.Database.Impl.DTC
 
 		protected readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>();
 
-		protected readonly ConcurrentDictionary<string, TransactionState> transactionStates =
-            new ConcurrentDictionary<string, TransactionState>();
+		protected readonly ConcurrentDictionary<string, TransactionState> transactionStates = new ConcurrentDictionary<string, TransactionState>();
 
 		protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 		{

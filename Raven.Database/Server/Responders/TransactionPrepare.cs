@@ -23,7 +23,6 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var txId = context.Request.QueryString["tx"];
-		
 			Database.PrepareTransaction(txId);
 			context.WriteJson(new { Prepared = txId });
 		}
