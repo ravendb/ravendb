@@ -25,10 +25,21 @@
     <?include Conditions.wxi ?>
     <?include Binaries.wxi ?>
 
-    
-    
+    <Property Id="INSTALLFOLDER">
+      <RegistrySearch Id="InstallFolderFromRegistry"
+                       Root="HKLM"
+                       Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                       Name="RAVEN_INSTALLATION_PATH"
+                       Type="raw" />
+    </Property>
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="INSTALLFOLDER" Name="RavenDB">
+        <Component Id="StoreInstallationPath" Guid="{1313C2AF-E8AD-46B6-9EA8-A60C5134CC8F}">
+          <RegistryKey Root="HKLM" Key="SOFTWARE\[Manufacturer]\[ProductName]" Action="createAndRemoveOnUninstall">
+            <RegistryValue Type="string" Name="RAVEN_INSTALLATION_PATH" Value="[INSTALLFOLDER]"></RegistryValue>
+          </RegistryKey>
+        </Component>
         <Directory Id="Bin" Name="bin">
         </Directory>
       </Directory>
@@ -40,6 +51,7 @@
              Description='RavenDB Windows service'
              Display='expand' 
              ConfigurableDirectory='INSTALLFOLDER'>
+      <ComponentRef Id='StoreInstallationPath' />
       <ComponentRef Id='Raven.Server' />
       <ComponentRef Id='Raven.Database.Service' />
       <ComponentRef Id='Raven.Abstractions.Service' />
@@ -51,6 +63,7 @@
              Description='RavenDB hosted by IIS'
              Display='expand'
              ConfigurableDirectory='INSTALLFOLDER'>
+      <ComponentRef Id='StoreInstallationPath' />
       <ComponentRef Id='Raven.Web' />
       <ComponentRef Id='Raven.Database.Web' />
       <ComponentRef Id='Raven.Abstractions.Web' />
