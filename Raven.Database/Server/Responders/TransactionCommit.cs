@@ -26,7 +26,8 @@ namespace Raven.Database.Server.Responders
 			var txId = context.Request.QueryString["tx"];
 
 			var clientVersion = context.Request.Headers[Constants.RavenClientVersion];
-			if (clientVersion != null && (clientVersion.StartsWith("2.0.") || clientVersion.StartsWith("1.0.")))
+			if (clientVersion == null // v1 clients do not send this header.
+				|| clientVersion.StartsWith("2.0."))
 			{
 				Database.PrepareTransaction(txId);
 			}
