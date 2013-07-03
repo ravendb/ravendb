@@ -195,6 +195,42 @@ namespace Raven.Abstractions.Linq
 			return Enumerate().LastOrDefault(predicate) ?? new DynamicNullObject();
 		}
 
+		public dynamic IndexOf(dynamic item)
+		{
+			var items = Enumerate().ToList();
+			return items.IndexOf(item);
+		}
+
+		public dynamic IndexOf(dynamic item, int index)
+		{
+			var items = Enumerate().ToList();
+			return items.IndexOf(item, index);
+		}
+
+		public dynamic IndexOf(dynamic item, int index, int count)
+		{
+			var items = Enumerate().ToList();
+			return items.IndexOf(item, index, count);
+		}
+
+		public dynamic LastIndexOf(dynamic item)
+		{
+			var items = Enumerate().ToList();
+			return items.LastIndexOf(item);
+		}
+
+		public dynamic LastIndexOf(dynamic item, int index)
+		{
+			var items = Enumerate().ToList();
+			return items.LastIndexOf(item, index);
+		}
+
+		public dynamic LastIndexOf(dynamic item, int index, int count)
+		{
+			var items = Enumerate().ToList();
+			return items.LastIndexOf(item, index, count);
+		}
+
 		/// <summary>
 		/// Gets the length.
 		/// </summary>
