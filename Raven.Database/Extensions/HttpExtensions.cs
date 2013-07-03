@@ -589,7 +589,7 @@ namespace Raven.Database.Extensions
 		}
 		public static void WriteETag(this IHttpContext context, string etag)
 		{
-			var clientVersion = context.Request.Headers["Raven-Client-Version"];
+			var clientVersion = context.Request.Headers[Constants.RavenClientVersion];
 			if (string.IsNullOrEmpty(clientVersion))
 			{
 				context.Response.AddHeader("ETag", etag);

@@ -39,10 +39,10 @@ namespace Raven.Tests.Issues
 
 					WaitForUserToContinueTheTest(documentStore);
 
-					var q1 = session.Query<Result>("TestIndex1").Customize(x => x.WaitForNonStaleResults()).ToList();
-					var q2 = session.Query<Result>("TestIndex2").Customize(x => x.WaitForNonStaleResults()).ToList();
-					var q3 = session.Query<Result, TestIndex3>().Customize(x => x.WaitForNonStaleResults()).ToList();
-					var q4 = session.Query<Result, TestIndex4>().Customize(x => x.WaitForNonStaleResults()).ToList();
+					var q1 = session.Query<Result>("TestIndex1").Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Date).ToList();
+					var q2 = session.Query<Result>("TestIndex2").Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Date).ToList();
+					var q3 = session.Query<Result, TestIndex3>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Date).ToList();
+					var q4 = session.Query<Result, TestIndex4>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Date).ToList();
 
 					Assert.Equal(3, q1.Count);
 					Assert.Equal(new DateTime(2012, 1, 1), q1[0].Date);

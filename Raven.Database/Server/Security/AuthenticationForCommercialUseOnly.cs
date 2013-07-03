@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Commercial;
 using Raven.Database.Plugins;
@@ -60,7 +61,7 @@ namespace Raven.Database.Server.Security
 			database.TransactionalStorage.Batch(
 				accessor => accessor.Lists.Set(LicensingListName, ValidationMarkerName, new RavenJObject()
 				{
-					{"ValidationTime", DateTime.UtcNow}
+					{"ValidationTime", SystemTime.UtcNow}
 				}, UuidType.Documents));
 		}
 	}

@@ -6,6 +6,7 @@
 
     <UI>
       <TextStyle Id="Red8" FaceName="Tahoma" Size="8" Red="210" Green="0" Blue="0" />
+      <TextStyle Id="SmallInfo" FaceName="Tahoma" Size="7" Red="0" Green="0" Blue="0" Italic="yes" />
       <Dialog Id="LicenseFileChooser" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
@@ -30,6 +31,7 @@
         <Control Type="Text" Id="expiration" Width="280" Text="[RAVEN_LICENSE_EXPIRATION]" Property="RAVEN_LICENSE_EXPIRATION" Height="10" X="30" Y="123" />
         <Control Type="Text" Id="attributes1" Width="150" Text="[RAVEN_LICENSE_ATTRIBUTES1]" Property="RAVEN_LICENSE_ATTRIBUTES1" Height="90" X="30" Y="132" />
         <Control Type="Text" Id="attributes2" Width="150" Text="[RAVEN_LICENSE_ATTRIBUTES2]" Property="RAVEN_LICENSE_ATTRIBUTES2" Height="90" X="180" Y="132" />
+        <Control Type="Text" Id="ossLicenseInfo" Width="302" Text="{\SmallInfo}For open source projects, please request a free license from support@hibernatingrhinos.com" Height="10" X="30" Y="224" />
       </Dialog>
       <Publish Dialog="LicenseFileChooser" Control="btnChange" Event="DoAction" Value="OpenLicenseFileChooser" Order="1">1</Publish>
       <Publish Dialog="LicenseFileChooser" Control="btnChange" Property="RAVEN_LICENSE_FILE_PATH" Value="[RAVEN_LICENSE_FILE_PATH]" Order="2">1</Publish>

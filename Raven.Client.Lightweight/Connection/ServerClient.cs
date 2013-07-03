@@ -1594,7 +1594,16 @@ namespace Raven.Client.Connection
 					throw;
 				}
 
-				return new Operation(this, jsonResponse.Value<long>("OperationId"));
+				// Be compitable with the resopnse from v2.0 server
+				if (jsonResponse == null || jsonResponse.Type != JTokenType.Object)
+					return null;
+
+				var opId = ((RavenJObject)jsonResponse)["OperationId"];
+
+				if (opId == null || opId.Type != JTokenType.Integer)
+					return null;
+				
+				return new Operation(this, opId.Value<long>());
 			});
 		}
 

@@ -68,6 +68,7 @@
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\Operation.cs" />
+    <Compile Include="Connection\NameValueCollectionExtensions.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\ITransactionRecoveryStorage.cs" />

@@ -32,5 +32,29 @@ namespace Raven.Tests.Issues
 				Assert.Equal(2, count);
 			}
 		}
+
+		[Fact]
+		public void CanDisposeEarly()
+		{
+			using (var store = NewDocumentStore(runInMemory: false))
+			{
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < 1000; i++)
+					{
+						session.Store(new User() { Name = "Test" });
+					}
+					session.SaveChanges();
+				}
+
+				var enumerator = store.DatabaseCommands.StreamDocs();
+
+				while (enumerator.MoveNext())
+				{
+					enumerator.Dispose();
+					break;
+				}
+			}
+		}
 	}
 }

@@ -384,7 +384,16 @@ namespace Raven.Storage.Esent.StorageActions
 						}
 					}
 
-					update.Save();
+					try
+					{
+						update.Save();
+					}
+					catch (EsentErrorException e)
+					{
+						if (e.Error == JET_err.KeyDuplicate)
+							throw new ConcurrencyException("PUT attempted on document '" + key + "' concurrently", e);
+						throw;
+					}
 				}
 
 				logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
