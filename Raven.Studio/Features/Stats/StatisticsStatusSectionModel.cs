@@ -282,6 +282,7 @@ namespace Raven.Studio.Features.Stats
 
 			foreach (var indexingPerformanceStat in performance)
 			{
+				indexingPerformanceStat.Started = indexingPerformanceStat.Started.ToLocalTime();
 				switch (indexingPerformanceStat.Operation)
 				{
 					case "Index":
