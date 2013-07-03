@@ -129,9 +129,7 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false)
 		{
-			var storageType = GetDefaultStorageType(requestedStorage);
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-				deleteDirectory: deleteDirectoryBefore, enableAuthentication: enableAuthentication);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, requestedStorage: requestedStorage, deleteDirectory: deleteDirectoryBefore, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
@@ -173,15 +171,18 @@ namespace Raven.Tests.Helpers
 
 		protected RavenDbServer GetNewServer(int port = 8079,
 			string dataDirectory = null, 
-			bool runInMemory = true, 
+			bool runInMemory = true,
+			string requestedStorage = null,
 			bool deleteDirectory = true, 
 			bool enableAuthentication = false)
 		{
+			var storageType = GetDefaultStorageType(requestedStorage);
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
 				DataDirectory = dataDirectory ?? DataDir,
-				RunInMemory = runInMemory,
+				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
 			};
 
