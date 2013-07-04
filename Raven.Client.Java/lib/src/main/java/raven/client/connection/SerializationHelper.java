@@ -101,6 +101,18 @@ public class SerializationHelper {
     return null;
   }
 
+  public static JsonDocumentMetadata deserializeJsonDocumentMetadata(String docKey, Map<String, String> headers, int responseStatusCode) {
+    RavenJObject meta = MetadataExtensions.filterHeaders(headers);
+    Etag etag = HttpExtensions.etagHeaderToEtag(headers.get("ETag"));
+    JsonDocumentMetadata result =  new JsonDocumentMetadata();
+    result.setEtag(etag);
+    result.setKey(docKey);
+    result.setLastModified(getLastModifiedDate(headers));
+    result.setMetadata(meta);
+    result.setMonAuthoritativeInformation(responseStatusCode == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION);
+    return result;
+  }
+
   public static JsonDocument ravenJObjectToJsonDocument(RavenJObject ravenJObject) {
     // TODO Auto-generated method stub
     return null;

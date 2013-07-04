@@ -1296,8 +1296,8 @@ public class ServerClient implements IDatabaseCommands {
         .addReplicationStatusHeaders(url, serverUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
-      RavenJToken responseJson = jsonRequest.readResponseJson();
-      return SerializationHelper.deserializeJsonDocumentMetadata(responseJson);
+      jsonRequest.executeRequest();
+      return SerializationHelper.deserializeJsonDocumentMetadata(key, jsonRequest.getResponseHeaders(), jsonRequest.getResponseStatusCode());
     } catch (HttpOperationException e) {
       if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
         return null;
