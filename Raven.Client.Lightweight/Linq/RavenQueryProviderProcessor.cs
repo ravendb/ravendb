@@ -107,9 +107,7 @@ namespace Raven.Client.Linq
 			{
 				switch (expression.NodeType)
 				{
-                    case ExpressionType.Constant:
-				        throw new ArgumentException("Constants expressions are not allowed in the RavenDB queries");
-					case ExpressionType.MemberAccess:
+                  	case ExpressionType.MemberAccess:
 						VisitMemberAccess((MemberExpression) expression, true);
 						break;
 					case ExpressionType.Not:
@@ -996,6 +994,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "Where":
 				{
 					insideWhere++;
+				    AssertNotConstantBoolean(expression.Arguments[0]);
 					VisitExpression(expression.Arguments[0]);
 					if (chainedWhere)
 					{
@@ -1149,7 +1148,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 			}
 		}
-        static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
+
+	    private void AssertNotConstantBoolean(Expression expression)
+	    {
+	        if (expression.NodeType != ExpressionType.Constant)
+	            return;
+	        if (((ConstantExpression) expression).Value is bool)
+	            throw new ArgumentException(
+	                "Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
+
+	    }
+
+	    static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
         {
             typeof(int),
             typeof(long),
