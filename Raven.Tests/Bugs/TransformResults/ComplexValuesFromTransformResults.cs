@@ -173,6 +173,8 @@ namespace Raven.Tests.Bugs.TransformResults
 									.Select(g => new AnswerViewItem {UserDisplayName = "From TransformResults", VoteTotal = g.Key, DecimalTotal = g.Count()})
 								);
 						})
+						.ToList()
+						.OrderBy(x=>x.VoteTotal)
 						.ToList();
 
 					Assert.NotNull(answers);
