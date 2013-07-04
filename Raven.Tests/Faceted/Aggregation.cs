@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
@@ -20,6 +21,7 @@ namespace Raven.Tests.Faceted
             public Currency Currency { get; set; }
 			public int Quantity { get; set; }
             public long Region { get; set; }
+			public DateTime At { get; set; }
         }
 
         public enum Currency
@@ -35,7 +37,7 @@ namespace Raven.Tests.Faceted
             {
                 Map = orders =>
                       from order in orders
-                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region };
+                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At };
 
                 Sort(x => x.Total, SortOptions.Double);
 				Sort(x => x.Quantity, SortOptions.Int);
@@ -182,6 +184,37 @@ namespace Raven.Tests.Faceted
                 }
             }
         }
+
+		[Fact]
+		public void CanCorrectlyAggregate_DateTimeDataType()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new Orders_All().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Order { Currency = Currency.EUR, Product = "Milk", Total = 3, Region = 1, At = DateTime.Today});
+					session.Store(new Order { Currency = Currency.NIS, Product = "Milk", Total = 9, Region = 1, At = DateTime.Today.AddDays(-1) });
+					session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333, Region = 2, At = DateTime.Today });
+					session.SaveChanges();
+				}
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+					var r = session.Query<Order>("Orders/All")
+					   .AggregateBy(x => x.At)
+						 .MaxOn(x => x.Total)
+						 .MinOn(x => x.Total)
+					   .ToList();
+
+					var facetResult = r.Results["At"];
+					Assert.Equal(2, facetResult.Values.Count);
+
+					Assert.Equal(1, facetResult.Values.Count(x => x.Range == DateTime.Today.ToString(Raven.Abstractions.Default.DateTimeFormatsToWrite)));
+				}
+			}
+		}
 
 		[Fact]
 		public void CanCorrectlyAggregate_DisplayName()
