@@ -686,6 +686,7 @@
     <Compile Include="MailingList\CanExcludeNullItems.cs" />
     <Compile Include="MailingList\CanFacetOnList.cs" />
     <Compile Include="MailingList\CanLoadDocumentArray.cs" />
+    <Compile Include="MailingList\CanQueryOnTrue.cs" />
     <Compile Include="MailingList\CanReduceAndTransform.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />

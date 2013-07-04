@@ -107,6 +107,8 @@ namespace Raven.Client.Linq
 			{
 				switch (expression.NodeType)
 				{
+                    case ExpressionType.Constant:
+				        throw new ArgumentException("Constants expressions are not allowed in the RavenDB queries");
 					case ExpressionType.MemberAccess:
 						VisitMemberAccess((MemberExpression) expression, true);
 						break;
