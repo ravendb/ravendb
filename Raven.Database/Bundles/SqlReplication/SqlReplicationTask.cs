@@ -152,7 +152,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var leastReplicatedEtag = GetLeastReplicatedEtag(config, localReplicationStatus);
+                var leastReplicatedEtag = GetLeastReplicatedEtag(relevantConfigs, localReplicationStatus);
 
 				if (leastReplicatedEtag == null)
 				{
@@ -362,10 +362,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private static string GetSqlReplicationDeletionName(SqlReplicationConfig replicationConfig)
 		{
-			return "SqlReplication/Deleteions/" + replicationConfig.Name;
+			return "SqlReplication/Deletions/" + replicationConfig.Name;
 		}
 
-		private Etag GetLeastReplicatedEtag(List<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
+		private Etag GetLeastReplicatedEtag(IEnumerable<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
 			var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
 			Etag leastReplicatedEtag = null;

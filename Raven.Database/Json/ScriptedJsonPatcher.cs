@@ -36,7 +36,6 @@ namespace Raven.Database.Json
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
-			
 			if (database == null)
 			{
 				maxSteps = 10 * 1000;
