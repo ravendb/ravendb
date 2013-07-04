@@ -1,0 +1,59 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>net.ravendb</groupId>
+    <artifactId>jvm-client-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>dsl</artifactId>
+  <properties>
+    <queryDsl.version>3.1.1</queryDsl.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.mysema.querydsl</groupId>
+      <artifactId>querydsl-sql</artifactId>
+      <version>${queryDsl.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysema.querydsl</groupId>
+      <artifactId>querydsl-collections</artifactId>
+      <version>${queryDsl.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysema.querydsl</groupId>
+      <artifactId>querydsl-lucene</artifactId>
+      <version>${queryDsl.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.mysema.maven</groupId>
+        <artifactId>maven-apt-plugin</artifactId>
+        <version>1.0.4</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-process</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>target/generated-test-sources/java</outputDirectory>
+              <processor>com.mysema.query.apt.QuerydslAnnotationProcessor</processor>
+              <options>
+                <querydsl.entityAccessors>true</querydsl.entityAccessors>
+              </options>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
