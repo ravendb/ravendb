@@ -19,6 +19,7 @@ namespace Raven.Tests.Faceted
             public decimal Total { get; set; }
             public Currency Currency { get; set; }
 			public int Quantity { get; set; }
+            public long Region { get; set; }
         }
 
         public enum Currency
@@ -34,10 +35,11 @@ namespace Raven.Tests.Faceted
             {
                 Map = orders =>
                       from order in orders
-                      select new { order.Currency, order.Product, order.Total, order.Quantity };
+                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region };
 
                 Sort(x => x.Total, SortOptions.Double);
 				Sort(x => x.Quantity, SortOptions.Int);
+                Sort(x => x.Quantity, SortOptions.Long);
             }
         }
 
@@ -146,6 +148,37 @@ namespace Raven.Tests.Faceted
                     Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Max);
                     Assert.Equal(3333, facetResult.Values.First(x => x.Range == "iphone").Min);
 
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCorrectlyAggregate_LongDataType()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new Orders_All().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Currency = Currency.EUR, Product = "Milk", Total = 3, Region = 1});
+                    session.Store(new Order { Currency = Currency.NIS, Product = "Milk", Total = 9, Region = 1 });
+                    session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333, Region = 2 });
+                    session.SaveChanges();
+                }
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var r = session.Query<Order>("Orders/All")
+                       .AggregateBy(x => x.Region)
+                         .MaxOn(x => x.Total)
+                         .MinOn(x => x.Total)
+                       .ToList();
+
+                    var facetResult = r.Results["Region"];
+                    Assert.Equal(2, facetResult.Values.Count);
+
+                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == "1"));
                 }
             }
         }
