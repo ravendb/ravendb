@@ -39,7 +39,7 @@ namespace Raven.Tests.Faceted
 
                 Sort(x => x.Total, SortOptions.Double);
 				Sort(x => x.Quantity, SortOptions.Int);
-                Sort(x => x.Quantity, SortOptions.Long);
+                Sort(x => x.Region, SortOptions.Long);
             }
         }
 
