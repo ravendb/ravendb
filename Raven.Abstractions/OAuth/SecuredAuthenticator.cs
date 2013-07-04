@@ -82,10 +82,7 @@ namespace Raven.Abstractions.OAuth
 						{
 							{OAuthHelper.Keys.APIKeyName, apiKeyName},
 							{OAuthHelper.Keys.Challenge, challenge},
-							{
-								OAuthHelper.Keys.Response,
-								OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))
-							}
+							{OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))}
 						}))
 					}
 				});
