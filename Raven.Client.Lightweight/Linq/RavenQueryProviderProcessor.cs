@@ -139,11 +139,20 @@ namespace Raven.Client.Linq
 						{
 							VisitMethodCall((MethodCallExpression) expression);
 						}
-						else if (expression is LambdaExpression)
+						else
 						{
-							VisitExpression(((LambdaExpression) expression).Body);
+						    var lambdaExpression = expression as LambdaExpression;
+						    if (lambdaExpression != null)
+						    {
+						        var body = lambdaExpression.Body;
+						        if (body.NodeType == ExpressionType.Constant && ((ConstantExpression)body).Value is bool)
+						        {
+						            throw new ArgumentException("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
+						        }
+						        VisitExpression(body);
+						    }
 						}
-						break;
+				        break;
 				}
 			}
 
@@ -994,8 +1003,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "Where":
 				{
 					insideWhere++;
-				    AssertNotConstantBoolean(expression.Arguments[0]);
-					VisitExpression(expression.Arguments[0]);
+				    VisitExpression(expression.Arguments[0]);
 					if (chainedWhere)
 					{
 						luceneQuery.AndAlso();
@@ -1148,16 +1156,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 			}
 		}
-
-	    private void AssertNotConstantBoolean(Expression expression)
-	    {
-	        if (expression.NodeType != ExpressionType.Constant)
-	            return;
-	        if (((ConstantExpression) expression).Value is bool)
-	            throw new ArgumentException(
-	                "Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
-
-	    }
 
 	    static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
         {

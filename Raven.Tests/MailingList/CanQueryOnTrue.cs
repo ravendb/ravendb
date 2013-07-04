@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Xunit;
 using Raven.Client.Linq;
 using System.Linq;
@@ -23,7 +24,10 @@ namespace Raven.Tests.MailingList
             {
                 using (var s = store.OpenSession())
                 {
-                    s.Query<Item>().Where(x => true).Where(x => x.Name == "oren").ToList();
+                    var e = Assert.Throws<ArgumentException>(
+                        () => s.Query<Item>().Where(_ => true).Where(x => x.Name == "oren").ToList());
+
+                    Assert.Equal("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries",e.Message);
                 }
             }
         }
