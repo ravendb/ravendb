@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task Restore_operation_works_async()
 		{
-			using (var store = NewRemoteDocumentStore(runInMemory: false))
+			using (var store = NewRemoteDocumentStore(runInMemory: false, requestedStorage:"esent"))
 			{
 				store.DatabaseCommands.Put("keys/1", null, new RavenJObject() { { "Key", 1 } }, new RavenJObject());
 
