@@ -63,6 +63,10 @@ namespace Raven.Database.Server.Security
 			if ( NeverSecret.Urls.Contains(requestUrl))
 				return true;
 
+			//CORS pre-flight (ignore creds if using cors).
+			if(!String.IsNullOrEmpty(Settings.AccessControlAllowOrigin) && context.Request.HttpMethod == "OPTIONS") 
+			{ return true; }
+
 			var oneTimeToken = context.Request.Headers["Single-Use-Auth-Token"];
 			if (string.IsNullOrEmpty(oneTimeToken) == false)
 			{
