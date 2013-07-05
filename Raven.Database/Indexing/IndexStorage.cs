@@ -167,7 +167,7 @@ namespace Raven.Database.Indexing
 					else
 					{
 						resetTried = true;
-						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, orcibly resetting index", e);
+						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, forcibly resetting index", e);
 						TryResettingIndex(indexName, indexDefinition);
 					}
 				}
