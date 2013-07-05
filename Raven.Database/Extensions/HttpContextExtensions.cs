@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -124,7 +125,7 @@ namespace Raven.Database.Extensions
 			SpatialUnits units;
 			bool unitsSpecified = Enum.TryParse(context.Request.QueryString["spatialUnits"], out units);
 			double distanceErrorPct;
-			if (!double.TryParse(context.Request.QueryString["distErrPrc"], out distanceErrorPct))
+			if (!double.TryParse(context.Request.QueryString["distErrPrc"], NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
 			if (Enum.TryParse(context.Request.QueryString["spatialRelation"], false, out spatialRelation)

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using System.IO;
 using System.Transactions;
 using Raven.Abstractions;
@@ -23,6 +24,7 @@ using Raven.Tests.Indexes;
 using Xunit;
 using System.Linq;
 using Raven.Tests.Spatial;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Document
 {
@@ -958,9 +960,11 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		[Fact]
-		public void Can_query_from_spatial_index()
+		[Theory]
+		[CriticalCultures]
+		public void Can_query_from_spatial_index(CultureInfo cultureInfo)
 		{
+			using(new TemporaryCulture(cultureInfo))
 			using (var session = documentStore.OpenSession())
 			{
 				foreach (Event @event in SpatialIndexTestHelper.GetEvents())
