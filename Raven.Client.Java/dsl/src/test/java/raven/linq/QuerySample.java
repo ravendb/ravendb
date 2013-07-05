@@ -18,15 +18,8 @@ import raven.samples.QPerson;
 import raven.samples.QPersonResult;
 
 import com.mysema.query.support.Expressions;
-import com.mysema.query.types.ConstructorExpression;
-import com.mysema.query.types.OperatorImpl;
-import com.mysema.query.types.expr.BooleanExpression;
 import com.mysema.query.types.expr.NumberExpression;
-import com.mysema.query.types.expr.SimpleExpression;
-import com.mysema.query.types.expr.SimpleOperation;
-import com.mysema.query.types.path.SimplePath;
 import com.mysema.query.types.path.StringPath;
-import com.mysema.query.types.template.NumberTemplate;
 import com.mysema.query.types.template.StringTemplate;
 
 
@@ -42,7 +35,7 @@ public class QuerySample {
             .with(pr.name, p.firstname)
             .with(pr.count, 1));
 
-    System.out.println(select);
+    assertEquals("docs.Persons.Select(person => new {Name = person.firstname, Count = 1})", select.toLinq());
 
     Grouping<StringPath> grouping = Grouping.create(StringPath.class);
 
@@ -53,7 +46,8 @@ public class QuerySample {
           .with(pr.name, grouping.key)
           .with(pr.count, grouping.sum(pr.count).divide(grouping.sum(pr.count))));
 
-    System.out.println(reduce);
+    assertEquals("results.GroupBy(personResult => personResult.name)." +
+    		"Select(group => new {Name = group.key, Count = group.Sum(personResult => personResult.count) / group.Sum(personResult => personResult.count)})", reduce.toLinq());
 
   }
 
@@ -125,93 +119,7 @@ public class QuerySample {
 
   }
 
-  @Test
-  public void testAny() {
-    QCompany c = new QCompany("c");
-    QCompany d = new QCompany("d");
 
-    QPersonResult pr = QPersonResult.personResult;
-    IndexDefinitionBuilder query1 = from(Company.class)
-        .where(d.name.eq("Test").and(d.name.eq("AA")))
-        .where(d.employees.size().gt(d.id))
-        .select(AnonymousExpression.create(PersonResult.class)
-            .with(pr.name, d.name));
-
-    System.out.println(query1.toLinq());
-
-    System.out.println(query1);
-
-  }
-
-  @Test
-  public void testTranformAny() {
-
-    QCompany c = new QCompany("c");
-
-    IndexDefinitionBuilder query = from(Company.class)
-      .where(c.employees.any().pets.any().name.eq("Dog"));
-
-
-    BooleanExpression booleanExpression = c.employees.any().pets.any().name.eq("Dog");
-
-    OperatorImpl<String> lambda = new OperatorImpl<>("LAMBDA");
-
-    SimplePath<Person> person = Expressions.path(Person.class, "p");
-    SimplePath<String> firstName = Expressions.path(String.class, person, "firstName");
-    SimpleExpression<?> lamda = SimpleOperation.create(firstName.getType(), lambda, person, firstName);
-
-    System.out.println(lamda);
-
-
-    System.out.println(booleanExpression);
-
-
-    System.out.println(query);
-
-//    LinqQuery<Company> query1 = from(Company.class)
-//        .where(c.employees.any().age));
-
-//    System.out.println(query1);
-
-
-  }
-
-  @Test
-  public void test() {
-    String linq = from(Person.class).toLinq();
-    assertEquals("docs.Persons", linq);
-
-    QPerson p = new QPerson("p");
-    QCompany c = new QCompany("c");
-    QPersonResult pr = QPersonResult.personResult;
-
-    IndexDefinitionBuilder query1 = from(Company.class)
-        .where(c.name.startsWith("C"))
-        .where(c.name.endsWith("a"))
-        .orderBy(c.name.asc())
-        .orderBy(c.id.asc())
-        .selectMany(c.employees)
-        .where(p.firstname.eq("Marcin"))
-        .where(p.lastname.length().gt(7));
-
-    IndexDefinitionBuilder select = from(Person.class)
-      .where(p.firstname.length().lt(5))
-      .select(QPersonResult.create(p.firstname, NumberTemplate.ONE));
-    System.out.println("SELECT: " + select);
-
-
-    Grouping<StringPath> grouping = Grouping.create(StringPath.class, "group");
-
-    System.out.println("PATH: " + grouping.key);
-
-
-
-    ConstructorExpression<PersonResult> personResult = QPersonResult.create(p.firstname, p.age);
-    System.out.println(personResult);
-
-    String linq2 = query1.toLinq();
-    System.out.println(linq2);
-  }
 
   @Test
   public void testGrouping() {
@@ -222,7 +130,6 @@ public class QuerySample {
     LinqSerializer serializer = new LinqSerializer(LinqQueryTemplates.DEFAULT);
     numberExpression.accept(serializer, null);
     assertEquals("group.Sum(pr => pr.count)", serializer.toString());
-
 
   }
 

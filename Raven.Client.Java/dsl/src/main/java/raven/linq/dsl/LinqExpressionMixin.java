@@ -63,7 +63,7 @@ public final class LinqExpressionMixin<T> implements Cloneable {
 
   @Override
   public String toString() {
-    return expression.accept(ToStringVisitor.DEFAULT, LinqQueryTemplates.DEFAULT);
+    return toLinq();
   }
 
   public T where(Predicate e) {
