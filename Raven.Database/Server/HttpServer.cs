@@ -288,7 +288,7 @@ namespace Raven.Database.Server
 				exceptionAggregator.Execute(() =>
 				{
 					if (listener != null && listener.IsListening)
-						listener.Stop();
+						listener.Close();
 				});
 				disposed = true;
 

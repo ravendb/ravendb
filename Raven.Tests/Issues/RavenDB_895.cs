@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public async void TransformScriptFiltering()
+		public async Task TransformScriptFiltering()
 		{
 			var options = new SmugglerOptions
 			{
@@ -43,8 +44,8 @@ namespace Raven.Tests.Issues
 				{
 					using (var session = store.OpenSession())
 					{
-						session.Store(new Foo { Name = "N1" });
-						session.Store(new Foo { Name = "N2" });
+						session.Store(new Foo {Name = "N1"});
+						session.Store(new Foo {Name = "N2"});
 
 						session.SaveChanges();
 					}
@@ -66,8 +67,8 @@ namespace Raven.Tests.Issues
 					using (var session = documentStore.OpenSession())
 					{
 						var foos = session.Query<Foo>()
-							.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-							.ToList();
+						                  .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+						                  .ToList();
 
 						Assert.Equal(1, foos.Count);
 						Assert.Equal("foos/2", foos[0].Id);
