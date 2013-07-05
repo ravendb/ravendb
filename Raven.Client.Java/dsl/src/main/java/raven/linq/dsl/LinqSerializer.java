@@ -18,7 +18,7 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
     super(templates);
   }
 
-  public String toLinq(LinqExpressionMixin query) {
+  public String toLinq(LinqExpressionMixin<?> query) {
     handle(query.getExpression());
     return toString();
   }

@@ -23,7 +23,7 @@ import com.mysema.query.types.path.StringPath;
 import com.mysema.query.types.template.StringTemplate;
 
 
-public class QuerySample {
+public class IndexBuildTests {
 
   @Test
   public void testMapReduce() {

@@ -1,7 +1,5 @@
 package raven.samples;
 
-import java.lang.reflect.Constructor;
-
 import com.mysema.query.annotations.QueryEntity;
 import com.mysema.query.annotations.QueryProjection;
 
