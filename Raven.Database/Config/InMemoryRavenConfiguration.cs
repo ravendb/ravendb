@@ -196,6 +196,8 @@ namespace Raven.Database.Config
 
 			PluginsDirectory = ravenSettings.PluginsDirectory.Value.ToFullPath();
 
+			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
+
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
 			if (taskSchedulerType != null)
 			{
@@ -662,6 +664,12 @@ namespace Raven.Database.Config
 
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
+
+		/// <summary>
+		/// Where to cache the compiled indexes
+		/// Default: ~\Raven\CompiledIndexCache
+		/// </summary>
+		public string CompiledIndexCacheDirectory { get; set; }
 
 		public string OAuthTokenServer { get; set; }
 

@@ -93,6 +93,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/WebDir"], GetDefaultWebDir);
 			PluginsDirectory =
 				new StringSetting(settings["Raven/PluginsDirectory"], @"~\Plugins");
+			CompiledIndexCacheDirectory =
+				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\Raven\CompiledIndexCache");
 			TaskScheduler =
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
@@ -213,6 +215,8 @@ namespace Raven.Database.Config
 		public StringSetting ServerName { get; private set; }
 
 		public StringSetting PluginsDirectory { get; private set; }
+
+		public StringSetting CompiledIndexCacheDirectory { get; private set; }
 
 		public StringSetting TaskScheduler { get; private set; }
 

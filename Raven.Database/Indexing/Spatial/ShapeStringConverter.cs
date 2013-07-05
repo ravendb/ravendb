@@ -73,13 +73,13 @@ namespace Raven.Database.Indexing.Spatial
 				if (coord.Success)
 				{
 					if (coord.Groups.Count > 1)
-						coordinate = new[] { double.Parse(coord.Groups[1].Value), double.Parse(coord.Groups[2].Value) };
+						coordinate = new[] { double.Parse(coord.Groups[1].Value, CultureInfo.InvariantCulture), double.Parse(coord.Groups[2].Value, CultureInfo.InvariantCulture) };
 					continue;
 				}
 				var u = RegexGeoUriUncert.Match(component);
 				if (u.Success)
 				{
-					uncertainty = double.Parse(u.Groups[1].Value);
+					uncertainty = double.Parse(u.Groups[1].Value, CultureInfo.InvariantCulture);
 
 					// Uncertainty is in meters when in a geographic context
 					if (uncertainty > 0 && options.Type == SpatialFieldType.Geography)
