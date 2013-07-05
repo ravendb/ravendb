@@ -1243,7 +1243,17 @@ namespace Raven.Database.Server
 		{
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlAllowOrigin))
 				return;
-			ctx.Response.AddHeader("Access-Control-Allow-Origin", SystemConfiguration.AccessControlAllowOrigin);
+
+			ctx.Response.AddHeader("Access-Control-Allow-Credentials", "true");
+
+			bool originAllowed = SystemConfiguration.AccessControlAllowOrigin == "*" ||
+					SystemConfiguration.AccessControlAllowOrigin.Split(' ')
+						.Any(o => o == ctx.Request.Headers["Origin"]);
+			if(originAllowed)
+			{
+				ctx.Response.AddHeader("Access-Control-Allow-Origin", ctx.Request.Headers["Origin"]);
+			}
+			
 			ctx.Response.AddHeader("Access-Control-Max-Age", SystemConfiguration.AccessControlMaxAge);
 			ctx.Response.AddHeader("Access-Control-Allow-Methods", SystemConfiguration.AccessControlAllowMethods);
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlRequestHeaders))
