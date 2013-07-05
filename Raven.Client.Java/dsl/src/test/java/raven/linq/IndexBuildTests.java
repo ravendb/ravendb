@@ -1,12 +1,12 @@
 package raven.linq;
 
 import static org.junit.Assert.assertEquals;
-import static raven.linq.dsl.IndexDefinitionBuilder.from;
+import static raven.linq.dsl.IndexExpression.from;
 
 import org.junit.Test;
 
 import raven.linq.dsl.Grouping;
-import raven.linq.dsl.IndexDefinitionBuilder;
+import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.LinqQueryTemplates;
 import raven.linq.dsl.LinqSerializer;
 import raven.linq.dsl.expressions.AnonymousExpression;
@@ -29,7 +29,7 @@ public class IndexBuildTests {
   public void testMapReduce() {
     QPerson p = QPerson.person;
     QPersonResult pr = QPersonResult.personResult;
-    IndexDefinitionBuilder select = from(Person.class)
+    IndexExpression select = from(Person.class)
         .select(
             AnonymousExpression.create(PersonResult.class)
             .with(pr.name, p.firstname)
@@ -39,7 +39,7 @@ public class IndexBuildTests {
 
     Grouping<StringPath> grouping = Grouping.create(StringPath.class);
 
-    IndexDefinitionBuilder reduce = from("results")
+    IndexExpression reduce = from("results")
       .groupBy(pr.name)
       .select(
           AnonymousExpression.create(PersonResult.class)
@@ -55,12 +55,12 @@ public class IndexBuildTests {
   @Test
   public void testOrder() {
     QPerson p = QPerson.person;
-    IndexDefinitionBuilder query1 = from(Person.class)
+    IndexExpression query1 = from(Person.class)
       .orderBy(p.firstname.asc(), p.lastname.desc());
 
     assertEquals("docs.Persons.OrderBy(person => person.firstname).OrderByDescending(person => person.lastname)", query1.toLinq());
 
-    IndexDefinitionBuilder query2 = from(Person.class)
+    IndexExpression query2 = from(Person.class)
         .orderBy(p.firstname.asc()).orderBy(p.lastname.desc());
 
       assertEquals("docs.Persons.OrderBy(person => person.firstname).OrderByDescending(person => person.lastname)", query2.toLinq());
