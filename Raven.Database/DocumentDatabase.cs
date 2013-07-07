@@ -1941,7 +1941,7 @@ namespace Raven.Database
 									shouldRetry = true;
 									if (rand == null)
 										rand = new Random();
-									Thread.Sleep(rand.Next(5, retries[0] * 2));
+                                    Thread.Sleep(rand.Next(5, Math.Max(retries[0] * 2, 10)));
 									return;
 								}
 								throw;
@@ -1999,7 +1999,7 @@ namespace Raven.Database
 					{
                         if(rand == null)
                             rand = new Random();
-					    Thread.Sleep(rand.Next(5, retries*2));
+                        Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
 						continue;
 					}
 					throw;
