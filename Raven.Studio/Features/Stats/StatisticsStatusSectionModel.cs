@@ -31,6 +31,7 @@ namespace Raven.Studio.Features.Stats
 			Statistics = new Dictionary<string, StatInfo>();
 			StatisticsToView = new Dictionary<string, StatInfo>();
 			ViewOptions = new List<string>();
+			StaleIndexes = new List<object>();
 			SelectedViewOption = new Observable<string> { Value = "All" };
 			SelectedViewOption.PropertyChanged += (sender, args) => UpdateView();
 			UpdateStatistics();
@@ -68,6 +69,16 @@ namespace Raven.Studio.Features.Stats
 						foreach (var item in items)
 						{
 							StatisticsToView.Add(item.Key, item.Value);
+						}
+					}
+					break;
+				case "Stale Indexes":
+					{
+						var indexes = Statistics.FirstOrDefault(pair => pair.Key == "Indexes");
+						foreach (var index in StaleIndexes)
+						{
+							var item = indexes.Value.ListItems.FirstOrDefault(infoItem => infoItem.Title == (string) index);
+							StatisticsToView.Add(index.ToString(), new StatInfo{ListItems = new List<StatInfoItem>{item}, IsList = true});
 						}
 					}
 					break;
@@ -147,9 +158,9 @@ namespace Raven.Studio.Features.Stats
 				if (enumerable != null)
 				{
 					var list = enumerable as List<object> ?? enumerable.ToList();
-
 					if (propertyInfo.Name == "StaleIndexes")
 					{
+						StaleIndexes = new List<object>(list);
 						if (list.Count == 0)
 						{
 							Statistics.Add(propertyInfo.Name, new StatInfo
@@ -160,17 +171,19 @@ namespace Raven.Studio.Features.Stats
 						}
 						else if (list.Count > 1)
 						{
+							ViewOptions.Add("Stale Indexes");
 							Statistics.Add(propertyInfo.Name, new StatInfo
 							{
-								Message = string.Format("There are {0} Stale Indexes", list.Count),
+								Message = string.Format("There are {0} Stale Indexes: {1}", list.Count, string.Join(",", list)),
 								ToolTipData = string.Join(", ", list)
 							});
 						}
 						else // only one item
 						{
+							ViewOptions.Add("Stale Indexes");
 							Statistics.Add(propertyInfo.Name, new StatInfo
 							{
-								Message = "There is 1 Stale Index",
+								Message = "There is 1 Stale Index: " + list[0],
 								ToolTipData = list[0].ToString() // only one item, no need to call string.Join()
 							});
 						}
@@ -370,6 +383,7 @@ namespace Raven.Studio.Features.Stats
 		public Dictionary<string, PerformanceStats> IndexesGraphData { get; set; } 
 		public Observable<string> SelectedViewOption { get; set; }
         public string Breadcrumb { get; set; }
+		public List<object> StaleIndexes { get; set; }
 	}
 
 	public class PerformanceStats
