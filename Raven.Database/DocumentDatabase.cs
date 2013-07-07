@@ -1077,22 +1077,26 @@ namespace Raven.Database
         {
             try
             {
-                try
-                {
+	            try
+	            {
 		            inFlightTransactionalState.Commit(txId);
-					log.Debug("Commit of tx {0} completed", txId);
-					workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
-				}
-                finally
-                {
-                    inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
-                }
+		            log.Debug("Commit of tx {0} completed", txId);
+		            workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
+	            }
+	            finally
+	            {
+		            inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
+	            }
             }
             catch (Exception e)
             {
-                if (TransactionalStorage.HandleException(e))
-                    return;
-                throw;
+	            if (TransactionalStorage.HandleException(e))
+		            return;
+	            throw;
+            }
+            finally
+            {
+	            workContext.HandleWorkNotifications();
             }
         }
 
