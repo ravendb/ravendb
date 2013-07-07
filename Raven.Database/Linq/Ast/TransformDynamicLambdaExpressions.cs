@@ -36,6 +36,7 @@ namespace Raven.Database.Linq.Ast
 				case "GroupBy":
 				case "Recurse":
 				case "Select":
+				case "ToDictionary":
 					node = ModifyLambdaForSelect(parenthesizedlambdaExpression, target);
 					break;
 				case "SelectMany":
