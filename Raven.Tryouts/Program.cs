@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Tests;
 using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
@@ -13,15 +14,10 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				
-				using (var x = new RavenDB_895())
-				{
-					x.TransformScriptFiltering().Wait();
-				}
 
-				using (var x = new RavenDB_895())
+				using (var x = new ConcurrentPatching())
 				{
-					x.TransformScriptModifying().Wait();
+					x.CanConcurrentlyUpdateSameDocument();
 				}
 			}
 		}
