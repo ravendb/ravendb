@@ -10,6 +10,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -614,7 +615,7 @@ public class HttpJsonRequest {
     this.responseHeaders = map;
   }
 
-  public HttpJsonRequest addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior,
+  public HttpJsonRequest addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl, ReplicationInformer replicationInformer, EnumSet<FailoverBehavior> failoverBehavior,
       HandleReplicationStatusChangesCallback handleReplicationStatusChangesCallback) {
 
     if (thePrimaryUrl.equalsIgnoreCase(currentUrl)) {
