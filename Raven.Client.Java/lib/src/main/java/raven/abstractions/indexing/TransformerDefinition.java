@@ -1,6 +1,6 @@
 package raven.abstractions.indexing;
 
-public class TransformDefinition implements Cloneable {
+public class TransformerDefinition implements Cloneable {
   public String transformResults;
   public String name;
 
@@ -15,7 +15,7 @@ public class TransformDefinition implements Cloneable {
 
   @Override
   public Object clone() throws CloneNotSupportedException {
-    TransformDefinition clone = new TransformDefinition();
+    TransformerDefinition clone = new TransformerDefinition();
     clone.setTransformResults(transformResults);
     clone.setName(name);
     return clone;
@@ -37,7 +37,7 @@ public class TransformDefinition implements Cloneable {
       return false;
     if (getClass() != obj.getClass())
       return false;
-    TransformDefinition other = (TransformDefinition) obj;
+    TransformerDefinition other = (TransformerDefinition) obj;
     if (transformResults == null) {
       if (other.transformResults != null)
         return false;

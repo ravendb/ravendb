@@ -40,6 +40,7 @@ import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.indexing.IndexDefinition;
+import raven.abstractions.indexing.TransformerDefinition;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -729,16 +730,86 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
+  public Collection<TransformerDefinition> getTransformers(final int start, final int pageSize) {
+    return executeWithReplication(HttpMethods.GET, new Function1<String, Collection<TransformerDefinition>>() {
 
-  //TODO: public TransformerDefinition[] GetTransformers(int start, int pageSize)
+      @Override
+      public Collection<TransformerDefinition> apply(String operationUrl) {
+        return directGetTransformers(operationUrl, start, pageSize);
+      }
+    });
+  }
 
-  //TODO: public TransformerDefinition GetTransformer(string name)
+  protected Collection<TransformerDefinition> directGetTransformers(String operationUrl, int start, int pageSize) {
+    String url2 = RavenUrlExtensions.noCache(operationUrl + "/transformers?start=" + start + "&pageSize=" + pageSize);
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), credentials, convention));
+    request.addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
-  //TODO: public void DeleteTransformer(string name)
+    try {
+      RavenJToken result = request.readResponseJson();
+      RavenJArray json = ((RavenJArray)result);
+      return JsonConvert.deserializeObject(json, TransformerDefinition.class, "definition");
+    } catch (IOException e) {
+      throw new ServerClientException("unable to get transformers", e);
+    }
+  }
 
-  //TODO: private void DirectDeleteTransformer(string name, string operationUrl)
+  public TransformerDefinition GetTransformer(final String name) {
+    ensureIsNotNullOrEmpty(name, "name");
+    return executeWithReplication(HttpMethods.GET, new Function1<String, TransformerDefinition>() {
+      @Override
+      public TransformerDefinition apply(String u) {
+        return directGetTransformer(name, u);
+      }
+    });
+  }
 
-  //TODO: private TransformerDefinition DirectGetTransformer(string transformerName, string operationUrl)
+  public void deleteTransformer(final String name) {
+    ensureIsNotNullOrEmpty(name, "name");
+    executeWithReplication(HttpMethods.DELETE, new Function1<String, Void>() {
+      @Override
+      public Void apply(String operationUrl) {
+        directDeleteTransformer(name, operationUrl);
+        return null;
+      }
+    });
+  }
+  private void directDeleteTransformer(final String name, String operationUrl) {
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/transformers/" + name, HttpMethods.DELETE, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      request.executeRequest();
+    } catch (IOException e) {
+      throw new ServerClientException("Unable to delete transformer", e);
+    }
+  }
+
+  private TransformerDefinition directGetTransformer(final String transformerName, final String operationUrl) {
+    HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/transformers/" + transformerName, HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      RavenJToken transformerDef;
+      try {
+        transformerDef = httpJsonRequest.readResponseJson();
+      } catch (HttpOperationException e) {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          return null;
+        }
+        throw e;
+      }
+
+      RavenJObject value = transformerDef.value(RavenJObject.class, "Transformer");
+      return JsonExtensions.getDefaultObjectMapper().readValue(value.toString(), TransformerDefinition.class);
+    } catch (IOException e){
+      throw new ServerClientException("unable to get transformer:" + transformerName, e);
+    }
+  }
 
   @Override
   public void resetIndex(final String name) {
@@ -862,11 +933,19 @@ public class ServerClient implements IDatabaseCommands {
 
   }
 
-  public String putIndex(String name, IndexDefinition definition) {
+  public String putIndex(final String name, final IndexDefinition definition) {
     return putIndex(name, definition, false);
   }
 
-  //TODO: public string PutTransformer(string name, TransformerDefinition indexDef)
+  public String putTransformer(final String name, final TransformerDefinition indexDef) {
+    ensureIsNotNullOrEmpty(name, "name");
+    return executeWithReplication(HttpMethods.PUT, new Function1<String, String>() {
+      @Override
+      public String apply(String operationUrl) {
+        return directPutTransformer(name, operationUrl, indexDef);
+      }
+    });
+  }
 
   public String putIndex(final String name, final IndexDefinition definition, final boolean overwrite) {
     ensureIsNotNullOrEmpty(name, "name");
@@ -878,7 +957,47 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
-  //TODO: public string DirectPutTransformer(string name, string operationUrl, TransformerDefinition definition)
+  public String directPutTransformer(String name, String operationUrl, TransformerDefinition definition) {
+    String requestUri = operationUrl + "/transformers/" + name;
+
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.PUT, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      request.write(JsonConvert.serializeObject(definition));
+
+
+      RavenJObject responseJson = (RavenJObject) request.readResponseJson();
+      return responseJson.value(String.class, "Transformer");
+    } catch (HttpOperationException e) {
+      throw new ServerClientException("unable to put transformer", e);
+      /*TODO: dead code
+      var httpWebResponse = e.Response as HttpWebResponse;
+      if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+        throw;
+
+      if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+      {
+        var error = e.TryReadErrorResponseObject(
+            new { Error = "", Message = "" });
+
+        if (error == null)
+        {
+          throw;
+        }
+
+        var compilationException = new TransformCompilationException(error.Message);
+
+        throw compilationException;
+      }
+
+      throw;*/
+    } catch (IOException e) {
+      throw new ServerClientException(e);
+    }
+  }
 
   public String directPutIndex(String name, String operationUrl, boolean overwrite, IndexDefinition definition) {
     String requestUri = operationUrl + "/indexes/" + name;
