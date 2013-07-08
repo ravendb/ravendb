@@ -83,7 +83,8 @@ namespace Raven.Abstractions.Commands
 						{"Key", Key},
 						{"Method", Method},
 						{"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))},
-						{"AdditionalData", AdditionalData}
+						{"AdditionalData", AdditionalData},
+                        {"Metadata", Metadata}
 			       	};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());
