@@ -794,6 +794,7 @@
     <Compile Include="MailingList\Troy2.cs" />
     <Compile Include="MailingList\TroyMapReduce.cs" />
     <Compile Include="MailingList\TroyMapReduceImport.cs" />
+    <Compile Include="MailingList\TypeConverter.cs" />
     <Compile Include="MailingList\UintId.cs" />
     <Compile Include="MailingList\UrlInIdsRepro.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
