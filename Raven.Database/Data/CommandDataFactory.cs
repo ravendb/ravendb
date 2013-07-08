@@ -41,6 +41,7 @@ namespace Raven.Database.Data
 						Key = key,
 						Etag = GetEtagFromCommand(jsonCommand),
 						TransactionInformation = transactionInformation,
+						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						Patches = jsonCommand
 							.Value<RavenJArray>("Patches")
 							.Cast<RavenJObject>()

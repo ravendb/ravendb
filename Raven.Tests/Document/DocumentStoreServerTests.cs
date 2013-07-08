@@ -1355,7 +1355,10 @@ namespace Raven.Tests.Document
 						Value = "New",
 					}
 				},
-				new RavenJObject());
+				new RavenJObject
+				{
+					{ "DefaultMetadataPresent", "true" }
+				});
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -1363,6 +1366,11 @@ namespace Raven.Tests.Document
 
 				Assert.NotNull(company);
 				Assert.Equal(company.Name, "New");
+
+				var metadata = session.Advanced.GetMetadataFor(company);
+
+				Assert.NotNull(metadata);
+				Assert.Equal(metadata["DefaultMetadataPresent"], "true");
 			}
 		}
 
