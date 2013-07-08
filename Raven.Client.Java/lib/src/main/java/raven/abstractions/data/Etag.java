@@ -18,6 +18,13 @@ public class Etag {
   public long getRestarts() {
     return restarts;
   }
+
+
+  @Override
+  public Etag clone() throws CloneNotSupportedException {
+    return new Etag(restarts, changes);
+  }
+
   /**
    * @return the changes
    */
