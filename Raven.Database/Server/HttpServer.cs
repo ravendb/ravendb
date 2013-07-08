@@ -347,7 +347,8 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+		    var prefix = Configuration.UseSsl ? "https://" : "http://";
+            var uri = prefix + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
