@@ -462,6 +462,15 @@ more responsive application.
 			var entity = defaultValue;
 			EnsureNotReadVetoed(metadata);
 
+			IDisposable disposable = null;
+			var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
+			if (defaultRavenContractResolver != null)
+			{
+				disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
+			}
+
+			using (disposable)
+			{
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
@@ -476,7 +485,7 @@ more responsive application.
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
-					entity = (object)(new DynamicJsonObject(document));
+						entity = (object) (new DynamicJsonObject(document));
 				}
 			}
 			GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
@@ -487,6 +496,18 @@ more responsive application.
 			}
 
 			return entity;
+		}
+		}
+
+		private void RegisterMissingProperties(object o, string key, JToken value)
+		{
+			Dictionary<string, JToken> dictionary;
+			if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
+			{
+				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
+			}
+
+			dictionary[key] = value;
 		}
 
 		/// <summary>
@@ -554,12 +575,22 @@ more responsive application.
 
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
+
+			IDisposable disposable = null;
+			var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
+			if (defaultRavenContractResolver != null)
+			{
+				disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
+			}
+			using (disposable)
+			{
+
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
 				var type = Type.GetType(documentType);
 				if (type != null)
-					entity = (T)documentFound.Deserialize(type, Conventions);
+						entity = (T)documentFound.Deserialize(type, Conventions);
 			}
 			if (Equals(entity, default(T)))
 			{
@@ -567,7 +598,7 @@ more responsive application.
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
-					entity = (T)(object)(new DynamicJsonObject(document));
+						entity = (T)(object)(new DynamicJsonObject(document));
 				}
 			}
 			GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
@@ -583,6 +614,7 @@ more responsive application.
 			}
 
 			return entity;
+		}
 		}
 
 		private static void EnsureNotReadVetoed(RavenJObject metadata)
@@ -727,9 +759,9 @@ more responsive application.
 				string id;
 				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
 					return id;
-				
+
 				var key = await GenerateKeyAsync(entity);
-							// If we generated a new id, store it back into the Id field so the client has access to to it                    
+				// If we generated a new id, store it back into the Id field so the client has access to to it                    
 				if (key != null)
 					GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
 				return key;
@@ -779,7 +811,7 @@ more responsive application.
 
 			var result = await generator;
 			if (result != null && result.StartsWith("/"))
-					throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
+				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 
 			return result;
 		}
