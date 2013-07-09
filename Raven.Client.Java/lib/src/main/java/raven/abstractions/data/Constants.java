@@ -20,4 +20,7 @@ public class Constants {
   public final static String RAVEN_FORCE_PRIMARY_SERVER_CHECK = "Raven-Force-Primary-Server-Check";
 
 
+  public final static String RAVEN_ENTITY_NAME = "Raven-Entity-Name";
+
+
 }

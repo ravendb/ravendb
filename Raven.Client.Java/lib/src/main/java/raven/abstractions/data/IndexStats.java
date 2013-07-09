@@ -1,0 +1,313 @@
+package raven.abstractions.data;
+
+import java.util.Date;
+
+import org.codehaus.jackson.annotate.JsonCreator;
+
+import raven.abstractions.basic.SharpEnum;
+import raven.abstractions.indexing.IndexLockMode;
+
+public class IndexStats {
+  private String name;
+  private int indexingAttempts;
+  private int indexingSuccesses;
+  private int indexingErrors;
+  private Etag lastIndexedEtag;
+  private Date lastIndexedTimestamp;
+  private Date lastQueryTimestamp;
+  private int touchCount;
+  private IndexingPriority priority;
+  private Integer reduceIndexingAttempts ;
+  private Integer reduceIndexingSuccesses;
+  private Integer reduceIndexingErrors;
+  private Etag lastReducedEtag;
+  private Date lastReducedTimestamp;
+  private Date createdTimestamp;
+  private Date lastIndexingTime;
+  private String isOnRam;
+  private IndexLockMode lockMode;
+
+  private IndexingPerformanceStats[] performance;
+
+
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public int getIndexingAttempts() {
+    return indexingAttempts;
+  }
+
+  public void setIndexingAttempts(int indexingAttempts) {
+    this.indexingAttempts = indexingAttempts;
+  }
+
+  public int getIndexingSuccesses() {
+    return indexingSuccesses;
+  }
+
+  public void setIndexingSuccesses(int indexingSuccesses) {
+    this.indexingSuccesses = indexingSuccesses;
+  }
+
+  public int getIndexingErrors() {
+    return indexingErrors;
+  }
+
+  public void setIndexingErrors(int indexingErrors) {
+    this.indexingErrors = indexingErrors;
+  }
+
+  public Etag getLastIndexedEtag() {
+    return lastIndexedEtag;
+  }
+
+  public void setLastIndexedEtag(Etag lastIndexedEtag) {
+    this.lastIndexedEtag = lastIndexedEtag;
+  }
+
+  public Date getLastIndexedTimestamp() {
+    return lastIndexedTimestamp;
+  }
+
+  public void setLastIndexedTimestamp(Date lastIndexedTimestamp) {
+    this.lastIndexedTimestamp = lastIndexedTimestamp;
+  }
+
+  public Date getLastQueryTimestamp() {
+    return lastQueryTimestamp;
+  }
+
+  public void setLastQueryTimestamp(Date lastQueryTimestamp) {
+    this.lastQueryTimestamp = lastQueryTimestamp;
+  }
+
+  public int getTouchCount() {
+    return touchCount;
+  }
+
+  public void setTouchCount(int touchCount) {
+    this.touchCount = touchCount;
+  }
+
+  public IndexingPriority getPriority() {
+    return priority;
+  }
+
+  public void setPriority(IndexingPriority priority) {
+    this.priority = priority;
+  }
+
+  public Integer getReduceIndexingAttempts() {
+    return reduceIndexingAttempts;
+  }
+
+  public void setReduceIndexingAttempts(Integer reduceIndexingAttempts) {
+    this.reduceIndexingAttempts = reduceIndexingAttempts;
+  }
+
+  public Integer getReduceIndexingSuccesses() {
+    return reduceIndexingSuccesses;
+  }
+
+  public void setReduceIndexingSuccesses(Integer reduceIndexingSuccesses) {
+    this.reduceIndexingSuccesses = reduceIndexingSuccesses;
+  }
+
+  public Integer getReduceIndexingErrors() {
+    return reduceIndexingErrors;
+  }
+
+  public void setReduceIndexingErrors(Integer reduceIndexingErrors) {
+    this.reduceIndexingErrors = reduceIndexingErrors;
+  }
+
+  public Etag getLastReducedEtag() {
+    return lastReducedEtag;
+  }
+
+  public void setLastReducedEtag(Etag lastReducedEtag) {
+    this.lastReducedEtag = lastReducedEtag;
+  }
+
+  public Date getLastReducedTimestamp() {
+    return lastReducedTimestamp;
+  }
+
+  public void setLastReducedTimestamp(Date lastReducedTimestamp) {
+    this.lastReducedTimestamp = lastReducedTimestamp;
+  }
+
+  public Date getCreatedTimestamp() {
+    return createdTimestamp;
+  }
+
+  public void setCreatedTimestamp(Date createdTimestamp) {
+    this.createdTimestamp = createdTimestamp;
+  }
+
+  public Date getLastIndexingTime() {
+    return lastIndexingTime;
+  }
+
+  public void setLastIndexingTime(Date lastIndexingTime) {
+    this.lastIndexingTime = lastIndexingTime;
+  }
+
+  public String getIsOnRam() {
+    return isOnRam;
+  }
+
+  public void setIsOnRam(String isOnRam) {
+    this.isOnRam = isOnRam;
+  }
+
+  public IndexLockMode getLockMode() {
+    return lockMode;
+  }
+
+  public void setLockMode(IndexLockMode lockMode) {
+    this.lockMode = lockMode;
+  }
+
+  public IndexingPerformanceStats[] getPerformance() {
+    return performance;
+  }
+
+  public void setPerformance(IndexingPerformanceStats[] performance) {
+    this.performance = performance;
+  }
+
+  @Override
+  public String toString() {
+    return "IndexStats [name=" + name + "]";
+  }
+
+  public static enum IndexingPriority {
+    NONE(0),
+    NORMAL(1),
+    DISABLED(2),
+    IDLE(4),
+    ABANDONED(8),
+    FORCED(512);
+
+    private int code;
+
+    private IndexingPriority(int code) {
+      this.code = code;
+    }
+
+    public int getCode() {
+      return code;
+    }
+
+    @JsonCreator
+    public static IndexingPriority fromValue(String v) {
+      return SharpEnum.fromValue(v, IndexingPriority.class);
+    }
+
+  }
+
+  public static class IndexingPerformanceStats {
+    private String operation;
+    private int outputCount;
+    private int inputCount;
+    private int itemsCount;
+    private String duration; //TODO: convert to TimeSpan
+    private Date started;
+    private double durationMilliseconds;
+    public String getOperation() {
+      return operation;
+    }
+    public void setOperation(String operation) {
+      this.operation = operation;
+    }
+    public int getOutputCount() {
+      return outputCount;
+    }
+    public void setOutputCount(int outputCount) {
+      this.outputCount = outputCount;
+    }
+    public int getInputCount() {
+      return inputCount;
+    }
+    public void setInputCount(int inputCount) {
+      this.inputCount = inputCount;
+    }
+    public int getItemsCount() {
+      return itemsCount;
+    }
+    public void setItemsCount(int itemsCount) {
+      this.itemsCount = itemsCount;
+    }
+    public String getDuration() {
+      return duration;
+    }
+    public void setDuration(String duration) {
+      this.duration = duration;
+    }
+    public Date getStarted() {
+      return started;
+    }
+    public void setStarted(Date started) {
+      this.started = started;
+    }
+    public double getDurationMilliseconds() {
+      return durationMilliseconds;
+    }
+    public void setDurationMilliseconds(double durationMilliseconds) {
+      this.durationMilliseconds = durationMilliseconds;
+    }
+    @Override
+    public String toString() {
+      return "IndexingPerformanceStats [operation=" + operation + ", outputCount=" + outputCount + ", inputCount=" + inputCount + ", duration=" + duration + ", durationMilliseconds="
+          + durationMilliseconds + "]";
+    }
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + inputCount;
+      result = prime * result + itemsCount;
+      result = prime * result + ((operation == null) ? 0 : operation.hashCode());
+      result = prime * result + outputCount;
+      result = prime * result + ((started == null) ? 0 : started.hashCode());
+      return result;
+    }
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      IndexingPerformanceStats other = (IndexingPerformanceStats) obj;
+      if (inputCount != other.inputCount)
+        return false;
+      if (itemsCount != other.itemsCount)
+        return false;
+      if (operation == null) {
+        if (other.operation != null)
+          return false;
+      } else if (!operation.equals(other.operation))
+        return false;
+      if (outputCount != other.outputCount)
+        return false;
+      if (started == null) {
+        if (other.started != null)
+          return false;
+      } else if (!started.equals(other.started))
+        return false;
+      return true;
+    }
+
+
+  }
+
+}

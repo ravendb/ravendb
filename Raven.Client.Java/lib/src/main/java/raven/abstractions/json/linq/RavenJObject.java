@@ -13,6 +13,8 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import com.google.common.base.Defaults;
+
 import raven.abstractions.basic.Holder;
 import raven.abstractions.exceptions.JsonReaderException;
 import raven.abstractions.exceptions.JsonWriterException;
@@ -242,11 +244,10 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   /* (non-Javadoc)
    * @see raven.client.json.RavenJToken#value(java.lang.Class, java.lang.String)
    */
-  @SuppressWarnings("unchecked")
   @Override
   public <T> T value(Class<T> clazz, String key) {
     if (!containsKey(key)) {
-      throw new IllegalArgumentException("Object does not contain key: " + key);
+      return Defaults.defaultValue(clazz);
     }
     RavenJToken ravenJToken = get(key);
     if (ravenJToken != null) {

@@ -173,8 +173,12 @@ public class IndexDefinitionBuilder {
       */
 
     IndexDefinition indexDefinition = new IndexDefinition();
-    indexDefinition.setReduce(reduce.toLinq());
-    indexDefinition.setTransformResults(transformResults.toLinq());
+    if (reduce != null) {
+      indexDefinition.setReduce(reduce.toLinq());
+    }
+    if (transformResults != null) {
+      indexDefinition.setTransformResults(transformResults.toLinq());
+    }
     indexDefinition.setIndexes(convertToStringDictionary(indexes));
     indexDefinition.setStores(convertToStringDictionary(stores));
     indexDefinition.setSortOptions(convertToStringDictionary(sortOptions));

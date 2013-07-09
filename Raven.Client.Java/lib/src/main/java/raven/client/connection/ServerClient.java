@@ -28,12 +28,15 @@ import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
+import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.PutResult;
+import raven.abstractions.data.QueryResult;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
@@ -50,6 +53,7 @@ import raven.client.connection.profiling.ProfilingInformation;
 import raven.client.document.DocumentConvention;
 import raven.client.exceptions.ConflictException;
 import raven.client.extensions.MultiDatabase;
+import raven.client.indexes.IndexDefinitionBuilder;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
@@ -1087,11 +1091,31 @@ public class ServerClient implements IDatabaseCommands {
     return null;
   }
 
-  //TODO: public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
+  public String putIndex(String name, IndexDefinitionBuilder indexDef) {
+    return putIndex(name, indexDef.toIndexDefinition(convention));
+  }
 
-  //TODO: public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
+  public String putIndex(String name, IndexDefinitionBuilder indexDef, boolean overwrite) {
+    return putIndex(name, indexDef.toIndexDefinition(convention), overwrite);
+  }
 
-  //TODO: public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
+  public QueryResult query(String index, IndexQuery query, String[] includes) {
+    return query(index, query, includes, false, false);
+  }
+
+  public QueryResult query(String index, IndexQuery query, String[] includes, boolean metadataOnly) {
+    return query(index, query, includes, metadataOnly, false);
+  }
+
+  public QueryResult query(final String index, final IndexQuery query, final String[] includes, final boolean metadataOnly, final boolean indexEntriesOnly) {
+    ensureIsNotNullOrEmpty(index, "index");
+    return executeWithReplication(HttpMethods.GET, new Function1<String, QueryResult>() {
+      @Override
+      public QueryResult apply(String u) {
+        return directQuery(index, query, u, includes, metadataOnly, indexEntriesOnly);
+      }
+    });
+  }
 
   //TODO: public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
 
@@ -1099,7 +1123,61 @@ public class ServerClient implements IDatabaseCommands {
 
   //TODO: private static IEnumerator<RavenJObject> YieldStreamResults(WebResponse webResponse)
 
-  //TODO: private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly, bool includeEntries)
+  private QueryResult directQuery(final String index, final IndexQuery query, final String operationUrl, final String[] includes, final boolean metadataOnly, final boolean includeEntries) {
+    String path = query.getIndexQueryUrl(operationUrl, index, "indexes");
+    if (metadataOnly)
+      path += "&metadata-only=true";
+    if (includeEntries)
+      path += "&debug=entries";
+    if (includes != null && includes.length > 0) {
+      for (String include: includes) {
+        path += "&include=" + include;
+      }
+    }
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, path, HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .setAvoidCachingRequest(query.isDisableCaching())
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer,
+            convention.getFailoverBehavior(),
+            new HandleReplicationStatusChangesCallback());
+
+    RavenJObject json;
+    try {
+      json = (RavenJObject)request.readResponseJson();
+    } catch (HttpOperationException e) {
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          String text = new String(baos.toByteArray());
+          if (text.contains("maxQueryString")) {
+            throw new IllegalStateException(text, e);
+          }
+          throw new IllegalStateException("There is no index named: " + index);
+        }
+
+      } catch (IllegalStateException | IOException ee) {
+        throw new ServerClientException(ee);
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+      }
+      throw e;
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+
+    QueryResult directQuery = SerializationHelper.toQueryResult(json, HttpExtensions.getEtagHeader(request), request.getResponseHeaders().get("Temp-Request-Time"));
+    List<RavenJObject> docsResults = new ArrayList<>();
+    docsResults.addAll(directQuery.getResults());
+    docsResults.addAll(directQuery.getIncludes());
+    return retryOperationBecauseOfConflict(docsResults, directQuery, new Function0<QueryResult>() {
+      @Override
+      public QueryResult apply() {
+        return directQuery(index, query, operationUrl, includes, metadataOnly, includeEntries);
+      }
+    });
+  }
 
   public void deleteIndex(final String name) {
     ensureIsNotNullOrEmpty(name, "name");
@@ -1272,7 +1350,7 @@ public class ServerClient implements IDatabaseCommands {
       return false;
     }
 
-    if (metadata.value(Integer.class, "@Http-Status-Code") == 409) {
+    if (metadata.value(Integer.TYPE, "@Http-Status-Code") == 409) {
       ConflictException concurrencyException = tryResolveConflictOrCreateConcurrencyException(metadata.value(String.class, "@id"), docResult, HttpExtensions.etagHeaderToEtag(metadata.value(String.class, "@etag")));
       if (concurrencyException == null) {
         return true;
@@ -1365,7 +1443,17 @@ public class ServerClient implements IDatabaseCommands {
 
   //TODO: public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
 
-  //TODO: public DatabaseStatistics GetStatistics()
+  public DatabaseStatistics getStatistics() {
+    HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, url + "/stats", HttpMethods.GET, new RavenJObject(), credentials, convention));
+
+    try {
+      RavenJObject jo = (RavenJObject)httpJsonRequest.readResponseJson();
+      return JsonExtensions.getDefaultObjectMapper().readValue(jo.toString(), DatabaseStatistics.class);
+    } catch (IOException e) {
+      throw new ServerClientException(e);
+    }
+  }
 
   public Long nextIdentityFor(final String name) {
     return executeWithReplication(HttpMethods.POST, new Function1<String, Long>() {

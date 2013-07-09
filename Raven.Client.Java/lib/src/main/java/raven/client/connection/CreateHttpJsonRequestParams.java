@@ -150,8 +150,9 @@ public class CreateHttpJsonRequestParams implements Serializable {
   /**
    * @param avoidCachingRequest the avoidCachingRequest to set
    */
-  public void setAvoidCachingRequest(boolean avoidCachingRequest) {
+  public CreateHttpJsonRequestParams setAvoidCachingRequest(boolean avoidCachingRequest) {
     this.avoidCachingRequest = avoidCachingRequest;
+    return this;
   }
 
   /**

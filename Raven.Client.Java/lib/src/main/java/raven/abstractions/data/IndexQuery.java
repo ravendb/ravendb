@@ -341,7 +341,7 @@ public class IndexQuery {
       path.append("&pageSize=").append(pageSize);
     }
 
-    if (!aggregationOperation.isEmpty() && !aggregationOperation.contains(AggregationOperation.NONE)) {
+    if (aggregationOperation != null && !aggregationOperation.isEmpty() && !aggregationOperation.contains(AggregationOperation.NONE)) {
       path.append("&aggregation=").append(aggregationOperation);
     }
 

@@ -6,14 +6,13 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.HttpParams;
 
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.client.connection.IDatabaseCommands;
 import raven.client.utils.UrlUtils;
 
 public abstract class RavenDBAwareTests {
@@ -53,6 +52,18 @@ public abstract class RavenDBAwareTests {
     return doc.toString();
   }
 
+  protected void waitForNonStaleIndexes(IDatabaseCommands dbCommands) {
+    while (true) {
+      if (dbCommands.getStatistics().getStaleIndexes().length == 0) {
+        return;
+      }
+      try {
+        Thread.sleep(40);
+      } catch (InterruptedException e) {
+      }
+
+    }
+  }
 
   protected void deleteDb(String dbName) throws Exception {
 

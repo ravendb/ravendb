@@ -18,6 +18,7 @@ import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
+import raven.abstractions.data.QueryResult;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJArray;
@@ -133,6 +134,31 @@ public class SerializationHelper {
   public static JsonDocument toJsonDocument(RavenJObject r) {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  public static QueryResult toQueryResult(RavenJObject json, Etag etagHeader, String tempRequestTime) {
+    QueryResult result = new QueryResult();
+    result.setStale(json.value(Boolean.class, "IsStale"));
+    result.setIndexTimestamp(json.value(Date.class, "IndexTimestamp"));
+    result.setIndexEtag(etagHeader);
+    result.setResults(json.value(RavenJArray.class, "Results").values(RavenJObject.class));
+    result.setIncludes(json.value(RavenJArray.class, "Includes").values(RavenJObject.class));
+    result.setTotalResults(json.value(Integer.class, "TotalResults"));
+    result.setIndexName(json.value(String.class, "IndexName"));
+    result.setSkippedResults(json.value(Integer.class, "SkippedResults"));
+//  TODO:        Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
+//            .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>()
+
+    if (json.containsKey("NonAuthoritativeInformation")) {
+      result.setNonAuthoritativeInformation(json.value(Boolean.class, "NonAuthoritativeInformation"));
+    }
+    if (json.containsKey("DurationMilliseconds")) {
+      result.setDurationMiliseconds(json.value(Long.class, "DurationMilliseconds"));
+    }
+    if (StringUtils.isNotEmpty(tempRequestTime)) {
+      result.setDurationMiliseconds(Long.valueOf(tempRequestTime));
+    }
+    return result;
   }
 
 }

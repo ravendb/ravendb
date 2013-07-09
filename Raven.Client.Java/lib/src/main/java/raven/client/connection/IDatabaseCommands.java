@@ -5,11 +5,13 @@ import java.util.Collection;
 import java.util.List;
 
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
-import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.PutResult;
+import raven.abstractions.data.QueryResult;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
@@ -23,6 +25,21 @@ public interface IDatabaseCommands {
    */
   public void delete(String key, Etag etag);
 
+
+  /**
+   * Returns server statistics
+   * @return
+   */
+  public DatabaseStatistics getStatistics();
+
+  /**
+   * Performs index query
+   * @param index
+   * @param query
+   * @param includes
+   * @return
+   */
+  public QueryResult query(String index, IndexQuery query, String[] includes);
   /**
    * Deletes the attachment with the specified key
    * @param key The key.

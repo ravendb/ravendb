@@ -47,6 +47,7 @@ import raven.abstractions.data.Constants;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.BadRequestException;
 import raven.abstractions.exceptions.HttpOperationException;
+import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -472,16 +473,12 @@ public class HttpJsonRequest {
           throw new IllegalStateException(readToEnd, e);
         }
 
-        /*TODO:
-         * if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
-        {
-          throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
-          {
-            IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
-            ProblematicText = ravenJObject.Value<string>("ProblematicText")
-          };
+        if (ravenJObject.containsKey("IndexDefinitionProperty")) {
+          IndexCompilationException ex = new IndexCompilationException(ravenJObject.value(String.class, "Message"));
+          ex.setIndexDefinitionProperty(ravenJObject.value(String.class, "IndexDefinitionProperty"));
+          ex.setProblematicText(ravenJObject.value(String.class, "ProblematicText"));
+          throw ex;
         }
-         */
 
         if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_BAD_REQUEST && ravenJObject.containsKey("Message")) {
           throw new BadRequestException(ravenJObject.value(String.class, "Message"), e);

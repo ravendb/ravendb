@@ -46,7 +46,7 @@ public final class LinqExpressionMixin<T> implements Cloneable {
     return self;
   }
 
-  public T select(FactoryExpression<?> projection) {
+  public T select(Expression<?> projection) {
     expression = OperationImpl.create(LinqExpressionMixin.class, LinqOps.Fluent.SELECT, expression, lambdaInferer.inferLambdas(projection));
     return self;
   }
