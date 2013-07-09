@@ -75,6 +75,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				replicationConfigs = null;
 				statistics.Clear();
+				log.Debug(() => "Sql Replication configuration was changed.");
 			};
 
 			GetReplicationStatus();
@@ -112,6 +113,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				if (hasChanges)
 					Database.WorkContext.NotifyAboutWork();
 			});
+			if (log.IsDebugEnabled)
+				log.Debug(() => "recorded a deleted document " + id);
 		}
 
 		private SqlReplicationStatus GetReplicationStatus()
@@ -192,7 +195,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						// so we filtered some documents, let us update the etag about that.
 						foreach (var lastReplicatedEtag in localReplicationStatus.LastReplicatedEtags)
 						{
-							if (lastReplicatedEtag.LastDocEtag == leastReplicatedEtag)
+							if (lastReplicatedEtag.LastDocEtag.CompareTo(leastReplicatedEtag) <= 0)
 								lastReplicatedEtag.LastDocEtag = latestEtag;
 						}
 						SaveNewReplicationStatus(localReplicationStatus, latestEtag);
