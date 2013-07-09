@@ -155,7 +155,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-                var leastReplicatedEtag = GetLeastReplicatedEtag(relevantConfigs, localReplicationStatus);
+				var leastReplicatedEtag = GetLeastReplicatedEtag(relevantConfigs, localReplicationStatus);
 
 				if (leastReplicatedEtag == null)
 				{
@@ -207,7 +207,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var successes = new ConcurrentQueue<SqlReplicationConfig>();
+				var successes = new ConcurrentQueue<Tuple<SqlReplicationConfig, Etag>>();
 				try
 				{
 					BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(Database.WorkContext, relevantConfigs, replicationConfig =>
@@ -221,7 +221,7 @@ namespace Raven.Database.Bundles.SqlReplication
 								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
 								.ToList();
 
-							latestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
+							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
 
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
 								ReplicateChangesToDesintation(replicationConfig, docsToReplicate))
@@ -231,7 +231,7 @@ namespace Raven.Database.Bundles.SqlReplication
 									Database.TransactionalStorage.Batch(accessor =>
 										accessor.Lists.RemoveAllBefore(GetSqlReplicationDeletionName(replicationConfig), deletedDocs[deletedDocs.Count - 1].Etag));
 								}
-								successes.Enqueue(replicationConfig);
+								successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
 							}
 						}
 						catch (Exception e)
@@ -250,21 +250,24 @@ namespace Raven.Database.Bundles.SqlReplication
 					});
 					if (successes.Count == 0)
 						continue;
-					foreach (var cfg in successes)
+					foreach (var t in successes)
 					{
+						var cfg = t.Item1;
+						var currentLatestEtag = t.Item2;
 						var destEtag = localReplicationStatus.LastReplicatedEtags.FirstOrDefault(x => string.Equals(x.Name, cfg.Name, StringComparison.InvariantCultureIgnoreCase));
 						if (destEtag == null)
 						{
 							localReplicationStatus.LastReplicatedEtags.Add(new LastReplicatedEtag
 							{
 								Name = cfg.Name,
-								LastDocEtag = latestEtag ?? Etag.Empty
+								LastDocEtag = currentLatestEtag ?? Etag.Empty
 							});
 						}
 						else
 						{
-							destEtag.LastDocEtag = latestEtag ?? destEtag.LastDocEtag;
+							destEtag.LastDocEtag = currentLatestEtag = currentLatestEtag ?? destEtag.LastDocEtag;
 						}
+						latestEtag = Etag.Max(latestEtag, currentLatestEtag);
 					}
 
 					SaveNewReplicationStatus(localReplicationStatus, latestEtag);
