@@ -78,6 +78,8 @@ public class ServerClient implements IDatabaseCommands {
 
   private Map<String, String> operationsHeaders;
 
+  private boolean expect100Continue = false;
+
   public void addFailoverStatusChanged(EventHandler<FailoverStatusChangedEventArgs> event) {
     replicationInformer.addFailoverStatusChanged(event);
   }
@@ -1580,7 +1582,12 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-  //TODO: public IDisposable Expect100Continue()
+  public boolean isExpect100Continue() {
+    return expect100Continue;
+  }
 
+  public void setExpect100Continue(boolean expect100Continue) {
+    this.expect100Continue = expect100Continue;
+  }
 
 }
