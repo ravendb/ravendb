@@ -195,7 +195,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						// so we filtered some documents, let us update the etag about that.
 						foreach (var lastReplicatedEtag in localReplicationStatus.LastReplicatedEtags)
 						{
-							if (lastReplicatedEtag.LastDocEtag.CompareTo(leastReplicatedEtag) <= 0)
+							if (lastReplicatedEtag.LastDocEtag.CompareTo(latestEtag) <= 0)
 								lastReplicatedEtag.LastDocEtag = latestEtag;
 						}
 						SaveNewReplicationStatus(localReplicationStatus, latestEtag);
