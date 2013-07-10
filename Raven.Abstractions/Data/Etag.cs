@@ -256,6 +256,8 @@ namespace Raven.Abstractions.Data
 
 		public static Etag Max(Etag first, Etag second)
 		{
+			if (first == null)
+				return second;
 			return first.CompareTo(second) > 0
 				? first
 				: second;
