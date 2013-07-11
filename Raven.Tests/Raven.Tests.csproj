@@ -744,6 +744,7 @@
     <Compile Include="MailingList\MapLongTests.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
+    <Compile Include="MailingList\MarkReadOnly.cs" />
     <Compile Include="MailingList\MoreLikeThisEvaluation.cs" />
     <Compile Include="MailingList\MultiLoadInTransaction.cs" />
     <Compile Include="MailingList\nberardi.cs" />

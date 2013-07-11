@@ -1010,7 +1010,7 @@ more responsive application.
 
 			// prevent saves of a modified read only entity
 			if (documentMetadata.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) &&
-				documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) &&
+				documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) ||
 				documentMetadata.Metadata.ContainsKey(Constants.RavenReadOnly) &&
 				documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
 				return false;
