@@ -661,6 +661,7 @@
     <Compile Include="MailingList\QueryOnItems.cs" />
     <Compile Include="MailingList\RacielRod.cs" />
     <Compile Include="MailingList\RavenCountTest.cs" />
+    <Compile Include="MailingList\RavenDB1206.cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\RavenDbRecoveryTests.cs" />
