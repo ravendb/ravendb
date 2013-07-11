@@ -94,10 +94,9 @@ namespace Raven.Database.Server.Abstractions
 			return response.Headers;
 		}
 
-		public IDisposable Streaming()
+		public void Streaming()
 		{
 			response.BufferOutput = false;
-			return new DisposableAction(() => response.BufferOutput = true);
 		}
 
 		public string ContentType

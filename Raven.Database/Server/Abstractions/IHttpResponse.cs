@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Abstractions
 		void SetPublicCacheability();
 		void WriteFile(string path);
 		NameValueCollection GetHeaders();
-		IDisposable Streaming();
+		void Streaming();
 
 		Task WriteAsync(string data);
 		void SetCookie(string name, string val);
