@@ -396,6 +396,7 @@
     <Compile Include="Server\Responders\Plugins.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
+    <Compile Include="Server\Responders\IdentitySeed.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
     <Compile Include="Server\Security\IgnoreDb.cs" />

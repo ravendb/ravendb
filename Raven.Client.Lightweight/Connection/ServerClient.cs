@@ -1448,12 +1448,32 @@ namespace Raven.Client.Connection
 			return jo.Deserialize<DatabaseStatistics>(convention);
 		}
 
+		/// <summary>
+		/// Generate the next identity value from the server
+		/// </summary>
 		public long NextIdentityFor(string name)
 		{
 			return ExecuteWithReplication("POST", url =>
 			{
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
+
+				var readResponseJson = request.ReadResponseJson();
+
+				return readResponseJson.Value<long>("Value");
+			});
+		}
+
+		/// <summary>
+		/// Seeds the next identity value on the server
+		/// </summary>
+		public long SeedIdentityFor(string name, long value)
+		{
+			return ExecuteWithReplication("POST", url =>
+			{
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + Uri.EscapeDataString(name) + "&value=" + Uri.EscapeDataString(value.ToString()), "POST", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				var readResponseJson = request.ReadResponseJson();

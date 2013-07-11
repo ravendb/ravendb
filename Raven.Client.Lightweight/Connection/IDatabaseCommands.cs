@@ -294,7 +294,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
-        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
@@ -368,7 +368,7 @@ namespace Raven.Client.Connection
 		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
-        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		void Patch(string key, ScriptedPatchRequest patch, Guid? etag);
 
@@ -398,6 +398,11 @@ namespace Raven.Client.Connection
 		/// Generate the next identity value from the server
 		/// </summary>
 		long NextIdentityFor(string name);
+
+		/// <summary>
+		/// Seeds the next identity value on the server
+		/// </summary>
+		long SeedIdentityFor(string name, long value);
 
 		/// <summary>
 		/// Get the full URL for the given document key
