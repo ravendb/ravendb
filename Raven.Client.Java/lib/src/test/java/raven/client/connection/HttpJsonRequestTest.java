@@ -150,7 +150,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
         byte[] responseBytes = jsonRequest.readResponseBytes();
         assertNotNull(responseBytes);
         RavenJToken jToken = RavenJObject.tryLoad(new ByteArrayInputStream(responseBytes));
-        assertEquals(jToken.toString(), "John", jToken.value(String.class, "firstName"));
+        assertEquals(jToken.toString(), "John", jToken.value(String.class, "FirstName"));
       }
 
     } finally {
@@ -276,7 +276,6 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       expectedRequestHeaders.put("Content-Type", "application/json; charset=UTF-8");
       expectedRequestHeaders.put("Transfer-Encoding", "chunked");
       expectedRequestHeaders.put("Content-Encoding", "gzip");
-      expectedRequestHeaders.put("Expect", "100-continue");
       verifyRequestHeaders(expectedRequestHeaders, true);
 
       Map<String, String> expectedResponseHeaders = new HashMap<>();
@@ -377,7 +376,6 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       Map<String, String> expectedRequestHeaders = new HashMap<>();
       expectedRequestHeaders.put("Content-Type", "application/json; charset=UTF-8");
       expectedRequestHeaders.put("Transfer-Encoding", "chunked");
-      expectedRequestHeaders.put("Expect", "100-continue");
 
       Map<String, String> requestHeaders = HttpJsonRequest.extractHeaders(requestQueue.get(0).getAllHeaders());
       assertTrue("Accept-Encoding must not be present! Headers: " + requestHeaders, !requestHeaders.containsKey("Accept-Encoding"));

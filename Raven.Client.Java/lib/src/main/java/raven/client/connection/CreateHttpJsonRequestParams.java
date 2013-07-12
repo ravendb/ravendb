@@ -30,6 +30,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
 
   public CreateHttpJsonRequestParams(ServerClient owner, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
     super();
+
     this.method = method;
     this.url = url;
     this.owner = owner;

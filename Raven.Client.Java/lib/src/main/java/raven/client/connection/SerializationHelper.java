@@ -114,9 +114,20 @@ public class SerializationHelper {
     return result;
   }
 
-  public static JsonDocument ravenJObjectToJsonDocument(RavenJObject ravenJObject) {
-    // TODO Auto-generated method stub
-    return null;
+  public static JsonDocument ravenJObjectToJsonDocument(RavenJObject doc) {
+    RavenJObject metadata = (RavenJObject) doc.get("@metadata");
+    doc.remove("@metadata");
+    String key = extract(metadata, "@id", "", String.class);
+
+    //TODO: var lastModified = GetLastModified(metadata);
+    Date lastModified = new Date(); //TODO delete me!
+
+    Etag etag = extract(metadata, "@etag", Etag.empty(), Etag.class);
+    boolean nai = extract(metadata, "Non-Authoritative-Information", false, Boolean.class);
+    JsonDocument jsonDocument = new JsonDocument(doc, MetadataExtensions.filterHeaders(metadata), key, nai, etag, lastModified);
+    jsonDocument.setTempIndexScore(metadata == null ? null : metadata.value(Float.class, Constants.TEMPORARY_SCORE_VALUE));
+
+    return jsonDocument;
   }
 
   public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, Map<String, String> headers, int responseStatusCode) {

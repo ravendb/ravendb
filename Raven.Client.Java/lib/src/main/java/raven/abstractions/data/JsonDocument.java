@@ -18,6 +18,7 @@ public class JsonDocument {
   private boolean nonAuthoritativeInformation;
   private Etag etag;
   private Date lastModified;
+  private Float tempIndexScore;
 
   public JsonDocument(RavenJObject dataAsJson, RavenJObject metadata, String key, boolean nonAuthoritativeInformation, Etag etag, Date lastModified) {
     super();
@@ -30,31 +31,10 @@ public class JsonDocument {
   }
 
   /**
-   * @return the key
+   * @return the dataAsJson
    */
-  public String getKey() {
-    return key;
-  }
-
-  /**
-   * @param key the key to set
-   */
-  public void setKey(String key) {
-    this.key = key;
-  }
-
-  /**
-   * @return the nonAuthoritativeInformation
-   */
-  public boolean isNonAuthoritativeInformation() {
-    return nonAuthoritativeInformation;
-  }
-
-  /**
-   * @param nonAuthoritativeInformation the nonAuthoritativeInformation to set
-   */
-  public void setNonAuthoritativeInformation(boolean nonAuthoritativeInformation) {
-    this.nonAuthoritativeInformation = nonAuthoritativeInformation;
+  public RavenJObject getDataAsJson() {
+    return dataAsJson != null ? dataAsJson : new RavenJObject();
   }
 
   /**
@@ -64,11 +44,13 @@ public class JsonDocument {
     return etag;
   }
 
+
+
   /**
-   * @param etag the etag to set
+   * @return the key
    */
-  public void setEtag(Etag etag) {
-    this.etag = etag;
+  public String getKey() {
+    return key;
   }
 
   /**
@@ -79,17 +61,21 @@ public class JsonDocument {
   }
 
   /**
-   * @param lastModified the lastModified to set
+   * @return the metadata
    */
-  public void setLastModified(Date lastModified) {
-    this.lastModified = lastModified;
+  public RavenJObject getMetadata() {
+    return metadata;
+  }
+
+  public Float getTempIndexScore() {
+    return tempIndexScore;
   }
 
   /**
-   * @return the dataAsJson
+   * @return the nonAuthoritativeInformation
    */
-  public RavenJObject getDataAsJson() {
-    return dataAsJson != null ? dataAsJson : new RavenJObject();
+  public boolean isNonAuthoritativeInformation() {
+    return nonAuthoritativeInformation;
   }
 
   /**
@@ -100,10 +86,24 @@ public class JsonDocument {
   }
 
   /**
-   * @return the metadata
+   * @param etag the etag to set
    */
-  public RavenJObject getMetadata() {
-    return metadata;
+  public void setEtag(Etag etag) {
+    this.etag = etag;
+  }
+
+  /**
+   * @param key the key to set
+   */
+  public void setKey(String key) {
+    this.key = key;
+  }
+
+  /**
+   * @param lastModified the lastModified to set
+   */
+  public void setLastModified(Date lastModified) {
+    this.lastModified = lastModified;
   }
 
   /**
@@ -111,6 +111,17 @@ public class JsonDocument {
    */
   public void setMetadata(RavenJObject metadata) {
     this.metadata = metadata;
+  }
+
+  /**
+   * @param nonAuthoritativeInformation the nonAuthoritativeInformation to set
+   */
+  public void setNonAuthoritativeInformation(boolean nonAuthoritativeInformation) {
+    this.nonAuthoritativeInformation = nonAuthoritativeInformation;
+  }
+
+  public void setTempIndexScore(Float tempIndexScore) {
+    this.tempIndexScore = tempIndexScore;
   }
 
   /* (non-Javadoc)

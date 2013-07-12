@@ -22,7 +22,7 @@ public class Inflector {
   }
 
   static {
-    addPlural("(.*)$", "s");
+    addPlural("(.*)$", "$1s");
     addPlural("(.*)s$", "$1s");
     addPlural("(ax|test)is$", "$1es");
     addPlural("(octop|vir)us$", "$1i");
@@ -30,7 +30,7 @@ public class Inflector {
     addPlural("(bu)s$", "$1ses");
     addPlural("(buffal|tomat)o$", "$1oes");
     addPlural("([ti])um$", "$1a");
-    addPlural("(.*)sis$", "ses");
+    addPlural("(.*)sis$", "$1ses");
     addPlural("(?:([^f])fe|([lr])f)$", "$1$2ves");
     addPlural("(hive)$", "$1s");
     addPlural("([^aeiouy]|qu)y$", "$1ies");
@@ -40,7 +40,7 @@ public class Inflector {
     addPlural("^(ox)$", "$1en");
     addPlural("(quiz)$", "$1zes");
 
-    addSingular("s$", "");
+    addSingular("(.*)s$", "");
     addSingular("(n)ews$", "$1ews");
     addSingular("([ti])a$", "$1um");
     addSingular("((a)naly|(b)a|(d)iagno|(p)arenthe|(p)rogno|(s)ynop|(t)he)ses$", "$1$2sis");

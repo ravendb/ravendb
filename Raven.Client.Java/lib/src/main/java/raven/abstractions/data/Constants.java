@@ -23,4 +23,7 @@ public class Constants {
   public final static String RAVEN_ENTITY_NAME = "Raven-Entity-Name";
 
 
+  public static final String TEMPORARY_SCORE_VALUE = "Temp-Index-Score";
+
+
 }

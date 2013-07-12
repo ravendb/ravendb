@@ -162,11 +162,15 @@ public class HttpJsonRequest {
       break;
     case POST:
       baseMethod = new HttpPost(url);
-      baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
+      if (owner != null) {
+        baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
+      }
       break;
     case PUT:
       baseMethod = new HttpPut(url);
-      baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
+      if (owner != null) {
+        baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
+      }
       break;
     case DELETE:
       baseMethod = new HttpDelete(url);

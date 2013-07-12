@@ -2,7 +2,6 @@ package raven.linq.dsl;
 
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Expression;
-import com.mysema.query.types.FactoryExpression;
 import com.mysema.query.types.OperationImpl;
 import com.mysema.query.types.Operator;
 import com.mysema.query.types.Order;

@@ -2,6 +2,8 @@ package raven.abstractions.data;
 
 import java.util.Date;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.codehaus.jackson.annotate.JsonCreator;
 
 import raven.abstractions.basic.SharpEnum;
@@ -28,7 +30,6 @@ public class IndexStats {
   private IndexLockMode lockMode;
 
   private IndexingPerformanceStats[] performance;
-
 
 
   public String getName() {
@@ -270,43 +271,24 @@ public class IndexStats {
     }
     @Override
     public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + inputCount;
-      result = prime * result + itemsCount;
-      result = prime * result + ((operation == null) ? 0 : operation.hashCode());
-      result = prime * result + outputCount;
-      result = prime * result + ((started == null) ? 0 : started.hashCode());
-      return result;
+      return new HashCodeBuilder().append(inputCount).append(itemsCount).append(operation).append(outputCount).append(started).hashCode();
     }
     @Override
     public boolean equals(Object obj) {
-      if (this == obj)
-        return true;
-      if (obj == null)
+      if (obj == null) { return false; }
+      if (obj == this) { return true; }
+      if (obj.getClass() != getClass()) {
         return false;
-      if (getClass() != obj.getClass())
-        return false;
-      IndexingPerformanceStats other = (IndexingPerformanceStats) obj;
-      if (inputCount != other.inputCount)
-        return false;
-      if (itemsCount != other.itemsCount)
-        return false;
-      if (operation == null) {
-        if (other.operation != null)
-          return false;
-      } else if (!operation.equals(other.operation))
-        return false;
-      if (outputCount != other.outputCount)
-        return false;
-      if (started == null) {
-        if (other.started != null)
-          return false;
-      } else if (!started.equals(other.started))
-        return false;
-      return true;
+      }
+      IndexingPerformanceStats rhs = (IndexingPerformanceStats) obj;
+      return new EqualsBuilder().
+          append(inputCount, rhs.inputCount)
+          .append(itemsCount, rhs.itemsCount)
+          .append(operation, rhs.operation)
+          .append(outputCount, rhs.outputCount)
+          .append(started, rhs.started)
+          .isEquals();
     }
-
 
   }
 

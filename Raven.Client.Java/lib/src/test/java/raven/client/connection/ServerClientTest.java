@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -22,12 +23,14 @@ import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.UuidType;
+import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.RavenDBAwareTests;
 import raven.client.document.DocumentConvention;
 import raven.client.listeners.IDocumentConflictListener;
+import raven.samples.Developer;
 
 public class ServerClientTest extends RavenDBAwareTests {
 
@@ -61,6 +64,18 @@ public class ServerClientTest extends RavenDBAwareTests {
       assertNotNull(result);
       JsonDocument jsonDocument = db1Commands.get("testVal");
       assertEquals("val", jsonDocument.getDataAsJson().value(String.class, "key"));
+
+
+      Developer d1 = new Developer();
+      d1.setNick("john");
+      d1.setId(5l);
+
+      String longKey = StringUtils.repeat("a", 256);
+      db1Commands.put(longKey, null, RavenJObject.fromObject(d1), new RavenJObject());
+
+      JsonDocument developerDocument = db1Commands.get(longKey);
+      Developer readDeveloper = JsonExtensions.getDefaultObjectMapper().readValue(developerDocument.getDataAsJson().toString(), Developer.class);
+      assertEquals("john", readDeveloper.getNick());
 
     } finally {
       deleteDb("db1");
@@ -117,6 +132,11 @@ public class ServerClientTest extends RavenDBAwareTests {
 
       jsonDocumentList = db1Commands.getDocuments(2, 10);
       assertEquals(2, jsonDocumentList.size());
+
+      List<JsonDocument> metaOnly = db1Commands.getDocuments(0, 100, true);
+      assertEquals(4, metaOnly.size());
+      assertEquals(0, metaOnly.get(0).getDataAsJson().getCount());
+
 
     } finally {
       deleteDb("db1");

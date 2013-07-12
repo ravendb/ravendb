@@ -44,9 +44,9 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
       for (Object item : content) {
         if (item instanceof RavenJToken) {
           items.add((RavenJToken) item);
+        } else {
+          items.add(new RavenJValue(item));
         }
-
-        items.add(new RavenJValue(item));
       }
     }
   }

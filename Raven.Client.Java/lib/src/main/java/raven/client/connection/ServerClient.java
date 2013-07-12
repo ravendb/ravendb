@@ -760,7 +760,7 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-  public TransformerDefinition GetTransformer(final String name) {
+  public TransformerDefinition getTransformer(final String name) {
     ensureIsNotNullOrEmpty(name, "name");
     return executeWithReplication(HttpMethods.GET, new Function1<String, TransformerDefinition>() {
       @Override
