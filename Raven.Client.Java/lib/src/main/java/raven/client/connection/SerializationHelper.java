@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
@@ -205,7 +206,7 @@ public class SerializationHelper {
       result.setDurationMiliseconds(json.value(Long.class, "DurationMilliseconds"));
     }
     if (StringUtils.isNotEmpty(tempRequestTime)) {
-      result.setDurationMiliseconds(Long.valueOf(tempRequestTime));
+      result.setDurationMiliseconds(Long.valueOf(tempRequestTime.replaceAll(",", "").replaceAll(Pattern.quote("."), "")));
     }
     return result;
   }

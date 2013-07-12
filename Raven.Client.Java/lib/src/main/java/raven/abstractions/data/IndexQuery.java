@@ -43,7 +43,7 @@ public class IndexQuery {
   private Date cutoff;
   private Etag cutoffEtag;
   private String defaultField;
-  private QueryOperator defaultOperator;
+  private QueryOperator defaultOperator = QueryOperator.OR;
   private boolean skipTransformResults;
   private Holder<Integer> skippedResults;
   private boolean debugOptionGetIndexEntires;
@@ -52,7 +52,6 @@ public class IndexQuery {
   private String[] highlighterPostTags;
   private String resultsTransformer;
   private boolean disableCaching;
-
 
   public String getResultsTransformer() {
     return resultsTransformer;

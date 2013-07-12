@@ -243,7 +243,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
   }
 
   @Override
-  public <T> Collection<T> values(Class<T> clazz) {
+  public <T> List<T> values(Class<T> clazz) {
     return Extensions.convert(clazz, items);
   }
 

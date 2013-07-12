@@ -4,13 +4,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import raven.abstractions.json.linq.RavenJObject;
 
 public class QueryResult {
-  private Collection<RavenJObject> results;
-  private Collection<RavenJObject> includes;
+  private List<RavenJObject> results;
+  private List<RavenJObject> includes;
   private boolean isStale;
   private Date indexTimestamp;
   private int totalResults;
@@ -93,7 +94,7 @@ public class QueryResult {
   public Etag getResultEtag() {
     return resultEtag;
   }
-  public Collection<RavenJObject> getResults() {
+  public List<RavenJObject> getResults() {
     return results;
   }
   public int getSkippedResults() {
@@ -114,7 +115,7 @@ public class QueryResult {
   public void setHighlightings(Map<String, Map<String, String[]>> highlightings) {
     this.highlightings = highlightings;
   }
-  public void setIncludes(Collection<RavenJObject> includes) {
+  public void setIncludes(List<RavenJObject> includes) {
     this.includes = includes;
   }
   public void setIndexEtag(Etag indexEtag) {
@@ -135,7 +136,7 @@ public class QueryResult {
   public void setResultEtag(Etag resultEtag) {
     this.resultEtag = resultEtag;
   }
-  public void setResults(Collection<RavenJObject> results) {
+  public void setResults(List<RavenJObject> results) {
     this.results = results;
   }
   public void setSkippedResults(int skippedResults) {

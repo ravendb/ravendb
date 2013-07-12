@@ -3,7 +3,6 @@ package raven.abstractions.json.linq;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -71,7 +70,7 @@ public class Extensions {
     return convert(clazz, token, cast);
   }
 
-  public static <U> Collection<U> convert(Class<U> clazz, Iterable<RavenJToken> source) {
+  public static <U> List<U> convert(Class<U> clazz, Iterable<RavenJToken> source) {
     boolean cast = RavenJToken.class.isAssignableFrom(clazz);
 
     List<U> result = new ArrayList<>();
