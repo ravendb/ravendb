@@ -31,7 +31,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
     items = new ArrayList<>();
   }
 
-  public RavenJArray(Collection content) {
+  public RavenJArray(Collection<?> content) {
     items = new ArrayList<>();
     if (content == null) {
       return;

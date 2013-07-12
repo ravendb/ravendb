@@ -37,6 +37,7 @@ public abstract class RavenJToken {
     return fromObjectInternal(o, JsonExtensions.getDefaultObjectMapper());
   }
 
+  @SuppressWarnings("unused")
   private static RavenJToken fromObject(Object o, ObjectMapper objectMapper) {
     return fromObjectInternal(o, objectMapper);
   }

@@ -8,7 +8,6 @@ import raven.abstractions.basic.EventHandler;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.ServerClientException;
-import raven.client.connection.ReplicationInformer.FailoverStatusChangedEventArgs;
 
 //TODO: finish me
 public class ReplicationInformer {

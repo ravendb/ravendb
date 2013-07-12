@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonGenerator;
@@ -244,6 +243,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   /* (non-Javadoc)
    * @see raven.client.json.RavenJToken#value(java.lang.Class, java.lang.String)
    */
+  @SuppressWarnings("null")
   @Override
   public <T> T value(Class<T> clazz, String key) {
     if (!containsKey(key)) {

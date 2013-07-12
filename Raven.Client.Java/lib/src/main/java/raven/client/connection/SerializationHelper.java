@@ -13,7 +13,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.impl.cookie.DateParseException;
 import org.apache.http.impl.cookie.DateUtils;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.Constants;
