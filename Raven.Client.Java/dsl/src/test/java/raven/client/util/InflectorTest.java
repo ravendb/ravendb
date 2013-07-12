@@ -13,8 +13,13 @@ public class InflectorTest {
     testPluar("fish", "fish");
     testSingualar("Person", "People");
     testPluar("tanimports", "tanimports");
+    testPluar("money", "money");
+    testSingualar("money", "money");
+    testSingualar("sex", "sexes");
+    testPluar("people", "person");
+    testPluar("mice", "mouse");
+    testSingualar("mouse", "mice");
 
-    //TODO: add tests for cases without matching group!
   }
 
   private void testPluar(String expected, String input) {

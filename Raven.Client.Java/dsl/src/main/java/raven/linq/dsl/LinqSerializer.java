@@ -4,7 +4,6 @@ package raven.linq.dsl;
 import org.apache.commons.lang.StringUtils;
 
 import raven.linq.dsl.expressions.AnonymousExpression;
-import raven.linq.dsl.utils.PathUtils;
 
 import com.mysema.query.support.SerializerBase;
 import com.mysema.query.types.Constant;

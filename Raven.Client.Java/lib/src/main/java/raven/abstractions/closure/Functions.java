@@ -41,4 +41,14 @@ public class Functions {
   public static <T> Function1<T, Boolean> alwaysFalse() {
     return new AlwaysFalse<T>();
   }
+
+  public static <T> Action1<T> delegate1() {
+    return new Action1<T>() {
+
+      @Override
+      public void apply(T first) {
+        //empty by design
+      }
+    };
+  }
 }

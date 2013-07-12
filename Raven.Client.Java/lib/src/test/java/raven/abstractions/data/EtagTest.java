@@ -15,14 +15,6 @@ public class EtagTest {
   private static class EtagHolder {
     private Etag tag;
 
-    public Etag getTag() {
-      return tag;
-    }
-
-    public void setTag(Etag tag) {
-      this.tag = tag;
-    }
-
   }
 
   @Test
@@ -32,7 +24,6 @@ public class EtagTest {
   }
 
 
-  //TODO: finish tests
   @Test
   public void testEmpty() {
     assertEquals("00000000-0000-0000-0000-000000000000", Etag.empty().toString());
