@@ -119,21 +119,20 @@ public class SerializationHelper {
    * @param responseJson
    * @return
    */
-  public static List<Attachment> deserializeAttachements(RavenJToken responseJson) {
+  public static List<Attachment> deserializeAttachements(RavenJToken responseJson, boolean canReadData) {
     RavenJArray array = (RavenJArray) responseJson;
 
-    ObjectMapper objectMapper = JsonExtensions.getDefaultObjectMapper();
+    List<Attachment> result = new ArrayList<>();
+    for (RavenJToken token: array) {
+      int size = token.value(Integer.TYPE, "Size");
+      RavenJObject metadata = token.value(RavenJObject.class, "Metadata");
+      Etag etag = token.value(Etag.class, "Etag");
+      String key = token.value(String.class, "Key");
 
-    try {
-      List<Attachment> result = new ArrayList<>();
-      for (RavenJToken token: array) {
-        Attachment attachment = objectMapper.readValue(token.toString(), Attachment.class);
-        result.add(attachment);
-      }
-      return result;
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to deserialize attachments",e);
+      Attachment attachment = new Attachment(canReadData, (byte[])null, size, metadata, etag, key);
+      result.add(attachment);
     }
+    return result;
   }
 
   public static JsonDocumentMetadata deserializeJsonDocumentMetadata(String docKey, Map<String, String> headers, int responseStatusCode) {

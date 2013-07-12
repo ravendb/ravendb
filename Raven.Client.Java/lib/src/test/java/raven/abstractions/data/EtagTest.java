@@ -12,8 +12,17 @@ import raven.abstractions.extensions.JsonExtensions;
 
 public class EtagTest {
 
-  private static class EtagHolder {
+  public static class EtagHolder {
     private Etag tag;
+
+    public Etag getTag() {
+      return tag;
+    }
+
+    public void setTag(Etag tag) {
+      this.tag = tag;
+    }
+
 
   }
 

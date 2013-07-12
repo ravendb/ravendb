@@ -65,6 +65,7 @@ public class ServerClient implements IDatabaseCommands {
   private final DocumentConvention convention;
   private final Credentials credentials;
   private final Function1<String, ReplicationInformer> replicationInformerGetter;
+  @SuppressWarnings("unused")
   private String databaseName;
   private final ReplicationInformer replicationInformer;
   private final HttpJsonRequestFactory jsonRequestFactory;
@@ -570,7 +571,7 @@ public class ServerClient implements IDatabaseCommands {
     try {
       RavenJToken responseJson = jsonRequest.readResponseJson();
       // this method not-exists in .net version
-      return SerializationHelper.deserializeAttachements(responseJson);
+      return SerializationHelper.deserializeAttachements(responseJson, false);
 
     } catch (Exception e) {
       throw new ServerClientException(e);

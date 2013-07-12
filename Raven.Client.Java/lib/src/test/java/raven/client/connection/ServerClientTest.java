@@ -1,6 +1,9 @@
 package raven.client.connection;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -11,9 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.abstractions.closure.Functions;
@@ -84,7 +85,6 @@ public class ServerClientTest extends RavenDBAwareTests {
 
   @Test
   public void testGetDatabaseNames() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
     try {
       createDb("db1");
       createDb("db2");
@@ -277,11 +277,14 @@ public class ServerClientTest extends RavenDBAwareTests {
       assertEquals("Test test test", new String(a.getData()));
 
       List<Attachment> list = db1Commands.getAttachmentHeadersStartingWith("test/", 0, 5);
+      assertEquals(1, list.size());
 
       Attachment ah = db1Commands.headAttachment(key);
+      assertNotNull(ah.getMetadata());
 
       db1Commands.deleteAttachment(key, a.getEtag());
       String url = db1Commands.urlFor(key);
+      assertEquals("http://localhost:8123/databases/db1/docs/test/at1", url);
 
       a = db1Commands.getAttachment(key);
       assertNull(a);
@@ -303,7 +306,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       RavenJObject o = RavenJObject.parse("{ \"key\" : \"val\"}");
-      PutResult result = db1Commands.put(key, etag, o, new RavenJObject());
+      db1Commands.put(key, etag, o, new RavenJObject());
 
       //head method does not work
       JsonDocumentMetadata meta = db1Commands.head(key);
@@ -367,7 +370,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       RavenJObject o = RavenJObject.parse("{ \"key\" : \"val\"}");
-      PutResult result = db1Commands.put(key, etag, o, new RavenJObject());
+      db1Commands.put(key, etag, o, new RavenJObject());
 
       //head method does not work
       Long l = db1Commands.nextIdentityFor(key);
@@ -378,7 +381,7 @@ public class ServerClientTest extends RavenDBAwareTests {
 
       doc.getDataAsJson().add("key2", RavenJToken.fromObject("val2"));
 
-      result = db1Commands.put(key, doc.getEtag(), doc.getDataAsJson(), new RavenJObject());
+      db1Commands.put(key, doc.getEtag(), doc.getDataAsJson(), new RavenJObject());
 
       l = db1Commands.nextIdentityFor(key);
 
