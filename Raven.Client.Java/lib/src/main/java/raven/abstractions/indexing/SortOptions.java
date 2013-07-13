@@ -1,5 +1,11 @@
 package raven.abstractions.indexing;
 
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonValue;
+
+import raven.abstractions.basic.SharpEnum;
+import raven.abstractions.data.IndexStats.IndexingPriority;
+
 /**
  * The sort options to use for a particular field
  *
@@ -75,6 +81,16 @@ public enum SortOptions {
 
   public int getValue() {
     return value;
+  }
+
+  @JsonValue
+  public String value() {
+    return SharpEnum.value(this);
+  }
+
+  @JsonCreator
+  public static IndexingPriority fromValue(String v) {
+    return SharpEnum.fromValue(v, IndexingPriority.class);
   }
 
 

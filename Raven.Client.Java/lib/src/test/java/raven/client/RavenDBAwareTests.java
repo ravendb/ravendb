@@ -1,6 +1,9 @@
 package raven.client;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
@@ -64,6 +67,15 @@ public abstract class RavenDBAwareTests {
 
     }
   }
+
+  protected <T> List<T> extractSinglePropertyFromList(List<RavenJObject> inputList, String propName, Class<T> resultClass) {
+    List<T> result = new ArrayList<>();
+    for (RavenJObject obj: inputList) {
+      result.add(obj.value(resultClass, propName));
+    }
+    return result;
+  }
+
 
   protected void deleteDb(String dbName) throws Exception {
 

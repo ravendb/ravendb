@@ -2,6 +2,10 @@ package raven.abstractions.basic;
 
 import com.google.common.base.CaseFormat;
 
+/**
+ * Utility class for inter-language enum conversion
+ *
+ */
 public class SharpEnum {
 
   public static <T extends Enum<T>>  T fromValue(String v, Class<T> class1) {
@@ -12,6 +16,10 @@ public class SharpEnum {
       }
     }
     throw new IllegalArgumentException("Unable to find enum for:" + v);
+  }
+
+  public static String value(Enum<?> enumValue) {
+    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumValue.name());
   }
 
 }

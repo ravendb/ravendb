@@ -5,6 +5,7 @@ import java.util.Date;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonValue;
 
 import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.indexing.IndexLockMode;
@@ -210,6 +211,11 @@ public class IndexStats {
     @JsonCreator
     public static IndexingPriority fromValue(String v) {
       return SharpEnum.fromValue(v, IndexingPriority.class);
+    }
+
+    @JsonValue
+    public String value() {
+      return SharpEnum.value(this);
     }
 
   }
