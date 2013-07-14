@@ -1549,14 +1549,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 #if !SILVERLIGHT
 				case SpecialQueryType.Count:
-				{
-					var queryResultAsync = finalQuery.QueryResult;
-					return queryResultAsync.TotalResults;
-				}
 				case SpecialQueryType.LongCount:
 				{
+					if (finalQuery.AggregationOperation == AggregationOperation.Distinct)
+						throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
+						                                "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
 					var queryResultAsync = finalQuery.QueryResult;
-					return (long) queryResultAsync.TotalResults;
+					return queryResultAsync.TotalResults;
 				}
 #else
 				case SpecialQueryType.Count:

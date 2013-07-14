@@ -174,6 +174,11 @@ namespace Raven.Client.Document
 		/// What aggregated operation to execute
 		/// </summary>
 		protected AggregationOperation aggregationOp;
+
+		public AggregationOperation AggregationOperation
+		{
+			get { return aggregationOp; }
+		}
 		/// <summary>
 		/// Fields to group on
 		/// </summary>

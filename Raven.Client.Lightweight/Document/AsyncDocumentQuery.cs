@@ -180,7 +180,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
 		{
-			//WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
 			return this;
 		}
 
