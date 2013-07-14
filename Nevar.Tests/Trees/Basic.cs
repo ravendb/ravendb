@@ -34,7 +34,7 @@ namespace Nevar.Tests.Trees
 		{
 			var cursor = tx.GetCursor(Env.Root);
 			var p = Env.Root.FindPageFor(tx, key, cursor);
-			bool match;
+			int match;
 			var node = p.Search(key, Env.SliceComparer, out match);
 
 			Assert.True(node != null);
@@ -116,7 +116,7 @@ namespace Nevar.Tests.Trees
 					for (int j = 0; j < 5; j++)
 					{
 						stream.Position = 0;
-						Env.Root.Add(tx, "test-" + j + i, stream);
+						Env.Root.Add(tx, "test-" + j + "-" + i, stream);
 
 					}
 				}
