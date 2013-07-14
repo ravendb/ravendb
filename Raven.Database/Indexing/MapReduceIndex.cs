@@ -254,8 +254,17 @@ namespace Raven.Database.Indexing
 
 		internal static string ReduceKeyToString(object reduceValue)
 		{
-			if (reduceValue is string || reduceValue is ValueType)
+			if (reduceValue is string)
+			{
 				return reduceValue.ToString();
+			}
+			if (reduceValue is DateTime)
+				return ((DateTime) reduceValue).ToString(Default.DateTimeFormatsToWrite);
+			if (reduceValue is DateTimeOffset)
+				return ((DateTimeOffset)reduceValue).ToString(Default.DateTimeFormatsToWrite);
+			if (reduceValue is ValueType)
+				return reduceValue.ToString();
+
 			var dynamicJsonObject = reduceValue as IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner.ToString(Formatting.None);
