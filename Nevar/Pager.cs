@@ -33,6 +33,9 @@ namespace Nevar
 			tx.NextPageNumber += num;
 			tx.DirtyPages.Add(page);
 
+			page.Lower = (ushort)Constants.PageHeaderSize;
+			page.Upper = Constants.PageSize;
+
 			return page;
 		}
 

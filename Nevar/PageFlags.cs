@@ -10,6 +10,5 @@ namespace Nevar
 		Leaf = 0x02,
 		Overlfow = 0x04,
 		Meta = 0x08,
-		Dirty = 0x10,
 	}
 }

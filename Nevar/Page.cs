@@ -105,7 +105,7 @@ namespace Nevar
 			}
 		}
 
-		internal void AddNode(ushort index, Slice key, Stream value = null, int pageNumber = -1)
+		public void AddNode(ushort index, Slice key, Stream value = null, int pageNumber = -1)
 		{
 			if (HasSpaceFor(key, value) == false)
 				throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
@@ -156,7 +156,7 @@ namespace Nevar
 				nodeSize += other->DataSize;
 			var key = new Slice(other);
 			var newNode = AllocateNewNode(index, key, nodeSize);
-			key.CopyTo((byte*) newNode + Constants.NodeHeaderSize);
+			key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
 			if (IsBranch)
 			{
@@ -190,13 +190,26 @@ namespace Nevar
 			get { return _header->Upper - _header->Lower; }
 		}
 
-		public void Truncate(ushort i)
+		public void Truncate(Transaction tx, ushort i)
 		{
 			if (i >= NumberOfEntries)
 				return;
 
-			Upper = KeysOffsets[i];
-			Lower = (ushort)(Constants.PageHeaderSize + Constants.NodeOffsetSize * i);
+			// when truncating, we copy the values to a tmp page
+			// this has the effect of compacting the page data and avoiding
+			// internal page fragmentation
+			var copy = tx.AllocatePage(1);
+			for (int j = 0; j < i; j++)
+			{
+				copy.CopyNodeData(GetNode(j));
+			}
+			NativeMethods.memcpy(_base + Constants.PageHeaderSize,
+			                     copy._base + Constants.PageHeaderSize,
+			                     Constants.PageSize - Constants.PageHeaderSize);
+
+			Upper = copy.Upper;
+			Lower = copy.Lower;
+			tx.FreePage(copy);
 
 			if (LastSearchPosition > i)
 				LastSearchPosition = i;
@@ -232,7 +245,7 @@ namespace Nevar
 				{
 					sb.Append("\tPage: ").Append(n->PageNumber);
 				}
-				 sb.AppendLine();
+				sb.AppendLine();
 			}
 			return sb.ToString();
 		}
@@ -241,6 +254,30 @@ namespace Nevar
 		{
 			var requiredSpace = Util.GetNodeSize(key, value) + Constants.NodeOffsetSize;
 			return requiredSpace < SizeLeft;
+		}
+
+		public string this[int i]
+		{
+			get { return new Slice(GetNode(i)).ToString(); }
+		}
+
+		[Conditional("DEBUG")]
+		public void DebugValidate(SliceComparer comparer)
+		{
+			if (NumberOfEntries == 0)
+				throw new InvalidOperationException("Page " + PageNumber + " exists but has no entries");
+
+			var prev = new Slice(GetNode(0));
+			for (int i = 1; i < NumberOfEntries; i++)
+			{
+				var node = GetNode(i);
+				var current = new Slice(node);
+
+				if (prev.Compare(current, comparer) >= 0)
+					throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
+
+				prev = current;
+			}
 		}
 	}
 }

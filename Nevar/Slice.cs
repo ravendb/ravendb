@@ -34,7 +34,7 @@ namespace Nevar
 
 		public Slice(byte* key, ushort size)
 		{
-			Debug.Assert(size > 0 && size < Constants.MaxKeySize);
+			Debug.Assert(size >= 0 && size < Constants.MaxKeySize);
 			_pointerSize = size;
 			Options = SliceOptions.Key;
 			_array = null;
@@ -118,7 +118,7 @@ namespace Nevar
 					return cmp(a, other._pointer, size);
 				}
 			}
-			if (_array != null)
+			if (other._array != null)
 			{
 				fixed (byte* b = other._array)
 				{

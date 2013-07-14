@@ -51,10 +51,30 @@ namespace Nevar
 			if (page.HasSpaceFor(key,value) == false)
 			{
 				SplitPage(tx, key, value, -1, cusror);
+				DebugValidateTree(tx, cusror.Root);
 				return;
 			}
 
 			page.AddNode(page.LastSearchPosition, key, value, 0);
+
+			page.DebugValidate(_cmp);
+		}
+
+		private void DebugValidateTree(Transaction tx, Page root)
+		{
+			var stack = new Stack<Page>();
+			stack.Push(root);
+			while (stack.Count >0)
+			{
+				var p = stack.Pop();
+				p.DebugValidate(_cmp);
+				if (p.IsBranch == false)
+					continue;
+				for (int i = 0; i < p.NumberOfEntries; i++)
+				{
+					stack.Push(tx.GetPage(p.GetNode(i)->PageNumber));
+				}
+			}
 		}
 
 		private Page SplitPage(Transaction tx, Slice newKey, Stream value, int pageNumber, Cursor cursor)
@@ -123,7 +143,7 @@ namespace Nevar
 				var node = page.GetNode(i);
 				rightPage.CopyNodeData(node);
 			}
-			page.Truncate(splitIndex);
+			page.Truncate(tx, splitIndex);
 
 			// actually insert the new key
 			if (currentIndex >= splitIndex)
@@ -254,10 +274,7 @@ namespace Nevar
 		{
 			var page = tx.AllocatePage(num);
 
-			page.Flags = flags | PageFlags.Dirty;
-
-			page.Lower = (ushort)Constants.PageHeaderSize;
-			page.Upper = Constants.PageSize;
+			page.Flags = flags;
 
 			return page;
 		}

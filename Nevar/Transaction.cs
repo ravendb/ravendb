@@ -54,5 +54,11 @@ namespace Nevar
 			cursors.Add(tree, c);
 			return c;
 		}
+
+		public void FreePage(Page page)
+		{
+			DirtyPages.Remove(page);
+			//todo: actually release this
+		}
 	}
 }

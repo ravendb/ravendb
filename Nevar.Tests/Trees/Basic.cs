@@ -101,7 +101,6 @@ namespace Nevar.Tests.Trees
 					Assert.Equal("test-" + i.ToString("000"), read.Item1);
 					Assert.Equal("val-" + i, read.Item2);
 				}
-				RenderAndShow(tx);
 			}
 		}
 
@@ -117,8 +116,8 @@ namespace Nevar.Tests.Trees
 					for (int j = 0; j < 5; j++)
 					{
 						stream.Position = 0;
-						Env.Root.Add(tx, "test-" + j + "-" + i, stream);
-						TreeDumper.Dump(tx, "test-" + j.ToString("0000") + "-" + i.ToString("0000") + ".dot", tx.GetCursor(Env.Root).Root, 1);
+						
+						Env.Root.Add(tx, "test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
 					}
 				}
 
@@ -128,11 +127,16 @@ namespace Nevar.Tests.Trees
 			using (var tx = Env.NewTransaction())
 			{
 				RenderAndShow(tx);
+				for (int i = 0; i < 256; i++)
+				{
+					for (int j = 0; j < 5; j++)
+					{
+						var key = "test-" + j.ToString("000") + "-" + i.ToString("000");
+						var readKey = ReadKey(tx, key);
+						Assert.Equal(readKey.Item1, key);
+					}
 			}
-
-			Assert.False(true);
-
-
+			}
 		}
 	}
 }
