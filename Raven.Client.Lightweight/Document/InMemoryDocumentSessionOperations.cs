@@ -985,6 +985,8 @@ more responsive application.
 		/// Mark the entity as read only, change tracking won't apply 
 		/// to such an entity. This can be done as an optimization step, so 
 		/// we don't need to check the entity for changes.
+		/// This flag is persisted in the document metadata and subsequent modifications of the document will not be possible.
+		/// If you want the session to ignore this entity, consider using the Evict() method.
 		/// </summary>
 		public void MarkReadOnly(object entity)
 		{
@@ -1010,7 +1012,7 @@ more responsive application.
 
 			// prevent saves of a modified read only entity
 			if (documentMetadata.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) &&
-				documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) ||
+				documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) &&
 				documentMetadata.Metadata.ContainsKey(Constants.RavenReadOnly) &&
 				documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
 				return false;
