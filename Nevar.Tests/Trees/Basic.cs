@@ -71,13 +71,36 @@ namespace Nevar.Tests.Trees
 
 				tx.Commit();
 
-				RenderAndShow(tx, Env.Root);
-
 				Assert.Equal(3, Env.Root.PageCount);
 				Assert.Equal(2, Env.Root.LeafPages);
 				Assert.Equal(1, Env.Root.BranchPages);
 				Assert.Equal(2, Env.Root.Depth);
 		
+			}
+		}
+
+		[Fact]
+		public void AfterPageSplitAllDataIsValid()
+		{
+			using (var tx = Env.NewTransaction())
+			{
+				for (int i = 0; i < 256; i++)
+				{
+					Env.Root.Add(tx, "test-" + i, StreamFor("val-" + i));
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction())
+			{
+				for (int i = 0; i < 256; i++)
+				{
+					var read = ReadKey(tx, "test-" + i);
+					Assert.Equal("test-"+i, read.Item1);
+					Assert.Equal("val-" + i, read.Item2);
+
+				}
 			}
 		}
 	}

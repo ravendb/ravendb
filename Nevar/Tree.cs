@@ -112,7 +112,7 @@ digraph structs {
 			var cusror = tx.GetCursor(this);
 			var page = FindPageFor(tx, key, cusror);
 
-			var nodeSize = Util.GetMinNodeSize(key);
+			var nodeSize = Util.GetLeafNodeSize(key, value);
 
 			if (nodeSize > page.SizeLeft)
 			{

@@ -105,8 +105,9 @@ namespace Nevar
 
 		internal void AddNode(ushort index, Slice key, Stream value = null, int pageNumber = -1, NodeHeader* other = null)
 		{
-			if (Util.GetMinNodeSize(key) > SizeLeft)
-				throw new InvalidOperationException("The page is full and cannot add an entry with min size of: " + Util.GetMinNodeSize(key) +
+			var leafNodeSize = Util.GetLeafNodeSize(key, value, other);
+			if (leafNodeSize > SizeLeft)
+				throw new InvalidOperationException("The page is full and cannot add an entry with min size of: " + leafNodeSize +
 													", this is probably a bug");
 
 			// move higher pointers up one slot
@@ -114,9 +115,9 @@ namespace Nevar
 			{
 				KeysOffsets[i] = KeysOffsets[i - 1];
 			}
-			var nodeSize = GetRequiredSpace(key, value, other);
+			var nodeSize = Util.GetRequiredSpace(key, value, other);
 			var newNodeOffset = (ushort)(_header->Upper - nodeSize);
-			Debug.Assert(newNodeOffset >= _header->Lower + sizeof(ushort));
+			Debug.Assert(newNodeOffset >= _header->Lower + Constants.NodeOffsetSize);
 			KeysOffsets[index] = newNodeOffset;
 			_header->Upper = newNodeOffset;
 			_header->Lower += (ushort)Constants.NodeOffsetSize;
@@ -155,20 +156,7 @@ namespace Nevar
 			}
 		}
 
-		private static unsafe int GetRequiredSpace(Slice key, Stream value, NodeHeader* other)
-		{
-			var nodeSize = Constants.NodeHeaderSize + key.Size;
-			if (value != null)
-			{
-				nodeSize += (int)value.Length;
-			}
-			else if (other != null)
-			{
-				nodeSize += other->DataSize;
-			}
-			return nodeSize;
-		}
-
+		
 		public int SizeLeft
 		{
 			get { return _header->Upper - _header->Lower; }
