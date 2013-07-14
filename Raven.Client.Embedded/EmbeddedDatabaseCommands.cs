@@ -1113,6 +1113,15 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Seeds the next identity value on the server
+		/// </summary>
+		public long SeedIdentityFor(string name, long value)
+		{
+			database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(name, value));
+			return value;
+		}
+
+		/// <summary>
 		/// Get the full URL for the given document key. This is not supported for embedded database.
 		/// </summary>
 		public string UrlFor(string documentKey)

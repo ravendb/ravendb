@@ -534,6 +534,8 @@
     <Compile Include="Bugs\TimeSpanIndexing.cs" />
     <Compile Include="Bugs\WhereInShouldBeBoostedCorrectly.cs" />
     <Compile Include="Bugs\TransformResults\Answers_ByQuestion_NoTransformResults.cs" />
+    <Compile Include="Bundles\IndexedProperties\Alexander.cs" />
+    <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
@@ -767,6 +769,7 @@
     <Compile Include="MailingList\RacielRod.cs" />
     <Compile Include="MailingList\RavenCountTest.cs" />
     <Compile Include="MailingList\RavenDB1192.cs" />
+    <Compile Include="MailingList\RavenDB1206.cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
     <Compile Include="MailingList\RavenDbRecoveryTests.cs" />
