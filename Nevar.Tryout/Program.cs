@@ -13,28 +13,26 @@ namespace Nevar.Tryout
 	{
 		static void Main(string[] args)
 		{
-			//Slice a = "test-1";
-			//Slice b = "test-10";
+			//new Basic().PageSplitsAllAround();
+			var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024 * 1024 * 16));
+			var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
+			using (var tx = env.NewTransaction())
+			{
+				for (int i = 0; i < 32; i++)
+				{
+					ms.Position = 0;
+					if (i == 23)
+					{
+						DebugStuff.RenderAndShow(env.NewTransaction(), tx.GetCursor(env.Root).Root, 1);
+					}
+					env.Root.Add(tx, string.Format("{0,5}", i), ms);
+				}
 
-			//var compare = a.Compare(b, NativeMethods.memcmp);
-			//Console.WriteLine(compare);
-			new Basic().PageSplitsAllAround();
-			//var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024*1024));
-			//var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
-			//using (var tx = env.NewTransaction())
-			//{
-			//	for (int i = 0; i < 50; i++)
-			//	{
-			//		ms.Position = 0;
-			//		env.Root.Add(tx, "test-" + i, ms);
-			//	}
+				tx.Commit();
+			}
 
-			//	tx.Commit();
-			//}
-
-			//env.Root.Dump(env.NewTransaction(),"out.dot");
-
-			////Process.Start("start", "out.png");
+			DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 100);
+			//Process.Start("start", "out.png");
 
 
 		}

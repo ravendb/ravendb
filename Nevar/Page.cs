@@ -199,6 +199,7 @@ namespace Nevar
 			// this has the effect of compacting the page data and avoiding
 			// internal page fragmentation
 			var copy = tx.AllocatePage(1);
+			copy.Flags = Flags;
 			for (int j = 0; j < i; j++)
 			{
 				copy.CopyNodeData(GetNode(j));

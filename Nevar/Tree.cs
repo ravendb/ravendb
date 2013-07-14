@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -44,14 +45,22 @@ namespace Nevar
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length > int.MaxValue) throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-			var cusror = tx.GetCursor(this);
+			var cursor = tx.GetCursor(this);
 			
-			var page = FindPageFor(tx, key, cusror);
+			var page = FindPageFor(tx, key, cursor);
 
 			if (page.HasSpaceFor(key,value) == false)
 			{
-				SplitPage(tx, key, value, -1, cusror);
-				DebugValidateTree(tx, cusror.Root);
+				SplitPage(tx, key, value, -1, cursor);
+				try
+				{
+					DebugValidateTree(tx, cursor.Root);
+				}
+				catch (Exception)
+				{
+					DebugStuff.RenderAndShow(tx, cursor.Root, 1);
+					throw;
+				}
 				return;
 			}
 
@@ -60,6 +69,7 @@ namespace Nevar
 			page.DebugValidate(_cmp);
 		}
 
+		[Conditional("DEBUG")]
 		private void DebugValidateTree(Transaction tx, Page root)
 		{
 			var stack = new Stack<Page>();
