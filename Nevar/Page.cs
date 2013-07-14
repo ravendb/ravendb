@@ -32,12 +32,12 @@ namespace Nevar
 			get { return (ushort*)(_base + Constants.PageHeaderSize); }
 		}
 
-		public NodeHeader* Search(Slice key, SliceComparer cmp, out bool exactMatch)
+		public NodeHeader* Search(Slice key, SliceComparer cmp, out int match)
 		{
 			int low = IsLeaf ? 0 : 1; // leaf pages entries start at 0, but branch entries 0th entry is the implicit left page
 			int high = NumberOfEntries - 1;
 			int position = 0;
-			int cmpResult = 0;
+			match = 0;
 
 			var pageKey = new Slice(SliceOptions.Key);
 
@@ -49,22 +49,21 @@ namespace Nevar
 				node = GetNode(position);
 				pageKey.Set(node);
 
-				cmpResult = key.Compare(pageKey, cmp);
-				if (cmpResult == 0)
+				match = key.Compare(pageKey, cmp);
+				if (match == 0)
 					break;
 
-				if (cmpResult > 0)
+				if (match > 0)
 					low = position + 1;
 				else
 					high = position - 1;
 			}
 
 
-			if (cmpResult > 0) // found entry less than key
+			if (match > 0) // found entry less than key
 				position++; // move to the smallest entry larger than the key
 
 
-			exactMatch = cmpResult == 0;
 			Debug.Assert(position < ushort.MaxValue);
 			LastSearchPosition = (ushort)position;
 
@@ -176,15 +175,10 @@ namespace Nevar
 
 		public ushort NodePositionFor(Slice key, SliceComparer cmp)
 		{
-			bool exactMatch;
-			if (Search(key, cmp, out exactMatch) == null)
-			{
-				return (ushort)(NumberOfEntries - 1);
-			}
-			var nodePos = LastSearchPosition;
-			if (!exactMatch)
-				nodePos--;
-			return nodePos;
+			int match;
+			if (Search(key, cmp, out match) == null)
+				return (ushort) (NumberOfEntries - 1);
+			return LastSearchPosition;
 		}
 
 		public override string ToString()
