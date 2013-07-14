@@ -3,6 +3,10 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nevar", "Nevar\Nevar.csproj", "{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nevar.Tests", "Nevar.Tests\Nevar.Tests.csproj", "{3C2CD044-CF12-48D1-9C43-64A9058C165E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nevar.Tryout", "Nevar.Tryout\Nevar.Tryout.csproj", "{FE36CB0D-80BE-4898-9599-81FDC9D4BF77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +17,14 @@ Global
 		{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE36CB0D-80BE-4898-9599-81FDC9D4BF77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE36CB0D-80BE-4898-9599-81FDC9D4BF77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE36CB0D-80BE-4898-9599-81FDC9D4BF77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE36CB0D-80BE-4898-9599-81FDC9D4BF77}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

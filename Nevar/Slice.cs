@@ -5,16 +5,7 @@ using System.Text;
 
 namespace Nevar
 {
-	public unsafe delegate int SliceComparer(byte* a, byte* b, int size);
-
-	public enum SliceOptions : byte
-	{
-		Key = 0,
-		BeforeAllKeys = 1,
-		AfterAllKeys = 2
-	}
-
-	public unsafe struct Slice
+	public unsafe class Slice
 	{
 		private ushort _pointerSize;
 		public SliceOptions Options;
@@ -60,6 +51,30 @@ namespace Nevar
 			Options = SliceOptions.Key;
 			_pointer = null;
 			_array = key;
+		}
+
+		public Slice(NodeHeader* node)
+		{
+			Options = SliceOptions.Key;
+			Set(node);
+		}
+
+		protected bool Equals(Slice other)
+		{
+			return Compare(other, NativeMethods.memcmp) == 0;
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != GetType()) return false;
+			return Equals((Slice) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			throw new NotImplementedException();
 		}
 
 		public override string ToString()
@@ -112,13 +127,18 @@ namespace Nevar
 		{
 			if (_array == null)
 			{
-				NativeMethods.MemCpy(dest, _pointer, _pointerSize);
+				NativeMethods.memcpy(dest, _pointer, _pointerSize);
 				return;
 			}
 			fixed (byte* a = _array)
 			{
-				NativeMethods.MemCpy(dest, a, _array.Length);
+				NativeMethods.memcpy(dest, a, _array.Length);
 			}
+		}
+
+		public void Set(NodeHeader* node)
+		{
+			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
 		}
 	}
 }

@@ -1,24 +1,35 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Nevar
 {
-	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public unsafe struct Page
+	public unsafe class Page
 	{
-		[FieldOffset(0)]
-		public byte* Base;
-		[FieldOffset(0)]
-		public PageHeader* Header;
+		private readonly byte* _base;
+		private readonly PageHeader* _header;
+		public ushort LastSearchPosition;
 
-		[FieldOffset(8)]
-		public ushort LastSearchPosition; // note that this is _not_ persisted!
+		public Page(byte* b)
+		{
+			_base = b;
+			_header = (PageHeader*)b;
+		}
+
+		public int PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
+
+		public PageFlags Flags { get { return _header->Flags; } set { _header->Flags = value; } }
+
+		public ushort Lower { get { return _header->Lower; } set { _header->Lower = value; } }
+
+		public ushort Upper { get { return _header->Upper; } set { _header->Upper = value; } }
+
+		public int NumberOfPages { get { return _header->NumberOfPages; } set { _header->NumberOfPages = value; } }
 
 		public ushort* KeysOffsets
 		{
-			get { return (ushort*)(Base + Constants.PageHeaderSize); }
+			get { return (ushort*)(_base + Constants.PageHeaderSize); }
 		}
 
 		public NodeHeader* Search(Slice key, SliceComparer cmp, out bool exactMatch)
@@ -28,7 +39,7 @@ namespace Nevar
 			int position = 0;
 			int cmpResult = 0;
 
-			var pageKey = new Slice();
+			var pageKey = new Slice(SliceOptions.Key);
 
 			NodeHeader* node = null;
 			while (low <= high)
@@ -36,7 +47,7 @@ namespace Nevar
 				position = (low + high) >> 1;
 
 				node = GetNode(position);
-				pageKey.Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
+				pageKey.Set(node);
 
 				cmpResult = key.Compare(pageKey, cmp);
 				if (cmpResult == 0)
@@ -67,17 +78,17 @@ namespace Nevar
 			Debug.Assert(n >= 0 && n <= NumberOfEntries);
 
 			var nodeOffset = KeysOffsets[n];
-			return (NodeHeader*)(Base + nodeOffset);
+			return (NodeHeader*)(_base + nodeOffset);
 		}
 
 		public bool IsLeaf
 		{
-			get { return Header->Flags.HasFlag(PageFlags.Leaf); }
+			get { return _header->Flags.HasFlag(PageFlags.Leaf); }
 		}
 
 		public bool IsBranch
 		{
-			get { return Header->Flags.HasFlag(PageFlags.Branch); }
+			get { return _header->Flags.HasFlag(PageFlags.Branch); }
 		}
 
 		public ushort NumberOfEntries
@@ -88,21 +99,14 @@ namespace Nevar
 				// we can calculate the number of entries by getting the size and dividing
 				// in 2, since that is the size of the offsets we use
 
-				return (ushort)((Header->Lower - Constants.PageHeaderSize) >> 1);
+				return (ushort)((_header->Lower - Constants.PageHeaderSize) >> 1);
 			}
 		}
 
-		internal void AddNode(ushort index, Slice key, Stream value, int pageNumber)
+		internal void AddNode(ushort index, Slice key, Stream value = null, int pageNumber = -1, NodeHeader* other = null)
 		{
-			var nodeSize = Constants.NodeHeaderSize;
-
-			if (key.Options == SliceOptions.Key)
-				nodeSize += key.Size;
-
-			nodeSize += nodeSize & 1; // align on 2 boundary
-
-			if (nodeSize + sizeof(ushort) > SizeLeft)
-				throw new InvalidOperationException("The page is full and cannot add an entry with size: " + nodeSize +
+			if (Util.GetMinNodeSize(key) > SizeLeft)
+				throw new InvalidOperationException("The page is full and cannot add an entry with min size of: " + Util.GetMinNodeSize(key) +
 													", this is probably a bug");
 
 			// move higher pointers up one slot
@@ -110,14 +114,14 @@ namespace Nevar
 			{
 				KeysOffsets[i] = KeysOffsets[i - 1];
 			}
-
-			var newNodeOffset = (ushort)(Header->Upper - nodeSize);
-			Debug.Assert(newNodeOffset >= Header->Lower + sizeof(ushort));
+			var nodeSize = GetRequiredSpace(key, value, other);
+			var newNodeOffset = (ushort)(_header->Upper - nodeSize);
+			Debug.Assert(newNodeOffset >= _header->Lower + sizeof(ushort));
 			KeysOffsets[index] = newNodeOffset;
-			Header->Upper = newNodeOffset;
-			Header->Lower += sizeof(ushort);
+			_header->Upper = newNodeOffset;
+			_header->Lower += sizeof(ushort);
 
-			var node = (NodeHeader*)(Base + newNodeOffset);
+			var node = (NodeHeader*)(_base + newNodeOffset);
 			node->KeySize = key.Size;
 			node->Flags = NodeFlags.None;
 
@@ -130,57 +134,90 @@ namespace Nevar
 				return;
 			}
 
-			node->DataSize = (int)value.Length;
 			Debug.Assert(key.Options == SliceOptions.Key);
-
-			using (var ums = new UnmanagedMemoryStream((byte*)node + Constants.NodeHeaderSize + key.Size, value.Length, value.Length, FileAccess.ReadWrite))
+			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
+			if (value != null)
 			{
-				value.CopyTo(ums);
+				node->DataSize = (int)value.Length;
+				using (var ums = new UnmanagedMemoryStream(dataPos, value.Length, value.Length, FileAccess.ReadWrite))
+				{
+					value.CopyTo(ums);
+				}
 			}
+			else if (other != null)
+			{
+				node->DataSize = other->DataSize;
+				NativeMethods.memcpy(dataPos, (byte*)other + Constants.NodeHeaderSize + other->KeySize, other->DataSize);
+			}
+			else
+			{
+				throw new ArgumentException("Adding a node to a leaf node requires either a value or a node header to clone from");
+			}
+		}
+
+		private static unsafe int GetRequiredSpace(Slice key, Stream value, NodeHeader* other)
+		{
+			var nodeSize = Constants.NodeHeaderSize + key.Size;
+			if (value != null)
+			{
+				nodeSize += (int)value.Length;
+			}
+			else if (other != null)
+			{
+				nodeSize += other->DataSize;
+			}
+			return nodeSize;
 		}
 
 		public int SizeLeft
 		{
-			get { return Header->Upper - Header->Lower; }
+			get { return _header->Upper - _header->Lower; }
 		}
-	}
 
-	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public unsafe struct PageHeader
-	{
-		[FieldOffset(0)]
-		public int PageNumber;
-		[FieldOffset(4)]
-		public PageFlags Flags;
+		public void Truncate(ushort i)
+		{
+			if (i >= NumberOfEntries)
+				return;
 
-		[FieldOffset(5)]
-		public ushort Lower;
-		[FieldOffset(7)]
-		public ushort Upper;
+			Upper = KeysOffsets[i];
+			Lower = (ushort)(Constants.PageHeaderSize + Constants.NodeOffsetSize * i);
 
-		[FieldOffset(5)]
-		public int NumberOfPages;
-	}
+			if (LastSearchPosition > i)
+				LastSearchPosition = i;
+		}
 
-	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct NodeHeader
-	{
-		[FieldOffset(0)]
-		public int DataSize;
-		[FieldOffset(0)]
-		public int PageNumber;
+		public ushort NodePositionFor(Slice key, SliceComparer cmp)
+		{
+			bool exactMatch;
+			if (Search(key, cmp, out exactMatch) == null)
+			{
+				return (ushort)(NumberOfEntries - 1);
+			}
+			var nodePos = LastSearchPosition;
+			if (!exactMatch)
+				nodePos--;
+			return nodePos;
+		}
 
-		[FieldOffset(4)]
-		public NodeFlags Flags;
+		public override string ToString()
+		{
+			return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + Flags;
+		}
 
-		[FieldOffset(6)]
-		public ushort KeySize;
-	}
-
-	[Flags]
-	public enum NodeFlags : byte
-	{
-		None = 0,
-		Overflow = 1,
+		public string Dump()
+		{
+			var sb = new StringBuilder();
+			var slice = new Slice(SliceOptions.Key);
+			for (var i = 0; i < NumberOfEntries; i++)
+			{
+				var n = GetNode(i);
+				slice.Set(n);
+				sb.AppendFormat("Node: {0,-5}", i).Append("\tKey: ").Append(slice)
+				  .Append("\tSize: ")
+				  .Append(n->GetNodeSize())
+				  .AppendLine();
+			}
+			return sb.ToString();
+		}
 	}
 }
