@@ -534,8 +534,6 @@
     <Compile Include="Bugs\TimeSpanIndexing.cs" />
     <Compile Include="Bugs\WhereInShouldBeBoostedCorrectly.cs" />
     <Compile Include="Bugs\TransformResults\Answers_ByQuestion_NoTransformResults.cs" />
-    <Compile Include="Bundles\IndexedProperties\Alexander.cs" />
-    <Compile Include="Bundles\IndexedProperties\IndexedProperties.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
@@ -746,7 +744,6 @@
     <Compile Include="MailingList\MapLongTests.cs" />
     <Compile Include="MailingList\Mare.cs" />
     <Compile Include="MailingList\AnyBugTest.cs" />
-    <Compile Include="MailingList\MarkReadOnly.cs" />
     <Compile Include="MailingList\MoreLikeThisEvaluation.cs" />
     <Compile Include="MailingList\MultiLoadInTransaction.cs" />
     <Compile Include="MailingList\nberardi.cs" />
