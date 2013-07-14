@@ -42,9 +42,9 @@ namespace Raven.Database.Indexing
 		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
 		{
 			return from property in properties.Cast<PropertyDescriptor>()
-			       where property.Name != Constants.DocumentIdFieldName
-			       from field in CreateFields(property.Name, property.GetValue(val), defaultStorage)
-			       select field;
+				   where property.Name != Constants.DocumentIdFieldName
+				   from field in CreateFields(property.Name, property.GetValue(val), defaultStorage)
+				   select field;
 		}
 
 		public IEnumerable<AbstractField> Index(RavenJObject document, Field.Store defaultStorage)
@@ -52,7 +52,7 @@ namespace Raven.Database.Indexing
 			return from property in document
 				   where property.Key != Constants.DocumentIdFieldName
 				   from field in CreateFields(property.Key, GetPropertyValue(property.Value), defaultStorage)
-			       select field;
+				   select field;
 		}
 
 		private static object GetPropertyValue(RavenJToken property)
@@ -211,14 +211,14 @@ namespace Raven.Database.Indexing
 			if (value is TimeSpan)
 			{
 				var val = (TimeSpan)value;
-				yield return CreateFieldWithCaching(name, val.ToString("c",CultureInfo.InvariantCulture), storage,
-						   indexDefinition.GetIndex(name,  Field.Index.NOT_ANALYZED_NO_NORMS),termVector);
-			} 
+				yield return CreateFieldWithCaching(name, val.ToString("c", CultureInfo.InvariantCulture), storage,
+						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
+			}
 			else if (value is DateTime)
 			{
 				var val = (DateTime)value;
 				var dateAsString = val.ToString(Default.DateTimeFormatsToWrite);
-				if(val.Kind == DateTimeKind.Utc)
+				if (val.Kind == DateTimeKind.Utc)
 					dateAsString += "Z";
 				yield return CreateFieldWithCaching(name, dateAsString, storage,
 						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
@@ -228,7 +228,7 @@ namespace Raven.Database.Indexing
 				var val = (DateTimeOffset)value;
 
 				string dtoStr;
-				if(Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) || Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED_NO_NORMS))
+				if (Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) || Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED_NO_NORMS))
 				{
 					dtoStr = val.ToString(Default.DateTimeOffsetFormatsToWrite);
 				}
@@ -245,9 +245,9 @@ namespace Raven.Database.Indexing
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 
 			}
-			else if(value is double)
+			else if (value is double)
 			{
-				var d = (double) value;
+				var d = (double)value;
 				yield return CreateFieldWithCaching(name, d.ToString("r", CultureInfo.InvariantCulture), storage,
 							   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
@@ -280,7 +280,7 @@ namespace Raven.Database.Indexing
 			else
 			{
 				var jsonVal = RavenJToken.FromObject(value).ToString(Formatting.None);
-				if(jsonVal.StartsWith("{") || jsonVal.StartsWith("[")) 
+				if (jsonVal.StartsWith("{") || jsonVal.StartsWith("["))
 					yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				else if (jsonVal.StartsWith("\"") && jsonVal.EndsWith("\"") && jsonVal.Length > 1)
 					jsonVal = jsonVal.Substring(1, jsonVal.Length - 2);
@@ -309,19 +309,23 @@ namespace Raven.Database.Indexing
 			if (value is TimeSpan)
 			{
 				yield return numericField.SetLongValue(((TimeSpan)value).Ticks);
-		
+
 			}
 			else if (value is int)
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Long)
 					yield return numericField.SetLongValue((int)value);
+				else if (indexDefinition.GetSortOption(name) == SortOptions.Double)
+					yield return numericField.SetDoubleValue((int)value);
 				else
 					yield return numericField.SetIntValue((int)value);
 			}
 			else if (value is long)
 			{
-				yield return numericField
-					.SetLongValue((long)value);
+				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
+					yield return numericField.SetDoubleValue((long)value);
+				else
+					yield return numericField.SetLongValue((long)value);
 			}
 			else if (value is decimal)
 			{
@@ -406,7 +410,7 @@ namespace Raven.Database.Indexing
 
 			protected bool Equals(FieldCacheKey other)
 			{
-				return string.Equals(name, other.name) && 
+				return string.Equals(name, other.name) &&
 					Equals(index, other.index) &&
 					Equals(store, other.store) &&
 					Equals(termVector, other.termVector) &&
@@ -440,10 +444,10 @@ namespace Raven.Database.Indexing
 			var cacheKey = new FieldCacheKey(name, index, store, termVector, multipleItemsSameFieldCount.ToArray());
 			Field field;
 
-		    if (fieldsCache.TryGetValue(cacheKey, out field) == false)
-		        fieldsCache[cacheKey] = field = new Field(name, value, store, index, termVector);
+			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
+				fieldsCache[cacheKey] = field = new Field(name, value, store, index, termVector);
 
-		    field.SetValue(value);
+			field.SetValue(value);
 			field.Boost = 1;
 			field.OmitNorms = true;
 			return field;
