@@ -32,6 +32,11 @@ namespace Raven.Database.Server.Security
 				}
 				set
 				{
+					if (value == null)
+					{
+						user = null;
+						return;
+					}
 					user = new OneTimetokenPrincipal
 					{
 						Name = value.Identity.Name
