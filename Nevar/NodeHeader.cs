@@ -22,27 +22,4 @@ namespace Nevar
 				  (Flags.HasFlag(NodeFlags.PageRef) ? Constants.PageNumberSize : DataSize);
 		}
 	}
-
-	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public unsafe struct NodeDebug
-	{
-		[FieldOffset(0)]
-		public int DataSize;
-		[FieldOffset(0)]
-		public int PageNumber;
-
-		[FieldOffset(4)]
-		public NodeFlags Flags;
-
-		[FieldOffset(6)]
-		public ushort KeySize;
-
-		[FieldOffset(8)]
-		public byte* Data;
-
-		public override string ToString()
-		{
-			return new Slice(Data, KeySize).ToString();
-		}
-	}
 }

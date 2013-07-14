@@ -20,8 +20,8 @@ namespace Nevar
 
 		public static int PageMaxSpace = PageSize - PageHeaderSize;
 
-		public static int PageNumberSize = sizeof (ushort);
+		public static int PageNumberSize = sizeof(ushort);
 
-		public static int NodeOffsetSize = sizeof (ushort);
+		public static int NodeOffsetSize = sizeof(ushort);
 	}
 }

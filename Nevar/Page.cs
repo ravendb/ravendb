@@ -119,7 +119,7 @@ namespace Nevar
 			Debug.Assert(newNodeOffset >= _header->Lower + sizeof(ushort));
 			KeysOffsets[index] = newNodeOffset;
 			_header->Upper = newNodeOffset;
-			_header->Lower += sizeof(ushort);
+			_header->Lower += (ushort)Constants.NodeOffsetSize;
 
 			var node = (NodeHeader*)(_base + newNodeOffset);
 			node->KeySize = key.Size;
@@ -147,7 +147,7 @@ namespace Nevar
 			else if (other != null)
 			{
 				node->DataSize = other->DataSize;
-				NativeMethods.memcpy(dataPos, (byte*)other + Constants.NodeHeaderSize + other->KeySize, other->DataSize);
+				NativeMethods.memcpy(dataPos, ((byte*)other) + Constants.NodeHeaderSize + other->KeySize, other->DataSize);
 			}
 			else
 			{

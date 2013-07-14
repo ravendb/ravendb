@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Cursor.cs" />
+    <Compile Include="DebugStuff.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="NodeFlags.cs" />
     <Compile Include="NodeHeader.cs" />

@@ -71,6 +71,8 @@ namespace Nevar.Tests.Trees
 
 				tx.Commit();
 
+				RenderAndShow(tx, Env.Root);
+
 				Assert.Equal(3, Env.Root.PageCount);
 				Assert.Equal(2, Env.Root.LeafPages);
 				Assert.Equal(1, Env.Root.BranchPages);

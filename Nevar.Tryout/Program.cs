@@ -9,27 +9,32 @@ using Nevar.Tests.Trees;
 
 namespace Nevar.Tryout
 {
-	class Program
+	unsafe class Program
 	{
 		static void Main(string[] args)
 		{
-			//new Basic().CanAddEnoughToCausePageSplit();
-			var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024*1024));
-			var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
-			using (var tx = env.NewTransaction())
-			{
-				for (int i = 0; i < 50; i++)
-				{
-					ms.Position = 0;
-					env.Root.Add(tx, "test-" + i, ms);
-				}
+			//Slice a = "test-1";
+			//Slice b = "test-10";
 
-				tx.Commit();
-			}
+			//var compare = a.Compare(b, NativeMethods.memcmp);
+			//Console.WriteLine(compare);
+			new Basic().CanAddEnoughToCausePageSplit();
+			//var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024*1024));
+			//var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
+			//using (var tx = env.NewTransaction())
+			//{
+			//	for (int i = 0; i < 50; i++)
+			//	{
+			//		ms.Position = 0;
+			//		env.Root.Add(tx, "test-" + i, ms);
+			//	}
 
-			env.Root.Dump("out.dot");
+			//	tx.Commit();
+			//}
 
-			//Process.Start("start", "out.png");
+			//env.Root.Dump(env.NewTransaction(),"out.dot");
+
+			////Process.Start("start", "out.png");
 
 
 		}

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Text;
@@ -28,6 +29,19 @@ namespace Nevar.Tests.Trees
 		public void Dispose()
 		{
 			_storageEnvironment.Dispose();
+		}
+
+		protected void RenderAndShow(Transaction tx,Tree tree)
+		{
+			if (Debugger.IsAttached == false)
+				return;
+			var path = Path.GetTempFileName();
+			Tree.Dump(tx, path, tree.Root);
+
+			var output = Path.Combine(Environment.CurrentDirectory, "output.png");
+			var p = Process.Start(@"C:\Users\Ayende\Downloads\graphviz-2.30.1\graphviz\bin\dot.exe", "-Tpng  " + path + " -o " + output);
+			p.WaitForExit();
+			Process.Start(output);
 		}
 	}
 }

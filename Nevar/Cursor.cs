@@ -95,6 +95,7 @@ namespace Nevar
 			_tree.OverflowPages = OverflowPages;
 			_tree.Depth = Depth;
 			_tree.PageCount = PageCount;
+			_tree.Root = Root;
 		}
 	}
 }

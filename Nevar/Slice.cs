@@ -94,6 +94,15 @@ namespace Nevar
 		public int Compare(Slice other, SliceComparer cmp)
 		{
 			Debug.Assert(Options == SliceOptions.Key);
+			var r = CompareData(other, cmp);
+			if (r != 0)
+				return r;
+			return Size - other.Size;
+		}
+
+		private int CompareData(Slice other, SliceComparer cmp)
+		{
+			var size = Math.Min(Size, other.Size);
 			if (_array != null)
 			{
 				fixed (byte* a = _array)
@@ -102,20 +111,20 @@ namespace Nevar
 					{
 						fixed (byte* b = other._array)
 						{
-							return cmp(a, b, Math.Min(_array.Length, other._array.Length));
+							return cmp(a, b, size);
 						}
 					}
-					return cmp(a, other._pointer, Math.Min(_array.Length, other._pointerSize));
+					return cmp(a, other._pointer, size);
 				}
 			}
 			if (_array != null)
 			{
 				fixed (byte* b = other._array)
 				{
-					return cmp(_pointer, b, Math.Min(_pointerSize, other._array.Length));
+					return cmp(_pointer, b, size);
 				}
 			}
-			return cmp(_pointer, other._pointer, Math.Min(_pointerSize, other._pointerSize));
+			return cmp(_pointer, other._pointer, size);
 		}
 
 		public static implicit operator Slice(string s)

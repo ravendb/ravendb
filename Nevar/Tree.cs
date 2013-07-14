@@ -24,7 +24,7 @@ namespace Nevar
 			Root = root;
 		}
 
-		public void Dump(string path)
+		public static void Dump(Transaction tx, string path, Page start, int showNodesEvery = 25)
 		{
 			using (var writer = File.CreateText(path))
 			{
@@ -35,37 +35,57 @@ digraph structs {
 ");
 
 				var stack = new Stack<Page>();
-				stack.Push(Root);
-
+				stack.Push(start);
+				var references = new StringBuilder();
 				while (stack.Count > 0)
 				{
 					var p = stack.Pop();
 
-					writer.WriteLine(@"subgraph cluster_p_{0} {{ 
-						label=""Page #{0}"";
-						p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#}|Avl Space: {3:#,#}""]
-						", p.PageNumber, p.Flags, p.NumberOfEntries, p.SizeLeft);
+					writer.WriteLine(@"
+	subgraph cluster_p_{0} {{ 
+		label=""Page #{0}"";
+		p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#}|Avl Space: {3:#,#}""];
 
+", p.PageNumber, p.Flags, p.NumberOfEntries, p.SizeLeft);
 					var key = new Slice(SliceOptions.Key);
-					if (p.IsLeaf)
+					if (p.IsLeaf && showNodesEvery > 0)
 					{
-						writer.WriteLine("p_{0}_nodes [label=\"", p.PageNumber);
+						writer.WriteLine("		p_{0}_nodes [label=\" Entries:", p.PageNumber);
+						for (int i = 0; i < p.NumberOfEntries; i += showNodesEvery)
+						{
+							if (i != 0)
+							{
+								writer.WriteLine(" ... {0:#,#} keys redacted ...", showNodesEvery);
+							}
+							var node = p.GetNode(i);
+							key.Set(node);
+							writer.WriteLine("{0} - Size {1:#,#} {2}", key, node->DataSize, node->Flags == NodeFlags.None ? "" : node->Flags.ToString());
+						}
+						writer.WriteLine("\"];");
+					}
+					else if (p.IsBranch)
+					{
+						writer.WriteLine("		p_{0}_refs [label=\"", p.PageNumber);
 						for (int i = 0; i < p.NumberOfEntries; i++)
 						{
 							var node = p.GetNode(i);
 							key.Set(node);
-							writer.WriteLine("{0} - Size {1:#,#} - {2}", key, node->DataSize, node->Flags);
+							writer.WriteLine("{0}  / to page {1} {2}", key.Size > 0 ? key : "(implicit)", node->PageNumber, node->Flags == NodeFlags.None ? "" : node->Flags.ToString());
 						}
 						writer.WriteLine("\"];");
+						for (int i = 0; i < p.NumberOfEntries; i++)
+						{
+							var node = p.GetNode(i);
+							var child = tx.GetPage(node->PageNumber);
+							stack.Push(child);
+
+							references.AppendFormat("	p_{0} -> p_{1};", p.PageNumber, child.PageNumber).AppendLine();
+						}
 					}
-					writer.WriteLine("}");
-
+					writer.WriteLine("	}");
 				}
-
-
-
+				writer.Write(references.ToString());
 				writer.WriteLine("}");
-
 			}
 		}
 
@@ -78,10 +98,9 @@ digraph structs {
 
 			// need to create the root
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
-			var tree = new Tree(cmp, newRootPage);
+			var tree = new Tree(cmp, newRootPage) {Depth = 1};
 			var cursor = tx.GetCursor(tree);
 			cursor.RecordNewPage(newRootPage, 1);
-			tree.Depth = 1;
 			return tree;
 		}
 
@@ -104,7 +123,7 @@ digraph structs {
 			page.AddNode(page.LastSearchPosition, key, value, 0);
 		}
 
-		private void SplitPage(Transaction tx, Slice newKey, Stream value, Cursor cursor)
+		private Page SplitPage(Transaction tx, Slice newKey, Stream value, Cursor cursor)
 		{
 			Page parentPage;
 			var page = cursor.Pop();
@@ -125,6 +144,7 @@ digraph structs {
 				// now add implicit left page
 				newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), pageNumber: page.PageNumber);
 				parentPage = newRootPage;
+				parentPage.LastSearchPosition++;
 			}
 			else
 			{
@@ -161,7 +181,7 @@ digraph structs {
 			}
 			else
 			{
-				parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, pageNumber: page.PageNumber);
+				parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, pageNumber: rightPage.PageNumber);
 			}
 
 			// move the actual entries from page to right page
@@ -169,10 +189,9 @@ digraph structs {
 			var keyInPage = new Slice(SliceOptions.Key);
 			for (ushort i = splitIndex; i < nKeys; i++)
 			{
-				var d = page.Dump();
 				var node = page.GetNode(i);
 				keyInPage.Set(node);
-				rightPage.AddNode(i, keyInPage, other: node);
+				rightPage.AddNode(rightPage.NumberOfEntries, keyInPage, other: node);
 			}
 			page.Truncate(splitIndex);
 
@@ -181,6 +200,8 @@ digraph structs {
 			var nodePos = pageToInsertTo.NodePositionFor(newKey, _cmp);
 			pageToInsertTo.AddNode(nodePos,
 								   newKey, value);
+
+			return parentPage;
 		}
 
 		/// <summary>
@@ -250,7 +271,7 @@ digraph structs {
 
 		public Page FindPageFor(Transaction tx, Slice key, Cursor cursor)
 		{
-			var p = Root;
+			var p = cursor.Root;
 			cursor.Push(p);
 			while (p.Flags.HasFlag(PageFlags.Branch))
 			{
