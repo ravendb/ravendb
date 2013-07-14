@@ -339,9 +339,10 @@ namespace Raven.Database.Server.Responders
 				throw new NotSupportedException();
 			}
 
-			public void Streaming()
+			public IDisposable Streaming()
 			{
 				bufferOutput = false;
+				return null;
 			}
 
 			public Task WriteAsync(string data)

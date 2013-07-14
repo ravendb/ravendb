@@ -1555,7 +1555,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
 						                                "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
 					var queryResultAsync = finalQuery.QueryResult;
-					return queryResultAsync.TotalResults;
+					return queryType == SpecialQueryType.Count ?  queryResultAsync.TotalResults : (long)queryResultAsync.TotalResults ;
 				}
 #else
 				case SpecialQueryType.Count:

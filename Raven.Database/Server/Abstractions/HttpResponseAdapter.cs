@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Abstractions
 	public class HttpResponseAdapter : IHttpResponse
 	{
 		private readonly HttpResponse response;
-		
+		private bool ignoreHeadersFromNowOn;
 		public HttpResponseAdapter(HttpResponse response)
 		{
 			this.response = response;
@@ -28,6 +28,9 @@ namespace Raven.Database.Server.Abstractions
 
 		public void AddHeader(string name, string value)
 		{
+			if (ignoreHeadersFromNowOn)
+				return;
+
 			if (name == "ETag" && string.IsNullOrEmpty(response.CacheControl))
 				response.AddHeader("Expires", "Sat, 01 Jan 2000 00:00:00 GMT");
 			
@@ -94,9 +97,14 @@ namespace Raven.Database.Server.Abstractions
 			return response.Headers;
 		}
 
-		public void Streaming()
+		public IDisposable Streaming()
 		{
 			response.BufferOutput = false;
+			return new DisposableAction(() =>
+			{
+				response.BufferOutput = true;
+				ignoreHeadersFromNowOn = true;
+			});
 		}
 
 		public string ContentType

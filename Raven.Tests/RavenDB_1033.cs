@@ -24,8 +24,9 @@ namespace Raven.Tests
 
 		public RavenDB_1033()
 		{
-			store = NewDocumentStore(settings:
-				new Dictionary<string, string>
+			store = NewDocumentStore(	
+				fiddler:false,
+				settings: new Dictionary<string, string>
 				{
 					{ "Raven/HttpCompression", "true" } // HttpCompression is enabled by default, just in case of changing it in the future
 				}); 

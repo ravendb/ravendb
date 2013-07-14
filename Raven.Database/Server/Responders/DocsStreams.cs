@@ -21,47 +21,49 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.Response.Streaming();
-			context.Response.ContentType = "application/json; charset=utf-8";
-
-			using (var writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream)))
+			using (context.Response.Streaming())
 			{
-				writer.WriteStartObject();
-				writer.WritePropertyName("Results");
-				writer.WriteStartArray();
+				context.Response.ContentType = "application/json; charset=utf-8";
 
-				Database.TransactionalStorage.Batch(accessor =>
+				using (var writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream)))
 				{
-					var startsWith = context.Request.QueryString["startsWith"];
-					int pageSize = context.GetPageSize(int.MaxValue);
-					if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
-						pageSize = int.MaxValue;
+					writer.WriteStartObject();
+					writer.WritePropertyName("Results");
+					writer.WriteStartArray();
 
-					// we may be sending a LOT of documents to the user, and most 
-					// of them aren't going to be relevant for other ops, so we are going to skip
-					// the cache for that, to avoid filling it up very quickly
-					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+					Database.TransactionalStorage.Batch(accessor =>
 					{
-						if (string.IsNullOrEmpty(startsWith))
-						{
-							Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(),
-							                      doc => doc.WriteTo(writer));
-						}
-						else
-						{
-							Database.GetDocumentsWithIdStartingWith(
-								startsWith,
-								context.Request.QueryString["matches"],
-								context.GetStart(),
-								pageSize,
-								doc => doc.WriteTo(writer));
-						}
-					}
-				});
+						var startsWith = context.Request.QueryString["startsWith"];
+						int pageSize = context.GetPageSize(int.MaxValue);
+						if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
+							pageSize = int.MaxValue;
 
-				writer.WriteEndArray();
-				writer.WriteEndObject();
-				writer.Flush();
+						// we may be sending a LOT of documents to the user, and most 
+						// of them aren't going to be relevant for other ops, so we are going to skip
+						// the cache for that, to avoid filling it up very quickly
+						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+						{
+							if (string.IsNullOrEmpty(startsWith))
+							{
+								Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(),
+								                      doc => doc.WriteTo(writer));
+							}
+							else
+							{
+								Database.GetDocumentsWithIdStartingWith(
+									startsWith,
+									context.Request.QueryString["matches"],
+									context.GetStart(),
+									pageSize,
+									doc => doc.WriteTo(writer));
+							}
+						}
+					});
+
+					writer.WriteEndArray();
+					writer.WriteEndObject();
+					writer.Flush();
+				}
 			}
 		}
 	}

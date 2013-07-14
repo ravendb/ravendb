@@ -116,9 +116,10 @@ namespace Raven.Database.Server.Abstractions
 			return response.Headers;
 		}
 
-		public void Streaming()
+		public IDisposable Streaming()
 		{
 			bufferOutput = false;
+			return new DisposableAction(() => bufferOutput = true);
 		}
 
 		public Task WriteAsync(string data)
