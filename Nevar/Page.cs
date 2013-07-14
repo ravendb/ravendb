@@ -77,8 +77,11 @@ namespace Nevar
 			Debug.Assert(n >= 0 && n <= NumberOfEntries);
 
 			var nodeOffset = KeysOffsets[n];
-			return (NodeHeader*)(_base + nodeOffset);
+			var nodeHeader = (NodeHeader*)(_base + nodeOffset);
+
+			return nodeHeader;
 		}
+
 
 		public bool IsLeaf
 		{
@@ -102,19 +105,73 @@ namespace Nevar
 			}
 		}
 
-		internal void AddNode(ushort index, Slice key, Stream value = null, int pageNumber = -1, NodeHeader* other = null)
+		internal void AddNode(ushort index, Slice key, Stream value = null, int pageNumber = -1)
 		{
-			var leafNodeSize = Util.GetLeafNodeSize(key, value, other);
-			if (leafNodeSize > SizeLeft)
-				throw new InvalidOperationException("The page is full and cannot add an entry with min size of: " + leafNodeSize +
-													", this is probably a bug");
+			if (HasSpaceFor(key, value) == false)
+				throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
 
 			// move higher pointers up one slot
 			for (int i = NumberOfEntries; i > index; i--)
 			{
 				KeysOffsets[i] = KeysOffsets[i - 1];
 			}
-			var nodeSize = Util.GetRequiredSpace(key, value, other);
+			var nodeSize = Util.GetNodeSize(key, value);
+			var node = AllocateNewNode(index, key, nodeSize);
+
+			if (key.Options == SliceOptions.Key)
+				key.CopyTo((byte*)node + Constants.NodeHeaderSize);
+
+			if (IsBranch)
+			{
+				if (pageNumber == -1)
+					throw new ArgumentException("Page numbers must be positive", "pageNumber");
+				node->PageNumber = pageNumber;
+				node->Flags = NodeFlags.PageRef;
+				return;
+			}
+
+			Debug.Assert(key.Options == SliceOptions.Key);
+			Debug.Assert(value != null);
+			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
+			node->DataSize = (int)value.Length;
+			using (var ums = new UnmanagedMemoryStream(dataPos, value.Length, value.Length, FileAccess.ReadWrite))
+			{
+				value.CopyTo(ums);
+			}
+		}
+
+		/// <summary>
+		/// Internal method that is used when splitting pages
+		/// No need to do any work here, we are always adding at the end
+		/// </summary>
+		internal void CopyNodeData(NodeHeader* other)
+		{
+			Debug.Assert(Util.NodeEntrySize(other) <= SizeLeft);
+
+			var index = NumberOfEntries;
+
+			var nodeSize = Constants.NodeHeaderSize + other->KeySize;
+			var isBranch = other->Flags.HasFlag(NodeFlags.PageRef);
+			if (isBranch == false)
+				nodeSize += other->DataSize;
+			var key = new Slice(other);
+			var newNode = AllocateNewNode(index, key, nodeSize);
+			key.CopyTo((byte*) newNode + Constants.NodeHeaderSize);
+
+			if (IsBranch)
+			{
+				newNode->PageNumber = other->PageNumber;
+				newNode->Flags = NodeFlags.PageRef;
+				return;
+			}
+			newNode->DataSize = other->DataSize;
+			NativeMethods.memcpy((byte*)newNode + Constants.NodeHeaderSize + other->KeySize,
+								 (byte*)other + Constants.NodeHeaderSize + other->KeySize,
+								 other->DataSize);
+		}
+
+		private NodeHeader* AllocateNewNode(ushort index, Slice key, int nodeSize)
+		{
 			var newNodeOffset = (ushort)(_header->Upper - nodeSize);
 			Debug.Assert(newNodeOffset >= _header->Lower + Constants.NodeOffsetSize);
 			KeysOffsets[index] = newNodeOffset;
@@ -124,38 +181,10 @@ namespace Nevar
 			var node = (NodeHeader*)(_base + newNodeOffset);
 			node->KeySize = key.Size;
 			node->Flags = NodeFlags.None;
-
-			if (key.Options == SliceOptions.Key)
-				key.CopyTo((byte*)node + Constants.NodeHeaderSize);
-
-			if (IsBranch)
-			{
-				node->PageNumber = pageNumber;
-				return;
-			}
-
-			Debug.Assert(key.Options == SliceOptions.Key);
-			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
-			if (value != null)
-			{
-				node->DataSize = (int)value.Length;
-				using (var ums = new UnmanagedMemoryStream(dataPos, value.Length, value.Length, FileAccess.ReadWrite))
-				{
-					value.CopyTo(ums);
-				}
-			}
-			else if (other != null)
-			{
-				node->DataSize = other->DataSize;
-				NativeMethods.memcpy(dataPos, ((byte*)other) + Constants.NodeHeaderSize + other->KeySize, other->DataSize);
-			}
-			else
-			{
-				throw new ArgumentException("Adding a node to a leaf node requires either a value or a node header to clone from");
-			}
+			return node;
 		}
 
-		
+
 		public int SizeLeft
 		{
 			get { return _header->Upper - _header->Lower; }
@@ -176,8 +205,7 @@ namespace Nevar
 		public ushort NodePositionFor(Slice key, SliceComparer cmp)
 		{
 			int match;
-			if (Search(key, cmp, out match) == null)
-				return (ushort) (NumberOfEntries - 1);
+			Search(key, cmp, out match);
 			return LastSearchPosition;
 		}
 
@@ -194,12 +222,25 @@ namespace Nevar
 			{
 				var n = GetNode(i);
 				slice.Set(n);
-				sb.AppendFormat("Node: {0,-5}", i).Append("\tKey: ").Append(slice)
-				  .Append("\tSize: ")
-				  .Append(n->GetNodeSize())
-				  .AppendLine();
+				var pageRef = n->Flags.HasFlag(NodeFlags.PageRef);
+				sb.AppendFormat("Node: {0,-5}", i).Append("\tKey: ").Append(slice);
+				if (pageRef == false)
+				{
+					sb.Append("\tSize: ").Append(n->GetNodeSize());
+				}
+				else
+				{
+					sb.Append("\tPage: ").Append(n->PageNumber);
+				}
+				 sb.AppendLine();
 			}
 			return sb.ToString();
+		}
+
+		public bool HasSpaceFor(Slice key, Stream value)
+		{
+			var requiredSpace = Util.GetNodeSize(key, value) + Constants.NodeOffsetSize;
+			return requiredSpace < SizeLeft;
 		}
 	}
 }

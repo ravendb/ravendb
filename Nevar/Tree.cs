@@ -45,20 +45,19 @@ namespace Nevar
 			if (value.Length > int.MaxValue) throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
 			var cusror = tx.GetCursor(this);
+			
 			var page = FindPageFor(tx, key, cusror);
 
-			var nodeSize = Util.GetLeafNodeSize(key, value);
-
-			if (nodeSize > page.SizeLeft)
+			if (page.HasSpaceFor(key,value) == false)
 			{
-				SplitPage(tx, key, value, cusror);
+				SplitPage(tx, key, value, -1, cusror);
 				return;
 			}
 
 			page.AddNode(page.LastSearchPosition, key, value, 0);
 		}
 
-		private Page SplitPage(Transaction tx, Slice newKey, Stream value, Cursor cursor)
+		private Page SplitPage(Transaction tx, Slice newKey, Stream value, int pageNumber, Cursor cursor)
 		{
 			Page parentPage;
 			var page = cursor.Pop();
@@ -109,24 +108,20 @@ namespace Nevar
 				seperatorKey = new Slice(node);
 			}
 
-			if (parentPage.SizeLeft < Util.GetBranchSize(seperatorKey))
+			if (parentPage.SizeLeft < Util.GetBranchSize(seperatorKey) + Constants.NodeOffsetSize)
 			{
-				// TODO need to split parent page as well
-				throw new NotImplementedException();
+				SplitPage(tx, seperatorKey, null, rightPage.PageNumber, cursor);
 			}
 			else
 			{
 				parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, pageNumber: rightPage.PageNumber);
 			}
-
 			// move the actual entries from page to right page
 			var nKeys = page.NumberOfEntries;
-			var keyInPage = new Slice(SliceOptions.Key);
 			for (ushort i = splitIndex; i < nKeys; i++)
 			{
 				var node = page.GetNode(i);
-				keyInPage.Set(node);
-				rightPage.AddNode(rightPage.NumberOfEntries, keyInPage, other: node);
+				rightPage.CopyNodeData(node);
 			}
 			page.Truncate(splitIndex);
 
@@ -134,10 +129,14 @@ namespace Nevar
 			if (currentIndex >= splitIndex)
 			{
 				var pos = rightPage.NodePositionFor(newKey, _cmp);
-				rightPage.AddNode(pos, newKey, value);
+				rightPage.AddNode(pos, newKey, value, pageNumber);
+				cursor.Push(rightPage);
 			}
 			else
-				 page.AddNode(page.LastSearchPosition,newKey, value);
+			{
+				page.AddNode(page.LastSearchPosition,newKey, value);
+				cursor.Push(page);
+			}
 
 			return parentPage;
 		}
@@ -224,7 +223,18 @@ namespace Nevar
 				}
 				else
 				{
-					nodePos = p.NodePositionFor(key, _cmp);
+					int match;
+					if (p.Search(key, _cmp, out match) != null)
+					{
+						nodePos = p.LastSearchPosition;
+						if (match != 0)
+							nodePos--;
+					}
+					else
+					{
+						nodePos = (ushort) (p.LastSearchPosition - 1);
+					}
+
 				}
 
 				var node = p.GetNode(nodePos);

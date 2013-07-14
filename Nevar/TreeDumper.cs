@@ -14,6 +14,7 @@ namespace Nevar
 digraph structs {
     node [shape=Mrecord]
     rankdir=LR;
+	bgcolor=transparent;
 ");
 
 				var stack = new Stack<Page>();
@@ -26,9 +27,10 @@ digraph structs {
 					writer.WriteLine(@"
 	subgraph cluster_p_{0} {{ 
 		label=""Page #{0}"";
+		color={4};
 		p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#}|Avl Space: {3:#,#}""];
 
-", p.PageNumber, p.Flags, p.NumberOfEntries, p.SizeLeft);
+", p.PageNumber, p.Flags, p.NumberOfEntries, p.SizeLeft, p.IsLeaf ? "black" : "blue");
 					var key = new Slice(SliceOptions.Key);
 					if (p.IsLeaf && showNodesEvery > 0)
 					{
@@ -47,35 +49,51 @@ digraph structs {
 					}
 					else if (p.IsBranch)
 					{
-						writer.WriteLine("		p_{0}_refs [label=\"", p.PageNumber);
+						writer.Write("		p_{0}_refs [label=\"", p.PageNumber);
 						for (int i = 0; i < p.NumberOfEntries; i++)
 						{
 							var node = p.GetNode(i);
-							key.Set(node);
-							writer.WriteLine("{0}  / to page {1} {2}", key.Size > 0 ? key : "(implicit)", node->PageNumber, node->Flags == NodeFlags.None ? "" : node->Flags.ToString());
+
+							writer.Write("{3}<{2}> {0}  / to page {1}", GetBranchNodeString(i, key, p, node), node->PageNumber,
+								i, i == 0 ? "" : "|");
 						}
 						writer.WriteLine("\"];");
-						int prev = 0;
+						var prev = -1;
 						for (int i = 0; i < p.NumberOfEntries; i++)
 						{
 							var node = p.GetNode(i);
 							var child = tx.GetPage(node->PageNumber);
 							stack.Push(child);
 
-							references.AppendFormat("	p_{0} -> p_{1};", p.PageNumber, child.PageNumber).AppendLine();
-							if (i%2 == 0 && prev != child.PageNumber)
-							{
-								references.AppendFormat("	p_{0} -> p_{1} [style=invis];", prev, child.PageNumber).AppendLine();
-							}
+							references.AppendFormat("	p_{0}_refs:{3} -> p_{1} [label=\"{2}\"];", p.PageNumber, child.PageNumber, GetBranchNodeString(i, key, p, node), i).AppendLine();
+							if (prev > -1)
+								references.AppendFormat("	p_{0} -> p_{1} [style=\"invis\"];", child.PageNumber, prev);
+
 							prev = child.PageNumber;
 						}
 					}
 					writer.WriteLine("	}");
 				}
-				writer.Write(references.ToString());
+				writer.WriteLine(references.ToString());
+
 				writer.WriteLine("}");
 			}
 		}
-		 
+
+		private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
+		{
+			string keyStr;
+			if (i == 0)
+			{
+				key.Set(p.GetNode(1));
+				keyStr = "(lt " + key + ")";
+			}
+			else
+			{
+				key.Set(node);
+				keyStr = key.ToString();
+			}
+			return keyStr;
+		}
 	}
 }

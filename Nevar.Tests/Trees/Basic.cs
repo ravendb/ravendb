@@ -82,31 +82,32 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void AfterPageSplitAllDataIsValid()
 		{
+			const int count = 256;
 			using (var tx = Env.NewTransaction())
 			{
-				for (int i = 0; i < 256; i++)
+				for (int i = 0; i < count; i++)
 				{
-					Env.Root.Add(tx, "test-" + i, StreamFor("val-" + i));
+					Env.Root.Add(tx, "test-" + i.ToString("000"), StreamFor("val-" + i));
+					
 				}
 
 				tx.Commit();
 			}
 			using (var tx = Env.NewTransaction())
 			{
-				for (int i = 0; i < 256; i++)
+				for (int i = 0; i < count; i++)
 				{
-					var read = ReadKey(tx, "test-" + i);
-					Assert.Equal("test-" + i, read.Item1);
+					var read = ReadKey(tx, "test-" + i.ToString("000"));
+					Assert.Equal("test-" + i.ToString("000"), read.Item1);
 					Assert.Equal("val-" + i, read.Item2);
-
 				}
+				RenderAndShow(tx);
 			}
 		}
 
 		[Fact]
 		public void PageSplitsAllAround()
 		{
-
 			using (var tx = Env.NewTransaction())
 			{
 				Stream stream = StreamFor("value");
@@ -117,7 +118,7 @@ namespace Nevar.Tests.Trees
 					{
 						stream.Position = 0;
 						Env.Root.Add(tx, "test-" + j + "-" + i, stream);
-
+						TreeDumper.Dump(tx, "test-" + j.ToString("0000") + "-" + i.ToString("0000") + ".dot", tx.GetCursor(Env.Root).Root, 1);
 					}
 				}
 
@@ -126,7 +127,7 @@ namespace Nevar.Tests.Trees
 
 			using (var tx = Env.NewTransaction())
 			{
-				RenderAndShow(tx, Env.Root);
+				RenderAndShow(tx);
 			}
 
 			Assert.False(true);
