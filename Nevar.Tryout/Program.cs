@@ -18,7 +18,7 @@ namespace Nevar.Tryout
 
 			//var compare = a.Compare(b, NativeMethods.memcmp);
 			//Console.WriteLine(compare);
-			new Basic().CanAddEnoughToCausePageSplit();
+			new Basic().AfterPageSplitAllDataIsValid();
 			//var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024*1024));
 			//var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
 			//using (var tx = env.NewTransaction())

@@ -30,7 +30,7 @@ namespace Nevar.Tests.Trees
 			}
 		}
 
-		private Tuple<Slice,Slice> ReadKey(Transaction tx, Slice key)
+		private Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
 			var cursor = tx.GetCursor(Env.Root);
 			var p = Env.Root.FindPageFor(tx, key, cursor);
@@ -40,7 +40,7 @@ namespace Nevar.Tests.Trees
 			Assert.True(node != null);
 
 			return Tuple.Create(new Slice(node),
-			                    new Slice((byte*) node + node->KeySize + Constants.NodeHeaderSize, (ushort) node->DataSize));
+								new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort)node->DataSize));
 		}
 
 		[Fact]
@@ -75,7 +75,7 @@ namespace Nevar.Tests.Trees
 				Assert.Equal(2, Env.Root.LeafPages);
 				Assert.Equal(1, Env.Root.BranchPages);
 				Assert.Equal(2, Env.Root.Depth);
-		
+
 			}
 		}
 
@@ -91,17 +91,47 @@ namespace Nevar.Tests.Trees
 
 				tx.Commit();
 			}
-
 			using (var tx = Env.NewTransaction())
 			{
 				for (int i = 0; i < 256; i++)
 				{
 					var read = ReadKey(tx, "test-" + i);
-					Assert.Equal("test-"+i, read.Item1);
+					Assert.Equal("test-" + i, read.Item1);
 					Assert.Equal("val-" + i, read.Item2);
 
 				}
 			}
+		}
+
+		[Fact]
+		public void PageSplitsAllAround()
+		{
+
+			using (var tx = Env.NewTransaction())
+			{
+				Stream stream = StreamFor("value");
+
+				for (int i = 0; i < 256; i++)
+				{
+					for (int j = 0; j < 5; j++)
+					{
+						stream.Position = 0;
+						Env.Root.Add(tx, "test-" + j + i, stream);
+
+					}
+				}
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction())
+			{
+				RenderAndShow(tx, Env.Root);
+			}
+
+			Assert.False(true);
+
+
 		}
 	}
 }

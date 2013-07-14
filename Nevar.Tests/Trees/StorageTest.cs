@@ -36,7 +36,7 @@ namespace Nevar.Tests.Trees
 			if (Debugger.IsAttached == false)
 				return;
 			var path = Path.GetTempFileName();
-			Tree.Dump(tx, path, tree.Root);
+			TreeDumper.Dump(tx, path, tree.Root, showNodesEvery:1);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.png");
 			var p = Process.Start(@"C:\Users\Ayende\Downloads\graphviz-2.30.1\graphviz\bin\dot.exe", "-Tpng  " + path + " -o " + output);

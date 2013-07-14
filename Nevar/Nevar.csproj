@@ -63,6 +63,7 @@
     <Compile Include="StorageEnvironment.cs" />
     <Compile Include="Transaction.cs" />
     <Compile Include="Tree.cs" />
+    <Compile Include="TreeDumper.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
