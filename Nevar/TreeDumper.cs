@@ -55,6 +55,7 @@ digraph structs {
 							writer.WriteLine("{0}  / to page {1} {2}", key.Size > 0 ? key : "(implicit)", node->PageNumber, node->Flags == NodeFlags.None ? "" : node->Flags.ToString());
 						}
 						writer.WriteLine("\"];");
+						int prev = 0;
 						for (int i = 0; i < p.NumberOfEntries; i++)
 						{
 							var node = p.GetNode(i);
@@ -62,6 +63,11 @@ digraph structs {
 							stack.Push(child);
 
 							references.AppendFormat("	p_{0} -> p_{1};", p.PageNumber, child.PageNumber).AppendLine();
+							if (i%2 == 0 && prev != child.PageNumber)
+							{
+								references.AppendFormat("	p_{0} -> p_{1} [style=invis];", prev, child.PageNumber).AppendLine();
+							}
+							prev = child.PageNumber;
 						}
 					}
 					writer.WriteLine("	}");
