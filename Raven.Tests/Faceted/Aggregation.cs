@@ -22,6 +22,7 @@ namespace Raven.Tests.Faceted
 			public int Quantity { get; set; }
 			public long Region { get; set; }
 			public DateTime At { get; set; }
+            public float Tax { get; set; }
 		}
 
 		public enum Currency
@@ -37,16 +38,17 @@ namespace Raven.Tests.Faceted
 			{
 				Map = orders =>
 					  from order in orders
-					  select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At };
+					  select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, order.Tax };
 
 				Sort(x => x.Total, SortOptions.Double);
 				Sort(x => x.Quantity, SortOptions.Int);
 				Sort(x => x.Region, SortOptions.Long);
-			}
+                Sort(x => x.Tax, SortOptions.Float);
+            }
 		}
 
 		[Fact]
-		public void CanCorrectlyAggregate_AnonymousTypes()
+		public void CanCorrectlyAggregate_AnonymousTypes_Double()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -76,11 +78,129 @@ namespace Raven.Tests.Faceted
 
 					var facetResult = r.Results["Region"];
 					Assert.Equal(2, facetResult.Values[0].Hits);
-
+                    Assert.Equal(1, facetResult.Values[0].Min);
+                    Assert.Equal(1.1, facetResult.Values[0].Max);
 					Assert.Equal(1, facetResult.Values.Count(x => x.Range == "1"));
 				}
 			}
 		}
+
+        [Fact]
+        public void CanCorrectlyAggregate_AnonymousTypes_Float()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new Orders_All().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+
+                    var obj = new { Currency = Currency.EUR, Product = "Milk", Total = 1.1, Region = 1, Tax = 1 };
+                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 1, Tax = 1.5 };
+
+                    session.Store(obj);
+                    session.Store(obj2);
+                    session.Advanced.GetMetadataFor(obj)["Raven-Entity-Name"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj2)["Raven-Entity-Name"] = "Orders";
+
+                    session.SaveChanges();
+                }
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var r = session.Query<Order>("Orders/All")
+                       .AggregateBy(x => x.Region)
+                         .MaxOn(x => x.Tax)
+                         .MinOn(x => x.Tax)
+                       .ToList();
+
+                    var facetResult = r.Results["Region"];
+                    Assert.Equal(2, facetResult.Values[0].Hits);
+                    Assert.Equal(1, facetResult.Values[0].Min);
+                    Assert.Equal(1.5, facetResult.Values[0].Max);
+
+                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == "1"));
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCorrectlyAggregate_AnonymousTypes_Int()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new Orders_All().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+
+                    var obj = new { Currency = Currency.EUR, Product = "Milk", Quantity = 1.0, Total = 1.1, Region = 1, Tax = 1 };
+                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Quantity =2, Total = 1, Region = 1, Tax = 1.5 };
+
+                    session.Store(obj);
+                    session.Store(obj2);
+                    session.Advanced.GetMetadataFor(obj)["Raven-Entity-Name"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj2)["Raven-Entity-Name"] = "Orders";
+
+                    session.SaveChanges();
+                }
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var r = session.Query<Order>("Orders/All")
+                       .AggregateBy(x => x.Region)
+                         .MaxOn(x => x.Quantity)
+                         .MinOn(x => x.Quantity)
+                       .ToList();
+
+                    var facetResult = r.Results["Region"];
+                    Assert.Equal(2, facetResult.Values[0].Hits);
+                    Assert.Equal(1, facetResult.Values[0].Min);
+                    Assert.Equal(2, facetResult.Values[0].Max);
+
+                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == "1"));
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCorrectlyAggregate_AnonymousTypes_Long()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new Orders_All().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+
+                    var obj = new { Currency = Currency.EUR, Product = "Milk", Total = 1.1, Region = 1.0, Tax = 1 };
+                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 2, Tax = 1.5 };
+
+                    session.Store(obj);
+                    session.Store(obj2);
+                    session.Advanced.GetMetadataFor(obj)["Raven-Entity-Name"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj2)["Raven-Entity-Name"] = "Orders";
+
+                    session.SaveChanges();
+                }
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var r = session.Query<Order>("Orders/All")
+                       .AggregateBy(x => x.Product)
+                         .MaxOn(x => x.Region)
+                         .MinOn(x => x.Region)
+                       .ToList();
+
+                    var facetResult = r.Results["Product"];
+                    Assert.Equal(2, facetResult.Values[0].Hits);
+                    Assert.Equal(1, facetResult.Values[0].Min);
+                    Assert.Equal(2, facetResult.Values[0].Max);
+
+                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == "milk"));
+                }
+            }
+        }
 
 		[Fact]
 		public void CanCorrectlyAggregate()
