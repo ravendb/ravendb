@@ -18,7 +18,7 @@ namespace Nevar.Tryout
 			var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
 			using (var tx = env.NewTransaction())
 			{
-				for (int i = 0; i < 32 * 256; i++)
+				for (int i = 0; i < 32*32; i++)
 				{
 					ms.Position = 0;
 					env.Root.Add(tx, string.Format("{0,5}", i), ms);
@@ -27,7 +27,7 @@ namespace Nevar.Tryout
 				tx.Commit();
 			}
 
-			//DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 25);
+			DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 25);
 		}
 	}
 }

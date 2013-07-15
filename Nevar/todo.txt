@@ -1,5 +1,5 @@
-﻿- Overflow pages
-- Updating Data
+﻿- Updating Data
 - Deleting data
+- Overflow pages
 - Allow to increase size
 - Split pages in increasing order with bias toward original page (greater density)

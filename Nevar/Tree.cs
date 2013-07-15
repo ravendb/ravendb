@@ -96,10 +96,6 @@ namespace Nevar
 			var page = cursor.Pop();
 			var newPosition = true;
 			var currentIndex = page.LastSearchPosition;
-			if(page.PageNumber == 2)
-			{
-				
-			}
 			var rightPage = NewPage(tx, page.Flags, 1);
 			cursor.RecordNewPage(page, 1);
 			rightPage.Flags = page.Flags;
