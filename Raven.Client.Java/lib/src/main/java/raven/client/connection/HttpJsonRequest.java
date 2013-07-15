@@ -185,7 +185,7 @@ public class HttpJsonRequest {
       throw new IllegalArgumentException("Unknown method: " + method);
     }
 
-    /*TODO
+    /*TODO credentials
     webRequest.UseDefaultCredentials = true;
     webRequest.Credentials = requestParams.Credentials;
      */

@@ -20,7 +20,6 @@ import org.codehaus.jackson.map.module.SimpleModule;
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
 
-//TODO: finish me
 public class JsonExtensions {
   private static ObjectMapper objectMapper;
 

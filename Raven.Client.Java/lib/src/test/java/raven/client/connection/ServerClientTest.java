@@ -25,7 +25,11 @@ import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.UuidType;
 import raven.abstractions.extensions.JsonExtensions;
+import raven.abstractions.indexing.FieldIndexing;
+import raven.abstractions.indexing.FieldStorage;
+import raven.abstractions.indexing.FieldTermVector;
 import raven.abstractions.indexing.IndexDefinition;
+import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.RavenDBAwareTests;
@@ -345,9 +349,31 @@ public class ServerClientTest extends RavenDBAwareTests {
 
       db1Commands.deleteIndex("firstIndex");
 
-
       IndexDefinition complexIndex = new IndexDefinition();
-      //TODO: set all fields create index, get index and compare properties
+      complexIndex.setMap("docs.Companies.SelectMany(c => c.Employees).Select(x => new {Name = x.Name,Count = 1})");
+      complexIndex.setReduce("results.GroupBy(x => x.Name).Select(x => new {Name = x.Key,Count = Enumerable.Sum(x, y => ((int) y.Count))})");
+      complexIndex.getStores().put("Name", FieldStorage.YES);
+      complexIndex.getStores().put("Count", FieldStorage.NO);
+      complexIndex.getIndexes().put("Name", FieldIndexing.ANALYZED);
+      complexIndex.getIndexes().put("Count", FieldIndexing.NOT_ANALYZED);
+      complexIndex.getSortOptions().put("Name", SortOptions.STRING_VAL);
+      complexIndex.getSortOptions().put("Count", SortOptions.FLOAT);
+      complexIndex.getTermVectors().put("Name", FieldTermVector.WITH_POSITIONS_AND_OFFSETS);
+      complexIndex.getAnalyzers().put("Name", "Raven.Database.Indexing.Collation.Cultures.SvCollationAnalyzer, Raven.Database");
+
+      db1Commands.putIndex("ComplexIndex", complexIndex);
+
+      IndexDefinition complexReturn = db1Commands.getIndex("ComplexIndex");
+      db1Commands.deleteIndex("ComplexIndex");
+
+      assertEquals(FieldStorage.YES, complexReturn.getStores().get("Name"));
+      assertNull("It should be null since, No is default value", complexReturn.getStores().get("Count"));
+      assertEquals(FieldIndexing.ANALYZED, complexReturn.getIndexes().get("Name"));
+      assertEquals(FieldIndexing.NOT_ANALYZED, complexReturn.getIndexes().get("Count"));
+      assertEquals(SortOptions.STRING_VAL, complexReturn.getSortOptions().get("Name"));
+      assertEquals(SortOptions.FLOAT, complexReturn.getSortOptions().get("Count"));
+      assertEquals(FieldTermVector.WITH_POSITIONS_AND_OFFSETS, complexReturn.getTermVectors().get("Name"));
+      assertEquals("Raven.Database.Indexing.Collation.Cultures.SvCollationAnalyzer, Raven.Database", complexReturn.getAnalyzers().get("Name"));
 
       assertEquals(new ArrayList<String>(), db1Commands.getIndexNames(0, 10));
 
