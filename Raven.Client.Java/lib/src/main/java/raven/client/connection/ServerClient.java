@@ -23,6 +23,7 @@ import org.apache.http.util.EntityUtils;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
@@ -37,6 +38,8 @@ import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.QueryResult;
+import raven.abstractions.data.SuggestionQuery;
+import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
@@ -1021,6 +1024,10 @@ public class ServerClient implements IDatabaseCommands {
         throw new IllegalStateException("Cannot put index: " + name + ", index already exists");
       }
     } catch (HttpOperationException e) {
+
+      if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
+        throw new ServerClientException(e);
+      }
       /*
        * TODO dead code
        *   var httpWebResponse = e.Response as HttpWebResponse;
@@ -1061,6 +1068,7 @@ public class ServerClient implements IDatabaseCommands {
         RavenJToken responseJson = request.readResponseJson();
         return responseJson.value(String.class, "Index");
       } catch (HttpOperationException e) {
+        throw new ServerClientException(e);
         /*TODO: dead code
         var httpWebResponse = e.Response as HttpWebResponse;
         if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
@@ -1091,7 +1099,6 @@ public class ServerClient implements IDatabaseCommands {
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
-    return null;
   }
 
   public String putIndex(String name, IndexDefinitionBuilder indexDef) {
@@ -1442,9 +1449,52 @@ public class ServerClient implements IDatabaseCommands {
 
   //TODO: public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete)
 
-  //TODO: public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
+  public SuggestionQueryResult suggest(final String index, final SuggestionQuery suggestionQuery) {
+    if (suggestionQuery == null) {
+      throw new IllegalArgumentException("suggestionQuery");
+    }
+    return executeWithReplication(HttpMethods.GET, new Function1<String, SuggestionQueryResult>() {
+
+      @Override
+      public SuggestionQueryResult apply(String operationUrl) {
+        return directSuggest(index, suggestionQuery, operationUrl);
+      }
+    });
+  }
 
   //TODO: public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
+
+  protected SuggestionQueryResult directSuggest(String index, SuggestionQuery suggestionQuery, String operationUrl) {
+    String requestUri = operationUrl + String.format("/suggest/%s?term=%s&field=%s&max=%d&distance=%s&accuracy=%.4f&popularity=%s",
+        UrlUtils.escapeDataString(index),
+        UrlUtils.escapeDataString(suggestionQuery.getTerm()),
+        UrlUtils.escapeDataString(suggestionQuery.getField()),
+        suggestionQuery.getMaxSuggestions(),
+        UrlUtils.escapeDataString(SharpEnum.value(suggestionQuery.getDistance())),
+        suggestionQuery.getAccuracy(),
+        suggestionQuery.isPopularity());
+
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      RavenJObject json = (RavenJObject)request.readResponseJson();
+
+      List<String> suggestions = new ArrayList<>();
+
+      SuggestionQueryResult result = new SuggestionQueryResult();
+      RavenJArray array = (RavenJArray) json.get("Suggestions");
+      for (RavenJToken token: array) {
+        suggestions.add(token.value(String.class));
+      }
+      result.setSuggestions(suggestions.toArray(new String[0]));
+      return result;
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
 
   public DatabaseStatistics getStatistics() {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(

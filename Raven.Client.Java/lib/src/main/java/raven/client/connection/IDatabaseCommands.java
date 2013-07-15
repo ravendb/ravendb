@@ -12,6 +12,8 @@ import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.QueryResult;
+import raven.abstractions.data.SuggestionQuery;
+import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
@@ -242,5 +244,13 @@ public interface IDatabaseCommands {
    * @param name
    */
   void resetIndex(String name);
+
+  /**
+   * Returns a list of suggestions based on the specified suggestion query
+   * @param index
+   * @param suggestionQuery
+   * @return
+   */
+  public SuggestionQueryResult suggest(final String index, final SuggestionQuery suggestionQuery);
 
 }

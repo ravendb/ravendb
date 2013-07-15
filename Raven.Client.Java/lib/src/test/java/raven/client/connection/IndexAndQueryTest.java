@@ -17,6 +17,7 @@ import raven.abstractions.data.Constants;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.SortedField;
+import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJObject;
@@ -48,6 +49,20 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     serverClient = new ServerClient(DEFAULT_SERVER_URL, convention, null,
         new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
         UUID.randomUUID(), new IDocumentConflictListener[0]);
+  }
+
+  @Test(expected = ServerClientException.class)
+  public void testPutInvalidIndex() throws Exception {
+    try {
+      createDb("db1");
+      IndexDefinition index = new IndexDefinition();
+      index.setMap("from doc in docs where doc.Type == 'posts' select new{ doc.Title.Length }");
+      IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+      db1Commands.putIndex("invalidIndex", index);
+
+    } finally {
+      deleteDb("db1");
+    }
   }
 
   @Test

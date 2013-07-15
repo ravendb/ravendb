@@ -14,7 +14,6 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 
-//TODO: finish me
 public class JsonConvert {
   public static String serializeObject(Object obj) {
     try {
