@@ -4,10 +4,8 @@ import java.util.Date;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonValue;
 
-import raven.abstractions.basic.SharpEnum;
+import raven.abstractions.basic.UseSharpEnum;
 import raven.abstractions.indexing.IndexLockMode;
 
 public class IndexStats {
@@ -190,6 +188,7 @@ public class IndexStats {
     return "IndexStats [name=" + name + "]";
   }
 
+  @UseSharpEnum
   public static enum IndexingPriority {
     NONE(0),
     NORMAL(1),
@@ -206,16 +205,6 @@ public class IndexStats {
 
     public int getCode() {
       return code;
-    }
-
-    @JsonCreator
-    public static IndexingPriority fromValue(String v) {
-      return SharpEnum.fromValue(v, IndexingPriority.class);
-    }
-
-    @JsonValue
-    public String value() {
-      return SharpEnum.value(this);
     }
 
   }

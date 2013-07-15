@@ -17,6 +17,7 @@ import org.codehaus.jackson.map.introspect.AnnotatedMethod;
 import org.codehaus.jackson.map.introspect.AnnotatedParameter;
 import org.codehaus.jackson.map.module.SimpleModule;
 
+import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
 
 //TODO: finish me
@@ -34,6 +35,7 @@ public class JsonExtensions {
         jsonFactory = objectMapper.getJsonFactory();
 
         objectMapper.registerModule(createCustomSerializeModule());
+        objectMapper.setAnnotationIntrospector(new SharpAwareJacksonAnnotationIntrospector());
       }
     }
   }
