@@ -2,7 +2,11 @@ package raven.abstractions.data;
 
 import java.util.Date;
 
+import org.apache.commons.lang.time.FastDateFormat;
+
+import raven.abstractions.Default;
 import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJValue;
 
 /**
  * A document representation:
@@ -10,7 +14,6 @@ import raven.abstractions.json.linq.RavenJObject;
  * - Etag
  * - Metadata
  */
-//TODO: finish me
 public class JsonDocument {
   private RavenJObject dataAsJson;
   private RavenJObject metadata;
@@ -64,6 +67,9 @@ public class JsonDocument {
    * @return the metadata
    */
   public RavenJObject getMetadata() {
+    if (metadata == null) {
+      metadata = new RavenJObject();
+    }
     return metadata;
   }
 
@@ -122,6 +128,29 @@ public class JsonDocument {
 
   public void setTempIndexScore(Float tempIndexScore) {
     this.tempIndexScore = tempIndexScore;
+  }
+
+  public RavenJObject toJson() {
+    dataAsJson.ensureCannotBeChangeAndEnableShapshotting();
+    metadata.ensureCannotBeChangeAndEnableShapshotting();
+
+    RavenJObject doc = (RavenJObject)dataAsJson.createSnapshot();
+    RavenJObject metadata = this.metadata.createSnapshot();
+
+    if (lastModified != null) {
+      FastDateFormat fdf = FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE);
+      metadata.add(Constants.LAST_MODIFIED, new RavenJValue(this.lastModified));
+      metadata.add(Constants.RAVEN_LAST_MODIFIED, new RavenJValue(fdf.format(this.lastModified)));
+    }
+    if (etag != null) {
+      metadata.add("@etag", new RavenJValue(etag.toString()));
+    }
+    if (nonAuthoritativeInformation) {
+      metadata.add("Non-Authoritative-Information", new RavenJValue(nonAuthoritativeInformation));
+    }
+    doc.add("@metadata", metadata);
+
+    return doc;
   }
 
   /* (non-Javadoc)

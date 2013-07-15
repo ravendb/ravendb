@@ -71,7 +71,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       IndexQuery query = new IndexQuery();
       query.setStart(0);
       query.setPageSize(1);
-//      query.setFieldsToFetch(new String[] { "Name" } ); //TODO: why we can't use fieldsToFetch ? http://localhost:8123/databases/db1/indexes/nameCounts?&pageSize=1&fetch=Name&sort=-Count
       query.setSortedFields(new SortedField[] { new SortedField("-Count") });
 
       QueryResult queryResult = db1Commands.query("nameCounts", query, new String[0]);
@@ -104,14 +103,15 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       waitForNonStaleIndexes(db1Commands);
 
       IndexQuery queryInt = new IndexQuery();
+      queryInt.setSortedFields(new SortedField[] { new SortedField("NumberOfHappyCustomers") });
       QueryResult queryResultInt = db1Commands.query("sortByNhcInt", queryInt, new String[0]);
       assertEquals(3, queryResultInt.getResults().size());
 
       List<String> companyNames = extractSinglePropertyFromList(queryResultInt.getResults(), "Name", String.class);
       assertEquals(Arrays.asList("Twitter", "Coca Cola", "Google"), companyNames);
-      //TODO: looks like it also doesn't work properly in .NET (???)
 
       IndexQuery queryDefault = new IndexQuery();
+      queryDefault.setSortedFields(new SortedField[] { new SortedField("NumberOfHappyCustomers") });
       QueryResult queryResultDefault = db1Commands.query("sortByNhcDefault", queryDefault, new String[0]);
       assertEquals(3, queryResultDefault.getResults().size());
       companyNames = extractSinglePropertyFromList(queryResultDefault.getResults(), "Name", String.class);
@@ -130,14 +130,14 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       insertSampleCompaniesEmployees(db1Commands);
 
       IndexDefinition indexDefinition = new IndexDefinition();
-      indexDefinition.setMap("docs.Companies.SelectMany(c => c.Employees).SelectMany(x => x.Specialties).Select(x => new {Spec = x,Count = 1})");
+      indexDefinition.setMap("from c in docs.Companies from e in c.Employees from s in e.Specialties select new {Spec = s, Count = 1}");
       indexDefinition.setReduce("results.GroupBy(x => x.Spec).Select(x => new {Spec = x.Key,Count = Enumerable.Sum(x, y => ((int) y.Count))})");
 
       db1Commands.putIndex("DevelopersCountBySkill", indexDefinition);
       waitForNonStaleIndexes(db1Commands);
 
       QueryResult queryAll = db1Commands.query("DevelopersCountBySkill", new IndexQuery(), new String[0]);
-      assertEquals(3, queryAll.getResults().size());
+      assertEquals(2, queryAll.getResults().size());
 
     } finally {
       deleteDb("db1");
