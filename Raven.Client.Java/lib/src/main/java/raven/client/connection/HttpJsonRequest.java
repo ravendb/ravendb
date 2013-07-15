@@ -139,12 +139,7 @@ public class HttpJsonRequest {
       }
 
       String value = prop.getValue().value(Object.class).toString();
-
-      switch (headerName) {
-      //TODO: list other custom headers that needs special treatment
-      default:
-        webRequest.addHeader(headerName, value);
-      }
+      webRequest.addHeader(headerName, value);
     }
   }
 

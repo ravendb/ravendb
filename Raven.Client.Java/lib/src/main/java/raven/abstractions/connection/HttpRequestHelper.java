@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
@@ -12,8 +13,11 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 
 public class HttpRequestHelper {
+
   public static void copyHeaders(HttpRequest src, HttpRequest dest) {
-    //TODO: impl me
+    for (Header header: src.getAllHeaders()) {
+      dest.addHeader(header);
+    }
   }
 
   public static void writeDataToRequest(HttpRequest newWebRequest, String postedData, boolean disableRequestCompression) {

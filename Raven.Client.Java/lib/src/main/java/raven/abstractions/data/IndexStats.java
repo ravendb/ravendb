@@ -214,7 +214,7 @@ public class IndexStats {
     private int outputCount;
     private int inputCount;
     private int itemsCount;
-    private String duration; //TODO: convert to TimeSpan
+    private String duration;
     private Date started;
     private double durationMilliseconds;
     public String getOperation() {

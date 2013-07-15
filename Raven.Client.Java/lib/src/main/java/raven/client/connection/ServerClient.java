@@ -1022,7 +1022,7 @@ public class ServerClient implements IDatabaseCommands {
       }
     } catch (HttpOperationException e) {
       /*
-       * TODO
+       * TODO dead code
        *   var httpWebResponse = e.Response as HttpWebResponse;
               if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
                   throw;
@@ -1061,7 +1061,7 @@ public class ServerClient implements IDatabaseCommands {
         RavenJToken responseJson = request.readResponseJson();
         return responseJson.value(String.class, "Index");
       } catch (HttpOperationException e) {
-        /*TODO:
+        /*TODO: dead code
         var httpWebResponse = e.Response as HttpWebResponse;
         if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
             throw;
