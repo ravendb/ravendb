@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -28,9 +29,10 @@ digraph structs {
 	subgraph cluster_p_{0} {{ 
 		label=""Page #{0}"";
 		color={4};
-		p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#}|Avl Space: {3:#,#}""];
+		p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | {5:p} utilization""];
 
-", p.PageNumber, p.Flags, p.NumberOfEntries, p.SizeLeft, p.IsLeaf ? "black" : "blue");
+", p.PageNumber, p.Flags, p.NumberOfEntries, p.SizeLeft, p.IsLeaf ? "black" : "blue", 
+	Math.Round(((Constants.PageSize - p.SizeLeft) / (double)Constants.PageSize), 2));
 					var key = new Slice(SliceOptions.Key);
 					if (p.IsLeaf && showNodesEvery > 0)
 					{

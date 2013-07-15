@@ -176,13 +176,13 @@ namespace Nevar
 
 		private static ushort SelectBestSplitIndex(Page page)
 		{
-			if (page.LastSearchPosition >= page.NumberOfEntries && page.NumberOfEntries > 4)
+			if (page.LastSearchPosition >= page.NumberOfEntries && page.NumberOfEntries >= 4)
 			{
 				// We are splitting at the end of the page, so this is probably a sequential insert
 				// in this case, we don't want 50/50 split, we want to do better than that
 				// we don't want 100%, because that would cause a split very fast if there are non
-				// sequtial, so 75% / 25% sounds good for that scenario
-				return (ushort)(page.NumberOfEntries - page.NumberOfEntries / 4);
+				// sequtial, so 85% / 15% sounds good for that scenario
+				return (ushort)(page.NumberOfEntries * 0.85);
 			}
 
 			return (ushort)(page.NumberOfEntries / 2);

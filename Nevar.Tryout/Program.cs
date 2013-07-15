@@ -18,16 +18,23 @@ namespace Nevar.Tryout
 			var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
 			using (var tx = env.NewTransaction())
 			{
-				for (int i = 0; i < 32*32; i++)
+				var cursor = tx.GetCursor(env.Root);
+				for (int i = 0; i < 1024 / 2; i++)
 				{
+					var root = cursor.Root;
 					ms.Position = 0;
+					if (i == 227)
+					{
+						DebugStuff.RenderAndShow(tx, root);
+
+					}
 					env.Root.Add(tx, string.Format("{0,5}", i), ms);
 				}
 
 				tx.Commit();
 			}
 
-			DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 25);
+			DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 50, "svg");
 		}
 	}
 }
