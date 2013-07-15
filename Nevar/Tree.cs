@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace Nevar
 {
@@ -108,7 +107,7 @@ namespace Nevar
 				cursor.RecordNewPage(newRootPage, 1);
 
 				// now add implicit left page
-				newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), pageNumber: page.PageNumber);
+				newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), null, page.PageNumber);
 				parentPage = newRootPage;
 				parentPage.LastSearchPosition++;
 			}
@@ -146,7 +145,7 @@ namespace Nevar
 			}
 			else
 			{
-				parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, pageNumber: rightPage.PageNumber);
+				parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, null, rightPage.PageNumber);
 			}
 			// move the actual entries from page to right page
 			var nKeys = page.NumberOfEntries;
@@ -170,8 +169,6 @@ namespace Nevar
 				page.AddNode(page.LastSearchPosition, newKey, value, pageNumber);
 				cursor.Push(page);
 			}
-
-			return;
 		}
 
 		private static ushort SelectBestSplitIndex(Page page)
@@ -270,11 +267,10 @@ namespace Nevar
 				}
 				else
 				{
-					int match;
-					if (p.Search(key, _cmp, out match) != null)
+					if (p.Search(key, _cmp) != null)
 					{
 						nodePos = p.LastSearchPosition;
-						if (match != 0)
+						if (p.LastMatch != 0)
 							nodePos--;
 					}
 					else

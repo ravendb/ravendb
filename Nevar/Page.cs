@@ -10,6 +10,7 @@ namespace Nevar
 		private readonly byte* _base;
 		private readonly PageHeader* _header;
 		public ushort LastSearchPosition;
+		public int LastMatch;
 
 		public Page(byte* b)
 		{
@@ -32,21 +33,26 @@ namespace Nevar
 			get { return (ushort*)(_base + Constants.PageHeaderSize); }
 		}
 
-		public NodeHeader* Search(Slice key, SliceComparer cmp, out int match)
+		public NodeHeader* Search(Slice key, SliceComparer cmp)
 		{
+			if (NumberOfEntries == 0)
+			{
+				LastSearchPosition = 0;
+				LastMatch = 1;
+				return null;
+			}
+
 			int low = 0;
-			if (IsBranch &&
-				NumberOfEntries > 0 &&
-				GetNode(0)->KeySize == 0)
+			int high = NumberOfEntries - 1;
+			int position = 0;
+
+			if (IsBranch && GetNode(0)->KeySize == 0)
 			{
 				low = 1;// skip the left page implicit smaller than anything entry
 			}
-			int high = NumberOfEntries - 1;
-			int position = 0;
-			match = 0;
-
+			
 			var pageKey = new Slice(SliceOptions.Key);
-
+			bool matched = false;
 			NodeHeader* node = null;
 			while (low <= high)
 			{
@@ -55,20 +61,25 @@ namespace Nevar
 				node = GetNode(position);
 				pageKey.Set(node);
 
-				match = key.Compare(pageKey, cmp);
-				if (match == 0)
+				LastMatch = key.Compare(pageKey, cmp);
+				matched = true;
+				if (LastMatch == 0)
 					break;
 
-				if (match > 0)
+				if (LastMatch > 0)
 					low = position + 1;
 				else
 					high = position - 1;
 			}
 
+			if (matched == false)
+			{
+				node = GetNode(position);
+				LastMatch = key.Compare(pageKey, cmp);
+			}
 
-			if (match > 0) // found entry less than key
+			if (LastMatch > 0) // found entry less than key
 				position++; // move to the smallest entry larger than the key
-
 
 			Debug.Assert(position < ushort.MaxValue);
 			LastSearchPosition = (ushort)position;
@@ -111,11 +122,11 @@ namespace Nevar
 			}
 		}
 
-		public void AddNode(ushort index, Slice key, Stream value = null, int pageNumber = -1)
+		public void AddNode(ushort index, Slice key, Stream value, int pageNumber)
 		{
 			if (HasSpaceFor(key, value) == false)
 				throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
-
+			
 			// move higher pointers up one slot
 			for (int i = NumberOfEntries; i > index; i--)
 			{
@@ -125,7 +136,7 @@ namespace Nevar
 			var node = AllocateNewNode(index, key, nodeSize);
 
 			if (key.Options == SliceOptions.Key)
-				key.CopyTo((byte*)node + Constants.NodeHeaderSize);
+				key.CopyTo((byte*) node + Constants.NodeHeaderSize);
 
 			if (IsBranch)
 			{
@@ -138,8 +149,8 @@ namespace Nevar
 
 			Debug.Assert(key.Options == SliceOptions.Key);
 			Debug.Assert(value != null);
-			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
-			node->DataSize = (int)value.Length;
+			var dataPos = (byte*) node + Constants.NodeHeaderSize + key.Size;
+			node->DataSize = (int) value.Length;
 			node->Flags = NodeFlags.Data;
 			using (var ums = new UnmanagedMemoryStream(dataPos, value.Length, value.Length, FileAccess.ReadWrite))
 			{
@@ -225,8 +236,7 @@ namespace Nevar
 
 		public ushort NodePositionFor(Slice key, SliceComparer cmp)
 		{
-			int match;
-			Search(key, cmp, out match);
+			Search(key, cmp);
 			return LastSearchPosition;
 		}
 

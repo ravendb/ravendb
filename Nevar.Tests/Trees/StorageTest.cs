@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Text;
+using Xunit;
 
 namespace Nevar.Tests.Trees
 {
@@ -42,6 +43,22 @@ namespace Nevar.Tests.Trees
 			var p = Process.Start(@"C:\Users\Ayende\Downloads\graphviz-2.30.1\graphviz\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
+		}
+
+		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
+		{
+			var cursor = tx.GetCursor(Env.Root);
+			var p = Env.Root.FindPageFor(tx, key, cursor);
+			var node = p.Search(key, Env.SliceComparer);
+
+			if (node == null)
+			{
+				DebugStuff.RenderAndShow(tx, cursor.Root, 1);
+			}
+			Assert.True(node != null);
+
+			return Tuple.Create(new Slice(node),
+								new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort)node->DataSize));
 		}
 	}
 }

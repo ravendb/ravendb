@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Nevar.Tests.Trees
 {
-	public unsafe class Basic : StorageTest
+	public class Basic : StorageTest
 	{
 		[Fact]
 		public void CanAdd()
@@ -28,23 +28,6 @@ namespace Nevar.Tests.Trees
 				Assert.Equal("a", actual.Item1);
 				Assert.Equal("1", actual.Item2);
 			}
-		}
-
-		private Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
-		{
-			var cursor = tx.GetCursor(Env.Root);
-			var p = Env.Root.FindPageFor(tx, key, cursor);
-			int match;
-			var node = p.Search(key, Env.SliceComparer, out match);
-
-			if (node == null)
-			{
-				DebugStuff.RenderAndShow(tx, cursor.Root, 1);
-			}
-			Assert.True(node != null);
-
-			return Tuple.Create(new Slice(node),
-								new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort)node->DataSize));
 		}
 
 		[Fact]
