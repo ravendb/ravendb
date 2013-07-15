@@ -7,10 +7,10 @@ import raven.abstractions.basic.UseSharpEnum;
 public class SpatialOptions {
 
   //about 4.78 meters at equator, should be good enough (see: http://unterbahn.com/2009/11/metric-dimensions-of-geohash-partitions-at-the-equator/)
-  public final int DEFAULT_GEOHASH_LEVEL = 9;
+  public final static int DEFAULT_GEOHASH_LEVEL = 9;
 
   //about 4.78 meters at equator, should be good enough
-  public final int DEFAULT_QUAD_TREE_LEVEL = 23;
+  public final static int DEFAULT_QUAD_TREE_LEVEL = 23;
 
   public SpatialOptions() {
     type = SpatialFieldType.GEOGRAPHY;
