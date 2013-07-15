@@ -315,7 +315,9 @@ namespace Raven.Database.Indexing
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Long)
 					yield return numericField.SetLongValue((int)value);
-				else if (indexDefinition.GetSortOption(name) == SortOptions.Double)
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+                    yield return numericField.SetFloatValue((int)value);
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((int)value);
 				else
 					yield return numericField.SetIntValue((int)value);
@@ -324,25 +326,45 @@ namespace Raven.Database.Indexing
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((long)value);
-				else
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+                    yield return numericField.SetFloatValue((long)value);
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+                    yield return numericField.SetIntValue(Convert.ToInt32((long)value));
+                else
 					yield return numericField.SetLongValue((long)value);
 			}
 			else if (value is decimal)
 			{
-				yield return numericField
-					.SetDoubleValue((double)(decimal)value);
+                if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+                    yield return numericField.SetFloatValue(Convert.ToSingle((decimal)value));
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+                    yield return numericField.SetIntValue(Convert.ToInt32((decimal)value));
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Long)
+                    yield return numericField.SetLongValue(Convert.ToInt64((decimal) value));
+                else
+                    yield return numericField.SetDoubleValue((double)(decimal)value);
 			}
 			else if (value is float)
 			{
 				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((float)value);
-				else
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+                    yield return numericField.SetIntValue(Convert.ToInt32((float)value));
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Long)
+                    yield return numericField.SetLongValue(Convert.ToInt64((float)value));
+                else
 					yield return numericField.SetFloatValue((float)value);
 			}
 			else if (value is double)
 			{
-				yield return numericField
-					.SetDoubleValue((double)value);
+                if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+                    yield return numericField.SetFloatValue(Convert.ToSingle((double)value));
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+                    yield return numericField.SetIntValue(Convert.ToInt32((double)value));
+                else if (indexDefinition.GetSortOption(name) == SortOptions.Long)
+                    yield return numericField.SetLongValue(Convert.ToInt64((double)value));
+                else
+    			    yield return numericField.SetDoubleValue((double)value);
 			}
 		}
 
