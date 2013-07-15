@@ -34,7 +34,10 @@ namespace Nevar
 
 		public Slice(byte* key, ushort size)
 		{
-			Debug.Assert(size >= 0 && size < Constants.MaxKeySize);
+			if (size > Constants.MaxKeySize)
+				throw new ArgumentException(
+				"Key size is too big, must be at most " + Constants.MaxKeySize + " bytes, but was " + size, "size");
+
 			_pointerSize = size;
 			Options = SliceOptions.Key;
 			_array = null;

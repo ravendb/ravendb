@@ -2,7 +2,7 @@
 
 namespace Nevar
 {
-	[StructLayout(LayoutKind.Explicit, Pack = 1)]
+	[StructLayout(LayoutKind.Explicit, Pack = 1, Size = 10)]
 	public struct PageHeader
 	{
 		[FieldOffset(0)]

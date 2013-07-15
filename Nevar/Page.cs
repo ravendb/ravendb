@@ -34,7 +34,7 @@ namespace Nevar
 
 		public NodeHeader* Search(Slice key, SliceComparer cmp, out int match)
 		{
-			int low = IsLeaf ? 0 : 1; // leaf pages entries start at 0, but branch entries 0th entry is the implicit left page
+			int low = 0; // leaf pages entries start at 0, but branch entries 0th entry is the implicit left page
 			int high = NumberOfEntries - 1;
 			int position = 0;
 			match = 0;
@@ -115,7 +115,7 @@ namespace Nevar
 			{
 				KeysOffsets[i] = KeysOffsets[i - 1];
 			}
-			var nodeSize = Util.GetNodeSize(key, value);
+			var nodeSize = SizeOf.NodeEntry(key, value);
 			var node = AllocateNewNode(index, key, nodeSize);
 
 			if (key.Options == SliceOptions.Key)
@@ -134,6 +134,7 @@ namespace Nevar
 			Debug.Assert(value != null);
 			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
 			node->DataSize = (int)value.Length;
+			node->Flags = NodeFlags.Data;
 			using (var ums = new UnmanagedMemoryStream(dataPos, value.Length, value.Length, FileAccess.ReadWrite))
 			{
 				value.CopyTo(ums);
@@ -146,16 +147,15 @@ namespace Nevar
 		/// </summary>
 		internal void CopyNodeData(NodeHeader* other)
 		{
-			Debug.Assert(Util.NodeEntrySize(other) <= SizeLeft);
+			Debug.Assert(SizeOf.NodeEntry(other) + Constants.NodeOffsetSize <= SizeLeft);
 
 			var index = NumberOfEntries;
 
-			var nodeSize = Constants.NodeHeaderSize + other->KeySize;
-			var isBranch = other->Flags.HasFlag(NodeFlags.PageRef);
-			if (isBranch == false)
-				nodeSize += other->DataSize;
+			var nodeSize = SizeOf.NodeEntry(other);
+
 			var key = new Slice(other);
 			var newNode = AllocateNewNode(index, key, nodeSize);
+			newNode->Flags = other->Flags;
 			key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
 			if (IsBranch)
@@ -170,6 +170,7 @@ namespace Nevar
 								 other->DataSize);
 		}
 
+		
 		private NodeHeader* AllocateNewNode(ushort index, Slice key, int nodeSize)
 		{
 			var newNodeOffset = (ushort)(_header->Upper - nodeSize);
@@ -253,8 +254,8 @@ namespace Nevar
 
 		public bool HasSpaceFor(Slice key, Stream value)
 		{
-			var requiredSpace = Util.GetNodeSize(key, value) + Constants.NodeOffsetSize;
-			return requiredSpace < SizeLeft;
+			var requiredSpace = SizeOf.NodeEntry(key, value) + Constants.NodeOffsetSize;
+			return requiredSpace <= SizeLeft;
 		}
 
 		public string this[int i]

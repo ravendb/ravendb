@@ -34,7 +34,7 @@ namespace Nevar
 
 			// need to create the root
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
-			var tree = new Tree(cmp, newRootPage) {Depth = 1};
+			var tree = new Tree(cmp, newRootPage) { Depth = 1 };
 			var cursor = tx.GetCursor(tree);
 			cursor.RecordNewPage(newRootPage, 1);
 			return tree;
@@ -46,12 +46,14 @@ namespace Nevar
 			if (value.Length > int.MaxValue) throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
 			var cursor = tx.GetCursor(this);
-			
+
 			var page = FindPageFor(tx, key, cursor);
 
-			if (page.HasSpaceFor(key,value) == false)
+			if (page.HasSpaceFor(key, value) == false)
 			{
+			
 				SplitPage(tx, key, value, -1, cursor);
+#if DEBUG
 				try
 				{
 					DebugValidateTree(tx, cursor.Root);
@@ -59,8 +61,10 @@ namespace Nevar
 				catch (Exception)
 				{
 					DebugStuff.RenderAndShow(tx, cursor.Root, 1);
+					DebugValidateTree(tx, cursor.Root);
 					throw;
 				}
+#endif
 				return;
 			}
 
@@ -74,7 +78,7 @@ namespace Nevar
 		{
 			var stack = new Stack<Page>();
 			stack.Push(root);
-			while (stack.Count >0)
+			while (stack.Count > 0)
 			{
 				var p = stack.Pop();
 				p.DebugValidate(_cmp);
@@ -116,7 +120,7 @@ namespace Nevar
 				parentPage = cursor.CurrentPage;
 			}
 
-			var splitIndex = (ushort)(page.NumberOfEntries / 2);
+			var splitIndex = SelectBestSplitIndex(page);
 			if (currentIndex < splitIndex)
 				newPosition = false;
 
@@ -138,7 +142,7 @@ namespace Nevar
 				seperatorKey = new Slice(node);
 			}
 
-			if (parentPage.SizeLeft < Util.GetBranchSize(seperatorKey) + Constants.NodeOffsetSize)
+			if (parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
 			{
 				SplitPage(tx, seperatorKey, null, rightPage.PageNumber, cursor);
 			}
@@ -164,11 +168,25 @@ namespace Nevar
 			}
 			else
 			{
-				page.AddNode(page.LastSearchPosition,newKey, value);
+				page.AddNode(page.LastSearchPosition, newKey, value, pageNumber);
 				cursor.Push(page);
 			}
 
 			return parentPage;
+		}
+
+		private static ushort SelectBestSplitIndex(Page page)
+		{
+			if (page.LastSearchPosition >= page.NumberOfEntries && page.NumberOfEntries > 4)
+			{
+				// We are splitting at the end of the page, so this is probably a sequential insert
+				// in this case, we don't want 50/50 split, we want to do better than that
+				// we don't want 100%, because that would cause a split very fast if there are non
+				// sequtial, so 75% / 25% sounds good for that scenario
+				return (ushort)(page.NumberOfEntries - page.NumberOfEntries / 4);
+			}
+
+			return (ushort)(page.NumberOfEntries / 2);
 		}
 
 		/// <summary>
@@ -188,8 +206,8 @@ namespace Nevar
 		private static ushort AdjustSplitPosition(Slice key, Stream value, Page page, ushort currentIndex, ushort splitIndex,
 													  ref bool newPosition)
 		{
-			var nodeSize = Util.GetLeafNodeSize(key, value);
-			if (page.NumberOfEntries >= 20 && nodeSize <= Constants.PageMaxSpace / 16)
+			var nodeSize = SizeOf.NodeEntry(key, value) + Constants.NodeOffsetSize;
+			if (page.NumberOfEntries >= 20 && nodeSize  <= Constants.PageMaxSpace / 16)
 			{
 				return splitIndex;
 			}
@@ -262,7 +280,7 @@ namespace Nevar
 					}
 					else
 					{
-						nodePos = (ushort) (p.LastSearchPosition - 1);
+						nodePos = (ushort)(p.LastSearchPosition - 1);
 					}
 
 				}

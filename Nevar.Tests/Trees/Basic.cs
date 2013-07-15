@@ -70,8 +70,12 @@ namespace Nevar.Tests.Trees
 				}
 
 				tx.Commit();
-				Assert.Equal(4, Env.Root.PageCount);
-				Assert.Equal(3, Env.Root.LeafPages);
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
+				if (Constants.PageSize != 4096)
+					return;
+// ReSharper restore ConditionIsAlwaysTrueOrFalse
+				Assert.Equal(3, Env.Root.PageCount);
+				Assert.Equal(2, Env.Root.LeafPages);
 				Assert.Equal(1, Env.Root.BranchPages);
 				Assert.Equal(2, Env.Root.Depth);
 
@@ -125,7 +129,6 @@ namespace Nevar.Tests.Trees
 
 			using (var tx = Env.NewTransaction())
 			{
-				RenderAndShow(tx);
 				for (int i = 0; i < 256; i++)
 				{
 					for (int j = 0; j < 5; j++)

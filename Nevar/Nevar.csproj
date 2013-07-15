@@ -64,7 +64,7 @@
     <Compile Include="Transaction.cs" />
     <Compile Include="Tree.cs" />
     <Compile Include="TreeDumper.cs" />
-    <Compile Include="Util.cs" />
+    <Compile Include="SizeOf.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="todo.txt" />

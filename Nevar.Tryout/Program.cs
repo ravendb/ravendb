@@ -13,28 +13,21 @@ namespace Nevar.Tryout
 	{
 		static void Main(string[] args)
 		{
-			//new Basic().PageSplitsAllAround();
-			var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024 * 1024 * 16));
-			var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
-			using (var tx = env.NewTransaction())
-			{
-				for (int i = 0; i < 32; i++)
-				{
-					ms.Position = 0;
-					if (i == 23)
-					{
-						DebugStuff.RenderAndShow(env.NewTransaction(), tx.GetCursor(env.Root).Root, 1);
-					}
-					env.Root.Add(tx, string.Format("{0,5}", i), ms);
-				}
+			new Basic().PageSplitsAllAround();
+			//var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024 * 1024 * 16));
+			//var ms = new MemoryStream(Encoding.UTF8.GetBytes("val"));
+			//using (var tx = env.NewTransaction())
+			//{
+			//	for (int i = 0; i < 32 * 2; i++)
+			//	{
+			//		ms.Position = 0;
+			//		env.Root.Add(tx, string.Format("{0,5}", i), ms);
+			//	}
 
-				tx.Commit();
-			}
+			//	tx.Commit();
+			//}
 
-			DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 100);
-			//Process.Start("start", "out.png");
-
-
+			//DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 25);
 		}
 	}
 }
