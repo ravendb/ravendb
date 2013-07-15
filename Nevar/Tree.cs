@@ -51,21 +51,12 @@ namespace Nevar
 			if (page.HasSpaceFor(key, value) == false)
 			{
 				SplitPage(tx, key, value, -1, cursor);
-#if DEBUG
-				try
-				{
-					DebugValidateTree(tx, cursor.Root);
-				}
-				catch (Exception)
-				{
-					DebugStuff.RenderAndShow(tx, cursor.Root, 1);
-					DebugValidateTree(tx, cursor.Root);
-					throw;
-				}
-#endif
+				DebugValidateTree(tx, cursor.Root);
 				return;
 			}
 
+			if(page.LastMatch == 0) // this is an update operation
+				page.RemoveNode(page.LastSearchPosition);
 			page.AddNode(page.LastSearchPosition, key, value, 0);
 
 			page.DebugValidate(_cmp);
@@ -157,7 +148,7 @@ namespace Nevar
 			page.Truncate(tx, splitIndex);
 
 			// actually insert the new key
-			if (currentIndex > splitIndex || 
+			if (currentIndex > splitIndex ||
 				newPosition && currentIndex == splitIndex)
 			{
 				var pos = rightPage.NodePositionFor(newKey, _cmp);
@@ -203,7 +194,7 @@ namespace Nevar
 													  ref bool newPosition)
 		{
 			var nodeSize = SizeOf.NodeEntry(key, value) + Constants.NodeOffsetSize;
-			if (page.NumberOfEntries >= 20 && nodeSize  <= Constants.PageMaxSpace / 16)
+			if (page.NumberOfEntries >= 20 && nodeSize <= Constants.PageMaxSpace / 16)
 			{
 				return splitIndex;
 			}
@@ -300,6 +291,21 @@ namespace Nevar
 			page.Flags = flags;
 
 			return page;
+		}
+
+		public void Delete(Transaction tx, Slice key)
+		{
+			var cursor = tx.GetCursor(this);
+
+			var page = FindPageFor(tx, key, cursor);
+
+			var pos = page.NodePositionFor(key, _cmp);
+			if (page.LastMatch != 0)
+				return; // not an exact match, can't delete
+			page.RemoveNode(pos);
+
+			page.DebugValidate(_cmp);
+
 		}
 	}
 }

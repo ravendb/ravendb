@@ -11,6 +11,9 @@ namespace Nevar
 
 		[DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
 		public static extern int memcmp(byte* b1, byte* b2, int count);
+
+		[DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
+		public static extern int memmove(byte* b1, byte* b2, int count);
 	}
 
 }

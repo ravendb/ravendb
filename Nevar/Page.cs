@@ -122,6 +122,34 @@ namespace Nevar
 			}
 		}
 
+		public void RemoveNode(ushort index)
+		{
+			Debug.Assert(index < NumberOfEntries);
+
+			var node = GetNode(index);
+
+			var size = SizeOf.NodeEntry(node);
+
+			var nodeOffset = KeysOffsets[index];
+
+			int modifiedEntries = 0;
+			for (int i = 0; i < NumberOfEntries; i++)
+			{
+				if (i == index)
+					continue;
+				KeysOffsets[modifiedEntries] = KeysOffsets[i];
+				if (KeysOffsets[i] < nodeOffset)
+					KeysOffsets[modifiedEntries] += (ushort)size;
+				modifiedEntries++;
+			}
+
+			NativeMethods.memmove(_base + Upper + size, _base + Upper, nodeOffset - Upper);
+
+			Lower -= (ushort)Constants.NodeOffsetSize;
+			Upper += (ushort)size;
+
+		}
+
 		public void AddNode(ushort index, Slice key, Stream value, int pageNumber)
 		{
 			if (HasSpaceFor(key, value) == false)
@@ -283,7 +311,7 @@ namespace Nevar
 		public void DebugValidate(SliceComparer comparer)
 		{
 			if (NumberOfEntries == 0)
-				throw new InvalidOperationException("Page " + PageNumber + " exists but has no entries");
+				return;
 
 			var prev = new Slice(GetNode(0));
 			for (int i = 1; i < NumberOfEntries; i++)

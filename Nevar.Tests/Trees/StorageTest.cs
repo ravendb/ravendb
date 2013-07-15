@@ -52,12 +52,13 @@ namespace Nevar.Tests.Trees
 			var node = p.Search(key, Env.SliceComparer);
 
 			if (node == null)
-			{
-				DebugStuff.RenderAndShow(tx, cursor.Root, 1);
-			}
-			Assert.True(node != null);
+				return null;
 
-			return Tuple.Create(new Slice(node),
+			var item1 = new Slice(node);
+
+			if (item1.Compare(key, Env.SliceComparer) != 0)
+				return null;
+			return Tuple.Create(item1,
 								new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort)node->DataSize));
 		}
 	}
