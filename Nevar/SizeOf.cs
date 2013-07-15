@@ -35,7 +35,7 @@ namespace Nevar
 		public static int BranchEntry(Slice key)
 		{
 			var sz = Constants.NodeHeaderSize + key.Size;
-			sz += sz + 1;
+			sz += sz & 1;
 			return sz;
 		}
 

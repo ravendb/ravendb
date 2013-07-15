@@ -34,7 +34,13 @@ namespace Nevar
 
 		public NodeHeader* Search(Slice key, SliceComparer cmp, out int match)
 		{
-			int low = 0; // leaf pages entries start at 0, but branch entries 0th entry is the implicit left page
+			int low = 0;
+			if (IsBranch &&
+				NumberOfEntries > 0 &&
+				GetNode(0)->KeySize == 0)
+			{
+				low = 1;// skip the left page implicit smaller than anything entry
+			}
 			int high = NumberOfEntries - 1;
 			int position = 0;
 			match = 0;
@@ -170,7 +176,7 @@ namespace Nevar
 								 other->DataSize);
 		}
 
-		
+
 		private NodeHeader* AllocateNewNode(ushort index, Slice key, int nodeSize)
 		{
 			var newNodeOffset = (ushort)(_header->Upper - nodeSize);
@@ -206,8 +212,8 @@ namespace Nevar
 				copy.CopyNodeData(GetNode(j));
 			}
 			NativeMethods.memcpy(_base + Constants.PageHeaderSize,
-			                     copy._base + Constants.PageHeaderSize,
-			                     Constants.PageSize - Constants.PageHeaderSize);
+								 copy._base + Constants.PageHeaderSize,
+								 Constants.PageSize - Constants.PageHeaderSize);
 
 			Upper = copy.Upper;
 			Lower = copy.Lower;

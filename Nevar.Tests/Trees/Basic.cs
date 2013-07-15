@@ -37,6 +37,10 @@ namespace Nevar.Tests.Trees
 			int match;
 			var node = p.Search(key, Env.SliceComparer, out match);
 
+			if (node == null)
+			{
+				DebugStuff.RenderAndShow(tx, cursor.Root, 1);
+			}
 			Assert.True(node != null);
 
 			return Tuple.Create(new Slice(node),
@@ -119,7 +123,7 @@ namespace Nevar.Tests.Trees
 					for (int j = 0; j < 5; j++)
 					{
 						stream.Position = 0;
-						
+
 						Env.Root.Add(tx, "test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
 					}
 				}

@@ -51,7 +51,6 @@ namespace Nevar
 
 			if (page.HasSpaceFor(key, value) == false)
 			{
-			
 				SplitPage(tx, key, value, -1, cursor);
 #if DEBUG
 				try
@@ -91,13 +90,16 @@ namespace Nevar
 			}
 		}
 
-		private Page SplitPage(Transaction tx, Slice newKey, Stream value, int pageNumber, Cursor cursor)
+		private void SplitPage(Transaction tx, Slice newKey, Stream value, int pageNumber, Cursor cursor)
 		{
 			Page parentPage;
 			var page = cursor.Pop();
 			var newPosition = true;
 			var currentIndex = page.LastSearchPosition;
-
+			if(page.PageNumber == 2)
+			{
+				
+			}
 			var rightPage = NewPage(tx, page.Flags, 1);
 			cursor.RecordNewPage(page, 1);
 			rightPage.Flags = page.Flags;
@@ -160,7 +162,8 @@ namespace Nevar
 			page.Truncate(tx, splitIndex);
 
 			// actually insert the new key
-			if (currentIndex >= splitIndex)
+			if (currentIndex > splitIndex || 
+				newPosition && currentIndex == splitIndex)
 			{
 				var pos = rightPage.NodePositionFor(newKey, _cmp);
 				rightPage.AddNode(pos, newKey, value, pageNumber);
@@ -172,7 +175,7 @@ namespace Nevar
 				cursor.Push(page);
 			}
 
-			return parentPage;
+			return;
 		}
 
 		private static ushort SelectBestSplitIndex(Page page)

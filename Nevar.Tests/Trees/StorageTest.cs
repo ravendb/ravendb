@@ -31,15 +31,15 @@ namespace Nevar.Tests.Trees
 			_storageEnvironment.Dispose();
 		}
 
-		protected void RenderAndShow(Transaction tx)
+		protected void RenderAndShow(Transaction tx, int showEntries = 25)
 		{
 			if (Debugger.IsAttached == false)
 				return;
 			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-			TreeDumper.Dump(tx, path, tx.GetCursor(Env.Root).Root);
+			TreeDumper.Dump(tx, path, tx.GetCursor(Env.Root).Root, showEntries);
 
-			var output = Path.Combine(Environment.CurrentDirectory, "output.png");
-			var p = Process.Start(@"C:\Users\Ayende\Downloads\graphviz-2.30.1\graphviz\bin\dot.exe", "-Tpng  " + path + " -o " + output);
+			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
+			var p = Process.Start(@"C:\Users\Ayende\Downloads\graphviz-2.30.1\graphviz\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
 		}
