@@ -1,7 +1,7 @@
 package raven.abstractions.closure;
 
 /**
- * Represents typed action with 3 arguments
+ * Represents typed action with 1 argument
  * @param <X>
  * @param <Y>
  * @param <Z>

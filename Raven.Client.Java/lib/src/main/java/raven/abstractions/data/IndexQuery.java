@@ -1,5 +1,6 @@
 package raven.abstractions.data;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -379,10 +380,10 @@ public class IndexQuery {
     }
 
     if (cutoff != null) {
-      /*TODO
-      var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
-      path.Append("&cutOff=").Append(cutOffAsString);
-       */
+      SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT);
+      String cutOffAsString = UrlUtils.escapeDataString(sdf.format(cutoff));
+      path.append("&cufOff=").append(cutOffAsString);
+      //TODO: test date format
     }
     if (cutoffEtag != null) {
       path.append("&cutOffEtag=").append(cutoffEtag);

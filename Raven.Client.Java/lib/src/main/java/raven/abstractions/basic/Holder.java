@@ -1,5 +1,10 @@
 package raven.abstractions.basic;
 
+/**
+ * Models out paramaters
+ *
+ * @param <T>
+ */
 public class Holder<T> {
   /**
    * The value contained in the holder.

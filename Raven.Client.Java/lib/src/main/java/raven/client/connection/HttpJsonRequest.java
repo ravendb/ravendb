@@ -40,7 +40,7 @@ import org.apache.http.util.EntityUtils;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Action3;
-import raven.abstractions.closure.Actions;
+import raven.abstractions.closure.Delegates;
 import raven.abstractions.connection.HttpRequestHelper;
 import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Constants;
@@ -94,7 +94,7 @@ public class HttpJsonRequest {
 
 
 
-  private Action3<Map<String, String>, String, String> handleReplicationStatusChanges = Actions.delegate3();
+  private Action3<Map<String, String>, String, String> handleReplicationStatusChanges = Delegates.delegate3();
 
   /**
    * @return the skipServerCheck

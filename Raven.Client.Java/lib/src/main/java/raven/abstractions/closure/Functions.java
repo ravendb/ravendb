@@ -42,13 +42,4 @@ public class Functions {
     return new AlwaysFalse<T>();
   }
 
-  public static <T> Action1<T> delegate1() {
-    return new Action1<T>() {
-
-      @Override
-      public void apply(T first) {
-        //empty by design
-      }
-    };
-  }
 }

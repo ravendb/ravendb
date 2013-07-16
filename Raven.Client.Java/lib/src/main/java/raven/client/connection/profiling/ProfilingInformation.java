@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Functions;
+import raven.abstractions.closure.Delegates;
 import raven.abstractions.connection.profiling.RequestResultArgs;
 
 /**
@@ -19,7 +19,7 @@ public class ProfilingInformation {
   /**
    *  A hook that allows extensions to provide additional information about the created context
    */
-  public static Action1<ProfilingInformation> onContextCreated = Functions.delegate1();
+  public static Action1<ProfilingInformation> onContextCreated = Delegates.delegate1();
 
   /**
    * Create a new instance of profiling information and provide additional context information

@@ -4,7 +4,6 @@ import com.google.common.base.CaseFormat;
 
 /**
  * Utility class for inter-language enum conversion
- *
  */
 public class SharpEnum {
 

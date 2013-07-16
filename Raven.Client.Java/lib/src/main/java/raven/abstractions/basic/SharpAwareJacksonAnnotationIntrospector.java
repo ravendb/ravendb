@@ -5,6 +5,7 @@ import org.codehaus.jackson.map.introspect.JacksonAnnotationIntrospector;
 /**
  * Performs custom enum serialization for enums annotated with {@link UseSharpEnum}
  *
+ * In Java there is convention for enums values: THIS_IS_ENUM, in .NET we have: ThisIsEnum.
  */
 public class SharpAwareJacksonAnnotationIntrospector extends JacksonAnnotationIntrospector {
 
