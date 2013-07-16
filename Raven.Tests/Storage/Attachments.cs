@@ -6,11 +6,13 @@
 using System;
 using System.IO;
 using Raven.Abstractions.Data;
+using Raven.Database.Tasks;
 using Raven.Json.Linq;
 using Raven.Database.Data;
 using Xunit;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Tests.Storage
 {
@@ -33,6 +35,20 @@ namespace Raven.Tests.Storage
 				{
 					Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
 				});
+			}
+		}
+
+		[Fact]
+		public async Task CanAddAndReadAttachmentsAsyncInEmbedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				await store.AsyncDatabaseCommands.PutAttachmentAsync("Ayende", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+
+
+				Attachment attachment = await store.AsyncDatabaseCommands.GetAttachmentAsync("Ayende");
+
+				Assert.Equal(new byte[] {1, 2, 3}, attachment.Data().ReadData());
 			}
 		}
 
