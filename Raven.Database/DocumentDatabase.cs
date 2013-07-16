@@ -18,7 +18,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Commercial;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Impl.Synchronization;
@@ -217,8 +216,6 @@ namespace Raven.Database
 
                     TransactionalStorage.Batch(actions =>
                         sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-
-                    TransportState = new TransportState();
 
                     // Index codecs must be initialized before we try to read an index
                     InitializeIndexCodecTriggers();
@@ -464,12 +461,6 @@ namespace Raven.Database
             }
 
             var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
-
-            exceptionAggregator.Execute(() =>
-            {
-                if(TransportState != null)
-                    TransportState.Dispose();
-            });
 
             exceptionAggregator.Execute(() =>
             {
@@ -2143,7 +2134,8 @@ namespace Raven.Database
         }
 
         static string productVersion;
-        private SequentialUuidGenerator sequentialUuidGenerator;
+        private readonly SequentialUuidGenerator sequentialUuidGenerator;
+        private Lazy<TransportState> transportState = new Lazy<TransportState>(() => new TransportState());
         public static string ProductVersion
         {
             get
@@ -2195,7 +2187,21 @@ namespace Raven.Database
             get { return disposed; }
         }
 
-        public TransportState TransportState { get; private set; }
+        public TransportState TransportState
+        {
+            get
+            {
+                return transportState.Value;
+            }
+            set
+            {
+                if (transportState.IsValueCreated)
+                {
+                    throw new InvalidOperationException("After the transport state has been published, it cannot be modified");
+                }
+                transportState = new Lazy<TransportState>(() => value);
+            }
+        }
 
         /// <summary>
         /// Get the total index storage size taken by the indexes on the disk.
