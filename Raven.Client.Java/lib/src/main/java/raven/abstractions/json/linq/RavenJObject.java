@@ -2,6 +2,7 @@ package raven.abstractions.json.linq;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -263,7 +264,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   }
 
   @Override
-  public <T> Iterable<T> values(Class<T> clazz) {
+  public <T> List<T> values(Class<T> clazz) {
     return Extensions.convert(clazz, properties.values());
   }
 
