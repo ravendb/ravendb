@@ -57,6 +57,7 @@ import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.ScriptedPatchRequest;
 import raven.abstractions.data.SuggestionQuery;
 import raven.abstractions.data.SuggestionQueryResult;
+import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.exceptions.HttpOperationException;
@@ -466,17 +467,15 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   protected void addTransactionInformation(RavenJObject metadata) {
-    /*FIXME: rewrite me!
-    if (convention.EnlistInDistributedTransactions == false)
-      return;
-
-    var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
-    if (transactionInformation == null)
-      return;
-
-    string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
-    metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
-     */
+    if (convention.isEnlistInDistributedTransactions() == false) {
+      return ;
+    }
+    TransactionInformation transactionInformation = RavenTransactionAccessor.getTransactionInformation();
+    if (transactionInformation == null) {
+      return ;
+    }
+    //TODO: format timeout as TimeSpan
+    metadata.add("Raven-Transaction-Information", new RavenJValue(String.format("%s, %s", transactionInformation.getId(), transactionInformation.getTimeout())));
   }
 
   @Override

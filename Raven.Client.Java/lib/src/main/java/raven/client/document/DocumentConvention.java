@@ -109,4 +109,9 @@ public class DocumentConvention {
     return handleUnauthorizedResponse.apply(unauthorizedResponse);
   }
 
+  public boolean isEnlistInDistributedTransactions() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
 }
