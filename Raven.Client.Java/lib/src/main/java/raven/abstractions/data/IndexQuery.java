@@ -15,10 +15,6 @@ import raven.client.utils.UrlUtils;
 /**
  * All the information required to query a Raven index
  */
-/**
- * @author <a href="mailto:marcin@ais.pl">Marcin Lewandowski</a>, AIS.PL
- *
- */
 public class IndexQuery {
   private int pageSize;
 
