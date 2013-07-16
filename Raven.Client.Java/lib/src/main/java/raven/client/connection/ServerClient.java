@@ -43,6 +43,7 @@ import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
+import raven.abstractions.data.MoreLikeThisQuery;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.PatchRequest;
 import raven.abstractions.data.PatchResult;
@@ -1572,8 +1573,8 @@ public class ServerClient implements IDatabaseCommands {
   private void directPrepareTransaction(String txId, String operationUrl) {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
         new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, HttpMethods.POST, new RavenJObject(), credentials, convention)
-          .addOperationHeaders(operationsHeaders))
-          .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
       httpJsonRequest.readResponseJson();
@@ -1784,7 +1785,15 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
-  //TODO: public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
+  public MultiLoadResult moreLikeThis(MoreLikeThisQuery query) {
+    RavenJToken token = executeGetRequest(query.getRequestUri());
+
+    MultiLoadResult multiLoadResult = new MultiLoadResult();
+    multiLoadResult.setIncludes(new ArrayList<RavenJObject>(token.value(RavenJArray.class, "Includes").values(RavenJObject.class)));
+    multiLoadResult.setResults(new ArrayList<RavenJObject>(token.value(RavenJArray.class, "Results").values(RavenJObject.class)));
+
+    return multiLoadResult;
+  }
 
   protected SuggestionQueryResult directSuggest(String index, SuggestionQuery suggestionQuery, String operationUrl) {
     String requestUri = operationUrl + String.format("/suggest/%s?term=%s&field=%s&max=%d&distance=%s&accuracy=%.4f&popularity=%s",
@@ -1897,11 +1906,35 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-
-
   //TODO: public GetResponse[] MultiGet(GetRequest[] requests)
 
-  //TODO: public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
+  public List<String> getTerms(final String index, final String field, final String fromValue, final int pageSize) {
+    return executeWithReplication(HttpMethods.GET, new Function1<String, List<String>>() {
+      @Override
+      public List<String> apply(String operationUrl) {
+        return directGetTerms(operationUrl, index, field, fromValue, pageSize);
+      }
+    });
+  }
+
+  protected List<String> directGetTerms(String operationUrl, String index, String field, String fromValue, int pageSize) {
+    String requestUri = operationUrl + String.format("/terms/%s?field=%s&pageSize=%d&fromValue=%s",
+        UrlUtils.escapeDataString(index),
+        UrlUtils.escapeDataString(field),
+        pageSize,
+        UrlUtils.escapeDataString(fromValue != null ? fromValue : ""));
+
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      return request.readResponseJson().values(String.class);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
 
   //TODO: public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 

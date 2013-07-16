@@ -3,6 +3,7 @@ package raven.abstractions.json.linq;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.util.List;
 import java.util.Stack;
 
 import org.codehaus.jackson.FormatSchema;
@@ -355,7 +356,7 @@ public abstract class RavenJToken {
     throw new UnsupportedOperationException();
   }
 
-  public <T> Iterable<T> values(Class<T> clazz) {
+  public <T> List<T> values(Class<T> clazz) {
     throw new UnsupportedOperationException();
   }
 
