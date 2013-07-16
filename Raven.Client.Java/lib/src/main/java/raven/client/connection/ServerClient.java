@@ -640,17 +640,22 @@ public class ServerClient implements IDatabaseCommands {
 
     } catch (HttpOperationException e) {
       if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
-        /*FIXME: rewrite
-         * var conflictsDoc = RavenJObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
-          var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        } catch (IOException e1) {
+          throw new ServerClientException(e1);
+        } finally {
+          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+        }
 
-          throw new ConflictException("Conflict detected on " + key +
-                        ", conflict must be resolved before the attachment will be accessible", true)
-          {
-            ConflictedVersionIds = conflictIds,
-            Etag = httpWebResponse.GetEtagHeader()
-          };
-         */
+        RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+        List<String> conflictIds = conflictsDoc.value(RavenJArray.class, "Conflicts").values(String.class);
+
+        ConflictException ex = new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachement will be accessible", true);
+        ex.setConflictedVersionIds(conflictIds.toArray(new String[0]));
+        ex.setEtag(HttpExtensions.getEtagHeader(e.getHttpResponse()));
+        throw ex;
       } else if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
         return null;
       }
