@@ -41,6 +41,8 @@ import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
+import raven.abstractions.data.GetRequest;
+import raven.abstractions.data.GetResponse;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
@@ -63,6 +65,7 @@ import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.TransformerDefinition;
+import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -1913,7 +1916,62 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-  //TODO: public GetResponse[] MultiGet(GetRequest[] requests)
+  /**
+   * Perform a single POST request containing multiple nested GET requests
+   * @param requests
+   * @return
+   */
+  public GetResponse[] multiGet(final GetRequest[] requests) {
+    for (GetRequest getRequest: requests) {
+      getRequest.getHeaders().put("Raven-Client-Version", HttpJsonRequest.clientVersion);
+    }
+    return executeWithReplication(HttpMethods.GET, new Function1<String, GetResponse[]>() {
+      @Override
+      public GetResponse[] apply(String operationUrl) {
+        return directMultiGet(operationUrl, requests);
+      }
+    });
+  }
+
+  protected GetResponse[] directMultiGet(String operationUrl, GetRequest[] requests) {
+    try {
+      MultiGetOperation multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
+
+      HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.getRequestUri(),
+          HttpMethods.POST, new RavenJObject(), credentials, convention));
+
+      GetRequest[] requestsForServer =
+          multiGetOperation.preparingForCachingRequest(jsonRequestFactory);
+
+      String postedData = JsonExtensions.getDefaultObjectMapper().writeValueAsString(requestsForServer);
+
+      if (multiGetOperation.canFullyCache(jsonRequestFactory, httpJsonRequest, postedData)) {
+        return multiGetOperation.handleCachingResponse(new GetResponse[requests.length],
+            jsonRequestFactory);
+      }
+
+      httpJsonRequest.write(postedData);
+      RavenJArray results = (RavenJArray)httpJsonRequest.readResponseJson();
+      GetResponse[] responses = results.values(GetResponse.class).toArray(new GetResponse[0]);
+
+
+      // 1.0 servers return result as string, not as an object, need to convert here
+      for (GetResponse response: responses) {
+        if (response != null && response.getResult() != null && response.getResult().getType() == JTokenType.STRING) {
+          String value = response.getResult().value(String.class);
+          if (StringUtils.isNotEmpty(value)) {
+            response.setResult(RavenJObject.parse(value));
+          } else {
+            response.setResult(RavenJValue.getNull());
+          }
+        }
+      }
+
+      return multiGetOperation.handleCachingResponse(responses, jsonRequestFactory);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
 
   public List<String> getTerms(final String index, final String field, final String fromValue, final int pageSize) {
     return executeWithReplication(HttpMethods.GET, new Function1<String, List<String>>() {

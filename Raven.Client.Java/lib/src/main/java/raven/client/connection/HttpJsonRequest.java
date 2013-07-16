@@ -84,6 +84,16 @@ public class HttpJsonRequest {
   private HttpClient httpClient;
   private int responseStatusCode;
 
+  public HttpMethods getMethod() {
+    return method;
+  }
+
+  public String getUrl() {
+    return url;
+  }
+
+
+
   private Action3<Map<String, String>, String, String> handleReplicationStatusChanges = Actions.delegate3();
 
   /**
@@ -286,7 +296,7 @@ public class HttpJsonRequest {
     }
   }
 
-  private double calculateDuration() {
+  protected double calculateDuration() {
     return sp.getTime();
   }
 

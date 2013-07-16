@@ -87,4 +87,19 @@ public class DocumentConvention {
     return requestCount.incrementAndGet();
   }
 
+  public boolean isUseParallelMultiGet() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  public boolean shouldCacheRequest(String requestUri) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  public boolean isDisableProfiling() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
 }

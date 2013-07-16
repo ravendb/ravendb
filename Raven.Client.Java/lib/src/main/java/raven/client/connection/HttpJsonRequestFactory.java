@@ -17,6 +17,7 @@ import org.apache.http.impl.client.StandardHttpRequestRetryHandler;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
+import raven.abstractions.closure.Action2;
 import raven.abstractions.connection.WebRequestEventArgs;
 import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Constants;
@@ -106,7 +107,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     cache.close();
   }
 
-  private CachedRequestOp configureCaching(String url, HttpRequest request) {
+  protected CachedRequestOp configureCaching(String url, Action2<String, String> setHeader) {
     CachedRequest cachedRequest = cache.get(url);
     if (cachedRequest == null) {
       return new CachedRequestOp(null, false);
@@ -115,7 +116,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     if (getAggressiveCacheDuration() != null) {
       long totalSeconds = getAggressiveCacheDuration() / 1000;
       if (totalSeconds > 0) {
-        request.addHeader("Cache-Control", "max-age=" + totalSeconds);
+        setHeader.apply("Cache-Control", "max-age=" + totalSeconds);
       }
 
       if (cachedRequest.isForceServerCheck() == false && (new Date().getTime() - cachedRequest.getTime().getTime() < getAggressiveCacheDuration())) { //can serve directly from local cache
@@ -123,8 +124,23 @@ public class HttpJsonRequestFactory implements AutoCloseable {
       }
       cachedRequest.setForceServerCheck(false);
     }
-    request.addHeader("If-None-Match", cachedRequest.getHeaders().get("ETag"));
+    setHeader.apply("If-None-Match", cachedRequest.getHeaders().get("ETag"));
     return new CachedRequestOp(cachedRequest, skipServerCheck);
+  }
+
+  private static class SetHeader implements Action2<String, String> {
+
+    private HttpRequest request;
+
+    public SetHeader(HttpRequest request) {
+      this.request = request;
+    }
+
+    @Override
+    public void apply(String headerName, String value) {
+      request.addHeader(headerName, value);
+    }
+
   }
 
   public HttpJsonRequest createHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams) {
@@ -137,7 +153,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
         && createHttpJsonRequestParams.getConvention().getShouldCacheRequest().apply(createHttpJsonRequestParams.getUrl()));
 
     if (request.getShouldCacheRequest() && createHttpJsonRequestParams.getMethod() == HttpMethods.GET && !getDisableHttpCaching()) {
-      CachedRequestOp cachedRequestDetails = configureCaching(createHttpJsonRequestParams.getUrl(), request.getWebRequest());
+      CachedRequestOp cachedRequestDetails = configureCaching(createHttpJsonRequestParams.getUrl(), new SetHeader(request.getWebRequest()));
       request.setCachedRequestDetails(cachedRequestDetails.getCachedRequest());
       request.setSkipServerCheck(cachedRequestDetails.isSkipServerCheck());
     }
@@ -219,7 +235,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
 
 
-  private void incrementCachedRequests() {
+  protected void incrementCachedRequests() {
     numOfCachedRequests.incrementAndGet();
   }
 
