@@ -467,6 +467,12 @@ namespace Raven.Database
 
             exceptionAggregator.Execute(() =>
             {
+                if(TransportState != null)
+                    TransportState.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
                 AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
                 AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
                 disposed = true;

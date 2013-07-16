@@ -1,5 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive.Linq;
+using Orders;
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Tests;
 using Raven.Tests.Issues;
 
@@ -9,17 +13,25 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
+            using (var s = new DocumentStore
+            {
+                Url = "http://localhost.fiddler:8080",
+                DefaultDatabase = "test"
+            }.Initialize())
+            {
+                (from change in s.Changes().ForDocumentsStartingWith("companies/")
+                 where change.Type == DocumentChangeTypes.Put
+                 select change.Id)
+                 .Subscribe(state => Console.WriteLine("Item changed: " + state));
 
-			for (int i = 0; i < 2500; i++)
-			{
-				Console.Clear();
-				Console.WriteLine(i);
-
-				using (var x = new ConcurrentPatching())
-				{
-					x.CanConcurrentlyUpdateSameDocument();
-				}
-			}
+                while (true)
+                {
+                    var cmd = Console.ReadLine();
+                    GC.Collect(2);
+                    GC.WaitForPendingFinalizers();
+                }
+            }
+			
 		}
 	}
 
