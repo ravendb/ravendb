@@ -897,8 +897,10 @@
   <!-- LayoutRoot Grid Style -->
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
-		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
-		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+	  
+	  <!--This is in comment because it couses the text editor in the patch page to put the marker int the wrong page, this could cause some text to appear as bold-->
+		<!--<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>-->
 	</Style>
 
   <!-- Content Border Style -->
