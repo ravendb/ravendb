@@ -78,6 +78,7 @@ import raven.client.exceptions.ConflictException;
 import raven.client.extensions.MultiDatabase;
 import raven.client.indexes.IndexDefinitionBuilder;
 import raven.client.listeners.IDocumentConflictListener;
+import raven.client.utils.TimeSpan;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
@@ -474,8 +475,7 @@ public class ServerClient implements IDatabaseCommands {
     if (transactionInformation == null) {
       return ;
     }
-    //TODO: format timeout as TimeSpan
-    metadata.add("Raven-Transaction-Information", new RavenJValue(String.format("%s, %s", transactionInformation.getId(), transactionInformation.getTimeout())));
+    metadata.add("Raven-Transaction-Information", new RavenJValue(String.format("%s, %s", transactionInformation.getId(), TimeSpan.formatString(transactionInformation.getTimeout()))));
   }
 
   @Override
