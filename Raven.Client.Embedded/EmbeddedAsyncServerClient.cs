@@ -298,6 +298,7 @@ namespace Raven.Client.Embedded
 			// Should the data paramater be changed to a Stream type so it matches IDatabaseCommands.PutAttachment?
 			var stream = new MemoryStream();
 			stream.Write(data, 0, data.Length);
+			stream.Position = 0;
 			databaseCommands.PutAttachment(key, etag, stream, metadata);
 			return new CompletedTask();
 		}
