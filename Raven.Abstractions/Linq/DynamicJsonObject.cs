@@ -219,8 +219,8 @@ namespace Raven.Abstractions.Linq
 							return dateTimeOffset;
 						}
 						TimeSpan timeSpan;
-						if (s.Contains(":")  && 
-							TimeSpan.TryParseExact(s,"c", CultureInfo.InvariantCulture, out timeSpan))
+                        if (s.Contains(":") && s.Length >= 6 &&
+                            TimeSpan.TryParseExact(s, "c", CultureInfo.InvariantCulture, out timeSpan))
 						{
 							return timeSpan;
 						}

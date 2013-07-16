@@ -610,7 +610,7 @@ namespace Raven.Database.Config
 				ResetContainer();
 				// remove old directory catalog
 				var matchingCatalogs = Catalog.Catalogs.OfType<DirectoryCatalog>()
-					.Concat(Catalog.Catalogs.OfType<FilteredCatalog>()
+					.Concat(Catalog.Catalogs.OfType<Raven.Database.Plugins.Catalogs.FilteredCatalog>()
 								.Select(x => x.CatalogToFilter as DirectoryCatalog)
 								.Where(x => x != null)
 					)

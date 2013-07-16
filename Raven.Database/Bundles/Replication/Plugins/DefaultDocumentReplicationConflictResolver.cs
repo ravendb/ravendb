@@ -31,6 +31,7 @@
 				return
 					conflictIds
 					.Select(getDocument)
+					.Where(x => x != null)
 					.All(doc => Historian.IsDirectChildOfCurrent(metadata, doc.Metadata));
 			}
 

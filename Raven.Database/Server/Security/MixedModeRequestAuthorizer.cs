@@ -2,12 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Security.Principal;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
 using System.Linq;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.Security
 {
@@ -19,9 +21,33 @@ namespace Raven.Database.Server.Security
 
 		private class OneTimeToken
 		{
-			public DocumentDatabase Database { get; set; }
+			private IPrincipal user;
+			private IntPtr? windowsUserToken;
+			public string DatabaseName { get; set; }
 			public DateTime GeneratedAt { get; set; }
-			public IPrincipal User { get; set; }
+			public IPrincipal User
+			{
+				get
+				{
+					if (windowsUserToken != null)
+					{
+						return new WindowsPrincipal(new WindowsIdentity(windowsUserToken.Value));
+					}
+					return user;
+				}
+				set
+				{
+					var windowsPrincipal = value as WindowsPrincipal;
+					if (windowsPrincipal != null)
+					{
+						user = null;
+						windowsUserToken = ((WindowsIdentity)windowsPrincipal.Identity).Token;
+						return;
+					}
+					windowsUserToken = null;
+					user = value;
+				}
+			}
 		}
 
 		protected override void Initialize()
@@ -49,20 +75,41 @@ namespace Raven.Database.Server.Security
 			if (hasApiKey || hasOAuthTokenInCookie || 
 				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
-				return oAuthRequestAuthorizer.Authorize(context, hasApiKey);
+				return oAuthRequestAuthorizer.Authorize(context, hasApiKey, IgnoreDb.Urls.Contains(requestUrl));
 			}
-			return windowsRequestAuthorizer.Authorize(context);
+			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
 		private bool AuthorizeOSingleUseAuthToken(IHttpContext context, string token)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
+			{
+				context.SetStatusToForbidden();
+				context.WriteJson(new
+				{
+					Error = "Unknown single use token, maybe it was already used?"
+				});
 				return false;
-			if (ReferenceEquals(value.Database, Database) == false)
+			}
+			if (string.Equals(value.DatabaseName, TenantId, StringComparison.InvariantCultureIgnoreCase) == false)
+			{
+				context.SetStatusToForbidden();
+				context.WriteJson(new
+				{
+					Error = "This single use token cannot be used for this database"
+				}); 
 				return false;
+			}
 			if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
+			{
+				context.SetStatusToForbidden();
+				context.WriteJson(new
+				{
+					Error = "This single use token has expired"
+				}); 
 				return false;
+			}
 
 			if (value.User != null)
 			{
@@ -107,7 +154,7 @@ namespace Raven.Database.Server.Security
 		{
 			var token = new OneTimeToken
 			{
-				Database = db,
+				DatabaseName = TenantId,
 				GeneratedAt = SystemTime.UtcNow,
 				User = user
 			};
