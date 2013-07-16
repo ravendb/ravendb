@@ -101,4 +101,12 @@ public class DocumentConvention {
     return false;
   }
 
+  public void handleForbiddenResponse(HttpResponse forbiddenResponse) {
+    handleForbiddenResponse.apply(forbiddenResponse);
+  }
+
+  public Action1<HttpRequest> handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
+    return handleUnauthorizedResponse.apply(unauthorizedResponse);
+  }
+
 }

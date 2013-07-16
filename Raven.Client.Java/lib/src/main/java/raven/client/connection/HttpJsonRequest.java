@@ -313,14 +313,14 @@ public class HttpJsonRequest {
     if (conventions.getHandleForbiddenResponse() == null)
       return;
 
-    conventions.getHandleForbiddenResponse().apply(forbiddenResponse);
+    conventions.handleForbiddenResponse(forbiddenResponse);
   }
 
   private boolean handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
     if (conventions.getHandleUnauthorizedResponse() == null)
       return false;
 
-    Action1<HttpRequest> handleUnauthorizedResponse = conventions.getHandleUnauthorizedResponse().apply(unauthorizedResponse);
+    Action1<HttpRequest> handleUnauthorizedResponse = conventions.handleUnauthorizedResponse(unauthorizedResponse);
     if (handleUnauthorizedResponse == null)
       return false;
 
