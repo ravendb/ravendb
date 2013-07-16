@@ -62,6 +62,10 @@ public class DocumentConvention {
     return shouldCacheRequest;
   }
 
+  public Boolean shouldCacheRequest(String url) {
+    return shouldCacheRequest.apply(url);
+  }
+
   /**
    * @param shouldCacheRequest the shouldCacheRequest to set
    */
@@ -88,11 +92,6 @@ public class DocumentConvention {
   }
 
   public boolean isUseParallelMultiGet() {
-    // TODO Auto-generated method stub
-    return false;
-  }
-
-  public boolean shouldCacheRequest(String requestUri) {
     // TODO Auto-generated method stub
     return false;
   }

@@ -1005,7 +1005,7 @@ public class ServerClient implements IDatabaseCommands {
       return responseJson.value(String.class, "Transformer");
     } catch (HttpOperationException e) {
       throw new ServerClientException("unable to put transformer", e);
-      /*TODO: dead code
+      /*TODO: dead code - reported - RavenDB-1216
       var httpWebResponse = e.Response as HttpWebResponse;
       if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
         throw;
@@ -1051,7 +1051,7 @@ public class ServerClient implements IDatabaseCommands {
         throw new ServerClientException(e);
       }
       /*
-       * TODO dead code
+       * TODO dead code - reported - RavenDB-1216
        *   var httpWebResponse = e.Response as HttpWebResponse;
               if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
                   throw;
@@ -1091,7 +1091,7 @@ public class ServerClient implements IDatabaseCommands {
         return responseJson.value(String.class, "Index");
       } catch (HttpOperationException e) {
         throw new ServerClientException(e);
-        /*TODO: dead code
+        /*TODO: dead code - reported - RavenDB-1216
         var httpWebResponse = e.Response as HttpWebResponse;
         if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
             throw;

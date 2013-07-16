@@ -150,7 +150,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
     HttpJsonRequest request = new HttpJsonRequest(createHttpJsonRequestParams, this);
     request.setShouldCacheRequest(createHttpJsonRequestParams.isAvoidCachingRequest() == false
-        && createHttpJsonRequestParams.getConvention().getShouldCacheRequest().apply(createHttpJsonRequestParams.getUrl()));
+        && createHttpJsonRequestParams.getConvention().shouldCacheRequest(createHttpJsonRequestParams.getUrl()));
 
     if (request.getShouldCacheRequest() && createHttpJsonRequestParams.getMethod() == HttpMethods.GET && !getDisableHttpCaching()) {
       CachedRequestOp cachedRequestDetails = configureCaching(createHttpJsonRequestParams.getUrl(), new SetHeader(request.getWebRequest()));
