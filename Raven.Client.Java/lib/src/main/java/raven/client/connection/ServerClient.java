@@ -31,7 +31,11 @@ import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
+import raven.abstractions.commands.ICommandData;
+import raven.abstractions.commands.PatchCommandData;
+import raven.abstractions.commands.ScriptedPatchCommandData;
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
@@ -40,12 +44,16 @@ import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
+import raven.abstractions.data.PatchRequest;
+import raven.abstractions.data.PatchResult;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.QueryHeaderInformation;
 import raven.abstractions.data.QueryResult;
+import raven.abstractions.data.ScriptedPatchRequest;
 import raven.abstractions.data.SuggestionQuery;
 import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.exceptions.ConcurrencyException;
+import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.extensions.JsonExtensions;
@@ -66,14 +74,12 @@ import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
-//TODO: finish me
 public class ServerClient implements IDatabaseCommands {
 
   private String url;
   private final DocumentConvention convention;
   private final Credentials credentials;
   private final Function1<String, ReplicationInformer> replicationInformerGetter;
-  @SuppressWarnings("unused")
   private String databaseName;
   private final ReplicationInformer replicationInformer;
   private final HttpJsonRequestFactory jsonRequestFactory;
@@ -1168,8 +1174,8 @@ public class ServerClient implements IDatabaseCommands {
 
     if (fromEtag != null) {
       sb.append("etag=")
-        .append(fromEtag)
-        .append("&");
+      .append(fromEtag)
+      .append("&");
     } else {
       if (startsWith != null) {
         sb.append("startsWith=").append(UrlUtils.escapeDataString(startsWith)).append("&");
@@ -1187,9 +1193,9 @@ public class ServerClient implements IDatabaseCommands {
 
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, sb.toString(), HttpMethods.GET, new RavenJObject(), credentials, convention)
+        new CreateHttpJsonRequestParams(this, sb.toString(), HttpMethods.GET, new RavenJObject(), credentials, convention)
         .addOperationHeaders(operationsHeaders))
-      .addReplicationStatusHeaders(url, url, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+        .addReplicationStatusHeaders(url, url, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     HttpResponse webResponse = request.rawExecuteRequest();
     return yieldStreamResults(webResponse);
   }
@@ -1455,23 +1461,135 @@ public class ServerClient implements IDatabaseCommands {
 
 
 
-  //TODO: public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
+  public BatchResult[] batch(final List<ICommandData> commandDatas) {
+    return executeWithReplication(HttpMethods.POST, new Function1<String, BatchResult[]>() {
+      @Override
+      public BatchResult[] apply(String u) {
+        return directBatch(commandDatas, u);
+      }
+    });
+  }
 
-  //TODO: private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
+  private BatchResult[] directBatch(List<ICommandData> commandDatas, String operationUrl) {
+    RavenJObject metadata = new RavenJObject();
+    addTransactionInformation(metadata);
+    HttpJsonRequest req = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/bulk_docs", HttpMethods.POST, metadata, credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
-  //TODO: public void Commit(string txId)
 
-  //TODO: private void DirectCommit(string txId, string operationUrl)
+    RavenJArray jArray = new RavenJArray();
+    for (ICommandData command: commandDatas) {
+      jArray.add(command.toJson());
+    }
+    try {
+      req.write(jArray.toString());
 
-  //TODO public void Rollback(string txId)
+      RavenJArray response;
+      try {
+        response = (RavenJArray)req.readResponseJson();
+      } catch (HttpOperationException e) {
+        if (e.getStatusCode() != HttpStatus.SC_CONFLICT) {
+          throw e;
+        }
+        throw throwConcurrencyException(e);
+      }
+      return JsonExtensions.getDefaultObjectMapper().readValue(response.toString(), BatchResult[].class);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
 
-  //TODO: private void DirectRollback(string txId, string operationUrl)
+  /**
+   * Commits the specified tx id.
+   * @param txId
+   */
+  public void commit(final String txId) {
+    executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
+      @Override
+      public Void apply(String u) {
+        directCommit(txId, u);
+        return null;
+      }
+    });
+  }
 
-  //TODO: public void PrepareTransaction(string txId)
+  private void directCommit(String txId, String operationUrl) {
+    HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/commit?tx=" + txId, HttpMethods.POST, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
-  //TODO: private void DirectPrepareTransaction(string txId, string operationUrl)
+    try {
+      httpJsonRequest.readResponseJson();
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
 
-  //TODO: public IDatabaseCommands With(ICredentials credentialsForSession)
+  /**
+   * Rollbacks the specified tx id.
+   * @param txId
+   */
+  public void rollback(final String txId) {
+    executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
+      @Override
+      public Void apply(String u) {
+        directRollback(txId, u);
+        return null;
+      }
+    });
+  }
+
+  private void directRollback(String txId, String operationUrl) {
+    HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, HttpMethods.POST, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      httpJsonRequest.readResponseJson();
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
+
+  /**
+   * Prepares the transaction on the server.
+   * @param txId
+   */
+  public void prepareTransaction(final String txId) {
+    executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
+      @Override
+      public Void apply(String u) {
+        directPrepareTransaction(txId, u);
+        return null;
+      }
+    });
+  }
+
+  private void directPrepareTransaction(String txId, String operationUrl) {
+    HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, HttpMethods.POST, new RavenJObject(), credentials, convention)
+          .addOperationHeaders(operationsHeaders))
+          .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      httpJsonRequest.readResponseJson();
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
+
+  /**
+   * Returns a new {@link IDatabaseCommands} using the specified credentials
+   * @param credentialsForSession
+   * @return
+   */
+  public IDatabaseCommands with(Credentials credentialsForSession) {
+    return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId, conflictListeners);
+  }
 
   //TODO: public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 
@@ -1518,19 +1636,140 @@ public class ServerClient implements IDatabaseCommands {
     return url;
   }
 
-  //TODO: public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+  /**
+   *  Perform a set based deletes using the specified index.
+   * @param indexName
+   * @param queryToDelete
+   * @param allowStale
+   * @return
+   */
+  public Operation deleteByIndex(final String indexName, final IndexQuery queryToDelete, final boolean allowStale) {
+    return executeWithReplication(HttpMethods.DELETE, new Function1<String, Operation>() {
+      @Override
+      public Operation apply(String operationUrl) {
+        return directDeleteByIndex(operationUrl, indexName, queryToDelete, allowStale);
+      }
+    });
+  }
 
-  //TODO: public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
+  private Operation directDeleteByIndex(String operationUrl, String indexName, IndexQuery queryToDelete, boolean allowStale) {
+    String path = queryToDelete.getIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, path, HttpMethods.DELETE, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+    RavenJToken jsonResponse;
+    try {
+      jsonResponse = request.readResponseJson();
+    } catch (HttpOperationException e) {
+      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        throw new IllegalStateException("There is no index named: " + indexName);
+      }
+      throw new ServerClientException(e);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
 
-  //TODO: public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+    return new Operation(this, jsonResponse.value(Long.TYPE,"OperationId"));
+  }
 
-  //TODO: public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+  /**
+   *  Perform a set based update using the specified index, not allowing the operation
+   *  if the index is stale
+   * @param indexName
+   * @param queryToUpdate
+   * @param patchRequests
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests) {
+    return updateByIndex(indexName, queryToUpdate, patchRequests, false);
+  }
 
-  //TODO: public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+  /**
+   * Perform a set based update using the specified index, not allowing the operation
+   *  if the index is stale
+   * @param indexName
+   * @param queryToUpdate
+   * @param patch
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch) {
+    return updateByIndex(indexName, queryToUpdate, patch, false);
+  }
 
-  //TODO: private Operation UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+  /**
+   * Perform a set based update using the specified index.
+   * @param indexName
+   * @param queryToUpdate
+   * @param patchRequests
+   * @param allowStale
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, boolean allowStale) {
+    RavenJArray array = new RavenJArray();
+    for (PatchRequest request: patchRequests) {
+      array.add(request.toJson());
+    }
 
-  //TODO: public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete)
+    String requestData = array.toString();
+    return updateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, HttpMethods.PATCH);
+  }
+
+  /**
+   * Perform a set based update using the specified index.
+   * @param indexName
+   * @param queryToUpdate
+   * @param patch
+   * @param allowStale
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, boolean allowStale) {
+    String requestData = RavenJObject.fromObject(patch).toString();
+    return updateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, HttpMethods.EVAL);
+  }
+
+  private Operation updateByIndexImpl(final String indexName, final IndexQuery queryToUpdate, final boolean allowStale, final String requestData, final HttpMethods method) {
+    return executeWithReplication(method, new Function1<String, Operation>() {
+      @Override
+      public Operation apply(String operationUrl) {
+        return directUpdateByIndexImpl(operationUrl, indexName, queryToUpdate, allowStale, requestData, method);
+      }
+    });
+  }
+
+  protected Operation directUpdateByIndexImpl(String operationUrl, String indexName, IndexQuery queryToUpdate, boolean allowStale, String requestData, HttpMethods method) {
+    String path = queryToUpdate.getIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, path, method, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    RavenJToken jsonResponse;
+    try {
+      request.write(requestData);
+      jsonResponse = request.readResponseJson();
+    } catch (HttpOperationException e) {
+      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        throw new IllegalStateException("There is no index named: " + indexName);
+      }
+      throw new ServerClientException(e);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+
+    return new Operation(this, jsonResponse.value(Long.TYPE, "OperationId"));
+  }
+
+  /**
+   * Perform a set based deletes using the specified index, not allowing the operation
+   *  if the index is stale
+   * @param indexName
+   * @param queryToDelete
+   * @return
+   */
+  public Operation deleteByIndex(String indexName, IndexQuery queryToDelete) {
+    return deleteByIndex(indexName, queryToDelete, false);
+  }
 
   public SuggestionQueryResult suggest(final String index, final SuggestionQuery suggestionQuery) {
     if (suggestionQuery == null) {
@@ -1668,21 +1907,136 @@ public class ServerClient implements IDatabaseCommands {
 
   //TODO: public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
 
-  //TODO: public RavenJObject Patch(string key, PatchRequest[] patches)
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag
+   * @param key
+   * @param patches
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patches) {
+    return patch(key, patches, null);
+  }
 
-  //TODO: public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag
+   * @param key
+   * @param patches
+   * @param ignoreMissing
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patches, boolean ignoreMissing) {
+    PatchCommandData command = new PatchCommandData();
+    command.setKey(key);
+    command.setPatches(patches);
 
-  //TODO: public RavenJObject Patch(string key, ScriptedPatchRequest patch)
+    BatchResult[] batchResults = batch(Arrays.<ICommandData> asList(command));
+    if (!ignoreMissing && batchResults[0].getPatchResult() != null && batchResults[0].getPatchResult() == PatchResult.DOCUMENT_DOES_NOT_EXISTS) {
+      throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
+    }
+    return batchResults[0].getAdditionalData();
+  }
 
-  //TODO: public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag
+   * @param key
+   * @param patch
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patch) {
+    return patch(key, patch, null);
+  }
 
-  //TODO: public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag
+   * @param key
+   * @param patch
+   * @param ignoreMissing
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patch, boolean ignoreMissing) {
+    ScriptedPatchCommandData command = new ScriptedPatchCommandData();
+    command.setKey(key);
+    command.setPatch(patch);
 
-  //TODO: public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
+    BatchResult[] batchResults = batch(Arrays.<ICommandData> asList(command));
+    if (!ignoreMissing && batchResults[0].getPatchResult() != null && batchResults[0].getPatchResult() == PatchResult.DOCUMENT_DOES_NOT_EXISTS) {
+      throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
+    }
+    return batchResults[0].getAdditionalData();
 
-  //TODO: public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
+  }
 
-  //TODO: public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
+  /**
+   * Sends a patch request for a specific document
+   * @param key
+   * @param patches
+   * @param etag
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patches, Etag etag) {
+    PatchCommandData command = new PatchCommandData();
+    command.setKey(key);
+    command.setPatches(patches);
+    command.setEtag(etag);
+
+    BatchResult[] batchResults = batch(Arrays.<ICommandData> asList(command));
+    return batchResults[0].getAdditionalData();
+  }
+
+  /**
+   * Sends a patch request for a specific document which may or may not currently exist
+   * @param key
+   * @param patchesToExisting
+   * @param patchesToDefault
+   * @param defaultMetadata
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata) {
+    PatchCommandData command = new PatchCommandData();
+    command.setKey(key);
+    command.setPatches(patchesToExisting);
+    command.setPatchesIfMissing(patchesToDefault);
+    command.setMetadata(defaultMetadata);
+
+    BatchResult[] batchResults = batch(Arrays.<ICommandData> asList(command));
+    return batchResults[0].getAdditionalData();
+  }
+
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag
+   * @param key
+   * @param patch
+   * @param etag
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patch, Etag etag) {
+    ScriptedPatchCommandData command = new ScriptedPatchCommandData();
+    command.setKey(key);
+    command.setPatch(patch);
+    command.setEtag(etag);
+
+    BatchResult[] batchResults = batch(Arrays.<ICommandData> asList(command));
+    return batchResults[0].getAdditionalData();
+  }
+
+  /**
+   * Sends a patch request for a specific document which may or may not currently exist
+   * @param key
+   * @param patchExisting
+   * @param patchDefault
+   * @param defaultMetadata
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata) {
+    ScriptedPatchCommandData command = new ScriptedPatchCommandData();
+    command.setKey(key);
+    command.setPatch(patchExisting);
+    command.setPatchIfMissing(patchDefault);
+    command.setMetadata(defaultMetadata);
+
+    BatchResult[] batchResults = batch(Arrays.<ICommandData>asList(command));
+    return batchResults[0].getAdditionalData();
+  }
 
 
   public AutoCloseable disableAllCaching() {
