@@ -2,8 +2,10 @@ package raven.client.connection;
 
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
+import raven.abstractions.basic.Holder;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
@@ -11,6 +13,7 @@ import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.PutResult;
+import raven.abstractions.data.QueryHeaderInformation;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.SuggestionQuery;
 import raven.abstractions.data.SuggestionQueryResult;
@@ -26,6 +29,29 @@ public interface IDatabaseCommands {
    * @param etag The etag.
    */
   public void delete(String key, Etag etag);
+
+
+  /**
+   *  Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+   *  of the number of items that might be returned.
+   * @param index
+   * @param query
+   * @param queryHeaderInfo
+   * @return
+   */
+  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Holder<QueryHeaderInformation> queryHeaderInfo) ;
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize);
 
 
   /**

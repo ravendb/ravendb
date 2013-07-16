@@ -1,10 +1,14 @@
 package raven.client.connection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Before;
@@ -12,9 +16,11 @@ import org.junit.Test;
 import org.mockito.cglib.core.CollectionUtils;
 import org.mockito.cglib.core.Transformer;
 
+import raven.abstractions.basic.Holder;
 import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.IndexQuery;
+import raven.abstractions.data.QueryHeaderInformation;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.SortedField;
 import raven.abstractions.exceptions.ServerClientException;
@@ -69,6 +75,63 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   public void testAsDocument() {
     //TODO provide logic + test for it + MetadataFor (http://ravendb.net/docs/2.0/client-api/querying/static-indexes/defining-static-index)
   }
+
+  @Test
+  public void testStreamQuery() throws Exception {
+    try {
+      createDb("db1");
+      IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+      insertSampleCompaniesEmployees(db1Commands);
+
+      IndexDefinition indexDefinition = new IndexDefinition();
+      indexDefinition.setMap("docs.Companies.Select(x => new {Name = x.Name})");
+      db1Commands.putIndex("companies/simple", indexDefinition);
+      waitForNonStaleIndexes(db1Commands);
+
+      IndexQuery query = new IndexQuery();
+      Holder<QueryHeaderInformation> queryHeaderInfo = new Holder<>();
+      Iterator<RavenJObject> iterator = db1Commands.streamQuery("companies/simple", query, queryHeaderInfo);
+
+      Set<String> companyNames = new HashSet<>();
+
+      while (iterator.hasNext()) {
+        RavenJObject ravenJObject = iterator.next();
+        companyNames.add(ravenJObject.value(String.class, "Name"));
+      }
+
+      assertEquals(new HashSet<>(Arrays.asList("Coca Cola", "Twitter", "Google")), companyNames);
+
+      QueryHeaderInformation headerInformation = queryHeaderInfo.value;
+
+      assertNotNull(headerInformation.getIndex());
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
+  @Test
+  public void testStreamDocs() throws Exception {
+    try {
+      createDb("db1");
+      IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+      insertSampleCompaniesEmployees(db1Commands);
+
+      Iterator<RavenJObject> streamDocs = db1Commands.streamDocs(null, "companies/", null, 0, Integer.MAX_VALUE);
+      Set<String> companyNames = new HashSet<>();
+
+      while (streamDocs.hasNext()) {
+        RavenJObject ravenJObject = streamDocs.next();
+        companyNames.add(ravenJObject.value(String.class, "Name"));
+      }
+
+      assertEquals(new HashSet<>(Arrays.asList("Coca Cola", "Twitter", "Google")), companyNames);
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
 
   @Test
   public void testSimpleMapReduce() throws Exception {

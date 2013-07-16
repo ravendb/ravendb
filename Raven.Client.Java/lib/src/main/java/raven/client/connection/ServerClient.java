@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,9 +18,12 @@ import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.util.EntityUtils;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonToken;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.Holder;
@@ -37,6 +41,7 @@ import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.PutResult;
+import raven.abstractions.data.QueryHeaderInformation;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.SuggestionQuery;
 import raven.abstractions.data.SuggestionQueryResult;
@@ -1127,11 +1132,89 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
-  //TODO: public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Holder<QueryHeaderInformation> queryHeaderInfo) {
+    ensureIsNotNullOrEmpty(index, "index");
+    String path = query.getIndexQueryUrl(url, index, "streams/query", false);
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, path,  HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, url, replicationInformer,
+            convention.getFailoverBehavior(),
+            new HandleReplicationStatusChangesCallback());
 
-  //TODO: public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+    HttpResponse webResponse = request.rawExecuteRequest();
 
-  //TODO: private static IEnumerator<RavenJObject> YieldStreamResults(WebResponse webResponse)
+    QueryHeaderInformation queryHeaderInformation = new QueryHeaderInformation();
+    Map<String, String> headers = HttpJsonRequest.extractHeaders(webResponse.getAllHeaders());
+    queryHeaderInformation.setIndex(headers.get("Raven-Index"));
+    //TODO: queryHeaderInformation.setIndexTimestamp() IndexTimestamp = DateTime.ParseExact(webResponse.Headers["Raven-Index-Timestamp"], Default.DateTimeFormatsToRead,
+    //CultureInfo.InvariantCulture, DateTimeStyles.None),
+
+    queryHeaderInformation.setIndexEtag(Etag.parse(headers.get("Raven-Index-Etag")));
+    queryHeaderInformation.setResultEtag(Etag.parse(headers.get("Raven-Result-Etag")));
+    queryHeaderInformation.setStable(Boolean.valueOf(headers.get("Raven-Is-Stale")));
+    queryHeaderInformation.setTotalResults(Integer.valueOf(headers.get("Raven-Total-Results")));
+
+    queryHeaderInfo.value = queryHeaderInformation;
+
+    return yieldStreamResults(webResponse);
+  }
+
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
+    if (fromEtag != null && startsWith != null)
+      throw new IllegalArgumentException("Either fromEtag or startsWith must be null, you can't specify both");
+
+    StringBuilder sb = new StringBuilder(url).append("/streams/docs?");
+
+    if (fromEtag != null) {
+      sb.append("etag=")
+        .append(fromEtag)
+        .append("&");
+    } else {
+      if (startsWith != null) {
+        sb.append("startsWith=").append(UrlUtils.escapeDataString(startsWith)).append("&");
+      }
+      if(matches != null) {
+        sb.append("matches=").append(UrlUtils.escapeDataString(matches)).append("&");
+      }
+    }
+    if (start != 0) {
+      sb.append("start=").append(start).append("&");
+    }
+    if (pageSize != Integer.MAX_VALUE) {
+      sb.append("start=").append(pageSize).append("&");
+    }
+
+
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+      new CreateHttpJsonRequestParams(this, sb.toString(), HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+      .addReplicationStatusHeaders(url, url, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+    HttpResponse webResponse = request.rawExecuteRequest();
+    return yieldStreamResults(webResponse);
+  }
+
+  private static Iterator<RavenJObject> yieldStreamResults(final HttpResponse webResponse) {
+    HttpEntity httpEntity = webResponse.getEntity();
+    try {
+      InputStream stream = httpEntity.getContent();
+      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(stream);
+      if (jsonParser.nextToken() == null || jsonParser.getCurrentToken() != JsonToken.START_OBJECT) {
+        throw new IllegalStateException("Unexpected data at start of stream");
+      }
+      if (jsonParser.nextToken() == null || jsonParser.getCurrentToken() != JsonToken.FIELD_NAME || !"Results".equals(jsonParser.getText())) {
+        throw new IllegalStateException("Unexpected data at stream 'Results' property name");
+      }
+      if (jsonParser.nextToken() == null || jsonParser.getCurrentToken() != JsonToken.START_ARRAY) {
+        throw new IllegalStateException("Unexpected data at 'Results', could not find start results array");
+      }
+
+      return new RavenJObjectIterator(httpEntity, jsonParser);
+    } catch (IOException e) {
+      throw new ServerClientException(e);
+    }
+
+  }
 
   private QueryResult directQuery(final String index, final IndexQuery query, final String operationUrl, final String[] includes, final boolean metadataOnly, final boolean includeEntries) {
     String path = query.getIndexQueryUrl(operationUrl, index, "indexes");
