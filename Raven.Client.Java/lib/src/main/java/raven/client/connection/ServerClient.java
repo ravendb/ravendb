@@ -39,6 +39,8 @@ import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.Facet;
+import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
@@ -1936,9 +1938,93 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
-  //TODO: public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
+  /**
+   * Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+   * @param index
+   * @param query
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults getFacets(final String index, final IndexQuery query, final String facetSetupDoc, final int start, final Integer pageSize) {
+    return executeWithReplication(HttpMethods.GET, new Function1<String, FacetResults>() {
 
-  //TODO: public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
+      @Override
+      public FacetResults apply(String operationUrl) {
+        return directGetFacets(operationUrl, index, query, facetSetupDoc, start, pageSize);
+      }
+    });
+  }
+
+  protected FacetResults directGetFacets(String operationUrl, String index, IndexQuery query, String facetSetupDoc, int start, Integer pageSize) {
+    String requestUri = operationUrl + String.format("/facets/%s?facetDoc=%s&%s&facetStart=%d&facetPageSize=%d",
+        UrlUtils.escapeDataString(index),
+        UrlUtils.escapeDataString(facetSetupDoc),
+        query.getMinimalQueryString(),
+        start,
+        pageSize);
+
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+
+    try {
+      RavenJObject json = (RavenJObject)request.readResponseJson();
+      return JsonExtensions.getDefaultObjectMapper().readValue(json.toString(), FacetResults.class);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
+
+  /**
+   * Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+   * @param index
+   * @param query
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults getFacets(final String index, final IndexQuery query, final List<Facet> facets, final int start, final Integer pageSize) {
+    final String facetsJson = JsonConvert.serializeObject(facets);
+    final HttpMethods method = facetsJson.length() > 1024 ? HttpMethods.POST : HttpMethods.GET;
+    return executeWithReplication(method, new Function1<String, FacetResults>() {
+      @Override
+      public FacetResults apply(String operationUrl) {
+        return directGetFacets(operationUrl, index, query, facetsJson, start, pageSize, method);
+      }
+    });
+  }
+
+  protected FacetResults directGetFacets(String operationUrl, String index, IndexQuery query, String facetsJson, int start, Integer pageSize, HttpMethods method) {
+    String requestUri = operationUrl + String.format("/facets/%s?%s&facetStart=%d&facetPageSize=%d",
+        UrlUtils.escapeDataString(index),
+        query.getMinimalQueryString(),
+        start,
+        pageSize);
+
+    if(method == HttpMethods.GET) {
+      requestUri += "&facets=" + UrlUtils.escapeDataString(facetsJson);
+    }
+
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, requestUri, method, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders))
+        .addReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    try {
+      if (method != HttpMethods.GET)
+        request.write(facetsJson);
+
+      RavenJObject json = (RavenJObject)request.readResponseJson();
+      return JsonExtensions.getDefaultObjectMapper().readValue(json.toString(), FacetResults.class);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
 
   /**
    * Sends a patch request for a specific document, ignoring the document's Etag
