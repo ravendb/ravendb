@@ -1040,10 +1040,8 @@ namespace Raven.Database.Server
 
 			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var documentDatabase = new DocumentDatabase(config)
-				{
-				    TransportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState())
-				};
+			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+			    var documentDatabase = new DocumentDatabase(config, transportState);
 
 			    AssertLicenseParameters(config);
 				documentDatabase.SpinBackgroundWorkers();

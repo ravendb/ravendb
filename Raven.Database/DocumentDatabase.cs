@@ -161,9 +161,10 @@ namespace Raven.Database
         private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches =
             new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
 
-        public DocumentDatabase(InMemoryRavenConfiguration configuration)
+        public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
         {
             this.configuration = configuration;
+            this.transportState = transportState ?? new TransportState();
 
             using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
             {
@@ -2135,7 +2136,7 @@ namespace Raven.Database
 
         static string productVersion;
         private readonly SequentialUuidGenerator sequentialUuidGenerator;
-        private Lazy<TransportState> transportState = new Lazy<TransportState>(() => new TransportState());
+        private readonly TransportState transportState;
         public static string ProductVersion
         {
             get
@@ -2191,15 +2192,7 @@ namespace Raven.Database
         {
             get
             {
-                return transportState.Value;
-            }
-            set
-            {
-                if (transportState.IsValueCreated)
-                {
-                    throw new InvalidOperationException("After the transport state has been published, it cannot be modified");
-                }
-                transportState = new Lazy<TransportState>(() => value);
+                return transportState;
             }
         }
 
