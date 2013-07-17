@@ -52,6 +52,7 @@ import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
+import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
@@ -69,7 +70,7 @@ public class HttpJsonRequest {
   private volatile HttpResponse httpResponse;
   private CachedRequest cachedRequestDetails;
   private final HttpJsonRequestFactory factory;
-  private final ServerClient owner;
+  private final IHoldProfilingInformation owner;
   private final DocumentConvention conventions;
   private String postedData;
   private final StopWatch sp;

@@ -23,6 +23,7 @@ import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.extensions.MultiDatabase;
 import raven.client.util.SimpleCache;
 
@@ -239,7 +240,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     numOfCachedRequests.incrementAndGet();
   }
 
-  protected void invokeLogRequest(ServerClient sender, RequestResultArgs requestResult) {
+  protected void invokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs requestResult) {
     EventHelper.invoke(logRequest, sender, requestResult);
   }
 

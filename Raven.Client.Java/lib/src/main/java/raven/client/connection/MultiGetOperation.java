@@ -15,11 +15,12 @@ import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.GetRequest;
 import raven.abstractions.data.GetResponse;
 import raven.abstractions.extensions.JsonExtensions;
+import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 
 public class MultiGetOperation {
-  private ServerClient holdProfilingInformation;
+  private IHoldProfilingInformation holdProfilingInformation;
   private DocumentConvention convention;
   private String url;
   private GetRequest[] requests;
@@ -31,7 +32,7 @@ public class MultiGetOperation {
     return requestUri;
   }
 
-  public MultiGetOperation(ServerClient holdProfilingInformation, DocumentConvention convention, String url, GetRequest[] requests) {
+  public MultiGetOperation(IHoldProfilingInformation holdProfilingInformation, DocumentConvention convention, String url, GetRequest[] requests) {
     this.holdProfilingInformation = holdProfilingInformation;
     this.convention = convention;
     this.url = url;

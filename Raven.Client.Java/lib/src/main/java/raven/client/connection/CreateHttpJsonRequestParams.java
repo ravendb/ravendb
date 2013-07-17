@@ -11,6 +11,7 @@ import org.apache.http.HttpRequest;
 
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJObject;
+import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.document.DocumentConvention;
 
 public class CreateHttpJsonRequestParams implements Serializable {
@@ -18,7 +19,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   private int operationHeadersHash;
   private Map<String, List<String>> operationsHeadersCollection;
   private Map<String, String> operationsHeadersDictionary = new HashMap<>();
-  private ServerClient owner;
+  private IHoldProfilingInformation owner;
   private String url;
   private String urlCached;
   private boolean avoidCachingRequest;
@@ -28,7 +29,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   private DocumentConvention convention;
   private boolean disableRequestCompression;
 
-  public CreateHttpJsonRequestParams(ServerClient owner, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
+  public CreateHttpJsonRequestParams(IHoldProfilingInformation owner, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
     super();
 
     this.method = method;
@@ -119,7 +120,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   /**
    * @return the owner
    */
-  public ServerClient getOwner() {
+  public IHoldProfilingInformation getOwner() {
     return owner;
   }
 
@@ -194,7 +195,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   /**
    * @param owner the owner to set
    */
-  public void setOwner(ServerClient owner) {
+  public void setOwner(IHoldProfilingInformation owner) {
     this.owner = owner;
   }
 

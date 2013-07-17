@@ -20,9 +20,10 @@ import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
+import raven.client.connection.profiling.IHoldProfilingInformation;
 
 //TODO: expose all methods
-public interface IDatabaseCommands {
+public interface IDatabaseCommands extends IHoldProfilingInformation {
   /**
    * Deletes the document with the specified key
    * @param key The key.
