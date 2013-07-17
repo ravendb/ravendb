@@ -1,6 +1,7 @@
 package raven.abstractions.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 
@@ -24,6 +25,12 @@ public class EtagTest {
     }
 
 
+  }
+
+  @Test
+  public void testGenerateRandom() {
+    Etag random = Etag.random();
+    assertNotEquals(0L, random.getChanges());
   }
 
   @Test

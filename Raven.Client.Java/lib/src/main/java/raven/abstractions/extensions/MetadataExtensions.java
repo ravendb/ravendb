@@ -200,7 +200,7 @@ public class MetadataExtensions {
       return RavenJArray.parse(val);
     }
     //TODO: parse dates
-    return RavenJToken.parse(val);
+    return new RavenJValue(val);
   }
 
 }

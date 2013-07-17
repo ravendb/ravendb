@@ -1,6 +1,7 @@
 package raven.abstractions.data;
 
 import java.nio.ByteBuffer;
+import java.util.UUID;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -37,7 +38,9 @@ public class Etag {
   }
 
   public Etag(String str) {
-    parse(str);
+    Etag parse = parse(str);
+    this.restarts = parse.restarts;
+    this.changes = parse.changes;
   }
 
   public Etag(UuidType type, long restarts, long changes) {
@@ -185,6 +188,11 @@ public class Etag {
     if (restarts != other.restarts)
       return false;
     return true;
+  }
+
+
+  public static Etag random() {
+    return new Etag(UUID.randomUUID().toString());
   }
 
 

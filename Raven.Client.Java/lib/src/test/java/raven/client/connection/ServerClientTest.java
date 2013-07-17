@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -24,6 +25,7 @@ import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.UuidType;
+import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.FieldIndexing;
 import raven.abstractions.indexing.FieldStorage;
@@ -32,6 +34,7 @@ import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
 import raven.client.document.DocumentConvention;
 import raven.client.listeners.IDocumentConflictListener;
@@ -63,13 +66,22 @@ public class ServerClientTest extends RavenDBAwareTests {
       createDb("db1");
 
       Etag etag = new Etag();
-      etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
       RavenJObject o = RavenJObject.parse("{ \"key\" : \"val\"}");
       PutResult result = db1Commands.put("testVal", etag, o, new RavenJObject());
       assertNotNull(result);
+      try {
+        db1Commands.delete("testVal", result.getEtag().incrementBy(10000));
+        fail();
+      } catch (Exception e) {
+        //ok
+      }
+
       JsonDocument jsonDocument = db1Commands.get("testVal");
       assertEquals("val", jsonDocument.getDataAsJson().value(String.class, "key"));
+      assertNull("Can't get document with long key", db1Commands.get(StringUtils.repeat("a", 256)));
+      assertNull("This document does not exist!", db1Commands.get("NoSuch"));
 
+      db1Commands.delete("noSuchKey", null);
 
       Developer d1 = new Developer();
       d1.setNick("john");
@@ -81,6 +93,13 @@ public class ServerClientTest extends RavenDBAwareTests {
       JsonDocument developerDocument = db1Commands.get(longKey);
       Developer readDeveloper = JsonExtensions.getDefaultObjectMapper().readValue(developerDocument.getDataAsJson().toString(), Developer.class);
       assertEquals("john", readDeveloper.getNick());
+
+      RavenJObject objectWithOutKey = new RavenJObject();
+      objectWithOutKey.add("Name",  new RavenJValue("Anonymous"));
+      PutResult putResult = db1Commands.put(null, null, objectWithOutKey , null);
+      assertNotNull(putResult);
+      String docKey = putResult.getKey();
+      assertNotNull(db1Commands.get(docKey));
 
     } finally {
       deleteDb("db1");
@@ -187,6 +206,10 @@ public class ServerClientTest extends RavenDBAwareTests {
       assertEquals(1, jsonDocumentList.size());
       assertEquals("val2", jsonDocumentList.get(0).getDataAsJson().value(String.class, "key"));
 
+      jsonDocumentList = db1Commands.startsWith("tests/", "val1a", 0, 5, true);
+      assertEquals(1, jsonDocumentList.size());
+      assertEquals("We requested metadata only", 0, jsonDocumentList.get(0).getDataAsJson().getCount());
+
     } finally {
       deleteDb("db1");
     }
@@ -261,11 +284,19 @@ public class ServerClientTest extends RavenDBAwareTests {
     }
   }
 
+
+  @Test
+  public void testTransformers() {
+
+  }
+
   @Test
   public void testAttachments() throws Exception {
     IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
     try {
       createDb("db1");
+
+      assertNull("No such attachment", db1Commands.getAttachment("noSuchLKey"));
 
       String key = "test/at1";
 
@@ -277,6 +308,36 @@ public class ServerClientTest extends RavenDBAwareTests {
       is.close();
 
       Attachment a = db1Commands.getAttachment(key);
+
+      RavenJObject meta = new RavenJObject();
+      meta.add("Content-Type", new RavenJValue("text/plain"));
+      db1Commands.updateAttachmentMetadata(key, a.getEtag(), meta);
+
+      a = db1Commands.getAttachment(key);
+      assertEquals("text/plain", a.getMetadata().get("Content-Type").value(String.class));
+
+      // can update attachment metadata
+
+      RavenJObject metadata = a.getMetadata();
+      metadata.add("test", new RavenJValue("yes"));
+      db1Commands.updateAttachmentMetadata(key, a.getEtag(), metadata);
+
+      a = db1Commands.getAttachment(key);
+      metadata = new RavenJObject();
+      metadata.add("test", new RavenJValue("no"));
+      db1Commands.updateAttachmentMetadata(key, a.getEtag(), metadata);
+      a = db1Commands.getAttachment(key);
+
+      assertEquals("no", a.getMetadata().get("Test").value(String.class));
+
+      metadata = new RavenJObject();
+      meta.add("test", new RavenJValue("etag"));
+      try {
+        db1Commands.updateAttachmentMetadata(key, a.getEtag().incrementBy(10000), metadata);
+        fail();
+      } catch (ServerClientException e) {
+        //ok
+      }
 
       assertEquals("Test test test", new String(a.getData()));
 

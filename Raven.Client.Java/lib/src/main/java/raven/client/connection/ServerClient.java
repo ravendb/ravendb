@@ -237,7 +237,7 @@ public class ServerClient implements IDatabaseCommands {
     if (key.length() > 127) {
       MultiLoadResult multiLoadResult = directGet(new String[] { key}, serverUrl, new String[0], null, new HashMap<String, RavenJToken>(), false);
       List<RavenJObject> results = multiLoadResult.getResults();
-      if (results.size() == 0) {
+      if (results.get(0) == null) {
         return null;
       } else {
         return SerializationHelper.ravenJObjectToJsonDocument(results.get(0));
@@ -267,42 +267,43 @@ public class ServerClient implements IDatabaseCommands {
       return SerializationHelper.deserializeJsonDocument(docKey, responseJson, request.getResponseHeaders(), request.getResponseStatusCode());
 
     } catch (HttpOperationException e) {
-      HttpResponse httpWebResponse = e.getHttpResponse();
-      if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        return null;
-      } else if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_CONFLICT) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+      try {
+        HttpResponse httpWebResponse = e.getHttpResponse();
+        if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          return null;
+        } else if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_CONFLICT) {
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          try {
+            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
 
-          RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
-          Etag etag = HttpExtensions.getEtagHeader(e.getHttpResponse());
+            RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+            Etag etag = HttpExtensions.getEtagHeader(e.getHttpResponse());
 
-          ConflictException concurrencyException = tryResolveConflictOrCreateConcurrencyException(key, conflictsDoc, etag);
+            ConflictException concurrencyException = tryResolveConflictOrCreateConcurrencyException(key, conflictsDoc, etag);
 
-          if (concurrencyException == null) {
-            if (resolvingConflictRetries) {
-              throw new IllegalStateException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+            if (concurrencyException == null) {
+              if (resolvingConflictRetries) {
+                throw new IllegalStateException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+              }
+
+              resolvingConflictRetries = true;
+              try {
+                return directGet(serverUrl, key);
+              } finally {
+                resolvingConflictRetries = false;
+              }
             }
+            throw concurrencyException;
 
-            resolvingConflictRetries = true;
-            try {
-              return directGet(serverUrl, key);
-            } finally {
-              resolvingConflictRetries = false;
-            }
+          } catch (IOException e1) {
+            throw new ServerClientException(e1);
           }
-          throw concurrencyException;
 
-
-        } catch (IOException e1) {
-          throw new ServerClientException(e1);
-        } finally {
-          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
-
+        throw new ServerClientException(e);
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw new ServerClientException(e);
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -422,10 +423,14 @@ public class ServerClient implements IDatabaseCommands {
       RavenJToken responseJson = jsonRequest.readResponseJson();
       return SerializationHelper.ravenJObjectsToJsonDocuments(responseJson);
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
-        throw throwConcurrencyException(e);
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          throw throwConcurrencyException(e);
+        }
+        throw e;
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw e;
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -458,9 +463,13 @@ public class ServerClient implements IDatabaseCommands {
       return new PutResult(responseJson.value(String.class, "Key"), responseJson.value(Etag.class, "ETag"));
     } catch (Exception e) {
       if (e instanceof HttpOperationException) {
-        HttpOperationException httpException = (HttpOperationException) e;
-        if (httpException.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          throw throwConcurrencyException(httpException);
+        try {
+          HttpOperationException httpException = (HttpOperationException) e;
+          if (httpException.getStatusCode() == HttpStatus.SC_CONFLICT) {
+            throw throwConcurrencyException(httpException);
+          }
+        } finally {
+          EntityUtils.consumeQuietly(((HttpOperationException)e).getHttpResponse().getEntity());
         }
       }
       throw new ServerClientException(e);
@@ -514,7 +523,7 @@ public class ServerClient implements IDatabaseCommands {
 
   protected void directUpdateAttachmentMetadata(String key, RavenJObject metadata, Etag etag, String operationUrl) {
     if (etag != null) {
-      metadata.set("Etag", new RavenJValue(etag.toString()));
+      metadata.set("ETag", new RavenJValue(etag.toString()));
     }
 
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
@@ -524,19 +533,21 @@ public class ServerClient implements IDatabaseCommands {
     try {
       jsonRequest.executeRequest();
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() != HttpStatus.SC_INTERNAL_SERVER_ERROR) {
-        throw e;
-      }
-
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try {
-        IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
-      } catch (IOException e1) {
-        throw new ServerClientException(e1);
+        if (e.getStatusCode() != HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+          throw new ServerClientException(e);
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        } catch (IOException e1) {
+          throw new ServerClientException(e1);
+        }
+        throw new ServerClientException("Internal server error: " + baos.toString());
       } finally {
         EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw new ServerClientException("Internal server error: " + baos.toString());
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -641,27 +652,31 @@ public class ServerClient implements IDatabaseCommands {
           HttpExtensions.getEtagHeader(webRequest), null);
 
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
-        } catch (IOException e1) {
-          throw new ServerClientException(e1);
-        } finally {
-          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          try {
+            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          } catch (IOException e1) {
+            throw new ServerClientException(e1);
+          } finally {
+            EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+          }
+
+          RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+          List<String> conflictIds = conflictsDoc.value(RavenJArray.class, "Conflicts").values(String.class);
+
+          ConflictException ex = new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachement will be accessible", true);
+          ex.setConflictedVersionIds(conflictIds.toArray(new String[0]));
+          ex.setEtag(HttpExtensions.getEtagHeader(e.getHttpResponse()));
+          throw ex;
+        } else if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          return null;
         }
-
-        RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
-        List<String> conflictIds = conflictsDoc.value(RavenJArray.class, "Conflicts").values(String.class);
-
-        ConflictException ex = new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachement will be accessible", true);
-        ex.setConflictedVersionIds(conflictIds.toArray(new String[0]));
-        ex.setEtag(HttpExtensions.getEtagHeader(e.getHttpResponse()));
-        throw ex;
-      } else if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        return null;
+        throw new ServerClientException(e);
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw new ServerClientException(e);
 
     } catch (Exception e) {
       throw new ServerClientException(e);
@@ -829,10 +844,14 @@ public class ServerClient implements IDatabaseCommands {
       try {
         transformerDef = httpJsonRequest.readResponseJson();
       } catch (HttpOperationException e) {
-        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-          return null;
+        try {
+          if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+            return null;
+          }
+          throw e;
+        } finally {
+          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
-        throw e;
       }
 
       RavenJObject value = transformerDef.value(RavenJObject.class, "Transformer");
@@ -903,10 +922,14 @@ public class ServerClient implements IDatabaseCommands {
     try {
       indexDef = httpJsonRequest.readResponseJson();
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        return null;
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          return null;
+        }
+        throw e;
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw e;
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -929,10 +952,14 @@ public class ServerClient implements IDatabaseCommands {
     try {
       jsonRequest.executeRequest();
     } catch (HttpOperationException e) {
-      if (HttpStatus.SC_CONFLICT == e.getStatusCode()) {
-        throwConcurrencyException(e);
-      } else {
-        throw e;
+      try {
+        if (HttpStatus.SC_CONFLICT == e.getStatusCode()) {
+          throw throwConcurrencyException(e);
+        } else {
+          throw e;
+        }
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
     } catch (Exception e) {
       throw new ServerClientException(e);
@@ -960,7 +987,7 @@ public class ServerClient implements IDatabaseCommands {
 
     RavenJToken ravenJToken = RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
 
-    return new ConcurrencyException(ravenJToken.value(Etag.class, "expectedETag"), ravenJToken.value(Etag.class, "actualETag"), ravenJToken.value(String.class, "error"), e);
+    return new ConcurrencyException(ravenJToken.value(Etag.class, "ExpectedETag"), ravenJToken.value(Etag.class, "ActualETag"), ravenJToken.value(String.class, "Error"), e);
 
   }
 
@@ -1003,8 +1030,9 @@ public class ServerClient implements IDatabaseCommands {
       RavenJObject responseJson = (RavenJObject) request.readResponseJson();
       return responseJson.value(String.class, "Transformer");
     } catch (HttpOperationException e) {
-      throw new ServerClientException("unable to put transformer", e);
-      /*TODO: dead code - reported - RavenDB-1216
+      try {
+        throw new ServerClientException("unable to put transformer", e);
+        /*TODO: dead code - reported - RavenDB-1216
       var httpWebResponse = e.Response as HttpWebResponse;
       if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
         throw;
@@ -1025,6 +1053,9 @@ public class ServerClient implements IDatabaseCommands {
       }
 
       throw;*/
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+      }
     } catch (IOException e) {
       throw new ServerClientException(e);
     }
@@ -1045,13 +1076,13 @@ public class ServerClient implements IDatabaseCommands {
         throw new IllegalStateException("Cannot put index: " + name + ", index already exists");
       }
     } catch (HttpOperationException e) {
-
-      if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
-        throw new ServerClientException(e);
-      }
-      /*
-       * TODO dead code - reported - RavenDB-1216
-       *   var httpWebResponse = e.Response as HttpWebResponse;
+      try {
+        if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
+          throw new ServerClientException(e);
+        }
+        /*
+         * TODO dead code - reported - RavenDB-1216
+         *   var httpWebResponse = e.Response as HttpWebResponse;
               if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
                   throw;
 
@@ -1073,7 +1104,10 @@ public class ServerClient implements IDatabaseCommands {
 
                   throw compilationException;
               }
-       */
+         */
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+      }
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -1198,7 +1232,7 @@ public class ServerClient implements IDatabaseCommands {
       sb.append("start=").append(start).append("&");
     }
     if (pageSize != Integer.MAX_VALUE) {
-      sb.append("start=").append(pageSize).append("&");
+      sb.append("pageSize=").append(pageSize).append("&");
     }
 
 
@@ -1500,10 +1534,14 @@ public class ServerClient implements IDatabaseCommands {
       try {
         response = (RavenJArray)req.readResponseJson();
       } catch (HttpOperationException e) {
-        if (e.getStatusCode() != HttpStatus.SC_CONFLICT) {
-          throw e;
+        try {
+          if (e.getStatusCode() != HttpStatus.SC_CONFLICT) {
+            throw e;
+          }
+          throw throwConcurrencyException(e);
+        } finally {
+          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
-        throw throwConcurrencyException(e);
       }
       return JsonExtensions.getDefaultObjectMapper().readValue(response.toString(), BatchResult[].class);
     } catch (Exception e) {
@@ -1672,10 +1710,14 @@ public class ServerClient implements IDatabaseCommands {
     try {
       jsonResponse = request.readResponseJson();
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        throw new IllegalStateException("There is no index named: " + indexName);
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          throw new IllegalStateException("There is no index named: " + indexName);
+        }
+        throw new ServerClientException(e);
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw new ServerClientException(e);
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -1759,10 +1801,14 @@ public class ServerClient implements IDatabaseCommands {
       request.write(requestData);
       jsonResponse = request.readResponseJson();
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        throw new IllegalStateException("There is no index named: " + indexName);
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          throw new IllegalStateException("There is no index named: " + indexName);
+        }
+        throw new ServerClientException(e);
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw new ServerClientException(e);
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -1899,17 +1945,21 @@ public class ServerClient implements IDatabaseCommands {
       jsonRequest.executeRequest();
       return SerializationHelper.deserializeJsonDocumentMetadata(key, jsonRequest.getResponseHeaders(), jsonRequest.getResponseStatusCode());
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        return null;
-      } else if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
-        ConflictException conflictException = new ConflictException("Conflict detected on " + key +
-            ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because" +
-            " a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true);
-        conflictException.setEtag(HttpExtensions.getEtagHeader(e.getHttpResponse()));
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          return null;
+        } else if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
+          ConflictException conflictException = new ConflictException("Conflict detected on " + key +
+              ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because" +
+              " a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true);
+          conflictException.setEtag(HttpExtensions.getEtagHeader(e.getHttpResponse()));
 
-        throw conflictException;
+          throw conflictException;
+        }
+        throw new ServerClientException(e);
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw new ServerClientException(e);
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -2236,17 +2286,18 @@ public class ServerClient implements IDatabaseCommands {
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
         new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, HttpMethods.GET, new RavenJObject(), credentials, convention)
         .addOperationHeaders(operationsHeaders));
-    try
-    {
+    try {
       return request.readResponseJson();
-    }
-    catch (HttpOperationException e)
-    {
-      if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        return null;
+    } catch (HttpOperationException e) {
+      try {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          return null;
+        }
+        throw e;
+      } finally {
+        EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-      throw e;
-    } catch (IOException e ){
+    } catch (IOException e) {
       throw new ServerClientException(e);
     }
   }

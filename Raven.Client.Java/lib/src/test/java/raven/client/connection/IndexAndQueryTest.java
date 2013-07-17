@@ -1,7 +1,11 @@
 package raven.client.connection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -19,13 +23,16 @@ import org.mockito.cglib.core.Transformer;
 import raven.abstractions.basic.Holder;
 import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
+import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.QueryHeaderInformation;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.SortedField;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.SortOptions;
+import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
@@ -117,6 +124,14 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
       insertSampleCompaniesEmployees(db1Commands);
 
+      try {
+        db1Commands.streamDocs(Etag.empty(), "companies/", "", 10, 5);
+        fail("can't use etag with startsWith");
+      } catch (IllegalArgumentException e) {
+        //ok
+      }
+
+
       Iterator<RavenJObject> streamDocs = db1Commands.streamDocs(null, "companies/", null, 0, Integer.MAX_VALUE);
       Set<String> companyNames = new HashSet<>();
 
@@ -124,8 +139,17 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
         RavenJObject ravenJObject = streamDocs.next();
         companyNames.add(ravenJObject.value(String.class, "Name"));
       }
-
       assertEquals(new HashSet<>(Arrays.asList("Coca Cola", "Twitter", "Google")), companyNames);
+
+      int count = 0;
+      streamDocs = db1Commands.streamDocs(null, "companies/", "*", 1, 2);
+      while (streamDocs.hasNext()) {
+        RavenJObject ravenJObject = streamDocs.next();
+        assertNotNull(ravenJObject.value(String.class, "Name"));
+        count++;
+      }
+
+      assertEquals(2, count);
 
     } finally {
       deleteDb("db1");
@@ -222,6 +246,42 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     }
   }
 
+  @Test
+  public void testQueryWithIncludes() throws Exception {
+    try {
+      createDb("db1");
+      IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+      insertSampleDataWithIncludes(db1Commands);
+
+      IndexDefinition indexDefinition = new IndexDefinition();
+      indexDefinition.setMap("from s in docs.School select new {Name = s.Name}");
+
+      db1Commands.putIndex("schoolsByName", indexDefinition);
+      waitForNonStaleIndexes(db1Commands);
+
+      IndexQuery query = new IndexQuery();
+      QueryResult queryResult = db1Commands.query("schoolsByName", query, new String[] { "Students" });
+
+      assertEquals(1, queryResult.getResults().size());
+      assertEquals(2, queryResult.getIncludes().size());
+
+      MultiLoadResult students = db1Commands.get(new String[] { "student/1", "student/2" }, new String[0]);
+      assertEquals(2, students.getResults().size());
+      assertTrue(students.getResults().get(0).containsKey("Name"));
+
+      MultiLoadResult studentsMeta = db1Commands.get(new String[] { "student/1", "student/2" }, new String[0], null, null, true);
+      assertEquals(2, studentsMeta.getResults().size());
+      assertFalse(studentsMeta.getResults().get(0).containsKey("Name"));
+
+      MultiLoadResult schoolWithStudents = db1Commands.get(new String[] { "school/1" }, new String[] { "Students" });
+      assertEquals(1, schoolWithStudents.getResults().size());
+      assertEquals(2, schoolWithStudents.getIncludes().size());
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   public void testDynamicQuery() throws Exception {
@@ -291,6 +351,32 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     }
   }
 
+  private void insertSampleDataWithIncludes(IDatabaseCommands dbCommands) {
+
+    // create objects
+    RavenJObject metaSchool = new RavenJObject();
+    metaSchool.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("School"));
+
+    RavenJObject metaStudent = new RavenJObject();
+    metaStudent.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("Student"));
+
+    RavenJObject school = new RavenJObject();
+    school.add("Name", new RavenJValue("Harvard"));
+    school.add("Students", new RavenJArray(new RavenJValue("student/1"), new RavenJValue("student/2")));
+
+    RavenJObject student1 = new RavenJObject();
+    student1.add("Name", new RavenJValue("Yoda"));
+
+    RavenJObject student2 = new RavenJObject();
+    student2.add("Name", new RavenJValue("Jedi"));
+
+    // put objects
+    dbCommands.put("school/1", null, school, metaSchool);
+    dbCommands.put("student/1", null, student1, metaStudent);
+    dbCommands.put("student/2", null, student2, metaStudent);
+
+  }
+
   private void insertSampleCompaniesEmployees(IDatabaseCommands db1Commands) {
     Company c1 = new Company("1", "Coca Cola", Arrays.asList(
         new Employee("John", new String[] {  }, new Date(), 100.0) )
@@ -354,6 +440,14 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
       db1Commands.putIndex("devStartWithM", builder.toIndexDefinition(convention));
 
+      try {
+        db1Commands.putIndex("devStartWithM", builder.toIndexDefinition(convention), false);
+        fail("Can't overwrite index.");
+      } catch (ServerClientException e) {
+        //ok
+      }
+
+
       waitForNonStaleIndexes(db1Commands);
 
       IndexQuery query = new IndexQuery();
@@ -362,6 +456,22 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       assertEquals(false, queryResult.isStale());
       assertEquals(1, queryResult.getResults().size());
       assertEquals("marcin", queryResult.getResults().iterator().next().value(String.class, "Nick"));
+
+      queryResult = db1Commands.query("devStartWithM", query, new String[0], true);
+      assertEquals(1, queryResult.getResults().size());
+      RavenJObject ravenJObject = queryResult.getResults().iterator().next();
+      assertFalse(ravenJObject.containsKey("Nick"));
+      assertTrue(ravenJObject.containsKey("@metadata"));
+
+      db1Commands.deleteIndex("devStartWithM");
+      assertNull(db1Commands.getIndex("devStartWithM"));
+
+      try {
+        queryResult = db1Commands.query("devStartWithM", query, new String[0]);
+        fail();
+      } catch (ServerClientException e) {
+        //ok
+      }
 
     } finally {
       deleteDb("db1");

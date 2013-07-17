@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import raven.abstractions.basic.Holder;
 import raven.abstractions.data.Attachment;
@@ -12,6 +13,7 @@ import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
+import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.QueryHeaderInformation;
 import raven.abstractions.data.QueryResult;
@@ -20,6 +22,7 @@ import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
 import raven.client.connection.profiling.IHoldProfilingInformation;
 
 //TODO: expose all methods
@@ -56,6 +59,44 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
 
 
   /**
+   * Gets the results for the specified ids.
+   * @param ids
+   * @param includes
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes);
+
+  /**
+   * Gets the results for the specified ids.
+   * @param ids
+   * @param includes
+   * @param transformer
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes, final String transformer);
+
+  /**
+   * Gets the results for the specified ids.
+   * @param ids
+   * @param includes
+   * @param transformer
+   * @param queryInputs
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes, final String transformer, final Map<String, RavenJToken> queryInputs);
+
+  /**
+   * @param ids
+   * @param includes
+   * @param transformer
+   * @param queryInputs
+   * @param metadataOnly
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes, final String transformer, final Map<String, RavenJToken> queryInputs, final boolean metadataOnly);
+
+
+  /**
    * Returns server statistics
    * @return
    */
@@ -69,6 +110,25 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public QueryResult query(String index, IndexQuery query, String[] includes);
+
+  /**
+   * Performs index query
+   * @param index
+   * @param query
+   * @param includes
+   * @return
+   */
+  public QueryResult query(String index, IndexQuery query, String[] includes, boolean metadataOnly);
+
+  /**
+   * Performs index query
+   * @param index
+   * @param query
+   * @param includes
+   * @return
+   */
+  public QueryResult query(String index, IndexQuery query, String[] includes, boolean metadataOnly, boolean indexEntriesOnly);
+
   /**
    * Deletes the attachment with the specified key
    * @param key The key.

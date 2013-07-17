@@ -384,12 +384,12 @@ public class HttpJsonRequest {
       return result;
     }
 
-    responseHeaders = extractHeaders(httpResponse.getAllHeaders());
-    responseStatusCode = httpResponse.getStatusLine().getStatusCode();
-
-    handleReplicationStatusChanges.apply(extractHeaders(httpResponse.getAllHeaders()), primaryUrl, operationUrl);
-
     try {
+      responseHeaders = extractHeaders(httpResponse.getAllHeaders());
+      responseStatusCode = httpResponse.getStatusLine().getStatusCode();
+
+      handleReplicationStatusChanges.apply(extractHeaders(httpResponse.getAllHeaders()), primaryUrl, operationUrl);
+
       RavenJToken data = RavenJToken.tryLoad(responseStream);
 
       if (HttpMethods.GET == method && shouldCacheRequest) {
