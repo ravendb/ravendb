@@ -1203,5 +1203,37 @@ more responsive application.
 		{
 			return ReferenceEquals(obj, this);
 		}
+
+	    internal void HandleInternalMetadata(RavenJObject result)
+	    {
+	        // Implant a property with "id" value ... if not exists
+	        var metadata = result.Value<RavenJObject>("@metadata");
+	        if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
+	        {
+	            // if the item has metadata, then nested items will not have it, so we can skip recursing down
+	            foreach (var nested in result.Select(property => property.Value))
+	            {
+	                var jObject = nested as RavenJObject;
+	                if (jObject != null)
+	                    HandleInternalMetadata(jObject);
+	                var jArray = nested as RavenJArray;
+	                if (jArray == null)
+	                    continue;
+	                foreach (var item in jArray.OfType<RavenJObject>())
+	                {
+	                    HandleInternalMetadata(item);
+	                }
+	            }
+	            return;
+	        }
+
+	        var entityName = metadata.Value<string>(Constants.RavenEntityName);
+
+	        var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
+	        if (result.ContainsKey(idPropName))
+	            return;
+
+	        result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
+	    }
 	}
 }
