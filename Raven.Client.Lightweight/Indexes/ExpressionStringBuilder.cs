@@ -883,7 +883,28 @@ namespace Raven.Client.Indexes
 
 		private string ConvertTypeToCSharpKeyword(Type type)
 		{
-			if (type == typeof(string))
+            if (type.IsGenericType)
+            {
+                var typeDefinition = type.GetGenericTypeDefinition();
+                var sb = new StringBuilder(typeDefinition.FullName,0);
+                sb.Length = typeDefinition.FullName.IndexOf('`');
+                sb.Replace('+', '.');
+                sb.Append("<");
+
+                var arguments = type.GetGenericArguments();
+                for (int i = 0; i < arguments.Length; i++)
+                {
+                    if (i != 0)
+                        sb.Append(", ");
+                    sb.Append(ConvertTypeToCSharpKeyword(arguments[i]));
+                }
+
+                sb.Append(">");
+
+                return sb.ToString();
+            }
+
+		    if (type == typeof(string))
 			{
 				return "string";
 			}
