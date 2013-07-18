@@ -311,6 +311,9 @@ task CopySilverlight {
 
 task CopySmuggler {
 	Copy-Item $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
+	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Smuggler
+	Copy-Item $build_dir\Jint.Raven.??? $build_dir\Output\Smuggler
+	Copy-Item $build_dir\System.Reactive.Core.??? $build_dir\Output\Smuggler
 	Copy-Item $build_dir\Microsoft.CompilerServices.AsyncTargetingPack.Net4.??? $build_dir\Output\Smuggler
 	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
