@@ -203,7 +203,9 @@ namespace Raven.Smuggler
 					try
 					{
 						RavenJArray documents = null;
-						var request = CreateRequest("/docs?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag);
+					    var url = "/docs?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag;
+					    ShowProgress("GET " + url);
+					    var request = CreateRequest(url);
 						request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
 
 						return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(documents.Values<RavenJObject>().GetEnumerator()));
@@ -217,7 +219,7 @@ namespace Raven.Smuggler
 					}
 				}
 			}
-
+		    ShowProgress("Streaming documents from " + lastEtag);
 			return Commands.StreamDocsAsync(lastEtag);
 		}
 
