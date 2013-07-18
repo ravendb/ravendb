@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 					Query = "Tag:Animals"
 				});
 
-				Assert.Throws<AggregateException>(() => op.WaitForCompletion());
+				Assert.Throws<InvalidOperationException>(() => op.WaitForCompletion());
 
 			}
 		}
