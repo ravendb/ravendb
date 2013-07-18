@@ -134,7 +134,6 @@ namespace Raven.Studio.Features.Stats
             return DatabaseCommands.GetLogsAsync(showErrorsOnly)
                 .ContinueOnSuccess(logs => Logs.Match(logs.OrderByDescending(x => x.TimeStamp).ToList(), () =>
                 {
-	                DisplayedLogs = Logs;
                     if (DisplayedLogs.Count == 0)
                         DisplayLatestLogs();
 					OnPropertyChanged(() => DisplayedLogs);
