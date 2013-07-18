@@ -1392,7 +1392,7 @@ namespace Raven.Database.Indexing
 						{
 							// however, we copy the current segments.gen & index.version to make 
 							// sure that we get the _at the time_ of the write. 
-							foreach (var fileName in new[] { "segments.gen", "index.version" })
+							foreach (var fileName in new[] { "segments.gen", IndexStorage.IndexVersionFileName(indexDefinition)})
 							{
 								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
 								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
