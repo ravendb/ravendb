@@ -58,7 +58,7 @@ public class Etag {
     ByteBuffer buffer = ByteBuffer.allocate(8);
     buffer.putLong(x);
     return buffer.array();
-}
+  }
 
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
@@ -81,7 +81,7 @@ public class Etag {
     buffer.put(bytes);
     buffer.flip();//need flip
     return buffer.getLong();
-}
+  }
 
   public static Etag parse(byte[] bytes) {
     byte[] arr1 = ArrayUtils.subarray(bytes, 0, 8);
@@ -102,8 +102,8 @@ public class Etag {
 
   private static byte hexStringToByte(String s) {
     return (byte) ((Character.digit(s.charAt(0), 16) << 4)
-                             + Character.digit(s.charAt(0+1), 16));
-}
+        + Character.digit(s.charAt(0+1), 16));
+  }
 
   public static Etag parse(String str) {
 

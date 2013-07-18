@@ -200,7 +200,7 @@ public class MetadataExtensions {
       return RavenJArray.parse(val);
     }
     //TODO: parse dates
-    return new RavenJValue(val);
+    return new RavenJValue(val); //TODO: do we need unescape?
   }
 
 }

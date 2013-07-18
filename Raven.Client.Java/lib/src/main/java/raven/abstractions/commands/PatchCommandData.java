@@ -89,6 +89,7 @@ public class PatchCommandData implements ICommandData {
       patchesArray.add(patchRequest.toJson());
     }
     ret.add("Patches", patchesArray);
+    ret.add("Metadata", metadata);
     ret.add("AdditionalData", additionalData);
     if (etag != null) {
       ret.add("Etag", new RavenJValue(etag));

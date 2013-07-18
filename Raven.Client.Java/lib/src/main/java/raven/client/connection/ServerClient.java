@@ -1391,7 +1391,7 @@ public class ServerClient implements IDatabaseCommands {
         for (String include: includes) {
           tokens.add("include=" + include);
         }
-        path += StringUtils.join(tokens, "&");
+        path += "&" + StringUtils.join(tokens, "&");
       }
       if (StringUtils.isNotEmpty(transformer)) {
         path += "&transformer=" + transformer;
@@ -1735,7 +1735,14 @@ public class ServerClient implements IDatabaseCommands {
       throw new ServerClientException(e);
     }
 
-    return new Operation(this, jsonResponse.value(Long.TYPE,"OperationId"));
+    if (jsonResponse == null || jsonResponse.getType() != JTokenType.OBJECT) {
+      return null;
+    }
+    RavenJToken opId = ((RavenJObject)jsonResponse).get("OperationId");
+    if (opId == null || opId.getType() != JTokenType.INTEGER) {
+      return null;
+    }
+    return new Operation(this, opId.value(Long.TYPE));
   }
 
   /**
@@ -1931,6 +1938,35 @@ public class ServerClient implements IDatabaseCommands {
     try {
       RavenJToken ravenJToken = jsonRequest.readResponseJson();
       return ravenJToken.value(Long.class, "Value");
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+  }
+
+  /**
+   * Seeds the next identity value on the server
+   * @param name
+   * @param value
+   * @return
+   */
+  public long seedIdentityFor(final String name, final long value) {
+    return executeWithReplication(HttpMethods.POST, new Function1<String, Long>() {
+
+      @Override
+      public Long apply(String url) {
+        return directSeedIdentityFor(url, name, value);
+      }
+    });
+  }
+
+  private long directSeedIdentityFor(String url, String name, long value) {
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
+        new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + UrlUtils.escapeDataString(name)+ "&value=" + value, HttpMethods.POST, new RavenJObject(), credentials, convention)
+        .addOperationHeaders(operationsHeaders));
+
+    try {
+      RavenJToken readResponseJson = request.readResponseJson();
+      return readResponseJson.value(Long.TYPE, "Value");
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
