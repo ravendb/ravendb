@@ -21,6 +21,8 @@ public class DocumentConvention {
 
   private Function1<HttpResponse, Action1<HttpRequest>> handleUnauthorizedResponse;
 
+  private boolean enlistInDistributedTransactions = false;
+
 
   /**
    * @return the handleUnauthorizedResponse
@@ -110,8 +112,12 @@ public class DocumentConvention {
   }
 
   public boolean isEnlistInDistributedTransactions() {
-    // TODO Auto-generated method stub
-    return false;
+    return enlistInDistributedTransactions;
   }
+
+  public void setEnlistInDistributedTransactions(boolean enlistInDistributedTransactions) {
+    this.enlistInDistributedTransactions = enlistInDistributedTransactions;
+  }
+
 
 }

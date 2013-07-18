@@ -26,6 +26,9 @@ public class PatchRequest {
   private Integer position;
   private Boolean allPositions;
 
+
+
+
   /**
    * Get AllPositions. Set this property to true if you want to modify all items in an collection.
    * @return

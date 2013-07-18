@@ -111,9 +111,6 @@ public class ServerClient implements IDatabaseCommands {
     replicationInformer.removeFailoverStatusChanged(event);
   }
 
-
-
-
   public ServerClient(String url, DocumentConvention convention, Credentials credentials, Function1<String, ReplicationInformer> replicationInformerGetter,  String databaseName,
       HttpJsonRequestFactory httpJsonRequestFactory, UUID currentSessionId, IDocumentConflictListener[] conflictListeners) {
     this.profilingInformation = ProfilingInformation.createProfilingInformation(currentSessionId);
@@ -145,6 +142,7 @@ public class ServerClient implements IDatabaseCommands {
   /**
    * @return the operationsHeaders
    */
+  @Override
   public Map<String, String> getOperationsHeaders() {
     return operationsHeaders;
   }
@@ -152,6 +150,7 @@ public class ServerClient implements IDatabaseCommands {
   /**
    * @param operationsHeaders the operationsHeaders to set
    */
+  @Override
   public void setOperationsHeaders(Map<String, String> operationsHeaders) {
     this.operationsHeaders = operationsHeaders;
   }
@@ -776,6 +775,7 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
+  @Override
   public Collection<TransformerDefinition> getTransformers(final int start, final int pageSize) {
     return executeWithReplication(HttpMethods.GET, new Function1<String, Collection<TransformerDefinition>>() {
 
@@ -800,6 +800,7 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
+  @Override
   public TransformerDefinition getTransformer(final String name) {
     ensureIsNotNullOrEmpty(name, "name");
     return executeWithReplication(HttpMethods.GET, new Function1<String, TransformerDefinition>() {
@@ -810,6 +811,7 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
+  @Override
   public void deleteTransformer(final String name) {
     ensureIsNotNullOrEmpty(name, "name");
     executeWithReplication(HttpMethods.DELETE, new Function1<String, Void>() {
@@ -995,6 +997,7 @@ public class ServerClient implements IDatabaseCommands {
     return putIndex(name, definition, false);
   }
 
+  @Override
   public String putTransformer(final String name, final TransformerDefinition indexDef) {
     ensureIsNotNullOrEmpty(name, "name");
     return executeWithReplication(HttpMethods.PUT, new Function1<String, String>() {
@@ -1005,6 +1008,7 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
+  @Override
   public String putIndex(final String name, final IndexDefinition definition, final boolean overwrite) {
     ensureIsNotNullOrEmpty(name, "name");
     return executeWithReplication(HttpMethods.PUT, new Function1<String, String>() {
@@ -1156,18 +1160,22 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
+  @Override
   public String putIndex(String name, IndexDefinitionBuilder indexDef) {
     return putIndex(name, indexDef.toIndexDefinition(convention));
   }
 
+  @Override
   public String putIndex(String name, IndexDefinitionBuilder indexDef, boolean overwrite) {
     return putIndex(name, indexDef.toIndexDefinition(convention), overwrite);
   }
 
+  @Override
   public QueryResult query(String index, IndexQuery query, String[] includes) {
     return query(index, query, includes, false, false);
   }
 
+  @Override
   public QueryResult query(String index, IndexQuery query, String[] includes, boolean metadataOnly) {
     return query(index, query, includes, metadataOnly, false);
   }
@@ -1607,6 +1615,7 @@ public class ServerClient implements IDatabaseCommands {
    * Prepares the transaction on the server.
    * @param txId
    */
+  @Override
   public void prepareTransaction(final String txId) {
     executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
       @Override
@@ -1635,12 +1644,14 @@ public class ServerClient implements IDatabaseCommands {
    * @param credentialsForSession
    * @return
    */
+  @Override
   public IDatabaseCommands with(Credentials credentialsForSession) {
     return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId, conflictListeners);
   }
 
   //TODO: public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 
+  @Override
   public AutoCloseable forceReadFromMaster() {
     final int old = readStripingBase;
     readStripingBase = -1;
@@ -1652,6 +1663,7 @@ public class ServerClient implements IDatabaseCommands {
     };
   }
 
+  @Override
   public IDatabaseCommands forDatabase(String database) {
     if (Constants.SYSTEM_DATABASE.equals(database)) {
       return forSystemDatabase();
@@ -1667,6 +1679,7 @@ public class ServerClient implements IDatabaseCommands {
     return client;
   }
 
+  @Override
   public IDatabaseCommands forSystemDatabase() {
     String databaseUrl = MultiDatabase.getRootDatabaseUrl(url);
     if (databaseUrl.equals(url)) {
@@ -1733,6 +1746,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param patchRequests
    * @return
    */
+  @Override
   public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests) {
     return updateByIndex(indexName, queryToUpdate, patchRequests, false);
   }
@@ -1745,6 +1759,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param patch
    * @return
    */
+  @Override
   public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch) {
     return updateByIndex(indexName, queryToUpdate, patch, false);
   }
@@ -1757,6 +1772,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param allowStale
    * @return
    */
+  @Override
   public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, boolean allowStale) {
     RavenJArray array = new RavenJArray();
     for (PatchRequest request: patchRequests) {
@@ -1775,6 +1791,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param allowStale
    * @return
    */
+  @Override
   public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, boolean allowStale) {
     String requestData = RavenJObject.fromObject(patch).toString();
     return updateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, HttpMethods.EVAL);
@@ -1840,6 +1857,7 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
+  @Override
   public MultiLoadResult moreLikeThis(MoreLikeThisQuery query) {
     RavenJToken token = executeGetRequest(query.getRequestUri());
 
@@ -1882,6 +1900,7 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
+  @Override
   public DatabaseStatistics getStatistics() {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
         new CreateHttpJsonRequestParams(this, url + "/stats", HttpMethods.GET, new RavenJObject(), credentials, convention));
@@ -1894,6 +1913,7 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
+  @Override
   public Long nextIdentityFor(final String name) {
     return executeWithReplication(HttpMethods.POST, new Function1<String, Long>() {
       @Override
@@ -1970,6 +1990,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param requests
    * @return
    */
+  @Override
   public GetResponse[] multiGet(final GetRequest[] requests) {
     for (GetRequest getRequest: requests) {
       getRequest.getHeaders().put("Raven-Client-Version", HttpJsonRequest.clientVersion);
@@ -2022,6 +2043,7 @@ public class ServerClient implements IDatabaseCommands {
     }
   }
 
+  @Override
   public List<String> getTerms(final String index, final String field, final String fromValue, final int pageSize) {
     return executeWithReplication(HttpMethods.GET, new Function1<String, List<String>>() {
       @Override
@@ -2059,6 +2081,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param pageSize
    * @return
    */
+  @Override
   public FacetResults getFacets(final String index, final IndexQuery query, final String facetSetupDoc, final int start, final Integer pageSize) {
     return executeWithReplication(HttpMethods.GET, new Function1<String, FacetResults>() {
 
@@ -2144,6 +2167,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param patches
    * @return
    */
+  @Override
   public RavenJObject patch(String key, PatchRequest[] patches) {
     return patch(key, patches, null);
   }
@@ -2155,6 +2179,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param ignoreMissing
    * @return
    */
+  @Override
   public RavenJObject patch(String key, PatchRequest[] patches, boolean ignoreMissing) {
     PatchCommandData command = new PatchCommandData();
     command.setKey(key);
@@ -2173,6 +2198,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param patch
    * @return
    */
+  @Override
   public RavenJObject patch(String key, ScriptedPatchRequest patch) {
     return patch(key, patch, null);
   }
@@ -2184,6 +2210,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param ignoreMissing
    * @return
    */
+  @Override
   public RavenJObject patch(String key, ScriptedPatchRequest patch, boolean ignoreMissing) {
     ScriptedPatchCommandData command = new ScriptedPatchCommandData();
     command.setKey(key);
@@ -2204,6 +2231,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param etag
    * @return
    */
+  @Override
   public RavenJObject patch(String key, PatchRequest[] patches, Etag etag) {
     PatchCommandData command = new PatchCommandData();
     command.setKey(key);
@@ -2222,6 +2250,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param defaultMetadata
    * @return
    */
+  @Override
   public RavenJObject patch(String key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata) {
     PatchCommandData command = new PatchCommandData();
     command.setKey(key);
@@ -2240,6 +2269,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param etag
    * @return
    */
+  @Override
   public RavenJObject patch(String key, ScriptedPatchRequest patch, Etag etag) {
     ScriptedPatchCommandData command = new ScriptedPatchCommandData();
     command.setKey(key);
@@ -2258,6 +2288,7 @@ public class ServerClient implements IDatabaseCommands {
    * @param defaultMetadata
    * @return
    */
+  @Override
   public RavenJObject patch(String key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata) {
     ScriptedPatchCommandData command = new ScriptedPatchCommandData();
     command.setKey(key);
@@ -2269,7 +2300,7 @@ public class ServerClient implements IDatabaseCommands {
     return batchResults[0].getAdditionalData();
   }
 
-
+  @Override
   public AutoCloseable disableAllCaching() {
     return jsonRequestFactory.disableAllCaching();
   }

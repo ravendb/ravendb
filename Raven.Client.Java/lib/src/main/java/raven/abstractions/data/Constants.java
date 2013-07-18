@@ -17,6 +17,8 @@ public class Constants {
 
   public final static String RAVEN_S_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
+  public final static String RAVEN_DOCUMENT_DOES_NOT_EXISTS = "Raven-Document-Does-Not-Exists";
+
   public final static String RAVEN_CLIENT_PRIMARY_SERVER_URL = "Raven-Client-Primary-Server-Url";
   public final static String RAVEN_CLIENT_PRIMARY_SERVER_LAST_CHECK = "Raven-Client-Primary-Server-LastCheck";
   public final static String RAVEN_FORCE_PRIMARY_SERVER_CHECK = "Raven-Force-Primary-Server-Check";

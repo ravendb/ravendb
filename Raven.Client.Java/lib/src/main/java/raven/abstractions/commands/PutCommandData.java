@@ -1,6 +1,5 @@
 package raven.abstractions.commands;
 
-import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.TransactionInformation;
@@ -74,10 +73,10 @@ public class PutCommandData implements ICommandData {
   public RavenJObject toJson() {
     RavenJObject value = new RavenJObject();
     value.add("Key", new RavenJValue(key));
-    value.add("Method", new RavenJValue(SharpEnum.value(getMethod())));
-    value.add("Document", new RavenJValue(document));
-    value.add("Metadata", new RavenJValue(metadata));
-    value.add("AdditionalData", new RavenJValue(additionalData));
+    value.add("Method", new RavenJValue(getMethod().name()));
+    value.add("Document", document);
+    value.add("Metadata", metadata);
+    value.add("AdditionalData", additionalData);
 
     if (etag != null) {
       value.add("Etag", new RavenJValue(etag.toString()));

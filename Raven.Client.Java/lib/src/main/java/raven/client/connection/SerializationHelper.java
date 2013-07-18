@@ -84,6 +84,9 @@ public class SerializationHelper {
   private static Date getLastModifiedDate(Map<String, String> headers) {
 
     String ravenLastModified = headers.get(Constants.RAVEN_LAST_MODIFIED);
+    if ("0001-01-01T00:00:00.0000000".equals(ravenLastModified)) {
+      return new Date(0);
+    }
     if (StringUtils.isNotEmpty(ravenLastModified)) {
       try {
         return new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT).parse(ravenLastModified);

@@ -19,10 +19,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 import raven.abstractions.closure.Functions;
+import raven.abstractions.commands.ICommandData;
+import raven.abstractions.commands.PatchCommandData;
+import raven.abstractions.commands.PutCommandData;
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.BatchResult;
+import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
+import raven.abstractions.data.PatchCommandType;
+import raven.abstractions.data.PatchRequest;
 import raven.abstractions.data.PutResult;
 import raven.abstractions.data.UuidType;
 import raven.abstractions.exceptions.ServerClientException;
@@ -32,6 +39,7 @@ import raven.abstractions.indexing.FieldStorage;
 import raven.abstractions.indexing.FieldTermVector;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.SortOptions;
+import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
@@ -58,6 +66,65 @@ public class ServerClientTest extends RavenDBAwareTests {
       new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
       UUID.randomUUID(), new IDocumentConflictListener[0]);
   }
+
+  @Test
+  public void testTransactionsToIsolateSaves() throws Exception {
+    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    try {
+      createDb("db1");
+
+      RavenJObject company = new RavenJObject();
+      company.add("Name", new RavenJValue("Company Name"));
+      RavenJObject meta = new RavenJObject();
+      meta.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("companies"));
+
+      try (AutoCloseable transaction = RavenTransactionAccessor.startTransaction()) {
+        convention.setEnlistInDistributedTransactions(true);
+        db1Commands.put("company/1", null, company, meta);
+
+        try (AutoCloseable tx2 = RavenTransactionAccessor.startTransaction()) {
+          assertTrue(db1Commands.get("company/1").getMetadata().containsKey(Constants.RAVEN_DOCUMENT_DOES_NOT_EXISTS));
+        }
+        assertNotNull(db1Commands.get("company/1"));
+        db1Commands.prepareTransaction(RavenTransactionAccessor.getTransactionInformation().getId());
+        db1Commands.commit(RavenTransactionAccessor.getTransactionInformation().getId());
+        convention.setEnlistInDistributedTransactions(false);
+      }
+
+      assertNotNull(db1Commands.get("company/1"));
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
+  @Test
+  public void testTransactionRollback() throws Exception {
+    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    try {
+      createDb("db1");
+
+      RavenJObject company = new RavenJObject();
+      company.add("Name", new RavenJValue("Company Name"));
+      RavenJObject meta = new RavenJObject();
+      meta.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("companies"));
+
+      try (AutoCloseable transaction = RavenTransactionAccessor.startTransaction()) {
+        convention.setEnlistInDistributedTransactions(true);
+        db1Commands.put("company/1", null, company, meta);
+
+        assertNotNull(db1Commands.get("company/1"));
+        db1Commands.rollback(RavenTransactionAccessor.getTransactionInformation().getId());
+        convention.setEnlistInDistributedTransactions(false);
+      }
+
+      assertNull(db1Commands.get("company/1"));
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
 
   @Test
   public void testPutGet() throws Exception {
@@ -286,8 +353,47 @@ public class ServerClientTest extends RavenDBAwareTests {
 
 
   @Test
-  public void testTransformers() {
+  public void testBatch() throws Exception {
+    try {
+      createDb("db1");
+      IDatabaseCommands commands = serverClient.forDatabase("db1");
 
+      RavenJObject postMeta = new RavenJObject();
+      postMeta.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("posts"));
+
+      RavenJObject firstComment = new RavenJObject();
+      firstComment.add("AuthorId", new RavenJValue("authors/123"));
+
+      RavenJObject post = new RavenJObject();
+      post.add("Comments", new RavenJArray(firstComment));
+
+      PutCommandData createPost = new PutCommandData();
+      createPost.setKey("posts/1");
+      createPost.setMetadata(postMeta);
+      createPost.setDocument(post);
+
+      RavenJObject secondComment = new RavenJObject();
+      secondComment.add("AuthorId", new RavenJValue("authors/456"));
+
+      PatchCommandData addAnotherComment = new PatchCommandData();
+      addAnotherComment.setKey("posts/1");
+      PatchRequest patchRequest = new PatchRequest();
+      addAnotherComment.setPatches(new PatchRequest[] { patchRequest});
+      patchRequest.setType(PatchCommandType.ADD);
+      patchRequest.setName("Comments");
+      patchRequest.setValue(secondComment);
+
+      BatchResult[] batchResults = commands.batch(Arrays.<ICommandData> asList(createPost, addAnotherComment));
+      assertEquals(2, batchResults.length);
+
+      JsonDocument fetchedPost = commands.get("posts/1");
+      assertNotNull(fetchedPost);
+      assertEquals(2, fetchedPost.getDataAsJson().value(RavenJArray.class, "Comments").size());
+
+
+    } finally {
+      deleteDb("db1");
+    }
   }
 
   @Test

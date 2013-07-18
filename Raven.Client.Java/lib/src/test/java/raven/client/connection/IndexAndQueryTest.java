@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.cglib.core.CollectionUtils;
 import org.mockito.cglib.core.Transformer;
@@ -45,6 +46,7 @@ import raven.samples.Developer;
 import raven.samples.QDeveloper;
 import raven.samples.entities.Company;
 import raven.samples.entities.Employee;
+import raven.samples.entities.QCompany;
 
 public class IndexAndQueryTest extends RavenDBAwareTests {
   private DocumentConvention convention;
@@ -72,6 +74,57 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       index.setMap("from doc in docs where doc.Type == 'posts' select new{ doc.Title.Length }");
       IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
       db1Commands.putIndex("invalidIndex", index);
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
+  @Test
+  public void testUpdateByIndexPatch() throws Exception {
+    try {
+      createDb("db1");
+      IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+      insertSampleCompaniesEmployees(db1Commands);
+
+
+    } finally {
+      deleteDb("db1");
+    }
+  }
+
+  @Test
+  @Ignore("waiting for RavenDB-1229")
+  public void testDeleteByIndex() throws Exception {
+    try {
+      createDb("db1");
+      IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+      insertSampleCompaniesEmployees(db1Commands);
+
+      try {
+        db1Commands.deleteByIndex("noSuchIndex", new IndexQuery());
+        fail();
+      } catch (IllegalStateException e) {
+        // ok
+      }
+
+      QCompany c = new QCompany("c");
+
+      IndexDefinition indexDefinition = new IndexDefinition();
+      indexDefinition.setMap(
+          IndexExpression.from(Company.class)
+          .where(c.name.startsWith("T").or(c.name.startsWith("C")))
+          .select(AnonymousExpression.create(Company.class).with(c.name, c.name)).toLinq()
+          );
+
+      String indexName = "companies/startsWithTorC";
+
+      db1Commands.putIndex(indexName, indexDefinition);
+      waitForNonStaleIndexes(db1Commands);
+
+      Operation operation = db1Commands.deleteByIndex(indexName, new IndexQuery());
+      RavenJArray completion = (RavenJArray) operation.waitForCompletion();
+      assertEquals(2, completion.size());
 
     } finally {
       deleteDb("db1");

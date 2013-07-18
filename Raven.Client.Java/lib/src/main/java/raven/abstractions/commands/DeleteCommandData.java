@@ -1,6 +1,5 @@
 package raven.abstractions.commands;
 
-import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.TransactionInformation;
@@ -61,7 +60,7 @@ public class DeleteCommandData implements ICommandData {
     RavenJObject object = new RavenJObject();
     object.add("Key", new RavenJValue(key));
     object.add("Etag", new RavenJValue(etag != null ? etag.toString() : null));
-    object.add("Method", new RavenJValue(SharpEnum.value(getMethod())));
+    object.add("Method", new RavenJValue(getMethod().name()));
     object.add("AdditionalData", additionalData);
     return object;
   }

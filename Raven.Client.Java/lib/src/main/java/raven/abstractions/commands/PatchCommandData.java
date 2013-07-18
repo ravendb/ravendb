@@ -1,6 +1,5 @@
 package raven.abstractions.commands;
 
-import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.PatchRequest;
@@ -83,7 +82,7 @@ public class PatchCommandData implements ICommandData {
   public RavenJObject toJson() {
     RavenJObject ret = new RavenJObject();
     ret.add("Key", new RavenJValue(key));
-    ret.add("Method", new RavenJValue(SharpEnum.value(getMethod())));
+    ret.add("Method", new RavenJValue(getMethod().name()));
 
     RavenJArray patchesArray = new RavenJArray();
     for (PatchRequest patchRequest: patches) {
