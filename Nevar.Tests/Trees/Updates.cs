@@ -1,9 +1,33 @@
-﻿using Xunit;
+﻿using System.IO;
+using Xunit;
 
 namespace Nevar.Tests.Trees
 {
 	public class Updates : StorageTest
 	{
+		[Fact]
+		public void UpdateThatIsBiggerThanPageSize()
+		{
+			using (var tx = Env.NewTransaction())
+			{
+				Env.Root.Add(tx, "1", new MemoryStream(new byte[1200]));
+				Env.Root.Add(tx, "2", new MemoryStream(new byte[1200]));
+				Env.Root.Add(tx, "3", new MemoryStream(new byte[1200]));
+
+				tx.Commit();
+			}
+
+			// update that is too big
+			using (var tx = Env.NewTransaction())
+			{
+				Env.Root.Add(tx, "1", new MemoryStream(new byte[Constants.PageMaxSpace - 1200]));
+
+				tx.Commit();
+			}
+
+			Assert.Equal(3 , Env.Root.PageCount);
+		}
+
 		[Fact]
 		public void CanAddAndUpdate()
 		{

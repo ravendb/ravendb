@@ -48,6 +48,9 @@ namespace Nevar
 
 			var page = FindPageFor(tx, key, cursor);
 
+			if (page.LastMatch == 0) // this is an update operation
+				page.RemoveNode(page.LastSearchPosition);
+
 			if (page.HasSpaceFor(key, value) == false)
 			{
 				SplitPage(tx, key, value, -1, cursor);
@@ -55,8 +58,6 @@ namespace Nevar
 				return;
 			}
 
-			if(page.LastMatch == 0) // this is an update operation
-				page.RemoveNode(page.LastSearchPosition);
 			page.AddNode(page.LastSearchPosition, key, value, 0);
 
 			page.DebugValidate(_cmp);
