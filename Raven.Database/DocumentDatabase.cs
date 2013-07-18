@@ -2429,7 +2429,11 @@ namespace Raven.Database
         {
             PendingTaskAndState value;
             if (pendingTasks.TryGetValue(id, out value))
-                return value.State;
+            {
+	            if (value.Task.IsFaulted || value.Task.IsCanceled)
+		            value.Task.Wait(); //throws
+	            return value.State;
+            }
             return null;
         }
 
