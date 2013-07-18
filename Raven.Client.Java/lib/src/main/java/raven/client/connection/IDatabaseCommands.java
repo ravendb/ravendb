@@ -115,6 +115,15 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    */
   public MultiLoadResult get(final String[] ids, final String[] includes, final String transformer, final Map<String, RavenJToken> queryInputs, final boolean metadataOnly);
 
+
+  /**
+   * Seeds the next identity value on the server
+   * @param name
+   * @param value
+   * @return
+   */
+  public long seedIdentityFor(final String name, final long value) ;
+
   /**
    * Get documents from server
    * @param start

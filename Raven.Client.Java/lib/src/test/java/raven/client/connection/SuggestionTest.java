@@ -57,7 +57,6 @@ public class SuggestionTest extends RavenDBAwareTests {
         dbCommands.put("users/" + (i+1), null, document, meta1);
       }
 
-
       IndexDefinition index = new IndexDefinition();
       index.setMap("from user in docs.users select new { user.FullName }");
       index.getIndexes().put("FullName", FieldIndexing.ANALYZED);

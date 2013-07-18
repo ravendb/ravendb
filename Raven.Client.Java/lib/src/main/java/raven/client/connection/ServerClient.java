@@ -1951,7 +1951,6 @@ public class ServerClient implements IDatabaseCommands {
    */
   public long seedIdentityFor(final String name, final long value) {
     return executeWithReplication(HttpMethods.POST, new Function1<String, Long>() {
-
       @Override
       public Long apply(String url) {
         return directSeedIdentityFor(url, name, value);
