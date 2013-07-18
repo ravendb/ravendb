@@ -61,8 +61,41 @@ namespace Raven.Studio.Features.Settings
             SelectedVersioning = null;
         }
 
-        public override void LoadFor(DatabaseDocument _)
+		public DatabaseDocument DatabaseDocument;
+
+		public bool CadEditAllowedRevisions
+		{
+			get { return DatabaseDocument != null; }
+		}
+
+		public bool AllowChangedToRevistions
+		{
+			get
+			{
+				if (DatabaseDocument == null) //Not an admin
+				{
+					//TODO: get data from configs
+					return false;
+				}
+				var changesToRevisionsAllowed = DatabaseDocument.Settings.ContainsKey("Raven/Versioning/ChangesToRevisionsAllowed");
+				if (changesToRevisionsAllowed == false)
+					return false;
+				bool result;
+				if (bool.TryParse(DatabaseDocument.Settings["Raven/Versioning/ChangesToRevisionsAllowed"], out result) == false)
+					return false;
+				return result;
+			}
+
+			set
+			{
+				if(DatabaseDocument != null)
+					DatabaseDocument.Settings["Raven/Versioning/ChangesToRevisionsAllowed"] = value.ToString();
+			}
+		}
+
+		public override void LoadFor(DatabaseDocument document)
         {
+	        DatabaseDocument = document;
             var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
 	        session.Advanced.LoadStartingWithAsync<VersioningConfiguration>("Raven/Versioning").
 		        ContinueOnSuccessInTheUIThread(data =>
