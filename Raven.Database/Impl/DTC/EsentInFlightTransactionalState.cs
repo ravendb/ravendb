@@ -22,7 +22,7 @@ namespace Raven.Database.Impl.DTC
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
 			new ConcurrentDictionary<string, EsentTransactionContext>();
 
-		private long transactionContextNumber = 0;
+		private long transactionContextNumber;
 		private readonly Func<EsentTransactionContext> createContext;
 
 		public EsentInFlightTransactionalState(TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
@@ -46,6 +46,7 @@ namespace Raven.Database.Impl.DTC
 
 			lock (context)
 			{
+				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
 				using (context.EnterSessionContext())
 				{
 					context.Transaction.Commit(txMode);
@@ -60,7 +61,7 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Prepare(string id)
 		{
-			var context = transactionContexts.GetOrAdd(id, createContext());
+			var context = transactionContexts.GetOrAdd(id, _ => createContext());
 
 			using (storage.SetTransactionContext(context))
 			{
@@ -76,11 +77,11 @@ namespace Raven.Database.Impl.DTC
 			if (transactionContexts.TryRemove(id, out context) == false)
 				return;
 
+			using(context.Session)
 			using (context.EnterSessionContext())
 			{
 				context.Transaction.Dispose(); // will rollback the transaction if it was not committed
 			}
-			context.Session.Dispose();
 		}
 
 		public void Dispose()
@@ -88,10 +89,10 @@ namespace Raven.Database.Impl.DTC
 			foreach (var context in transactionContexts)
 			{
 				using (context.Value.EnterSessionContext())
+				using (context.Value.Session)
 				{
 					context.Value.Transaction.Dispose();
 				}
-				context.Value.Session.Dispose();
 			}
 		}
 	}
