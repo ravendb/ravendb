@@ -16,13 +16,21 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-
-				var op = store.DatabaseCommands.DeleteByIndex("noSuchIndex", new IndexQuery
+				try
 				{
-					Query = "Tag:Animals"
-				});
+					var op = store.DatabaseCommands.DeleteByIndex("noSuchIndex", new IndexQuery
+					{
+						Query = "Tag:Animals"
+					});
 
-				Assert.Throws<InvalidOperationException>(() => op.WaitForCompletion());
+					op.WaitForCompletion();
+
+					Assert.False(true, "Should have thrown");
+				}
+				catch (Exception e)
+				{
+					Assert.NotNull(e);
+				}
 
 			}
 		}

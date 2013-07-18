@@ -502,7 +502,18 @@ namespace Raven.Database
             {
                 foreach (var shouldDispose in pendingTasks)
                 {
-                    exceptionAggregator.Execute(shouldDispose.Value.Task.Wait);
+					var pendingTaskAndState = shouldDispose.Value;
+					exceptionAggregator.Execute(() =>
+                    {
+	                    try
+	                    {
+		                    pendingTaskAndState.Task.Wait();
+	                    }
+	                    catch (Exception)
+	                    {
+		                    // we explictly don't care about this during shutdown
+	                    }
+                    });
                 }
                 pendingTasks.Clear();
             });
