@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using Raven.Abstractions.Data;
 using Xunit;
 
@@ -106,11 +107,28 @@ namespace Raven.Tests.Issues
 
 					for (int i = 0; i < 1000; i++)
 					{
-						bulk.Store(new Person
+						try
 						{
-							Id = i,
-							FirstName = "FName" + i
-						}, i.ToString());
+							bulk.Store(new Person
+							{
+								Id = i,
+								FirstName = "FName" + i
+							}, i.ToString(CultureInfo.InvariantCulture));
+						}
+						catch (Exception)
+						{
+							errored = true;
+							break;
+						}
+					}
+
+					try
+					{
+						bulk.DisposeAsync().Wait();
+					}
+					catch (Exception)
+					{
+						errored = true;
 					}
 				}
 			}
