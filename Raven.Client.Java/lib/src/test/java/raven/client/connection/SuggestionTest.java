@@ -43,8 +43,8 @@ public class SuggestionTest extends RavenDBAwareTests {
   @Test
   public void testSuggestion() throws Exception {
     try {
-      createDb("db1");
-      IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+      createDb();
+      IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
 
       RavenJObject meta1 = new RavenJObject();
       meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("users"));
@@ -54,14 +54,14 @@ public class SuggestionTest extends RavenDBAwareTests {
       for (int i = 0; i < persons.size(); i++) {
         RavenJObject document = new RavenJObject();
         document.add("FullName", new RavenJValue(persons.get(i)));
-        db1Commands.put("users/" + (i+1), null, document, meta1);
+        dbCommands.put("users/" + (i+1), null, document, meta1);
       }
 
 
       IndexDefinition index = new IndexDefinition();
       index.setMap("from user in docs.users select new { user.FullName }");
       index.getIndexes().put("FullName", FieldIndexing.ANALYZED);
-      db1Commands.putIndex("suggestIndex", index);
+      dbCommands.putIndex("suggestIndex", index);
 
       SuggestionQuery suggestionQuery = new SuggestionQuery();
       suggestionQuery.setTerm("johne");
@@ -71,13 +71,13 @@ public class SuggestionTest extends RavenDBAwareTests {
       suggestionQuery.setPopularity(true);
       suggestionQuery.setField("FullName");
 
-      waitForNonStaleIndexes(db1Commands);
-      SuggestionQueryResult suggestionQueryResult = db1Commands.suggest("suggestIndex", suggestionQuery);
+      waitForNonStaleIndexes(dbCommands);
+      SuggestionQueryResult suggestionQueryResult = dbCommands.suggest("suggestIndex", suggestionQuery);
       String[] suggestions = suggestionQueryResult.getSuggestions();
       assertEquals(Arrays.asList("john", "jones", "johnson"), Arrays.asList(suggestions));
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 }

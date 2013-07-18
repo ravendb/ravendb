@@ -12,6 +12,8 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
@@ -20,12 +22,22 @@ import raven.client.utils.UrlUtils;
 
 public abstract class RavenDBAwareTests {
 
+  @Rule
+  public TestName testName = new TestName();
+
   public final static String DEFAULT_SERVER_URL = "http://localhost:8123";
 
   private HttpClient client = new DefaultHttpClient();
 
   public String getServerUrl() {
     return DEFAULT_SERVER_URL;
+  }
+
+  /**
+   * Creates new db with name taken from test name
+   */
+  protected void createDb() throws Exception {
+    createDb(getDbName());
   }
 
   protected void createDb(String dbName) throws Exception {
@@ -74,6 +86,14 @@ public abstract class RavenDBAwareTests {
       result.add(obj.value(resultClass, propName));
     }
     return result;
+  }
+
+  protected void deleteDb() throws Exception {
+    deleteDb(getDbName());
+  }
+
+  protected String getDbName() {
+    return testName.getMethodName();
   }
 
 

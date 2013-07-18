@@ -69,9 +69,9 @@ public class ServerClientTest extends RavenDBAwareTests {
 
   @Test
   public void testTransactionsToIsolateSaves() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       RavenJObject company = new RavenJObject();
       company.add("Name", new RavenJValue("Company Name"));
@@ -80,29 +80,29 @@ public class ServerClientTest extends RavenDBAwareTests {
 
       try (AutoCloseable transaction = RavenTransactionAccessor.startTransaction()) {
         convention.setEnlistInDistributedTransactions(true);
-        db1Commands.put("company/1", null, company, meta);
+        dbCommands.put("company/1", null, company, meta);
 
         try (AutoCloseable tx2 = RavenTransactionAccessor.startTransaction()) {
-          assertTrue(db1Commands.get("company/1").getMetadata().containsKey(Constants.RAVEN_DOCUMENT_DOES_NOT_EXISTS));
+          assertTrue(dbCommands.get("company/1").getMetadata().containsKey(Constants.RAVEN_DOCUMENT_DOES_NOT_EXISTS));
         }
-        assertNotNull(db1Commands.get("company/1"));
-        db1Commands.prepareTransaction(RavenTransactionAccessor.getTransactionInformation().getId());
-        db1Commands.commit(RavenTransactionAccessor.getTransactionInformation().getId());
+        assertNotNull(dbCommands.get("company/1"));
+        dbCommands.prepareTransaction(RavenTransactionAccessor.getTransactionInformation().getId());
+        dbCommands.commit(RavenTransactionAccessor.getTransactionInformation().getId());
         convention.setEnlistInDistributedTransactions(false);
       }
 
-      assertNotNull(db1Commands.get("company/1"));
+      assertNotNull(dbCommands.get("company/1"));
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testTransactionRollback() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       RavenJObject company = new RavenJObject();
       company.add("Name", new RavenJValue("Company Name"));
@@ -111,65 +111,65 @@ public class ServerClientTest extends RavenDBAwareTests {
 
       try (AutoCloseable transaction = RavenTransactionAccessor.startTransaction()) {
         convention.setEnlistInDistributedTransactions(true);
-        db1Commands.put("company/1", null, company, meta);
+        dbCommands.put("company/1", null, company, meta);
 
-        assertNotNull(db1Commands.get("company/1"));
-        db1Commands.rollback(RavenTransactionAccessor.getTransactionInformation().getId());
+        assertNotNull(dbCommands.get("company/1"));
+        dbCommands.rollback(RavenTransactionAccessor.getTransactionInformation().getId());
         convention.setEnlistInDistributedTransactions(false);
       }
 
-      assertNull(db1Commands.get("company/1"));
+      assertNull(dbCommands.get("company/1"));
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
 
   @Test
   public void testPutGet() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       Etag etag = new Etag();
       RavenJObject o = RavenJObject.parse("{ \"key\" : \"val\"}");
-      PutResult result = db1Commands.put("testVal", etag, o, new RavenJObject());
+      PutResult result = dbCommands.put("testVal", etag, o, new RavenJObject());
       assertNotNull(result);
       try {
-        db1Commands.delete("testVal", result.getEtag().incrementBy(10000));
+        dbCommands.delete("testVal", result.getEtag().incrementBy(10000));
         fail();
       } catch (Exception e) {
         //ok
       }
 
-      JsonDocument jsonDocument = db1Commands.get("testVal");
+      JsonDocument jsonDocument = dbCommands.get("testVal");
       assertEquals("val", jsonDocument.getDataAsJson().value(String.class, "key"));
-      assertNull("Can't get document with long key", db1Commands.get(StringUtils.repeat("a", 256)));
-      assertNull("This document does not exist!", db1Commands.get("NoSuch"));
+      assertNull("Can't get document with long key", dbCommands.get(StringUtils.repeat("a", 256)));
+      assertNull("This document does not exist!", dbCommands.get("NoSuch"));
 
-      db1Commands.delete("noSuchKey", null);
+      dbCommands.delete("noSuchKey", null);
 
       Developer d1 = new Developer();
       d1.setNick("john");
       d1.setId(5l);
 
       String longKey = StringUtils.repeat("a", 256);
-      db1Commands.put(longKey, null, RavenJObject.fromObject(d1), new RavenJObject());
+      dbCommands.put(longKey, null, RavenJObject.fromObject(d1), new RavenJObject());
 
-      JsonDocument developerDocument = db1Commands.get(longKey);
+      JsonDocument developerDocument = dbCommands.get(longKey);
       Developer readDeveloper = JsonExtensions.getDefaultObjectMapper().readValue(developerDocument.getDataAsJson().toString(), Developer.class);
       assertEquals("john", readDeveloper.getNick());
 
       RavenJObject objectWithOutKey = new RavenJObject();
       objectWithOutKey.add("Name",  new RavenJValue("Anonymous"));
-      PutResult putResult = db1Commands.put(null, null, objectWithOutKey , null);
+      PutResult putResult = dbCommands.put(null, null, objectWithOutKey , null);
       assertNotNull(putResult);
       String docKey = putResult.getKey();
-      assertNotNull(db1Commands.get(docKey));
+      assertNotNull(dbCommands.get(docKey));
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
@@ -186,168 +186,168 @@ public class ServerClientTest extends RavenDBAwareTests {
 
     } finally {
       deleteDb("db1");
-      createDb("db2");
+      deleteDb("db2");
     }
   }
 
   @Test
   public void testGetDocuments() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       Etag etag = new Etag();
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
-      PutResult result = db1Commands.put("testVal1", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
+      PutResult result = dbCommands.put("testVal1", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
         new RavenJObject());
-      result = db1Commands.put("testVal2", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
-      result = db1Commands.put("testVal3", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
-      result = db1Commands.put("testVal4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
+      result = dbCommands.put("testVal2", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
+      result = dbCommands.put("testVal3", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
+      result = dbCommands.put("testVal4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
 
       assertNotNull(result);
 
-      List<JsonDocument> jsonDocumentList = db1Commands.getDocuments(0, 4);
+      List<JsonDocument> jsonDocumentList = dbCommands.getDocuments(0, 4);
       assertEquals(4, jsonDocumentList.size());
       assertTrue(jsonDocumentList.get(0).getDataAsJson().containsKey("key"));
       assertTrue(jsonDocumentList.get(1).getDataAsJson().containsKey("key"));
       assertTrue(jsonDocumentList.get(2).getDataAsJson().containsKey("key"));
       assertTrue(jsonDocumentList.get(3).getDataAsJson().containsKey("key"));
 
-      jsonDocumentList = db1Commands.getDocuments(0, 2);
+      jsonDocumentList = dbCommands.getDocuments(0, 2);
       assertEquals(2, jsonDocumentList.size());
 
-      jsonDocumentList = db1Commands.getDocuments(0, 10);
+      jsonDocumentList = dbCommands.getDocuments(0, 10);
       assertEquals(4, jsonDocumentList.size());
 
-      jsonDocumentList = db1Commands.getDocuments(2, 10);
+      jsonDocumentList = dbCommands.getDocuments(2, 10);
       assertEquals(2, jsonDocumentList.size());
 
-      List<JsonDocument> metaOnly = db1Commands.getDocuments(0, 100, true);
+      List<JsonDocument> metaOnly = dbCommands.getDocuments(0, 100, true);
       assertEquals(4, metaOnly.size());
       assertEquals(0, metaOnly.get(0).getDataAsJson().getCount());
 
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testStartsWith() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       Etag etag = new Etag();
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
-      PutResult result = db1Commands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
+      PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
         new RavenJObject());
-      result = db1Commands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
-      result = db1Commands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
-      result = db1Commands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
+      result = dbCommands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
+      result = dbCommands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
+      result = dbCommands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
 
       assertNotNull(result);
 
-      List<JsonDocument> jsonDocumentList = db1Commands.startsWith("tests/", "", 0, 5);
+      List<JsonDocument> jsonDocumentList = dbCommands.startsWith("tests/", "", 0, 5);
       assertEquals(4, jsonDocumentList.size());
       assertTrue(jsonDocumentList.get(0).getDataAsJson().containsKey("key"));
       assertTrue(jsonDocumentList.get(1).getDataAsJson().containsKey("key"));
       assertTrue(jsonDocumentList.get(2).getDataAsJson().containsKey("key"));
       assertTrue(jsonDocumentList.get(3).getDataAsJson().containsKey("key"));
 
-      jsonDocumentList = db1Commands.startsWith("tests/", "val1a", 0, 5);
+      jsonDocumentList = dbCommands.startsWith("tests/", "val1a", 0, 5);
       assertEquals(1, jsonDocumentList.size());
 
-      jsonDocumentList = db1Commands.startsWith("tests/", "val*", 0, 5);
+      jsonDocumentList = dbCommands.startsWith("tests/", "val*", 0, 5);
       assertEquals(3, jsonDocumentList.size());
 
-      jsonDocumentList = db1Commands.startsWith("tests/", "val*a", 0, 5);
+      jsonDocumentList = dbCommands.startsWith("tests/", "val*a", 0, 5);
       assertEquals(3, jsonDocumentList.size());
 
-      jsonDocumentList = db1Commands.startsWith("tests/", "*val*", 0, 5);
+      jsonDocumentList = dbCommands.startsWith("tests/", "*val*", 0, 5);
       assertEquals(4, jsonDocumentList.size());
 
-      jsonDocumentList = db1Commands.startsWith("tests/v", "*2a", 0, 5);
+      jsonDocumentList = dbCommands.startsWith("tests/v", "*2a", 0, 5);
       assertEquals(1, jsonDocumentList.size());
       assertEquals("val2", jsonDocumentList.get(0).getDataAsJson().value(String.class, "key"));
 
-      jsonDocumentList = db1Commands.startsWith("tests/", "val1a", 0, 5, true);
+      jsonDocumentList = dbCommands.startsWith("tests/", "val1a", 0, 5, true);
       assertEquals(1, jsonDocumentList.size());
       assertEquals("We requested metadata only", 0, jsonDocumentList.get(0).getDataAsJson().getCount());
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testUrlFor() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       Etag etag = new Etag();
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
-      PutResult result = db1Commands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
+      PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
         new RavenJObject());
 
       assertNotNull(result);
 
-      String url = db1Commands.urlFor("tests/val1a");
+      String url = dbCommands.urlFor("tests/val1a");
 
-      assertTrue(url.endsWith("db1/docs/tests/val1a"));
+      assertTrue(url.endsWith(getDbName() + "/docs/tests/val1a"));
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testDelete() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       Etag etag = new Etag();
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
-      PutResult result = db1Commands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
+      PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
         new RavenJObject());
-      result = db1Commands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
-      result = db1Commands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
-      result = db1Commands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
+      result = dbCommands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
+      result = dbCommands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
+      result = dbCommands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
       assertNotNull(result);
 
-      List<JsonDocument> jsonDocumentList = db1Commands.getDocuments(0, 5);
+      List<JsonDocument> jsonDocumentList = dbCommands.getDocuments(0, 5);
       assertEquals(4, jsonDocumentList.size());
 
-      JsonDocument jsonDocument = db1Commands.get("tests/val1a");
+      JsonDocument jsonDocument = dbCommands.get("tests/val1a");
 
-      db1Commands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
+      dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
 
-      jsonDocumentList = db1Commands.getDocuments(0, 5);
+      jsonDocumentList = dbCommands.getDocuments(0, 5);
       assertEquals(3, jsonDocumentList.size());
 
-      jsonDocument = db1Commands.get("tests/val2a");
-      db1Commands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
-      jsonDocumentList = db1Commands.getDocuments(0, 5);
+      jsonDocument = dbCommands.get("tests/val2a");
+      dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
+      jsonDocumentList = dbCommands.getDocuments(0, 5);
       assertEquals(2, jsonDocumentList.size());
 
-      jsonDocument = db1Commands.get("tests/val3a");
-      db1Commands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
-      jsonDocumentList = db1Commands.getDocuments(0, 5);
+      jsonDocument = dbCommands.get("tests/val3a");
+      dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
+      jsonDocumentList = dbCommands.getDocuments(0, 5);
       assertEquals(1, jsonDocumentList.size());
 
-      jsonDocument = db1Commands.get("tests/aval4");
-      db1Commands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
-      jsonDocumentList = db1Commands.getDocuments(0, 5);
+      jsonDocument = dbCommands.get("tests/aval4");
+      dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
+      jsonDocumentList = dbCommands.getDocuments(0, 5);
       assertEquals(0, jsonDocumentList.size());
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
@@ -355,8 +355,8 @@ public class ServerClientTest extends RavenDBAwareTests {
   @Test
   public void testBatch() throws Exception {
     try {
-      createDb("db1");
-      IDatabaseCommands commands = serverClient.forDatabase("db1");
+      createDb();
+      IDatabaseCommands commands = serverClient.forDatabase(getDbName());
 
       RavenJObject postMeta = new RavenJObject();
       postMeta.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("posts"));
@@ -392,17 +392,17 @@ public class ServerClientTest extends RavenDBAwareTests {
 
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testAttachments() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
-      assertNull("No such attachment", db1Commands.getAttachment("noSuchLKey"));
+      assertNull("No such attachment", dbCommands.getAttachment("noSuchLKey"));
 
       String key = "test/at1";
 
@@ -410,36 +410,36 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       InputStream is  = new ByteArrayInputStream("Test test test".getBytes());
-      db1Commands.putAttachment(key, etag, is, new RavenJObject());
+      dbCommands.putAttachment(key, etag, is, new RavenJObject());
       is.close();
 
-      Attachment a = db1Commands.getAttachment(key);
+      Attachment a = dbCommands.getAttachment(key);
 
       RavenJObject meta = new RavenJObject();
       meta.add("Content-Type", new RavenJValue("text/plain"));
-      db1Commands.updateAttachmentMetadata(key, a.getEtag(), meta);
+      dbCommands.updateAttachmentMetadata(key, a.getEtag(), meta);
 
-      a = db1Commands.getAttachment(key);
+      a = dbCommands.getAttachment(key);
       assertEquals("text/plain", a.getMetadata().get("Content-Type").value(String.class));
 
       // can update attachment metadata
 
       RavenJObject metadata = a.getMetadata();
       metadata.add("test", new RavenJValue("yes"));
-      db1Commands.updateAttachmentMetadata(key, a.getEtag(), metadata);
+      dbCommands.updateAttachmentMetadata(key, a.getEtag(), metadata);
 
-      a = db1Commands.getAttachment(key);
+      a = dbCommands.getAttachment(key);
       metadata = new RavenJObject();
       metadata.add("test", new RavenJValue("no"));
-      db1Commands.updateAttachmentMetadata(key, a.getEtag(), metadata);
-      a = db1Commands.getAttachment(key);
+      dbCommands.updateAttachmentMetadata(key, a.getEtag(), metadata);
+      a = dbCommands.getAttachment(key);
 
       assertEquals("no", a.getMetadata().get("Test").value(String.class));
 
       metadata = new RavenJObject();
       meta.add("test", new RavenJValue("etag"));
       try {
-        db1Commands.updateAttachmentMetadata(key, a.getEtag().incrementBy(10000), metadata);
+        dbCommands.updateAttachmentMetadata(key, a.getEtag().incrementBy(10000), metadata);
         fail();
       } catch (ServerClientException e) {
         //ok
@@ -447,29 +447,29 @@ public class ServerClientTest extends RavenDBAwareTests {
 
       assertEquals("Test test test", new String(a.getData()));
 
-      List<Attachment> list = db1Commands.getAttachmentHeadersStartingWith("test/", 0, 5);
+      List<Attachment> list = dbCommands.getAttachmentHeadersStartingWith("test/", 0, 5);
       assertEquals(1, list.size());
 
-      Attachment ah = db1Commands.headAttachment(key);
+      Attachment ah = dbCommands.headAttachment(key);
       assertNotNull(ah.getMetadata());
 
-      db1Commands.deleteAttachment(key, a.getEtag());
-      String url = db1Commands.urlFor(key);
-      assertEquals("http://localhost:8123/databases/db1/docs/test/at1", url);
+      dbCommands.deleteAttachment(key, a.getEtag());
+      String url = dbCommands.urlFor(key);
+      assertEquals("http://localhost:8123/databases/" + getDbName() + "/docs/test/at1", url);
 
-      a = db1Commands.getAttachment(key);
+      a = dbCommands.getAttachment(key);
       assertNull(a);
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testHead() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       String key = "testVal";
 
@@ -477,44 +477,44 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       RavenJObject o = RavenJObject.parse("{ \"key\" : \"val\"}");
-      db1Commands.put(key, etag, o, new RavenJObject());
+      dbCommands.put(key, etag, o, new RavenJObject());
 
       //head method does not work
-      JsonDocumentMetadata meta = db1Commands.head(key);
+      JsonDocumentMetadata meta = dbCommands.head(key);
 
       assertNotNull(meta);
       assertNotNull(meta.getLastModified());
       assertEquals(key, meta.getKey());
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testIndexes() throws Exception {
 
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       IndexDefinition index1 = new IndexDefinition();
       index1.setMap("from company in docs.Companies from partner in company.Partners select new { Partner = partner }");
 
-      db1Commands.putIndex("firstIndex", index1);
+      dbCommands.putIndex("firstIndex", index1);
 
-      assertNotNull(db1Commands.getIndex("firstIndex"));
+      assertNotNull(dbCommands.getIndex("firstIndex"));
 
-      db1Commands.resetIndex("firstIndex");
+      dbCommands.resetIndex("firstIndex");
 
-      Collection<String> indexNames = db1Commands.getIndexNames(0, 10);
+      Collection<String> indexNames = dbCommands.getIndexNames(0, 10);
       List<String> expectedIndexNames = Arrays.asList("firstIndex");
       assertEquals(expectedIndexNames, indexNames);
 
-      Collection<IndexDefinition> collection = db1Commands.getIndexes(0, 10);
+      Collection<IndexDefinition> collection = dbCommands.getIndexes(0, 10);
       assertEquals(1, collection.size());
 
-      db1Commands.deleteIndex("firstIndex");
+      dbCommands.deleteIndex("firstIndex");
 
       IndexDefinition complexIndex = new IndexDefinition();
       complexIndex.setMap("docs.Companies.SelectMany(c => c.Employees).Select(x => new {Name = x.Name,Count = 1})");
@@ -528,10 +528,10 @@ public class ServerClientTest extends RavenDBAwareTests {
       complexIndex.getTermVectors().put("Name", FieldTermVector.WITH_POSITIONS_AND_OFFSETS);
       complexIndex.getAnalyzers().put("Name", "Raven.Database.Indexing.Collation.Cultures.SvCollationAnalyzer, Raven.Database");
 
-      db1Commands.putIndex("ComplexIndex", complexIndex);
+      dbCommands.putIndex("ComplexIndex", complexIndex);
 
-      IndexDefinition complexReturn = db1Commands.getIndex("ComplexIndex");
-      db1Commands.deleteIndex("ComplexIndex");
+      IndexDefinition complexReturn = dbCommands.getIndex("ComplexIndex");
+      dbCommands.deleteIndex("ComplexIndex");
 
       assertEquals(FieldStorage.YES, complexReturn.getStores().get("Name"));
       assertNull("It should be null since, No is default value", complexReturn.getStores().get("Count"));
@@ -542,20 +542,20 @@ public class ServerClientTest extends RavenDBAwareTests {
       assertEquals(FieldTermVector.WITH_POSITIONS_AND_OFFSETS, complexReturn.getTermVectors().get("Name"));
       assertEquals("Raven.Database.Indexing.Collation.Cultures.SvCollationAnalyzer, Raven.Database", complexReturn.getAnalyzers().get("Name"));
 
-      assertEquals(new ArrayList<String>(), db1Commands.getIndexNames(0, 10));
+      assertEquals(new ArrayList<String>(), dbCommands.getIndexNames(0, 10));
 
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
 
   }
 
   @Test
   public void testNextIdentityFor() throws Exception {
-    IDatabaseCommands db1Commands = serverClient.forDatabase("db1");
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
-      createDb("db1");
+      createDb();
 
       String key = "test";
 
@@ -563,25 +563,25 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       RavenJObject o = RavenJObject.parse("{ \"key\" : \"val\"}");
-      db1Commands.put(key, etag, o, new RavenJObject());
+      dbCommands.put(key, etag, o, new RavenJObject());
 
       //head method does not work
-      Long l = db1Commands.nextIdentityFor(key);
+      Long l = dbCommands.nextIdentityFor(key);
 
       assertEquals(new Long(1), l);
 
-      JsonDocument doc = db1Commands.get(key);
+      JsonDocument doc = dbCommands.get(key);
 
       doc.getDataAsJson().add("key2", RavenJToken.fromObject("val2"));
 
-      db1Commands.put(key, doc.getEtag(), doc.getDataAsJson(), new RavenJObject());
+      dbCommands.put(key, doc.getEtag(), doc.getDataAsJson(), new RavenJObject());
 
-      l = db1Commands.nextIdentityFor(key);
+      l = dbCommands.nextIdentityFor(key);
 
       assertEquals(new Long(2), l);
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
