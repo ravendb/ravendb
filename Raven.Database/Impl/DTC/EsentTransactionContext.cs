@@ -14,10 +14,11 @@ namespace Raven.Database.Impl.DTC
 	{
 		private readonly IntPtr sessionContext;
 
-		public EsentTransactionContext(Session session, IntPtr context)
+		public EsentTransactionContext(Session session, IntPtr context, DateTime createdAt)
 		{
 			sessionContext = context;
 			Session = session;
+			CreatedAt = createdAt;
 			using (EnterSessionContext())
 			{
 				Transaction = new Transaction(Session);
@@ -28,6 +29,7 @@ namespace Raven.Database.Impl.DTC
 
 		public List<Action> ActionsAfterCommit { get; private set; }
 		public Session Session { get; private set; }
+		public DateTime CreatedAt { get; private set; }
 		public Transaction Transaction { get; private set; }
 
 		public IDisposable EnterSessionContext()

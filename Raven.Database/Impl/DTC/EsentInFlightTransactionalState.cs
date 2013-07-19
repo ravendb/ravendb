@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
@@ -17,6 +18,7 @@ namespace Raven.Database.Impl.DTC
 {
 	public class EsentInFlightTransactionalState : InFlightTransactionalState, IDisposable
 	{
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly TransactionalStorage storage;
 		private readonly CommitTransactionGrbit txMode;
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
@@ -24,18 +26,35 @@ namespace Raven.Database.Impl.DTC
 
 		private long transactionContextNumber;
 		private readonly Func<EsentTransactionContext> createContext;
+		private readonly Timer timer;
 
 		public EsentInFlightTransactionalState(TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 			: base(databasePut, databaseDelete)
 		{
 			this.storage = storage;
 			this.txMode = txMode;
+			this.timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 			createContext = () =>
 			{
 				var newTransactionNumber = Interlocked.Increment(ref transactionContextNumber);
 				return new EsentTransactionContext(new Session(storage.Instance),
-												   new IntPtr(newTransactionNumber));
+												   new IntPtr(newTransactionNumber),
+												   SystemTime.UtcNow);
 			};
+		}
+
+		private void CleanupOldTransactions(object state)
+		{
+			var oldestAllowedTransaction = SystemTime.UtcNow;
+			foreach (var ctx in transactionContexts.ToArray())
+			{
+				var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
+				if (age.TotalMinutes >= 5)
+				{
+					log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
+					Rollback(ctx.Key);
+				}
+			}
 		}
 
 		public override void Commit(string id)
@@ -62,10 +81,17 @@ namespace Raven.Database.Impl.DTC
 		public override void Prepare(string id)
 		{
 			var context = transactionContexts.GetOrAdd(id, _ => createContext());
-
-			using (storage.SetTransactionContext(context))
+			try
 			{
-				storage.Batch(accessor => RunOperationsInTransaction(id));
+				using (storage.SetTransactionContext(context))
+				{
+					storage.Batch(accessor => RunOperationsInTransaction(id));
+				}
+			}
+			catch (Exception)
+			{
+				Rollback(id);
+				throw;
 			}
 		}
 
@@ -86,6 +112,7 @@ namespace Raven.Database.Impl.DTC
 
 		public void Dispose()
 		{
+			timer.Dispose();
 			foreach (var context in transactionContexts)
 			{
 				using (context.Value.EnterSessionContext())
