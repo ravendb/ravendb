@@ -219,7 +219,7 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   public boolean isInFailoverMode() {
-    return replicationInformer.getFailureCount(url) > 0;
+    return replicationInformer.getFailureCount(url).longValue() > 0;
   }
 
   public JsonDocument directGet(String serverUrl, String key) {

@@ -5,23 +5,31 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.activity.InvalidActivityException;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import raven.abstractions.basic.EventArgs;
 import raven.abstractions.basic.EventHandler;
+import raven.abstractions.basic.EventHelper;
+import raven.abstractions.basic.Holder;
+import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.json.linq.JTokenType;
+import raven.abstractions.task.TaskFactory;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
 
+import com.google.common.util.concurrent.FutureCallback;
 
 // TODO: finish me
 public class ReplicationInformer {
@@ -30,7 +38,6 @@ public class ReplicationInformer {
 
   private static String RAVEN_REPLICATION_DESTINATIONS = "Raven/Replication/Destinations";
   private static List<String> EMPTY = new ArrayList<>();
-  protected static int READ_STRIPING_BASE;
 
   private boolean firstTime = true;
   protected DocumentConvention conventions;
@@ -41,8 +48,11 @@ public class ReplicationInformer {
 
   protected static AtomicInteger readStripingBase = new AtomicInteger(0);
 
-  //System.Collections.Concurrent.ConcurrentDictionary
-  private final Map<String, FailureCounter> failureCounts = new ConcurrentHashMap<String, FailureCounter>();
+  private List<EventHandler<FailoverStatusChangedEventArgs>> failoverStatusChanged = new ArrayList<>();
+
+  private final Map<String, FailureCounter> failureCounts = new ConcurrentHashMap<>();
+
+  private Future<Void> refreshReplicationInformationTask;
 
   public ReplicationInformer(DocumentConvention conventions) {
     this.conventions = conventions;
@@ -50,10 +60,6 @@ public class ReplicationInformer {
 
   public ReplicationInformer() {
   }
-
-
-  //TODO: public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
-  //EventHandler<FailoverStatusChangedEventArgs> failoverStatusChanged = new ArrayList<>();
 
   public List<ReplicationDestinationData> getReplicationDestinations() {
     return this.replicationDestinations;
@@ -70,62 +76,163 @@ public class ReplicationInformer {
     return result;
   }
 
-  public void updateReplicationInformationIfNeeded(ServerClient serverClient) {
-    /* if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-       return new CompletedTask();
+  //TODO: consider return the Future<Void>
+  public void updateReplicationInformationIfNeeded(final ServerClient serverClient) {
+    if (conventions.getFailoverBehavior().contains(FailoverBehavior.FAIL_IMMEDIATELY)) {
+      return; //new CompletedFuture<>();
+    }
 
-    if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-       return new CompletedTask();
+    if (DateUtils.addMinutes(lastReplicationUpdate, 5).after(new Date())) {
+      return; // new CompletedFuture<>();
+    }
 
-    lock (replicationLock)
-    {
-       if (firstTime)
-       {
-           var serverHash = ServerHash.GetServerHash(serverClient.Url);
+    synchronized (replicationLock) {
+      if (firstTime) {
+        String serverHash = ServerHash.getServerHash(serverClient.getUrl());
 
-           var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-           if (IsInvalidDestinationsDocument(document) == false)
-           {
-               UpdateReplicationInformationFromDocument(document);
-           }
-       }
+        JsonDocument document = ReplicationInformerLocalCache.tryLoadReplicationInformationFromLocalCache(serverHash);
+        if (!isInvalidDestinationsDocument(document)) {
+          updateReplicationInformationFromDocument(document);
+        }
+      }
 
-       firstTime = false;
+      firstTime = false;
 
-       if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-           return new CompletedTask();
+      if (DateUtils.addMinutes(lastReplicationUpdate, 5).after(new Date())) {
+        return; //new CompletedFuture<>();
+      }
 
-       var taskCopy = refreshReplicationInformationTask;
-       if (taskCopy != null)
-           return taskCopy;
+      Future<Void> taskCopy = refreshReplicationInformationTask;
 
-       return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
-           .ContinueWith(task =>
-           {
-               if (task.Exception != null)
+      if (taskCopy != null) {
+        return;  //taskCopy;
+      }
+
+      TaskFactory.startNew(new Function0<Void>() {
+
+        @Override
+        public Void apply() {
+          refreshReplicationInformation(serverClient);
+          return null;
+        }
+
+      }, new FutureCallback<Void>() {
+
+        @Override
+        public void onFailure(Throwable e) {
+          log.error("Failed to refresh replication information", e);
+        }
+
+        @Override
+        public void onSuccess(Void v) {
+          refreshReplicationInformationTask = null;
+
+        }
+      });
+    }
+
+    /*
+           return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
+               .ContinueWith(task =>
                {
-                   log.ErrorException("Failed to refresh replication information", task.Exception);
-               }
-               refreshReplicationInformationTask = null;
-           });
-    }*/
+                   if (task.Exception != null)
+                   {
+                       log.ErrorException("Failed to refresh replication information", task.Exception);
+                   }
+                   refreshReplicationInformationTask = null;
+               });
+        }*/
 
   }
-
-  //TODO: impl me
 
   public int getReadStripingBase() {
     return readStripingBase.incrementAndGet();
   }
 
-  public <T> T executeWithReplication(HttpMethods method, String url, int currentRequest, int currentReadStripingBase,
+  public <T> T executeWithReplication(HttpMethods method, String primaryUrl, int currentRequest, int currentReadStripingBase,
     Function1<String, T> operation) throws ServerClientException {
-    return operation.apply(url);
-    //TODO: implement me
+
+    T result = null;
+    boolean timeoutThrown = false;
+
+    List<String> localReplicationDestinations = getReplicationDestinationsUrls(); // thread safe copy
+
+    boolean shouldReadFromAllServers = conventions.getFailoverBehavior().contains(FailoverBehavior.READ_FROM_ALL_SERVERS);
+    if (shouldReadFromAllServers && HttpMethods.GET.equals(method))
+    {
+        int replicationIndex = currentReadStripingBase % (localReplicationDestinations.size() + 1);
+        // if replicationIndex == destinations count, then we want to use the master
+        // if replicationIndex < 0, then we were explicitly instructed to use the master
+        if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0)
+        {
+            // if it is failing, ignore that, and move to the master or any of the replicas
+            if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false))
+            {
+                if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, new Holder(result), timeoutThrown))
+                    return result;
+            }
+        }
+    }
+
+    if (shouldExecuteUsing(primaryUrl, currentRequest, method, true))
+    {
+        if (tryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.size() > 0, new Holder(result), timeoutThrown))
+            return result;
+        if (!timeoutThrown && isFirstFailure(primaryUrl) &&
+            tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, new Holder(result), timeoutThrown))
+            return result;
+        incrementFailureCount(primaryUrl);
+    }
+
+    for (int i = 0; i < localReplicationDestinations.size(); i++)
+    {
+        String replicationDestination = localReplicationDestinations.get(i);
+        if (shouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
+            continue;
+        if (tryOperation(operation, replicationDestination, !timeoutThrown, new Holder(result), timeoutThrown))
+            return result;
+        if (!timeoutThrown && isFirstFailure(replicationDestination) &&
+            tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, new Holder(result),
+                         timeoutThrown))
+            return result;
+        incrementFailureCount(replicationDestination);
+    }
+    // this should not be thrown, but since I know the value of should...
+    //TODO: throw new InvalidActivityException("Attempted to connect to master and all replicas have failed, giving up. There is a high probability of a network problem preventing access to all the replicas. Failed to get in touch with any of the " + (1 + localReplicationDestinations.size()) + " Raven instances.");
+    return null;
   }
 
-  public long getFailureCount(String operationUrl) {
-    // TODO Auto-generated method stub
+  //TODO: finish me
+  protected <T> boolean tryOperation(Function1<String, T> operation, String operationUrl, boolean avoidThrowing, Holder<T> result, boolean wasTimeout)
+  {
+      try
+      {
+          result.value = operation.apply(operationUrl);
+          resetFailureCount(operationUrl);
+          wasTimeout = false;
+          return true;
+      }
+      catch (Exception e)
+      {
+          if (avoidThrowing == false)
+              throw e;
+          //result = default(T);
+
+          if (isServerDown(e, wasTimeout))
+          {
+              return false;
+          }
+          throw e;
+      }
+  }
+
+  public boolean isServerDown(Exception e, boolean timeout)
+  {
+    //TODO: implement me
+    return true;
+  }
+
+  public AtomicLong getFailureCount(String operationUrl) {
     return getHolder(operationUrl).getValue();
   }
 
@@ -133,19 +240,23 @@ public class ReplicationInformer {
     return getHolder(operationUrl).getLastCheck();
   }
 
-  public boolean shouldExecuteUsing(String operationUrl, int currentRequest, String method, boolean primary)
-    throws InvalidActivityException {
+  public boolean shouldExecuteUsing(String operationUrl, int currentRequest, HttpMethods method, boolean primary) {
     if (primary == false) {
-      assertValidOperation(method);
+      try {
+        assertValidOperation(method);
+      } catch (InvalidActivityException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
     }
 
     FailureCounter failureCounter = getHolder(operationUrl);
-    if (failureCounter.getValue() == 0 || failureCounter.isForceCheck()) {
+    if (failureCounter.getValue().longValue() == 0 || failureCounter.isForceCheck()) {
       failureCounter.setLastCheck(new Date());
       return true;
     }
 
-    if (currentRequest % getCheckRepetitionRate(failureCounter.getValue()) == 0) {
+    if (currentRequest % getCheckRepetitionRate(failureCounter.getValue().longValue()) == 0) {
       failureCounter.setLastCheck(new Date());
       return true;
     }
@@ -169,9 +280,9 @@ public class ReplicationInformer {
     return 100000;
   }
 
-  protected void assertValidOperation(String method) throws InvalidActivityException {
+  protected void assertValidOperation(HttpMethods method) throws InvalidActivityException {
     if (conventions.getFailoverBehaviorWithoutFlags().contains(FailoverBehavior.ALLOW_READS_FROM_SECONDARIES)) {
-      if ("GET".equals(method)) {
+      if (HttpMethods.GET.equals(method)) {
         return;
       }
     }
@@ -181,7 +292,7 @@ public class ReplicationInformer {
     }
     if (conventions.getFailoverBehaviorWithoutFlags().contains(FailoverBehavior.FAIL_IMMEDIATELY)) {
       if (conventions.getFailoverBehaviorWithoutFlags().contains(FailoverBehavior.READ_FROM_ALL_SERVERS)) {
-        if ("GET".equals(method)) {
+        if (HttpMethods.GET.equals(method)) {
           return;
         }
       }
@@ -192,20 +303,17 @@ public class ReplicationInformer {
 
   public boolean isFirstFailure(String operationUrl) {
     FailureCounter value = getHolder(operationUrl);
-    return value.getValue() == 0;
+    return value.getValue().longValue() == 0;
   }
 
   public void incrementFailureCount(String operationUrl) {
     FailureCounter value = getHolder(operationUrl);
     value.setForceCheck(false);
-    long current = value.getValue();//= Interlocked.Increment(ref value.Value);
+    long current = value.getValue().incrementAndGet();
     if (current == 1)// first failure
     {
-      //      failoverStatusChanged(this, new FailoverStatusChangedEventArgs
-      //      {
-      //          Url = operationUrl,
-      //          Failing = true
-      //      });
+      EventHelper.invoke(failoverStatusChanged, this, new FailoverStatusChangedEventArgs(operationUrl, true));
+
     }
   }
 
@@ -215,35 +323,34 @@ public class ReplicationInformer {
       || JTokenType.NULL.equals(document.getDataAsJson().get("Destinations").getType());
   }
 
-  public void refreshReplicationInformation(ServerClient commands){
-  //TODO: implement me
+  public void refreshReplicationInformation(ServerClient commands) {
+    //TODO: implement me
   }
 
   private void updateReplicationInformationFromDocument(JsonDocument document) {
     //TODO: implement me
   }
 
-  public void resetFailureCount(String operationUrl)
-  {
-      FailureCounter value = getHolder(operationUrl);
-      //var oldVal = Interlocked.Exchange(ref value.Value, 0);
-      long oldVal = value.getValue();
-      value.setValue(0);
-      value.setLastCheck(new Date());
-      value.setForceCheck(false);
-      if (oldVal != 0)
-      {
-        /*  FailoverStatusChanged(this,
-              new FailoverStatusChangedEventArgs
-              {
-                  Url = operationUrl,
-                  Failing = false
-              });*/
-      }
+  public void resetFailureCount(String operationUrl) {
+    FailureCounter value = getHolder(operationUrl);
+    long oldVal = value.getValue().getAndSet(0);
+    value.setLastCheck(new Date());
+    value.setForceCheck(false);
+    if (oldVal != 0) {
+      EventHelper.invoke(failoverStatusChanged, this, new FailoverStatusChangedEventArgs(operationUrl, false));
+    }
   }
 
-
   public static class FailoverStatusChangedEventArgs extends EventArgs {
+
+    public FailoverStatusChangedEventArgs() {
+    }
+
+    public FailoverStatusChangedEventArgs(String url, Boolean failing) {
+      super();
+      this.failing = failing;
+      this.url = url;
+    }
 
     private Boolean failing;
     private String url;
@@ -279,13 +386,11 @@ public class ReplicationInformer {
   }
 
   public void addFailoverStatusChanged(EventHandler<FailoverStatusChangedEventArgs> event) {
-    // TODO Auto-generated method stub
-
+    failoverStatusChanged.add(event);
   }
 
   public void removeFailoverStatusChanged(EventHandler<FailoverStatusChangedEventArgs> event) {
-    // TODO Auto-generated method stub
-
+    failoverStatusChanged.remove(event);
   }
 
   public void forceCheck(String primaryUrl, boolean shouldForceCheck) {
@@ -303,15 +408,15 @@ public class ReplicationInformer {
 
   public class FailureCounter {
 
-    private long value;
+    private AtomicLong value;
     private Date lastCheck;
     private boolean forceCheck;
 
-    public long getValue() {
+    public AtomicLong getValue() {
       return value;
     }
 
-    public void setValue(long value) {
+    public void setValue(AtomicLong value) {
       this.value = value;
     }
 

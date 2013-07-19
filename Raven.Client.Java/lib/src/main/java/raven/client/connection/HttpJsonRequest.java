@@ -632,7 +632,7 @@ public class HttpJsonRequest {
     if (thePrimaryUrl.equalsIgnoreCase(currentUrl)) {
       return this;
     }
-    if (replicationInformer.getFailureCount(thePrimaryUrl) <= 0) {
+    if (replicationInformer.getFailureCount(thePrimaryUrl).longValue() <= 0) {
       return this; // not because of failover, no need to do this.
     }
 
