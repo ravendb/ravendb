@@ -49,5 +49,30 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				Assert.Null(loadedUser);
 			}
 		}
-	}
+
+        [Fact]
+        public void Will_load_with_generic_property()
+        {
+            var namedValue = new GenericNamedValue<Dictionary<string, string>>
+            {
+                Id = "genericnamedvalue/1",
+                Name = "asdf",
+                Value = new Dictionary<string, string>()
+            };
+
+            using (var session = DocumentStore.OpenSession())
+            {
+                session.Store(namedValue);
+                session.SaveChanges();
+            }
+
+            using (var session = DocumentStore.OpenSession())
+            {
+                var loadedNamedValue = session.LoadByUniqueConstraint<GenericNamedValue<Dictionary<string, string>>>(x => x.Name, "asdf");
+
+                Assert.NotNull(loadedNamedValue);
+                Assert.Equal(namedValue.Id, loadedNamedValue.Id);
+            }
+        }
+    }
 }
