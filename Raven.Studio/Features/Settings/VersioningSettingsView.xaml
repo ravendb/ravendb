@@ -89,22 +89,37 @@
 	<Grid x:Name="LayoutRoot">
         <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Settings}">
             <toolkit:HeaderedContentControl.Header>
-                <StackPanel Orientation="Horizontal"
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<StackPanel Orientation="Horizontal"
 						Margin="0,4,4,4"
 						VerticalAlignment="Center">
 
-                    <Button Command="{Binding AddVersioning}"
+						<Button Command="{Binding AddVersioning}"
 						Style="{StaticResource Style_Button_MouseOverChrome}"
 						ToolTipService.ToolTip="Add Versioning">
-                        <Button.Content>
-                            <StackPanel Orientation="Horizontal">
-                                <Image Source="{StaticResource Image_Add_Tiny}"
+							<Button.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_Add_Tiny}"
 									   Stretch="None"/>
-                                <TextBlock Text="Add Versioning" Margin="2,0,0,0" />
-                            </StackPanel>
-                        </Button.Content>
-                    </Button>
-                </StackPanel>
+									<TextBlock Text="Add Versioning" Margin="2,0,0,0" />
+								</StackPanel>
+							</Button.Content>
+						</Button>
+					</StackPanel>
+					
+					<CheckBox Grid.Column="2" 
+							  Margin="5"
+							  Content="Allow Revisions" 
+							  IsChecked="{Binding AllowChangedToRevistions, Mode=TwoWay}" 
+							  IsEnabled="{Binding CadEditAllowedRevisions}"
+							  VerticalAlignment="Center"/>
+				</Grid>
+               
             </toolkit:HeaderedContentControl.Header>
             <ListBox  Style="{StaticResource Databases_FluidList}"
                       ItemsSource="{Binding VersioningConfigurations}"

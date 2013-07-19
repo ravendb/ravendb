@@ -235,6 +235,9 @@ namespace Raven.Studio.Commands
 					session.Store(versioningConfiguration);
 				}
 
+				if (versioningSettings.DatabaseDocument != null)
+					await DatabaseCommands.CreateDatabaseAsync(versioningSettings.DatabaseDocument);
+
 				needToSaveChanges = true;
 			}
 

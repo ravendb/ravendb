@@ -52,7 +52,7 @@ namespace Raven.Studio.Models
 		    var bundles = ApplicationModel.CreateSerializer()
 		                                  .Deserialize<List<string>>(
 			                                  new RavenJTokenReader(debug.SelectToken("ActiveBundles")));
-
+		    var addedVersioning = false;
 		    if (ApplicationModel.Current.Server.Value.UserInfo.IsAdminGlobal)
 		    {
 			    var doc = await ApplicationModel.Current.Server.Value.DocumentStore
@@ -72,8 +72,15 @@ namespace Raven.Studio.Models
 				    Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
 				    Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
+					//Bundles that need the database document
 				    if (bundles.Contains("Quotas"))
 					    Settings.Sections.Add(new QuotaSettingsSectionModel());
+
+				    if (bundles.Contains("Versioning"))
+				    {
+					    AddModel(new VersioningSettingsSectionModel());
+					    addedVersioning = true;
+				    }
 
 				    foreach (var settingsSectionModel in Settings.Sections)
 				    {
@@ -82,14 +89,15 @@ namespace Raven.Studio.Models
 			    }
 		    }
 
+			//Bundles that don't need the database document
 		    if (bundles.Contains("Replication"))
 			    AddModel(new ReplicationSettingsSectionModel());
 
+			 if (bundles.Contains("Versioning") && addedVersioning == false)
+				 AddModel(new VersioningSettingsSectionModel());
+
 		    if (bundles.Contains("SqlReplication"))
 			    AddModel(new SqlReplicationSettingsSectionModel());
-
-		    if (bundles.Contains("Versioning"))
-			    AddModel(new VersioningSettingsSectionModel());
 
 		    if (bundles.Contains("ScriptedIndexResults"))
 			    AddModel(new ScriptedIndexSettingsSectionModel());
