@@ -1,13 +1,45 @@
 package raven.abstractions.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
+import java.io.IOException;
+
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.junit.Test;
+
+import raven.abstractions.extensions.JsonExtensions;
 
 public class EtagTest {
 
+  public static class EtagHolder {
+    private Etag tag;
 
-  //TODO: finish tests
+    public Etag getTag() {
+      return tag;
+    }
+
+    public void setTag(Etag tag) {
+      this.tag = tag;
+    }
+
+
+  }
+
+  @Test
+  public void testGenerateRandom() {
+    Etag random = Etag.random();
+    assertNotEquals(0L, random.getChanges());
+  }
+
+  @Test
+  public void testParseEtagUsingDefaultFactor() throws JsonParseException, JsonMappingException, IOException {
+    EtagHolder etagHolder = JsonExtensions.getDefaultObjectMapper().readValue("{\"Tag\": \"00000001-0000-0100-0000-000000000002\"}", EtagHolder.class);
+    assertEquals(Etag.parse("00000001-0000-0100-0000-000000000002"), etagHolder.tag);
+  }
+
+
   @Test
   public void testEmpty() {
     assertEquals("00000000-0000-0000-0000-000000000000", Etag.empty().toString());

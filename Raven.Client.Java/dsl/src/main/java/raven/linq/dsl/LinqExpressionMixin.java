@@ -2,7 +2,6 @@ package raven.linq.dsl;
 
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Expression;
-import com.mysema.query.types.FactoryExpression;
 import com.mysema.query.types.OperationImpl;
 import com.mysema.query.types.Operator;
 import com.mysema.query.types.Order;
@@ -46,7 +45,7 @@ public final class LinqExpressionMixin<T> implements Cloneable {
     return self;
   }
 
-  public T select(FactoryExpression<?> projection) {
+  public T select(Expression<?> projection) {
     expression = OperationImpl.create(LinqExpressionMixin.class, LinqOps.Fluent.SELECT, expression, lambdaInferer.inferLambdas(projection));
     return self;
   }

@@ -1,5 +1,8 @@
 package raven.abstractions.data;
 
+import raven.abstractions.basic.UseSharpEnum;
+
+@UseSharpEnum
 public enum UuidType {
 
   DOCUMENTS((byte)1),

@@ -1,9 +1,12 @@
 package raven.abstractions.data;
 
+import raven.abstractions.basic.UseSharpEnum;
+
 /**
  * String distance algorithms used in suggestion query
  *
  */
+@UseSharpEnum
 public enum StringDistanceTypes {
   /**
    * Default, suggestion is not active

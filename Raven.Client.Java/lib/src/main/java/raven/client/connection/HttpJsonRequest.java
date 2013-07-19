@@ -28,6 +28,7 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -41,17 +42,19 @@ import org.apache.http.util.EntityUtils;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Action3;
-import raven.abstractions.closure.Actions;
+import raven.abstractions.closure.Delegates;
 import raven.abstractions.connection.HttpRequestHelper;
 import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.BadRequestException;
 import raven.abstractions.exceptions.HttpOperationException;
+import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
+import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
@@ -69,7 +72,7 @@ public class HttpJsonRequest {
   private volatile HttpResponse httpResponse;
   private CachedRequest cachedRequestDetails;
   private final HttpJsonRequestFactory factory;
-  private final ServerClient owner;
+  private final IHoldProfilingInformation owner;
   private final DocumentConvention conventions;
   private String postedData;
   private final StopWatch sp;
@@ -84,7 +87,17 @@ public class HttpJsonRequest {
   private HttpClient httpClient;
   private int responseStatusCode;
 
-  private Action3<Map<String, String>, String, String> handleReplicationStatusChanges = Actions.delegate3();
+  public HttpMethods getMethod() {
+    return method;
+  }
+
+  public String getUrl() {
+    return url;
+  }
+
+
+
+  private Action3<Map<String, String>, String, String> handleReplicationStatusChanges = Delegates.delegate3();
 
   /**
    * @return the skipServerCheck
@@ -139,12 +152,7 @@ public class HttpJsonRequest {
       }
 
       String value = prop.getValue().value(Object.class).toString();
-
-      switch (headerName) {
-      //TODO: list other custom headers that needs special treatment
-      default:
-        webRequest.addHeader(headerName, value);
-      }
+      webRequest.addHeader(headerName, value);
     }
   }
 
@@ -162,14 +170,21 @@ public class HttpJsonRequest {
       break;
     case POST:
       baseMethod = new HttpPost(url);
-      baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, true);
+      if (owner != null) {
+        baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
+      }
       break;
     case PUT:
       baseMethod = new HttpPut(url);
-      baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, true);
+      if (owner != null) {
+        baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
+      }
       break;
     case DELETE:
       baseMethod = new HttpDelete(url);
+      break;
+    case PATCH:
+      baseMethod = new HttpPatch(url);
       break;
     case HEAD:
       baseMethod = new HttpHead(url);
@@ -181,7 +196,7 @@ public class HttpJsonRequest {
       throw new IllegalArgumentException("Unknown method: " + method);
     }
 
-    /*TODO
+    /*TODO credentials
     webRequest.UseDefaultCredentials = true;
     webRequest.Credentials = requestParams.Credentials;
      */
@@ -287,7 +302,7 @@ public class HttpJsonRequest {
     }
   }
 
-  private double calculateDuration() {
+  protected double calculateDuration() {
     return sp.getTime();
   }
 
@@ -304,14 +319,14 @@ public class HttpJsonRequest {
     if (conventions.getHandleForbiddenResponse() == null)
       return;
 
-    conventions.getHandleForbiddenResponse().apply(forbiddenResponse);
+    conventions.handleForbiddenResponse(forbiddenResponse);
   }
 
   private boolean handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
     if (conventions.getHandleUnauthorizedResponse() == null)
       return false;
 
-    Action1<HttpRequest> handleUnauthorizedResponse = conventions.getHandleUnauthorizedResponse().apply(unauthorizedResponse);
+    Action1<HttpRequest> handleUnauthorizedResponse = conventions.handleUnauthorizedResponse(unauthorizedResponse);
     if (handleUnauthorizedResponse == null)
       return false;
 
@@ -374,12 +389,12 @@ public class HttpJsonRequest {
       return result;
     }
 
-    responseHeaders = extractHeaders(httpResponse.getAllHeaders());
-    responseStatusCode = httpResponse.getStatusLine().getStatusCode();
-
-    handleReplicationStatusChanges.apply(extractHeaders(httpResponse.getAllHeaders()), primaryUrl, operationUrl);
-
     try {
+      responseHeaders = extractHeaders(httpResponse.getAllHeaders());
+      responseStatusCode = httpResponse.getStatusLine().getStatusCode();
+
+      handleReplicationStatusChanges.apply(extractHeaders(httpResponse.getAllHeaders()), primaryUrl, operationUrl);
+
       RavenJToken data = RavenJToken.tryLoad(responseStream);
 
       if (HttpMethods.GET == method && shouldCacheRequest) {
@@ -473,16 +488,12 @@ public class HttpJsonRequest {
           throw new IllegalStateException(readToEnd, e);
         }
 
-        /*TODO:
-         * if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
-        {
-          throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
-          {
-            IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
-            ProblematicText = ravenJObject.Value<string>("ProblematicText")
-          };
+        if (ravenJObject.containsKey("IndexDefinitionProperty")) {
+          IndexCompilationException ex = new IndexCompilationException(ravenJObject.value(String.class, "Message"));
+          ex.setIndexDefinitionProperty(ravenJObject.value(String.class, "IndexDefinitionProperty"));
+          ex.setProblematicText(ravenJObject.value(String.class, "ProblematicText"));
+          throw ex;
         }
-         */
 
         if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_BAD_REQUEST && ravenJObject.containsKey("Message")) {
           throw new BadRequestException(ravenJObject.value(String.class, "Message"), e);

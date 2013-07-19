@@ -18,6 +18,8 @@ import raven.abstractions.indexing.SuggestionOptions;
 import raven.client.document.DocumentConvention;
 import raven.linq.dsl.IndexExpression;
 
+
+//TODO: create AbstractIndexCreationTask + provide structures for both string and expression based index creation
 public class IndexDefinitionBuilder {
 
   private IndexExpression map;
@@ -173,8 +175,12 @@ public class IndexDefinitionBuilder {
       */
 
     IndexDefinition indexDefinition = new IndexDefinition();
-    indexDefinition.setReduce(reduce.toLinq());
-    indexDefinition.setTransformResults(transformResults.toLinq());
+    if (reduce != null) {
+      indexDefinition.setReduce(reduce.toLinq());
+    }
+    if (transformResults != null) {
+      indexDefinition.setTransformResults(transformResults.toLinq());
+    }
     indexDefinition.setIndexes(convertToStringDictionary(indexes));
     indexDefinition.setStores(convertToStringDictionary(stores));
     indexDefinition.setSortOptions(convertToStringDictionary(sortOptions));

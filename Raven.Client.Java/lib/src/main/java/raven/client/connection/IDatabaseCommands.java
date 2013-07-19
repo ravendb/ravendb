@@ -2,186 +2,52 @@ package raven.client.connection;
 
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import raven.abstractions.basic.Holder;
+import raven.abstractions.commands.ICommandData;
 import raven.abstractions.data.Attachment;
+import raven.abstractions.data.BatchResult;
+import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.FacetResults;
+import raven.abstractions.data.GetRequest;
+import raven.abstractions.data.GetResponse;
+import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
+import raven.abstractions.data.MoreLikeThisQuery;
 import raven.abstractions.data.MultiLoadResult;
+import raven.abstractions.data.PatchRequest;
 import raven.abstractions.data.PutResult;
+import raven.abstractions.data.QueryHeaderInformation;
+import raven.abstractions.data.QueryResult;
+import raven.abstractions.data.ScriptedPatchRequest;
+import raven.abstractions.data.SuggestionQuery;
+import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.indexing.IndexDefinition;
+import raven.abstractions.indexing.TransformerDefinition;
 import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
+import raven.client.connection.profiling.IHoldProfilingInformation;
+import raven.client.indexes.IndexDefinitionBuilder;
 
-//TODO: expose all methods
-public interface IDatabaseCommands {
-  /**
-   * Deletes the document with the specified key
-   * @param key The key.
-   * @param etag The etag.
-   */
-  public void delete(String key, Etag etag);
+public interface IDatabaseCommands extends IHoldProfilingInformation {
 
   /**
-   * Deletes the attachment with the specified key
-   * @param key The key.
-   * @param etag The etag.
-   */
-  public void deleteAttachment(String key, Etag etag);
-
-  /**
-   * Delete index
-   * @param name
-   */
-  public void deleteIndex(final String name);
-
-  /**
-   * Create a new instance of {@link IDatabaseCommands} that will interacts with the specified database
-   * @param database
+   * Gets the operations headers
    * @return
    */
-  public IDatabaseCommands forDatabase(String database);
+  public Map<String, String> getOperationsHeaders();
 
   /**
-   * Creates a new instance of {@link IDatabaseCommands} that will interacts with the default database.
+   * Sets the operations headers
+   * @param operationsHeaders
    */
-  public IDatabaseCommands forSystemDatabase();
-
-
-  /**
-   * Retrieves the document for the specified key
-   * @param key The key
-   * @return
-   */
-  public JsonDocument get(String key) throws ServerClientException;
-
-  /**
-   * Gets the attachment by the specified key
-   * @param key
-   * @return
-   */
-  public Attachment getAttachment(String key);
-
-  /**
-   * Gets the attachments starting with the specified prefix
-   * @param idPrefix
-   * @param start
-   * @param pageSize
-   * @return
-   */
-  public List<Attachment> getAttachmentHeadersStartingWith(String idPrefix, int start, int pageSize);
-
-  /**
-   * Returns list of database names
-   * @param pageSize
-   * @return
-   */
-  List<String> getDatabaseNames(int pageSize);
-
-  /**
-   * Returns list of database names
-   * @param pageSize
-   * @param start
-   * @return
-   */
-  public List<String> getDatabaseNames(int pageSize, int start);
-
-  /**
-   * Get documents from server
-   * @param start
-   * @param pageSize
-   * @return
-   */
-  public List<JsonDocument> getDocuments(int start, int pageSize);
-
-  /**
-   * Get documents from server
-   * @param start Paging start
-   * @param pageSize Size of the page.
-   * @param metadataOnly Load just the document metadata
-   * @return
-   */
-  public List<JsonDocument> getDocuments(int start, int pageSize, boolean metadataOnly);
-
-  /**
-   * Checks if the document exists for the specified key
-   * @param key The key.
-   * @return
-   */
-  public JsonDocumentMetadata head(String key);
-
-  /**
-   * Retrieves the attachment metadata with the specified key, not the actual attachment
-   * @param key
-   * @return
-   */
-  public Attachment headAttachment(String key);
-
-  /**
-   * Generate the next identity value from the server
-   * @param name
-   * @return
-   */
-  public Long nextIdentityFor(String name);
-
-  /**
-   * Puts the document in the database with the specified key
-   * @param key The key.
-   * @param guid The etag.
-   * @param document The document.
-   * @param metadata The metadata.
-   * @return PutResult
-   */
-  public PutResult put(String key, Etag guid, RavenJObject document, RavenJObject metadata);
-  /**
-   * Returns {@link IndexDefinition}s
-   * @param start
-   * @param pageSize
-   * @return
-   */
-  public Collection<IndexDefinition> getIndexes(final int start, final int pageSize);
-
-  /**
-   * Gets the index definition for the specified name
-   * @param name
-   * @return
-   */
-  public IndexDefinition getIndex(String name);
-
-  /**
-   * Gets the index names from the server
-   * @param start
-   * @param pageSize
-   * @return
-   */
-  public Collection<String> getIndexNames(final int start, final int pageSize) ;
-
-  /**
-   * Puts a byte array as attachment with the specified key
-   * @param key The key.
-   * @param etag The etag.
-   * @param data The data.
-   * @param metadata The metadata.
-   */
-  public void putAttachment(String key, Etag etag, InputStream data, RavenJObject metadata);
-
-  /**
-   * Puts index with given definition
-   * @param name
-   * @param definition
-   * @return
-   */
-  public String putIndex(String name, IndexDefinition definition);
-
-  /**
-   * Puts the index.
-   * @param name
-   * @param definition
-   * @param overwrite
-   * @return
-   */
-  public String putIndex(final String name, final IndexDefinition definition, final boolean overwrite);
+  public void setOperationsHeaders(Map<String, String> operationsHeaders);
 
   /**
    * Retrieves documents for the specified key prefix
@@ -206,12 +72,520 @@ public interface IDatabaseCommands {
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly);
 
   /**
+   * Retrieves the document for the specified key
+   * @param key The key
+   * @return
+   */
+  public JsonDocument get(String key) throws ServerClientException;
+
+  /**
+   * Gets the results for the specified ids.
+   * @param ids
+   * @param includes
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes);
+
+  /**
+   * Gets the results for the specified ids.
+   * @param ids
+   * @param includes
+   * @param transformer
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes, final String transformer);
+
+  /**
+   * Gets the results for the specified ids.
+   * @param ids
+   * @param includes
+   * @param transformer
+   * @param queryInputs
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes, final String transformer, final Map<String, RavenJToken> queryInputs);
+
+  /**
+   * @param ids
+   * @param includes
+   * @param transformer
+   * @param queryInputs
+   * @param metadataOnly
+   * @return
+   */
+  public MultiLoadResult get(final String[] ids, final String[] includes, final String transformer, final Map<String, RavenJToken> queryInputs, final boolean metadataOnly);
+
+
+  /**
+   * Seeds the next identity value on the server
+   * @param name
+   * @param value
+   * @return
+   */
+  public long seedIdentityFor(final String name, final long value) ;
+
+  /**
+   * Get documents from server
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public List<JsonDocument> getDocuments(int start, int pageSize);
+
+  /**
+   * Get documents from server
+   * @param start Paging start
+   * @param pageSize Size of the page.
+   * @param metadataOnly Load just the document metadata
+   * @return
+   */
+  public List<JsonDocument> getDocuments(int start, int pageSize, boolean metadataOnly);
+
+  /**
+   * Puts the document in the database with the specified key
+   * @param key The key.
+   * @param guid The etag.
+   * @param document The document.
+   * @param metadata The metadata.
+   * @return PutResult
+   */
+  public PutResult put(String key, Etag guid, RavenJObject document, RavenJObject metadata);
+
+  /**
+   * Deletes the document with the specified key
+   * @param key The key.
+   * @param etag The etag.
+   */
+  public void delete(String key, Etag etag);
+
+  /**
+   * Puts a byte array as attachment with the specified key
+   * @param key The key.
+   * @param etag The etag.
+   * @param data The data.
+   * @param metadata The metadata.
+   */
+  public void putAttachment(String key, Etag etag, InputStream data, RavenJObject metadata);
+
+  /**
    *  Updates just the attachment with the specified key's metadata
    * @param key The key.
    * @param etag The etag.
    * @param metadata The metadata.
    */
   public void updateAttachmentMetadata(String key, Etag etag, RavenJObject metadata);
+
+  /**
+   * Gets the attachment by the specified key
+   * @param key
+   * @return
+   */
+  public Attachment getAttachment(String key);
+
+  /**
+   * Gets the attachments starting with the specified prefix
+   * @param idPrefix
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public List<Attachment> getAttachmentHeadersStartingWith(String idPrefix, int start, int pageSize);
+
+  /**
+   * Retrieves the attachment metadata with the specified key, not the actual attachment
+   * @param key
+   * @return
+   */
+  public Attachment headAttachment(String key);
+
+  /**
+   * Deletes the attachment with the specified key
+   * @param key The key.
+   * @param etag The etag.
+   */
+  public void deleteAttachment(String key, Etag etag);
+
+  /**
+   * Returns list of database names
+   * @param pageSize
+   * @return
+   */
+  List<String> getDatabaseNames(int pageSize);
+
+  /**
+   * Returns list of database names
+   * @param pageSize
+   * @param start
+   * @return
+   */
+  public List<String> getDatabaseNames(int pageSize, int start);
+
+  /**
+   * Gets the index names from the server
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Collection<String> getIndexNames(final int start, final int pageSize) ;
+
+  /**
+   * Returns {@link IndexDefinition}s
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Collection<IndexDefinition> getIndexes(final int start, final int pageSize);
+
+  /**
+   * Resets the specified index
+   * @param name
+   */
+  public void resetIndex(String name);
+
+  /**
+   * Gets the index definition for the specified name
+   * @param name
+   * @return
+   */
+  public IndexDefinition getIndex(String name);
+
+  /**
+   * Puts index with given definition
+   * @param name
+   * @param definition
+   * @return
+   */
+  public String putIndex(String name, IndexDefinition definition);
+
+  /**
+   * Creates a transformer with the specified name, based on an transformer definition
+   * @param name
+   * @param indexDef
+   * @return
+   */
+  public String putTransformer(String name, TransformerDefinition indexDef);
+
+  /**
+   * Puts the index.
+   * @param name
+   * @param definition
+   * @param overwrite
+   * @return
+   */
+  public String putIndex(final String name, final IndexDefinition definition, final boolean overwrite);
+
+  /**
+   * Creates an index with the specified name, based on an index definition
+   * @param name
+   * @param indexDef
+   * @return
+   */
+  public String putIndex(String name, IndexDefinitionBuilder indexDef);
+
+  /**
+   * Creates an index with the specified name, based on an index definition
+   * @param name
+   * @param indexDef
+   * @param overwrite
+   * @return
+   */
+  public String putIndex(String name, IndexDefinitionBuilder indexDef, boolean overwrite);
+
+  /**
+   * Performs index query
+   * @param index
+   * @param query
+   * @param includes
+   * @return
+   */
+  public QueryResult query(String index, IndexQuery query, String[] includes);
+
+  /**
+   * Performs index query
+   * @param index
+   * @param query
+   * @param includes
+   * @return
+   */
+  public QueryResult query(String index, IndexQuery query, String[] includes, boolean metadataOnly);
+
+  /**
+   * Performs index query
+   * @param index
+   * @param query
+   * @param includes
+   * @return
+   */
+  public QueryResult query(String index, IndexQuery query, String[] includes, boolean metadataOnly, boolean indexEntriesOnly);
+
+  /**
+   *  Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+   *  of the number of items that might be returned.
+   * @param index
+   * @param query
+   * @param queryHeaderInfo
+   * @return
+   */
+  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Holder<QueryHeaderInformation> queryHeaderInfo) ;
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+
+  /**
+   * Delete index
+   * @param name
+   */
+  public void deleteIndex(final String name);
+
+  /**
+   *  Executed the specified commands as a single batch
+   * @param commandDatas
+   * @return
+   */
+  public BatchResult[] batch(final List<ICommandData> commandDatas);
+
+  /**
+   * Commits the specified tx id.
+   * @param txId
+   */
+  public void commit(final String txId);
+
+  /**
+   * Rollbacks the specified tx id.
+   * @param txId
+   */
+  public void rollback(final String txId);
+
+  /**
+   * Returns a new {@link IDatabaseCommands} using the specified credentials
+   * @param credentialsForSession
+   * @return
+   */
+  public IDatabaseCommands with(Credentials credentialsForSession);
+
+  /**
+   * Perform a set based deletes using the specified index.
+   * @param indexName
+   * @param queryToDelete
+   * @param allowStale
+   * @return
+   */
+  public Operation deleteByIndex(final String indexName, final IndexQuery queryToDelete, final boolean allowStale);
+
+  /**
+   * Perform a set based deletes using the specified index, not allowing the operation
+   *  if the index is stale
+   * @param indexName
+   * @param queryToDelete
+   * @return
+   */
+  public Operation deleteByIndex(String indexName, IndexQuery queryToDelete);
+
+  /**
+   * Perform a set based update using the specified index, not allowing the operation
+   * if the index is stale
+   * @param indexName
+   * @param queryToUpdate
+   * @param patchRequests
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
+
+  /**
+   * Perform a set based update using the specified index, not allowing the operation
+   * if the index is stale
+   * @param indexName
+   * @param queryToUpdate
+   * @param patch
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
+
+  /**
+   * Perform a set based update using the specified index, not allowing the operation
+   * if the index is stale
+   * @param indexName
+   * @param queryToUpdate
+   * @param patchRequests
+   * @param allowStale
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, boolean allowStale);
+
+  /**
+   * Perform a set based update using the specified index, not allowing the operation
+   * if the index is stale
+   * @param indexName
+   * @param queryToUpdate
+   * @param patch
+   * @param allowStale
+   * @return
+   */
+  public Operation updateByIndex(String indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, boolean allowStale);
+
+  /**
+   * Create a new instance of {@link IDatabaseCommands} that will interacts with the specified database
+   * @param database
+   * @return
+   */
+  public IDatabaseCommands forDatabase(String database);
+
+  /**
+   * Creates a new instance of {@link IDatabaseCommands} that will interacts with the default database.
+   */
+  public IDatabaseCommands forSystemDatabase();
+
+  /**
+   * Returns a list of suggestions based on the specified suggestion query
+   * @param index
+   * @param suggestionQuery
+   * @return
+   */
+  public SuggestionQueryResult suggest(final String index, final SuggestionQuery suggestionQuery);
+
+  /**
+   * Return a list of documents that based on the MoreLikeThisQuery.
+   * @param query
+   * @return
+   */
+  public MultiLoadResult moreLikeThis(MoreLikeThisQuery query);
+
+  /**
+   * Get the all terms stored in the index for the specified field
+   * You can page through the results by use fromValue parameter as the
+   * starting point for the next query
+   * @param index
+   * @param field
+   * @param fromValue
+   * @param pageSize
+   * @return
+   */
+  public List<String> getTerms(String index, String field, String fromValue, int pageSize);
+
+  /**
+   *  Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+   * @param index
+   * @param query
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults getFacets(String index, IndexQuery query, String facetSetupDoc, int start, Integer pageSize);
+
+  /**
+   *  Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
+   * @param key
+   * @param patches
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patches);
+
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag
+   * @param key
+   * @param patches
+   * @param ignoreMissing
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patches, boolean ignoreMissing);
+
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag and  if the document is missing
+   * @param key
+   * @param patch
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patch);
+
+  /**
+   * Sends a patch request for a specific document, ignoring the document's Etag
+   * @param key
+   * @param patch
+   * @param ignoreMissing
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patch, boolean ignoreMissing);
+
+  /**
+   * Sends a patch request for a specific document
+   * @param key
+   * @param patches
+   * @param etag
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patches, Etag etag);
+
+  /**
+   * Sends a patch request for a specific document which may or may not currently exist
+   * @param key
+   * @param patchesToExisting
+   * @param patchesToDefault
+   * @param defaultMetadata
+   * @return
+   */
+  public RavenJObject patch(String key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata);
+
+  /**
+   *  Sends a patch request for a specific document
+   * @param key
+   * @param patch
+   * @param etag
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patch, Etag etag);
+
+  /**
+   * Sends a patch request for a specific document which may or may not currently exist
+   * @param key
+   * @param patchExisting
+   * @param patchDefault
+   * @param defaultMetadata
+   * @return
+   */
+  public RavenJObject patch(String key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata);
+
+  /**
+   * Disable all caching within the given scope
+   * @return
+   */
+  public AutoCloseable disableAllCaching();
+
+  /**
+   * Perform a single POST request containing multiple nested GET requests
+   * @param requests
+   * @return
+   */
+  public GetResponse[] multiGet(GetRequest[] requests);
+
+  /**
+   * Returns server statistics
+   * @return
+   */
+  public DatabaseStatistics getStatistics();
+
+  /**
+   * Checks if the document exists for the specified key
+   * @param key The key.
+   * @return
+   */
+  public JsonDocumentMetadata head(String key);
+
+  /**
+   * Generate the next identity value from the server
+   * @param name
+   * @return
+   */
+  public Long nextIdentityFor(String name);
 
   /**
    * Get the full URL for the given document key
@@ -221,9 +595,38 @@ public interface IDatabaseCommands {
   public String urlFor(String documentKey);
 
   /**
-   * Resets the specified index
+   * Force the database commands to read directly from the master, unless there has been a failover.
+   */
+  public AutoCloseable forceReadFromMaster();
+
+  //TODO: public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+
+  /**
+   * Gets the transformers from the server
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Collection<TransformerDefinition> getTransformers(int start, int pageSize);
+
+  /**
+   *  Gets the transformer definition for the specified name
+   * @param name
+   * @return
+   */
+  public TransformerDefinition getTransformer(String name);
+
+  /**
+   * Deletes the specified transformer
    * @param name
    */
-  void resetIndex(String name);
+  public void deleteTransformer(String name);
+
+  /**
+   * Prepares the transaction on the server.
+   * @param txId
+   */
+  public void prepareTransaction(final String txId);
+
 
 }

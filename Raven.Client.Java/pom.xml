@@ -27,11 +27,11 @@
 
   <dependencyManagement>
     <dependencies>
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
+      <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>2.6</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -55,6 +55,16 @@
       <id>coverage</id>
       <build>
         <plugins>
+        <!--
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.15</version>
+            <configuration>
+              <parallel>methods</parallel>
+              <threadCount>2</threadCount>
+            </configuration>
+          </plugin> -->
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>

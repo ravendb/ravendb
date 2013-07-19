@@ -22,6 +22,7 @@ import raven.abstractions.json.linq.JTokenType;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
 
+
 // TODO: finish me
 public class ReplicationInformer {
 

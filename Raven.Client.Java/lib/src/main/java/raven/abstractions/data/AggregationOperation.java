@@ -2,6 +2,8 @@ package raven.abstractions.data;
 
 import org.apache.commons.lang.StringUtils;
 
+import raven.abstractions.basic.UseSharpEnum;
+@UseSharpEnum
 public enum AggregationOperation {
   NONE(0),
 

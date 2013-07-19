@@ -3,7 +3,6 @@ package raven.abstractions.json.linq;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +35,7 @@ public class Extensions {
     return values(source, null);
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   private static <U> Iterable<U> values(Class<U> clazz, Iterable<RavenJToken> source, String key) {
     return new RavenJTokenIterable(clazz, source, key);
   }
@@ -53,6 +53,7 @@ public class Extensions {
     return convert(clazzU, token);
   }
 
+  @SuppressWarnings("unchecked")
   public static <U> U convert(Class<U> clazz, RavenJToken token) {
     if (token instanceof RavenJArray && RavenJObject.class.equals(clazz)) {
       RavenJArray ar = (RavenJArray) token;
@@ -63,13 +64,13 @@ public class Extensions {
         o.set(value(String.class, key), value);
 
       }
-      return (U) (Object) o;
+      return (U) ((Object) o);
     }
     boolean cast = RavenJToken.class.isAssignableFrom(clazz);
     return convert(clazz, token, cast);
   }
 
-  public static <U> Collection<U> convert(Class<U> clazz, Iterable<RavenJToken> source) {
+  public static <U> List<U> convert(Class<U> clazz, Iterable<RavenJToken> source) {
     boolean cast = RavenJToken.class.isAssignableFrom(clazz);
 
     List<U> result = new ArrayList<>();
@@ -79,6 +80,7 @@ public class Extensions {
     return result;
   }
 
+  @SuppressWarnings("unchecked")
   public static <U> U convert(Class<U> clazz, RavenJToken token, boolean cast) {
     if (cast || Object.class.equals(clazz)) {
       // HACK
@@ -174,6 +176,7 @@ public class Extensions {
         return sourceIterator.hasNext();
       }
 
+      @SuppressWarnings("unchecked")
       @Override
       public T next() {
         RavenJToken token = sourceIterator.next();

@@ -5,8 +5,6 @@ package raven.abstractions.data;
  */
 public class SortedField {
 
-
-
   private String field;
 
   private boolean descending;

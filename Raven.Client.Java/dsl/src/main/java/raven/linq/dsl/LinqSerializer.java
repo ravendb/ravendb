@@ -1,6 +1,8 @@
 package raven.linq.dsl;
 
 
+import org.apache.commons.lang.StringUtils;
+
 import raven.linq.dsl.expressions.AnonymousExpression;
 
 import com.mysema.query.support.SerializerBase;
@@ -8,7 +10,10 @@ import com.mysema.query.types.Constant;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.FactoryExpression;
 import com.mysema.query.types.Operation;
+import com.mysema.query.types.Path;
+import com.mysema.query.types.PathType;
 import com.mysema.query.types.SubQueryExpression;
+import com.mysema.query.types.path.SimplePath;
 /**
  * Class responsible for AST -> Linq expression serialization
  */
@@ -21,6 +26,16 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
   public String toLinq(LinqExpressionMixin<?> query) {
     handle(query.getExpression());
     return toString();
+  }
+
+  @Override
+  public Void visit(Path< ? > path, Void context) {
+    if (PathType.PROPERTY == path.getMetadata().getPathType()) {
+      String propToUpper = StringUtils.capitalize(path.getMetadata().getName());
+      SimplePath<?> newPath = new SimplePath<>(path.getType(), path.getMetadata().getParent(), propToUpper);
+      return super.visit(newPath, context);
+    }
+    return super.visit(path, context);
   }
 
   @SuppressWarnings("unchecked")

@@ -22,7 +22,7 @@ public class ConcurrencyException extends RuntimeException {
   }
 
   public ConcurrencyException(Etag expectedEtag, Etag actualEtag, String error, Throwable cause) {
-    super("Expected Etag:" + expectedEtag + ", actual:" + actualEtag + error + cause.getMessage(), cause);
+    super("Expected Etag: " + expectedEtag + ", actual: " + actualEtag + " " + error + ":" + cause.getMessage(), cause);
     this.expectedEtag = expectedEtag;
     this.actualEtag = actualEtag;
   }

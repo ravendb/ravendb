@@ -1,6 +1,7 @@
 package raven.abstractions.data;
 
 import java.nio.ByteBuffer;
+import java.util.UUID;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -37,7 +38,9 @@ public class Etag {
   }
 
   public Etag(String str) {
-    parse(str);
+    Etag parse = parse(str);
+    this.restarts = parse.restarts;
+    this.changes = parse.changes;
   }
 
   public Etag(UuidType type, long restarts, long changes) {
@@ -55,7 +58,7 @@ public class Etag {
     ByteBuffer buffer = ByteBuffer.allocate(8);
     buffer.putLong(x);
     return buffer.array();
-}
+  }
 
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
@@ -78,7 +81,7 @@ public class Etag {
     buffer.put(bytes);
     buffer.flip();//need flip
     return buffer.getLong();
-}
+  }
 
   public static Etag parse(byte[] bytes) {
     byte[] arr1 = ArrayUtils.subarray(bytes, 0, 8);
@@ -99,8 +102,8 @@ public class Etag {
 
   private static byte hexStringToByte(String s) {
     return (byte) ((Character.digit(s.charAt(0), 16) << 4)
-                             + Character.digit(s.charAt(0+1), 16));
-}
+        + Character.digit(s.charAt(0+1), 16));
+  }
 
   public static Etag parse(String str) {
 
@@ -185,6 +188,11 @@ public class Etag {
     if (restarts != other.restarts)
       return false;
     return true;
+  }
+
+
+  public static Etag random() {
+    return new Etag(UUID.randomUUID().toString());
   }
 
 

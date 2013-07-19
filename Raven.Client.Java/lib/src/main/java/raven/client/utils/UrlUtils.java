@@ -13,6 +13,9 @@ public class UrlUtils {
 
   public static String escapeDataString(String input) {
     try {
+      if (input == null) {
+        return "";
+      }
       return URLEncoder.encode(input, "UTF-8");
     } catch (UnsupportedEncodingException e) {
       log.error(e.getMessage(), e);
@@ -22,6 +25,9 @@ public class UrlUtils {
 
   public static String unescapeDataString(String input) {
     try {
+      if (input == null) {
+        return null;
+      }
       return URLDecoder.decode(input, "UTF-8");
     } catch (UnsupportedEncodingException e) {
       log.error(e.getMessage(), e);

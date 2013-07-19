@@ -1,9 +1,12 @@
 package raven.abstractions.indexing;
 
+import raven.abstractions.basic.UseSharpEnum;
+
 /**
  * The sort options to use for a particular field
  *
  */
+@UseSharpEnum
 public enum SortOptions {
 
   /**
@@ -76,6 +79,5 @@ public enum SortOptions {
   public int getValue() {
     return value;
   }
-
 
 }

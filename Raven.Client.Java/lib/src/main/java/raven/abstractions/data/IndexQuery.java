@@ -1,5 +1,6 @@
 package raven.abstractions.data;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -14,10 +15,6 @@ import raven.client.utils.UrlUtils;
 
 /**
  * All the information required to query a Raven index
- */
-/**
- * @author <a href="mailto:marcin@ais.pl">Marcin Lewandowski</a>, AIS.PL
- *
  */
 public class IndexQuery {
   private int pageSize;
@@ -43,7 +40,7 @@ public class IndexQuery {
   private Date cutoff;
   private Etag cutoffEtag;
   private String defaultField;
-  private QueryOperator defaultOperator;
+  private QueryOperator defaultOperator = QueryOperator.OR;
   private boolean skipTransformResults;
   private Holder<Integer> skippedResults;
   private boolean debugOptionGetIndexEntires;
@@ -52,7 +49,6 @@ public class IndexQuery {
   private String[] highlighterPostTags;
   private String resultsTransformer;
   private boolean disableCaching;
-
 
   public String getResultsTransformer() {
     return resultsTransformer;
@@ -341,7 +337,7 @@ public class IndexQuery {
       path.append("&pageSize=").append(pageSize);
     }
 
-    if (!aggregationOperation.isEmpty() && !aggregationOperation.contains(AggregationOperation.NONE)) {
+    if (aggregationOperation != null && !aggregationOperation.isEmpty() && !aggregationOperation.contains(AggregationOperation.NONE)) {
       path.append("&aggregation=").append(aggregationOperation);
     }
 
@@ -384,10 +380,10 @@ public class IndexQuery {
     }
 
     if (cutoff != null) {
-      /*TODO
-      var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
-      path.Append("&cutOff=").Append(cutOffAsString);
-       */
+      SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT);
+      String cutOffAsString = UrlUtils.escapeDataString(sdf.format(cutoff));
+      path.append("&cufOff=").append(cutOffAsString);
+      //TODO: test date format
     }
     if (cutoffEtag != null) {
       path.append("&cutOffEtag=").append(cutoffEtag);

@@ -25,7 +25,6 @@ public class ConcurrentLruLSetTest {
     });
 
     set1.clearHalf();
-
   }
 
   @Test

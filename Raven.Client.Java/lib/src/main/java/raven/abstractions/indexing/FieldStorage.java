@@ -1,8 +1,11 @@
 package raven.abstractions.indexing;
 
+import raven.abstractions.basic.UseSharpEnum;
+
 /**
  *  Specifies whether and how a field should be stored.
  */
+@UseSharpEnum
 public enum FieldStorage {
   /**
    *  Store the original field value in the index. This is useful for short texts like a document's title which should be displayed with the results.

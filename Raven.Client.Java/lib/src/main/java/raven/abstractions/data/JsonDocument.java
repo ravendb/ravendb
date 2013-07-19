@@ -2,7 +2,11 @@ package raven.abstractions.data;
 
 import java.util.Date;
 
+import org.apache.commons.lang.time.FastDateFormat;
+
+import raven.abstractions.Default;
 import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJValue;
 
 /**
  * A document representation:
@@ -10,7 +14,6 @@ import raven.abstractions.json.linq.RavenJObject;
  * - Etag
  * - Metadata
  */
-//TODO: finish me
 public class JsonDocument {
   private RavenJObject dataAsJson;
   private RavenJObject metadata;
@@ -18,6 +21,7 @@ public class JsonDocument {
   private boolean nonAuthoritativeInformation;
   private Etag etag;
   private Date lastModified;
+  private Float tempIndexScore;
 
   public JsonDocument(RavenJObject dataAsJson, RavenJObject metadata, String key, boolean nonAuthoritativeInformation, Etag etag, Date lastModified) {
     super();
@@ -30,31 +34,10 @@ public class JsonDocument {
   }
 
   /**
-   * @return the key
+   * @return the dataAsJson
    */
-  public String getKey() {
-    return key;
-  }
-
-  /**
-   * @param key the key to set
-   */
-  public void setKey(String key) {
-    this.key = key;
-  }
-
-  /**
-   * @return the nonAuthoritativeInformation
-   */
-  public boolean isNonAuthoritativeInformation() {
-    return nonAuthoritativeInformation;
-  }
-
-  /**
-   * @param nonAuthoritativeInformation the nonAuthoritativeInformation to set
-   */
-  public void setNonAuthoritativeInformation(boolean nonAuthoritativeInformation) {
-    this.nonAuthoritativeInformation = nonAuthoritativeInformation;
+  public RavenJObject getDataAsJson() {
+    return dataAsJson != null ? dataAsJson : new RavenJObject();
   }
 
   /**
@@ -64,11 +47,13 @@ public class JsonDocument {
     return etag;
   }
 
+
+
   /**
-   * @param etag the etag to set
+   * @return the key
    */
-  public void setEtag(Etag etag) {
-    this.etag = etag;
+  public String getKey() {
+    return key;
   }
 
   /**
@@ -79,17 +64,24 @@ public class JsonDocument {
   }
 
   /**
-   * @param lastModified the lastModified to set
+   * @return the metadata
    */
-  public void setLastModified(Date lastModified) {
-    this.lastModified = lastModified;
+  public RavenJObject getMetadata() {
+    if (metadata == null) {
+      metadata = new RavenJObject();
+    }
+    return metadata;
+  }
+
+  public Float getTempIndexScore() {
+    return tempIndexScore;
   }
 
   /**
-   * @return the dataAsJson
+   * @return the nonAuthoritativeInformation
    */
-  public RavenJObject getDataAsJson() {
-    return dataAsJson != null ? dataAsJson : new RavenJObject();
+  public boolean isNonAuthoritativeInformation() {
+    return nonAuthoritativeInformation;
   }
 
   /**
@@ -100,10 +92,24 @@ public class JsonDocument {
   }
 
   /**
-   * @return the metadata
+   * @param etag the etag to set
    */
-  public RavenJObject getMetadata() {
-    return metadata;
+  public void setEtag(Etag etag) {
+    this.etag = etag;
+  }
+
+  /**
+   * @param key the key to set
+   */
+  public void setKey(String key) {
+    this.key = key;
+  }
+
+  /**
+   * @param lastModified the lastModified to set
+   */
+  public void setLastModified(Date lastModified) {
+    this.lastModified = lastModified;
   }
 
   /**
@@ -111,6 +117,40 @@ public class JsonDocument {
    */
   public void setMetadata(RavenJObject metadata) {
     this.metadata = metadata;
+  }
+
+  /**
+   * @param nonAuthoritativeInformation the nonAuthoritativeInformation to set
+   */
+  public void setNonAuthoritativeInformation(boolean nonAuthoritativeInformation) {
+    this.nonAuthoritativeInformation = nonAuthoritativeInformation;
+  }
+
+  public void setTempIndexScore(Float tempIndexScore) {
+    this.tempIndexScore = tempIndexScore;
+  }
+
+  public RavenJObject toJson() {
+    dataAsJson.ensureCannotBeChangeAndEnableShapshotting();
+    metadata.ensureCannotBeChangeAndEnableShapshotting();
+
+    RavenJObject doc = (RavenJObject)dataAsJson.createSnapshot();
+    RavenJObject metadata = this.metadata.createSnapshot();
+
+    if (lastModified != null) {
+      FastDateFormat fdf = FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE);
+      metadata.add(Constants.LAST_MODIFIED, new RavenJValue(this.lastModified));
+      metadata.add(Constants.RAVEN_LAST_MODIFIED, new RavenJValue(fdf.format(this.lastModified)));
+    }
+    if (etag != null) {
+      metadata.add("@etag", new RavenJValue(etag.toString()));
+    }
+    if (nonAuthoritativeInformation) {
+      metadata.add("Non-Authoritative-Information", new RavenJValue(nonAuthoritativeInformation));
+    }
+    doc.add("@metadata", metadata);
+
+    return doc;
   }
 
   /* (non-Javadoc)

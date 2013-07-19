@@ -16,7 +16,6 @@ import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.JsonStreamContext;
 import org.codehaus.jackson.ObjectCodec;
 
-//TODO: review me
 public class RavenJTokenWriter extends JsonGenerator {
 
   private RavenJToken token;

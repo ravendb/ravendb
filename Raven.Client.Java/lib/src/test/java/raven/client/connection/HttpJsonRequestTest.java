@@ -85,12 +85,12 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
     try (InputStream ravenImage = this.getClass().getResourceAsStream("/raven.png")){
       assertNotNull(ravenImage);
-      createDb("db1");
+      createDb();
 
       RavenJObject metadata = new RavenJObject();
       metadata.add("Content-Type", RavenJToken.fromObject("image/png"));
 
-      HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/static/images/ravendb.png", HttpMethods.PUT,
+      HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/static/images/ravendb.png", HttpMethods.PUT,
           metadata, null, convention).addOperationHeaders(operationHeaders));
 
       jsonRequest.write(ravenImage);
@@ -98,7 +98,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
       // and now verify attachment using plain client.
 
-      HttpGet get = new HttpGet(DEFAULT_SERVER_URL + "/databases/db1/static/images/ravendb.png");
+      HttpGet get = new HttpGet(DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/static/images/ravendb.png");
       HttpClient httpClient = jsonRequestFactory.getHttpClient();
       HttpResponse httpResponse = httpClient.execute(get);
       byte[] imageBytes = IOUtils.toByteArray(httpResponse.getEntity().getContent());
@@ -107,7 +107,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       EntityUtils.consumeQuietly(httpResponse.getEntity());
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
@@ -117,9 +117,9 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
     Map<String, String> operationHeaders = new HashMap<>();
 
     try {
-      createDb("db1");
+      createDb();
 
-      HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/10", HttpMethods.GET,
+      HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/docs/persons/10", HttpMethods.GET,
           new RavenJObject(), null, convention).addOperationHeaders(operationHeaders));
 
       try {
@@ -130,7 +130,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       }
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
 
   }
@@ -138,30 +138,30 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
   @Test
   public void testReadResponseBytes() throws Exception {
     try {
-      createDb("db1");
+      createDb();
       putSampleDocument(new HashMap<String, String>());
 
       // repeat test to check connection management
       for (int i = 0;i < 10; i++) {
 
-        HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.GET,
+        HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/docs/persons/1", HttpMethods.GET,
             new RavenJObject() , null, convention).addOperationHeaders(new HashMap<String, String>()));
 
         byte[] responseBytes = jsonRequest.readResponseBytes();
         assertNotNull(responseBytes);
         RavenJToken jToken = RavenJObject.tryLoad(new ByteArrayInputStream(responseBytes));
-        assertEquals(jToken.toString(), "John", jToken.value(String.class, "firstName"));
+        assertEquals(jToken.toString(), "John", jToken.value(String.class, "FirstName"));
       }
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
   @Test
   public void testDelete() throws Exception {
     try {
-      createDb("db1");
+      createDb();
       RavenJToken putResult = putSampleDocument(new HashMap<String, String>());
       Etag etag = putResult.value(Etag.class, "ETag");
       assertNotNull(etag);
@@ -176,7 +176,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       requestResultArgs.clear();
 
       // try with invalid ETag
-      HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.DELETE,
+      HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/docs/persons/1", HttpMethods.DELETE,
           ravenJObject , null, convention).addOperationHeaders(operationHeaders));
       try {
         jsonRequest.executeRequest();
@@ -201,14 +201,14 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       requestResultArgs.clear();
 
       // try with invalid ETag
-      jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.DELETE,
+      jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/docs/persons/1", HttpMethods.DELETE,
           ravenJObject , null, convention).addOperationHeaders(operationHeaders));
       jsonRequest.executeRequest();
       assertEquals(HttpStatus.SC_NO_CONTENT, responseQueue.get(0).getStatusLine().getStatusCode());
 
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
   }
 
@@ -217,7 +217,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
     Map<String, String> operationHeaders = new HashMap<>();
 
     try {
-      createDb("db1");
+      createDb();
 
       putSampleDocument(operationHeaders);
 
@@ -238,13 +238,13 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       assertEquals(RequestStatus.AGGRESSIVELY_CACHED, resultArgs.getStatus());
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
 
   }
 
   private void getSampleDocument(Map<String, String> operationHeaders) throws IOException, Exception {
-    HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.GET,
+    HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/docs/persons/1", HttpMethods.GET,
         new RavenJObject(), null, convention).addOperationHeaders(operationHeaders));
     RavenJToken responseJson = jsonRequest.readResponseJson();
     assertNotNull(responseJson);
@@ -264,7 +264,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
     Map<String, String> operationHeaders = new HashMap<>();
 
     try {
-      createDb("db1");
+      createDb();
 
       /*
        * put sample document
@@ -276,7 +276,6 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       expectedRequestHeaders.put("Content-Type", "application/json; charset=UTF-8");
       expectedRequestHeaders.put("Transfer-Encoding", "chunked");
       expectedRequestHeaders.put("Content-Encoding", "gzip");
-      expectedRequestHeaders.put("Expect", "100-continue");
       verifyRequestHeaders(expectedRequestHeaders, true);
 
       Map<String, String> expectedResponseHeaders = new HashMap<>();
@@ -355,7 +354,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       }
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
     }
 
   }
@@ -367,7 +366,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
     jsonRequestFactory.setDisableRequestCompression(true);
 
     try {
-      createDb("db1");
+      createDb();
 
       /*
        * put sample document
@@ -377,7 +376,6 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
       Map<String, String> expectedRequestHeaders = new HashMap<>();
       expectedRequestHeaders.put("Content-Type", "application/json; charset=UTF-8");
       expectedRequestHeaders.put("Transfer-Encoding", "chunked");
-      expectedRequestHeaders.put("Expect", "100-continue");
 
       Map<String, String> requestHeaders = HttpJsonRequest.extractHeaders(requestQueue.get(0).getAllHeaders());
       assertTrue("Accept-Encoding must not be present! Headers: " + requestHeaders, !requestHeaders.containsKey("Accept-Encoding"));
@@ -432,14 +430,14 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
 
     } finally {
-      deleteDb("db1");
+      deleteDb();
       jsonRequestFactory.setDisableRequestCompression(false);
     }
 
   }
 
   private RavenJToken putSampleDocument(Map<String, String> operationHeaders) throws UnsupportedEncodingException, IOException, Exception {
-    HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/db1/docs/persons/1", HttpMethods.PUT,
+    HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL + "/databases/" + getDbName() + "/docs/persons/1", HttpMethods.PUT,
         new RavenJObject(), null, convention).addOperationHeaders(operationHeaders));
     Person person = new Person("5", "John", "Smith");
 

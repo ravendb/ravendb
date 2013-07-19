@@ -1,7 +1,6 @@
 package raven.linq.dsl;
 
 import com.mysema.query.types.Expression;
-import com.mysema.query.types.FactoryExpression;
 import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Predicate;
 import com.mysema.query.types.path.EntityPathBase;
@@ -35,7 +34,7 @@ public class IndexExpression {
     return expressionMixin.orderBy(orderSpecifiers);
   }
 
-  public IndexExpression select(FactoryExpression< ? > projection) {
+  public IndexExpression select(Expression< ? > projection) {
     return expressionMixin.select(projection);
   }
 

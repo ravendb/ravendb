@@ -1,18 +1,25 @@
 package raven.abstractions.extensions;
 
+import java.io.IOException;
+
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.Version;
 import org.codehaus.jackson.map.DeserializationConfig;
+import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.MapperConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.PropertyNamingStrategy.PropertyNamingStrategyBase;
+import org.codehaus.jackson.map.deser.std.FromStringDeserializer;
 import org.codehaus.jackson.map.introspect.AnnotatedField;
 import org.codehaus.jackson.map.introspect.AnnotatedMethod;
 import org.codehaus.jackson.map.introspect.AnnotatedParameter;
+import org.codehaus.jackson.map.module.SimpleModule;
 
-//TODO: finish me
+import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
+import raven.abstractions.data.Etag;
+
 public class JsonExtensions {
   private static ObjectMapper objectMapper;
 
@@ -25,8 +32,30 @@ public class JsonExtensions {
         objectMapper.setPropertyNamingStrategy(new DotNetNamingStrategy());
         objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
         jsonFactory = objectMapper.getJsonFactory();
+
+        objectMapper.registerModule(createCustomSerializeModule());
+        objectMapper.setAnnotationIntrospector(new SharpAwareJacksonAnnotationIntrospector());
       }
     }
+  }
+
+  private static SimpleModule createCustomSerializeModule() {
+    SimpleModule module = new SimpleModule("customSerializers", new Version(1, 0, 0, null));
+    module.addDeserializer(Etag.class, new EtagDeserializer(Etag.class));
+    return module;
+  }
+
+  public static class EtagDeserializer extends FromStringDeserializer<Etag> {
+
+    private EtagDeserializer(Class< ? > vc) {
+      super(vc);
+    }
+
+    @Override
+    protected Etag _deserialize(String value, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+      return Etag.parse(value);
+    }
+
   }
 
   public static ObjectMapper getDefaultObjectMapper() {

@@ -1,8 +1,11 @@
 package raven.abstractions.indexing;
 
+import raven.abstractions.basic.UseSharpEnum;
+
 /**
  * Specifies whether to include term vectors for a field
  */
+@UseSharpEnum
 public enum FieldTermVector {
   /**
    *  Do not store term vectors

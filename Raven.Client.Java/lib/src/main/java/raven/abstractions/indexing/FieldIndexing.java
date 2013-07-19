@@ -1,8 +1,11 @@
 package raven.abstractions.indexing;
 
+import raven.abstractions.basic.UseSharpEnum;
+
 /**
  *  Options for indexing a field
  */
+@UseSharpEnum
 public enum FieldIndexing {
   /**
    * Do not index the field value. This field can thus not be searched, but one can still access its contents provided it is stored.

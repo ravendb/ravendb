@@ -41,4 +41,5 @@ public class Functions {
   public static <T> Function1<T, Boolean> alwaysFalse() {
     return new AlwaysFalse<T>();
   }
+
 }

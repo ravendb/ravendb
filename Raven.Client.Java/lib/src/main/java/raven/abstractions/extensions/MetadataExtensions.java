@@ -14,11 +14,11 @@ import raven.abstractions.data.Constants;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJValue;
 
 /**
  * Extensions for handling metadata
  */
-//TODO: finish me
 public class MetadataExtensions {
   public final static Set<String> HEADERS_TO_IGNORE_CLIENT = new HashSet<>();
   static {
@@ -112,6 +112,41 @@ public class MetadataExtensions {
   }
 
   /**
+   * Filters headers from unwanted headers
+   * @param self
+   * @return
+   */
+  public static RavenJObject filterHeaders(RavenJObject self) {
+    if (self == null) {
+      return null;
+    }
+
+    RavenJObject metadata = new RavenJObject();
+    for (Entry<String, RavenJToken> header : self) {
+      if (header.getKey().startsWith("Temp")) {
+        continue;
+      }
+      if (header.getKey().equals(Constants.DOCUMENT_ID_FIELD_NAME)) {
+        continue;
+      }
+      if (HEADERS_TO_IGNORE_CLIENT.contains(header.getKey())) {
+        continue;
+      }
+      String headerName = captureHeaderName(header.getKey());
+      metadata.add(headerName, header.getValue());
+    }
+    return metadata;
+  }
+
+  public static RavenJObject filterHeadersAttachment(Map<String, String> self) {
+    RavenJObject filteredHeaders = filterHeaders(self);
+    if (self.get("Content-Type") != null) {
+      filteredHeaders.add("Content-Type", RavenJValue.fromObject(self.get("Content-Type")));
+    }
+    return filteredHeaders;
+  }
+
+  /**
    * Filters the headers from unwanted headers
    * @param headers
    * @return
@@ -144,49 +179,6 @@ public class MetadataExtensions {
     return metadata;
   }
 
-  private static RavenJToken getValue(String val) {
-    if (val.startsWith("{")) {
-      return RavenJObject.parse(val);
-    }
-    if (val.startsWith("[")) {
-      return RavenJArray.parse(val);
-    }
-    //TODO: parse dates
-    return RavenJToken.parse(val);
-  }
-
-  public static RavenJObject filterHeadersAttachment(Map<String, String> input) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  /**
-   * Filters headers from unwanted headers
-   * @param self
-   * @return
-   */
-  public static RavenJObject filterHeaders(RavenJObject self) {
-    if (self == null) {
-      return null;
-    }
-
-    RavenJObject metadata = new RavenJObject();
-    for (Entry<String, RavenJToken> header : self) {
-      if (header.getKey().startsWith("Temp")) {
-        continue;
-      }
-      if (header.getKey().equals(Constants.DOCUMENT_ID_FIELD_NAME)) {
-        continue;
-      }
-      if (HEADERS_TO_IGNORE_CLIENT.contains(header.getKey())) {
-        continue;
-      }
-      String headerName = captureHeaderName(header.getKey());
-      metadata.add(headerName, header.getValue());
-    }
-    return metadata;
-  }
-
   private static String captureHeaderName(String header) {
     boolean lastWasDash = true;
     StringBuilder sb = new StringBuilder(header.length());
@@ -198,6 +190,17 @@ public class MetadataExtensions {
 
     }
     return sb.toString();
+  }
+
+  private static RavenJToken getValue(String val) {
+    if (val.startsWith("{")) {
+      return RavenJObject.parse(val);
+    }
+    if (val.startsWith("[")) {
+      return RavenJArray.parse(val);
+    }
+    //TODO: parse dates
+    return new RavenJValue(val); //TODO: do we need unescape?
   }
 
 }

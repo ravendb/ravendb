@@ -38,6 +38,9 @@ public class DocumentConvention {
     this.maxFailoverCheckPeriod = maxFailoverCheckPeriod;
   }
 
+  private boolean enlistInDistributedTransactions = false;
+
+
   /**
    * @return the handleUnauthorizedResponse
    */
@@ -78,6 +81,10 @@ public class DocumentConvention {
     return shouldCacheRequest;
   }
 
+  public Boolean shouldCacheRequest(String url) {
+    return shouldCacheRequest.apply(url);
+  }
+
   /**
    * @param shouldCacheRequest the shouldCacheRequest to set
    */
@@ -108,5 +115,32 @@ public class DocumentConvention {
     result.remove(FailoverBehavior.READ_FROM_ALL_SERVERS);
     return result;
   }
+
+  public boolean isUseParallelMultiGet() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  public boolean isDisableProfiling() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  public void handleForbiddenResponse(HttpResponse forbiddenResponse) {
+    handleForbiddenResponse.apply(forbiddenResponse);
+  }
+
+  public Action1<HttpRequest> handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
+    return handleUnauthorizedResponse.apply(unauthorizedResponse);
+  }
+
+  public boolean isEnlistInDistributedTransactions() {
+    return enlistInDistributedTransactions;
+  }
+
+  public void setEnlistInDistributedTransactions(boolean enlistInDistributedTransactions) {
+    this.enlistInDistributedTransactions = enlistInDistributedTransactions;
+  }
+
 
 }
