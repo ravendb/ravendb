@@ -18,14 +18,12 @@ namespace Raven.Database.Impl.DTC
 {
 	public class EsentInFlightTransactionalState : InFlightTransactionalState, IDisposable
 	{
-		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly TransactionalStorage storage;
 		private readonly CommitTransactionGrbit txMode;
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
 			new ConcurrentDictionary<string, EsentTransactionContext>();
 
 		private long transactionContextNumber;
-		private readonly Func<EsentTransactionContext> createContext;
 		private readonly Timer timer;
 
 		public EsentInFlightTransactionalState(TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
@@ -33,14 +31,15 @@ namespace Raven.Database.Impl.DTC
 		{
 			this.storage = storage;
 			this.txMode = txMode;
-			this.timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
-			createContext = () =>
-			{
-				var newTransactionNumber = Interlocked.Increment(ref transactionContextNumber);
-				return new EsentTransactionContext(new Session(storage.Instance),
-												   new IntPtr(newTransactionNumber),
-												   SystemTime.UtcNow);
-			};
+			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+		}
+
+		private EsentTransactionContext CreateEsentTransactionContext()
+		{
+			var newTransactionNumber = Interlocked.Increment(ref transactionContextNumber);
+			return new EsentTransactionContext(new Session(storage.Instance),
+			                                   new IntPtr(newTransactionNumber),
+			                                   SystemTime.UtcNow);
 		}
 
 		private void CleanupOldTransactions(object state)
@@ -80,7 +79,17 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Prepare(string id)
 		{
-			var context = transactionContexts.GetOrAdd(id, _ => createContext());
+			var myContext = CreateEsentTransactionContext();
+			EsentTransactionContext context = null;
+			try
+			{
+				context = transactionContexts.GetOrAdd(id, myContext);
+			}
+			finally
+			{
+				if (myContext != context)
+					myContext.Dispose();
+			}
 			try
 			{
 				using (storage.SetTransactionContext(context))

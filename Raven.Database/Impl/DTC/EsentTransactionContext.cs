@@ -10,7 +10,7 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Impl.DTC
 {
-	public class EsentTransactionContext
+	public class EsentTransactionContext : IDisposable
 	{
 		private readonly IntPtr sessionContext;
 
@@ -42,6 +42,14 @@ namespace Raven.Database.Impl.DTC
 		public void AfterCommit(Action action)
 		{
 			ActionsAfterCommit.Add(action);
-		} 
+		}
+
+		public void Dispose()
+		{
+			if(Transaction != null)
+				Transaction.Dispose();
+			if(Session != null)
+				Session.Dispose();
+		}
 	}
 }
