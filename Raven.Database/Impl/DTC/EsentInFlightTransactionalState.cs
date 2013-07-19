@@ -79,16 +79,19 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Prepare(string id)
 		{
-			var myContext = CreateEsentTransactionContext();
-			EsentTransactionContext context = null;
-			try
+			EsentTransactionContext context;
+			if (transactionContexts.TryGetValue(id, out context) == false)
 			{
-				context = transactionContexts.GetOrAdd(id, myContext);
-			}
-			finally
-			{
-				if (myContext != context)
-					myContext.Dispose();
+				var myContext = CreateEsentTransactionContext();
+				try
+				{
+					context = transactionContexts.GetOrAdd(id, myContext);
+				}
+				finally
+				{
+					if (myContext != context)
+						myContext.Dispose();
+				}
 			}
 			try
 			{
