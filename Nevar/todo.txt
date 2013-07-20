@@ -1,1 +1,4 @@
-﻿- Allow to increase size
+﻿0. Free space
+1. Transactions
+2. Multiple trees 
+3. Allow to increase size
