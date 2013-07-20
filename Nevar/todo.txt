@@ -1,3 +1,2 @@
-﻿- reblancing
-- Overflow pages
+﻿- Overflow pages
 - Allow to increase size

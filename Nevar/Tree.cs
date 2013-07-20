@@ -499,6 +499,7 @@ namespace Nevar
 				}
 				else
 				{
+					_parentPage.NodePositionFor(seperatorKey, _cmp); // select the appropriate place for this
 					_parentPage.AddNode(_parentPage.LastSearchPosition, seperatorKey, null, rightPage.PageNumber);
 				}
 			}

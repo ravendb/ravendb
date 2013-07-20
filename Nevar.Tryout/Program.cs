@@ -13,7 +13,7 @@ namespace Nevar.Tryout
 	{
 		static void Main(string[] args)
 		{
-			new Updates().UpdateThatIsBiggerThanPageSize();
+			new Basic().PageSplitsAllAround();
 			return;
 			var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024 * 1024 * 16));
 			var ms = new MemoryStream(Encoding.UTF8.GetBytes("000000000000"));
