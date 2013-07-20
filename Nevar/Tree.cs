@@ -53,7 +53,7 @@ namespace Nevar
 
 			if (page.HasSpaceFor(key, value) == false)
 			{
-				SplitPage(tx, key, value, -1, cursor);
+				new PageSplitter(tx, this, key, value, -1, cursor).Execute();
 				DebugValidateTree(tx, cursor.Root);
 				return;
 			}
@@ -81,87 +81,6 @@ namespace Nevar
 			}
 		}
 
-		private void SplitPage(Transaction tx, Slice newKey, Stream value, int pageNumber, Cursor cursor)
-		{
-			Page parentPage;
-			var page = cursor.Pop();
-			var newPosition = true;
-			var currentIndex = page.LastSearchPosition;
-			var rightPage = NewPage(tx, page.Flags, 1);
-			cursor.RecordNewPage(page, 1);
-			rightPage.Flags = page.Flags;
-			if (cursor.Pages.Count == 0) // we need to do a root split
-			{
-				var newRootPage = NewPage(tx, PageFlags.Branch, 1);
-				cursor.Push(newRootPage);
-				cursor.Root = newRootPage;
-				cursor.Depth++;
-				cursor.RecordNewPage(newRootPage, 1);
-
-				// now add implicit left page
-				newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), null, page.PageNumber);
-				parentPage = newRootPage;
-				parentPage.LastSearchPosition++;
-			}
-			else
-			{
-				// we already popped the page, so the current one on the stack is what the parent of the page
-				parentPage = cursor.CurrentPage;
-			}
-
-			var splitIndex = (ushort)(page.NumberOfEntries/2);
-			if (currentIndex < splitIndex)
-				newPosition = false;
-
-			if (page.IsLeaf)
-			{
-				splitIndex = AdjustSplitPosition(newKey, value, page, currentIndex, splitIndex, ref newPosition);
-			}
-
-			// here we the current key is the separator key and can go either way, so 
-			// use newPosition to decide if it stays on the left node or moves to the right
-			Slice seperatorKey;
-			if (currentIndex == splitIndex && newPosition)
-			{
-				seperatorKey = newKey;
-			}
-			else
-			{
-				var node = page.GetNode(splitIndex);
-				seperatorKey = new Slice(node);
-			}
-
-			if (parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
-			{
-				SplitPage(tx, seperatorKey, null, rightPage.PageNumber, cursor);
-			}
-			else
-			{
-				parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, null, rightPage.PageNumber);
-			}
-			// move the actual entries from page to right page
-			var nKeys = page.NumberOfEntries;
-			for (ushort i = splitIndex; i < nKeys; i++)
-			{
-				var node = page.GetNode(i);
-				rightPage.CopyNodeData(node);
-			}
-			page.Truncate(tx, splitIndex);
-
-			// actually insert the new key
-			if (currentIndex > splitIndex ||
-				newPosition && currentIndex == splitIndex)
-			{
-				var pos = rightPage.NodePositionFor(newKey, _cmp);
-				rightPage.AddNode(pos, newKey, value, pageNumber);
-				cursor.Push(rightPage);
-			}
-			else
-			{
-				page.AddNode(page.LastSearchPosition, newKey, value, pageNumber);
-				cursor.Push(page);
-			}
-		}
 
 		/// <summary>
 		/// For leaf pages, check the split point based on what
@@ -294,5 +213,109 @@ namespace Nevar
 			page.DebugValidate(_cmp);
 
 		}
+
+		public class PageSplitter
+		{
+			private readonly Transaction _tx;
+			private readonly Tree _parent;
+			private readonly Slice _newKey;
+			private readonly Stream _value;
+			private readonly int _pageNumber;
+			private readonly Cursor _cursor;
+
+			public PageSplitter(Transaction tx, Tree parent, Slice newKey, Stream value, int pageNumber, Cursor cursor)
+			{
+				_tx = tx;
+				_parent = parent;
+				_newKey = newKey;
+				_value = value;
+				_pageNumber = pageNumber;
+				_cursor = cursor;
+			}
+
+			public void Execute()
+			{
+				Page parentPage;
+				var page = _cursor.Pop();
+				var newPosition = true;
+				var currentIndex = page.LastSearchPosition;
+				var rightPage = NewPage(_tx, page.Flags, 1);
+				_cursor.RecordNewPage(page, 1);
+				rightPage.Flags = page.Flags;
+				if (_cursor.Pages.Count == 0) // we need to do a root split
+				{
+					var newRootPage = NewPage(_tx, PageFlags.Branch, 1);
+					_cursor.Push(newRootPage);
+					_cursor.Root = newRootPage;
+					_cursor.Depth++;
+					_cursor.RecordNewPage(newRootPage, 1);
+
+					// now add implicit left page
+					newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), null, page.PageNumber);
+					parentPage = newRootPage;
+					parentPage.LastSearchPosition++;
+				}
+				else
+				{
+					// we already popped the page, so the current one on the stack is what the parent of the page
+					parentPage = _cursor.CurrentPage;
+				}
+
+				var splitIndex = (ushort)(page.NumberOfEntries / 2);
+				if (currentIndex < splitIndex)
+					newPosition = false;
+
+				if (page.IsLeaf)
+				{
+					splitIndex = AdjustSplitPosition(_newKey, _value, page, currentIndex, splitIndex, ref newPosition);
+				}
+
+				// here we the current key is the separator key and can go either way, so 
+				// use newPosition to decide if it stays on the left node or moves to the right
+				Slice seperatorKey;
+				if (currentIndex == splitIndex && newPosition)
+				{
+					seperatorKey = _newKey;
+				}
+				else
+				{
+					var node = page.GetNode(splitIndex);
+					seperatorKey = new Slice(node);
+				}
+
+				if (parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
+				{
+					new PageSplitter(_tx, _parent, seperatorKey, null, rightPage.PageNumber, _cursor).Execute();
+				}
+				else
+				{
+					parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, null, rightPage.PageNumber);
+				}
+				// move the actual entries from page to right page
+				var nKeys = page.NumberOfEntries;
+				for (ushort i = splitIndex; i < nKeys; i++)
+				{
+					var node = page.GetNode(i);
+					rightPage.CopyNodeData(node);
+				}
+				page.Truncate(_tx, splitIndex);
+
+				// actually insert the new key
+				if (currentIndex > splitIndex ||
+					newPosition && currentIndex == splitIndex)
+				{
+					var pos = rightPage.NodePositionFor(_newKey, _parent._cmp);
+					rightPage.AddNode(pos, _newKey, _value, _pageNumber);
+					_cursor.Push(rightPage);
+				}
+				else
+				{
+					page.AddNode(page.LastSearchPosition, _newKey, _value, _pageNumber);
+					_cursor.Push(page);
+				}
+			}
+		}
 	}
+
+	
 }
