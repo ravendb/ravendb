@@ -222,6 +222,8 @@ namespace Nevar
 			private readonly Stream _value;
 			private readonly int _pageNumber;
 			private readonly Cursor _cursor;
+			private readonly Page _page;
+			private Page _parentPage;
 
 			public PageSplitter(Transaction tx, Tree parent, Slice newKey, Stream value, int pageNumber, Cursor cursor)
 			{
@@ -231,17 +233,14 @@ namespace Nevar
 				_value = value;
 				_pageNumber = pageNumber;
 				_cursor = cursor;
+				_page = _cursor.Pop();
 			}
 
 			public void Execute()
 			{
-				Page parentPage;
-				var page = _cursor.Pop();
-				var newPosition = true;
-				var currentIndex = page.LastSearchPosition;
-				var rightPage = NewPage(_tx, page.Flags, 1);
-				_cursor.RecordNewPage(page, 1);
-				rightPage.Flags = page.Flags;
+				var rightPage = NewPage(_tx, _page.Flags, 1);
+				_cursor.RecordNewPage(_page, 1);
+				rightPage.Flags = _page.Flags;
 				if (_cursor.Pages.Count == 0) // we need to do a root split
 				{
 					var newRootPage = NewPage(_tx, PageFlags.Branch, 1);
@@ -251,23 +250,42 @@ namespace Nevar
 					_cursor.RecordNewPage(newRootPage, 1);
 
 					// now add implicit left page
-					newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), null, page.PageNumber);
-					parentPage = newRootPage;
-					parentPage.LastSearchPosition++;
+					newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), null, _page.PageNumber);
+					_parentPage = newRootPage;
+					_parentPage.LastSearchPosition++;
 				}
 				else
 				{
 					// we already popped the page, so the current one on the stack is what the parent of the page
-					parentPage = _cursor.CurrentPage;
+					_parentPage = _cursor.CurrentPage;
 				}
 
-				var splitIndex = (ushort)(page.NumberOfEntries / 2);
+				if (_page.LastSearchPosition >= _page.NumberOfEntries)
+				{
+					// when we get a split at the end of the page, we take that as a hint that the user is doing 
+					// sequential inserts, at that point, we are going to keep the current page as is and create a new 
+					// page, this will allow us to do minimal amount of work to get the best density
+
+					AddSeperatorToParentPage(rightPage, _newKey);
+					rightPage.AddNode(0, _newKey, _value, _pageNumber);
+					_cursor.Push(rightPage);
+					return;
+				}
+
+				SplitPageInHalf(rightPage);
+			}
+
+			private void SplitPageInHalf(Page rightPage)
+			{
+				var currentIndex = _page.LastSearchPosition;
+				var newPosition = true;
+				var splitIndex = (ushort)(_page.NumberOfEntries / 2);
 				if (currentIndex < splitIndex)
 					newPosition = false;
 
-				if (page.IsLeaf)
+				if (_page.IsLeaf)
 				{
-					splitIndex = AdjustSplitPosition(_newKey, _value, page, currentIndex, splitIndex, ref newPosition);
+					splitIndex = AdjustSplitPosition(_newKey, _value, _page, currentIndex, splitIndex, ref newPosition);
 				}
 
 				// here we the current key is the separator key and can go either way, so 
@@ -279,30 +297,24 @@ namespace Nevar
 				}
 				else
 				{
-					var node = page.GetNode(splitIndex);
+					var node = _page.GetNode(splitIndex);
 					seperatorKey = new Slice(node);
 				}
 
-				if (parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
-				{
-					new PageSplitter(_tx, _parent, seperatorKey, null, rightPage.PageNumber, _cursor).Execute();
-				}
-				else
-				{
-					parentPage.AddNode(parentPage.LastSearchPosition, seperatorKey, null, rightPage.PageNumber);
-				}
+				AddSeperatorToParentPage(rightPage, seperatorKey);
+
 				// move the actual entries from page to right page
-				var nKeys = page.NumberOfEntries;
+				var nKeys = _page.NumberOfEntries;
 				for (ushort i = splitIndex; i < nKeys; i++)
 				{
-					var node = page.GetNode(i);
+					var node = _page.GetNode(i);
 					rightPage.CopyNodeData(node);
 				}
-				page.Truncate(_tx, splitIndex);
+				_page.Truncate(_tx, splitIndex);
 
 				// actually insert the new key
 				if (currentIndex > splitIndex ||
-					newPosition && currentIndex == splitIndex)
+				    newPosition && currentIndex == splitIndex)
 				{
 					var pos = rightPage.NodePositionFor(_newKey, _parent._cmp);
 					rightPage.AddNode(pos, _newKey, _value, _pageNumber);
@@ -310,8 +322,20 @@ namespace Nevar
 				}
 				else
 				{
-					page.AddNode(page.LastSearchPosition, _newKey, _value, _pageNumber);
-					_cursor.Push(page);
+					_page.AddNode(_page.LastSearchPosition, _newKey, _value, _pageNumber);
+					_cursor.Push(_page);
+				}
+			}
+
+			private void AddSeperatorToParentPage(Page rightPage, Slice seperatorKey)
+			{
+				if (_parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
+				{
+					new PageSplitter(_tx, _parent, seperatorKey, null, rightPage.PageNumber, _cursor).Execute();
+				}
+				else
+				{
+					_parentPage.AddNode(_parentPage.LastSearchPosition, seperatorKey, null, rightPage.PageNumber);
 				}
 			}
 		}
