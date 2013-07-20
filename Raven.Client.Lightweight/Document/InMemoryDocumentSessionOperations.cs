@@ -719,11 +719,11 @@ more responsive application.
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
-				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
+				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
 					return CompletedTask.With(id);
-				else
-					return GenerateKeyAsync(entity)
-						.ContinueWith(task =>
+				
+				return GenerateKeyAsync(entity)
+					.ContinueWith(task =>
 						{
 							// If we generated a new id, store it back into the Id field so the client has access to to it                    
 							if (task.Result != null)
