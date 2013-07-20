@@ -21,12 +21,13 @@ namespace Nevar.Tests.Trees
 			// update that is too big
 			using (var tx = Env.NewTransaction())
 			{
-				Env.Root.Add(tx, "1", new MemoryStream(new byte[Constants.PageMaxSpace - 1200]));
+				Env.Root.Add(tx, "1", new MemoryStream(new byte[Constants.MaxNodeSize - 10]));
 
 				tx.Commit();
 			}
 
 			Assert.Equal(3 , Env.Root.PageCount);
+			Assert.Equal(0, Env.Root.OverflowPages);
 		}
 
 		[Fact]

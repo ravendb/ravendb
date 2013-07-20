@@ -175,17 +175,16 @@ namespace Nevar.Trees
 			if (key.Options == SliceOptions.Key)
 				key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
-			if (IsBranch)
+			if (value == null) // branch or overflow
 			{
-				if (pageNumber == -1)
-					throw new ArgumentException("Page numbers must be positive", "pageNumber");
+				Debug.Assert(pageNumber != -1);
 				node->PageNumber = pageNumber;
 				node->Flags = NodeFlags.PageRef;
 				return;
 			}
 
-			System.Diagnostics.Debug.Assert(key.Options == SliceOptions.Key);
-			System.Diagnostics.Debug.Assert(value != null);
+			Debug.Assert(key.Options == SliceOptions.Key);
+			Debug.Assert(value != null);
 			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
 			node->DataSize = (int)value.Length;
 			node->Flags = NodeFlags.Data;
@@ -309,8 +308,13 @@ namespace Nevar.Trees
 
 		public bool HasSpaceFor(Slice key, Stream value)
 		{
-			var requiredSpace = SizeOf.NodeEntry(key, value) + Constants.NodeOffsetSize;
+			var requiredSpace = GetRequiredSpace(key, value);
 			return requiredSpace <= SizeLeft;
+		}
+
+		public static int GetRequiredSpace(Slice key, Stream value)
+		{
+			return SizeOf.NodeEntry(key, value) + Constants.NodeOffsetSize;
 		}
 
 		public string this[int i]

@@ -16,7 +16,7 @@ namespace Nevar.Impl
 
 		public static readonly int NodeHeaderSize = sizeof(NodeHeader);
 
-		public static readonly int MaxKeySize = (PageSize - PageHeaderSize) / MinKeysInPage;
+		public static readonly int MaxNodeSize = (PageSize - PageHeaderSize) / MinKeysInPage;
 
 		public static int PageMaxSpace = PageSize - PageHeaderSize;
 

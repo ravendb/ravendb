@@ -54,16 +54,45 @@ namespace Nevar.Trees
 				RemoveLeafNode(tx, page);
 			}
 
+			var pageNumber = -1;
+			if (ShouldGoToOverflowPage(value))
+			{
+				pageNumber = WriteToOverflowPages(tx, cursor, value);
+				value = null;
+			}
+
 			if (page.HasSpaceFor(key, value) == false)
 			{
-				new PageSplitter(tx, _cmp, key, value, -1, cursor).Execute();
+				new PageSplitter(tx, _cmp, key, value, pageNumber, cursor).Execute();
 				DebugValidateTree(tx, cursor.Root);
 				return;
 			}
 
-			page.AddNode(page.LastSearchPosition, key, value, 0);
+			page.AddNode(page.LastSearchPosition, key, value, pageNumber);
 
 			page.DebugValidate(_cmp);
+		}
+
+		private static int WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
+		{
+			int numberOfPages = (int) ((Constants.PageHeaderSize - 1) + value.Length)/(Constants.PageSize + 1);
+			var overflowPageStart = tx.AllocatePage(numberOfPages);
+			overflowPageStart.NumberOfPages = numberOfPages;
+			overflowPageStart.Flags = PageFlags.Overlfow;
+
+			using (var ums = new UnmanagedMemoryStream(overflowPageStart.Base + Constants.PageHeaderSize, 
+				value.Length, value.Length, FileAccess.ReadWrite))
+			{
+				value.CopyTo(ums);
+			}
+			cursor.OverflowPages += numberOfPages;
+			cursor.PageCount += numberOfPages;
+			return overflowPageStart.PageNumber;
+		}
+
+		private bool ShouldGoToOverflowPage(Stream value)
+		{
+			return value.Length + Constants.PageHeaderSize > Constants.MaxNodeSize;
 		}
 
 		private static void RemoveLeafNode(Transaction tx, Page page)

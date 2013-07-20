@@ -1,2 +1,5 @@
 ﻿- Overflow pages
+	- Delete oveflow
+
+
 - Allow to increase size

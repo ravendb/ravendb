@@ -39,9 +39,9 @@ namespace Nevar
 
 		public Slice(byte* key, ushort size)
 		{
-			if (size > Constants.MaxKeySize)
+			if (size > Constants.MaxNodeSize)
 				throw new ArgumentException(
-				"Key size is too big, must be at most " + Constants.MaxKeySize + " bytes, but was " + size, "size");
+				"Key size is too big, must be at most " + Constants.MaxNodeSize + " bytes, but was " + size, "size");
 
 			_pointerSize = size;
 			Options = SliceOptions.Key;
@@ -52,9 +52,9 @@ namespace Nevar
 		public Slice(byte[] key)
 		{
 			if (key == null) throw new ArgumentNullException("key");
-			if (key.Length > Constants.MaxKeySize)
+			if (key.Length > Constants.MaxNodeSize)
 				throw new ArgumentException(
-					"Key size is too big, must be at most " + Constants.MaxKeySize + " bytes, but was " + key.Length, "key");
+					"Key size is too big, must be at most " + Constants.MaxNodeSize + " bytes, but was " + key.Length, "key");
 
 			_pointerSize = 0;
 			Options = SliceOptions.Key;
