@@ -15,7 +15,7 @@ namespace Nevar
 			TreeDumper.Dump(tx, path, start, showNodesEvery);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output." + format);
-			var p = Process.Start(@"C:\Users\Ayende\Downloads\graphviz-2.30.1\graphviz\bin\dot.exe", "-T" + format + " " + path + " -o " + output);
+			var p = Process.Start(@"C:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-T" + format + " " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
 		} 
