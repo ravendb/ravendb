@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Nevar.Impl;
 using Xunit;
 
 namespace Nevar.Tests.Trees

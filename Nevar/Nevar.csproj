@@ -46,25 +46,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
-    <Compile Include="Cursor.cs" />
-    <Compile Include="DebugStuff.cs" />
-    <Compile Include="NativeMethods.cs" />
-    <Compile Include="NodeFlags.cs" />
-    <Compile Include="NodeHeader.cs" />
-    <Compile Include="Page.cs" />
-    <Compile Include="PageFlags.cs" />
-    <Compile Include="PageHeader.cs" />
-    <Compile Include="Pager.cs" />
+    <Compile Include="Impl\Constants.cs" />
+    <Compile Include="Trees\Cursor.cs" />
+    <Compile Include="Debugging\DebugStuff.cs" />
+    <Compile Include="Impl\NativeMethods.cs" />
+    <Compile Include="Trees\NodeFlags.cs" />
+    <Compile Include="Trees\NodeHeader.cs" />
+    <Compile Include="Trees\Page.cs" />
+    <Compile Include="Trees\PageFlags.cs" />
+    <Compile Include="Trees\PageHeader.cs" />
+    <Compile Include="Impl\Pager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Slice.cs" />
-    <Compile Include="SliceComparer.cs" />
+    <Compile Include="Impl\SliceComparer.cs" />
     <Compile Include="SliceOptions.cs" />
     <Compile Include="StorageEnvironment.cs" />
-    <Compile Include="Transaction.cs" />
-    <Compile Include="Tree.cs" />
-    <Compile Include="TreeDumper.cs" />
-    <Compile Include="SizeOf.cs" />
+    <Compile Include="Impl\Transaction.cs" />
+    <Compile Include="Trees\Tree.cs" />
+    <Compile Include="Debugging\TreeDumper.cs" />
+    <Compile Include="Impl\SizeOf.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="todo.txt" />

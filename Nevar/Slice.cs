@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Nevar.Impl;
+using Nevar.Trees;
 
 namespace Nevar
 {

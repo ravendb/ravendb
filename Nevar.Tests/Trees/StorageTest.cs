@@ -3,7 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Text;
-using Xunit;
+using Nevar.Debugging;
+using Nevar.Impl;
 
 namespace Nevar.Tests.Trees
 {

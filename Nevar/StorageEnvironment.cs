@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO.MemoryMappedFiles;
+using Nevar.Impl;
+using Nevar.Trees;
 
 namespace Nevar
 {
