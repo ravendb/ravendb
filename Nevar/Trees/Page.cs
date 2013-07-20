@@ -26,7 +26,7 @@ namespace Nevar.Trees
 
 		public ushort Upper { get { return _header->Upper; } set { _header->Upper = value; } }
 
-		public int NumberOfPages { get { return _header->NumberOfPages; } set { _header->NumberOfPages = value; } }
+		public int OverflowSize { get { return _header->OverflowSize; } set { _header->OverflowSize = value; } }
 
 		public ushort* KeysOffsets
 		{

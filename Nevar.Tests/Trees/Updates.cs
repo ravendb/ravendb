@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using Nevar.Debugging;
 using Nevar.Impl;
 using Xunit;
 
@@ -6,6 +8,52 @@ namespace Nevar.Tests.Trees
 {
 	public class Updates : StorageTest
 	{
+		[Fact]
+		public void CanAddVeryLargeValue()
+		{
+			var random = new Random();
+			var buffer = new byte[8192];
+			random.NextBytes(buffer);
+
+			using (var tx = Env.NewTransaction())
+			{
+				Env.Root.Add(tx, "a", new MemoryStream(buffer));
+
+				tx.Commit();
+			}
+
+			Assert.Equal(4, Env.Root.PageCount);
+			Assert.Equal(3, Env.Root.OverflowPages);
+		}
+
+		[Fact]
+		public void CanReadLargeValue()
+		{
+			var random = new Random();
+			var buffer = new byte[8192];
+			random.NextBytes(buffer);
+
+			using (var tx = Env.NewTransaction())
+			{
+				Env.Root.Add(tx, "a", new MemoryStream(buffer));
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction())
+			{
+				using (var stream = Env.Root.Read(tx, "a"))
+				{
+					var memoryStream = new MemoryStream();
+					stream.CopyTo(memoryStream);
+					memoryStream.Position = 0;
+					Assert.Equal(memoryStream.ToArray(), buffer);
+				}
+			}
+
+
+		}
+
 		[Fact]
 		public void UpdateThatIsBiggerThanPageSize()
 		{

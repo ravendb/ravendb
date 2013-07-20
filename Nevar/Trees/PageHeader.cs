@@ -16,6 +16,6 @@ namespace Nevar.Trees
 		public ushort Upper;
 
 		[FieldOffset(5)]
-		public int NumberOfPages;
+		public int OverflowSize;
 	}
 }

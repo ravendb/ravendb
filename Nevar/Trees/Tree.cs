@@ -75,11 +75,12 @@ namespace Nevar.Trees
 
 		private static int WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
 		{
-			int numberOfPages = (int) ((Constants.PageHeaderSize - 1) + value.Length)/(Constants.PageSize + 1);
+			var overflowSize = (int) value.Length;
+			int numberOfPages = (Constants.PageSize - 1 + overflowSize) / (Constants.PageSize) + 1;
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
-			overflowPageStart.NumberOfPages = numberOfPages;
+			overflowPageStart.OverflowSize = numberOfPages;
 			overflowPageStart.Flags = PageFlags.Overlfow;
-
+			overflowPageStart.OverflowSize = overflowSize;
 			using (var ums = new UnmanagedMemoryStream(overflowPageStart.Base + Constants.PageHeaderSize, 
 				value.Length, value.Length, FileAccess.ReadWrite))
 			{
@@ -101,7 +102,7 @@ namespace Nevar.Trees
 			if (node->Flags.HasFlag(NodeFlags.PageRef)) // this is an overflow pointer
 			{
 				var overflowPage = tx.GetPage(node->PageNumber);
-				for (int i = 0; i < overflowPage.NumberOfPages; i++)
+				for (int i = 0; i < overflowPage.OverflowSize; i++)
 				{
 					tx.FreePage(tx.GetPage(node->PageNumber + i));
 				}
@@ -228,6 +229,27 @@ namespace Nevar.Trees
 					l.Add(new Slice(node));
 				}
 			}
+		}
+
+		public Stream Read(Transaction tx, Slice key)
+		{
+			var cursor = tx.GetCursor(this);
+			var p = FindPageFor(tx, key, cursor);
+			var node = p.Search(key, _cmp);
+
+			if (node == null)
+				return null;
+
+			var item1 = new Slice(node);
+
+			if (item1.Compare(key, _cmp) != 0)
+				return null;
+			if (node->Flags.HasFlag(NodeFlags.PageRef))
+			{
+				var overFlowPage = tx.GetPage(node->PageNumber);
+				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+			}
+			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
 		}
 	}
 }

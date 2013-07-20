@@ -84,7 +84,6 @@ namespace Nevar.Trees
 			else if (flags.HasFlag(PageFlags.Overlfow))
 			{
 				OverflowPages += num;
-				p.NumberOfPages = num;
 			}
 		}
 
