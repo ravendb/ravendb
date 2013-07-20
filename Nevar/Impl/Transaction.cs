@@ -58,7 +58,6 @@ namespace Nevar.Impl
 
 		public void FreePage(Page page)
 		{
-			DirtyPages.Remove(page);
 			//todo: actually release this
 		}
 	}
