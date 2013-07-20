@@ -13,8 +13,8 @@ namespace Nevar.Tryout
 	{
 		static void Main(string[] args)
 		{
-			//new Deletes().CanDeleteAtRoot();
-			//return;
+			new Updates().UpdateThatIsBiggerThanPageSize();
+			return;
 			var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024 * 1024 * 16));
 			var ms = new MemoryStream(Encoding.UTF8.GetBytes("000000000000"));
 			using (var tx = env.NewTransaction())

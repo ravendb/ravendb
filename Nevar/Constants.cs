@@ -4,7 +4,7 @@ namespace Nevar
 {
 	public unsafe class Constants
 	{
-		public const int PageSize = 128;
+		public const int PageSize = 4096;
 
 		/// <summary>
 		/// If there are less than 2 keys in a page, we no longer have a tree

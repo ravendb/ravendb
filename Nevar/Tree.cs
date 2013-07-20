@@ -322,7 +322,7 @@ namespace Nevar
 				int pageNum;
 				if (fromNode->Flags.HasFlag(NodeFlags.Data))
 				{
-					val = new UnmanagedMemoryStream(from.Base + from.KeysOffsets[from.LastSearchPosition] + Constants.NodeHeaderSize, fromNode->DataSize);
+					val = new UnmanagedMemoryStream(from.Base + from.KeysOffsets[from.LastSearchPosition] + Constants.NodeHeaderSize + fromKey.Size, fromNode->DataSize);
 					pageNum = -1;
 				}
 				else
