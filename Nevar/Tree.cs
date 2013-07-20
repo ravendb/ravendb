@@ -53,7 +53,7 @@ namespace Nevar
 
 			if (page.HasSpaceFor(key, value) == false)
 			{
-				new PageSplitter(tx, this, key, value, -1, cursor).Execute();
+				new PageSplitter(tx, _cmp, key, value, -1, cursor).Execute();
 				DebugValidateTree(tx, cursor.Root);
 				return;
 			}
@@ -255,15 +255,53 @@ namespace Nevar
 				    page.NumberOfEntries >= minKeys)
 					return null; // above space/keys thresholds
 
-
 				Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
+				var sibling = SetupMoveOrMerge(page, parentPage);
+
+				minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
+				if (sibling.SizeUsed > Constants.PageMinSpace && sibling.NumberOfEntries > minKeys)
+				{
+					// neighbor is over the min size and has enough key, can move just one key to  the current page
+					MoveNode(parentPage, sibling, page);
+					cursor.Pop();
+					return parentPage;
+				}
+
+				if (page.LastSearchPosition == 0) // this is the right page, merge left
+				{
+					MergePages(parentPage, sibling, page);
+				}
+				else // this is the left page, merge right
+				{
+					parentPage.LastSearchPosition++; // move to the right page to be unlinked
+					MergePages(parentPage, page, sibling);
+				}
+				cursor.Pop();
+				return parentPage;
+			}
+
+			private void MergePages(Page parentPage, Page left, Page right)
+			{
+				for (int i = 0; i < right.NumberOfEntries; i++)
+				{
+					right.LastSearchPosition = i;
+					var key = GetCurrentKeyFrom(right);
+					var node = right.GetNode(i);
+					left.CopyNodeDataToEndOfPage(node, key);
+				}
+				parentPage.RemoveNode(parentPage.LastSearchPosition); // unlink the right sibling
+				_tx.FreePage(right);
+			}
+
+			private Page SetupMoveOrMerge(Page page, Page parentPage)
+			{
 				Page sibling;
 				if (parentPage.LastSearchPosition == 0) // we are the left most item
 				{
 					sibling = _tx.GetPage(parentPage.GetNode(1)->PageNumber);
 					sibling.LastSearchPosition = 0;
-					page.LastSearchPosition = page.NumberOfEntries;
+					page.LastSearchPosition = page.NumberOfEntries + 1;
 					parentPage.LastSearchPosition = 1;
 				}
 				else // there is at least 1 page to our left
@@ -271,18 +309,8 @@ namespace Nevar
 					sibling = _tx.GetPage(parentPage.GetNode(parentPage.LastSearchPosition - 1)->PageNumber);
 					sibling.LastSearchPosition = sibling.NumberOfEntries - 1;
 					page.LastSearchPosition = 0;
-					parentPage.LastSearchPosition--;
-
 				}
-
-				minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
-				if (sibling.SizeUsed > Constants.PageMinSpace && sibling.NumberOfEntries > minKeys)
-				{
-					// neighbor is over the min size and has enough key, can move just one key to  the current page
-					MoveNode(parentPage, sibling, page);
-					return parentPage;
-				}
-				return null;
+				return sibling;
 			}
 
 			private void MoveNode(Page parentPage, Page from, Page to)
@@ -306,11 +334,11 @@ namespace Nevar
 					to.AddNode(to.LastSearchPosition, fromKey, val, pageNum);
 				}
 
-				to.RemoveNode(to.LastSearchPosition);
+				from.RemoveNode(from.LastSearchPosition);
 
 				parentPage.RemoveNode(parentPage.LastSearchPosition);
 				var toKey = GetCurrentKeyFrom(from); // get the next smallest key it has
-				parentPage.AddNode(parentPage.LastSearchPosition, toKey, null, from.PageNumber);
+				parentPage.AddNode(parentPage.LastSearchPosition, toKey, null, to.PageNumber);
 			}
 
 			private Slice GetCurrentKeyFrom(Page page)
@@ -353,7 +381,7 @@ namespace Nevar
 		public class PageSplitter
 		{
 			private readonly Transaction _tx;
-			private readonly Tree _parent;
+			private readonly SliceComparer _cmp;
 			private readonly Slice _newKey;
 			private readonly Stream _value;
 			private readonly int _pageNumber;
@@ -361,10 +389,10 @@ namespace Nevar
 			private readonly Page _page;
 			private Page _parentPage;
 
-			public PageSplitter(Transaction tx, Tree parent, Slice newKey, Stream value, int pageNumber, Cursor cursor)
+			public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, Stream value, int pageNumber, Cursor cursor)
 			{
 				_tx = tx;
-				_parent = parent;
+				_cmp = cmp;
 				_newKey = newKey;
 				_value = value;
 				_pageNumber = pageNumber;
@@ -452,7 +480,7 @@ namespace Nevar
 				if (currentIndex > splitIndex ||
 					newPosition && currentIndex == splitIndex)
 				{
-					var pos = rightPage.NodePositionFor(_newKey, _parent._cmp);
+					var pos = rightPage.NodePositionFor(_newKey, _cmp);
 					rightPage.AddNode(pos, _newKey, _value, _pageNumber);
 					_cursor.Push(rightPage);
 				}
@@ -467,7 +495,7 @@ namespace Nevar
 			{
 				if (_parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
 				{
-					new PageSplitter(_tx, _parent, seperatorKey, null, rightPage.PageNumber, _cursor).Execute();
+					new PageSplitter(_tx, _cmp, seperatorKey, null, rightPage.PageNumber, _cursor).Execute();
 				}
 				else
 				{

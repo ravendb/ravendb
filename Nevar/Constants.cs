@@ -20,7 +20,7 @@ namespace Nevar
 
 		public static int PageMaxSpace = PageSize - PageHeaderSize;
 
-		public static int PageMinSpace = PageMaxSpace / 4;
+		public static int PageMinSpace = (int)(PageMaxSpace * 0.33);
 
 		public static int PageNumberSize = sizeof(ushort);
 

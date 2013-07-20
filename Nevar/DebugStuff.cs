@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace Nevar
 {
@@ -18,6 +19,7 @@ namespace Nevar
 			var p = Process.Start(@"C:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-T" + format + " " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
+			Thread.Sleep(500);
 		} 
 	}
 }

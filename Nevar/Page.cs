@@ -301,17 +301,7 @@ namespace Nevar
 			{
 				var n = GetNode(i);
 				slice.Set(n);
-				var pageRef = n->Flags.HasFlag(NodeFlags.PageRef);
-				sb.AppendFormat("Node: {0,-5}", i).Append("\tKey: ").Append(slice);
-				if (pageRef == false)
-				{
-					sb.Append("\tSize: ").Append(n->GetNodeSize());
-				}
-				else
-				{
-					sb.Append("\tPage: ").Append(n->PageNumber);
-				}
-				sb.AppendLine();
+				sb.Append(slice).Append(", ");
 			}
 			return sb.ToString();
 		}

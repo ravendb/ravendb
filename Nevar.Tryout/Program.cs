@@ -16,19 +16,18 @@ namespace Nevar.Tryout
 			//new Deletes().CanDeleteAtRoot();
 			//return;
 			var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024 * 1024 * 16));
-			var ms = new MemoryStream(Encoding.UTF8.GetBytes("00000000000000000"));
+			var ms = new MemoryStream(Encoding.UTF8.GetBytes("000000000000"));
 			using (var tx = env.NewTransaction())
 			{
 				var cursor = tx.GetCursor(env.Root);
-				for (int i = 0; i < 15; i++)
+				for (int i = 0; i < 6; i++)
 				{
-					var root = cursor.Root;
 					ms.Position = 0;
 					env.Root.Add(tx, string.Format("{0,5}", i), ms);
 				}
 
 				DebugStuff.RenderAndShow(env.NewTransaction(), cursor.Root, 1);
-				for (int i = 0; i < 14; i++)
+				for (int i = 4; i >= 1 ; i--)
 				{
 					env.Root.Delete(tx, string.Format("{0,5}", i));
 					DebugStuff.RenderAndShow(env.NewTransaction(), cursor.Root, 1);
@@ -36,9 +35,6 @@ namespace Nevar.Tryout
 
 				tx.Commit();
 			}
-
-			DebugStuff.RenderAndShow(env.NewTransaction(), env.Root.Root, 1);
-
 		}
 	}
 }
