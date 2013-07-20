@@ -9,7 +9,6 @@ namespace Nevar
 	{
 		private readonly byte* _base;
 		private readonly PageHeader* _header;
-		public ushort LastSearchPosition;
 		public int LastMatch;
 
 		public Page(byte* b)
@@ -42,15 +41,24 @@ namespace Nevar
 				return null;
 			}
 
-			int low = 0;
+			if (key.Options == SliceOptions.BeforeAllKeys)
+			{
+				LastSearchPosition = 0;
+				LastMatch = 1;
+				return GetNode(0);
+			}
+
+			if (key.Options == SliceOptions.AfterAllKeys)
+			{
+				LastMatch = -1;
+				LastSearchPosition = NumberOfEntries - 1;
+				return GetNode(LastSearchPosition);
+			}
+
+			int low = IsLeaf ? 0 : 1;
 			int high = NumberOfEntries - 1;
 			int position = 0;
 
-			if (IsBranch && GetNode(0)->KeySize == 0)
-			{
-				low = 1;// skip the left page implicit smaller than anything entry
-			}
-			
 			var pageKey = new Slice(SliceOptions.Key);
 			bool matched = false;
 			NodeHeader* node = null;
@@ -82,7 +90,7 @@ namespace Nevar
 				position++; // move to the smallest entry larger than the key
 
 			Debug.Assert(position < ushort.MaxValue);
-			LastSearchPosition = (ushort)position;
+			LastSearchPosition = position;
 
 			if (position >= NumberOfEntries)
 				return null;
@@ -122,7 +130,7 @@ namespace Nevar
 			}
 		}
 
-		public void RemoveNode(ushort index)
+		public void RemoveNode(int index)
 		{
 			Debug.Assert(index < NumberOfEntries);
 
@@ -150,11 +158,11 @@ namespace Nevar
 
 		}
 
-		public void AddNode(ushort index, Slice key, Stream value, int pageNumber)
+		public void AddNode(int index, Slice key, Stream value, int pageNumber)
 		{
 			if (HasSpaceFor(key, value) == false)
 				throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
-			
+
 			// move higher pointers up one slot
 			for (int i = NumberOfEntries; i > index; i--)
 			{
@@ -164,7 +172,7 @@ namespace Nevar
 			var node = AllocateNewNode(index, key, nodeSize);
 
 			if (key.Options == SliceOptions.Key)
-				key.CopyTo((byte*) node + Constants.NodeHeaderSize);
+				key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
 			if (IsBranch)
 			{
@@ -177,8 +185,8 @@ namespace Nevar
 
 			Debug.Assert(key.Options == SliceOptions.Key);
 			Debug.Assert(value != null);
-			var dataPos = (byte*) node + Constants.NodeHeaderSize + key.Size;
-			node->DataSize = (int) value.Length;
+			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
+			node->DataSize = (int)value.Length;
 			node->Flags = NodeFlags.Data;
 			using (var ums = new UnmanagedMemoryStream(dataPos, value.Length, value.Length, FileAccess.ReadWrite))
 			{
@@ -190,7 +198,7 @@ namespace Nevar
 		/// Internal method that is used when splitting pages
 		/// No need to do any work here, we are always adding at the end
 		/// </summary>
-		internal void CopyNodeData(NodeHeader* other)
+		internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
 		{
 			Debug.Assert(SizeOf.NodeEntry(other) + Constants.NodeOffsetSize <= SizeLeft);
 
@@ -198,7 +206,7 @@ namespace Nevar
 
 			var nodeSize = SizeOf.NodeEntry(other);
 
-			var key = new Slice(other);
+			key = key ?? new Slice(other);
 			var newNode = AllocateNewNode(index, key, nodeSize);
 			newNode->Flags = other->Flags;
 			key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
@@ -216,7 +224,7 @@ namespace Nevar
 		}
 
 
-		private NodeHeader* AllocateNewNode(ushort index, Slice key, int nodeSize)
+		private NodeHeader* AllocateNewNode(int index, Slice key, int nodeSize)
 		{
 			var newNodeOffset = (ushort)(_header->Upper - nodeSize);
 			Debug.Assert(newNodeOffset >= _header->Lower + Constants.NodeOffsetSize);
@@ -236,7 +244,19 @@ namespace Nevar
 			get { return _header->Upper - _header->Lower; }
 		}
 
-		public void Truncate(Transaction tx, ushort i)
+		public int SizeUsed
+		{
+			get { return _header->Lower + Constants.PageMaxSpace - _header->Upper; }
+		}
+
+		public int LastSearchPosition { get; set; }
+
+		public byte* Base
+		{
+			get { return _base; }
+		}
+
+		public void Truncate(Transaction tx, int i)
 		{
 			if (i >= NumberOfEntries)
 				return;
@@ -248,7 +268,7 @@ namespace Nevar
 			copy.Flags = Flags;
 			for (int j = 0; j < i; j++)
 			{
-				copy.CopyNodeData(GetNode(j));
+				copy.CopyNodeDataToEndOfPage(GetNode(j));
 			}
 			NativeMethods.memcpy(_base + Constants.PageHeaderSize,
 								 copy._base + Constants.PageHeaderSize,
@@ -262,7 +282,7 @@ namespace Nevar
 				LastSearchPosition = i;
 		}
 
-		public ushort NodePositionFor(Slice key, SliceComparer cmp)
+		public int NodePositionFor(Slice key, SliceComparer cmp)
 		{
 			Search(key, cmp);
 			return LastSearchPosition;

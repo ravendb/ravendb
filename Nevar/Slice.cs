@@ -8,6 +8,9 @@ namespace Nevar
 {
 	public unsafe class Slice
 	{
+		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
+		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
+
 		private ushort _pointerSize;
 		public SliceOptions Options;
 		private readonly byte[] _array;

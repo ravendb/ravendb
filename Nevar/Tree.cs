@@ -96,7 +96,7 @@ namespace Nevar
 		///	item is also "large" and falls on the half with
 		///	"large" nodes, it also may not fit.
 		/// </summary>
-		private static ushort AdjustSplitPosition(Slice key, Stream value, Page page, ushort currentIndex, ushort splitIndex,
+		private static int AdjustSplitPosition(Slice key, Stream value, Page page, int currentIndex, int splitIndex,
 													  ref bool newPosition)
 		{
 			var nodeSize = SizeOf.NodeEntry(key, value) + Constants.NodeOffsetSize;
@@ -153,7 +153,7 @@ namespace Nevar
 			cursor.Push(p);
 			while (p.Flags.HasFlag(PageFlags.Branch))
 			{
-				ushort nodePos;
+				int nodePos;
 				if (key.Options == SliceOptions.BeforeAllKeys)
 				{
 					nodePos = 0;
@@ -168,7 +168,10 @@ namespace Nevar
 					{
 						nodePos = p.LastSearchPosition;
 						if (p.LastMatch != 0)
+						{
 							nodePos--;
+							p.LastSearchPosition--;
+						}
 					}
 					else
 					{
@@ -210,8 +213,141 @@ namespace Nevar
 				return; // not an exact match, can't delete
 			page.RemoveNode(pos);
 
-			page.DebugValidate(_cmp);
+			var treeRebalancer = new TreeRebalancer(tx);
 
+			var changedPage = page;
+			while (changedPage != null)
+			{
+				changedPage = treeRebalancer.Execute(cursor, changedPage);
+			}
+
+			page.DebugValidate(_cmp);
+		}
+
+		public class TreeRebalancer
+		{
+			private readonly Transaction _tx;
+
+			public TreeRebalancer(Transaction tx)
+			{
+				_tx = tx;
+			}
+
+			public Page Execute(Cursor cursor, Page page)
+			{
+				if (cursor.Pages.Count <= 1) // the root page
+				{
+					RebalanceRoot(cursor, page);
+					return null;
+				}
+
+				var parentPage = cursor.ParentPage;
+				if (page.NumberOfEntries == 0)
+				{
+					// empty page, just delete it and fixup parent
+					parentPage.RemoveNode(parentPage.LastSearchPosition);
+					cursor.Pop();
+					return parentPage;
+				}
+
+				var minKeys = page.IsBranch ? 2 : 1;
+				if (page.SizeUsed >= Constants.PageMinSpace &&
+				    page.NumberOfEntries >= minKeys)
+					return null; // above space/keys thresholds
+
+
+				Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
+
+				Page sibling;
+				if (parentPage.LastSearchPosition == 0) // we are the left most item
+				{
+					sibling = _tx.GetPage(parentPage.GetNode(1)->PageNumber);
+					sibling.LastSearchPosition = 0;
+					page.LastSearchPosition = page.NumberOfEntries;
+					parentPage.LastSearchPosition = 1;
+				}
+				else // there is at least 1 page to our left
+				{
+					sibling = _tx.GetPage(parentPage.GetNode(parentPage.LastSearchPosition - 1)->PageNumber);
+					sibling.LastSearchPosition = sibling.NumberOfEntries - 1;
+					page.LastSearchPosition = 0;
+					parentPage.LastSearchPosition--;
+
+				}
+
+				minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
+				if (sibling.SizeUsed > Constants.PageMinSpace && sibling.NumberOfEntries > minKeys)
+				{
+					// neighbor is over the min size and has enough key, can move just one key to  the current page
+					MoveNode(parentPage, sibling, page);
+					return parentPage;
+				}
+				return null;
+			}
+
+			private void MoveNode(Page parentPage, Page from, Page to)
+			{
+				var fromKey = GetCurrentKeyFrom(from);
+
+				var fromNode = from.GetNode(from.LastSearchPosition);
+				Stream val = null;
+				int pageNum;
+				if (fromNode->Flags.HasFlag(NodeFlags.Data))
+				{
+					val = new UnmanagedMemoryStream(from.Base + from.KeysOffsets[from.LastSearchPosition] + Constants.NodeHeaderSize, fromNode->DataSize);
+					pageNum = -1;
+				}
+				else
+				{
+					pageNum = fromNode->PageNumber;
+				}
+				using (val)
+				{
+					to.AddNode(to.LastSearchPosition, fromKey, val, pageNum);
+				}
+
+				to.RemoveNode(to.LastSearchPosition);
+
+				parentPage.RemoveNode(parentPage.LastSearchPosition);
+				var toKey = GetCurrentKeyFrom(from); // get the next smallest key it has
+				parentPage.AddNode(parentPage.LastSearchPosition, toKey, null, from.PageNumber);
+			}
+
+			private Slice GetCurrentKeyFrom(Page page)
+			{
+				var node = page.GetNode(page.LastSearchPosition);
+				var key = new Slice(node);
+				while (key.Size == 0)
+				{
+					Debug.Assert(page.LastSearchPosition == 0 && page.IsBranch);
+					page = _tx.GetPage(node->PageNumber);
+					node = page.GetNode(0);
+					key.Set(node);
+				}
+				return key;
+			}
+
+			private void RebalanceRoot(Cursor cursor, Page page)
+			{
+				if (page.NumberOfEntries == 0)
+					return; // nothing to do 
+				if (!page.IsBranch || page.NumberOfEntries > 1)
+				{
+					return; // cannot do anything here
+				}
+				// in this case, we have a root pointer with just one pointer, we can just swap it out
+				var node = page.GetNode(0);
+				Debug.Assert(node->Flags.HasFlag(NodeFlags.PageRef));
+				cursor.Root = _tx.GetPage(node->PageNumber);
+				cursor.LeafPages = 1;
+				cursor.BranchPages = 0;
+				cursor.Depth = 1;
+				cursor.PageCount = 1;
+				cursor.Pop();
+				cursor.Push(cursor.Root);
+
+				_tx.FreePage(page);
+			}
 		}
 
 		public class PageSplitter
@@ -250,7 +386,7 @@ namespace Nevar
 					_cursor.RecordNewPage(newRootPage, 1);
 
 					// now add implicit left page
-					newRootPage.AddNode(0, new Slice(SliceOptions.BeforeAllKeys), null, _page.PageNumber);
+					newRootPage.AddNode(0, Slice.BeforeAllKeys, null, _page.PageNumber);
 					_parentPage = newRootPage;
 					_parentPage.LastSearchPosition++;
 				}
@@ -279,7 +415,7 @@ namespace Nevar
 			{
 				var currentIndex = _page.LastSearchPosition;
 				var newPosition = true;
-				var splitIndex = (ushort)(_page.NumberOfEntries / 2);
+				var splitIndex = _page.NumberOfEntries / 2;
 				if (currentIndex < splitIndex)
 					newPosition = false;
 
@@ -305,16 +441,16 @@ namespace Nevar
 
 				// move the actual entries from page to right page
 				var nKeys = _page.NumberOfEntries;
-				for (ushort i = splitIndex; i < nKeys; i++)
+				for (int i = splitIndex; i < nKeys; i++)
 				{
 					var node = _page.GetNode(i);
-					rightPage.CopyNodeData(node);
+					rightPage.CopyNodeDataToEndOfPage(node);
 				}
 				_page.Truncate(_tx, splitIndex);
 
 				// actually insert the new key
 				if (currentIndex > splitIndex ||
-				    newPosition && currentIndex == splitIndex)
+					newPosition && currentIndex == splitIndex)
 				{
 					var pos = rightPage.NodePositionFor(_newKey, _parent._cmp);
 					rightPage.AddNode(pos, _newKey, _value, _pageNumber);
@@ -339,7 +475,29 @@ namespace Nevar
 				}
 			}
 		}
-	}
 
-	
+		public List<Slice> KeysAsList(Transaction tx)
+		{
+			var l = new List<Slice>();
+			AddKeysToListInOrder(tx, l, Root);
+			return l;
+		}
+
+		private void AddKeysToListInOrder(Transaction tx, List<Slice> l, Page page)
+		{
+			for (int i = 0; i < page.NumberOfEntries; i++)
+			{
+				var node = page.GetNode(i);
+				if (page.IsBranch)
+				{
+					var p = tx.GetPage(node->PageNumber);
+					AddKeysToListInOrder(tx, l, p);
+				}
+				else
+				{
+					l.Add(new Slice(node));
+				}
+			}
+		}
+	}
 }
