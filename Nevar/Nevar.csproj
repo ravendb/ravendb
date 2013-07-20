@@ -62,9 +62,11 @@
     <Compile Include="SliceOptions.cs" />
     <Compile Include="StorageEnvironment.cs" />
     <Compile Include="Impl\Transaction.cs" />
+    <Compile Include="Trees\PageSplitter.cs" />
     <Compile Include="Trees\Tree.cs" />
     <Compile Include="Debugging\TreeDumper.cs" />
     <Compile Include="Impl\SizeOf.cs" />
+    <Compile Include="Trees\TreeRebalancer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="todo.txt" />
