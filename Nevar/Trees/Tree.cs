@@ -50,7 +50,9 @@ namespace Nevar.Trees
 			var page = FindPageFor(tx, key, cursor);
 
 			if (page.LastMatch == 0) // this is an update operation
-				page.RemoveNode(page.LastSearchPosition);
+			{
+				RemoveLeafNode(tx, page);
+			}
 
 			if (page.HasSpaceFor(key, value) == false)
 			{
@@ -62,6 +64,20 @@ namespace Nevar.Trees
 			page.AddNode(page.LastSearchPosition, key, value, 0);
 
 			page.DebugValidate(_cmp);
+		}
+
+		private static void RemoveLeafNode(Transaction tx, Page page)
+		{
+			var node = page.GetNode(page.LastSearchPosition);
+			if (node->Flags.HasFlag(NodeFlags.PageRef)) // this is an overflow pointer
+			{
+				var overflowPage = tx.GetPage(node->PageNumber);
+				for (int i = 0; i < overflowPage.NumberOfPages; i++)
+				{
+					tx.FreePage(tx.GetPage(node->PageNumber + i));
+				}
+			}
+			page.RemoveNode(page.LastSearchPosition);
 		}
 
 		[Conditional("DEBUG")]
@@ -145,10 +161,10 @@ namespace Nevar.Trees
 
 			var page = FindPageFor(tx, key, cursor);
 
-			var pos = page.NodePositionFor(key, _cmp);
+			page.NodePositionFor(key, _cmp);
 			if (page.LastMatch != 0)
 				return; // not an exact match, can't delete
-			page.RemoveNode(pos);
+			RemoveLeafNode(tx, page);
 
 			var treeRebalancer = new TreeRebalancer(tx);
 
