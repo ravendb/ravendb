@@ -51,7 +51,7 @@ namespace Nevar.Trees
 
 			if (page.LastMatch == 0) // this is an update operation
 			{
-				RemoveLeafNode(tx, page);
+				RemoveLeafNode(tx, cursor, page);
 			}
 
 			var pageNumber = -1;
@@ -76,7 +76,7 @@ namespace Nevar.Trees
 		private static int WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
 		{
 			var overflowSize = (int) value.Length;
-			int numberOfPages = (Constants.PageSize - 1 + overflowSize) / (Constants.PageSize) + 1;
+			var numberOfPages = GetNumberOfOverflowPages(overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
 			overflowPageStart.OverflowSize = numberOfPages;
 			overflowPageStart.Flags = PageFlags.Overlfow;
@@ -91,21 +91,29 @@ namespace Nevar.Trees
 			return overflowPageStart.PageNumber;
 		}
 
+		private static int GetNumberOfOverflowPages(int overflowSize)
+		{
+			return (Constants.PageSize - 1 + overflowSize)/(Constants.PageSize) + 1;
+		}
+
 		private bool ShouldGoToOverflowPage(Stream value)
 		{
 			return value.Length + Constants.PageHeaderSize > Constants.MaxNodeSize;
 		}
 
-		private static void RemoveLeafNode(Transaction tx, Page page)
+		private static void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
 		{
 			var node = page.GetNode(page.LastSearchPosition);
 			if (node->Flags.HasFlag(NodeFlags.PageRef)) // this is an overflow pointer
 			{
 				var overflowPage = tx.GetPage(node->PageNumber);
-				for (int i = 0; i < overflowPage.OverflowSize; i++)
+				var numberOfPages = GetNumberOfOverflowPages(overflowPage.OverflowSize);
+				for (int i = 0; i < numberOfPages; i++)
 				{
 					tx.FreePage(tx.GetPage(node->PageNumber + i));
 				}
+				cursor.OverflowPages -= numberOfPages;
+				cursor.PageCount -= numberOfPages;
 			}
 			page.RemoveNode(page.LastSearchPosition);
 		}
@@ -194,7 +202,7 @@ namespace Nevar.Trees
 			page.NodePositionFor(key, _cmp);
 			if (page.LastMatch != 0)
 				return; // not an exact match, can't delete
-			RemoveLeafNode(tx, page);
+			RemoveLeafNode(tx, cursor, page);
 
 			var treeRebalancer = new TreeRebalancer(tx);
 
