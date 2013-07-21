@@ -948,7 +948,7 @@ namespace Raven.Client.Connection
                 if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
                     throw;
 
-                if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
                 {
                     var error = e.TryReadErrorResponseObject(
                         new { Error = "", Message = "" });
@@ -992,7 +992,7 @@ namespace Raven.Client.Connection
 	            if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
 	                throw;
 
-	            if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
 	            {
 	                var error = e.TryReadErrorResponseObject(
 	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
@@ -1032,7 +1032,7 @@ namespace Raven.Client.Connection
 	            if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
 	                throw;
 
-	            if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
 	            {
 	                var error = e.TryReadErrorResponseObject(
 	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
