@@ -17,17 +17,20 @@ namespace Nevar.Impl
 			_mappedFile = mappedFile;
 
 			_viewAccessor = mappedFile.CreateViewAccessor();
-
+            
 			_viewAccessor.SafeMemoryMappedViewHandle.AcquirePointer(ref _baseAddress);
 		}
 
 		public Page Get(int n)
 		{
-			// TODO: handle when requesting data beyond the mapped region
-			return new Page(_baseAddress + (n * Constants.PageSize));
+		    var pos = (n*Constants.PageSize);
+		    if (pos + Constants.PageSize >= _viewAccessor.Capacity)
+		        throw new InvalidOperationException("Request past end of mapped memory");
+
+		    return new Page(_baseAddress + pos);
 		}
 
-		public Page Allocate(Transaction tx, int num)
+	    public Page Allocate(Transaction tx, int num)
 		{
 			var page = Get(tx.NextPageNumber);
 			page.PageNumber = tx.NextPageNumber;

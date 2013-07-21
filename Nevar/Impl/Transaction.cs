@@ -11,7 +11,7 @@ namespace Nevar.Impl
 
 		private readonly Pager _pager;
 
-		private readonly Dictionary<Tree, Cursor> cursors = new Dictionary<Tree, Cursor>();
+		private readonly Dictionary<Tree, Cursor> _cursors = new Dictionary<Tree, Cursor>();
 
 		public Transaction(Pager pager)
 		{
@@ -32,7 +32,7 @@ namespace Nevar.Impl
 		public void Commit()
 		{
 			_pager.NextPageNumber = NextPageNumber;
-			foreach (var cursor in cursors)
+			foreach (var cursor in _cursors)
 			{
 				cursor.Value.Flush();
 			}
@@ -46,13 +46,13 @@ namespace Nevar.Impl
 		public Cursor GetCursor(Tree tree)
 		{
 			Cursor c;
-			if (cursors.TryGetValue(tree, out c))
+			if (_cursors.TryGetValue(tree, out c))
 			{
 				c.Pages.Clear(); // this reset the mutable cursor state
 				return c;
 			}
 			c = new Cursor(tree);
-			cursors.Add(tree, c);
+			_cursors.Add(tree, c);
 			return c;
 		}
 
