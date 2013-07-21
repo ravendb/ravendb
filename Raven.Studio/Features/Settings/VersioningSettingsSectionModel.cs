@@ -8,8 +8,6 @@ using Raven.Abstractions.Data;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
-using Raven.Client.Silverlight.MissingFromSilverlight;
-using Raven.Json.Linq;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
