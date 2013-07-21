@@ -59,10 +59,11 @@ namespace Raven.Tests.Helpers
 			bool enableAuthentication = false)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenTestBase)).CodeBase);
-			path = Path.Combine(path, DataDir);
+            
+            if (path.StartsWith(@"file:\", StringComparison.InvariantCultureIgnoreCase))
+                path = path.Substring(6);
 
-			if (path.StartsWith("file:/", StringComparison.InvariantCultureIgnoreCase))
-				path = path.Substring(6);
+            path = Path.Combine(path, Path.GetFileName(Path.GetDirectoryName(DataDir)));
 
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var documentStore = new EmbeddableDocumentStore

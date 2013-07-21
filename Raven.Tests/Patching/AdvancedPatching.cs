@@ -317,6 +317,7 @@ this.Value = another.Value;
 			}
 		}
 
+        [Fact]
         public void CanPatchMetadata()
         {
             using (var store = NewDocumentStore())

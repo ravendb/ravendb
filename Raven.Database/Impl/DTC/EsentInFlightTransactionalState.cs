@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
@@ -22,20 +23,37 @@ namespace Raven.Database.Impl.DTC
 		private readonly ConcurrentDictionary<string, EsentTransactionContext> transactionContexts =
 			new ConcurrentDictionary<string, EsentTransactionContext>();
 
-		private long transactionContextNumber = 0;
-		private readonly Func<EsentTransactionContext> createContext;
+		private long transactionContextNumber;
+		private readonly Timer timer;
 
 		public EsentInFlightTransactionalState(TransactionalStorage storage, CommitTransactionGrbit txMode, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 			: base(databasePut, databaseDelete)
 		{
 			this.storage = storage;
 			this.txMode = txMode;
-			createContext = () =>
+			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+		}
+
+		private EsentTransactionContext CreateEsentTransactionContext()
+		{
+			var newTransactionNumber = Interlocked.Increment(ref transactionContextNumber);
+			return new EsentTransactionContext(new Session(storage.Instance),
+			                                   new IntPtr(newTransactionNumber),
+			                                   SystemTime.UtcNow);
+		}
+
+		private void CleanupOldTransactions(object state)
+		{
+			var oldestAllowedTransaction = SystemTime.UtcNow;
+			foreach (var ctx in transactionContexts.ToArray())
 			{
-				var newTransactionNumber = Interlocked.Increment(ref transactionContextNumber);
-				return new EsentTransactionContext(new Session(storage.Instance),
-												   new IntPtr(newTransactionNumber));
-			};
+				var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
+				if (age.TotalMinutes >= 5)
+				{
+					log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
+					Rollback(ctx.Key);
+				}
+			}
 		}
 
 		public override void Commit(string id)
@@ -46,6 +64,7 @@ namespace Raven.Database.Impl.DTC
 
 			lock (context)
 			{
+				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
 				using (context.EnterSessionContext())
 				{
 					context.Transaction.Commit(txMode);
@@ -60,11 +79,31 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Prepare(string id)
 		{
-			var context = transactionContexts.GetOrAdd(id, createContext());
-
-			using (storage.SetTransactionContext(context))
+			EsentTransactionContext context;
+			if (transactionContexts.TryGetValue(id, out context) == false)
 			{
-				storage.Batch(accessor => RunOperationsInTransaction(id));
+				var myContext = CreateEsentTransactionContext();
+				try
+				{
+					context = transactionContexts.GetOrAdd(id, myContext);
+				}
+				finally
+				{
+					if (myContext != context)
+						myContext.Dispose();
+				}
+			}
+			try
+			{
+				using (storage.SetTransactionContext(context))
+				{
+					storage.Batch(accessor => RunOperationsInTransaction(id));
+				}
+			}
+			catch (Exception)
+			{
+				Rollback(id);
+				throw;
 			}
 		}
 
@@ -76,22 +115,23 @@ namespace Raven.Database.Impl.DTC
 			if (transactionContexts.TryRemove(id, out context) == false)
 				return;
 
+			using(context.Session)
 			using (context.EnterSessionContext())
 			{
 				context.Transaction.Dispose(); // will rollback the transaction if it was not committed
 			}
-			context.Session.Dispose();
 		}
 
 		public void Dispose()
 		{
+			timer.Dispose();
 			foreach (var context in transactionContexts)
 			{
 				using (context.Value.EnterSessionContext())
+				using (context.Value.Session)
 				{
 					context.Value.Transaction.Dispose();
 				}
-				context.Value.Session.Dispose();
 			}
 		}
 	}

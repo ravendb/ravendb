@@ -368,16 +368,21 @@ namespace Raven.Database.Indexing
 													lastCommitPoint.TimeStamp));
 		}
 
+		public static string IndexVersionFileName(IndexDefinition indexDefinition)
+		{
+			if (indexDefinition.IsMapReduce)
+				return "mapReduce.version";
+			return "index.version";
+		}
+
 		public static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			var indexVersion = "index.version";
 			var version = IndexVersion;
 			if(indexDefinition.IsMapReduce)
 			{
-				indexVersion = "mapReduce.version";
 				version = MapReduceIndexVersion;
 			}
-			using (var indexOutput = directory.CreateOutput(indexVersion))
+			using (var indexOutput = directory.CreateOutput(IndexVersionFileName(indexDefinition)))
 			{
 				indexOutput.WriteString(version);
 				indexOutput.Flush();
@@ -386,13 +391,12 @@ namespace Raven.Database.Indexing
 
 		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			var indexVersion = "index.version";
 			var versionToCheck = IndexVersion;
 			if(indexDefinition.IsMapReduce)
 			{
-				indexVersion = "mapReduce.version";
 				versionToCheck = MapReduceIndexVersion;
 			}
+			var indexVersion = IndexVersionFileName(indexDefinition);
 			if (directory.FileExists(indexVersion) == false)
 			{
 				throw new InvalidOperationException("Could not find " + indexVersion + " " + indexName + ", resetting index");

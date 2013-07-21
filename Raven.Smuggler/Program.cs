@@ -207,7 +207,7 @@ namespace Raven.Smuggler
 				}
 				else
 				{
-					Console.WriteLine(e);
+					Console.WriteLine(ex);
 					Environment.Exit(-1);
 				}
 			}

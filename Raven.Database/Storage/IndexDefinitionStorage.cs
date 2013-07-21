@@ -327,8 +327,6 @@ namespace Raven.Database.Storage
 
         public static string FixupIndexName(string index, string path)
         {
-	        if (path.Length > 230)
-		        throw new InvalidOperationException(string.Format("Path: {0}, is too long must be shorter then 230 chars"));
             index = index.Trim();
             string prefix = null;
             if (index.StartsWith("Temp/") || index.StartsWith("Auto/"))
