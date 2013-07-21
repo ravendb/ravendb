@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -266,7 +267,15 @@ namespace Raven.Storage.Managed
 			throw new NotSupportedException("Not valid for munin");
 		}
 
-		public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+        public IList<string> ComputeDetailedStorageInformation()
+        {
+            return new List<string>
+            {
+                "Detailed storage sizes is not available for Munin"
+            };
+        }
+
+	    public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{
 			return inFlightTransactionalState ?? (inFlightTransactionalState = new MuninInFlightTransactionalState(this, put, delete));
 		}
