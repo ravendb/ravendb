@@ -439,7 +439,6 @@ namespace Raven.Client
         /// <exception cref="ArgumentNullException">
         /// source or predicate is null.
         /// </exception>
-        [Obsolete("AnyAsync will LOAD ALL DOCUMENTS IN MEMORY and fall back to Linq to Objects.")]
         public static async Task<bool> AllAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
