@@ -163,7 +163,7 @@ namespace Raven.Client.Shard
 			return LoadAsyncInternal<T>(ids, new KeyValuePair<string, Type>[0], new TTransformer().TransformerName);
 		}
 
-		public Task<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);

@@ -369,7 +369,7 @@ namespace Raven.Client.Document.Async
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
