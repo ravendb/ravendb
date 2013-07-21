@@ -18,7 +18,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Commercial;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Impl.Synchronization;
@@ -162,9 +161,10 @@ namespace Raven.Database
         private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches =
             new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
 
-        public DocumentDatabase(InMemoryRavenConfiguration configuration)
+        public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
         {
             this.configuration = configuration;
+            this.transportState = transportState ?? new TransportState();
 
             using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
             {
@@ -217,8 +217,6 @@ namespace Raven.Database
 
                     TransactionalStorage.Batch(actions =>
                         sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-
-                    TransportState = new TransportState();
 
                     // Index codecs must be initialized before we try to read an index
                     InitializeIndexCodecTriggers();
@@ -2137,7 +2135,8 @@ namespace Raven.Database
         }
 
         static string productVersion;
-        private SequentialUuidGenerator sequentialUuidGenerator;
+        private readonly SequentialUuidGenerator sequentialUuidGenerator;
+        private readonly TransportState transportState;
         public static string ProductVersion
         {
             get
@@ -2189,7 +2188,13 @@ namespace Raven.Database
             get { return disposed; }
         }
 
-        public TransportState TransportState { get; private set; }
+        public TransportState TransportState
+        {
+            get
+            {
+                return transportState;
+            }
+        }
 
         /// <summary>
         /// Get the total index storage size taken by the indexes on the disk.

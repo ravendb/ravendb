@@ -15,7 +15,7 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Connections
 {
-	public class EventsTransport
+	public class EventsTransport : IDisposable
 	{
 		private readonly Timer heartbeat;
 
@@ -148,7 +148,15 @@ namespace Raven.Database.Server.Connections
 
 			Connected = false;
 			Disconnected();
-			context.FinalizeResponse();
+		    context.FinalizeResponse();
 		}
+
+        public void Dispose()
+        {
+            Connected = false;
+            Disconnected();
+            SendAsync(new { Type = "Disconnect" })
+               .ContinueWith(_ => context.FinalizeResponse());
+        }
 	}
 }

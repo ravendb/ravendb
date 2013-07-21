@@ -686,7 +686,7 @@ namespace Raven.Bundles.Replication.Tasks
 									var info = docDb.GetRecentTouchesFor(document.Key);
 									if (info != null)
 									{
-										if (info.PreTouchEtag.CompareTo(result.LastEtag) <= 0)
+										if (info.PreTouchEtag.CompareTo(result.LastEtag) >= 0)
 											return false;
 									}
 

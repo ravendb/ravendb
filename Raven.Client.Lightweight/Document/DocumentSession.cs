@@ -320,7 +320,11 @@ namespace Raven.Client.Document
                                             .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
                                             .Select(values =>
                                             {
-                                                var array = values.Select(y => y.Deserialize(typeof(T).GetElementType(), Conventions)).ToArray();
+                                                var array = values.Select(y =>
+                                                {
+                                                    HandleInternalMetadata(y);
+                                                    return y.Deserialize(typeof (T).GetElementType(), Conventions);
+                                                }).ToArray();
                                                 var newArray = Array.CreateInstance(typeof (T).GetElementType(), array.Length);
                                                 Array.Copy(array, newArray, array.Length);
                                                 return newArray;
@@ -336,7 +340,11 @@ namespace Raven.Client.Document
                                             .Results
                                             .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
                                             .Select(JsonExtensions.ToJObject)
-                                            .Select(x => x.Deserialize(typeof (T), Conventions))
+                                            .Select(x =>
+                                            {
+                                                HandleInternalMetadata(x);
+                                                return x.Deserialize(typeof (T), Conventions);
+                                            })
                                             .Cast<T>()
                                             .ToArray();
                 

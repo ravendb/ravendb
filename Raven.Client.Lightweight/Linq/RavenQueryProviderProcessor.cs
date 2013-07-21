@@ -1554,8 +1554,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					if (finalQuery.AggregationOperation == AggregationOperation.Distinct)
 						throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
 						                                "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
-					var queryResultAsync = finalQuery.QueryResult;
-					return queryType == SpecialQueryType.Count ?  queryResultAsync.TotalResults : (long)queryResultAsync.TotalResults ;
+					var qr = finalQuery.QueryResult;
+					if (queryType != SpecialQueryType.Count) 
+						return (long) qr.TotalResults;
+					return qr.TotalResults;
 				}
 #else
 				case SpecialQueryType.Count:

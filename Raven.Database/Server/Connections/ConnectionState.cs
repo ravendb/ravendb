@@ -224,10 +224,10 @@ namespace Raven.Database.Server.Connections
                 });
         }
 
-        public void Disconnect()
+        public void Dispose()
         {
             if (eventsTransport != null)
-                eventsTransport.Disconnect();
+                eventsTransport.Dispose();
         }
     }
 }

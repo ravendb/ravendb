@@ -70,6 +70,8 @@ namespace Raven.Database.Server
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
+        private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
+
 #if DEBUG
 		private readonly ConcurrentQueue<string> recentRequests = new ConcurrentQueue<string>();
 
@@ -280,6 +282,13 @@ namespace Raven.Database.Server
 			{
 				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+                exceptionAggregator.Execute(() =>
+                {
+                    foreach (var databaseTransportState in databaseTransportStates)
+                    {
+                        databaseTransportState.Value.Dispose();
+                    }
+                });
 				exceptionAggregator.Execute(() =>
 				{
 					if (serverTimer != null)
@@ -1031,8 +1040,10 @@ namespace Raven.Database.Server
 
 			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var documentDatabase = new DocumentDatabase(config);
-				AssertLicenseParameters(config);
+			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+			    var documentDatabase = new DocumentDatabase(config, transportState);
+
+			    AssertLicenseParameters(config);
 				documentDatabase.SpinBackgroundWorkers();
 				InitializeRequestResponders(documentDatabase);
 
