@@ -440,7 +440,7 @@ namespace Raven.Client
         /// source or predicate is null.
         /// </exception>
         [Obsolete("AnyAsync will LOAD ALL DOCUMENTS IN MEMORY and fall back to Linq to Objects.")]
-        public static Task<bool> AllAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static async Task<bool> AllAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -461,7 +461,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.Any(predicate.Compile()));
+            var result = await query.ToListAsync();
+
+            return result.Item2.Any(predicate.Compile());
         }
 
         /// <summary>
@@ -483,7 +485,7 @@ namespace Raven.Client
         /// <exception cref="ArgumentNullException">
         /// source is null.
         /// </exception>
-        public static Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source)
+        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -498,7 +500,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item1.TotalResults > 0);
+            var result = await query.ToListAsync();
+
+            return result.Item1.TotalResults > 0;
         }
 
         /// <summary>
@@ -525,7 +529,7 @@ namespace Raven.Client
         /// <exception cref="ArgumentNullException">
         /// source or predicate is null.
         /// </exception>
-        public static Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -541,7 +545,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item1.TotalResults > 0);
+            var result = await query.ToListAsync();
+
+            return result.Item1.TotalResults > 0;
         }
 
         /// <summary>
@@ -567,7 +573,7 @@ namespace Raven.Client
         /// <exception cref="OverflowException">
         /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
         /// </exception>
-        public static Task<int> CountAsync<TSource>(this IQueryable<TSource> source)
+        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -582,7 +588,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item1.TotalResults);
+            var result = await query.ToListAsync();
+
+            return result.Item1.TotalResults;
         }
 
         /// <summary>
@@ -613,7 +621,7 @@ namespace Raven.Client
         /// <exception cref="OverflowException">
         /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
         /// </exception>
-        public static Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -629,7 +637,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item1.TotalResults);
+            var result = await query.ToListAsync();
+
+            return result.Item1.TotalResults;
         }
 
         /// <summary>
@@ -656,7 +666,7 @@ namespace Raven.Client
         /// The source sequence is empty or source
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source)
+        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -671,7 +681,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.First());
+            var result = await query.ToListAsync();
+
+            return result.Item2.First();
         }
 
         /// <summary>
@@ -703,7 +715,7 @@ namespace Raven.Client
         /// the source sequence is empty or source
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -719,7 +731,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.First());
+            var result = await query.ToListAsync();
+
+            return result.Item2.First();
         }
 
         /// <summary>
@@ -746,7 +760,7 @@ namespace Raven.Client
         /// <exception cref="InvalidOperationException">
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source)
+        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -761,7 +775,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.FirstOrDefault());
+            var result = await query.ToListAsync();
+
+            return result.Item2.FirstOrDefault();
         }
 
         /// <summary>
@@ -795,7 +811,7 @@ namespace Raven.Client
         /// <exception cref="InvalidOperationException">
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -811,7 +827,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.FirstOrDefault());
+            var result = await query.ToListAsync();
+
+            return result.Item2.FirstOrDefault();
         }
 
         /// <summary>
@@ -839,7 +857,7 @@ namespace Raven.Client
         /// The source sequence is empty, has more than one element or
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source)
+        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -854,7 +872,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.Single());
+            var result = await query.ToListAsync();
+
+            return result.Item2.Single();
         }
 
         /// <summary>
@@ -887,7 +907,7 @@ namespace Raven.Client
         /// one element satisfies the condition, the source sequence is empty or
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -903,7 +923,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.Single());
+            var result = await query.ToListAsync();
+
+            return result.Item2.Single();
         }
 
         /// <summary>
@@ -933,7 +955,7 @@ namespace Raven.Client
         /// source has more than one element or
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source)
+        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -948,7 +970,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.SingleOrDefault());
+            var result = await query.ToListAsync();
+
+            return result.Item2.SingleOrDefault();
         }
 
         /// <summary>
@@ -982,7 +1006,7 @@ namespace Raven.Client
         /// More than one element satisfies the condition in predicate
         /// or source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -998,7 +1022,9 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            return query.ToListAsync().ContinueWith(t => t.Result.Item2.SingleOrDefault());
+            var result = await query.ToListAsync();
+
+            return result.Item2.SingleOrDefault();
         }
 
 #if !NETFX_CORE
