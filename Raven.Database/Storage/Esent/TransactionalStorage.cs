@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
@@ -349,7 +350,12 @@ namespace Raven.Storage.Esent
             });
         }
 
-	    public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+        public IList<string> ComputeDetailedStorageInformation()
+        {
+            return StorageSizes.ReportOn(this);
+        }
+
+        public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 	    {
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 			   ? CommitTransactionGrbit.LazyFlush

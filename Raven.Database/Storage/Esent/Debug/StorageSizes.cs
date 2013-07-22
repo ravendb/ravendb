@@ -36,7 +36,7 @@ namespace Raven.Database.Storage.Esent.Debug
 			}
 		}
 
-		private static List<string> ReportOn(TransactionalStorage transactionalStorage)
+	    public static List<string> ReportOn(TransactionalStorage transactionalStorage)
 		{
 			var list = new List<string>();
 			transactionalStorage.Batch(accessor =>

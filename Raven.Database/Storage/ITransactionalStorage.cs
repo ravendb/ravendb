@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
@@ -41,5 +42,6 @@ namespace Raven.Database.Storage
 		void ClearCaches();
 		void DumpAllStorageTables();
 		InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete);
+        IList<string> ComputeDetailedStorageInformation();
 	}
 }
