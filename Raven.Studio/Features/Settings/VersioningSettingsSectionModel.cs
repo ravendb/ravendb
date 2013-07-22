@@ -84,28 +84,31 @@ namespace Raven.Studio.Features.Settings
 					}
 
 					ApplicationModel.Current.Server.Value.SelectedDatabase.Value
-							.AsyncDatabaseCommands
-							.CreateRequest(string.Format("/debug/settings?key=Raven/Versioning/ChangesToRevisionsAllowed").NoCache(), "GET")
-							.ReadResponseJsonAsync()
-							.ContinueOnSuccessInTheUIThread(doc =>
+						.AsyncDatabaseCommands
+						.CreateRequest(string.Format("/debug/config").NoCache(), "GET")
+						.ReadResponseJsonAsync()
+						.ContinueOnSuccessInTheUIThread(doc =>
+						{
+							if (doc == null)
 							{
-								if (doc == null)
-								{
-									allowChangedToRevistionsInternal = false;
-									return;
-								}
-								bool value;
-								if (bool.TryParse(doc.ToString(), out value) == false)
-								{
-									allowChangedToRevistionsInternal = false;
-								}
-								else
-								{
-									allowChangedToRevistionsInternal = value;
-								}
+								allowChangedToRevistionsInternal = false;
+								return;
+							}
 
-								OnPropertyChanged(() => AllowChangedToRevistions);
-							});
+							var item = doc.SelectToken("Raven/Versioning/ChangesToRevisionsAllowed");
+
+							if (item == null)
+							{
+								allowChangedToRevistionsInternal = false;
+								return;
+							}
+
+							bool value;
+							allowChangedToRevistionsInternal = bool.TryParse(item.ToString(), out value) && value;
+
+							OnPropertyChanged(() => AllowChangedToRevistions);
+						});
+
 					allowChangedToRevistions.Value = false;
 					return allowChangedToRevistions;
 				}
