@@ -321,7 +321,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		        captureSelectNewFieldNamesVisitor.Clear(); // reduce override the map fields
 		        reduceDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 		        reduceDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
-		        reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(groupByIdentifier), null);
+				reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCallsInReduce(groupByIdentifier), null);
 
 		        ValidateMapReduceFields(mapFields);
 
