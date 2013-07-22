@@ -323,7 +323,7 @@ namespace Raven.Client.Document
                                                 var array = values.Select(y =>
                                                 {
                                                     HandleInternalMetadata(y);
-                                                    return y.Deserialize(typeof (T).GetElementType(), Conventions);
+                                                    return ConvertToEntity<T>(null, y, new RavenJObject());
                                                 }).ToArray();
                                                 var newArray = Array.CreateInstance(typeof (T).GetElementType(), array.Length);
                                                 Array.Copy(array, newArray, array.Length);
@@ -343,7 +343,7 @@ namespace Raven.Client.Document
                                             .Select(x =>
                                             {
                                                 HandleInternalMetadata(x);
-                                                return x.Deserialize(typeof (T), Conventions);
+                                                return ConvertToEntity<T>(null, x, new RavenJObject());
                                             })
                                             .Cast<T>()
                                             .ToArray();
