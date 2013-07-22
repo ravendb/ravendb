@@ -29,7 +29,7 @@ namespace Raven.Client.Document
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
-	                               ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+								   ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
@@ -60,9 +60,9 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="DocumentSession"/> class.
 		/// </summary>
 		public DocumentSession(string dbName, DocumentStore documentStore,
-		                       DocumentSessionListeners listeners,
-		                       Guid id,
-		                       IDatabaseCommands databaseCommands)
+							   DocumentSessionListeners listeners,
+							   Guid id,
+							   IDatabaseCommands databaseCommands)
 			: base(dbName, documentStore, listeners, id)
 		{
 			DatabaseCommands = databaseCommands;
@@ -114,7 +114,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		Lazy<T> ILazySessionOperations.Load<T>(string id)
 		{
-			return Lazily.Load(id, (Action<T>) null);
+			return Lazily.Load(id, (Action<T>)null);
 		}
 
 		/// <summary>
@@ -195,7 +195,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
 		{
-			return Lazily.Load(id, (Action<T>) null);
+			return Lazily.Load(id, (Action<T>)null);
 		}
 
 		/// <summary>
@@ -213,7 +213,7 @@ namespace Raven.Client.Document
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
 			{
-				return (T) existingEntity;
+				return (T)existingEntity;
 			}
 
 			IncrementRequestCount();
@@ -247,7 +247,7 @@ namespace Raven.Client.Document
 		/// <param name="ids">The ids.</param>
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return ((IDocumentSessionImpl) this).LoadInternal<T>(ids.ToArray());
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
 		}
 
 		/// <summary>
@@ -304,82 +304,82 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
-	    private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
-	    {
-	        if (ids.Length == 0)
-	            return new T[0];
+		private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+		{
+			if (ids.Length == 0)
+				return new T[0];
 
-	        IncrementRequestCount();
+			IncrementRequestCount();
 
-            if (typeof (T).IsArray)
-            {
-                // Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-                // With a single Id
-                var arrayOfArrays = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
-                                            .Results
-                                            .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-                                            .Select(values =>
-                                            {
-                                                var elementType = typeof (T).GetElementType();
-                                                var array = values.Select(y =>
-                                                {
-                                                    HandleInternalMetadata(y);
+			if (typeof(T).IsArray)
+			{
+				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
+				// With a single Id
+				var arrayOfArrays = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
+											.Results
+											.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+											.Select(values =>
+											{
+												var elementType = typeof(T).GetElementType();
+												var array = values.Select(y =>
+												{
+													HandleInternalMetadata(y);
 
-                                                    return ProjectionToInstance(y, elementType);
-                                                }).ToArray();
-                                                var newArray = Array.CreateInstance(elementType, array.Length);
-                                                Array.Copy(array, newArray, array.Length);
-                                                return newArray;
-                                            })
-                                            .Cast<T>()
-                                            .ToArray();
-                
-                return arrayOfArrays;
-            }
-            else
-            {
-                var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
-                                            .Results
-                                            .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-                                            .Select(JsonExtensions.ToJObject)
-                                            .Select(x =>
-                                            {
-                                                HandleInternalMetadata(x);
-                                                return ProjectionToInstance(x, typeof(T));
-                                            })
-                                            .Cast<T>()
-                                            .ToArray();
-                
-                if (items.Length > ids.Length)
-                {
-                    throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-                        transformer,
-                        typeof(T).Name));
-                }
-                return items;
-            }
-	    }
+													return ProjectionToInstance(y, elementType);
+												}).ToArray();
+												var newArray = Array.CreateInstance(elementType, array.Length);
+												Array.Copy(array, newArray, array.Length);
+												return newArray;
+											})
+											.Cast<T>()
+											.ToArray();
 
-	    private object ProjectionToInstance(RavenJObject y, Type type)
-	    {
-	        foreach (var conversionListener in listeners.ExtendedConversionListeners)
-	        {
-	            conversionListener.BeforeConversionToEntity(null, y, null);
-	        }
-	        var instance = y.Deserialize(type, Conventions);
-	        foreach (var conversionListener in listeners.ConversionListeners)
-	        {
-	            conversionListener.DocumentToEntity(null, instance, y, null);
-	        }
-	        foreach (var conversionListener in listeners.ExtendedConversionListeners)
-	        {
-	            conversionListener.AfterConversionToEntity(null, y, null, instance);
-	        }
-	        return instance;
-	    }
+				return arrayOfArrays;
+			}
+			else
+			{
+				var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
+											.Results
+											.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+											.Select(JsonExtensions.ToJObject)
+											.Select(x =>
+											{
+												HandleInternalMetadata(x);
+												return ProjectionToInstance(x, typeof(T));
+											})
+											.Cast<T>()
+											.ToArray();
 
-	    public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
-	    {
+				if (items.Length > ids.Length)
+				{
+					throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
+						transformer,
+						typeof(T).Name));
+				}
+				return items;
+			}
+		}
+
+		private object ProjectionToInstance(RavenJObject y, Type type)
+		{
+			foreach (var conversionListener in listeners.ExtendedConversionListeners)
+			{
+				conversionListener.BeforeConversionToEntity(null, y, null);
+			}
+			var instance = y.Deserialize(type, Conventions);
+			foreach (var conversionListener in listeners.ConversionListeners)
+			{
+				conversionListener.DocumentToEntity(null, instance, y, null);
+			}
+			foreach (var conversionListener in listeners.ExtendedConversionListeners)
+			{
+				conversionListener.AfterConversionToEntity(null, y, null, instance);
+			}
+			return instance;
+		}
+
+		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+		{
 			if (ids.Length == 0)
 				return new T[0];
 
@@ -398,7 +398,7 @@ namespace Raven.Client.Document
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
 			return multiLoadOperation.Complete<T>();
-	    }
+		}
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
@@ -407,8 +407,8 @@ namespace Raven.Client.Document
 
 			// only load documents that aren't already cached
 			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
-			                                 .Distinct(StringComparer.OrdinalIgnoreCase)
-			                                 .ToArray();
+											 .Distinct(StringComparer.OrdinalIgnoreCase)
+											 .ToArray();
 
 			if (idsOfNotExistingObjects.Length > 0)
 			{
@@ -431,7 +431,7 @@ namespace Raven.Client.Document
 			{
 				object val;
 				entitiesByKey.TryGetValue(id, out val);
-				return (T) val;
+				return (T)val;
 			}).ToArray();
 		}
 
@@ -477,7 +477,7 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
 
 			value.Metadata = jsonDocument.Metadata;
-			value.OriginalMetadata = (RavenJObject) jsonDocument.Metadata.CloneToken();
+			value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
@@ -540,25 +540,25 @@ namespace Raven.Client.Document
 			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
 		}
 
-	    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
-	    {
-	        var transformer = new TTransformer().TransformerName;
-	        return this.LoadInternal<TResult>(new string[] {id}, transformer).FirstOrDefault();
-	    }
+		public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+			return this.LoadInternal<TResult>(new string[] { id }, transformer).FirstOrDefault();
+		}
 
-	    public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-	    {
-            var transformer = new TTransformer().TransformerName;
-	        var configuration = new RavenLoadConfiguration();
-	        configure(configuration);
-            return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
-	    }
+		public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+			var configuration = new RavenLoadConfiguration();
+			configure(configuration);
+			return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+		}
 
 		public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 			return this.LoadInternal<TResult>(ids, transformer);
-	  
+
 		}
 
 		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
@@ -591,9 +591,9 @@ namespace Raven.Client.Document
 
 		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
 		{
-            var queryProvider = (IRavenQueryProvider)query.Provider;
-            var docQuery = queryProvider.ToLuceneQuery<T>(query.Expression);
-		    return Stream(docQuery, out queryHeaderInformation);
+			var queryProvider = (IRavenQueryProvider)query.Provider;
+			var docQuery = queryProvider.ToLuceneQuery<T>(query.Expression);
+			return Stream(docQuery, out queryHeaderInformation);
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
@@ -606,49 +606,59 @@ namespace Raven.Client.Document
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(false);
-		    var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
-		    return YieldQuery(query, enumerator);
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			return YieldQuery(query, enumerator);
 		}
 
-        private static IEnumerator<StreamResult<T>> YieldQuery<T>(IDocumentQuery<T> query, IEnumerator<RavenJObject> enumerator)
-	    {
-	        var queryOperation = ((DocumentQuery<T>) query).InitializeQueryOperation(null);
-			queryOperation.DisableEntitiesTracking = true; 
+		private static IEnumerator<StreamResult<T>> YieldQuery<T>(IDocumentQuery<T> query, IEnumerator<RavenJObject> enumerator)
+		{
+			var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation(null);
+			queryOperation.DisableEntitiesTracking = true;
 			while (enumerator.MoveNext())
-	        {
-	            var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+			{
+				var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
 
-	            string key = null;
-	            Etag etag = null;
-	            if (meta != null)
-	            {
-	                key = meta.Value<string>(Constants.DocumentIdFieldName);
-	                var value = meta.Value<string>("@etag");
-	                if (value != null)
-	                    etag = Etag.Parse(value);
-	            }
+				string key = null;
+				Etag etag = null;
+				if (meta != null)
+				{
+					key = meta.Value<string>(Constants.DocumentIdFieldName);
+					var value = meta.Value<string>("@etag");
+					if (value != null)
+						etag = Etag.Parse(value);
+				}
 
-	            yield return new StreamResult<T>
-	            {
-	                Document = queryOperation.Deserialize<T>(enumerator.Current),
-	                Etag = etag,
-	                Key = key,
-	                Metadata = meta
-	            };
-	        }
-	    }
+				yield return new StreamResult<T>
+				{
+					Document = queryOperation.Deserialize<T>(enumerator.Current),
+					Etag = etag,
+					Key = key,
+					Metadata = meta
+				};
+			}
+		}
 
-	    public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize);
+		}
+
+		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
+		}
+
+		private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
 		{
 			var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
-		
+
 			while (enumerator.MoveNext())
 			{
 				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
 
 				yield return new StreamResult<T>
 				{
-					Document = (T) ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+					Document = (T)ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
 					Etag = document.Etag,
 					Key = document.Key,
 					Metadata = document.Metadata
@@ -698,22 +708,22 @@ namespace Raven.Client.Document
 			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
 		}
 
-	    /// <summary>
-	    /// Commits the specified tx id.
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    public override void Commit(string txId)
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public override void Commit(string txId)
 		{
 			IncrementRequestCount();
 			DatabaseCommands.Commit(txId);
 			ClearEnlistment();
 		}
 
-	    /// <summary>
-	    /// Rollbacks the specified tx id.
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    public override void Rollback(string txId)
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public override void Rollback(string txId)
 		{
 			IncrementRequestCount();
 			DatabaseCommands.Rollback(txId);
@@ -776,11 +786,11 @@ namespace Raven.Client.Document
 			var lazyValue = new Lazy<T>(() =>
 			{
 				ExecuteAllPendingLazyOperations();
-				return (T) operation.Result;
+				return (T)operation.Result;
 			});
 
 			if (onEval != null)
-				onEvaluateLazy[operation] = theResult => onEval((T) theResult);
+				onEvaluateLazy[operation] = theResult => onEval((T)theResult);
 
 			return lazyValue;
 		}
@@ -835,7 +845,7 @@ namespace Raven.Client.Document
 						if (responses[i].RequestHasErrors())
 						{
 							throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-							                                    Environment.NewLine + responses[i].Result);
+																Environment.NewLine + responses[i].Result);
 						}
 						pendingLazyOperations[i].HandleResponse(responses[i]);
 						if (pendingLazyOperations[i].RequiresRetry)
@@ -871,8 +881,8 @@ namespace Raven.Client.Document
 		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
 			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize)
-			                       .Select(TrackEntity<T>)
-			                       .ToArray();
+								   .Select(TrackEntity<T>)
+								   .ToArray();
 		}
 
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)

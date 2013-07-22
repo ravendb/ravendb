@@ -97,7 +97,12 @@ namespace Raven.Client
 		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
-		IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag = null, string startsWith = null, string matches = null,
-		                                        int start = 0, int pageSize = int.MaxValue);
+		IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue);
+
+		/// <summary>
+		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
+		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		/// </summary>
+		IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue);
 	}
 }
