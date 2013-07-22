@@ -944,25 +944,12 @@ namespace Raven.Client.Connection
             }
             catch (WebException e)
             {
-                var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-                    throw;
-
-                if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+                Exception newException;
+                if (ShouldRethrowIndexException(e, out newException))
                 {
-                    var error = e.TryReadErrorResponseObject(
-                        new { Error = "", Message = "" });
-
-                    if (error == null)
-                    {
-                        throw;
-                    }
-
-                    var compilationException = new TransformCompilationException(error.Message);
-
-                    throw compilationException;
+                    if (newException != null)
+                        throw new TransformCompilationException(newException.Message, e);
                 }
-
                 throw;
             }
 		}
@@ -988,28 +975,14 @@ namespace Raven.Client.Connection
 	        }
 	        catch (WebException e)
 	        {
-	            var httpWebResponse = e.Response as HttpWebResponse;
-	            if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-	                throw;
-
-	            if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+	            Exception newException;
+	            if (ShouldRethrowIndexException(e, out newException))
 	            {
-	                var error = e.TryReadErrorResponseObject(
-	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
-
-	                if (error == null)
-	                {
-	                    throw;
-	                }
-
-	                var compilationException = new IndexCompilationException(error.Message)
-	                {
-	                    IndexDefinitionProperty = error.IndexDefinitionProperty,
-	                    ProblematicText = error.ProblematicText
-	                };
-
-	                throw compilationException;
+	                if (newException != null)
+	                    throw newException;
+	                throw;
 	            }
+                
 	        }
 
 	        var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1028,31 +1001,43 @@ namespace Raven.Client.Connection
 	        }
 	        catch (WebException e)
 	        {
-	            var httpWebResponse = e.Response as HttpWebResponse;
-	            if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-	                throw;
+                Exception newException;
+                if (ShouldRethrowIndexException(e, out newException))
+                {
+                    if (newException != null)
+                        throw newException;
+                }
+                throw;
+            }
+	    }
 
-	            if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
+	    private static bool ShouldRethrowIndexException(WebException e, out Exception newEx)
+	    {
+	        newEx = null;
+	        var httpWebResponse = e.Response as HttpWebResponse;
+	        if (httpWebResponse == null)
+	            return true;
+
+	        if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+	        {
+	            var error = e.TryReadErrorResponseObject(
+	                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+	            if (error == null)
 	            {
-	                var error = e.TryReadErrorResponseObject(
-	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
-
-	                if (error == null)
-	                {
-	                    throw;
-	                }
-
-	                var compilationException = new IndexCompilationException(error.Message)
-	                {
-	                    IndexDefinitionProperty = error.IndexDefinitionProperty,
-	                    ProblematicText = error.ProblematicText
-	                };
-
-	                throw compilationException;
+	                return true;
 	            }
 
-	            throw;
+                newEx = new IndexCompilationException(error.Message, e)
+	            {
+	                IndexDefinitionProperty = error.IndexDefinitionProperty,
+	                ProblematicText = error.ProblematicText
+	            };
+
+	            return true;
 	        }
+
+	        return (httpWebResponse.StatusCode != HttpStatusCode.NotFound);
 	    }
 
 	    /// <summary>

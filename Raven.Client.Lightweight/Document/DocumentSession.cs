@@ -320,12 +320,14 @@ namespace Raven.Client.Document
                                             .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
                                             .Select(values =>
                                             {
+                                                var elementType = typeof (T).GetElementType();
                                                 var array = values.Select(y =>
                                                 {
                                                     HandleInternalMetadata(y);
-                                                    return y.Deserialize(typeof (T).GetElementType(), Conventions);
+
+                                                    return ProjectionToInstance(y, elementType);
                                                 }).ToArray();
-                                                var newArray = Array.CreateInstance(typeof (T).GetElementType(), array.Length);
+                                                var newArray = Array.CreateInstance(elementType, array.Length);
                                                 Array.Copy(array, newArray, array.Length);
                                                 return newArray;
                                             })
@@ -343,7 +345,7 @@ namespace Raven.Client.Document
                                             .Select(x =>
                                             {
                                                 HandleInternalMetadata(x);
-                                                return x.Deserialize(typeof (T), Conventions);
+                                                return ProjectionToInstance(x, typeof(T));
                                             })
                                             .Cast<T>()
                                             .ToArray();
@@ -358,7 +360,25 @@ namespace Raven.Client.Document
             }
 	    }
 
-		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+	    private object ProjectionToInstance(RavenJObject y, Type type)
+	    {
+	        foreach (var conversionListener in listeners.ExtendedConversionListeners)
+	        {
+	            conversionListener.BeforeConversionToEntity(null, y, null);
+	        }
+	        var instance = y.Deserialize(type, Conventions);
+	        foreach (var conversionListener in listeners.ConversionListeners)
+	        {
+	            conversionListener.DocumentToEntity(null, instance, y, null);
+	        }
+	        foreach (var conversionListener in listeners.ExtendedConversionListeners)
+	        {
+	            conversionListener.AfterConversionToEntity(null, y, null, instance);
+	        }
+	        return instance;
+	    }
+
+	    public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 	    {
 			if (ids.Length == 0)
 				return new T[0];

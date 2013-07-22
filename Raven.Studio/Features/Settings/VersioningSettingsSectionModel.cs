@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Versioning.Data;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Infrastructure;
@@ -68,22 +69,65 @@ namespace Raven.Studio.Features.Settings
 			get { return DatabaseDocument != null; }
 		}
 
-		public bool AllowChangedToRevistions
+		private bool? allowChangedToRevistionsInternal;
+		private Observable<bool> allowChangedToRevistions = new Observable<bool>();
+		public Observable<bool> AllowChangedToRevistions
 		{
 			get
 			{
 				if (DatabaseDocument == null) //Not an admin
 				{
-					//TODO: get data from configs
-					return false;
+					if (allowChangedToRevistionsInternal.HasValue)
+					{
+						allowChangedToRevistions.Value = allowChangedToRevistionsInternal.Value;
+						return allowChangedToRevistions;
+					}
+
+					ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+						.AsyncDatabaseCommands
+						.CreateRequest(string.Format("/debug/config").NoCache(), "GET")
+						.ReadResponseJsonAsync()
+						.ContinueOnSuccessInTheUIThread(doc =>
+						{
+							if (doc == null)
+							{
+								allowChangedToRevistionsInternal = false;
+								return;
+							}
+
+							var item = doc.SelectToken("Raven/Versioning/ChangesToRevisionsAllowed");
+
+							if (item == null)
+							{
+								allowChangedToRevistionsInternal = false;
+								return;
+							}
+
+							bool value;
+							allowChangedToRevistionsInternal = bool.TryParse(item.ToString(), out value) && value;
+
+							OnPropertyChanged(() => AllowChangedToRevistions);
+						});
+
+					allowChangedToRevistions.Value = false;
+					return allowChangedToRevistions;
 				}
+
 				var changesToRevisionsAllowed = DatabaseDocument.Settings.ContainsKey("Raven/Versioning/ChangesToRevisionsAllowed");
 				if (changesToRevisionsAllowed == false)
-					return false;
+				{
+					allowChangedToRevistions.Value = false;
+					return allowChangedToRevistions;
+				}
 				bool result;
 				if (bool.TryParse(DatabaseDocument.Settings["Raven/Versioning/ChangesToRevisionsAllowed"], out result) == false)
-					return false;
-				return result;
+				{
+					allowChangedToRevistions.Value = false;
+					return allowChangedToRevistions;
+				}
+
+				allowChangedToRevistions.Value = result;
+				return allowChangedToRevistions;
 			}
 
 			set

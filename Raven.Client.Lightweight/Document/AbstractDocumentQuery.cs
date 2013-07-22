@@ -1472,7 +1472,7 @@ If you really want to do in memory filtering on the data returned from the query
 			OrderBy(fields);
 		}
 
-		string MakeFieldSortDescending(string field)
+		protected string MakeFieldSortDescending(string field)
 		{
 			if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
 			{

@@ -91,6 +91,8 @@ namespace Raven.Database.Storage
 
                 var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
 
+	            name = FixupIndexName(name, path);
+
                 transactionalStorage.Batch(actions =>
                 {
                     if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
@@ -279,6 +281,7 @@ namespace Raven.Database.Storage
 
         public IndexDefinition GetIndexDefinition(string name)
         {
+	        name = FixupIndexName(name);
             IndexDefinition value;
             indexDefinitions.TryGetValue(name, out value);
             if (value != null && value.Name == null) // backward compact, mostly
@@ -327,6 +330,8 @@ namespace Raven.Database.Storage
 
         public static string FixupIndexName(string index, string path)
         {
+	        if (index.EndsWith("=")) //allready encoded
+		        return index;
             index = index.Trim();
             string prefix = null;
             if (index.StartsWith("Temp/") || index.StartsWith("Auto/"))
@@ -339,7 +344,12 @@ namespace Raven.Database.Storage
                 using (var md5 = MD5.Create())
                 {
                     var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
-                    return prefix + Convert.ToBase64String(bytes);
+                    var result = prefix + Convert.ToBase64String(bytes);
+
+					if(path.Length + result.Length > 230)
+						throw new InvalidDataException("index name with the given path is too long even after encoding: " + index);
+
+	                return result;
                 }
             }
             return index;
