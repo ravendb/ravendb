@@ -182,7 +182,7 @@ namespace Raven.Tests.Shard.Async
 				//get all, should automagically retrieve from each shard
 				var allCompanies = session.Advanced.AsyncLuceneQuery<Company>()
 					.WaitForNonStaleResults()
-					.ToListAsync().Result.Item2;
+					.ToListAsync().Result;
 
 				Assert.NotNull(allCompanies);
 				Assert.Equal(company1.Name, allCompanies[0].Name);

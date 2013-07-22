@@ -33,7 +33,6 @@ namespace Raven.Client.Linq
 		private bool chainedWhere;
 		private int insideWhere;
 		private IAbstractDocumentQuery<T> luceneQuery;
-		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
 		private string currentPath = string.Empty;

@@ -411,8 +411,7 @@ namespace Raven.Client
 
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item2);
+			return documentQuery.ToListAsync();
 		}
 
         /// <summary>
@@ -448,10 +447,12 @@ namespace Raven.Client
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
+	        RavenQueryStatistics stats;
+	        query.Statistics(out stats);
 
-            var result = await query.ToListAsync();
+            await query.ToListAsync();
 
-            return result.Item1.TotalResults > 0;
+            return stats.TotalResults > 0;
         }
 
         /// <summary>
@@ -494,9 +495,12 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync();
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
 
-            return result.Item1.TotalResults > 0;
+			await query.ToListAsync();
+
+			return stats.TotalResults > 0;
         }
 
         /// <summary>
@@ -537,9 +541,12 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync();
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
 
-            return result.Item1.TotalResults;
+			await query.ToListAsync();
+
+			return stats.TotalResults;
         }
 
         /// <summary>
@@ -585,10 +592,12 @@ namespace Raven.Client
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
 
-            var result = await query.ToListAsync();
+			await query.ToListAsync();
 
-            return result.Item1.TotalResults;
+			return stats.TotalResults;
         }
 
         /// <summary>
@@ -632,7 +641,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.First();
+            return result.First();
         }
 
         /// <summary>
@@ -682,7 +691,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.First();
+            return result.First();
         }
 
         /// <summary>
@@ -726,7 +735,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.FirstOrDefault();
+            return result.FirstOrDefault();
         }
 
         /// <summary>
@@ -778,7 +787,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.FirstOrDefault();
+            return result.FirstOrDefault();
         }
 
         /// <summary>
@@ -823,7 +832,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.Single();
+            return result.Single();
         }
 
         /// <summary>
@@ -874,7 +883,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.Single();
+            return result.Single();
         }
 
         /// <summary>
@@ -921,7 +930,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.SingleOrDefault();
+            return result.SingleOrDefault();
         }
 
         /// <summary>
@@ -973,7 +982,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.SingleOrDefault();
+            return result.SingleOrDefault();
         }
 
 #if !NETFX_CORE
