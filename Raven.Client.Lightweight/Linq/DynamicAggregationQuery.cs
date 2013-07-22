@@ -33,7 +33,7 @@ namespace Raven.Client.Linq
 
 		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName = null)
 		{
-			var propertyPath = path.ToPropertyPath();
+			var propertyPath = path.ToPropertyPath('_');
 			if (IsNumeric(path))
 			{
 				var tmp = propertyPath + "_Range";
@@ -87,7 +87,7 @@ namespace Raven.Client.Linq
 	    private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
 		{
 			var last = facets.Last();
-			last.AggregationField = path.ToPropertyPath();
+			last.AggregationField = path.ToPropertyPath('_');
 			last.Aggregation |= facetAggregation;
 		}
 
