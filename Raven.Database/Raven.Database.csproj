@@ -212,7 +212,6 @@
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugSettings.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
