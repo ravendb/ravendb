@@ -289,8 +289,8 @@ namespace Raven.Database.Impl.DTC
 		protected void RunOperationsInTransaction(string id)
 		{
 			TransactionState value;
-			if (transactionStates.TryGetValue(id, out value) == false)
-				throw new InvalidOperationException("There is no transaction with id: " + id);
+		    if (transactionStates.TryGetValue(id, out value) == false)
+		        return; // no transaction, cannot do anything to this
 
 			lock (value)
 			{
