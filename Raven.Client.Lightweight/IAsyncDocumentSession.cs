@@ -92,7 +92,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Begins the a load that will use the specified results transformer against the specified id
 		/// </summary>
-		Task<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+		Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Begins the async load operation
