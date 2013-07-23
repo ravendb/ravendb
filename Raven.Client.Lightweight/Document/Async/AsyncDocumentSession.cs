@@ -88,7 +88,7 @@ namespace Raven.Client.Document.Async
 			return new QueryYieldStream<T>(this, enumerator, queryOperation);
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string matches, int start = 0,
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
 		                                                             int pageSize = Int32.MaxValue)
 		{
 			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize);
@@ -97,7 +97,7 @@ namespace Raven.Client.Document.Async
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
 		                                                             int pageSize = Int32.MaxValue)
 		{
-			return StreamAsync<T>(fromEtag: null, startsWith: start, matches: matches, start: start, pageSize: pageSize);
+			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
 		}
 
 		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start , int pageSize)
