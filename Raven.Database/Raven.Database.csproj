@@ -215,6 +215,7 @@
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
+    <Compile Include="Server\Responders\Admin\AdminLohCompaction.cs" />
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
     <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
     <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
