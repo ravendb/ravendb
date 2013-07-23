@@ -190,6 +190,20 @@ namespace Raven.Client.Document.Async
 				};
 			}
 		}
+
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var index = new TIndexCreator();
+
+            return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
+        }
+
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
