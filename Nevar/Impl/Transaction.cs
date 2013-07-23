@@ -10,13 +10,15 @@ namespace Nevar.Impl
 		public List<Page> DirtyPages = new List<Page>();
 
 		private readonly Pager _pager;
+		private readonly StorageEnvironment _env;
 
 		private readonly Dictionary<Tree, Cursor> cursors = new Dictionary<Tree, Cursor>();
 
-		public Transaction(Pager pager)
+		public Transaction(Pager pager, StorageEnvironment env)
 		{
 			_pager = pager;
-			NextPageNumber = pager.NextPageNumber;
+			_env = env;
+			NextPageNumber = env.NextPageNumber;
 		}
 
 		public Page GetPage(int n)
@@ -26,12 +28,15 @@ namespace Nevar.Impl
 
 		public Page AllocatePage(int num)
 		{
-			return _pager.Allocate(this, num);
+			var allocatePage = _pager.Allocate(this.NextPageNumber, num);
+			NextPageNumber += num;
+			DirtyPages.Add(allocatePage);
+			return allocatePage;
 		}
 
 		public void Commit()
 		{
-			_pager.NextPageNumber = NextPageNumber;
+			_env.NextPageNumber = NextPageNumber;
 			foreach (var cursor in cursors)
 			{
 				cursor.Value.Flush();

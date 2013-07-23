@@ -11,11 +11,13 @@ namespace Nevar
 		private readonly Pager _pager;
 		private readonly SliceComparer _sliceComparer;
 
+		public int NextPageNumber { get; set; }
+
 		public StorageEnvironment(MemoryMappedFile file)
 		{
 			_file = file;
 			_pager = new Pager(file);
-			using (var transaction = new Transaction(_pager))
+			using (var transaction = new Transaction(_pager, this))
 			{
 				_sliceComparer = NativeMethods.memcmp;
 				Root = Tree.CreateOrOpen(transaction, -1, _sliceComparer);
@@ -38,7 +40,7 @@ namespace Nevar
 
 		public Transaction NewTransaction()
 		{
-			return new Transaction(_pager);
+			return new Transaction(_pager, this);
 		}
 	}
 }

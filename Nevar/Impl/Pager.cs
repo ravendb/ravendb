@@ -1,16 +1,13 @@
-﻿using System;
-using System.IO.MemoryMappedFiles;
+﻿using System.IO.MemoryMappedFiles;
 using Nevar.Trees;
 
 namespace Nevar.Impl
 {
-	public unsafe class Pager : IDisposable
+	public unsafe class Pager : IVirtualPager
 	{
 		private readonly MemoryMappedFile _mappedFile;
 		private readonly MemoryMappedViewAccessor _viewAccessor;
 		private readonly byte* _baseAddress = null;
-
-		public int NextPageNumber { get; set; }
 
 		public Pager(MemoryMappedFile mappedFile)
 		{
@@ -27,12 +24,10 @@ namespace Nevar.Impl
 			return new Page(_baseAddress + (n * Constants.PageSize));
 		}
 
-		public Page Allocate(Transaction tx, int num)
+		public Page Allocate(int nextPageNumber, int num)
 		{
-			var page = Get(tx.NextPageNumber);
-			page.PageNumber = tx.NextPageNumber;
-			tx.NextPageNumber += num;
-			tx.DirtyPages.Add(page);
+			var page = Get(nextPageNumber);
+			page.PageNumber = nextPageNumber;
 
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Upper = Constants.PageSize;
