@@ -7,8 +7,7 @@ namespace Nevar.Impl
 	public class Transaction : IDisposable
 	{
 		public int NextPageNumber;
-		public List<Page> DirtyPages = new List<Page>();
-
+		
 		private readonly IVirtualPager _pager;
 		private readonly StorageEnvironment _env;
 
@@ -33,7 +32,6 @@ namespace Nevar.Impl
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Upper = Constants.PageSize;
 			NextPageNumber += num;
-			DirtyPages.Add(page);
 			return page;
 		}
 
