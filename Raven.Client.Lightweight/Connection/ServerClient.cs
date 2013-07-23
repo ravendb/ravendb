@@ -661,18 +661,6 @@ namespace Raven.Client.Connection
 				.ToArray();
 		}
 
-		public IDictionary<string, RavenJToken> GetDatabases(int pageSize, int start = 0)
-		{
-			var result = ExecuteGetRequest("".Databases(pageSize, start).NoCache());
-
-			var json = (RavenJArray)result;
-
-			return json
-				.ToDictionary(
-					x =>
-					x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty));
-		}
-
 		private void DirectDeleteAttachment(string key, Etag etag, string operationUrl)
 		{
 			var metadata = new RavenJObject();
