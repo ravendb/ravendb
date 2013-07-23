@@ -324,13 +324,17 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-								   int pageSize = Int32.MaxValue)
-		{
-			throw new NotSupportedException("Streams are currently not supported by sharded document store");
-		}
+	    public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
+	    {
+            throw new NotSupportedException("Streams are currently not supported by sharded document store");
+	    }
 
-		#endregion
+	    public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+	    {
+            throw new NotSupportedException("Streams are currently not supported by sharded document store");
+	    }
+
+	    #endregion
 
 		/// <summary>
 		/// Saves all the changes to the Raven server.
