@@ -167,7 +167,7 @@ namespace Raven.ProjectRewriter
 			{
 				if (element.Attribute("Include").Value == "Microsoft.CompilerServices.AsyncTargetingPack.Net4")
 				{
-					element.Element(xmlns + "HintPath").Value = element.Element(xmlns + "HintPath").Value.Replace(@"net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4", @"net45\Microsoft.CompilerServices.AsyncTargetingPack.Net45");
+					element.Remove();
 				}
 				else if (element.Attribute("Include").Value == "System.Reactive.Core")
 				{
