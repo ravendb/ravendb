@@ -255,9 +255,9 @@ namespace Nevar.Trees
 			if (node->Flags.HasFlag(NodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetPage(node->PageNumber);
-				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize,overFlowPage.OverflowSize, FileAccess.Read);
 			}
-			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize,node->DataSize, FileAccess.Read);
 		}
 	}
 }
