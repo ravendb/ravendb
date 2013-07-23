@@ -411,59 +411,8 @@ namespace Raven.Client
 
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item2);
+			return documentQuery.ToListAsync();
 		}
-
-        /// <summary>
-        /// Determines whether all the elements of a sequence satisfy a condition.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
-        /// </param>
-        /// 
-        /// <param name="predicate">
-        /// A function to test each element for a condition.
-        /// </param>
-        /// 
-        /// <returns>
-        /// true if every element of the source sequence passes the test in the specified
-        /// predicate, or if the sequence is empty; otherwise, false.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source or predicate is null.
-        /// </exception>
-        public static async Task<bool> AllAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
-        {
-            if (source == null)
-                throw new ArgumentNullException("source");
-
-            var provider = source.Provider as IRavenQueryProvider;
-
-            if (provider == null)
-                throw new InvalidOperationException("AllAsync only be used with IRavenQueryable");
-
-
-            var queryable  = typeof(Queryable);
-            var tyepParams = new[] { typeof(TSource) };
-            var sourceExpr = Expression.Parameter(typeof(IQueryable<TSource>));
-            var lambdaExpr = Expression.Lambda(predicate.Body, predicate.Parameters);
-            var callExpr   = Expression.Call(queryable, "All", tyepParams, sourceExpr, lambdaExpr);
-
-            var query = provider.ToAsyncLuceneQuery<TSource>(callExpr);
-
-            provider.MoveAfterQueryExecuted(query);
-
-            var result = await query.ToListAsync();
-
-            return result.Item2.Any(predicate.Compile());
-        }
 
         /// <summary>
         /// Determines whether a sequence contains any elements.
@@ -498,10 +447,12 @@ namespace Raven.Client
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
+	        RavenQueryStatistics stats;
+	        query.Statistics(out stats);
 
-            var result = await query.ToListAsync();
+            await query.ToListAsync();
 
-            return result.Item1.TotalResults > 0;
+            return stats.TotalResults > 0;
         }
 
         /// <summary>
@@ -544,9 +495,12 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync();
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
 
-            return result.Item1.TotalResults > 0;
+			await query.ToListAsync();
+
+			return stats.TotalResults > 0;
         }
 
         /// <summary>
@@ -587,9 +541,12 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync();
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
 
-            return result.Item1.TotalResults;
+			await query.ToListAsync();
+
+			return stats.TotalResults;
         }
 
         /// <summary>
@@ -635,10 +592,12 @@ namespace Raven.Client
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
 
-            var result = await query.ToListAsync();
+			await query.ToListAsync();
 
-            return result.Item1.TotalResults;
+			return stats.TotalResults;
         }
 
         /// <summary>
@@ -682,7 +641,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.First();
+            return result.First();
         }
 
         /// <summary>
@@ -732,7 +691,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.First();
+            return result.First();
         }
 
         /// <summary>
@@ -776,7 +735,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.FirstOrDefault();
+            return result.FirstOrDefault();
         }
 
         /// <summary>
@@ -828,7 +787,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.FirstOrDefault();
+            return result.FirstOrDefault();
         }
 
         /// <summary>
@@ -873,7 +832,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.Single();
+            return result.Single();
         }
 
         /// <summary>
@@ -924,7 +883,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.Single();
+            return result.Single();
         }
 
         /// <summary>
@@ -971,7 +930,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.SingleOrDefault();
+            return result.SingleOrDefault();
         }
 
         /// <summary>
@@ -1023,7 +982,7 @@ namespace Raven.Client
 
             var result = await query.ToListAsync();
 
-            return result.Item2.SingleOrDefault();
+            return result.SingleOrDefault();
         }
 
 #if !NETFX_CORE

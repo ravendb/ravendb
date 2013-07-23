@@ -33,7 +33,6 @@ namespace Raven.Client.Linq
 		private bool chainedWhere;
 		private int insideWhere;
 		private IAbstractDocumentQuery<T> luceneQuery;
-		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
@@ -1322,8 +1321,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitAll(Expression<Func<T, bool>> predicateExpression)
 		{
-			predicate = predicateExpression;
-			queryType = SpecialQueryType.All;
+			throw new NotSupportedException("All() is not supported for linq queries");
 		}
 
 		private void VisitAny()
@@ -1538,11 +1536,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				{
 					return finalQuery.SingleOrDefault();
 				}
-				case SpecialQueryType.All:
-				{
-					var pred = predicate.Compile();
-					return finalQuery.AsQueryable().All(projection => pred((T) (object) projection));
-				}
 				case SpecialQueryType.Any:
 				{
 					return finalQuery.Any();
@@ -1587,10 +1580,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// 
 			/// </summary>
 			None,
-			/// <summary>
-			/// 
-			/// </summary>
-			All,
 			/// <summary>
 			/// 
 			/// </summary>

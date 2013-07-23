@@ -2075,12 +2075,12 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public Task<Tuple<QueryResult,IList<T>>> ToListAsync()
+		public Task<IList<T>> ToListAsync()
 		{
 			return InitAsync()
 				.ContinueWith(t => ProcessEnumerator(t))
 				.Unwrap()
-				.ContinueWith(t => Tuple.Create(t.Result.Item1.CurrentQueryResults, t.Result.Item2));
+				.ContinueWith(t => t.Result.Item2);
 		}
 
 		/// <summary>
