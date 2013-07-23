@@ -2,6 +2,7 @@
 using System.IO.MemoryMappedFiles;
 using System.Text;
 using Nevar.Debugging;
+using Nevar.Impl;
 using Nevar.Tests.Trees;
 
 namespace Nevar.Tryout
@@ -12,7 +13,7 @@ namespace Nevar.Tryout
 		{
 			new Basic().PageSplitsAllAround();
 			return;
-			var env = new StorageEnvironment(MemoryMappedFile.CreateNew("test", 1024 * 1024 * 16));
+			var env = new StorageEnvironment(new PureMemoryPager());
 			var ms = new MemoryStream(Encoding.UTF8.GetBytes("000000000000"));
 			using (var tx = env.NewTransaction())
 			{

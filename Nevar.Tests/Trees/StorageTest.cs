@@ -19,8 +19,7 @@ namespace Nevar.Tests.Trees
 
 		protected StorageTest()
 		{
-			var memoryMappedFile = MemoryMappedFile.CreateNew("test", 1024 * 1024 *16, MemoryMappedFileAccess.ReadWrite);
-			_storageEnvironment = new StorageEnvironment(memoryMappedFile);
+			_storageEnvironment = new StorageEnvironment(new PureMemoryPager());
 		}
 
 		protected Stream StreamFor(string val)

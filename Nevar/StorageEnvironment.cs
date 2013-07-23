@@ -7,16 +7,14 @@ namespace Nevar
 {
 	public unsafe class StorageEnvironment : IDisposable
 	{
-		private readonly MemoryMappedFile _file;
-		private readonly Pager _pager;
+		private readonly IVirtualPager _pager;
 		private readonly SliceComparer _sliceComparer;
 
 		public int NextPageNumber { get; set; }
 
-		public StorageEnvironment(MemoryMappedFile file)
+		public StorageEnvironment(IVirtualPager pager)
 		{
-			_file = file;
-			_pager = new Pager(file);
+			_pager = pager;
 			using (var transaction = new Transaction(_pager, this))
 			{
 				_sliceComparer = NativeMethods.memcmp;
@@ -33,7 +31,6 @@ namespace Nevar
 		public void Dispose()
 		{
 			_pager.Dispose();
-			_file.Dispose();
 		}
 
 		public Tree Root { get; private set; }
