@@ -10,13 +10,18 @@ namespace Raven.Abstractions.Data
 	/// </summary>
 	public class SuggestionQuery
 	{
+		public static float DefaultAccuracy = 0.5f;
+
+		public static int DefaultMaxSuggestions = 15;
+
+		public static StringDistanceTypes DefaultDistance = StringDistanceTypes.Levenshtein;
+
 		/// <summary>
 		/// Create a new instance of <seealso cref="SuggestionQuery"/>
 		/// </summary>
 		public SuggestionQuery()
 		{
-			MaxSuggestions = 15;
-			Distance = StringDistanceTypes.Default;
+			MaxSuggestions = SuggestionQuery.DefaultMaxSuggestions;
 		}
 
 		/// <summary>
@@ -41,13 +46,13 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the string distance algorithm.
 		/// </summary>
 		/// <value>The distance.</value>
-		public StringDistanceTypes Distance { get; set; }
+		public StringDistanceTypes? Distance { get; set; }
 
 		/// <summary>
 		/// Gets or sets the accuracy.
 		/// </summary>
 		/// <value>The accuracy.</value>
-		public float Accuracy { get; set; }
+		public float? Accuracy { get; set; }
 
 		/// <summary>
 		/// Whatever to return the terms in order of popularity

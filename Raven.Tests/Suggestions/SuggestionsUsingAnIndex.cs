@@ -211,8 +211,8 @@ namespace Raven.Tests.Suggestions
 						Field = "Name",
 						Term = "Oern", // intentional typo
 						MaxSuggestions = 10,
-						Accuracy = 1f,						  // The index should overwrite this value with 0.2f
-						Distance = StringDistanceTypes.NGram  // Should be overwrite by the value in the index, which is StringDistanceTypes.Levenshtein
+						Accuracy = 0.1f,						  
+						Distance = StringDistanceTypes.NGram  
 					});
 
 					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);

@@ -21,15 +21,22 @@ namespace Raven.Client.Document.Batches
 
 		public GetRequest CreateRequest()
 		{
+			var query = string.Format(
+				"term={0}&field={1}&max={2}",
+				suggestionQuery.Term,
+				suggestionQuery.Field,
+				suggestionQuery.MaxSuggestions);
+
+			if (suggestionQuery.Accuracy.HasValue)
+				query += "&accuracy=" + suggestionQuery.Accuracy.Value.ToString(CultureInfo.InvariantCulture);
+
+			if (suggestionQuery.Distance.HasValue)
+				query += "&distance=" + suggestionQuery.Distance;
+
 			return new GetRequest
 			{
 				Url = "/suggest/" + index,
-				Query = string.Format("term={0}&field={1}&max={2}&distance={3}&accuracy={4}",
-									  suggestionQuery.Term,
-									  suggestionQuery.Field,
-									  suggestionQuery.MaxSuggestions,
-									  suggestionQuery.Distance,
-									  suggestionQuery.Accuracy.ToString(CultureInfo.InvariantCulture))
+				Query = query
 			};
 		}
 

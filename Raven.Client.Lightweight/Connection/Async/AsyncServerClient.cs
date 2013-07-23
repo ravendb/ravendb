@@ -1001,7 +1001,7 @@ namespace Raven.Client.Connection.Async
 		public Task StartIndexingAsync()
 		{
 			return ExecuteWithReplication("POST", operationUrl =>
-		{
+			{
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
 					                                                                         (operationUrl + "/admin/StartIndexing")
@@ -1174,14 +1174,19 @@ namespace Raven.Client.Connection.Async
 
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
-													 Uri.EscapeUriString(index),
-													 Uri.EscapeDataString(suggestionQuery.Term),
-													 Uri.EscapeDataString(suggestionQuery.Field),
+				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&popularity={4}",
+				                                              Uri.EscapeUriString(index),
+				                                              Uri.EscapeDataString(suggestionQuery.Term),
+				                                              Uri.EscapeDataString(suggestionQuery.Field),
 				                                              Uri.EscapeDataString(
 					                                              suggestionQuery.MaxSuggestions.ToInvariantString()),
-				                                              Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-				                                              Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()));
+													 suggestionQuery.Popularity);
+
+				if (suggestionQuery.Accuracy.HasValue)
+					requestUri += "&accuracy=" + suggestionQuery.Accuracy.Value;
+
+				if (suggestionQuery.Distance.HasValue)
+					requestUri += "&distance=" + suggestionQuery.Distance;
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
@@ -1861,7 +1866,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 
-	#region IAsyncGlobalAdminDatabaseCommands
+		#region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{
@@ -1871,8 +1876,8 @@ namespace Raven.Client.Connection.Async
 		async Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
 		{
 			var json = (RavenJObject) await rootUrl.AdminStats()
-					.NoCache()
-					.ToJsonRequest(this, credentials, convention)
+			                                       .NoCache()
+			                                       .ToJsonRequest(this, credentials, convention)
 			                                       .ReadResponseJsonAsync();
 
 			return json.Deserialize<AdminStatistics>(convention);
@@ -1881,7 +1886,7 @@ namespace Raven.Client.Connection.Async
 		#endregion
 
 		#region IAsyncAdminDatabaseCommands
-		
+
 		/// <summary>
 		/// Admin operations, like create/delete database.
 		/// </summary>
