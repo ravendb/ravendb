@@ -545,6 +545,7 @@ Enjoy...
 			{
 				ManagedInstallerClass.InstallHelper(new[] { Assembly.GetExecutingAssembly().Location });
 				SetRecoveryOptions(ProjectInstaller.SERVICE_NAME);
+                SetServiceDescription(ProjectInstaller.SERVICE_NAME, "Open Source 2nd Generation Document DB");
 				var startController = new ServiceController(ProjectInstaller.SERVICE_NAME);
 				startController.Start();
 			}
@@ -579,6 +580,33 @@ Enjoy...
 			if (exitCode != 0)
 				throw new InvalidOperationException(
 					"Failed to set the service recovery policy. Command: " + Environment.NewLine+ "sc " + arguments + Environment.NewLine + "Exit code: " + exitCode);
-		} 
+		}
+
+        static void SetServiceDescription(string serviceName, string description )
+        {
+            int exitCode;
+            var arguments = string.Format("description {0} \"{1}\"", serviceName, description);
+            using (var process = new Process())
+            {
+                var startInfo = process.StartInfo;
+                startInfo.FileName = "sc";
+                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+
+                // set the service description
+                startInfo.Arguments = arguments;
+
+                process.Start();
+                process.WaitForExit();
+
+                exitCode = process.ExitCode;
+
+                process.Close();
+            }
+
+            if (exitCode != 0)
+                throw new InvalidOperationException(
+                    "Failed to set the service description. Command: " + Environment.NewLine + "sc " + arguments + Environment.NewLine + "Exit code: " + exitCode);
+        } 
+
 	}
 }
