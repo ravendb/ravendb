@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using Nevar.Debugging;
 using Nevar.Impl;
 
 namespace Nevar.Trees
@@ -141,11 +142,11 @@ namespace Nevar.Trees
 				int nodePos;
 				if (key.Options == SliceOptions.BeforeAllKeys)
 				{
-					nodePos = 0;
+					p.LastSearchPosition = nodePos = 0;
 				}
 				else if (key.Options == SliceOptions.AfterAllKeys)
 				{
-					nodePos = (ushort)(p.NumberOfEntries - 1);
+					p.LastSearchPosition  = nodePos = (ushort)(p.NumberOfEntries - 1);
 				}
 				else
 				{
@@ -280,6 +281,7 @@ namespace Nevar.Trees
 		public bool Seek(Slice key)
 		{
 			_currentPage = _tree.FindPageFor(_tx, key, _cursor);
+			_cursor.Pop();
 			var node = _currentPage.Search(key, _cmp);
 			return node != null;
 		}
@@ -296,16 +298,24 @@ namespace Nevar.Trees
 
 		public bool MoveNext()
 		{
-			// run out of entries, need to select the next page...
-			while (_cursor.Pages.Count > 0)
+			while (true)
 			{
 				_currentPage.LastSearchPosition++;
 				if (_currentPage.LastSearchPosition < _currentPage.NumberOfEntries)
+				{
+					// run out of entries, need to select the next page...
+					if (_currentPage.IsBranch)
+					{
+						_cursor.Push(_currentPage);
+						var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
+						_currentPage = _tx.GetPage(node->PageNumber);
+						_currentPage.LastSearchPosition = 0;
+					}
 					return true;// there is another entry in this page
-
+				}
+				if (_cursor.Pages.Count == 0)
+					break;
 				_currentPage = _cursor.Pop();
-
-
 			}
 			_currentPage = null;
 			return false;
