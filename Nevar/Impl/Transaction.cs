@@ -17,7 +17,7 @@ namespace Nevar.Impl
 		private readonly List<Page> freePages = new List<Page>();
 
 		private readonly Dictionary<Tree, Cursor> cursors = new Dictionary<Tree, Cursor>();
-		private long _oldestTx;
+		private readonly long _oldestTx;
 
 		public Transaction(IVirtualPager pager, StorageEnvironment env, long id)
 		{
@@ -33,24 +33,19 @@ namespace Nevar.Impl
 			return _pager.Get(n);
 		}
 
-		public unsafe Page AllocatePage(int num)
+		public Page AllocatePage(int num)
 		{
 			var page = TryAllocateFromFreeSpace(num);
-			if (page != null)
+			if (page == null) // allocate from end of file
 			{
-				page.Lower = (ushort)Constants.PageHeaderSize;
-				page.Upper = Constants.PageSize;
-				
-				return page;
+				page = _pager.Get(NextPageNumber);
+				page.PageNumber = NextPageNumber;
+				NextPageNumber += num;
 			}
 
-		
-			page = _pager.Get(NextPageNumber);
-			page.PageNumber = NextPageNumber;
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Upper = Constants.PageSize;
 
-			NextPageNumber += num;
 			return page;
 		}
 
@@ -58,25 +53,80 @@ namespace Nevar.Impl
 		{
 			if (_env.FreeSpace == null)
 				return null;// TODO: fix me!
-			var page = _env.FreeSpace.FindPageFor(this, Slice.BeforeAllKeys, GetCursor(_env.FreeSpace));
-			while (true)
+
+			using (var iterator = _env.FreeSpace.Iterage(this))
 			{
-				if (page.NumberOfEntries <= 0)
-					return null; // there is no free space
-				var node = page.GetNode(0);
-				var txId = new Slice(node).ToInt64();
-				if (txId >= _oldestTx)
-					return null; // all the free space is tied up in active transactions
-
-				// now need to find enough pages 
-
-				var pageCount = GetNodeDataSize(node) / sizeof(int);
-				
-				if (num > pageCount) // not enough free pages, let us try the next transaction
+				if (iterator.Seek(Slice.BeforeAllKeys) == false)
+					return null;
+				var slice = new Slice(SliceOptions.Key);
+				do
 				{
-					
+					var node = iterator.Current;
+					slice.Set(node);
+
+					var txId = slice.ToInt64();
+
+					if (txId >= _oldestTx)
+						return null;  // all the free space is tied up in active transactions
+					var remainingPages = GetNodeDataSize(node) / sizeof(int);
+
+					if (remainingPages > num)
+						continue; // this transaction doesn't have enough pages, let us try the next one...
+
+					// this transaction does have enough pages, now we need to see if we can find enough sequential pages
+					var list = ReadRemainingPagesList(remainingPages, node);
+					var start = 0;
+					var len = 1;
+					for (int i = 1; i < list.Count && len < num; i++)
+					{
+						if (list[i - 1] + 1 != list[i]) // hole found, try from current post
+						{
+							start = i;
+							len = 1;
+							continue;
+						}
+						len++;
+					}
+
+					if (len != num)
+						continue; // couldn't find enough consecutive entries, try next tx...
+
+					if (remainingPages - len == 0) // we completely emptied this transaction
+					{
+						_env.FreeSpace.Delete(this, slice);
+					}
+					else // update with the taken pages
+					{
+						list.RemoveRange(start, len);
+						using (var ms = new MemoryStream())
+						using(var writer = new BinaryWriter(ms))
+						{
+							foreach (var i in list)
+							{
+								writer.Write(i);
+							}
+							ms.Position = 0;
+							_env.FreeSpace.Add(this, slice, ms);
+						}
+					}
+					return GetPage(list[start]);
+				} while (iterator.MoveNext());
+				return null;
+			}
+		}
+
+		private unsafe List<int> ReadRemainingPagesList(int remainingPages, NodeHeader* node)
+		{
+			var list = new List<int>(remainingPages);
+			using (var data = Tree.StreamForNode(this, node))
+			using (var reader = new BinaryReader(data))
+			{
+				for (int i = 0; i < remainingPages; i++)
+				{
+					list.Add(reader.ReadInt32());
 				}
 			}
+			return list;
 		}
 
 		private unsafe int GetNodeDataSize(NodeHeader* node)
@@ -92,7 +142,7 @@ namespace Nevar.Impl
 		public void Commit()
 		{
 			_env.NextPageNumber = NextPageNumber;
-			
+
 			FlushFreePages();
 
 			foreach (var cursor in cursors.Values)
@@ -129,7 +179,7 @@ namespace Nevar.Impl
 
 		public void Dispose()
 		{
-
+			_env.TransactionCompleted(_id);
 		}
 
 		public Cursor GetCursor(Tree tree)
