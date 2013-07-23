@@ -15,7 +15,7 @@ namespace Nevar
 
 		private ushort _pointerSize;
 		public SliceOptions Options;
-		private readonly byte[] _array;
+		private byte[] _array;
 		private byte* _pointer;
 
 		public ushort Size
@@ -157,6 +157,21 @@ namespace Nevar
 		public void Set(NodeHeader* node)
 		{
 			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
+		}
+
+		public void Set(long val)
+		{
+			_array = BitConverter.GetBytes(val);
+		}
+
+		public long ToInt64()
+		{
+			Debug.Assert(Size == sizeof(long));
+
+			if (_array != null)
+				return BitConverter.ToInt64(_array, 0);
+
+			return *(long*) _pointer;
 		}
 	}
 }

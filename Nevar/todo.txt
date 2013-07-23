@@ -1,4 +1,8 @@
 ﻿0. Free space
 1. Transactions
-2. Multiple trees 
-3. Allow to increase size
+	- make sure that only write transactions increment the transaction counter
+2. Read from disk
+	- double buffering
+	- header
+3. Multiple trees 
+4. Allow to increase size

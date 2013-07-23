@@ -19,20 +19,14 @@ namespace Nevar.Trees
 
 		public Page Root;
 
-		private Tree(SliceComparer cmp, Page root)
+		public Tree(SliceComparer cmp, Page root)
 		{
 			_cmp = cmp;
 			Root = root;
 		}
 
-		public static Tree CreateOrOpen(Transaction tx, int root, SliceComparer cmp)
+		public static Tree Create(Transaction tx, SliceComparer cmp)
 		{
-			if (root != -1)
-			{
-				return new Tree(cmp, tx.GetPage(root));
-			}
-
-			// need to create the root
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
 			var tree = new Tree(cmp, newRootPage) { Depth = 1 };
 			var cursor = tx.GetCursor(tree);
@@ -75,13 +69,13 @@ namespace Nevar.Trees
 
 		private static int WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
 		{
-			var overflowSize = (int) value.Length;
+			var overflowSize = (int)value.Length;
 			var numberOfPages = GetNumberOfOverflowPages(overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
 			overflowPageStart.OverflowSize = numberOfPages;
 			overflowPageStart.Flags = PageFlags.Overlfow;
 			overflowPageStart.OverflowSize = overflowSize;
-			using (var ums = new UnmanagedMemoryStream(overflowPageStart.Base + Constants.PageHeaderSize, 
+			using (var ums = new UnmanagedMemoryStream(overflowPageStart.Base + Constants.PageHeaderSize,
 				value.Length, value.Length, FileAccess.ReadWrite))
 			{
 				value.CopyTo(ums);
@@ -93,7 +87,7 @@ namespace Nevar.Trees
 
 		private static int GetNumberOfOverflowPages(int overflowSize)
 		{
-			return (Constants.PageSize - 1 + overflowSize)/(Constants.PageSize) + 1;
+			return (Constants.PageSize - 1 + overflowSize) / (Constants.PageSize) + 1;
 		}
 
 		private bool ShouldGoToOverflowPage(Stream value)
@@ -239,6 +233,11 @@ namespace Nevar.Trees
 			}
 		}
 
+		public Iterator Iterage(Transaction tx)
+		{
+			return new Iterator(this, tx, _cmp);
+		}
+
 		public Stream Read(Transaction tx, Slice key)
 		{
 			var cursor = tx.GetCursor(this);
@@ -255,9 +254,61 @@ namespace Nevar.Trees
 			if (node->Flags.HasFlag(NodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetPage(node->PageNumber);
-				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize,overFlowPage.OverflowSize, FileAccess.Read);
+				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize, overFlowPage.OverflowSize, FileAccess.Read);
 			}
-			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize,node->DataSize, FileAccess.Read);
+			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize, node->DataSize, FileAccess.Read);
+		}
+	}
+
+	public unsafe class Iterator
+	{
+		private readonly Tree _tree;
+		private readonly Transaction _tx;
+		private readonly SliceComparer _cmp;
+		private readonly Cursor _cursor;
+		private Page _currentPage;
+
+
+		public Iterator(Tree tree, Transaction tx, SliceComparer cmp)
+		{
+			_tree = tree;
+			_tx = tx;
+			_cmp = cmp;
+			_cursor = _tx.GetCursor(tree);
+		}
+
+		public bool Seek(Slice key)
+		{
+			_currentPage = _tree.FindPageFor(_tx, key, _cursor);
+			var node = _currentPage.Search(key, _cmp);
+			return node != null;
+		}
+
+		public NodeHeader* Current
+		{
+			get
+			{
+				if (_currentPage == null)
+					throw new InvalidOperationException("No current page was set");
+				return _currentPage.GetNode(_currentPage.LastSearchPosition);
+			}
+		}
+
+		public bool MoveNext()
+		{
+			// run out of entries, need to select the next page...
+			while (_cursor.Pages.Count > 0)
+			{
+				_currentPage.LastSearchPosition++;
+				if (_currentPage.LastSearchPosition < _currentPage.NumberOfEntries)
+					return true;// there is another entry in this page
+
+				_currentPage = _cursor.Pop();
+
+
+			}
+			_currentPage = null;
+			return false;
 		}
 	}
 }
