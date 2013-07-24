@@ -33,6 +33,7 @@ namespace Nevar.Impl
             {
                 Marshal.FreeHGlobal(memoryHandle.Ptr);
             }
+            _handles.Clear();
         }
 
         public Page Get(long n)

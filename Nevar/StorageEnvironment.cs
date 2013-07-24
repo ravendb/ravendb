@@ -12,7 +12,8 @@ namespace Nevar
 	public unsafe class StorageEnvironment : IDisposable
 	{
 		private readonly IVirtualPager _pager;
-		private readonly SliceComparer _sliceComparer;
+	    private readonly bool _ownsPager;
+	    private readonly SliceComparer _sliceComparer;
 
 	    private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions = new ConcurrentDictionary<long, Transaction>();
@@ -20,10 +21,11 @@ namespace Nevar
 		private long _transactionsCounter;
 		public long NextPageNumber { get; set; }
 
-		public StorageEnvironment(IVirtualPager pager)
+		public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
 			_pager = pager;
-            _sliceComparer = NativeMethods.memcmp;
+		    _ownsPager = ownsPager;
+		    _sliceComparer = NativeMethods.memcmp;
 
             if (pager.NumberOfAllocatedPages == 0)
             {
@@ -59,7 +61,7 @@ namespace Nevar
 	        var fileHeader = ((FileHeader*) pg.Base);
 	        fileHeader->MagicMarker = Constants.MagicMarker;
 	        fileHeader->Version = Constants.CurrentVersion;
-	        fileHeader->TransactionId = -1;
+	        fileHeader->TransactionId = 0;
             fileHeader->LastPageNumber = 1;
 	        fileHeader->FreeSpace.RootPageNumber = -1;
             fileHeader->Root.RootPageNumber = -1;
@@ -90,8 +92,8 @@ namespace Nevar
                 throw new InvalidDataException("This is a db file for version " + fileHeader->Version + ", which is not compatible with the current version " + Constants.CurrentVersion);
             if(fileHeader->LastPageNumber >= _pager.NumberOfAllocatedPages)
                 throw new InvalidDataException("The last page number is beyond the number of allocated pages");
-            if (fileHeader->TransactionId <= 0)
-                throw new InvalidDataException("The transaction number cannot be zero or negative");
+            if (fileHeader->TransactionId < 0)
+                throw new InvalidDataException("The transaction number cannot be negative");
             return fileHeader;
 	    }
 
@@ -102,7 +104,8 @@ namespace Nevar
 
 		public void Dispose()
 		{
-			_pager.Dispose();
+		    if (_ownsPager)
+		        _pager.Dispose();
 		}
 
 		public Tree Root { get; private set; }

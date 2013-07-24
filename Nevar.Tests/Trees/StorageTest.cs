@@ -11,18 +11,20 @@ namespace Nevar.Tests.Trees
 	public abstract class StorageTest : IDisposable
 	{
 		private readonly StorageEnvironment _storageEnvironment;
+	    private PureMemoryPager _pureMemoryPager;
 
-		public StorageEnvironment Env
+	    public StorageEnvironment Env
 		{
 			get { return _storageEnvironment; }
 		}
 
 		protected StorageTest()
 		{
-			_storageEnvironment = new StorageEnvironment(new PureMemoryPager());
+		    _pureMemoryPager = new PureMemoryPager();
+		    _storageEnvironment = new StorageEnvironment(_pureMemoryPager);
 		}
 
-		protected Stream StreamFor(string val)
+	    protected Stream StreamFor(string val)
 		{
 			return new MemoryStream(Encoding.UTF8.GetBytes(val));
 		}
@@ -30,6 +32,7 @@ namespace Nevar.Tests.Trees
 		public void Dispose()
 		{
 			_storageEnvironment.Dispose();
+            _pureMemoryPager.Dispose();
 		}
 
 		protected void RenderAndShow(Transaction tx, int showEntries = 25)

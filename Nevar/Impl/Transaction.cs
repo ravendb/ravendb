@@ -169,6 +169,8 @@ namespace Nevar.Impl
 	    private unsafe void WriteHeader(Page pg)
 	    {
 	        var fileHeader = (FileHeader*) pg.Base;
+	        fileHeader->TransactionId = _id;
+	        fileHeader->LastPageNumber = NextPageNumber - 1;
 	        _env.FreeSpace.CopyTo(&fileHeader->FreeSpace);
             _env.Root.CopyTo(&fileHeader->Root);
 	    }
