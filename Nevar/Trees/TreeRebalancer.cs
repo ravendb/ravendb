@@ -6,13 +6,15 @@ namespace Nevar.Trees
 	public unsafe class TreeRebalancer
 	{
 		private readonly Transaction _tx;
+	    private readonly SliceComparer _cmp;
 
-		public TreeRebalancer(Transaction tx)
+	    public TreeRebalancer(Transaction tx, SliceComparer cmp)
 		{
-			_tx = tx;
+		    _tx = tx;
+		    _cmp = cmp;
 		}
 
-		public Page Execute(Cursor cursor, Page page)
+	    public Page Execute(Cursor cursor, Page page)
 		{
 			if (cursor.Pages.Count <= 1) // the root page
 			{
@@ -54,7 +56,6 @@ namespace Nevar.Trees
 			}
 			else // this is the left page, merge right
 			{
-				parentPage.LastSearchPosition++; // move to the right page to be unlinked
 				MergePages(parentPage, page, sibling);
 			}
 			cursor.Pop();
@@ -118,7 +119,14 @@ namespace Nevar.Trees
 
 			parentPage.RemoveNode(parentPage.LastSearchPosition);
 			var toKey = GetCurrentKeyFrom(from); // get the next smallest key it has
-			parentPage.AddNode(parentPage.LastSearchPosition, toKey, null, to.PageNumber);
+
+		    var pageNumber = to.PageNumber; 
+            if (fromKey.Compare(GetCurrentKeyFrom(to), _cmp) > 0)
+            {
+                pageNumber = from.PageNumber;
+            }
+            
+			parentPage.AddNode(parentPage.LastSearchPosition, toKey, null, pageNumber);
 		}
 
 		private Slice GetCurrentKeyFrom(Page page)

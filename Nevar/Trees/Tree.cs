@@ -65,7 +65,7 @@ namespace Nevar.Trees
 
 			page.AddNode(page.LastSearchPosition, key, value, pageNumber);
 
-			page.DebugValidate(_cmp);
+			page.DebugValidate(tx, _cmp, cursor.Root);
 		}
 
 		private static int WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
@@ -121,7 +121,7 @@ namespace Nevar.Trees
 			while (stack.Count > 0)
 			{
 				var p = stack.Pop();
-				p.DebugValidate(_cmp);
+				p.DebugValidate(tx, _cmp, root);
 				if (p.IsBranch == false)
 					continue;
 				for (int i = 0; i < p.NumberOfEntries; i++)
@@ -199,7 +199,7 @@ namespace Nevar.Trees
 				return; // not an exact match, can't delete
 			RemoveLeafNode(tx, cursor, page);
 
-			var treeRebalancer = new TreeRebalancer(tx);
+			var treeRebalancer = new TreeRebalancer(tx, _cmp);
 
 			var changedPage = page;
 			while (changedPage != null)
@@ -207,7 +207,7 @@ namespace Nevar.Trees
 				changedPage = treeRebalancer.Execute(cursor, changedPage);
 			}
 
-			page.DebugValidate(_cmp);
+			page.DebugValidate(tx, _cmp, cursor.Root);
 		}
 
 		public List<Slice> KeysAsList(Transaction tx)

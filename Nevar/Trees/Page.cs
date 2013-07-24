@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Nevar.Debugging;
 using Nevar.Impl;
 
 namespace Nevar.Trees
@@ -323,7 +324,7 @@ namespace Nevar.Trees
 		}
 
 		[Conditional("DEBUG")]
-		public void DebugValidate(SliceComparer comparer)
+		public void DebugValidate(Transaction tx, SliceComparer comparer, Page root)
 		{
 			if (NumberOfEntries == 0)
 				return;
@@ -335,7 +336,10 @@ namespace Nevar.Trees
 				var current = new Slice(node);
 
 				if (prev.Compare(current, comparer) >= 0)
-					throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
+				{
+                    DebugStuff.RenderAndShow(tx, root, 1);
+				    throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
+				}
 
 				prev = current;
 			}

@@ -29,8 +29,11 @@ namespace Nevar.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
+                    if (i == 9)
+                    {
+                        DebugStuff.RenderAndShow(tx, tx.GetCursor(Env.Root).Root, 1);
+                    }
 					Env.Root.Delete(tx, i.ToString("0000"));
-					DebugStuff.RenderAndShow(tx, tx.GetCursor(Env.Root).Root, 1);
 				}
 
 				tx.Commit();
