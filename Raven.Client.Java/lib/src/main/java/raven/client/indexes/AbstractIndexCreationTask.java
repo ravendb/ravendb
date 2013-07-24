@@ -94,6 +94,12 @@ public class AbstractIndexCreationTask {
     return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_GENERATE3, lat, lng);
   }
 
+  //TODO:  public object SpatialClustering(string fieldName, double? lat, double? lng)
+  //TODO:  object SpatialClustering(string fieldName, double? lat, double? lng,
+  //                                                                int minPrecision,
+  //                                                               int maxPrecision)
+
+
   /*
    * protected class SpatialIndex
     {

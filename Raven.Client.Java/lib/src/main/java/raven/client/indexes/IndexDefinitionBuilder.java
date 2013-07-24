@@ -19,7 +19,6 @@ import raven.client.document.DocumentConvention;
 import raven.linq.dsl.IndexExpression;
 
 
-//TODO: create AbstractIndexCreationTask + provide structures for both string and expression based index creation
 public class IndexDefinitionBuilder {
 
   private IndexExpression map;

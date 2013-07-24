@@ -42,6 +42,7 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
+import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.document.DocumentConvention;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.indexes.IndexDefinitionBuilder;

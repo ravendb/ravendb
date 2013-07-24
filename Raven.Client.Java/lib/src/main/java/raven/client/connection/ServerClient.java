@@ -72,6 +72,8 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.connection.ReplicationInformer.FailoverStatusChangedEventArgs;
+import raven.client.connection.implementation.HttpJsonRequest;
+import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.connection.profiling.ProfilingInformation;
 import raven.client.document.DocumentConvention;
 import raven.client.exceptions.ConflictException;

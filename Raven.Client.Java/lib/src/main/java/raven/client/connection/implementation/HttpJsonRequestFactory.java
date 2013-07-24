@@ -1,4 +1,4 @@
-package raven.client.connection;
+package raven.client.connection.implementation;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -23,6 +23,9 @@ import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.connection.CachedRequest;
+import raven.client.connection.CachedRequestOp;
+import raven.client.connection.CreateHttpJsonRequestParams;
 import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.extensions.MultiDatabase;
 import raven.client.util.SimpleCache;

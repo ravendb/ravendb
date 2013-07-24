@@ -5,6 +5,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 
 import raven.abstractions.data.Etag;
+import raven.client.connection.implementation.HttpJsonRequest;
 
 public class HttpExtensions {
   public static Etag getEtagHeader(HttpJsonRequest request) {

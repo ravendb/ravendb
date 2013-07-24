@@ -38,6 +38,8 @@ import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.RavenDBAwareTests;
+import raven.client.connection.implementation.HttpJsonRequest;
+import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 

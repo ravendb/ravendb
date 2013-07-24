@@ -1,4 +1,4 @@
-package raven.client.connection;
+package raven.client.connection.implementation;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -52,6 +52,10 @@ import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.connection.CachedRequest;
+import raven.client.connection.CreateHttpJsonRequestParams;
+import raven.client.connection.ReplicationInformer;
+import raven.client.connection.ServerClient;
 import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
 import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.connection.profiling.RequestStatus;

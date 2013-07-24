@@ -44,6 +44,7 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
+import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.document.DocumentConvention;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.samples.Developer;

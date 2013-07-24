@@ -37,6 +37,8 @@ import raven.client.indexes.IndexDefinitionBuilder;
 
 public interface IDatabaseCommands extends IHoldProfilingInformation {
 
+  //TODO: IAdminDatabaseCommands Admin { get; }
+
   /**
    * Gets the operations headers
    * @return
