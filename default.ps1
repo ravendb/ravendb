@@ -12,9 +12,6 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Release"
-	$signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
-	$installerCert = "..\certs\installer.pfx"
-	$certPassword = $null 
 	
 	$core_db_dlls = @(
         "Raven.Abstractions.???", 
@@ -356,21 +353,29 @@ task CopyInstaller {
 }
 
 task SignInstaller {
-  if($env:buildlabel -eq 13)
-  {
-    return
-  }
+	if($env:buildlabel -eq 13)
+	{
+		return
+	}
   
-  if (!(Test-Path $signTool)) 
-  {
-    throw "Could not find SignTool.exe under the specified path $signTool"
-  }
+	$signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+	if (!(Test-Path $signTool)) 
+	{
+		$signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
+	
+		if (!(Test-Path $signTool)) 
+		{
+			throw "Could not find SignTool.exe under the specified path $signTool"
+		}
+	}
   
-  if (!(Test-Path $installerCert)) 
-  {
-    throw "Could not find pfx file under the path $installerCert to sign the installer"
-  }
+	$installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.pfx"
+	if (!(Test-Path $installerCert)) 
+	{
+		throw "Could not find pfx file under the path $installerCert to sign the installer"
+	}
   
+  $certPassword = "$base_dir\..\BuildsInfo\RavenDB\certs\installerCertPassword.txt"
   if ($certPassword -eq $null) 
   {
     throw "Certificate password must be provided"
