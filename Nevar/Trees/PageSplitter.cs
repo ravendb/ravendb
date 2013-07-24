@@ -11,10 +11,11 @@ namespace Nevar.Trees
 		private readonly Stream _value;
 		private readonly long _pageNumber;
 		private readonly Cursor _cursor;
-		private readonly Page _page;
+	    private readonly TreeDataInTransaction _txInfo;
+	    private readonly Page _page;
 		private Page _parentPage;
 
-		public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, Stream value, long pageNumber, Cursor cursor)
+		public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, Stream value, long pageNumber, Cursor cursor, TreeDataInTransaction txInfo)
 		{
 			_tx = tx;
 			_cmp = cmp;
@@ -22,21 +23,22 @@ namespace Nevar.Trees
 			_value = value;
 			_pageNumber = pageNumber;
 			_cursor = cursor;
-			_page = _cursor.Pop();
+		    _txInfo = txInfo;
+		    _page = _cursor.Pop();
 		}
 
 		public void Execute()
 		{
 			var rightPage = Tree.NewPage(_tx, _page.Flags, 1);
-			_cursor.RecordNewPage(_page, 1);
+            _txInfo.RecordNewPage(_page, 1);
 			rightPage.Flags = _page.Flags;
 			if (_cursor.Pages.Count == 0) // we need to do a root split
 			{
 				var newRootPage = Tree.NewPage(_tx, PageFlags.Branch, 1);
 				_cursor.Push(newRootPage);
-				_cursor.Root = newRootPage;
-				_cursor.Depth++;
-				_cursor.RecordNewPage(newRootPage, 1);
+                _txInfo.Root = newRootPage;
+                _txInfo.Depth++;
+                _txInfo.RecordNewPage(newRootPage, 1);
 
 				// now add implicit left page
 				newRootPage.AddNode(0, Slice.BeforeAllKeys, null, _page.PageNumber);
@@ -120,7 +122,7 @@ namespace Nevar.Trees
 		{
 			if (_parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
 			{
-				new PageSplitter(_tx, _cmp, seperatorKey, null, rightPage.PageNumber, _cursor).Execute();
+                new PageSplitter(_tx, _cmp, seperatorKey, null, rightPage.PageNumber, _cursor, _txInfo).Execute();
 			}
 			else
 			{

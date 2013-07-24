@@ -11,13 +11,13 @@ namespace Nevar.Tests.Trees
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterage(tx);
+				var iterator = Env.Root.Iterate(tx);
 				Assert.False(iterator.Seek(Slice.BeforeAllKeys));
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterage(tx);
+				var iterator = Env.Root.Iterate(tx);
 				Assert.False(iterator.Seek(Slice.AfterAllKeys));
 			}
 		}
@@ -41,7 +41,7 @@ namespace Nevar.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterage(tx);
+				var iterator = Env.Root.Iterate(tx);
 				Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
 				var slice = new Slice(SliceOptions.Key);

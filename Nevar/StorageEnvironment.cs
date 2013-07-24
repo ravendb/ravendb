@@ -54,6 +54,9 @@ namespace Nevar
                     tx.Commit();
                 }
             }
+
+            FreeSpace.Name = "Free Space";
+            Root.Name = "Root";
 		}
 
 	    private void WriteEmptyHeaderPage(Page pg)

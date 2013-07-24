@@ -12,6 +12,8 @@ namespace Nevar.Trees
 		private readonly byte* _base;
 		private readonly PageHeader* _header;
 		public int LastMatch;
+        public int LastSearchPosition;
+	    public bool Dirty;
 
 		public Page(byte* b)
 		{
@@ -91,7 +93,7 @@ namespace Nevar.Trees
 			if (LastMatch > 0) // found entry less than key
 				position++; // move to the smallest entry larger than the key
 
-			System.Diagnostics.Debug.Assert(position < ushort.MaxValue);
+			Debug.Assert(position < ushort.MaxValue);
 			LastSearchPosition = position;
 
 			if (position >= NumberOfEntries)
@@ -101,7 +103,7 @@ namespace Nevar.Trees
 
 		public NodeHeader* GetNode(int n)
 		{
-			System.Diagnostics.Debug.Assert(n >= 0 && n <= NumberOfEntries);
+			Debug.Assert(n >= 0 && n <= NumberOfEntries);
 
 			var nodeOffset = KeysOffsets[n];
 			var nodeHeader = (NodeHeader*)(_base + nodeOffset);
@@ -134,7 +136,7 @@ namespace Nevar.Trees
 
 		public void RemoveNode(int index)
 		{
-			System.Diagnostics.Debug.Assert(index < NumberOfEntries);
+			Debug.Assert(index < NumberOfEntries);
 
 			var node = GetNode(index);
 
@@ -201,7 +203,7 @@ namespace Nevar.Trees
 		/// </summary>
 		internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
 		{
-			System.Diagnostics.Debug.Assert(SizeOf.NodeEntry(other) + Constants.NodeOffsetSize <= SizeLeft);
+			Debug.Assert(SizeOf.NodeEntry(other) + Constants.NodeOffsetSize <= SizeLeft);
 
 			var index = NumberOfEntries;
 
@@ -228,7 +230,7 @@ namespace Nevar.Trees
 		private NodeHeader* AllocateNewNode(int index, Slice key, int nodeSize)
 		{
 			var newNodeOffset = (ushort)(_header->Upper - nodeSize);
-			System.Diagnostics.Debug.Assert(newNodeOffset >= _header->Lower + Constants.NodeOffsetSize);
+			Debug.Assert(newNodeOffset >= _header->Lower + Constants.NodeOffsetSize);
 			KeysOffsets[index] = newNodeOffset;
 			_header->Upper = newNodeOffset;
 			_header->Lower += (ushort)Constants.NodeOffsetSize;
@@ -250,7 +252,6 @@ namespace Nevar.Trees
 			get { return _header->Lower + Constants.PageMaxSpace - _header->Upper; }
 		}
 
-		public int LastSearchPosition { get; set; }
 
 		public byte* Base
 		{
@@ -277,7 +278,7 @@ namespace Nevar.Trees
 
 			Upper = copy.Upper;
 			Lower = copy.Lower;
-			tx.FreePage(copy);
+			tx.FreePage(copy.PageNumber);
 
 			if (LastSearchPosition > i)
 				LastSearchPosition = i;

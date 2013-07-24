@@ -37,7 +37,7 @@ namespace Nevar.Impl.FileHeaders
         /// <summary>
         /// The root node for the main tree
         /// </summary>
-        [FieldOffset(81)]
+        [FieldOffset(90)]
         public TreeRootHeader Root;
     }
 }

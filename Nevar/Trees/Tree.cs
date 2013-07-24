@@ -16,7 +16,8 @@ namespace Nevar.Trees
         public long OverflowPages;
         public int Depth;
         public long PageCount;
-
+	    public long EntriesCount;
+        public string Name { get; set; }
 		private readonly SliceComparer _cmp;
 
 		public Page Root;
@@ -27,16 +28,18 @@ namespace Nevar.Trees
 			Root = root;
 		}
 
-        public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
+
+	    public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
         {
-            var root = tx.GetPage(header->RootPageNumber);
+            var root = tx.GetReadOnlyPage(header->RootPageNumber);
             return new Tree(cmp, root)
                 {
                     PageCount = header->PageCount,
                     BranchPages = header->BranchPages,
                     Depth = header->Depth,
                     OverflowPages = header->OverflowPages,
-                    LeafPages = header->LeafPages
+                    LeafPages = header->LeafPages,
+                    EntriesCount = header->EntriesCount
                 };
         }
 
@@ -44,8 +47,8 @@ namespace Nevar.Trees
 		{
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
 			var tree = new Tree(cmp, newRootPage) { Depth = 1 };
-			var cursor = tx.GetCursor(tree);
-			cursor.RecordNewPage(newRootPage, 1);
+			var txInfo = tx.GetTreeInformation(tree);
+			txInfo.RecordNewPage(newRootPage, 1);
 			return tree;
 		}
 
@@ -55,35 +58,43 @@ namespace Nevar.Trees
 			if (value.Length > int.MaxValue) throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
             if(tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot add a value in a read only transaction");
 
-			var cursor = tx.GetCursor(this);
+		    var cursor = new Cursor();
+            var txInfo = tx.GetTreeInformation(this);
 
-			var page = FindPageFor(tx, key, cursor);
+			FindPageFor(tx, key, cursor);
+
+            var page = tx.ModifyCursor(this, cursor);
 
 			if (page.LastMatch == 0) // this is an update operation
 			{
 				RemoveLeafNode(tx, cursor, page);
 			}
+			else // new item should be recorded
+			{
+                txInfo.EntriesCount++;
+			}
 
 		    var pageNumber = -1L;
 			if (ShouldGoToOverflowPage(value))
 			{
-				pageNumber = WriteToOverflowPages(tx, cursor, value);
+				pageNumber = WriteToOverflowPages(tx, txInfo, value);
 				value = null;
 			}
 
 			if (page.HasSpaceFor(key, value) == false)
 			{
-				new PageSplitter(tx, _cmp, key, value, pageNumber, cursor).Execute();
-				DebugValidateTree(tx, cursor.Root);
+			    var pageSplitter = new PageSplitter(tx, _cmp, key, value, pageNumber, cursor, txInfo);
+			    pageSplitter.Execute();
+                DebugValidateTree(tx, txInfo.Root);
 				return;
 			}
 
 			page.AddNode(page.LastSearchPosition, key, value, pageNumber);
 
-			page.DebugValidate(tx, _cmp, cursor.Root);
+            page.DebugValidate(tx, _cmp, txInfo.Root);
 		}
 
-		private static long WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
+        private static long WriteToOverflowPages(Transaction tx, TreeDataInTransaction txInfo, Stream value)
 		{
 			var overflowSize = (int)value.Length;
 			var numberOfPages = GetNumberOfOverflowPages(overflowSize);
@@ -96,8 +107,8 @@ namespace Nevar.Trees
 			{
 				value.CopyTo(ums);
 			}
-			cursor.OverflowPages += numberOfPages;
-			cursor.PageCount += numberOfPages;
+            txInfo.OverflowPages += numberOfPages;
+            txInfo.PageCount += numberOfPages;
 			return overflowPageStart.PageNumber;
 		}
 
@@ -111,19 +122,22 @@ namespace Nevar.Trees
 			return value.Length + Constants.PageHeaderSize > Constants.MaxNodeSize;
 		}
 
-		private static void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
+		private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
 		{
 			var node = page.GetNode(page.LastSearchPosition);
 			if (node->Flags.HasFlag(NodeFlags.PageRef)) // this is an overflow pointer
 			{
-				var overflowPage = tx.GetPage(node->PageNumber);
+                tx.ModifyCursor(this, cursor);
+			    var overflowPage = tx.GetModifiedPage(node->PageNumber);
 				var numberOfPages = GetNumberOfOverflowPages(overflowPage.OverflowSize);
 				for (int i = 0; i < numberOfPages; i++)
 				{
-					tx.FreePage(tx.GetPage(node->PageNumber + i));
+					tx.FreePage(node->PageNumber + i);
 				}
-				cursor.OverflowPages -= numberOfPages;
-				cursor.PageCount -= numberOfPages;
+                var txInfo = tx.GetTreeInformation(this);
+
+				txInfo.OverflowPages -= numberOfPages;
+				txInfo.PageCount -= numberOfPages;
 			}
 			page.RemoveNode(page.LastSearchPosition);
 		}
@@ -141,7 +155,7 @@ namespace Nevar.Trees
 					continue;
 				for (int i = 0; i < p.NumberOfEntries; i++)
 				{
-					stack.Push(tx.GetPage(p.GetNode(i)->PageNumber));
+					stack.Push(tx.GetReadOnlyPage(p.GetNode(i)->PageNumber));
 				}
 			}
 		}
@@ -150,7 +164,7 @@ namespace Nevar.Trees
 
 		public Page FindPageFor(Transaction tx, Slice key, Cursor cursor)
 		{
-			var p = cursor.Root;
+			var p = tx.GetTreeInformation(this).Root;
 			cursor.Push(p);
 			while (p.Flags.HasFlag(PageFlags.Branch))
 			{
@@ -182,7 +196,7 @@ namespace Nevar.Trees
 				}
 
 				var node = p.GetNode(nodePos);
-				p = tx.GetPage(node->PageNumber);
+				p = tx.GetReadOnlyPage(node->PageNumber);
 				cursor.Push(p);
 			}
 
@@ -207,24 +221,26 @@ namespace Nevar.Trees
 		{
             if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot delete a value in a read only transaction");
 
-			var cursor = tx.GetCursor(this);
-
+			var txInfo = tx.GetTreeInformation(this);
+		    var cursor = new Cursor();
 			var page = FindPageFor(tx, key, cursor);
 
-			page.NodePositionFor(key, _cmp);
+            page.NodePositionFor(key, _cmp);
 			if (page.LastMatch != 0)
 				return; // not an exact match, can't delete
+
+            page = tx.ModifyCursor(this, cursor);
+
+            txInfo.EntriesCount--;
 			RemoveLeafNode(tx, cursor, page);
-
-			var treeRebalancer = new TreeRebalancer(tx, _cmp);
-
+			var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
 			var changedPage = page;
 			while (changedPage != null)
 			{
 				changedPage = treeRebalancer.Execute(cursor, changedPage);
 			}
 
-			page.DebugValidate(tx, _cmp, cursor.Root);
+			page.DebugValidate(tx, _cmp, txInfo.Root);
 		}
 
 		public List<Slice> KeysAsList(Transaction tx)
@@ -241,7 +257,7 @@ namespace Nevar.Trees
 				var node = page.GetNode(i);
 				if (page.IsBranch)
 				{
-					var p = tx.GetPage(node->PageNumber);
+					var p = tx.GetReadOnlyPage(node->PageNumber);
 					AddKeysToListInOrder(tx, l, p);
 				}
 				else
@@ -251,14 +267,14 @@ namespace Nevar.Trees
 			}
 		}
 
-		public Iterator Iterage(Transaction tx)
+		public Iterator Iterate(Transaction tx)
 		{
 			return new Iterator(this, tx, _cmp);
 		}
 
 		public Stream Read(Transaction tx, Slice key)
 		{
-			var cursor = tx.GetCursor(this);
+			var cursor = new Cursor();
 			var p = FindPageFor(tx, key, cursor);
 			var node = p.Search(key, _cmp);
 
@@ -276,7 +292,7 @@ namespace Nevar.Trees
 		{
 			if (node->Flags.HasFlag(NodeFlags.PageRef))
 			{
-				var overFlowPage = tx.GetPage(node->PageNumber);
+				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
 				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize,
 				                                 overFlowPage.OverflowSize, FileAccess.Read);
 			}
@@ -292,7 +308,13 @@ namespace Nevar.Trees
 	        header->LeafPages = LeafPages;
 	        header->OverflowPages = OverflowPages;
 	        header->PageCount = PageCount;
-	        header->RootPageNumber = Root.PageNumber;
+            header->EntriesCount = EntriesCount;
+            header->RootPageNumber = Root.PageNumber;
 	    }
+
+        public override string ToString()
+        {
+            return Name;
+        }
 	}
 }

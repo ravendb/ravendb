@@ -17,7 +17,7 @@ namespace Nevar.Trees
 			_tree = tree;
 			_tx = tx;
 			_cmp = cmp;
-			_cursor = _tx.GetCursor(tree);
+			_cursor = new Cursor();
 		}
 
 		public bool Seek(Slice key)
@@ -50,7 +50,7 @@ namespace Nevar.Trees
 					{
 						_cursor.Push(_currentPage);
 						var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-						_currentPage = _tx.GetPage(node->PageNumber);
+                        _currentPage = _tx.GetReadOnlyPage(node->PageNumber);
 						_currentPage.LastSearchPosition = 0;
 					}
 					return true;// there is another entry in this page

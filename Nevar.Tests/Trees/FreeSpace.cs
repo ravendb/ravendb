@@ -45,8 +45,7 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			Assert.Equal(nextPageNumber, Env.NextPageNumber);
-
+			Assert.Equal(nextPageNumber + Env.FreeSpace.EntriesCount, Env.NextPageNumber);
 		}
 	}
 }

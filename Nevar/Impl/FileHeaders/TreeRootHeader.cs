@@ -16,8 +16,10 @@ namespace Nevar.Impl.FileHeaders
         [FieldOffset(40)]
         public long PageCount;
         [FieldOffset(48)]
+        public long EntriesCount;
+        [FieldOffset(56)]
         public int Depth;
-        [FieldOffset(52)]
+        [FieldOffset(60)]
         public TreeFlags Flags;
     }
 }

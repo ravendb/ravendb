@@ -5,6 +5,7 @@ using System.IO.MemoryMappedFiles;
 using System.Text;
 using Nevar.Debugging;
 using Nevar.Impl;
+using Nevar.Trees;
 
 namespace Nevar.Tests.Trees
 {
@@ -40,7 +41,7 @@ namespace Nevar.Tests.Trees
 			if (Debugger.IsAttached == false)
 				return;
 			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-			TreeDumper.Dump(tx, path, tx.GetCursor(Env.Root).Root, showEntries);
+			TreeDumper.Dump(tx, path, tx.GetTreeInformation(Env.Root).Root, showEntries);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
             var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
@@ -50,8 +51,7 @@ namespace Nevar.Tests.Trees
 
 		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
-			var cursor = tx.GetCursor(Env.Root);
-			var p = Env.Root.FindPageFor(tx, key, cursor);
+			var p = Env.Root.FindPageFor(tx, key, new Cursor());
 			var node = p.Search(key, Env.SliceComparer);
 
 			if (node == null)

@@ -68,6 +68,7 @@
     <Compile Include="Trees\Tree.cs" />
     <Compile Include="Debugging\TreeDumper.cs" />
     <Compile Include="Impl\SizeOf.cs" />
+    <Compile Include="Trees\TreeDataInTransaction.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -66,7 +66,13 @@ digraph structs {
 						for (int i = 0; i < p.NumberOfEntries; i++)
 						{
 							var node = p.GetNode(i);
-							var child = tx.GetPage(node->PageNumber);
+                            if (node->PageNumber < 0 || node->PageNumber > tx.NextPageNumber)
+                            {
+                                writer.Write("		p_{0}_refs [label=\"CORRUPTED\"; Color=RED];", p.PageNumber);
+                                stack.Clear();
+                                break;
+                            }
+							var child = tx.GetReadOnlyPage(node->PageNumber);
 							stack.Push(child);
 
 							references.AppendFormat("	p_{0}_refs:{3} -> p_{1} [label=\"{2}\"];", p.PageNumber, child.PageNumber, GetBranchNodeString(i, key, p, node), i).AppendLine();

@@ -15,9 +15,10 @@ namespace Nevar.Impl
 		private readonly IVirtualPager _pager;
 		private readonly StorageEnvironment _env;
 		private readonly long _id;
-		private readonly List<Page> _freePages = new List<Page>();
+		private readonly HashSet<long> _freePages = new HashSet<long>();
 
-		private readonly Dictionary<Tree, Cursor> _cursors = new Dictionary<Tree, Cursor>();
+        private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
+        private readonly Dictionary<long, Page> _dirtyPages = new Dictionary<long, Page>();
 		private readonly long _oldestTx;
 
         public TransactionFlags Flags { get; private set; }
@@ -32,12 +33,62 @@ namespace Nevar.Impl
 		    NextPageNumber = env.NextPageNumber;
 		}
 
-		public Page GetPage(long n)
+        public Page ModifyCursor(Tree tree, Cursor c)
+        {
+            var txInfo = GetTreeInformation(tree);
+            return ModifyCursor(txInfo, c);
+        }
+
+	    public Page ModifyCursor(TreeDataInTransaction txInfo, Cursor c)
+	    {
+	        txInfo.Root = ModifyPage(txInfo.Root);
+
+	        if (c.Pages.Count == 0)
+	            return null;
+
+	        var node = c.Pages.First;
+	        while (node != null)
+	        {
+	            node.Value = ModifyPage(node.Value);
+	            node = node.Next;
+	        }
+	        return c.Pages.First.Value;
+	    }
+
+	    private unsafe Page ModifyPage(Page p)
+	    {
+	        if (p.Dirty)
+	            return p;
+
+	        Page page;
+	        if (_dirtyPages.TryGetValue(p.PageNumber, out page))
+	        {
+                page.LastMatch = p.LastMatch;
+                page.LastSearchPosition = p.LastSearchPosition;
+                return page;
+	        }
+
+	        var newPage = AllocatePage(1);
+	        newPage.Dirty = true;
+	        var newPageNum = newPage.PageNumber;
+	        NativeMethods.memcpy(newPage.Base, p.Base, Constants.PageSize);
+	        newPage.PageNumber = newPageNum;
+	        newPage.LastMatch = p.LastMatch;
+	        newPage.LastSearchPosition = p.LastSearchPosition;
+	        _dirtyPages[p.PageNumber] = newPage;
+	        FreePage(p.PageNumber);
+	        return newPage;
+	    }
+
+	    public Page GetReadOnlyPage(long n)
 		{
+		    Page page;
+		    if (_dirtyPages.TryGetValue(n, out page))
+		        return page;
 			return _pager.Get(n);
 		}
 
-		public Page AllocatePage(int num)
+	    public Page AllocatePage(int num)
 		{
 			var page = TryAllocateFromFreeSpace(num);
 			if (page == null) // allocate from end of file
@@ -46,10 +97,9 @@ namespace Nevar.Impl
 				page.PageNumber = NextPageNumber;
 				NextPageNumber += num;
 			}
-
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Upper = Constants.PageSize;
-
+	        _dirtyPages[page.PageNumber] = page;
 			return page;
 		}
 
@@ -58,7 +108,7 @@ namespace Nevar.Impl
 			if (_env.FreeSpace == null)
 				return null;// this can happen the first time FreeSpace tree is created
 
-			using (var iterator = _env.FreeSpace.Iterage(this))
+			using (var iterator = _env.FreeSpace.Iterate(this))
 			{
 				if (iterator.Seek(Slice.BeforeAllKeys) == false)
 					return null;
@@ -113,7 +163,7 @@ namespace Nevar.Impl
 							_env.FreeSpace.Add(this, slice, ms);
 						}
 					}
-					return GetPage(list[start]);
+					return _pager.Get(list[start]);
 				} while (iterator.MoveNext());
 				return null;
 			}
@@ -137,7 +187,7 @@ namespace Nevar.Impl
 		{
 			if (node->Flags.HasFlag(NodeFlags.PageRef)) // lots of data, enough to overflow!
 			{
-				var overflowPage = GetPage(node->PageNumber);
+				var overflowPage = GetReadOnlyPage(node->PageNumber);
 				return overflowPage.OverflowSize;
 			}
 			return node->DataSize;
@@ -148,15 +198,15 @@ namespace Nevar.Impl
 		    if (Flags.HasFlag(TransactionFlags.ReadWrite) == false)
 		        return; // nothing to do
 
-			_env.NextPageNumber = NextPageNumber;
-
 			FlushFreePages();
 
-			foreach (var cursor in _cursors.Values)
+			foreach (var cursor in _treesInfo.Values)
 			{
 				cursor.Flush();
 			}
-            
+
+            _env.NextPageNumber = NextPageNumber;
+ 
             // Because we don't know in what order the OS will flush the pages 
             // we need to do this twice, once for the data, and then once for the metadata
 		    _pager.Flush();
@@ -184,9 +234,9 @@ namespace Nevar.Impl
 				using (var ms = new MemoryStream())
 				using (var binaryWriter = new BinaryWriter(ms))
 				{
-					foreach (var freePage in _freePages.OrderBy(x => x.PageNumber))
+					foreach (var freePage in _freePages.OrderBy(x => x))
 					{
-						binaryWriter.Write(freePage.PageNumber);
+						binaryWriter.Write(freePage);
 					}
 
 					_freePages.Clear();
@@ -206,22 +256,27 @@ namespace Nevar.Impl
 			_env.TransactionCompleted(_id);
 		}
 
-		public Cursor GetCursor(Tree tree)
+		public TreeDataInTransaction GetTreeInformation(Tree tree)
 		{
-			Cursor c;
-			if (_cursors.TryGetValue(tree, out c))
+            TreeDataInTransaction c;
+			if (_treesInfo.TryGetValue(tree, out c))
 			{
-				c.Pages.Clear(); // this reset the mutable cursor state
 				return c;
 			}
-			c = new Cursor(tree);
-			_cursors.Add(tree, c);
+            c = new TreeDataInTransaction(tree);
+			_treesInfo.Add(tree, c);
 			return c;
 		}
 
-		public void FreePage(Page page)
+		public void FreePage(long pageNumber)
 		{
-			_freePages.Add(page);
+		    var success = _freePages.Add(pageNumber);
+		    Debug.Assert(success);
 		}
+
+	    public Page GetModifiedPage(long n)
+	    {
+	        return ModifyPage(GetReadOnlyPage(n));
+	    }
 	}
 }
