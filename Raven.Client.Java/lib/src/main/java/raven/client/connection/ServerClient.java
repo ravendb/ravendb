@@ -84,6 +84,7 @@ import raven.client.utils.TimeSpan;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
+//TODO: merge changes from 470f20a547526dfe5677
 public class ServerClient implements IDatabaseCommands {
 
   private String url;
@@ -426,7 +427,7 @@ public class ServerClient implements IDatabaseCommands {
     } catch (HttpOperationException e) {
       try {
         if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          throw throwConcurrencyException(e);
+          throw fetchConcurrencyException(e);
         }
         throw e;
       } finally {
@@ -467,7 +468,7 @@ public class ServerClient implements IDatabaseCommands {
         try {
           HttpOperationException httpException = (HttpOperationException) e;
           if (httpException.getStatusCode() == HttpStatus.SC_CONFLICT) {
-            throw throwConcurrencyException(httpException);
+            throw fetchConcurrencyException(httpException);
           }
         } finally {
           EntityUtils.consumeQuietly(((HttpOperationException)e).getHttpResponse().getEntity());
@@ -712,22 +713,6 @@ public class ServerClient implements IDatabaseCommands {
     return result;
   }
 
-  public Map<String, RavenJToken> getDatabases(int pageSize) {
-    return getDatabases(pageSize, 0);
-  }
-
-  public Map<String, RavenJToken> getDatabases(int pageSize, int start) {
-    String url = RavenUrlExtensions.databases("", pageSize, start);
-    url = RavenUrlExtensions.noCache(url);
-    RavenJArray json = (RavenJArray) executeGetRequest(url);
-
-    Map<String, RavenJToken> result = new HashMap<>();
-    for (RavenJToken token: json) {
-      result.put(token.value(RavenJObject.class, "@metadata").value(String.class, "@id").replace("Raven/Databases/", ""), token);
-    }
-
-    return result;
-  }
 
   protected void directDeleteAttachment(String key, Etag etag, String operationUrl) {
     RavenJObject metadata = new RavenJObject();
@@ -958,7 +943,7 @@ public class ServerClient implements IDatabaseCommands {
     } catch (HttpOperationException e) {
       try {
         if (HttpStatus.SC_CONFLICT == e.getStatusCode()) {
-          throw throwConcurrencyException(e);
+          throw fetchConcurrencyException(e);
         } else {
           throw e;
         }
@@ -971,14 +956,14 @@ public class ServerClient implements IDatabaseCommands {
 
   }
 
-  protected class HandleReplicationStatusChangesCallback implements Action3<Map<String, String>, String, String> {
+  public class HandleReplicationStatusChangesCallback implements Action3<Map<String, String>, String, String> {
     @Override
     public void apply(Map<String, String> headers, String primaryUrl, String currentUrl) {
       handleReplicationStatusChanges(headers, primaryUrl, currentUrl);
     }
   }
 
-  private ConcurrencyException throwConcurrencyException(HttpOperationException e) {
+  private ConcurrencyException fetchConcurrencyException(HttpOperationException e) {
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try {
@@ -1548,7 +1533,7 @@ public class ServerClient implements IDatabaseCommands {
           if (e.getStatusCode() != HttpStatus.SC_CONFLICT) {
             throw e;
           }
-          throw throwConcurrencyException(e);
+          throw fetchConcurrencyException(e);
         } finally {
           EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }

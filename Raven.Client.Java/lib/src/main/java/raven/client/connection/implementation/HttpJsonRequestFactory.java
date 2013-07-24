@@ -90,7 +90,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     return httpClient;
   }
 
-  protected void cacheResponse(String url, RavenJToken data, Map<String, String> headers) {
+  public void cacheResponse(String url, RavenJToken data, Map<String, String> headers) {
     if (StringUtils.isEmpty(headers.get("ETag"))) {
       return;
     }
@@ -111,7 +111,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     cache.close();
   }
 
-  protected CachedRequestOp configureCaching(String url, Action2<String, String> setHeader) {
+  public CachedRequestOp configureCaching(String url, Action2<String, String> setHeader) {
     CachedRequest cachedRequest = cache.get(url);
     if (cachedRequest == null) {
       return new CachedRequestOp(null, false);
@@ -239,11 +239,11 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
 
 
-  protected void incrementCachedRequests() {
+  public void incrementCachedRequests() {
     numOfCachedRequests.incrementAndGet();
   }
 
-  protected void invokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs requestResult) {
+  public void invokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs requestResult) {
     EventHelper.invoke(logRequest, sender, requestResult);
   }
 

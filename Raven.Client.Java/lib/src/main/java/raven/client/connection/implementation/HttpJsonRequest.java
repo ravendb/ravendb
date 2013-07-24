@@ -55,7 +55,6 @@ import raven.abstractions.json.linq.RavenJToken;
 import raven.client.connection.CachedRequest;
 import raven.client.connection.CreateHttpJsonRequestParams;
 import raven.client.connection.ReplicationInformer;
-import raven.client.connection.ServerClient;
 import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
 import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.connection.profiling.RequestStatus;
@@ -305,7 +304,7 @@ public class HttpJsonRequest {
     }
   }
 
-  protected double calculateDuration() {
+  public double calculateDuration() {
     return sp.getTime();
   }
 
