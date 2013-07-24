@@ -27,5 +27,6 @@ namespace Nevar.Impl
 		public static int PageNumberSize = sizeof(long);
 
 		public static int NodeOffsetSize = sizeof(ushort);
+	    public const int CurrentVersion = 0x00010009;
 	}
 }

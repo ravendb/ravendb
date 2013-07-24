@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Threading;
 using Nevar.Impl;
+using Nevar.Impl.FileHeaders;
 using Nevar.Trees;
 using System.Linq;
 
@@ -16,21 +18,69 @@ namespace Nevar
 		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions = new ConcurrentDictionary<long, Transaction>();
 
 		private long _transactionsCounter;
-		public int NextPageNumber { get; set; }
+		public long NextPageNumber { get; set; }
 
 		public StorageEnvironment(IVirtualPager pager)
 		{
 			_pager = pager;
-			using (var transaction = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
-			{
-				_sliceComparer = NativeMethods.memcmp;
-				FreeSpace = Tree.Create(transaction, _sliceComparer);
-				Root = Tree.Create(transaction, _sliceComparer);
-				transaction.Commit();
-			}
+            _sliceComparer = NativeMethods.memcmp;
+
+            if (pager.NumberOfAllocatedPages == 0)
+            {
+                using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
+                {
+                    FreeSpace = Tree.Create(tx, _sliceComparer);
+                    Root = Tree.Create(tx, _sliceComparer);
+                    tx.Commit();
+                }
+            }
+            else // existing db, let us load it
+            {
+                // the first two pages are allocated for double buffering tx commits
+                var entry = FindLatestFileHeadeEntry();
+                NextPageNumber = entry->LastPageNumber + 1;
+                _transactionsCounter = entry->TransactionId + 1;
+                using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
+                {
+                    FreeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
+                    Root = Tree.Open(tx, _sliceComparer, &entry->Root);
+
+                    tx.Commit();
+                }
+            }
 		}
 
-		public SliceComparer SliceComparer
+	    private FileHeader* FindLatestFileHeadeEntry()
+	    {
+	        var fst = _pager.Get(0);
+	        var snd = _pager.Get(1);
+
+	        var e1 = GetFileHeaderFrom(fst);
+	        var e2 = GetFileHeaderFrom(snd);
+
+	        var entry = e1;
+	        if (e2->TransactionId < e1->TransactionId)
+	        {
+	            entry = e2;
+	        }
+	        return entry;
+	    }
+
+	    private FileHeader* GetFileHeaderFrom(Page p)
+	    {
+	        var fileHeader = ((FileHeader*) p.Base);
+	        if (fileHeader->MagicMarker != Constants.MagicMarker)
+	            throw new InvalidDataException("The header page did not start with the magic marker, probably not a db file");
+            if(fileHeader->Version != Constants.CurrentVersion)
+                throw new InvalidDataException("This is a db file for version " + fileHeader->Version + ", which is not compatible with the current version " + Constants.CurrentVersion);
+            if(fileHeader->LastPageNumber >= _pager.NumberOfAllocatedPages)
+                throw new InvalidDataException("The last page number is beyond the number of allocated pages");
+            if (fileHeader->TransactionId <= 0)
+                throw new InvalidDataException("The transaction number cannot be zero or negative");
+            return fileHeader;
+	    }
+
+	    public SliceComparer SliceComparer
 		{
 			get { return _sliceComparer; }
 		}

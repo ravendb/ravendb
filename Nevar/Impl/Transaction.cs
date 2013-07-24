@@ -9,7 +9,7 @@ namespace Nevar.Impl
 {
 	public class Transaction : IDisposable
 	{
-		public int NextPageNumber;
+		public long NextPageNumber;
 
 		private readonly IVirtualPager _pager;
 		private readonly StorageEnvironment _env;

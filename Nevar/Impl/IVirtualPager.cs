@@ -6,5 +6,6 @@ namespace Nevar.Impl
 	public interface IVirtualPager : IDisposable
 	{
 		Page Get(long n);
+        long NumberOfAllocatedPages { get; }
 	}
 }

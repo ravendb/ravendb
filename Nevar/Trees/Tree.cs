@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using Nevar.Debugging;
 using Nevar.Impl;
+using Nevar.Impl.FileHeaders;
 
 namespace Nevar.Trees
 {
@@ -20,13 +21,26 @@ namespace Nevar.Trees
 
 		public Page Root;
 
-		public Tree(SliceComparer cmp, Page root)
+	    private Tree(SliceComparer cmp, Page root)
 		{
 			_cmp = cmp;
 			Root = root;
 		}
 
-		public static Tree Create(Transaction tx, SliceComparer cmp)
+        public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
+        {
+            var root = tx.GetPage(header->RootPageNumber);
+            return new Tree(cmp, root)
+                {
+                    PageCount = header->PageCount,
+                    BranchPages = header->BranchPages,
+                    Depth = header->Depth,
+                    OverflowPages = header->OverflowPages,
+                    LeafPages = header->LeafPages
+                };
+        }
+
+	    public static Tree Create(Transaction tx, SliceComparer cmp)
 		{
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
 			var tree = new Tree(cmp, newRootPage) { Depth = 1 };
