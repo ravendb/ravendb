@@ -19,13 +19,16 @@ namespace Nevar.Impl
 		private readonly Dictionary<Tree, Cursor> cursors = new Dictionary<Tree, Cursor>();
 		private readonly long _oldestTx;
 
-		public Transaction(IVirtualPager pager, StorageEnvironment env, long id)
+        public TransactionFlags Flags { get; private set; }
+
+		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags)
 		{
 			_pager = pager;
 			_env = env;
 			_oldestTx = _env.OldestTransaction;
 			_id = id;
-			NextPageNumber = env.NextPageNumber;
+		    Flags = flags;
+		    NextPageNumber = env.NextPageNumber;
 		}
 
 		public Page GetPage(int n)

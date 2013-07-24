@@ -14,7 +14,7 @@ namespace Nevar.Tests.Trees
 			var buffer = new byte[512];
 			random.NextBytes(buffer);
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
 				{
@@ -25,21 +25,17 @@ namespace Nevar.Tests.Trees
 			}
 
 			var nextPageNumber = Env.NextPageNumber;
-			using (var tx = Env.NewTransaction())
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
 				{
-                    if (i == 9)
-                    {
-                        DebugStuff.RenderAndShow(tx, tx.GetCursor(Env.Root).Root, 1);
-                    }
 					Env.Root.Delete(tx, i.ToString("0000"));
 				}
 
 				tx.Commit();
 			}
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
 				{

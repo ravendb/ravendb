@@ -9,13 +9,13 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void EmptyIterator()
 		{
-			using (var tx = Env.NewTransaction())
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				var iterator = Env.Root.Iterage(tx);
 				Assert.False(iterator.Seek(Slice.BeforeAllKeys));
 			}
 
-			using (var tx = Env.NewTransaction())
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				var iterator = Env.Root.Iterage(tx);
 				Assert.False(iterator.Seek(Slice.AfterAllKeys));
@@ -29,7 +29,7 @@ namespace Nevar.Tests.Trees
 			var buffer = new byte[512];
 			random.NextBytes(buffer);
 
-			using (var tx = Env.NewTransaction())
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
 				{
@@ -39,7 +39,7 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			using (var tx = Env.NewTransaction())
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				var iterator = Env.Root.Iterage(tx);
 				Assert.True(iterator.Seek(Slice.BeforeAllKeys));

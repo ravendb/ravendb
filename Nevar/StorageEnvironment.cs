@@ -13,6 +13,7 @@ namespace Nevar
 		private readonly IVirtualPager _pager;
 		private readonly SliceComparer _sliceComparer;
 
+	    private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions = new ConcurrentDictionary<long, Transaction>();
 
 		private long _transactionsCounter;
@@ -21,7 +22,7 @@ namespace Nevar
 		public StorageEnvironment(IVirtualPager pager)
 		{
 			_pager = pager;
-			using (var transaction = new Transaction(_pager, this, _transactionsCounter + 1))
+			using (var transaction = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
 			{
 				_sliceComparer = NativeMethods.memcmp;
 				FreeSpace = Tree.Create(transaction, _sliceComparer);
@@ -43,12 +44,28 @@ namespace Nevar
 		public Tree Root { get; private set; }
 		public Tree FreeSpace { get; private set; }
 
-		public Transaction NewTransaction()
+		public Transaction NewTransaction(TransactionFlags flags)
 		{
-			var txId = Interlocked.Increment(ref _transactionsCounter);
-			var newTransaction = new Transaction(_pager, this, txId);
-			_activeTransactions.TryAdd(txId, newTransaction);
-			return newTransaction;
+		    bool txLockTaken = false;
+		    try
+		    {
+                long txId = _transactionsCounter;
+                if (flags.HasFlag(TransactionFlags.ReadWrite))
+                {
+                    txId = _transactionsCounter + 1;
+                    _txWriter.Wait();
+                    txLockTaken = true;
+                }
+                var newTransaction = new Transaction(_pager, this, txId, flags);
+                _activeTransactions.TryAdd(txId, newTransaction);
+                return newTransaction;
+		    }
+		    catch (Exception)
+		    {
+		        if (txLockTaken)
+		            _txWriter.Release();
+		        throw;
+		    }
 		}
 
 		public long OldestTransaction
@@ -58,8 +75,15 @@ namespace Nevar
 
 		internal void TransactionCompleted(long txId)
 		{
-			Transaction value;
-			_activeTransactions.TryRemove(txId, out value);
+			Transaction tx;
+		    if (_activeTransactions.TryRemove(txId, out tx) == false)
+		        return;
+
+		    if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+		        return;
+
+		    _transactionsCounter = txId;
+		    _txWriter.Release();
 		}
 	}
 }

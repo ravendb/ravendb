@@ -1,6 +1,4 @@
-﻿1. Transactions
-	- make sure that only write transactions increment the transaction counter
-2. Read from disk
+﻿2. Read from disk
 	- double buffering
 	- header
 3. Multiple trees 

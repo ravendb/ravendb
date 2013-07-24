@@ -16,7 +16,7 @@ namespace Nevar.Tests.Trees
 			var buffer = new byte[8192];
 			random.NextBytes(buffer);
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "a", new MemoryStream(buffer));
 
@@ -30,7 +30,7 @@ namespace Nevar.Tests.Trees
 			random.NextBytes(buffer);
 
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "a", new MemoryStream(buffer));
 
@@ -46,7 +46,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void UpdateThatIsBiggerThanPageSize()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "1", new MemoryStream(new byte[1200]));
 				Env.Root.Add(tx, "2", new MemoryStream(new byte[1200]));
@@ -56,7 +56,7 @@ namespace Nevar.Tests.Trees
 			}
 
 			// update that is too big
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "1", new MemoryStream(new byte[Constants.MaxNodeSize - 10]));
 
@@ -70,7 +70,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanAddAndUpdate()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "test", StreamFor("1"));
 				Env.Root.Add(tx, "test", StreamFor("2"));
@@ -84,7 +84,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanAddAndUpdate2()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "test/1", StreamFor("1"));
 				Env.Root.Add(tx, "test/2", StreamFor("2"));
@@ -104,7 +104,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanAddAndUpdate1()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "test/1", StreamFor("1"));
 				Env.Root.Add(tx, "test/2", StreamFor("2"));
@@ -125,7 +125,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanDelete()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "test", StreamFor("1"));
 				Assert.NotNull(ReadKey(tx, "test"));
@@ -138,7 +138,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanDelete2()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "test/1", StreamFor("1"));
 				Env.Root.Add(tx, "test/2", StreamFor("1"));
@@ -153,7 +153,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanDelete1()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "test/1", StreamFor("1"));
 				Env.Root.Add(tx, "test/2", StreamFor("1"));

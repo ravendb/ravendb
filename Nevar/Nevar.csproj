@@ -49,6 +49,7 @@
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\IVirtualPager.cs" />
     <Compile Include="Impl\PureMemoryPager.cs" />
+    <Compile Include="TransactionFlags.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
     <Compile Include="Impl\NativeMethods.cs" />

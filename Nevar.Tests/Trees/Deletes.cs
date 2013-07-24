@@ -15,7 +15,7 @@ namespace Nevar.Tests.Trees
 			var buffer = new byte[8192];
 			random.NextBytes(buffer);
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "a", new MemoryStream(buffer));
 
@@ -25,7 +25,7 @@ namespace Nevar.Tests.Trees
 			Assert.Equal(4, Env.Root.PageCount);
 			Assert.Equal(3, Env.Root.OverflowPages);
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Delete(tx, "a");
 
@@ -36,7 +36,7 @@ namespace Nevar.Tests.Trees
 			Assert.Equal(1, Env.Root.PageCount);
 			Assert.Equal(0, Env.Root.OverflowPages);
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				Assert.Null(Env.Root.Read(tx, "a"));
 
@@ -49,7 +49,7 @@ namespace Nevar.Tests.Trees
 		 [Fact]
 		 public void CanDeleteAtRoot()
 		 {
-			 using (var tx = Env.NewTransaction())
+             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			 {
 				 for (int i = 0; i < 1000; i++)
 				 {
@@ -58,7 +58,7 @@ namespace Nevar.Tests.Trees
 				 tx.Commit();
 			 }
 
-			 using (var tx = Env.NewTransaction())
+             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			 {
 				 for (int i = 0; i < 15; i++)
 				 {
@@ -73,7 +73,7 @@ namespace Nevar.Tests.Trees
 				 expected.Add(string.Format("{0,5}", i));
 			 }
 
-			 using (var tx = Env.NewTransaction())
+             using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			 {
 				 var list = Env.Root.KeysAsList(tx);
 				 Assert.Equal(expected, list);

@@ -15,7 +15,7 @@ namespace Nevar.Tests.Trees
 			var buffer = new byte[8192];
 			random.NextBytes(buffer);
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "a", new MemoryStream(buffer));
 
@@ -34,14 +34,14 @@ namespace Nevar.Tests.Trees
 			var buffer = new byte[8192];
 			random.NextBytes(buffer);
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "a", new MemoryStream(buffer));
 
 				tx.Commit();
 			}
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				using (var stream = Env.Root.Read(tx, "a"))
 				{
@@ -58,7 +58,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanAdd()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "test", StreamFor("value"));
 			}
@@ -67,7 +67,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanAddAndRead()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Add(tx, "b", StreamFor("2"));
 				Env.Root.Add(tx, "c", StreamFor("3"));
@@ -82,7 +82,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanAddAndReadStats()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Slice key = "test";
 				Env.Root.Add(tx, key, StreamFor("value"));
@@ -94,7 +94,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void CanAddEnoughToCausePageSplit()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Stream stream = StreamFor("value");
 
@@ -122,7 +122,7 @@ namespace Nevar.Tests.Trees
 		public void AfterPageSplitAllDataIsValid()
 		{
 			const int count = 256;
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < count; i++)
 				{
@@ -132,7 +132,7 @@ namespace Nevar.Tests.Trees
 
 				tx.Commit();
 			}
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				for (int i = 0; i < count; i++)
 				{
@@ -146,7 +146,7 @@ namespace Nevar.Tests.Trees
 		[Fact]
 		public void PageSplitsAllAround()
 		{
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Stream stream = StreamFor("value");
 
@@ -166,7 +166,7 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			using (var tx = Env.NewTransaction())
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				for (int i = 0; i < 256; i++)
 				{

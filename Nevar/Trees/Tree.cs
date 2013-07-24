@@ -39,6 +39,7 @@ namespace Nevar.Trees
 		{
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length > int.MaxValue) throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
+            if(tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot add a value in a read only transaction");
 
 			var cursor = tx.GetCursor(this);
 
@@ -190,6 +191,8 @@ namespace Nevar.Trees
 
 		public void Delete(Transaction tx, Slice key)
 		{
+            if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot delete a value in a read only transaction");
+
 			var cursor = tx.GetCursor(this);
 
 			var page = FindPageFor(tx, key, cursor);
