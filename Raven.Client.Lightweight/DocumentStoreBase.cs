@@ -127,6 +127,12 @@ namespace Raven.Client
 			set { url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
 		}
 
+		/// <summary>
+		/// Failover servers used by replication informers when cannot fetch the list of replication 
+		/// destinations if a master server is down.
+		/// </summary>
+		public FailoverServers FailoverServers { get; set; }
+
 		///<summary>
 		/// Whatever or not we will automatically enlist in distributed transactions
 		///</summary>

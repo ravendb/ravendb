@@ -240,6 +240,8 @@ namespace Raven.Client.Document
 				DefaultDatabase = options.DefaultDatabase;
 			if (string.IsNullOrEmpty(options.ApiKey) == false)
 				ApiKey = options.ApiKey;
+			if (options.FailoverServers != null)
+				FailoverServers = options.FailoverServers;
 
 			EnlistInDistributedTransactions = options.EnlistInDistributedTransactions;
 		}
@@ -698,7 +700,20 @@ namespace Raven.Client.Document
 				}
 			}
 #else
-			result  = replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
+			var informer = replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
+
+			if (dbName == DefaultDatabase)
+			{
+				if(FailoverServers.IsSetForDefaultDatabase && informer.FailoverUrls == null)
+					informer.FailoverUrls = FailoverServers.ForDefaultDatabase;
+			}
+			else
+			{
+				if (FailoverServers.IsSetForDatabase(dbName) && informer.FailoverUrls == null)
+					informer.FailoverUrls = FailoverServers.GetForDatabase(dbName);
+			}
+
+			return informer;
 #endif
 
 			if (FailoverServers == null)

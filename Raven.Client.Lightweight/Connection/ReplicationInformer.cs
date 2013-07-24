@@ -27,6 +27,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -55,6 +56,11 @@ namespace Raven.Client.Connection
 		{
 			get { return replicationDestinations; }
 		}
+
+		/// <summary>
+		/// Urls of failover servers set manually in config file or when document store was initialized
+		/// </summary>
+		public string[] FailoverUrls { get; internal set; }
 
 		/// <summary>
 		/// Gets the replication destinations.
@@ -394,9 +400,9 @@ namespace Raven.Client.Connection
 
 							document = new JsonDocument();
 							document.DataAsJson = RavenJObject.FromObject(failoverServers);
-
-							fromFailoverUrls = true;
 						}
+					}
+				}
 					}
 				}
 				if (document == null)

@@ -113,6 +113,7 @@
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
+    <Compile Include="Data\FailoverServers.cs" />
     <Compile Include="Data\HighlightedField.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
