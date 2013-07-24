@@ -375,11 +375,17 @@ task SignInstaller {
 		throw "Could not find pfx file under the path $installerCert to sign the installer"
 	}
   
-  $certPassword = "$base_dir\..\BuildsInfo\RavenDB\certs\installerCertPassword.txt"
-  if ($certPassword -eq $null) 
-  {
-    throw "Certificate password must be provided"
-  }
+	$certPasswordPath = "$base_dir\..\BuildsInfo\RavenDB\certs\installerCertPassword.txt"
+	if (!(Test-Path $certPasswordPath)) 
+	{
+		throw "Could not find the path for the certificate password of the installer"
+	}
+	
+	$certPassword = Get-Content $certPasswordPath
+	if ($certPassword -eq $null) 
+	{
+		throw "Certificate password must be provided"
+	}
   
   $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
     
