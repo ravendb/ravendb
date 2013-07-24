@@ -115,6 +115,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
+		[Obsolete]
 		protected class SpatialIndex
 		{
 			/// <summary>
@@ -123,6 +124,7 @@ namespace Raven.Client.Indexes
 			/// <param name="fieldName">The field name, will be used for querying</param>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(string fieldName, double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
@@ -133,6 +135,7 @@ namespace Raven.Client.Indexes
 			/// </summary>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
