@@ -50,5 +50,10 @@ namespace Nevar.Impl
         {
             get { return _handles.Count * (SegmentSize / Constants.PageSize); }
         }
+
+        public void Flush()
+        {
+            
+        }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Nevar.Impl.FileHeaders;
 using Nevar.Trees;
 using System.Linq;
 
@@ -155,11 +156,24 @@ namespace Nevar.Impl
 			{
 				cursor.Flush();
 			}
+            
+            // Because we don't know in what order the OS will flush the pages 
+            // we need to do this twice, once for the data, and then once for the metadata
+		    _pager.Flush();
 
+		    WriteHeader(_pager.Get(_id & 1)); // this will cycle between the first and second pages
 
+            _pager.Flush(); // and now we flush the metadata as well
 		}
 
-		private void FlushFreePages()
+	    private unsafe void WriteHeader(Page pg)
+	    {
+	        var fileHeader = (FileHeader*) pg.Base;
+	        _env.FreeSpace.CopyTo(&fileHeader->FreeSpace);
+            _env.Root.CopyTo(&fileHeader->Root);
+	    }
+
+	    private void FlushFreePages()
 		{
 			var slice = new Slice(SliceOptions.Key);
 			slice.Set(_id);

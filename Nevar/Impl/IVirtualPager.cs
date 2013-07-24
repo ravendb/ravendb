@@ -7,5 +7,6 @@ namespace Nevar.Impl
 	{
 		Page Get(long n);
         long NumberOfAllocatedPages { get; }
+	    void Flush();
 	}
 }

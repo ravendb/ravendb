@@ -1,6 +1,4 @@
-﻿0. Read from disk
-	- double buffering
-	- header
+﻿0. Copy on write for pages! 
 1. Multiple trees 
 2. Run using mmap files
 3. Allow to increase size

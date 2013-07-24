@@ -27,8 +27,12 @@ namespace Nevar
 
             if (pager.NumberOfAllocatedPages == 0)
             {
+                WriteEmptyHeaderPage(_pager.Get(0));
+                WriteEmptyHeaderPage(_pager.Get(1));
+
+                NextPageNumber = 2;
                 using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
-                {
+                {  
                     FreeSpace = Tree.Create(tx, _sliceComparer);
                     Root = Tree.Create(tx, _sliceComparer);
                     tx.Commit();
@@ -49,6 +53,17 @@ namespace Nevar
                 }
             }
 		}
+
+	    private void WriteEmptyHeaderPage(Page pg)
+	    {
+	        var fileHeader = ((FileHeader*) pg.Base);
+	        fileHeader->MagicMarker = Constants.MagicMarker;
+	        fileHeader->Version = Constants.CurrentVersion;
+	        fileHeader->TransactionId = -1;
+            fileHeader->LastPageNumber = 1;
+	        fileHeader->FreeSpace.RootPageNumber = -1;
+            fileHeader->Root.RootPageNumber = -1;
+	    }
 
 	    private FileHeader* FindLatestFileHeadeEntry()
 	    {

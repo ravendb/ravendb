@@ -283,5 +283,16 @@ namespace Nevar.Trees
 			return new UnmanagedMemoryStream((byte*) node + node->KeySize + Constants.NodeHeaderSize, node->DataSize,
 			                                 node->DataSize, FileAccess.Read);
 		}
+
+	    public void CopyTo(TreeRootHeader* header)
+	    {
+	        header->BranchPages = BranchPages;
+	        header->Depth = Depth;
+            header->Flags = TreeFlags.None;
+	        header->LeafPages = LeafPages;
+	        header->OverflowPages = OverflowPages;
+	        header->PageCount = PageCount;
+	        header->RootPageNumber = Root.PageNumber;
+	    }
 	}
 }
