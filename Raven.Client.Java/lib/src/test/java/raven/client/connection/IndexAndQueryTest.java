@@ -21,6 +21,8 @@ import org.junit.Test;
 import org.mockito.cglib.core.CollectionUtils;
 import org.mockito.cglib.core.Transformer;
 
+import com.mysema.query.types.path.StringPath;
+
 import raven.abstractions.basic.Holder;
 import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Constants;
@@ -41,15 +43,20 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
 import raven.client.document.DocumentConvention;
+import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.indexes.IndexDefinitionBuilder;
 import raven.client.listeners.IDocumentConflictListener;
+import raven.linq.dsl.Grouping;
 import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.expressions.AnonymousExpression;
 import raven.samples.Developer;
 import raven.samples.QDeveloper;
 import raven.samples.entities.Company;
 import raven.samples.entities.Employee;
+import raven.samples.entities.GroupResult;
 import raven.samples.entities.QCompany;
+import raven.samples.entities.QEmployee;
+import raven.samples.entities.QGroupResult;
 
 public class IndexAndQueryTest extends RavenDBAwareTests {
   private DocumentConvention convention;
@@ -226,6 +233,50 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       }
 
       assertEquals(2, count);
+
+    } finally {
+      deleteDb();
+    }
+  }
+
+  private static class CompaniesMapReduce extends AbstractIndexCreationTask {
+    public CompaniesMapReduce() {
+      QCompany c = QCompany.company;
+      QEmployee e = QEmployee.employee;
+      QGroupResult pr = new QGroupResult("gr");
+      Grouping<StringPath> group = Grouping.create(StringPath.class);
+
+      map = IndexExpression
+          .from(Company.class)
+          .selectMany(c.employees, e)
+          .select(new AnonymousExpression<>(Person.class).with(pr.name, e.name).with(pr.count, 1));
+      reduce = IndexExpression
+          .from("results")
+          .groupBy(pr.name)
+          .select(new AnonymousExpression<>(GroupResult.class).with(pr.name, group.key).with(pr.count, group.sum(pr.count)));
+
+    }
+  }
+
+  @Test
+  public void testMapReduceWithDsl() throws Exception {
+    try {
+      createDb();
+      IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
+      insertSampleCompaniesEmployees(dbCommands);
+
+      dbCommands.putIndex("companiesMapReduce", new CompaniesMapReduce().createIndexDefinition());
+      waitForNonStaleIndexes(dbCommands);
+
+      IndexQuery query = new IndexQuery();
+      query.setStart(0);
+      query.setPageSize(1);
+      query.setSortedFields(new SortedField[] { new SortedField("-Count") });
+
+      QueryResult queryResult = dbCommands.query("companiesMapReduce", query, new String[0]);
+      assertEquals(1, queryResult.getResults().size());
+      assertEquals("John", queryResult.getResults().get(0).value(String.class, "Name"));
+
 
     } finally {
       deleteDb();

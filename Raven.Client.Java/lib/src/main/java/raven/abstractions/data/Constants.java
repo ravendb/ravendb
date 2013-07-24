@@ -15,6 +15,8 @@ public class Constants {
 
   public final static String METADATA = "@metadata";
 
+  public final static String ALL_FIELDS = "__all_fields";
+
   public final static String RAVEN_S_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
   public final static String RAVEN_DOCUMENT_DOES_NOT_EXISTS = "Raven-Document-Does-Not-Exists";

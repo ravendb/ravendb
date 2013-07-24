@@ -16,7 +16,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 public class TaskFactory {
 
-
   private final static ListeningExecutorService executorService;
 
   static {
