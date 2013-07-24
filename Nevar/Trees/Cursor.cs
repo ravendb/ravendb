@@ -8,11 +8,11 @@ namespace Nevar.Trees
 		private readonly Tree _tree;
 		public Page Root;
 
-		public int BranchPages;
-		public int LeafPages;
-		public int OverflowPages;
-		public int Depth;
-		public int PageCount;
+		public long BranchPages;
+        public long LeafPages;
+        public long OverflowPages;
+        public int Depth;
+        public long PageCount;
 
 		public LinkedList<Page> Pages = new LinkedList<Page>();
 

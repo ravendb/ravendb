@@ -39,14 +39,13 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Impl\Constants.cs" />
+    <Compile Include="Impl\FileHeaders\FileHeader.cs" />
+    <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
+    <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\IVirtualPager.cs" />
     <Compile Include="Impl\PureMemoryPager.cs" />
     <Compile Include="TransactionFlags.cs" />

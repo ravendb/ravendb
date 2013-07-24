@@ -10,11 +10,11 @@ namespace Nevar.Trees
 {
 	public unsafe class Tree
 	{
-		public int BranchPages;
-		public int LeafPages;
-		public int OverflowPages;
-		public int Depth;
-		public int PageCount;
+        public long BranchPages;
+        public long LeafPages;
+        public long OverflowPages;
+        public int Depth;
+        public long PageCount;
 
 		private readonly SliceComparer _cmp;
 

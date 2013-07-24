@@ -4,6 +4,8 @@ namespace Nevar.Impl
 {
 	public unsafe class Constants
 	{
+        public const ulong MagicMarker = 0xB16BAADC0DEF0015; 
+
 		public const int PageSize = 4096;
 
 		/// <summary>
