@@ -39,7 +39,8 @@ namespace Nevar.Trees
 			var sibling = SetupMoveOrMerge(page, parentPage);
 
 			minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
-			if (sibling.SizeUsed > Constants.PageMinSpace && sibling.NumberOfEntries > minKeys)
+			if (sibling.SizeUsed > Constants.PageMinSpace && 
+				sibling.NumberOfEntries > minKeys)
 			{
 				// neighbor is over the min size and has enough key, can move just one key to  the current page
 				MoveNode(parentPage, sibling, page);

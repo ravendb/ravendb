@@ -11,7 +11,7 @@ namespace Nevar.Tryout
 	{
 		static void Main(string[] args)
 		{
-			new Basic().PageSplitsAllAround();
+			new FreeSpace().WillBeReused();
 			return;
 			var env = new StorageEnvironment(new PureMemoryPager());
 			var ms = new MemoryStream(Encoding.UTF8.GetBytes("000000000000"));
