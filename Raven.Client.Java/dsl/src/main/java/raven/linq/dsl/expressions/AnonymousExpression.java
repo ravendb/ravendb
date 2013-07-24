@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.google.common.collect.ImmutableList;
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.ExpressionBase;
@@ -23,6 +24,11 @@ public class AnonymousExpression<T> extends ExpressionBase<T> implements Factory
 
   public AnonymousExpression(Class<T> type) {
     super(type);
+  }
+
+  public AnonymousExpression(Class<T> type, Expression<?>...args) {
+    super(type);
+    this.expressions = ImmutableList.copyOf(args);
   }
 
   @Override
@@ -48,7 +54,7 @@ public class AnonymousExpression<T> extends ExpressionBase<T> implements Factory
     throw new IllegalStateException("this method is not implemented");
   }
 
-  public <S> AnonymousExpression<T> with(Path<S> path, Expression<S> selector) {
+  public <S> AnonymousExpression<T> with(Path<? extends S> path, Expression<? extends S> selector) {
     return with(extractPropName(path), selector);
   }
 

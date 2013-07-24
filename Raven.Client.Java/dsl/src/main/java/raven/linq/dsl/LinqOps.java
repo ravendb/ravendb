@@ -11,13 +11,22 @@ public class LinqOps {
   public static final Operator<Object> LAMBDA = new OperatorImpl<>("LAMBDA");
 
   @SuppressWarnings("rawtypes")
+  public static class Markers {
+    public static final OperatorImpl<LinqExpressionMixin> CREATE_FIELD2 = new OperatorImpl<>("CREATE_FIELD2");
+    public static final OperatorImpl<LinqExpressionMixin> CREATE_FIELD4 = new OperatorImpl<>("CREATE_FIELD4");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_GENERATE3 = new OperatorImpl<>("SPATIAL_GENERATE3");
+  }
+
+  @SuppressWarnings("rawtypes")
   public static class Fluent {
     public static final Operator<LinqExpressionMixin> GROUP_BY = new OperatorImpl<>("FLUENT_GROUP_BY");
     public static final Operator<LinqExpressionMixin> ORDER_BY = new OperatorImpl<>("FLUENT_ORDER_BY");
     public static final Operator<LinqExpressionMixin> ORDER_BY_DESC = new OperatorImpl<>("FLUENT_ORDER_BY_DESC");
     public static final Operator<LinqExpressionMixin> SELECT = new OperatorImpl<>("FLUENT_SELECT");
     public static final Operator<LinqExpressionMixin> SELECT_MANY = new OperatorImpl<>("FLUENT_SELECT_MANY");
+    public static final Operator<LinqExpressionMixin> SELECT_MANY_TRANSLATED = new OperatorImpl<>("FLUENT_SELECT_MANY_TRANSLATED");
     public static final Operator<LinqExpressionMixin> WHERE = new OperatorImpl<>("FLUENT_WHERE");
   }
+
 
 }

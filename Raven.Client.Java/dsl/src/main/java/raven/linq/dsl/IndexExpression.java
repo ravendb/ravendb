@@ -2,6 +2,7 @@ package raven.linq.dsl;
 
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.OrderSpecifier;
+import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
 import com.mysema.query.types.path.EntityPathBase;
 import com.mysema.query.types.path.ListPath;
@@ -38,8 +39,8 @@ public class IndexExpression {
     return expressionMixin.select(projection);
   }
 
-  public <S> IndexExpression selectMany(ListPath<S, ? extends EntityPathBase<S>> selector) {
-    return expressionMixin.selectMany(selector);
+  public <S> IndexExpression selectMany(ListPath<S, ? extends EntityPathBase<S>> selector, Path<?> nestedRoot) {
+    return expressionMixin.selectMany(selector, nestedRoot);
   }
 
   public String toLinq() {
