@@ -52,7 +52,7 @@ namespace Nevar.Impl
 		private unsafe Page TryAllocateFromFreeSpace(int num)
 		{
 			if (_env.FreeSpace == null)
-				return null;// TODO: fix me!
+				return null;// this can happen the first time FreeSpace tree is created
 
 			using (var iterator = _env.FreeSpace.Iterage(this))
 			{
@@ -66,11 +66,11 @@ namespace Nevar.Impl
 
 					var txId = slice.ToInt64();
 
-					if (txId >= _oldestTx)
+					if (_oldestTx != 0 && txId >= _oldestTx)
 						return null;  // all the free space is tied up in active transactions
 					var remainingPages = GetNodeDataSize(node) / sizeof(int);
 
-					if (remainingPages > num)
+					if (remainingPages < num)
 						continue; // this transaction doesn't have enough pages, let us try the next one...
 
 					// this transaction does have enough pages, now we need to see if we can find enough sequential pages

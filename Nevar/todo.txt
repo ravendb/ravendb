@@ -1,5 +1,4 @@
-﻿0. Free space
-1. Transactions
+﻿1. Transactions
 	- make sure that only write transactions increment the transaction counter
 2. Read from disk
 	- double buffering
