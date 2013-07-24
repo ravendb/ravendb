@@ -14,9 +14,9 @@ namespace Nevar.Impl
 		private readonly IVirtualPager _pager;
 		private readonly StorageEnvironment _env;
 		private readonly long _id;
-		private readonly List<Page> freePages = new List<Page>();
+		private readonly List<Page> _freePages = new List<Page>();
 
-		private readonly Dictionary<Tree, Cursor> cursors = new Dictionary<Tree, Cursor>();
+		private readonly Dictionary<Tree, Cursor> _cursors = new Dictionary<Tree, Cursor>();
 		private readonly long _oldestTx;
 
         public TransactionFlags Flags { get; private set; }
@@ -31,7 +31,7 @@ namespace Nevar.Impl
 		    NextPageNumber = env.NextPageNumber;
 		}
 
-		public Page GetPage(int n)
+		public Page GetPage(long n)
 		{
 			return _pager.Get(n);
 		}
@@ -71,7 +71,7 @@ namespace Nevar.Impl
 
 					if (_oldestTx != 0 && txId >= _oldestTx)
 						return null;  // all the free space is tied up in active transactions
-					var remainingPages = GetNodeDataSize(node) / sizeof(int);
+					var remainingPages = GetNodeDataSize(node) / Constants.PageNumberSize;
 
 					if (remainingPages < num)
 						continue; // this transaction doesn't have enough pages, let us try the next one...
@@ -118,15 +118,15 @@ namespace Nevar.Impl
 			}
 		}
 
-		private unsafe List<int> ReadRemainingPagesList(int remainingPages, NodeHeader* node)
+		private unsafe List<long> ReadRemainingPagesList(int remainingPages, NodeHeader* node)
 		{
-			var list = new List<int>(remainingPages);
+            var list = new List<long>(remainingPages);
 			using (var data = Tree.StreamForNode(this, node))
 			using (var reader = new BinaryReader(data))
 			{
 				for (int i = 0; i < remainingPages; i++)
 				{
-					list.Add(reader.ReadInt32());
+					list.Add(reader.ReadInt64());
 				}
 			}
 			return list;
@@ -144,31 +144,36 @@ namespace Nevar.Impl
 
 		public void Commit()
 		{
+		    if (Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+		        return; // nothing to do
+
 			_env.NextPageNumber = NextPageNumber;
 
 			FlushFreePages();
 
-			foreach (var cursor in cursors.Values)
+			foreach (var cursor in _cursors.Values)
 			{
 				cursor.Flush();
 			}
+
+
 		}
 
 		private void FlushFreePages()
 		{
 			var slice = new Slice(SliceOptions.Key);
 			slice.Set(_id);
-			while (freePages.Count != 0)
+			while (_freePages.Count != 0)
 			{
 				using (var ms = new MemoryStream())
 				using (var binaryWriter = new BinaryWriter(ms))
 				{
-					foreach (var freePage in freePages.OrderBy(x => x.PageNumber))
+					foreach (var freePage in _freePages.OrderBy(x => x.PageNumber))
 					{
 						binaryWriter.Write(freePage.PageNumber);
 					}
 
-					freePages.Clear();
+					_freePages.Clear();
 
 					var end = ms.Position;
 					ms.Position = 0;
@@ -188,19 +193,19 @@ namespace Nevar.Impl
 		public Cursor GetCursor(Tree tree)
 		{
 			Cursor c;
-			if (cursors.TryGetValue(tree, out c))
+			if (_cursors.TryGetValue(tree, out c))
 			{
 				c.Pages.Clear(); // this reset the mutable cursor state
 				return c;
 			}
 			c = new Cursor(tree);
-			cursors.Add(tree, c);
+			_cursors.Add(tree, c);
 			return c;
 		}
 
 		public void FreePage(Page page)
 		{
-			freePages.Add(page);
+			_freePages.Add(page);
 		}
 	}
 }

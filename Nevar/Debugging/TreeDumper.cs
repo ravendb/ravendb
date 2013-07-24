@@ -62,7 +62,7 @@ digraph structs {
 								i, i == 0 ? "" : "|");
 						}
 						writer.WriteLine("\"];");
-						var prev = -1;
+						var prev = -1L;
 						for (int i = 0; i < p.NumberOfEntries; i++)
 						{
 							var node = p.GetNode(i);

@@ -19,7 +19,7 @@ namespace Nevar.Trees
 			_header = (PageHeader*)b;
 		}
 
-		public int PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
+		public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
 
 		public PageFlags Flags { get { return _header->Flags; } set { _header->Flags = value; } }
 
@@ -160,7 +160,7 @@ namespace Nevar.Trees
 
 		}
 
-		public void AddNode(int index, Slice key, Stream value, int pageNumber)
+		public void AddNode(int index, Slice key, Stream value, long pageNumber)
 		{
 			if (HasSpaceFor(key, value) == false)
 				throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");

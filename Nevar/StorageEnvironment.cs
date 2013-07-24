@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO.MemoryMappedFiles;
 using System.Threading;
 using Nevar.Impl;
 using Nevar.Trees;

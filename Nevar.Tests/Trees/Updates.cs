@@ -48,9 +48,9 @@ namespace Nevar.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.Root.Add(tx, "1", new MemoryStream(new byte[1200]));
-				Env.Root.Add(tx, "2", new MemoryStream(new byte[1200]));
-				Env.Root.Add(tx, "3", new MemoryStream(new byte[1200]));
+				Env.Root.Add(tx, "1", new MemoryStream(new byte[1100]));
+				Env.Root.Add(tx, "2", new MemoryStream(new byte[1100]));
+				Env.Root.Add(tx, "3", new MemoryStream(new byte[1100]));
 
 				tx.Commit();
 			}
@@ -58,9 +58,12 @@ namespace Nevar.Tests.Trees
 			// update that is too big
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.Root.Add(tx, "1", new MemoryStream(new byte[Constants.MaxNodeSize - 10]));
+				Env.Root.Add(tx, "1", new MemoryStream(new byte[Constants.MaxNodeSize - 25]));
+                RenderAndShow(tx);
 
 				tx.Commit();
+
+
 			}
 
 			Assert.Equal(3 , Env.Root.PageCount);

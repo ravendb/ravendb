@@ -40,7 +40,7 @@ namespace Nevar.Tests.Trees
 			TreeDumper.Dump(tx, path, tx.GetCursor(Env.Root).Root, showEntries);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
-			var p = Process.Start(@"C:\Users\Ayende\Downloads\graphviz-2.30.1\graphviz\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+            var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
 		}

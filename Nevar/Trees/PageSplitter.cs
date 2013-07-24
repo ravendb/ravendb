@@ -9,12 +9,12 @@ namespace Nevar.Trees
 		private readonly SliceComparer _cmp;
 		private readonly Slice _newKey;
 		private readonly Stream _value;
-		private readonly int _pageNumber;
+		private readonly long _pageNumber;
 		private readonly Cursor _cursor;
 		private readonly Page _page;
 		private Page _parentPage;
 
-		public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, Stream value, int pageNumber, Cursor cursor)
+		public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, Stream value, long pageNumber, Cursor cursor)
 		{
 			_tx = tx;
 			_cmp = cmp;

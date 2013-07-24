@@ -35,14 +35,14 @@ namespace Nevar.Impl
 			}
 		}
 
-		public Page Get(int n)
+		public Page Get(long n)
 		{
 			var index = n/SegmentSize;
 			if (index == _handles.Count)
 			{
 				AddSegment();
 			}
-			var pageStart = _handles[index].Base + (n%SegmentSize*Constants.PageSize);
+			var pageStart = _handles[(int)index].Base + (n%SegmentSize*Constants.PageSize);
 			return new Page(pageStart);
 		}
 	}

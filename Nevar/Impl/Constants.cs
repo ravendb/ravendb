@@ -22,7 +22,7 @@ namespace Nevar.Impl
 
 		public static int PageMinSpace = (int)(PageMaxSpace * 0.33);
 
-		public static int PageNumberSize = sizeof(ushort);
+		public static int PageNumberSize = sizeof(long);
 
 		public static int NodeOffsetSize = sizeof(ushort);
 	}

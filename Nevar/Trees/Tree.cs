@@ -50,7 +50,7 @@ namespace Nevar.Trees
 				RemoveLeafNode(tx, cursor, page);
 			}
 
-			var pageNumber = -1;
+		    var pageNumber = -1L;
 			if (ShouldGoToOverflowPage(value))
 			{
 				pageNumber = WriteToOverflowPages(tx, cursor, value);
@@ -69,7 +69,7 @@ namespace Nevar.Trees
 			page.DebugValidate(tx, _cmp, cursor.Root);
 		}
 
-		private static int WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
+		private static long WriteToOverflowPages(Transaction tx, Cursor cursor, Stream value)
 		{
 			var overflowSize = (int)value.Length;
 			var numberOfPages = GetNumberOfOverflowPages(overflowSize);

@@ -110,8 +110,8 @@ namespace Nevar.Tests.Trees
 				if (Constants.PageSize != 4096)
 					return;
 // ReSharper restore ConditionIsAlwaysTrueOrFalse
-				Assert.Equal(3, Env.Root.PageCount);
-				Assert.Equal(2, Env.Root.LeafPages);
+				Assert.Equal(4, Env.Root.PageCount);
+				Assert.Equal(3, Env.Root.LeafPages);
 				Assert.Equal(1, Env.Root.BranchPages);
 				Assert.Equal(2, Env.Root.Depth);
 

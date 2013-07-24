@@ -2,20 +2,22 @@
 
 namespace Nevar.Trees
 {
-	[StructLayout(LayoutKind.Explicit, Pack = 1, Size = 10)]
+	[StructLayout(LayoutKind.Explicit, Pack = 1)]
 	public struct PageHeader
 	{
 		[FieldOffset(0)]
-		public int PageNumber;
-		[FieldOffset(4)]
+        public long PageNumber;
+
+		[FieldOffset(8)]
 		public PageFlags Flags;
 
-		[FieldOffset(5)]
+		[FieldOffset(10)]
 		public ushort Lower;
-		[FieldOffset(7)]
+
+		[FieldOffset(12)]
 		public ushort Upper;
 
-		[FieldOffset(5)]
+		[FieldOffset(14)]
 		public int OverflowSize;
 	}
 }

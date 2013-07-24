@@ -9,12 +9,12 @@ namespace Nevar.Trees
 		[FieldOffset(0)]
 		public int DataSize;
 		[FieldOffset(0)]
-		public int PageNumber;
+		public long PageNumber;
 
-		[FieldOffset(4)]
+		[FieldOffset(8)]
 		public NodeFlags Flags;
 
-		[FieldOffset(6)]
+		[FieldOffset(9)]
 		public ushort KeySize;
 
 		public int GetNodeSize()
