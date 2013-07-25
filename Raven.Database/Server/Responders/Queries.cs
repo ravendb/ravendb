@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Responders
 			});
 
 			Etag computedEtag;
-
+            
 			using (var md5 = MD5.Create())
 			{
 				var computeHash = md5.ComputeHash(includedEtags.ToArray());

@@ -1325,7 +1325,7 @@ namespace Raven.Database
                         {
                             onResult(result);
                         }
-
+                        resultEtag = resultEtag.HashWith(docRetriever.Etag);
                         if (transformerErrors.Count > 0)
                         {
                             throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
@@ -2495,7 +2495,7 @@ namespace Raven.Database
 
 					result = new JsonDocument
 					{
-						Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()),
+						Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(docRetriever.Etag),
 						NonAuthoritativeInformation = document.NonAuthoritativeInformation,
 						LastModified = document.LastModified,
 						DataAsJson = new RavenJObject {{"$values", new RavenJArray(transformed)}},
