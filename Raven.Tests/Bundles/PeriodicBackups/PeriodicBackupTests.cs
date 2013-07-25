@@ -28,7 +28,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 		[Fact]
 		public void CanBackupToDirectory()
 		{
-			var backupPath = GetPath("BackupFolder");
+			var backupPath = NewDataPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
@@ -69,7 +69,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 		[Fact]
 		public void CanBackupToDirectory_MultipleBackups()
 		{
-			var backupPath = GetPath("BackupFolder");
+			var backupPath = NewDataPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())

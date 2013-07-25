@@ -4,13 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
-using Raven.Tests.Document;
 using Raven.Tests.Helpers;
 using System.Diagnostics;
 
@@ -31,12 +27,6 @@ namespace Raven.Tests
 		protected void Consume(object o)
 		{
 			
-		}
-
-		public string GetPath(string subFolderName)
-		{
-			string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			return Path.Combine(retPath, subFolderName).Substring(6); // remove leading file://
 		}
 
 		public double Timer(Action action)

@@ -3,25 +3,20 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Database.Extensions;
+using Raven.Client.Shard;
 using Raven.Database.Server;
 using Raven.Server;
 using Raven.Tests.Document;
 using Rhino.Mocks;
 using Xunit;
-using System.Collections.Generic;
-using Raven.Client.Shard;
-using System.Linq;
 
 namespace Raven.Tests.Shard
 {
-	using Raven.Abstractions.Data;
-
-	public class WhenUsingShardedServers : RemoteClientTest, IDisposable
+	public class WhenUsingShardedServers : RemoteClientTest
 	{
 		readonly string path1;
 		readonly string path2;
@@ -40,8 +35,8 @@ namespace Raven.Tests.Shard
 			const int port1 = 8079;
 			const int port2 = 8081;
 
-			path1 = GetPath("TestShardedDb1");
-			path2 = GetPath("TestShardedDb2");
+			path1 = NewDataPath("TestShardedDb1");
+			path2 = NewDataPath("TestShardedDb2");
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port1);
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port2);
@@ -187,24 +182,6 @@ namespace Raven.Tests.Shard
 				Assert.Equal(company1.Name, allCompanies[0].Name);
 				Assert.Equal(company2.Name, allCompanies[1].Name);
 			}
-		}
-
-		public override void Dispose()
-		{
-			server1.Dispose();
-			server2.Dispose();
-
-			Thread.Sleep(100);
-
-			foreach (var path in new[] { path1, path2 })
-			{
-				try
-				{
-					IOExtensions.DeleteDirectory(path);
-				}
-				catch (Exception) { }
-			}
-			base.Dispose();
 		}
 	}
 }

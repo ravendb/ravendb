@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Queries
@@ -11,16 +9,10 @@ namespace Raven.Tests.Queries
 	public class Includes : RemoteClientTest
 	{
 		private readonly IDocumentStore store;
-		private readonly RavenDbServer server;
 
 		public Includes()
 		{
-			server = GetNewServer(8079, GetPath(DataDir));
-
-			store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize();
+			store = NewRemoteDocumentStore();
 		}
 
 		[Fact]
@@ -479,13 +471,5 @@ namespace Raven.Tests.Queries
 			public string[] Images { get; set; }
 			public double Price { get; set; }
 		}
-
-		public override void Dispose()
-		{
-			store.Dispose();
-			server.Dispose();
-			base.Dispose();
-		}
-
 	}
 }

@@ -4,15 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Threading;
 using Raven.Client.Document;
-using Raven.Database.Extensions;
-using Raven.Database.Server;
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class WhenUsingMultipleUnshardedServers : RemoteClientTest, IDisposable
+	public class WhenUsingMultipleUnshardedServers : RemoteClientTest
 	{
 		private readonly string path1;
 		private readonly string path2;
@@ -24,11 +21,8 @@ namespace Raven.Tests.Document
 			port1 = 8079;
 			port2 = 8081;
 
-			path1 = GetPath("TestUnshardedDb1");
-			path2 = GetPath("TestUnshardedDb2");
-
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port1);
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port2);
+			path1 = NewDataPath("TestUnshardedDb1");
+			path2 = NewDataPath("TestUnshardedDb2");
 		}
 
 		[Fact]
@@ -49,21 +43,6 @@ namespace Raven.Tests.Document
 					}
 				}
 			}
-		}
-
-		public override void Dispose()
-		{
-			Thread.Sleep(100);
-
-			foreach (var path in new[] { path1, path2 })
-			{
-				try
-				{
-					IOExtensions.DeleteDirectory(path);
-				}
-				catch (Exception) { }
-			}
-			base.Dispose();
 		}
 	}
 }

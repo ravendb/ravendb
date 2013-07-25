@@ -19,12 +19,14 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_1007_incremental_backup : RavenTest
 	{
-		private const string BackupDir = @".\BackupDatabase\";
+		private readonly string DataDir;
+		private readonly string BackupDir;
 		private DocumentDatabase db;
 
 		public RavenDB_1007_incremental_backup()
 		{
-			IOExtensions.DeleteDirectory(BackupDir);
+			DataDir = NewDataPath("IncrementalBackup");
+			BackupDir = NewDataPath("BackupDatabase");
 
 			db = new DocumentDatabase(new RavenConfiguration
 			{
@@ -37,13 +39,6 @@ namespace Raven.Tests.Issues
 			});
 			db.SpinBackgroundWorkers();
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-		}
-
-		public override void Dispose()
-		{
-			db.Dispose();
-			base.Dispose();
-			IOExtensions.DeleteDirectory(BackupDir);
 		}
 
 		[Fact]
@@ -99,12 +94,14 @@ namespace Raven.Tests.Issues
 
 	public class RavenDB_1007_standard_backup : RavenTest
 	{
-		private const string BackupDir = @".\BackupDatabase\";
+		private readonly string DataDir;
+		private readonly string BackupDir;
 		private DocumentDatabase db;
 
 		public RavenDB_1007_standard_backup()
 		{
-			IOExtensions.DeleteDirectory(BackupDir);
+			DataDir = NewDataPath("IncrementalBackup");
+			BackupDir = NewDataPath("BackupDatabase");
 
 			db = new DocumentDatabase(new RavenConfiguration
 			{
@@ -113,13 +110,6 @@ namespace Raven.Tests.Issues
 			});
 			db.SpinBackgroundWorkers();
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-		}
-
-		public override void Dispose()
-		{
-			db.Dispose();
-			base.Dispose();
-			IOExtensions.DeleteDirectory(BackupDir);
 		}
 
 		[Fact]
@@ -138,8 +128,7 @@ namespace Raven.Tests.Issues
 			IOExtensions.DeleteDirectory(DataDir);
 
 			// lock file to simulate IOException when restore operation will try to copy this file
-			using (
-				var file = File.Open(Path.Combine(BackupDir, "Indexes\\Raven%2fDocumentsByEntityName\\segments.gen"),
+			using (var file = File.Open(Path.Combine(BackupDir, "Indexes\\Raven%2fDocumentsByEntityName\\segments.gen"),
 				                     FileMode.Open, FileAccess.ReadWrite, FileShare.None))
 			{
 				var sb = new StringBuilder();
