@@ -15,11 +15,12 @@ namespace Nevar.Impl
 		private readonly IVirtualPager _pager;
 		private readonly StorageEnvironment _env;
 		private readonly long _id;
-		private readonly HashSet<long> _freePages = new HashSet<long>();
 
         private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
         private readonly Dictionary<long, Page> _dirtyPages = new Dictionary<long, Page>();
 		private readonly long _oldestTx;
+
+        private HashSet<long> _freePages = new HashSet<long>();
 
         public TransactionFlags Flags { get; private set; }
 
@@ -259,15 +260,19 @@ namespace Nevar.Impl
 					{
 						binaryWriter.Write(freePage);
 					}
+				    var old = _freePages;
+					_freePages = new HashSet<long>();
 
-					_freePages.Clear();
-
-					var end = ms.Position;
 					ms.Position = 0;
 
 					// this may cause additional pages to be freed, so we need need the while loop to track them all
 					_env.FreeSpace.Add(this, slice, ms);
-					ms.Position = end; // so if we have additional freed pages, they will be added
+					ms.Position = 0; // so if we have additional freed pages, they will be added
+
+                    if (_freePages.Count != 0)
+                    {
+                        _freePages.UnionWith(old);
+                    }
 				}
 			}
 		}
