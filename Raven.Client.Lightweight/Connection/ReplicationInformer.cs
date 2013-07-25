@@ -320,7 +320,20 @@ namespace Raven.Client.Connection
 					{
 						log.ErrorException("Could not contact master for new replication information", getTask.Exception);
 						document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-								}
+
+						if (document == null)
+						{
+							if (FailoverUrls != null && FailoverUrls.Length > 0) // try to use configured failover servers
+							{
+								var failoverServers = new ReplicationDocument { Destinations = new List<ReplicationDestination>() };
+
+								foreach (var failoverUrl in FailoverUrls)
+								{
+									failoverServers.Destinations.Add(new ReplicationDestination()
+									{
+										Url = failoverUrl
+									});
+					}
 
 								document = new JsonDocument();
 								document.DataAsJson = RavenJObject.FromObject(failoverServers);

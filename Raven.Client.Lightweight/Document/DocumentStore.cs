@@ -686,20 +686,21 @@ namespace Raven.Client.Document
 			{
 				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
 			}
+			ReplicationInformer result;
+
 #if SILVERLIGHT || NETFX_CORE
 			lock (replicationInformersLocker)
 			{
-				ReplicationInformer result;
 				if (!replicationInformers.TryGetValue(key, out result))
 				{
 					result = Conventions.ReplicationInformerFactory(key);
 					replicationInformers.Add(key, result);
 				}
-				return result;
 			}
 #else
-			return replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
+			result  = replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
 #endif
+
 			if (FailoverServers == null)
 				return result;
 
