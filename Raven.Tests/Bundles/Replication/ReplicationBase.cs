@@ -15,6 +15,7 @@ using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Listeners;
 using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -47,8 +48,8 @@ namespace Raven.Tests.Bundles.Replication
 
         private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false)
 		{
-			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+			var serverConfiguration = new RavenConfiguration
 									  {
 										  Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
 										  AnonymousUserAccessMode = anonymousUserAccessMode,
@@ -88,7 +89,7 @@ namespace Raven.Tests.Bundles.Replication
 
 		private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
 		{
-			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
 			var embeddedStore = new EmbeddableDocumentStore
 			{
@@ -120,7 +121,7 @@ namespace Raven.Tests.Bundles.Replication
 			return embeddedStore;
 		}
 
-		protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration serverConfiguration)
+		protected virtual void ConfigureServer(RavenConfiguration serverConfiguration)
 		{
 		}
 
@@ -175,11 +176,11 @@ namespace Raven.Tests.Bundles.Replication
 		{
 			var previousServer = servers[index];
 
-			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.Database.Configuration.Port);
-			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.Database.Configuration.Port);
+			var serverConfiguration = new RavenConfiguration
 			{
 				Settings = { { "Raven/ActiveBundles", "replication" } },
-                AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.Admin,
+                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
 				DataDirectory = previousServer.Database.Configuration.DataDirectory,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = previousServer.Database.Configuration.RunInMemory,
