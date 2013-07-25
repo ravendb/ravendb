@@ -82,7 +82,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			stores.Add(documentStore);
 
-			ConfigureDatbase(ravenDbServer.Database);
+			ConfigureDatabase(ravenDbServer.Database);
 			return documentStore;
 		}
 
@@ -124,7 +124,7 @@ namespace Raven.Tests.Bundles.Replication
 		{
 		}
 
-		protected virtual void ConfigureDatbase(DocumentDatabase database)
+		protected virtual void ConfigureDatabase(DocumentDatabase database)
 		{
 			
 		}

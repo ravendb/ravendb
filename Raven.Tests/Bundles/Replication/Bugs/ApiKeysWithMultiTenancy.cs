@@ -25,7 +25,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
             Authentication.EnableOnce();
 		}
 
-		protected override void ConfigureDatbase(Database.DocumentDatabase database)
+		protected override void ConfigureDatabase(Database.DocumentDatabase database)
 		{
 			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
