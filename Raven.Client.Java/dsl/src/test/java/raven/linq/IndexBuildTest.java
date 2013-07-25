@@ -1,6 +1,7 @@
 package raven.linq;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static raven.linq.dsl.IndexExpression.from;
 
 import org.junit.Test;
@@ -42,14 +43,14 @@ public class IndexBuildTest {
     Grouping<StringPath> grouping = Grouping.create(StringPath.class);
 
     IndexExpression reduce = from("results")
-      .groupBy(pr.name)
-      .select(
-          AnonymousExpression.create(PersonResult.class)
-          .with(pr.name, grouping.key)
-          .with(pr.count, grouping.sum(pr.count).divide(grouping.sum(pr.count))));
+        .groupBy(pr.name)
+        .select(
+            AnonymousExpression.create(PersonResult.class)
+            .with(pr.name, grouping.key)
+            .with(pr.count, grouping.sum(pr.count).divide(grouping.sum(pr.count))));
 
     assertEquals("results.GroupBy(personResult => personResult.Name)." +
-    		"Select(group => new {Name = group.Key, Count = group.Sum(personResult => personResult.Count) / group.Sum(personResult => personResult.Count)})", reduce.toLinq());
+        "Select(group => new {Name = group.Key, Count = group.Sum(personResult => personResult.Count) / group.Sum(personResult => personResult.Count)})", reduce.toLinq());
 
   }
 
@@ -58,15 +59,27 @@ public class IndexBuildTest {
   public void testOrder() {
     QPerson p = QPerson.person;
     IndexExpression query1 = from(Person.class)
-      .orderBy(p.firstname.asc(), p.lastname.desc());
+        .orderBy(p.firstname.asc(), p.lastname.desc());
 
     assertEquals("docs.People.OrderBy(person => person.Firstname).OrderByDescending(person => person.Lastname)", query1.toLinq());
 
     IndexExpression query2 = from(Person.class)
         .orderBy(p.firstname.asc()).orderBy(p.lastname.desc());
 
-      assertEquals("docs.People.OrderBy(person => person.Firstname).OrderByDescending(person => person.Lastname)", query2.toLinq());
+    assertEquals("docs.People.OrderBy(person => person.Firstname).OrderByDescending(person => person.Lastname)", query2.toLinq());
 
+  }
+  @Test
+  public void testRootDetectorInSelectMany() {
+    QCompany c = QCompany.company;
+    QPerson p = QPerson.person;
+    try {
+      from(Company.class)
+      .selectMany(c.employees, p.age);
+      fail();
+    } catch (Exception e) {
+      // ok
+    }
   }
 
   @Test
@@ -101,13 +114,13 @@ public class IndexBuildTest {
 
 
     assertEquals("docs.Companies." +
-    		"Where(company => company.Name.StartsWith(\"C\"))" +
-    		".Where(company => company.Employees.Length < 10)" +
-    		".SelectMany(company => company.Employees, (company, person) => new {Company = company, Person = person})" +
-    		".Where(transId_1 => transId_1.Person.Firstname.StartsWith(\"A\"))" +
-    		".Where(transId_1 => length(transId_1.Company.Name) > 10)" +
-    		".SelectMany(transId_1 => transId_1.Person.Pets, (transId_1, pet) => new {TransId_1 = transId_1, Pet = pet})" +
-    		".Where(transId_2 => transId_2.Pet.Name.StartsWith(\"G\")).Select(transId_2 => new {Name = transId_2.Pet.Name})", query1.toLinq());
+        "Where(company => company.Name.StartsWith(\"C\"))" +
+        ".Where(company => company.Employees.Length < 10)" +
+        ".SelectMany(company => company.Employees, (company, person) => new {Company = company, Person = person})" +
+        ".Where(transId_1 => transId_1.Person.Firstname.StartsWith(\"A\"))" +
+        ".Where(transId_1 => length(transId_1.Company.Name) > 10)" +
+        ".SelectMany(transId_1 => transId_1.Person.Pets, (transId_1, pet) => new {TransId_1 = transId_1, Pet = pet})" +
+        ".Where(transId_2 => transId_2.Pet.Name.StartsWith(\"G\")).Select(transId_2 => new {Name = transId_2.Pet.Name})", query1.toLinq());
   }
 
 
@@ -147,7 +160,7 @@ public class IndexBuildTest {
         .groupBy(AnonymousExpression.create(PersonResult.class)
             .with(pr.name, p.firstname)
             .with(pr.count, Expressions.constant(1)))
-        .toLinq());
+            .toLinq());
 
     Grouping<QPersonResult> grouping = Grouping.create(QPersonResult.class, "group");
 
@@ -156,10 +169,10 @@ public class IndexBuildTest {
         .groupBy(AnonymousExpression.create(PersonResult.class)
             .with(pr.name, p.firstname)
             .with(pr.count, 1))
-        .select(AnonymousExpression.create(PersonResult.class)
-            .with(pr.name, grouping.key.name)
-            .with(pr.count, grouping.sum(pr.count)))
-        .toLinq());
+            .select(AnonymousExpression.create(PersonResult.class)
+                .with(pr.name, grouping.key.name)
+                .with(pr.count, grouping.sum(pr.count)))
+                .toLinq());
 
   }
 

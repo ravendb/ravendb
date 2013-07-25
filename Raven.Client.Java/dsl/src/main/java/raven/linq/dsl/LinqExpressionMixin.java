@@ -58,8 +58,12 @@ public final class LinqExpressionMixin<T> implements Cloneable {
     return self;
   }
 
+  @SuppressWarnings("rawtypes")
   public <S> T selectMany(ListPath<S, ? extends EntityPathBase<S>> selector, Path<?> nestedRoot) {
-    //TODO: verify if root is root!
+    if (nestedRoot.getMetadata().getParent() != null) {
+      throw new RuntimeException("Root expected. Got: " + nestedRoot);
+    }
+
     Expression< ? > expressionWithInferedLambda = lambdaInferer.inferLambdas(selector);
     SimpleExpression<List> operation = Expressions.operation(List.class, Ops.LIST, expressionWithInferedLambda, nestedRoot);
 
