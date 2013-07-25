@@ -80,7 +80,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			IndexMessing.MessSegmentsFile(indexFullPath);
 
-			using (GetNewServer(runInMemory: false, dataDirectory: dataDir, deleteDirectory: false)) // do not delete previous directory
+			using (GetNewServer(runInMemory: false, dataDirectory: dataDir)) // do not delete previous directory
 			{
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{

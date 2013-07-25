@@ -131,13 +131,12 @@ namespace Raven.Tests.Helpers
 		}
 
 		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
-			bool deleteDirectoryAfter = true,
-			bool deleteDirectoryBefore = true,
 			bool runInMemory = true,
+			string dataDirectory = null,
 			string requestedStorage = null,
 			bool enableAuthentication = false)
 		{
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, requestedStorage: requestedStorage, deleteDirectory: deleteDirectoryBefore, enableAuthentication: enableAuthentication);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
@@ -145,12 +144,7 @@ namespace Raven.Tests.Helpers
 				DefaultDatabase = databaseName,
 			};
 			stores.Add(store);
-			store.AfterDispose += (sender, args) =>
-			{
-				ravenDbServer.Dispose();
-				if (deleteDirectoryAfter)
-					ClearDatabaseDirectory(ravenDbServer.Server.Configuration.DataDirectory);
-			};
+			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
 			ModifyStore(store);
 			return store.Initialize();
 		}
@@ -182,7 +176,6 @@ namespace Raven.Tests.Helpers
 			string dataDirectory = null,
 			bool runInMemory = true,
 			string requestedStorage = null,
-			bool deleteDirectory = true,
 			bool enableAuthentication = false)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
@@ -198,9 +191,6 @@ namespace Raven.Tests.Helpers
 			ModifyConfiguration(ravenConfiguration);
 
 			ravenConfiguration.PostInit();
-
-			if (ravenConfiguration.RunInMemory == false && deleteDirectory)
-				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
 			var ravenDbServer = new RavenDbServer(ravenConfiguration);
