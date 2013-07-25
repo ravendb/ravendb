@@ -466,7 +466,10 @@ public class HttpJsonRequest {
 
       try {
         HttpEntity httpEntity = httpWebException.getHttpResponse().getEntity();
-        String readToEnd = IOUtils.toString(httpEntity.getContent());
+        String readToEnd = "";
+        if (httpEntity != null) {
+          readToEnd = IOUtils.toString(httpEntity.getContent());
+        }
 
 
         RequestResultArgs requestResultArgs = new RequestResultArgs();
@@ -579,7 +582,7 @@ public class HttpJsonRequest {
     }
     if (httpResponse.getStatusLine().getStatusCode() >= 300) {
       try {
-        String rawResponse = IOUtils.toString(httpResponse.getEntity().getContent());
+        String rawResponse = (httpResponse.getEntity() != null) ? IOUtils.toString(httpResponse.getEntity().getContent()) :"";
         throw new HttpOperationException("Server error response:" + httpResponse.getStatusLine().getStatusCode() + rawResponse, null, webRequest, httpResponse);
       } catch (IOException e) {
         throw new RuntimeException("Unable to read response", e);

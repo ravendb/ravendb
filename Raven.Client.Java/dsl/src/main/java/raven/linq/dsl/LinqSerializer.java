@@ -66,8 +66,7 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
 
   @Override
   public Void visit(SubQueryExpression< ? > expr, Void context) {
-    // TODO Auto-generated method stub
-    return null;
+    throw new IllegalStateException("We don't support subqueries.");
   }
 
   @Override

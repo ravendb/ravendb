@@ -13,18 +13,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.cglib.core.CollectionUtils;
 import org.mockito.cglib.core.Transformer;
 
-import com.mysema.query.types.path.StringPath;
-
 import raven.abstractions.basic.Holder;
-import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
@@ -42,11 +37,8 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
-import raven.client.connection.implementation.HttpJsonRequestFactory;
-import raven.client.document.DocumentConvention;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.indexes.IndexDefinitionBuilder;
-import raven.client.listeners.IDocumentConflictListener;
 import raven.linq.dsl.Grouping;
 import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.expressions.AnonymousExpression;
@@ -59,23 +51,9 @@ import raven.samples.entities.QCompany;
 import raven.samples.entities.QEmployee;
 import raven.samples.entities.QGroupResult;
 
+import com.mysema.query.types.path.StringPath;
+
 public class IndexAndQueryTest extends RavenDBAwareTests {
-  private DocumentConvention convention;
-  private HttpJsonRequestFactory factory;
-  private ReplicationInformer replicationInformer;
-  private ServerClient serverClient;
-
-  @Before
-  public void init() {
-    System.setProperty("java.net.preferIPv4Stack" , "true");
-    convention = new DocumentConvention();
-    factory = new HttpJsonRequestFactory(10);
-    replicationInformer = new ReplicationInformer();
-
-    serverClient = new ServerClient(DEFAULT_SERVER_URL, convention, null,
-        new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
-        UUID.randomUUID(), new IDocumentConflictListener[0]);
-  }
 
   @Test(expected = ServerClientException.class)
   public void testPutInvalidIndex() throws Exception {

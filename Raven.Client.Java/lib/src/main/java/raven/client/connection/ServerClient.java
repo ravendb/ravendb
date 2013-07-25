@@ -61,7 +61,6 @@ import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.exceptions.HttpOperationException;
-import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.exceptions.TransformCompilationException;
 import raven.abstractions.extensions.JsonExtensions;
@@ -278,7 +277,9 @@ public class ServerClient implements IDatabaseCommands {
         } else if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_CONFLICT) {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           try {
-            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            if (e.getHttpResponse().getEntity() != null) {
+              IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            }
 
             RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
             Etag etag = HttpExtensions.getEtagHeader(e.getHttpResponse());
@@ -544,7 +545,9 @@ public class ServerClient implements IDatabaseCommands {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          if (e.getHttpResponse().getEntity() != null) {
+            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          }
         } catch (IOException e1) {
           throw new ServerClientException(e1);
         }
@@ -575,7 +578,9 @@ public class ServerClient implements IDatabaseCommands {
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try {
-        IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        if (e.getHttpResponse().getEntity() != null) {
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        }
       } catch (IOException e1) {
         throw new ServerClientException(e1);
       } finally {
@@ -660,7 +665,9 @@ public class ServerClient implements IDatabaseCommands {
         if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           try {
-            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            if (e.getHttpResponse().getEntity() != null) {
+              IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            }
           } catch (IOException e1) {
             throw new ServerClientException(e1);
           } finally {
@@ -969,7 +976,9 @@ public class ServerClient implements IDatabaseCommands {
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try {
-      IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+      if (e.getHttpResponse().getEntity() != null) {
+        IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+      }
     } catch (IOException e1) {
       throw new ServerClientException(e1);
     } finally {
@@ -1023,28 +1032,49 @@ public class ServerClient implements IDatabaseCommands {
       RavenJObject responseJson = (RavenJObject) request.readResponseJson();
       return responseJson.value(String.class, "Transformer");
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
-        throw new ServerClientException(e);
-      }
       try {
-        HttpResponse httpResponse = e.getHttpResponse();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        IOUtils.copy(httpResponse.getEntity().getContent(), baos);
 
-        RavenJObject error = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
-        if (error == null) {
-          throw e;
+        Holder<RuntimeException> newException = new Holder<>();
+        if (shouldRethrowIndexException(e, newException)) {
+          if (newException.value != null) {
+            throw new TransformCompilationException(newException.value.getMessage(), newException.value);
+          }
         }
-        throw new TransformCompilationException(error.get("Message").value(String.class));
-      } catch (Exception ee) {
-        throw new ServerClientException(ee);
+        throw e;
+
       } finally {
         EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
 
-    } catch (IOException e) {
+    } catch (Exception e) {
       throw new ServerClientException(e);
     }
+  }
+
+  private boolean shouldRethrowIndexException(HttpOperationException e, Holder<RuntimeException> newException) {
+    newException.value = null;
+
+    if (e.getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+      /* TODO:
+      var error = e.TryReadErrorResponseObject(
+          new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+          if (error == null)
+          {
+          return true;
+          }
+
+                          newEx = new IndexCompilationException(error.Message, e)
+          {
+          IndexDefinitionProperty = error.IndexDefinitionProperty,
+          ProblematicText = error.ProblematicText
+          };
+
+          return true;*/
+    }
+
+    return e.getStatusCode() != HttpStatus.SC_NOT_FOUND;
+
   }
 
   public String directPutIndex(String name, String operationUrl, boolean overwrite, IndexDefinition definition) {
@@ -1062,27 +1092,15 @@ public class ServerClient implements IDatabaseCommands {
         throw new IllegalStateException("Cannot put index: " + name + ", index already exists");
       }
     } catch (HttpOperationException e) {
-      if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
-        throw new ServerClientException(e);
-      }
       try {
-        HttpResponse httpResponse = e.getHttpResponse();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        IOUtils.copy(httpResponse.getEntity().getContent(), baos);
-
-        RavenJObject error = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
-        if (error == null) {
+        Holder<RuntimeException> newException = new Holder<>();
+        if (shouldRethrowIndexException(e, newException)) {
+          if (newException.value != null) {
+            throw newException.value;
+          }
           throw e;
         }
-        IndexCompilationException compilationException = new IndexCompilationException(error.get("Message").value(String.class));
 
-        compilationException.setIndexDefinitionProperty(error.get("IndexDefinitionProperty").value(String.class));
-        compilationException.setProblematicText(error.get("ProblematicText").value(String.class));
-
-        throw compilationException;
-
-      } catch (Exception ee) {
-        throw new ServerClientException(ee);
       } finally {
         EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
@@ -1101,27 +1119,14 @@ public class ServerClient implements IDatabaseCommands {
         RavenJToken responseJson = request.readResponseJson();
         return responseJson.value(String.class, "Index");
       } catch (HttpOperationException e) {
-        if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
-          throw new ServerClientException(e);
-        }
         try {
-          HttpResponse httpResponse = e.getHttpResponse();
-          ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          IOUtils.copy(httpResponse.getEntity().getContent(), baos);
-
-          RavenJObject error = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
-          if (error == null) {
-            throw e;
+          Holder<RuntimeException> newException = new Holder<>();
+          if (shouldRethrowIndexException(e, newException)) {
+            if (newException != null) {
+              throw newException.value;
+            }
           }
-          IndexCompilationException compilationException = new IndexCompilationException(error.get("Message").value(String.class));
-
-          compilationException.setIndexDefinitionProperty(error.get("IndexDefinitionProperty").value(String.class));
-          compilationException.setProblematicText(error.get("ProblematicText").value(String.class));
-
-          throw compilationException;
-
-        } catch (Exception ee) {
-          throw new ServerClientException(ee);
+          throw new ServerClientException(e);
         } finally {
           EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
@@ -1271,7 +1276,9 @@ public class ServerClient implements IDatabaseCommands {
       try {
         if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          if (e.getHttpResponse().getEntity() != null) {
+            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          }
           String text = new String(baos.toByteArray());
           if (text.contains("maxQueryString")) {
             throw new IllegalStateException(text, e);

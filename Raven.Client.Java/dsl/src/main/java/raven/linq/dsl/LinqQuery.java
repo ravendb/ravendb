@@ -13,13 +13,6 @@ public class LinqQuery {
     return new LinqQuery(LinqExpressionMixin.DOCS_ROOT_NAME + "." + Inflector.pluralize(objectClass.getSimpleName()));
   }
 
-  public static LinqQuery whereEntityIs(Class<?> objectClass, String... subClasses) {
-    //TODO:     //TODO: docs.WhereEntityIs(new string[] {\r\n    \"Cats\",\r\n    \"Dogs\"\r\n}).Select(i => ....
-
-    return new LinqQuery("");
-  }
-
-
   public static LinqQuery from(String customRoot) {
     return new LinqQuery(customRoot);
   }

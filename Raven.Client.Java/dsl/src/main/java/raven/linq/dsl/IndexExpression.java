@@ -1,5 +1,10 @@
 package raven.linq.dsl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
@@ -17,6 +22,15 @@ public class IndexExpression {
     return new IndexExpression(LinqExpressionMixin.DOCS_ROOT_NAME + "." + Inflector.pluralize(objectClass.getSimpleName()));
   }
 
+  public static IndexExpression whereEntityIs(String... subClasses) {
+    List<String> plurar = new ArrayList<>();
+    for (String subClass: subClasses) {
+      plurar.add("\"" + Inflector.pluralize(subClass) + "\"");
+    }
+    String subClassesJoined = StringUtils.join(plurar, ", ");
+
+    return new IndexExpression(LinqExpressionMixin.DOCS_ROOT_NAME + ".WhereEntityIs(new string[] { " + subClassesJoined + " })");
+  }
 
   public static IndexExpression from(String customRoot) {
     return new IndexExpression(customRoot);
@@ -30,6 +44,8 @@ public class IndexExpression {
   public IndexExpression groupBy(Expression< ? > keySelector) {
     return expressionMixin.groupBy(keySelector);
   }
+
+
 
   public IndexExpression orderBy(OrderSpecifier< ? >... orderSpecifiers) {
     return expressionMixin.orderBy(orderSpecifiers);
