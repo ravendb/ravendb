@@ -104,8 +104,8 @@
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedWebSite" Order="1">1</Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISAppPoolUser" Order="2"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="SetApplicationPoolIdentityType" Order="2"><![CDATA[CUSTOM_APPLICATION_POOL AND NOT APPLICATION_POOL_IDENTITY_TYPE_INITIALIZED]]></Publish>
-      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg" Order="3"><![CDATA[WEBSITE_VD <> "" AND CUSTOM_APPLICATION_POOL]]></Publish>
-      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3"><![CDATA[WEBSITE_VD <> "" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg" Order="3"><![CDATA[CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Back" Event="NewDialog" Value="InstallationType">1</Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 
