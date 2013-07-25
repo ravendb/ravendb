@@ -57,7 +57,7 @@ namespace Raven.Tests.Bundles.Replication
 										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 										  RunInMemory = true,
 										  Port = port,
-										  DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+										  DefaultStorageTypeName = RavenTestBase.GetDefaultStorageType()
 									  };
 			ConfigureServer(serverConfiguration);
 			if (removeDataDirectory)
