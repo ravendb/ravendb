@@ -40,7 +40,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 		{
 			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				DataDirectory = NewDataPath(),
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInUnreliableMode,
 				DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName,
 			});
