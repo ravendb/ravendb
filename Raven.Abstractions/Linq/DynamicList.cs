@@ -22,6 +22,27 @@ namespace Raven.Abstractions.Linq
 		{
 			this.parent = parent;
 		}
+#if !SILVERLIGHT
+        public override bool TryConvert(ConvertBinder binder, out object result)
+        {
+            if (binder.ReturnType.IsArray)
+            {
+                var elementType = binder.ReturnType.GetElementType();
+                var count = Count;
+                var array = Array.CreateInstance(elementType, count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    array.SetValue(Convert.ChangeType(this[i], elementType), i);
+                }
+
+                result = array;
+
+                return true;
+            }
+            return base.TryConvert(binder, out result);
+        }
+#endif
 
 		public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
 		{
