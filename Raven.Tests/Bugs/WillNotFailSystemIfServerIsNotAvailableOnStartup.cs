@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Document;
@@ -39,14 +40,15 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					await AssertAsync.Throws<WebException>(() => session.LoadAsync<User>("user/1"));
+					var aggregateException = await AssertAsync.Throws<AggregateException>(async () => await session.LoadAsync<User>("user/1"));
+					Assert.IsType<WebException>(aggregateException.Flatten().InnerException);
 				}
 
 				using (GetNewServer())
 				{
 					using (var session = store.OpenAsyncSession())
 					{
-						Assert.Null(session.LoadAsync<Item>("items/1"));
+						Assert.Null(await session.LoadAsync<Item>("items/1"));
 					}
 				}
 			}
