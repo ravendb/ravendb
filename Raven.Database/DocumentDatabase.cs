@@ -1325,7 +1325,6 @@ namespace Raven.Database
                         {
                             onResult(result);
                         }
-                        resultEtag = resultEtag.HashWith(docRetriever.Etag);
                         if (transformerErrors.Count > 0)
                         {
                             throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
