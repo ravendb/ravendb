@@ -61,7 +61,9 @@ import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.exceptions.HttpOperationException;
+import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.exceptions.TransformCompilationException;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.indexing.IndexDefinition;
@@ -1021,32 +1023,25 @@ public class ServerClient implements IDatabaseCommands {
       RavenJObject responseJson = (RavenJObject) request.readResponseJson();
       return responseJson.value(String.class, "Transformer");
     } catch (HttpOperationException e) {
-      try {
-        throw new ServerClientException("unable to put transformer", e);
-        /*TODO: dead code - reported - RavenDB-1216
-      var httpWebResponse = e.Response as HttpWebResponse;
-      if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-        throw;
-
-      if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
-      {
-        var error = e.TryReadErrorResponseObject(
-            new { Error = "", Message = "" });
-
-        if (error == null)
-        {
-          throw;
-        }
-
-        var compilationException = new TransformCompilationException(error.Message);
-
-        throw compilationException;
+      if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
+        throw new ServerClientException(e);
       }
+      try {
+        HttpResponse httpResponse = e.getHttpResponse();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        IOUtils.copy(httpResponse.getEntity().getContent(), baos);
 
-      throw;*/
+        RavenJObject error = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+        if (error == null) {
+          throw e;
+        }
+        throw new TransformCompilationException(error.get("Message").value(String.class));
+      } catch (Exception ee) {
+        throw new ServerClientException(ee);
       } finally {
         EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
+
     } catch (IOException e) {
       throw new ServerClientException(e);
     }
@@ -1067,35 +1062,27 @@ public class ServerClient implements IDatabaseCommands {
         throw new IllegalStateException("Cannot put index: " + name + ", index already exists");
       }
     } catch (HttpOperationException e) {
+      if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
+        throw new ServerClientException(e);
+      }
       try {
-        if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
-          throw new ServerClientException(e);
+        HttpResponse httpResponse = e.getHttpResponse();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        IOUtils.copy(httpResponse.getEntity().getContent(), baos);
+
+        RavenJObject error = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+        if (error == null) {
+          throw e;
         }
-        /*
-         * TODO dead code - reported - RavenDB-1216
-         *   var httpWebResponse = e.Response as HttpWebResponse;
-              if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-                  throw;
+        IndexCompilationException compilationException = new IndexCompilationException(error.get("Message").value(String.class));
 
-              if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
-              {
-                  var error = e.TryReadErrorResponseObject(
-                      new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+        compilationException.setIndexDefinitionProperty(error.get("IndexDefinitionProperty").value(String.class));
+        compilationException.setProblematicText(error.get("ProblematicText").value(String.class));
 
-                  if (error == null)
-                  {
-                      throw;
-                  }
+        throw compilationException;
 
-                  var compilationException = new IndexCompilationException(error.Message)
-                  {
-                      IndexDefinitionProperty = error.IndexDefinitionProperty,
-                      ProblematicText = error.ProblematicText
-                  };
-
-                  throw compilationException;
-              }
-         */
+      } catch (Exception ee) {
+        throw new ServerClientException(ee);
       } finally {
         EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
@@ -1114,33 +1101,30 @@ public class ServerClient implements IDatabaseCommands {
         RavenJToken responseJson = request.readResponseJson();
         return responseJson.value(String.class, "Index");
       } catch (HttpOperationException e) {
-        throw new ServerClientException(e);
-        /*TODO: dead code - reported - RavenDB-1216
-        var httpWebResponse = e.Response as HttpWebResponse;
-        if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-            throw;
-
-        if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
-        {
-            var error = e.TryReadErrorResponseObject(
-                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
-
-            if (error == null)
-            {
-                throw;
-            }
-
-            var compilationException = new IndexCompilationException(error.Message)
-            {
-                IndexDefinitionProperty = error.IndexDefinitionProperty,
-                ProblematicText = error.ProblematicText
-            };
-
-            throw compilationException;
+        if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
+          throw new ServerClientException(e);
         }
+        try {
+          HttpResponse httpResponse = e.getHttpResponse();
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          IOUtils.copy(httpResponse.getEntity().getContent(), baos);
 
-        throw;
-    }*/
+          RavenJObject error = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+          if (error == null) {
+            throw e;
+          }
+          IndexCompilationException compilationException = new IndexCompilationException(error.get("Message").value(String.class));
+
+          compilationException.setIndexDefinitionProperty(error.get("IndexDefinitionProperty").value(String.class));
+          compilationException.setProblematicText(error.get("ProblematicText").value(String.class));
+
+          throw compilationException;
+
+        } catch (Exception ee) {
+          throw new ServerClientException(ee);
+        } finally {
+          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+        }
       }
     } catch (Exception e) {
       throw new ServerClientException(e);
