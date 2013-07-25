@@ -277,6 +277,12 @@
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\DocumentHelpers.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
+    <Compile Include="Util\Encryptors\DefaultEncryptor.cs" />
+    <Compile Include="Util\Encryptors\Encryptor.cs" />
+    <Compile Include="Util\Encryptors\EncryptorBase.cs" />
+    <Compile Include="Util\Encryptors\FipsEncryptor.cs" />
+    <Compile Include="Util\Encryptors\HashEncryptorBase.cs" />
+    <Compile Include="Util\Encryptors\IEncryptor.cs" />
     <Compile Include="Util\EtagUtil.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />

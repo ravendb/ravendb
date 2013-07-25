@@ -13,6 +13,8 @@ using Rhino.Licensing.Discovery;
 
 namespace Rhino.Licensing
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	/// <summary>
 	/// Base license validator.
 	/// </summary>
@@ -606,22 +608,24 @@ namespace Rhino.Licensing
 
 		private bool TryGetValidDocument(string licensePublicKey, XmlDocument doc)
 		{
-			var rsa = new RSACryptoServiceProvider();
-			rsa.FromXmlString(licensePublicKey);
-
-			var nsMgr = new XmlNamespaceManager(doc.NameTable);
-			nsMgr.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
-
-			var signedXml = new SignedXml(doc);
-			var sig = (XmlElement)doc.SelectSingleNode("//sig:Signature", nsMgr);
-			if (sig == null)
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
-				Logger.Warn("Could not find this signature node on license:\r\n{0}", License);
-				return false;
-			}
-			signedXml.LoadXml(sig);
+				rsa.FromXmlString(licensePublicKey);
 
-			return signedXml.CheckSignature(rsa);
+				var nsMgr = new XmlNamespaceManager(doc.NameTable);
+				nsMgr.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
+
+				var signedXml = new SignedXml(doc);
+				var sig = (XmlElement)doc.SelectSingleNode("//sig:Signature", nsMgr);
+				if (sig == null)
+				{
+					Logger.Warn("Could not find this signature node on license:\r\n{0}", License);
+					return false;
+				}
+				signedXml.LoadXml(sig);
+
+				return signedXml.CheckSignature(rsa.Algorithm);
+			}
 		}
 
 		/// <summary>

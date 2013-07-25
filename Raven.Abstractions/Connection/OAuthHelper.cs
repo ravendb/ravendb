@@ -14,6 +14,8 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	public static class OAuthHelper
 	{
 		public static class Keys
@@ -67,15 +69,12 @@ namespace Raven.Abstractions.Connection
 #if NETFX_CORE
 			throw new NotImplementedException("WinRT...");
 #else
-			using (var aesKeyGen = new AesManaged
-			{
-				KeySize = 256,
-			})
+			using (var aesKeyGen = Encryptor.Current.CreateSymmetrical(keySize: 256))
 			{
 				aesKeyGen.GenerateKey();
 				aesKeyGen.GenerateIV();
 
-				results.AddRange(AddEncryptedKeyAndIv(exponent, modulus, aesKeyGen));
+				results.AddRange(AddEncryptedKeyAndIv(exponent, modulus, aesKeyGen.Key, aesKeyGen.IV));
 
 				using (var encryptor = aesKeyGen.CreateEncryptor())
 				{
@@ -97,16 +96,11 @@ namespace Raven.Abstractions.Connection
 #elif NETFX_CORE
 		
 #else
-		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
+		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical(exponent, modulus))
 			{
-				rsa.ImportParameters(new RSAParameters
-				{
-					Exponent = exponent,
-					Modulus = modulus
-				});
-				return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray(), true);
+				return rsa.Encrypt(key.Concat(iv).ToArray(), true);
 			}
 		}
 #endif
