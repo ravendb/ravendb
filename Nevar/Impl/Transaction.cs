@@ -41,30 +41,32 @@ namespace Nevar.Impl
 
 	    public Page ModifyCursor(TreeDataInTransaction txInfo, Cursor c)
 	    {
-	        txInfo.Root = ModifyPage(txInfo.Root);
+	        txInfo.Root = ModifyPage(null, txInfo.Root);
 
 	        if (c.Pages.Count == 0)
 	            return null;
 
-	        var node = c.Pages.First;
+	        var node = c.Pages.Last;
 	        while (node != null)
 	        {
-	            node.Value = ModifyPage(node.Value);
-	            node = node.Next;
+                var parent = node.Next != null ? node.Next.Value : null;
+	            node.Value = ModifyPage(parent, node.Value);
+	            node = node.Previous;
 	        }
 	        return c.Pages.First.Value;
 	    }
 
-	    private unsafe Page ModifyPage(Page p)
+	    private unsafe Page ModifyPage(Page parent, Page p)
 	    {
 	        if (p.Dirty)
 	            return p;
 
-	        Page page;
+            Page page;
 	        if (_dirtyPages.TryGetValue(p.PageNumber, out page))
 	        {
                 page.LastMatch = p.LastMatch;
                 page.LastSearchPosition = p.LastSearchPosition;
+                UpdateParentPageNumber(parent, page.PageNumber); 
                 return page;
 	        }
 
@@ -77,7 +79,20 @@ namespace Nevar.Impl
 	        newPage.LastSearchPosition = p.LastSearchPosition;
 	        _dirtyPages[p.PageNumber] = newPage;
 	        FreePage(p.PageNumber);
+            UpdateParentPageNumber(parent, newPage.PageNumber); 
 	        return newPage;
+	    }
+
+	    private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
+	    {
+	        if (parent == null) 
+                return;
+
+            if (parent.Dirty == false)
+                throw new InvalidOperationException("The parent page must already been dirtied, but wasn't");
+	     
+	        var node = parent.GetNode(parent.LastSearchPosition);
+	        node->PageNumber = pageNumber;
 	    }
 
 	    public Page GetReadOnlyPage(long n)
@@ -99,6 +114,7 @@ namespace Nevar.Impl
 			}
 			page.Lower = (ushort)Constants.PageHeaderSize;
 			page.Upper = Constants.PageSize;
+	        page.Dirty = true;
 	        _dirtyPages[page.PageNumber] = page;
 			return page;
 		}
@@ -122,7 +138,7 @@ namespace Nevar.Impl
 
 					if (_oldestTx != 0 && txId >= _oldestTx)
 						return null;  // all the free space is tied up in active transactions
-					var remainingPages = GetNodeDataSize(node) / Constants.PageNumberSize;
+					var remainingPages = GetNumberOfFreePages(node);
 
 					if (remainingPages < num)
 						continue; // this transaction doesn't have enough pages, let us try the next one...
@@ -169,7 +185,12 @@ namespace Nevar.Impl
 			}
 		}
 
-		private unsafe List<long> ReadRemainingPagesList(int remainingPages, NodeHeader* node)
+	    internal unsafe int GetNumberOfFreePages(NodeHeader* node)
+	    {
+	        return GetNodeDataSize(node)/Constants.PageNumberSize;
+	    }
+
+	    private unsafe List<long> ReadRemainingPagesList(int remainingPages, NodeHeader* node)
 		{
             var list = new List<long>(remainingPages);
 			using (var data = Tree.StreamForNode(this, node))
@@ -183,7 +204,7 @@ namespace Nevar.Impl
 			return list;
 		}
 
-		private unsafe int GetNodeDataSize(NodeHeader* node)
+		internal unsafe int GetNodeDataSize(NodeHeader* node)
 		{
 			if (node->Flags.HasFlag(NodeFlags.PageRef)) // lots of data, enough to overflow!
 			{
@@ -274,9 +295,10 @@ namespace Nevar.Impl
 		    Debug.Assert(success);
 		}
 
-	    public Page GetModifiedPage(long n)
+	    public Page GetModifiedPage(Page parentPage, long n)
 	    {
-	        return ModifyPage(GetReadOnlyPage(n));
+
+	        return ModifyPage(parentPage, GetReadOnlyPage(n));
 	    }
 	}
 }

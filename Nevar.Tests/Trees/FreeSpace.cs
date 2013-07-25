@@ -24,7 +24,6 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			var nextPageNumber = Env.NextPageNumber;
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
@@ -35,6 +34,7 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
+		    var old = Env.NextPageNumber;
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
@@ -45,7 +45,12 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			Assert.Equal(nextPageNumber + Env.FreeSpace.EntriesCount, Env.NextPageNumber);
+		    var stats = Env.Stats();
+
+		    Assert.Equal(stats.FreePages + stats.FreePagesOverhead + stats.HeaderPages + stats.RootPages, 
+                Env.NextPageNumber);
+
+            Assert.Equal(old, Env.NextPageNumber);
 		}
 	}
 }

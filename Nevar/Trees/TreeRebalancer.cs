@@ -39,7 +39,7 @@ namespace Nevar.Trees
                 page.NumberOfEntries >= minKeys)
                 return null; // above space/keys thresholds
 
-            System.Diagnostics.Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
+            Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
             var sibling = SetupMoveOrMerge(cursor, page, parentPage);
 
@@ -84,7 +84,9 @@ namespace Nevar.Trees
             if (parentPage.LastSearchPosition == 0) // we are the left most item
             {
                 _tx.ModifyCursor(_txInfo, c);
-                sibling = _tx.GetModifiedPage(parentPage.GetNode(1)->PageNumber);
+                parentPage.LastSearchPosition = 1;
+                sibling = _tx.GetModifiedPage(parentPage, parentPage.GetNode(1)->PageNumber);
+                parentPage.LastSearchPosition = 0;
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries + 1;
                 parentPage.LastSearchPosition = 1;
@@ -92,7 +94,9 @@ namespace Nevar.Trees
             else // there is at least 1 page to our left
             {
                 _tx.ModifyCursor(_txInfo, c);
-                sibling = _tx.GetModifiedPage(parentPage.GetNode(parentPage.LastSearchPosition - 1)->PageNumber);
+                parentPage.LastSearchPosition--;
+                sibling = _tx.GetModifiedPage(parentPage, parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber);
+                parentPage.LastSearchPosition++;
                 sibling.LastSearchPosition = sibling.NumberOfEntries - 1;
                 page.LastSearchPosition = 0;
             }

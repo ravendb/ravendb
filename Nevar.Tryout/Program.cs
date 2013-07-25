@@ -30,7 +30,7 @@ namespace Nevar.Tryout
             //        DebugStuff.RenderAndShow(tx, storage.Root.Root, 1);
             //    }
 
-             
+
             //}
         }
     }

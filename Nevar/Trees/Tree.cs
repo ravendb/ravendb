@@ -128,11 +128,11 @@ namespace Nevar.Trees
 			if (node->Flags.HasFlag(NodeFlags.PageRef)) // this is an overflow pointer
 			{
                 tx.ModifyCursor(this, cursor);
-			    var overflowPage = tx.GetModifiedPage(node->PageNumber);
+			    var overflowPage = tx.GetReadOnlyPage(node->PageNumber);
 				var numberOfPages = GetNumberOfOverflowPages(overflowPage.OverflowSize);
 				for (int i = 0; i < numberOfPages; i++)
 				{
-					tx.FreePage(node->PageNumber + i);
+                    tx.FreePage(overflowPage.PageNumber + i);
 				}
                 var txInfo = tx.GetTreeInformation(this);
 

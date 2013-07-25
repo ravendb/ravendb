@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
+using Nevar.Debugging;
 using Nevar.Impl;
 using Nevar.Impl.FileHeaders;
 using Nevar.Trees;
@@ -155,5 +158,50 @@ namespace Nevar
 		    _transactionsCounter = txId;
 		    _txWriter.Release();
 		}
+
+        public EnvironmentStats Stats()
+	    {
+	        var results = new EnvironmentStats
+	            {
+                    FreePagesOverhead = FreeSpace.PageCount,
+                    RootPages = Root.PageCount,
+                    HeaderPages = 2
+	            };
+	        using (var tx = NewTransaction(TransactionFlags.Read))
+	        {
+	            using (var it = FreeSpace.Iterate(tx))
+	            {
+	                var slice = new Slice(SliceOptions.Key);
+	                if (it.Seek(Slice.BeforeAllKeys))
+	                {
+	                    do
+	                    {
+	                        slice.Set(it.Current);
+
+	                        var ft = new EnvironmentStats.FreedTransaction
+	                            {
+	                                Id = slice.ToInt64()
+	                            };
+	                       
+                            results.FreedTransactions.Add(ft);
+
+	                        var numberOfFreePages = tx.GetNumberOfFreePages(it.Current);
+	                        results.FreePages += numberOfFreePages;
+                            using (var data = Tree.StreamForNode(tx, it.Current))
+	                        using (var reader = new BinaryReader(data))
+	                        {
+	                            for (int i = 0; i < numberOfFreePages; i++)
+	                            {
+                                    ft.Pages.Add(reader.ReadInt64());
+	                            }
+	                        }
+	                    } while (it.MoveNext());
+	                }
+	            }
+	            tx.Commit();
+	        }
+
+            return results;
+	    }
 	}
 }
