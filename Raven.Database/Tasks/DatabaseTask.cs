@@ -12,11 +12,11 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Tasks
 {
-	public abstract class Task
+	public abstract class DatabaseTask
 	{
 		public string Index { get; set; }
 
-		public abstract void Merge(Task task);
+		public abstract void Merge(DatabaseTask task);
 		public abstract void Execute(WorkContext context);
 
 		public byte[] AsBytes()
@@ -26,12 +26,12 @@ namespace Raven.Database.Tasks
 			return memoryStream.ToArray();
 		}
 
-		public static Task ToTask(string taskType, byte[] task)
+		public static DatabaseTask ToTask(string taskType, byte[] task)
 		{
-			var type = typeof(Task).Assembly.GetType(taskType);
-			return (Task) JsonExtensions.CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(task)), type);
+			var type = typeof(DatabaseTask).Assembly.GetType(taskType);
+			return (DatabaseTask) JsonExtensions.CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(task)), type);
 		}
 
-		public abstract Task Clone();
+		public abstract DatabaseTask Clone();
 	}
 }

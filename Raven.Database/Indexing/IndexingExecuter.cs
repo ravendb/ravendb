@@ -23,7 +23,6 @@ using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
-using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
@@ -79,7 +78,7 @@ namespace Raven.Database.Indexing
 			throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Name + ": " + indexesStat.Priority);
 		}
 
-		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
+		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
 			return actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
 		}

@@ -829,7 +829,7 @@
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
-    <Compile Include="Tasks\Task.cs" />
+    <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />

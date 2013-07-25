@@ -10,7 +10,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Task = Raven.Database.Tasks.Task;
+using Raven.Database.Tasks;
 
 namespace Raven.Database.Indexing
 {
@@ -321,7 +321,7 @@ namespace Raven.Database.Indexing
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
 
-		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
+		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
 			return null;
 		}

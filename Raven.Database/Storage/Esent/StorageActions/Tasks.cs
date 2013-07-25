@@ -14,7 +14,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{
-		public void AddTask(Task task, DateTime addedAt)
+		public void AddTask(DatabaseTask task, DateTime addedAt)
 		{
 			int actualBookmarkSize;
 			var bookmark = new byte[SystemParameters.BookmarkMost];
@@ -53,7 +53,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public T GetMergedTask<T>() where T : Task
+		public T GetMergedTask<T>() where T : DatabaseTask
 		{
 			Api.MoveBeforeFirst(session, Tasks);
 			while (Api.TryMoveNext(session, Tasks))
@@ -71,10 +71,10 @@ namespace Raven.Storage.Esent.StorageActions
 					if (e.Error != JET_err.WriteConflict)
 						throw;
 				}
-				Task task;
+				DatabaseTask task;
 				try
 				{
-					task = Task.ToTask(taskType, taskAsBytes);
+					task = DatabaseTask.ToTask(taskType, taskAsBytes);
 				}
 				catch (Exception e)
 				{
@@ -90,7 +90,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return null;
 		}
 
-		public void MergeSimilarTasks(Task task)
+		public void MergeSimilarTasks(DatabaseTask task)
 		{
 			var expectedTaskType = task.GetType().FullName;
 
@@ -119,10 +119,10 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
 					var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
-					Task existingTask;
+					DatabaseTask existingTask;
 					try
 					{
-						existingTask = Task.ToTask(taskType, taskAsBytes);
+						existingTask = DatabaseTask.ToTask(taskType, taskAsBytes);
 					}
 					catch (Exception e)
 					{
