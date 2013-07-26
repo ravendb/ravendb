@@ -1,6 +1,5 @@
 package raven.linq.dsl;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import raven.linq.dsl.visitors.RootsExtractor;

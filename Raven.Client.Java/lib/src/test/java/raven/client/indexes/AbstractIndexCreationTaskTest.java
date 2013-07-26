@@ -32,8 +32,8 @@ public class AbstractIndexCreationTaskTest {
 
   @Test
   public void testCreateIndex() {
-    System.out.println(new MyIndex().createIndexDefinition().getMap());
-    //TODO: finish me
+    assertEquals("docs.Foos.Select(f => new {Something = f.Something, _ = this.CreateField(\"DynamicKey\", f.LongItem, false, false), s = AbstractIndexCreationTask.SpatialGenerate(\"spatial\", (double?) f.LongItem, (double?) f.LongItem)})",
+    new MyIndex().createIndexDefinition().getMap());
   }
 
 
