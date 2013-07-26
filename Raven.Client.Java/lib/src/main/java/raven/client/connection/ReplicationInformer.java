@@ -1,5 +1,8 @@
 package raven.client.connection;
 
+import java.io.IOException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -9,8 +12,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.activity.InvalidActivityException;
-
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -23,11 +26,16 @@ import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.JsonDocument;
+import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.json.linq.JTokenType;
+import raven.abstractions.replication.ReplicationDestination;
+import raven.abstractions.replication.ReplicationDocument;
 import raven.abstractions.task.TaskFactory;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
+import raven.client.extensions.MultiDatabase;
 
 import com.google.common.util.concurrent.FutureCallback;
 
@@ -102,7 +110,7 @@ public class ReplicationInformer {
       Future<Void> taskCopy = refreshReplicationInformationTask;
 
       if (taskCopy != null) {
-        return;  //taskCopy;
+        return; //taskCopy;
       }
 
       TaskFactory.startNew(new Function0<Void>() {
@@ -128,107 +136,121 @@ public class ReplicationInformer {
       });
     }
 
-    /*
-           return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
-               .ContinueWith(task =>
-               {
-                   if (task.Exception != null)
-                   {
-                       log.ErrorException("Failed to refresh replication information", task.Exception);
-                   }
-                   refreshReplicationInformationTask = null;
-               });
-        }*/
-
   }
 
   public int getReadStripingBase() {
     return readStripingBase.incrementAndGet();
   }
 
-  public <T> T executeWithReplication(HttpMethods method, String primaryUrl, int currentRequest, int currentReadStripingBase,
-    Function1<String, T> operation) throws ServerClientException {
+  public <T> T executeWithReplication(HttpMethods method, String primaryUrl, int currentRequest,
+    int currentReadStripingBase, Function1<String, T> operation) throws ServerClientException {
 
     Holder<T> resultHolder = new Holder<>();
-    boolean timeoutThrown = false;
+    Holder<Boolean> timeoutThrown = new Holder<>();
+    timeoutThrown.value = Boolean.FALSE;
 
     List<String> localReplicationDestinations = getReplicationDestinationsUrls(); // thread safe copy
 
-    boolean shouldReadFromAllServers = conventions.getFailoverBehavior().contains(FailoverBehavior.READ_FROM_ALL_SERVERS);
-    if (shouldReadFromAllServers && HttpMethods.GET.equals(method))
-    {
-        int replicationIndex = currentReadStripingBase % (localReplicationDestinations.size() + 1);
-        // if replicationIndex == destinations count, then we want to use the master
-        // if replicationIndex < 0, then we were explicitly instructed to use the master
-        if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0) {
-            // if it is failing, ignore that, and move to the master or any of the replicas
-            if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false)) {
-                if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, resultHolder, timeoutThrown))
-                    return resultHolder.value;
-            }
+    boolean shouldReadFromAllServers = conventions.getFailoverBehavior().contains(
+      FailoverBehavior.READ_FROM_ALL_SERVERS);
+    if (shouldReadFromAllServers && HttpMethods.GET.equals(method)) {
+      int replicationIndex = currentReadStripingBase % (localReplicationDestinations.size() + 1);
+      // if replicationIndex == destinations count, then we want to use the master
+      // if replicationIndex < 0, then we were explicitly instructed to use the master
+      if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0) {
+        // if it is failing, ignore that, and move to the master or any of the replicas
+        if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false)) {
+          if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, resultHolder,
+            timeoutThrown)) return resultHolder.value;
         }
+      }
     }
 
     if (shouldExecuteUsing(primaryUrl, currentRequest, method, true)) {
-        if (tryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
-            return resultHolder.value;
-        }
-        if (!timeoutThrown && isFirstFailure(primaryUrl) &&
-            tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
-            return resultHolder.value;
-        }
-        incrementFailureCount(primaryUrl);
+
+      if (tryOperation(operation, primaryUrl, !timeoutThrown.value && localReplicationDestinations.size() > 0, resultHolder,
+        timeoutThrown)) {
+        return resultHolder.value;
+      }
+      if (!timeoutThrown.value && isFirstFailure(primaryUrl)
+        && tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
+        return resultHolder.value;
+      }
+      incrementFailureCount(primaryUrl);
     }
 
     for (int i = 0; i < localReplicationDestinations.size(); i++) {
-        String replicationDestination = localReplicationDestinations.get(i);
-        if (!shouldExecuteUsing(replicationDestination, currentRequest, method, false)) {
-            continue;
-        }
-        if (tryOperation(operation, replicationDestination, !timeoutThrown, resultHolder, timeoutThrown)) {
-            return resultHolder.value;
-        }
-        if (!timeoutThrown && isFirstFailure(replicationDestination) &&
-            tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, resultHolder,
-                         timeoutThrown)) {
-            return resultHolder.value;
-        }
-        incrementFailureCount(replicationDestination);
+      String replicationDestination = localReplicationDestinations.get(i);
+      if (!shouldExecuteUsing(replicationDestination, currentRequest, method, false)) {
+        continue;
+      }
+      if (tryOperation(operation, replicationDestination, !timeoutThrown.value, resultHolder, timeoutThrown)) {
+        return resultHolder.value;
+      }
+      if (!timeoutThrown.value
+        && isFirstFailure(replicationDestination)
+        && tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, resultHolder,
+          timeoutThrown)) {
+        return resultHolder.value;
+      }
+      incrementFailureCount(replicationDestination);
+
     }
     // this should not be thrown, but since I know the value of should...
-    //TODO: throw new InvalidActivityException("Attempted to connect to master and all replicas have failed, giving up. There is a high probability of a network problem preventing access to all the replicas. Failed to get in touch with any of the " + (1 + localReplicationDestinations.size()) + " Raven instances.");
-    return null;
+    throw new IllegalStateException("Attempted to connect to master and all replicas have failed, giving up. There is a high probability of a network problem preventing access to all the replicas. Failed to get in touch with any of the " + (1 + localReplicationDestinations.size()) + " Raven instances.");
   }
 
-  //TODO: finish me
-  protected <T> boolean tryOperation(Function1<String, T> operation, String operationUrl, boolean avoidThrowing, Holder<T> result, boolean wasTimeout)
-  {
-      try
-      {
-          result.value = operation.apply(operationUrl);
-          resetFailureCount(operationUrl);
-          wasTimeout = false;
-          return true;
+  protected <T> boolean tryOperation(Function1<String, T> operation, String operationUrl, boolean avoidThrowing,
+    Holder<T> result, Holder<Boolean> wasTimeout) {
+    try {
+      result.value = operation.apply(operationUrl);
+      resetFailureCount(operationUrl);
+      wasTimeout.value = Boolean.FALSE;
+      return true;
+    } catch (Exception e) {
+      if (avoidThrowing == false) {
+        throw e;
       }
-      catch (Exception e)
-      {
-          if (avoidThrowing == false)
-              throw e;
-          //result = default(T);
+      result.value = null;
 
-          if (isServerDown(e, wasTimeout))
-          {
-              return false;
-          }
-          throw e;
+      if (isServerDown(e, wasTimeout)) {
+        return false;
+      }
+      throw e;
+    }
+  }
+
+  public boolean isHttpStatus(Exception e, int... httpStatusCode) {
+    if (e instanceof HttpOperationException) {
+      HttpOperationException hoe = (HttpOperationException) e;
+      if (ArrayUtils.contains(httpStatusCode, hoe.getStatusCode())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean isServerDown(Exception e, Holder<Boolean> timeout) {
+    timeout.value = Boolean.FALSE;
+    if (e instanceof SocketTimeoutException) {
+      timeout.value = Boolean.TRUE;
+      return true;
+    }
+    if (e instanceof SocketException) {
+      return true;
+    }
+    //TODO: finish me
+    return false;
+  }
+
+  public void dispose() throws InterruptedException
+  {
+      Future<Void> replicationInformationTaskCopy = refreshReplicationInformationTask;
+      if (replicationInformationTaskCopy != null) {
+          replicationInformationTaskCopy.wait();
       }
   }
 
-  public boolean isServerDown(Exception e, boolean timeout)
-  {
-    //TODO: implement me
-    return true;
-  }
 
   public AtomicLong getFailureCount(String operationUrl) {
     return getHolder(operationUrl).getValue();
@@ -240,12 +262,7 @@ public class ReplicationInformer {
 
   public boolean shouldExecuteUsing(String operationUrl, int currentRequest, HttpMethods method, boolean primary) {
     if (primary == false) {
-      try {
-        assertValidOperation(method);
-      } catch (InvalidActivityException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
+      assertValidOperation(method);
     }
 
     FailureCounter failureCounter = getHolder(operationUrl);
@@ -278,7 +295,7 @@ public class ReplicationInformer {
     return 100000;
   }
 
-  protected void assertValidOperation(HttpMethods method) throws InvalidActivityException {
+  protected void assertValidOperation(HttpMethods method) {
     if (conventions.getFailoverBehaviorWithoutFlags().contains(FailoverBehavior.ALLOW_READS_FROM_SECONDARIES)) {
       if (HttpMethods.GET.equals(method)) {
         return;
@@ -295,7 +312,7 @@ public class ReplicationInformer {
         }
       }
     }
-    throw new InvalidActivityException("Could not replicate " + method
+    throw new IllegalStateException("Could not replicate " + method
       + " operation to secondary node, failover behavior is: " + conventions.getFailoverBehavior());
   }
 
@@ -308,10 +325,8 @@ public class ReplicationInformer {
     FailureCounter value = getHolder(operationUrl);
     value.setForceCheck(false);
     long current = value.getValue().incrementAndGet();
-    if (current == 1)// first failure
-    {
+    if (current == 1) { // first failure
       EventHelper.invoke(failoverStatusChanged, this, new FailoverStatusChangedEventArgs(operationUrl, true));
-
     }
   }
 
@@ -322,11 +337,55 @@ public class ReplicationInformer {
   }
 
   public void refreshReplicationInformation(ServerClient commands) {
-    //TODO: implement me
+    synchronized (this) {
+      String serverHash = ServerHash.getServerHash(commands.getUrl());
+
+      JsonDocument document;
+      try {
+        document = commands.directGet(commands.getUrl(), RAVEN_REPLICATION_DESTINATIONS);
+        failureCounts.put(commands.getUrl(), new FailureCounter()); // we just hit the master, so we can reset its failure count
+      } catch (Exception e) {
+        log.error("Could not contact master for new replication information", e);
+        document = ReplicationInformerLocalCache.tryLoadReplicationInformationFromLocalCache(serverHash);
+      }
+      if (document == null) {
+        lastReplicationUpdate = new Date(); // checked and not found
+        return;
+      }
+
+      ReplicationInformerLocalCache.trySavingReplicationInformationToLocalCache(serverHash, document);
+      updateReplicationInformationFromDocument(document);
+      lastReplicationUpdate = new Date();
+    }
   }
 
   private void updateReplicationInformationFromDocument(JsonDocument document) {
-    //TODO: implement me
+    ReplicationDocument replicationDocument = null;
+    try {
+      replicationDocument = JsonExtensions.getDefaultObjectMapper().readValue(document.getDataAsJson().toString(),
+        ReplicationDocument.class);
+    } catch (IOException e) {
+      log.error("Mapping Exception", e);
+      return;
+    }
+    List<ReplicationDestinationData> replicationDestinations = new ArrayList<>();
+    for (ReplicationDestination x : replicationDocument.getDestinations()) {
+      String url = StringUtils.isEmpty(x.getClientVisibleUrl()) ? x.getUrl() : x.getClientVisibleUrl();
+      if (StringUtils.isEmpty(url) || Boolean.TRUE.equals(x.getDisabled()) || Boolean.TRUE.equals(x.getIgnoredClient())) {
+        return;
+      }
+      if (StringUtils.isEmpty(x.getDatabase())) {
+        replicationDestinations.add(new ReplicationDestinationData(url));
+        return;
+      }
+      replicationDestinations.add(new ReplicationDestinationData(MultiDatabase.getRootDatabaseUrl(url) + "/databases/"
+        + x.getDatabase()));
+    }
+    for (ReplicationDestinationData replicationDestination : replicationDestinations) {
+      if (!failureCounts.containsKey(replicationDestination.getUrl())) {
+        failureCounts.put(replicationDestination.getUrl(), new FailureCounter());
+      }
+    }
   }
 
   public void resetFailureCount(String operationUrl) {
@@ -440,6 +499,11 @@ public class ReplicationInformer {
   }
 
   public class ReplicationDestinationData {
+
+    public ReplicationDestinationData(String url) {
+      super();
+      this.url = url;
+    }
 
     private String url;
 
