@@ -655,5 +655,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Adds an ordering by score for a specific field to the query
 		/// </summary>
 		TSelf OrderByScoreDescending();
+
+		/// <summary>
+		/// Adds explanations of scores calculated for queried documents to the query result
+		/// </summary>
+		TSelf ExplainScores();
 	}
 }

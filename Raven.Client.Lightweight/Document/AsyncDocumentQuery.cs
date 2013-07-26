@@ -736,7 +736,8 @@ namespace Raven.Client.Document
 											queryInputs = queryInputs,
 											disableEntitiesTracking = disableEntitiesTracking,
 											disableCaching = disableCaching,
-											lastEquality = lastEquality
+											lastEquality = lastEquality,
+											shouldExplainScores = shouldExplainScores
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
@@ -939,6 +940,12 @@ namespace Raven.Client.Document
 		{
 		    base.SetResultTransformer(resultsTransformer);
 	        return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ExplainScores()
+		{
+			shouldExplainScores = true;
+			return this;
 		}
 	}
 }

@@ -82,6 +82,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> ExplainScores()
+		{
+			shouldExplainScores = true;
+			return this;
+		}
+
 		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
 	        this.queryInputs = queryInputs;
@@ -145,7 +151,8 @@ namespace Raven.Client.Document
                 queryInputs = queryInputs,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
-                lastEquality = lastEquality
+                lastEquality = lastEquality,
+				shouldExplainScores = shouldExplainScores
 			};
 			return documentQuery;
 		}

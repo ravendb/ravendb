@@ -115,7 +115,8 @@ namespace Raven.Client.Document
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
 				disableEntitiesTracking = disableEntitiesTracking,
-				disableCaching = disableCaching
+				disableCaching = disableCaching,
+				shouldExplainScores = shouldExplainScores
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;

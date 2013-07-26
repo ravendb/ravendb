@@ -210,6 +210,11 @@ namespace Raven.Client.Document
 		protected bool disableCaching;
 
 		/// <summary>
+		/// Determine if scores of query results should be explained
+		/// </summary>
+		protected bool shouldExplainScores;
+
+		/// <summary>
 		///   Get the name of the index being queried
 		/// </summary>
 		public string IndexQueried
@@ -370,6 +375,7 @@ namespace Raven.Client.Document
 		    queryInputs = other.queryInputs;
 			disableEntitiesTracking = other.disableEntitiesTracking;
 			disableCaching = other.disableCaching;
+			shouldExplainScores = other.shouldExplainScores;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -1747,7 +1753,8 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
                     QueryInputs  = queryInputs,
-					DisableCaching = disableCaching
+					DisableCaching = disableCaching,
+					ExplainScores = shouldExplainScores
 				};
 			}
 
@@ -1768,7 +1775,8 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
                 QueryInputs = queryInputs,
-				DisableCaching = disableCaching
+				DisableCaching = disableCaching,
+				ExplainScores = shouldExplainScores
 			};
 
 			if (pageSize != null)

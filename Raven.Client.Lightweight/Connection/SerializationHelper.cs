@@ -132,7 +132,9 @@ namespace Raven.Client.Connection
 				IndexName = json.Value<string>("IndexName"),
 				SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
 				Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
-					.JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>()
+					.JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),
+				ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())
+				.JsonDeserialization<Dictionary<string, string>>()
 			};
 
 			if (json.ContainsKey("NonAuthoritativeInformation"))

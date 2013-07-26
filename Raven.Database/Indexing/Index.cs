@@ -943,6 +943,8 @@ namespace Raven.Database.Indexing
 
 								AddHighlighterResults(indexSearcher, scoreDoc, indexQueryResult);
 
+								AddQueryExplanation(luceneQuery, indexSearcher, scoreDoc, indexQueryResult);
+
 								returnedResults++;
 								yield return indexQueryResult;
 								if (returnedResults == indexQuery.PageSize)
@@ -1012,6 +1014,16 @@ namespace Raven.Database.Indexing
 
 					fieldQuery = highlighter.GetFieldQuery(luceneQuery);
 				}
+			}
+
+			private void AddQueryExplanation(Query luceneQuery, IndexSearcher indexSearcher, ScoreDoc scoreDoc, IndexQueryResult indexQueryResult)
+			{
+				if(indexQuery.ExplainScores == false)
+					return;
+
+				var explanation = indexSearcher.Explain(luceneQuery, scoreDoc.Doc);
+
+				indexQueryResult.ScoreExplanation = explanation.ToString();
 			}
 
 			private Query ApplyIndexTriggers(Query luceneQuery)

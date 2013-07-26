@@ -506,6 +506,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+		public static bool GetExplainScores(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["explainScores"], out result);
+			return result;
+		}
+
 		public static Etag GetEtagFromQueryString(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["etag"];

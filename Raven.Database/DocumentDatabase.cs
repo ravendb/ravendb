@@ -55,7 +55,7 @@ using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IDisposable
+    public class DocumentDatabase : IDisposable
     {
         private readonly InMemoryRavenConfiguration configuration;
 
@@ -269,7 +269,7 @@ namespace Raven.Database
 			Lucene.Net.Support.Cryptography.FIPSCompliant = configuration.UseFips;
 		}
 
-		private void SecondStageInitialization()
+        private void SecondStageInitialization()
         {
             DocumentCodecs.OfType<IRequiresDocumentDatabaseInitialization>()
                 .Concat(PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
@@ -1295,12 +1295,21 @@ namespace Raven.Database
 
 	            index = index != null ? index.Trim() : null;
             var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-                Func<IndexQueryResult, object> tryRecordHighlighting = queryResult =>
+	        var scoreExplanations = new Dictionary<string, string>();
+
+            Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
             {
-                    if (queryResult.Highligtings != null && queryResult.Key != null)
-						highlightings.Add(queryResult.Key, queryResult.Highligtings);
+				if (queryResult.Key != null)
+				{
+					if (queryResult.Highligtings != null)
+                    highlightings.Add(queryResult.Key, queryResult.Highligtings);
+					if(queryResult.ScoreExplanation != null)
+						scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
+				}
+                
                 return null;
             };
+
             var stale = false;
             Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
             Etag resultEtag = Etag.Empty;
@@ -1353,7 +1362,7 @@ namespace Raven.Database
                                                   let doc = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
                                                   where doc != null
                                                   let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
-                                                      let __ = tryRecordHighlighting(queryResult)
+                                                  let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
                                                   select doc, transformerErrors);
 
                     if (headerInfo != null)
@@ -1397,7 +1406,8 @@ namespace Raven.Database
                 IdsToInclude = idsToLoad,
                 LastQueryTime = SystemTime.UtcNow,
                 Highlightings = highlightings,
-                    DurationMilliseconds = duration.ElapsedMilliseconds
+				DurationMilliseconds = duration.ElapsedMilliseconds,
+				ScoreExplanations = scoreExplanations
             };
         }
             finally
@@ -2365,37 +2375,37 @@ namespace Raven.Database
                 return Etag.Empty; // this ensures that we will get the normal reaction of IndexNotFound later on.
             using (var md5 = MD5.Create())
             {
-            var list = new List<byte>();
-            list.AddRange(indexDefinition.GetIndexHash());
-            list.AddRange(Encoding.Unicode.GetBytes(indexName));
-            if (string.IsNullOrWhiteSpace(resultTransformer) == false)
-            {
-                var abstractTransformer = IndexDefinitionStorage.GetTransformer(resultTransformer);
-                if (abstractTransformer == null)
-                    throw new InvalidOperationException("The result transformer: " + resultTransformer + " was not found");
-                list.AddRange(abstractTransformer.GetHashCodeBytes());
-            }
-            list.AddRange(lastDocEtag.ToByteArray());
-            list.AddRange(BitConverter.GetBytes(touchCount));
-            list.AddRange(BitConverter.GetBytes(isStale));
-            if (lastReducedEtag != null)
-            {
-                list.AddRange(lastReducedEtag.ToByteArray());
-            }
+                var list = new List<byte>();
+                list.AddRange(indexDefinition.GetIndexHash());
+                list.AddRange(Encoding.Unicode.GetBytes(indexName));
+                if (string.IsNullOrWhiteSpace(resultTransformer) == false)
+                {
+                    var abstractTransformer = IndexDefinitionStorage.GetTransformer(resultTransformer);
+                    if (abstractTransformer == null)
+                        throw new InvalidOperationException("The result transformer: " + resultTransformer + " was not found");
+                    list.AddRange(abstractTransformer.GetHashCodeBytes());
+                }
+                list.AddRange(lastDocEtag.ToByteArray());
+                list.AddRange(BitConverter.GetBytes(touchCount));
+                list.AddRange(BitConverter.GetBytes(isStale));
+                if (lastReducedEtag != null)
+                {
+                    list.AddRange(lastReducedEtag.ToByteArray());
+                }
 
                 var indexEtag = Etag.Parse(md5.ComputeHash(list.ToArray()));
 
-            if (previousEtag != null && previousEtag != indexEtag)
-            {
-                // the index changed between the time when we got it and the time 
-                // we actually call this, we need to return something random so that
-                // the next time we won't get 304
+                if (previousEtag != null && previousEtag != indexEtag)
+                {
+                    // the index changed between the time when we got it and the time 
+                    // we actually call this, we need to return something random so that
+                    // the next time we won't get 304
 
-                return Etag.InvalidEtag;
+                    return Etag.InvalidEtag;
+                }
+
+                return indexEtag;
             }
-
-            return indexEtag;
-        }
         }
 
         public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
