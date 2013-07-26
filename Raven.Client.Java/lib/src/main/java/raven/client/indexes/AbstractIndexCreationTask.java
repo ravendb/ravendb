@@ -2,15 +2,21 @@ package raven.client.indexes;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.mysema.query.support.Expressions;
+import com.mysema.query.types.Expression;
 import com.mysema.query.types.Operation;
 import com.mysema.query.types.Path;
+import com.mysema.query.types.expr.SimpleExpression;
+import com.mysema.query.types.path.EntityPathBase;
+import com.mysema.query.types.path.ListPath;
 
 import raven.abstractions.closure.Action2;
 import raven.abstractions.data.Constants;
@@ -250,17 +256,36 @@ public class AbstractIndexCreationTask {
     return reduce != null;
   }
 
-  //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, TResult> func)
-  //TODO protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IEnumerable<TResult>> func)
-  //TODO protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, ICollection<TResult>> func)
-  //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, ISet<TResult>> func)
-  //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, HashSet<TResult>> func)
-  //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, SortedSet<TResult>> func)
+
+  protected <T> Expression<?> recurse(ListPath<T, ? extends EntityPathBase<T>> path) {
+    Path<?> originalRoot = path.getRoot();
+
+    // 1. replace lambda in path to some custom value
+    Stack<String> pathStack = new Stack<>();
+    Stack<Class<?>> classStack = new Stack<>();
+    Path<?> currentPath = path;
+    while (currentPath.getMetadata().getParent() != null) {
+      pathStack.add(currentPath.getMetadata().getName());
+      classStack.add(currentPath.getType());
+      currentPath = (Path< ? >) currentPath.getMetadata().getParent();
+    }
+    Path<?> innerRoot = Expressions.path(currentPath.getType(), "x");
+    Path< ? > newPath = innerRoot;
+    while (!pathStack.isEmpty()) {
+      String prop = pathStack.pop();
+      Class<?> elementClass = classStack.pop();
+      newPath = Expressions.path(elementClass, newPath, prop);
+    }
+
+    Expression<?> innerLambda = Expressions.operation(LinqExpressionMixin.class, LinqOps.LAMBDA, innerRoot, newPath);
+
+    Expression<?> recurseOp = Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.RECURSE, originalRoot, innerLambda);
+
+    return recurseOp;
+  }
+
   //TODO: public T LoadDocument<T>(string key)
   //TODO: public T[] LoadDocument<T>(IEnumerable<string> keys)
-  //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IList<TResult>> func)
-  //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, TResult[]> func)
-  //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, List<TResult>> func)
   //TODO: protected RavenJObject MetadataFor(object doc)
   //TODO: protected RavenJObject AsDocument(object doc)
 

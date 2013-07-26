@@ -15,19 +15,21 @@ import com.mysema.query.types.template.StringTemplate;
 
 import raven.linq.dsl.expressions.AnonymousExpression;
 import raven.linq.dsl.visitors.RootsExtractor;
+import raven.linq.dsl.visitors.RootsExtractorContext;
 import raven.samples.PersonResult;
 import raven.samples.QPerson;
 import raven.samples.QPersonResult;
 
+//TODO: test for inner lambdas
 public class RootsExtractorTest {
 
   @Test
   public void testTemplate() {
     StringExpression stringExpression = StringTemplate.create("c => c.firstname");
-    Set<String> context = new HashSet<>();
+    RootsExtractorContext context = new RootsExtractorContext();
     stringExpression.accept(RootsExtractor.DEFAULT, context);
 
-    assertTrue(context.isEmpty());
+    assertTrue(context.getRoots().isEmpty());
   }
 
   @Test
@@ -40,27 +42,27 @@ public class RootsExtractorTest {
     .with(pr.name, p.firstname)
     .with(pr.count, Expressions.constant(1));
 
-    Set<String> context = new HashSet<>();
+    RootsExtractorContext context = new RootsExtractorContext();
     anonymousExpression.accept(RootsExtractor.DEFAULT, context);
 
     Set<String> expected = new HashSet<>();
     expected.add("person");
 
-    assertEquals(expected, context);
+    assertEquals(expected, context.getRoots());
   }
 
   @Test
   public void testSimple() {
     QPerson person = QPerson.person;
 
-    Set<String> context = new HashSet<>();
+    RootsExtractorContext context = new RootsExtractorContext();
     BooleanExpression booleanExpression = person.firstname.eq("John");
     booleanExpression.accept(RootsExtractor.DEFAULT, context);
 
     Set<String> expected = new HashSet<>();
     expected.add("person");
 
-    assertEquals(expected, context);
+    assertEquals(expected, context.getRoots());
   }
 
   @Test
@@ -69,7 +71,7 @@ public class RootsExtractorTest {
     QPerson p2 = new QPerson("p2");
 
 
-    Set<String> context = new HashSet<>();
+    RootsExtractorContext context = new RootsExtractorContext();
     BooleanExpression booleanExpression = p1.firstname.eq(p2.lastname);
     booleanExpression.accept(RootsExtractor.DEFAULT, context);
 
@@ -77,7 +79,7 @@ public class RootsExtractorTest {
     expected.add("p1");
     expected.add("p2");
 
-    assertEquals(expected, context);
+    assertEquals(expected, context.getRoots());
 
   }
 

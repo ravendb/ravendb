@@ -30,6 +30,7 @@ public class LinqQueryTemplates extends Templates {
     add(LinqOps.Markers.SPATIAL_WKT_GENERATE2, "AbstractIndexCreationTask.SpatialGenerate({0}, {1})");
     add(LinqOps.Markers.SPATIAL_WKT_GENERATE3, "AbstractIndexCreationTask.SpatialGenerate({0}, {1}, {2})");
     add(LinqOps.Markers.SPATIAL_WKT_GENERATE4, "AbstractIndexCreationTask.SpatialGenerate({0}, {1}, {2}, {3})");
+    add(LinqOps.Markers.RECURSE, "this.Recurse({0}, {1})");
 
 
     add(LinqOps.Fluent.GROUP_BY, "{0}.GroupBy({1})");

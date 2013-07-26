@@ -2,6 +2,7 @@ package raven.linq.dsl;
 
 import java.util.List;
 
+import raven.linq.dsl.expressions.AnonymousExpression;
 import raven.linq.dsl.visitors.LocationAwareContext;
 import raven.linq.dsl.visitors.SelectManyTranslatorVisitor;
 
@@ -66,6 +67,17 @@ public final class LinqExpressionMixin<T> implements Cloneable {
 
     Expression< ? > expressionWithInferedLambda = lambdaInferer.inferLambdas(selector);
     SimpleExpression<List> operation = Expressions.operation(List.class, Ops.LIST, expressionWithInferedLambda, nestedRoot);
+
+    expression = OperationImpl.create(LinqExpressionMixin.class, LinqOps.Fluent.SELECT_MANY, expression, operation);
+    return self;
+  }
+
+  @SuppressWarnings("rawtypes")
+  public T selectMany(Expression<?> selector, AnonymousExpression<?> anonymousClass) {
+
+    Expression< ? > expressionWithInferedLambda = lambdaInferer.inferLambdas(selector);
+    Expression< ? > anonymousWithLambda = lambdaInferer.inferLambdas(anonymousClass);
+    SimpleExpression<List> operation = Expressions.operation(List.class, Ops.LIST, expressionWithInferedLambda, anonymousWithLambda);
 
     expression = OperationImpl.create(LinqExpressionMixin.class, LinqOps.Fluent.SELECT_MANY, expression, operation);
     return self;

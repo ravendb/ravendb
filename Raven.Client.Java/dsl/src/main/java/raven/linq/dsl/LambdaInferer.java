@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import raven.linq.dsl.visitors.RootsExtractor;
+import raven.linq.dsl.visitors.RootsExtractorContext;
 
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Expression;
@@ -20,9 +21,9 @@ public class LambdaInferer {
 
 
   private Set<String> extractRoots(Expression<?> expr) {
-    Set<String> context = new HashSet<>();
+    RootsExtractorContext context = new RootsExtractorContext();
     expr.accept(RootsExtractor.DEFAULT, context);
-    return context;
+    return context.getRoots();
   }
 
 

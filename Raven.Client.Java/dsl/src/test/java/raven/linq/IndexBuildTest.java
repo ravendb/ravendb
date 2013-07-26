@@ -93,6 +93,7 @@ public class IndexBuildTest {
     assertEquals("docs.Companies.SelectMany(company => company.Employees, (company, person) => new {Company = company, Person = person}).Select(transId_1 => transId_1.Person)", query1.toLinq());
   }
 
+
   @Test
   public void testSelectMany() {
     QCompany c = QCompany.company;
