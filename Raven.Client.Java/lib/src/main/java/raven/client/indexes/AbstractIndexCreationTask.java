@@ -1,7 +1,12 @@
 package raven.client.indexes;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Operation;
@@ -11,6 +16,7 @@ import raven.abstractions.closure.Action2;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.StringDistanceTypes;
+import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.FieldIndexing;
 import raven.abstractions.indexing.FieldStorage;
 import raven.abstractions.indexing.FieldTermVector;
@@ -20,6 +26,8 @@ import raven.abstractions.indexing.SpatialOptions;
 import raven.abstractions.indexing.SpatialOptions.SpatialSearchStrategy;
 import raven.abstractions.indexing.SpatialOptionsFactory;
 import raven.abstractions.indexing.SuggestionOptions;
+import raven.abstractions.replication.ReplicationDestination;
+import raven.abstractions.replication.ReplicationDocument;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ServerClient;
 import raven.client.document.DocumentConvention;
@@ -31,6 +39,8 @@ import raven.linq.dsl.LinqOps;
  * Base class for creating indexes
  */
 public class AbstractIndexCreationTask {
+
+  private Log logger = LogFactory.getLog(getClass());
 
   protected DocumentConvention conventions;
   protected IndexExpression map;
@@ -180,26 +190,35 @@ public class AbstractIndexCreationTask {
     if (doc == null) {
       return ;
     }
-    /* TODO:
-    var replicationDocument =
-      documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
-    if (replicationDocument == null)
-      return;
+    ReplicationDocument replicationDocument = null;
+    try {
+      replicationDocument = JsonExtensions.getDefaultObjectMapper().readValue(doc.getDataAsJson().toString(), ReplicationDocument.class);
+    } catch(IOException e) {
+      throw new RuntimeException("Unable to read replicationDocument", e);
+    }
 
-    foreach (var replicationDestination in replicationDocument.Destinations)
-    {
-      try
-      {
-        if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
+    if (replicationDocument == null) {
+      return ;
+    }
+
+    for (ReplicationDestination replicationDestination: replicationDocument.getDestinations()) {
+      try {
+        if (replicationDestination.getDisabled() || replicationDestination.getIgnoredClient()) {
           continue;
-        action(serverClient, GetReplicationUrl(replicationDestination));
-      }
-      catch (Exception e)
-      {
-        Logger.WarnException("Could not put index in replication server", e);
+        }
+        action.apply(serverClient, getReplicationUrl(replicationDestination));
+      } catch (Exception e) {
+        logger.warn("Could not put index in replication server", e);
       }
     }
-    */
+  }
+
+  private String getReplicationUrl(ReplicationDestination replicationDestination) {
+    String replicationUrl = replicationDestination.getUrl();
+    if (replicationDestination.getClientVisibleUrl() != null) {
+      replicationUrl = replicationDestination.getClientVisibleUrl();
+    }
+    return StringUtils.isBlank(replicationDestination.getDatabase()) ? replicationUrl : replicationUrl + "/databases/" + replicationDestination.getDatabase();
   }
 
   public IndexDefinition createIndexDefinition() {
@@ -244,8 +263,6 @@ public class AbstractIndexCreationTask {
   //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, List<TResult>> func)
   //TODO: protected RavenJObject MetadataFor(object doc)
   //TODO: protected RavenJObject AsDocument(object doc)
-  //TODO: private string GetReplicationUrl(ReplicationDestination replicationDestination)
-  //TODO: internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
 
   /**
    *  Register a field to be indexed

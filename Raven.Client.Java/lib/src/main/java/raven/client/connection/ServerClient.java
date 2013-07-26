@@ -62,6 +62,7 @@ import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.exceptions.HttpOperationException;
+import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.exceptions.TransformCompilationException;
 import raven.abstractions.extensions.JsonExtensions;
@@ -1056,22 +1057,25 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     newException.value = null;
 
     if (e.getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
-      /* TODO:
-      var error = e.TryReadErrorResponseObject(
-          new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
 
-          if (error == null)
-          {
-          return true;
-          }
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      if (e.getHttpResponse().getEntity() != null) {
+        try {
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        } catch (Exception ee) {
+          //ignore
+        }
+      }
+      RavenJObject error = RavenJObject.parse(baos.toString());
+      if (error == null) {
+        return true;
+      }
+      IndexCompilationException compilationException = new IndexCompilationException(error.value(String.class, "Message"));
+      compilationException.setIndexDefinitionProperty(error.value(String.class, "IndexDefinitionProperty"));
+      compilationException.setProblematicText(error.value(String.class, "ProblematicText"));
+      newException.value = compilationException;
+      return true;
 
-                          newEx = new IndexCompilationException(error.Message, e)
-          {
-          IndexDefinitionProperty = error.IndexDefinitionProperty,
-          ProblematicText = error.ProblematicText
-          };
-
-          return true;*/
     }
 
     return e.getStatusCode() != HttpStatus.SC_NOT_FOUND;
