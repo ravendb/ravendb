@@ -114,32 +114,43 @@ public class SelectManyTranslatorVisitor implements Visitor<Expression<?>, Locat
     if (!LinqOps.LAMBDA.equals(leftLambda.getOperator())) {
       throw new IllegalStateException("Expected LAMBDA operation. Got: " + leftLambda.getOperator().getId());
     }
+
+    AnonymousExpression<?> selectManySelector = null;
+    Expression<?> wrappedParamsList = null;
+
     Path< ? > variableName = (Path< ? >) leftLambda.getArg(0);
-    Path<?> aliasForNested = (Path< ? >) rightOp.getArg(1);
+    Path< ? > aliasForNested = null;
+    if (rightOp.getArg(1) instanceof Operation<?>) {
+      Operation<?> lambdaOp =  (Operation< ? >) rightOp.getArg(1);
+      aliasForNested = (Path< ? >) lambdaOp.getArg(0);
+      selectManySelector = (AnonymousExpression< ? >) lambdaOp.getArg(1);
+    } else {
+      aliasForNested = (Path< ? >) rightOp.getArg(1);
+      // Create expression body for second argument for SelectMany called selector function
+      selectManySelector = AnonymousExpression
+          .create(Object.class)
+          .with(StringUtils.capitalize(variableName.getMetadata().getName()), variableName)
+          .with(StringUtils.capitalize(aliasForNested.getMetadata().getName()), aliasForNested);
 
-    // 2. Create new lambda expression: leave root only from variable name (could be renamed due to replace algorithm), leave right node as it was)
-    SimpleExpression<?> newLeftLambda = Expressions.operation(LinqExpressionMixin.class, LinqOps.LAMBDA, variableName.getRoot(), leftLambda.getArg(1));
+   // Register paths for rename
+      String leftName = variableName.accept(ToStringVisitor.DEFAULT, LinqQueryTemplates.DEFAULT).replace('.', '_');
+      String rightName = aliasForNested.accept(ToStringVisitor.DEFAULT, LinqQueryTemplates.DEFAULT).replace('.', '_');
+      PathBuilder<?> transientEntityPath = new PathBuilder<>(AnonymousExpression.class, TRANSIENT_ID_PREFIX + context.innerExprNum);
+      context.innerExprNum++;
+      context.add(variableName, transientEntityPath.get(leftName));
+      context.add(aliasForNested, transientEntityPath.get(rightName));
+    }
 
-    // 3. Create expression body for second argument for SelectMany called selector function
-    AnonymousExpression<Object> selectManySelector = AnonymousExpression
-        .create(Object.class)
-        .with(StringUtils.capitalize(variableName.getMetadata().getName()), variableName)
-        .with(StringUtils.capitalize(aliasForNested.getMetadata().getName()), aliasForNested);
-
-    // 4. Create variables for selector function. Produces: (leftAlias, aliasForNested)
-    SimpleExpression<LinqExpressionMixin> wrappedParamsList = Expressions.operation(LinqExpressionMixin.class, Ops.WRAPPED,
+    // Create variables for selector function. Produces: (leftAlias, aliasForNested)
+    wrappedParamsList = Expressions.operation(LinqExpressionMixin.class, Ops.WRAPPED,
         Expressions.operation(LinqExpressionMixin.class, Ops.LIST, variableName.getRoot(), aliasForNested));
 
-    // 5. And combine left and right node into LAMBDA expression
-    SimpleExpression<LinqExpressionMixin> selectManySelectorLambda = Expressions.operation(LinqExpressionMixin.class, LinqOps.LAMBDA, wrappedParamsList, selectManySelector);
 
-    // 6. Register paths for rename
-    String leftName = variableName.accept(ToStringVisitor.DEFAULT, LinqQueryTemplates.DEFAULT).replace('.', '_');
-    String rightName = aliasForNested.accept(ToStringVisitor.DEFAULT, LinqQueryTemplates.DEFAULT).replace('.', '_');
-    PathBuilder<?> transientEntityPath = new PathBuilder<>(AnonymousExpression.class, TRANSIENT_ID_PREFIX + context.innerExprNum);
-    context.innerExprNum++;
-    context.add(variableName, transientEntityPath.get(leftName));
-    context.add(aliasForNested, transientEntityPath.get(rightName));
+    // Create new lambda expression: leave root only from variable name (could be renamed due to replace algorithm), leave right node as it was)
+    SimpleExpression<?> newLeftLambda = Expressions.operation(LinqExpressionMixin.class, LinqOps.LAMBDA, variableName.getRoot(), leftLambda.getArg(1));
+
+    // And combine left and right node into LAMBDA expression
+    SimpleExpression<LinqExpressionMixin> selectManySelectorLambda = Expressions.operation(LinqExpressionMixin.class, LinqOps.LAMBDA, wrappedParamsList, selectManySelector);
 
 
     return Expressions.operation(LinqExpressionMixin.class, LinqOps.Fluent.SELECT_MANY_TRANSLATED, visitedArgs[0], newLeftLambda, selectManySelectorLambda);

@@ -272,10 +272,9 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
     } catch (HttpOperationException e) {
       try {
-        HttpResponse httpWebResponse = e.getHttpResponse();
-        if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
           return null;
-        } else if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_CONFLICT) {
+        } else if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           try {
             if (e.getHttpResponse().getEntity() != null) {

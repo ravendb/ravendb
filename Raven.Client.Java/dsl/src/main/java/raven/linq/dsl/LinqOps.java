@@ -23,6 +23,7 @@ public class LinqOps {
     public static final OperatorImpl<LinqExpressionMixin> SPATIAL_WKT_GENERATE2 = new OperatorImpl<>("SPATIAL_WKT_GENERATE2");
     public static final OperatorImpl<LinqExpressionMixin> SPATIAL_WKT_GENERATE3 = new OperatorImpl<>("SPATIAL_WKT_GENERATE3");
     public static final OperatorImpl<LinqExpressionMixin> SPATIAL_WKT_GENERATE4 = new OperatorImpl<>("SPATIAL_WKT_GENERATE4");
+    public static final OperatorImpl<LinqExpressionMixin> RECURSE = new OperatorImpl<>("RECURSE");
   }
 
   @SuppressWarnings("rawtypes")
@@ -34,6 +35,7 @@ public class LinqOps {
     public static final Operator<LinqExpressionMixin> SELECT_MANY = new OperatorImpl<>("FLUENT_SELECT_MANY");
     public static final Operator<LinqExpressionMixin> SELECT_MANY_TRANSLATED = new OperatorImpl<>("FLUENT_SELECT_MANY_TRANSLATED");
     public static final Operator<LinqExpressionMixin> WHERE = new OperatorImpl<>("FLUENT_WHERE");
+
   }
 
 

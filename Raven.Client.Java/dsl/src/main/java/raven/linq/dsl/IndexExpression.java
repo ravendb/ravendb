@@ -13,6 +13,7 @@ import com.mysema.query.types.path.EntityPathBase;
 import com.mysema.query.types.path.ListPath;
 
 import raven.client.util.Inflector;
+import raven.linq.dsl.expressions.AnonymousExpression;
 
 /**
  * Represents Index definition
@@ -69,6 +70,10 @@ public class IndexExpression {
 
   public IndexExpression where(Predicate e) {
     return expressionMixin.where(e);
+  }
+
+  public IndexExpression selectMany(Expression<?> selector, AnonymousExpression<?> anonymousClass) {
+    return expressionMixin.selectMany(selector, anonymousClass);
   }
 
 

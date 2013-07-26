@@ -1,20 +1,22 @@
 package raven.client.indexes;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Map;
 
 import org.junit.Test;
 
-import com.mysema.query.annotations.QueryEntity;
-
-import raven.abstractions.json.linq.RavenJObject;
 import raven.linq.dsl.IndexExpression;
-
 import raven.linq.dsl.expressions.AnonymousExpression;
+import raven.samples.Post;
+import raven.samples.QComment;
+import raven.samples.QPost;
+
+import com.mysema.query.annotations.QueryEntity;
 
 public class AbstractIndexCreationTaskTest {
 
   private static class MyIndex extends AbstractIndexCreationTask {
-    QAbstractIndexCreationTaskTest_Bar b = new QAbstractIndexCreationTaskTest_Bar("b");
     QAbstractIndexCreationTaskTest_Foo f = new QAbstractIndexCreationTaskTest_Foo("f");
     QAbstractIndexCreationTaskTest_Result r = new QAbstractIndexCreationTaskTest_Result("r");
     public MyIndex() {
@@ -30,8 +32,8 @@ public class AbstractIndexCreationTaskTest {
 
   @Test
   public void testCreateIndex() {
-    System.out.println(new MyIndex().createIndexDefinition().getMap());
-    //TODO: finish me
+    assertEquals("docs.Foos.Select(f => new {Something = f.Something, _ = this.CreateField(\"DynamicKey\", f.LongItem, false, false), s = AbstractIndexCreationTask.SpatialGenerate(\"spatial\", (double?) f.LongItem, (double?) f.LongItem)})",
+    new MyIndex().createIndexDefinition().getMap());
   }
 
 
@@ -120,4 +122,19 @@ public class AbstractIndexCreationTaskTest {
       this.whatever = whatever;
     }
   }
+
+  private class RecurseIndex extends AbstractIndexCreationTask {
+    public RecurseIndex() {
+      QPost p = QPost.post;
+      QComment c = QComment.comment;
+      map = IndexExpression.from(Post.class).selectMany(recurse(p.comments), AnonymousExpression.create(Object.class).with("test", c.test));
+    }
+  }
+
+  @Test
+  public void testRecurse() {
+    assertEquals("docs.Posts.SelectMany(post => this.Recurse(post, x => x.Comments), (post, comment) => new {test = comment.Test})",
+        new RecurseIndex().createIndexDefinition().getMap());
+  }
+
 }
