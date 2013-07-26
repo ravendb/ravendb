@@ -19,11 +19,15 @@ public class LinqQueryTemplates extends Templates {
     add(LinqOps.SUM, "{0}.Sum({1})");
     add(LinqOps.LAMBDA, "{0} => {1}");
 
+    add(LinqOps.Markers.CREATE_FIELD2, "this.CreateField({0}, {1})");
+    add(LinqOps.Markers.CREATE_FIELD4, "this.CreateField({0}, {1}, {2}, {3})");
+    add(LinqOps.Markers.SPATIAL_GENERATE3, "AbstractIndexCreationTask.SpatialGenerate({0}, (double?) {1}, (double?) {2}");
+
     add(LinqOps.Fluent.GROUP_BY, "{0}.GroupBy({1})");
     add(LinqOps.Fluent.ORDER_BY, "{0}.OrderBy({1})");
     add(LinqOps.Fluent.ORDER_BY_DESC, "{0}.OrderByDescending({1})");
     add(LinqOps.Fluent.SELECT, "{0}.Select({1})");
-    add(LinqOps.Fluent.SELECT_MANY, "{0}.SelectMany({1})");
+    add(LinqOps.Fluent.SELECT_MANY_TRANSLATED, "{0}.SelectMany({1}, {2})");
     add(LinqOps.Fluent.WHERE, "{0}.Where({1})");
 
 

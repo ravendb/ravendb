@@ -37,6 +37,7 @@ import raven.abstractions.commands.ScriptedPatchCommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.DatabaseDocument;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.Facet;
@@ -62,6 +63,7 @@ import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.exceptions.HttpOperationException;
 import raven.abstractions.exceptions.ServerClientException;
+import raven.abstractions.exceptions.TransformCompilationException;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.indexing.IndexDefinition;
@@ -72,6 +74,8 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.connection.ReplicationInformer.FailoverStatusChangedEventArgs;
+import raven.client.connection.implementation.HttpJsonRequest;
+import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.connection.profiling.ProfilingInformation;
 import raven.client.document.DocumentConvention;
 import raven.client.exceptions.ConflictException;
@@ -82,7 +86,8 @@ import raven.client.utils.TimeSpan;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
-public class ServerClient implements IDatabaseCommands {
+//TODO: merge changes from 470f20a547526dfe5677
+public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   private String url;
   private final DocumentConvention convention;
@@ -273,7 +278,9 @@ public class ServerClient implements IDatabaseCommands {
         } else if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_CONFLICT) {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           try {
-            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            if (e.getHttpResponse().getEntity() != null) {
+              IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            }
 
             RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
             Etag etag = HttpExtensions.getEtagHeader(e.getHttpResponse());
@@ -424,7 +431,7 @@ public class ServerClient implements IDatabaseCommands {
     } catch (HttpOperationException e) {
       try {
         if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          throw throwConcurrencyException(e);
+          throw fetchConcurrencyException(e);
         }
         throw e;
       } finally {
@@ -465,7 +472,7 @@ public class ServerClient implements IDatabaseCommands {
         try {
           HttpOperationException httpException = (HttpOperationException) e;
           if (httpException.getStatusCode() == HttpStatus.SC_CONFLICT) {
-            throw throwConcurrencyException(httpException);
+            throw fetchConcurrencyException(httpException);
           }
         } finally {
           EntityUtils.consumeQuietly(((HttpOperationException)e).getHttpResponse().getEntity());
@@ -539,7 +546,9 @@ public class ServerClient implements IDatabaseCommands {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          if (e.getHttpResponse().getEntity() != null) {
+            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          }
         } catch (IOException e1) {
           throw new ServerClientException(e1);
         }
@@ -570,7 +579,9 @@ public class ServerClient implements IDatabaseCommands {
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try {
-        IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        if (e.getHttpResponse().getEntity() != null) {
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        }
       } catch (IOException e1) {
         throw new ServerClientException(e1);
       } finally {
@@ -655,7 +666,9 @@ public class ServerClient implements IDatabaseCommands {
         if (e.getStatusCode() == HttpStatus.SC_CONFLICT) {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           try {
-            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            if (e.getHttpResponse().getEntity() != null) {
+              IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+            }
           } catch (IOException e1) {
             throw new ServerClientException(e1);
           } finally {
@@ -710,22 +723,6 @@ public class ServerClient implements IDatabaseCommands {
     return result;
   }
 
-  public Map<String, RavenJToken> getDatabases(int pageSize) {
-    return getDatabases(pageSize, 0);
-  }
-
-  public Map<String, RavenJToken> getDatabases(int pageSize, int start) {
-    String url = RavenUrlExtensions.databases("", pageSize, start);
-    url = RavenUrlExtensions.noCache(url);
-    RavenJArray json = (RavenJArray) executeGetRequest(url);
-
-    Map<String, RavenJToken> result = new HashMap<>();
-    for (RavenJToken token: json) {
-      result.put(token.value(RavenJObject.class, "@metadata").value(String.class, "@id").replace("Raven/Databases/", ""), token);
-    }
-
-    return result;
-  }
 
   protected void directDeleteAttachment(String key, Etag etag, String operationUrl) {
     RavenJObject metadata = new RavenJObject();
@@ -956,7 +953,7 @@ public class ServerClient implements IDatabaseCommands {
     } catch (HttpOperationException e) {
       try {
         if (HttpStatus.SC_CONFLICT == e.getStatusCode()) {
-          throw throwConcurrencyException(e);
+          throw fetchConcurrencyException(e);
         } else {
           throw e;
         }
@@ -969,18 +966,20 @@ public class ServerClient implements IDatabaseCommands {
 
   }
 
-  protected class HandleReplicationStatusChangesCallback implements Action3<Map<String, String>, String, String> {
+  public class HandleReplicationStatusChangesCallback implements Action3<Map<String, String>, String, String> {
     @Override
     public void apply(Map<String, String> headers, String primaryUrl, String currentUrl) {
       handleReplicationStatusChanges(headers, primaryUrl, currentUrl);
     }
   }
 
-  private ConcurrencyException throwConcurrencyException(HttpOperationException e) {
+  private ConcurrencyException fetchConcurrencyException(HttpOperationException e) {
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try {
-      IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+      if (e.getHttpResponse().getEntity() != null) {
+        IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+      }
     } catch (IOException e1) {
       throw new ServerClientException(e1);
     } finally {
@@ -1035,34 +1034,48 @@ public class ServerClient implements IDatabaseCommands {
       return responseJson.value(String.class, "Transformer");
     } catch (HttpOperationException e) {
       try {
-        throw new ServerClientException("unable to put transformer", e);
-        /*TODO: dead code - reported - RavenDB-1216
-      var httpWebResponse = e.Response as HttpWebResponse;
-      if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-        throw;
 
-      if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
-      {
-        var error = e.TryReadErrorResponseObject(
-            new { Error = "", Message = "" });
-
-        if (error == null)
-        {
-          throw;
+        Holder<RuntimeException> newException = new Holder<>();
+        if (shouldRethrowIndexException(e, newException)) {
+          if (newException.value != null) {
+            throw new TransformCompilationException(newException.value.getMessage(), newException.value);
+          }
         }
+        throw e;
 
-        var compilationException = new TransformCompilationException(error.Message);
-
-        throw compilationException;
-      }
-
-      throw;*/
       } finally {
         EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
-    } catch (IOException e) {
+
+    } catch (Exception e) {
       throw new ServerClientException(e);
     }
+  }
+
+  private boolean shouldRethrowIndexException(HttpOperationException e, Holder<RuntimeException> newException) {
+    newException.value = null;
+
+    if (e.getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+      /* TODO:
+      var error = e.TryReadErrorResponseObject(
+          new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+          if (error == null)
+          {
+          return true;
+          }
+
+                          newEx = new IndexCompilationException(error.Message, e)
+          {
+          IndexDefinitionProperty = error.IndexDefinitionProperty,
+          ProblematicText = error.ProblematicText
+          };
+
+          return true;*/
+    }
+
+    return e.getStatusCode() != HttpStatus.SC_NOT_FOUND;
+
   }
 
   public String directPutIndex(String name, String operationUrl, boolean overwrite, IndexDefinition definition) {
@@ -1081,34 +1094,14 @@ public class ServerClient implements IDatabaseCommands {
       }
     } catch (HttpOperationException e) {
       try {
-        if (e.getStatusCode() != HttpStatus.SC_NOT_FOUND) {
-          throw new ServerClientException(e);
+        Holder<RuntimeException> newException = new Holder<>();
+        if (shouldRethrowIndexException(e, newException)) {
+          if (newException.value != null) {
+            throw newException.value;
+          }
+          throw e;
         }
-        /*
-         * TODO dead code - reported - RavenDB-1216
-         *   var httpWebResponse = e.Response as HttpWebResponse;
-              if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-                  throw;
 
-              if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
-              {
-                  var error = e.TryReadErrorResponseObject(
-                      new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
-
-                  if (error == null)
-                  {
-                      throw;
-                  }
-
-                  var compilationException = new IndexCompilationException(error.Message)
-                  {
-                      IndexDefinitionProperty = error.IndexDefinitionProperty,
-                      ProblematicText = error.ProblematicText
-                  };
-
-                  throw compilationException;
-              }
-         */
       } finally {
         EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
       }
@@ -1127,33 +1120,17 @@ public class ServerClient implements IDatabaseCommands {
         RavenJToken responseJson = request.readResponseJson();
         return responseJson.value(String.class, "Index");
       } catch (HttpOperationException e) {
-        throw new ServerClientException(e);
-        /*TODO: dead code - reported - RavenDB-1216
-        var httpWebResponse = e.Response as HttpWebResponse;
-        if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-            throw;
-
-        if (httpWebResponse.StatusCode == HttpStatusCode.BadRequest)
-        {
-            var error = e.TryReadErrorResponseObject(
-                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
-
-            if (error == null)
-            {
-                throw;
+        try {
+          Holder<RuntimeException> newException = new Holder<>();
+          if (shouldRethrowIndexException(e, newException)) {
+            if (newException != null) {
+              throw newException.value;
             }
-
-            var compilationException = new IndexCompilationException(error.Message)
-            {
-                IndexDefinitionProperty = error.IndexDefinitionProperty,
-                ProblematicText = error.ProblematicText
-            };
-
-            throw compilationException;
+          }
+          throw new ServerClientException(e);
+        } finally {
+          EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
-
-        throw;
-    }*/
       }
     } catch (Exception e) {
       throw new ServerClientException(e);
@@ -1300,7 +1277,9 @@ public class ServerClient implements IDatabaseCommands {
       try {
         if (e.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          if (e.getHttpResponse().getEntity() != null) {
+            IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+          }
           String text = new String(baos.toByteArray());
           if (text.contains("maxQueryString")) {
             throw new IllegalStateException(text, e);
@@ -1546,7 +1525,7 @@ public class ServerClient implements IDatabaseCommands {
           if (e.getStatusCode() != HttpStatus.SC_CONFLICT) {
             throw e;
           }
-          throw throwConcurrencyException(e);
+          throw fetchConcurrencyException(e);
         } finally {
           EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
@@ -2374,6 +2353,36 @@ public class ServerClient implements IDatabaseCommands {
 
   public void setExpect100Continue(boolean expect100Continue) {
     this.expect100Continue = expect100Continue;
+  }
+
+  @Override
+  public IAdminDatabaseCommands getAdmin() {
+    return (IAdminDatabaseCommands) forSystemDatabase();
+  }
+
+  @Override
+  public void createDatabase(DatabaseDocument databaseDocument) {
+    if (!databaseDocument.getSettings().containsKey("Raven/DataDir")) {
+      throw new IllegalStateException("The Raven/DataDir setting is mandatory");
+    }
+
+    String dbname = databaseDocument.getId().replaceAll("Raven/Databases/", "");
+    MultiDatabase.assertValidDatabaseName(dbname);
+
+    RavenJObject doc = RavenJObject.fromObject(databaseDocument);
+    doc.remove("Id");
+
+    try {
+      HttpJsonRequest req = createRequest(HttpMethods.PUT, "/admin/databases/" + UrlUtils.escapeDataString(dbname));
+      req.write(doc.toString());
+      req.executeRequest();
+    } catch (HttpOperationException e) {
+      EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+      throw new ServerClientException(e);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+
   }
 
 }

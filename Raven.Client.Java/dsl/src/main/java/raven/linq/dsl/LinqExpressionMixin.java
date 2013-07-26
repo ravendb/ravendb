@@ -1,12 +1,20 @@
 package raven.linq.dsl;
 
+import java.util.List;
+
+import raven.linq.dsl.visitors.LocationAwareContext;
+import raven.linq.dsl.visitors.SelectManyTranslatorVisitor;
+
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.OperationImpl;
 import com.mysema.query.types.Operator;
+import com.mysema.query.types.Ops;
 import com.mysema.query.types.Order;
 import com.mysema.query.types.OrderSpecifier;
+import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
+import com.mysema.query.types.expr.SimpleExpression;
 import com.mysema.query.types.path.EntityPathBase;
 import com.mysema.query.types.path.ListPath;
 
@@ -50,13 +58,23 @@ public final class LinqExpressionMixin<T> implements Cloneable {
     return self;
   }
 
-  public <S> T selectMany(ListPath<S, ? extends EntityPathBase<S>> selector) {
-    expression = OperationImpl.create(LinqExpressionMixin.class, LinqOps.Fluent.SELECT_MANY, expression, lambdaInferer.inferLambdas(selector));
+  @SuppressWarnings("rawtypes")
+  public <S> T selectMany(ListPath<S, ? extends EntityPathBase<S>> selector, Path<?> nestedRoot) {
+    if (nestedRoot.getMetadata().getParent() != null) {
+      throw new RuntimeException("Root expected. Got: " + nestedRoot);
+    }
+
+    Expression< ? > expressionWithInferedLambda = lambdaInferer.inferLambdas(selector);
+    SimpleExpression<List> operation = Expressions.operation(List.class, Ops.LIST, expressionWithInferedLambda, nestedRoot);
+
+    expression = OperationImpl.create(LinqExpressionMixin.class, LinqOps.Fluent.SELECT_MANY, expression, operation);
     return self;
   }
 
   public String toLinq() {
-    return new LinqSerializer(LinqQueryTemplates.DEFAULT).toLinq(this);
+    LocationAwareContext context = new LocationAwareContext();
+    Expression< ? > translatedExpression = this.getExpression().accept(new SelectManyTranslatorVisitor(), context);
+    return new LinqSerializer(LinqQueryTemplates.DEFAULT).toLinq(translatedExpression);
   }
 
   @Override

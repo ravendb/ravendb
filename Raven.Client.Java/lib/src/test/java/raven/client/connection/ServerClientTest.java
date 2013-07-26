@@ -12,19 +12,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
-import org.junit.Before;
 import org.junit.Test;
 
-import raven.abstractions.closure.Functions;
 import raven.abstractions.commands.ICommandData;
 import raven.abstractions.commands.PatchCommandData;
 import raven.abstractions.commands.PutCommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.DatabaseDocument;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
@@ -44,27 +42,21 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
-import raven.client.document.DocumentConvention;
-import raven.client.listeners.IDocumentConflictListener;
 import raven.samples.Developer;
 
 public class ServerClientTest extends RavenDBAwareTests {
 
-  private DocumentConvention convention;
-  private HttpJsonRequestFactory factory;
-  private ReplicationInformer replicationInformer;
-  private ServerClient serverClient;
-
-  @Before
-  public void init() {
-    System.setProperty("java.net.preferIPv4Stack" , "true");
-    convention = new DocumentConvention();
-    factory = new HttpJsonRequestFactory(10);
-    replicationInformer = new ReplicationInformer();
-
-    serverClient = new ServerClient(DEFAULT_SERVER_URL, convention, null,
-      new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
-      UUID.randomUUID(), new IDocumentConflictListener[0]);
+  @Test
+  public void testCreateDb() throws Exception {
+    try {
+      IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
+      DatabaseDocument databaseDocument = new DatabaseDocument();
+      databaseDocument.setId("testingDb");
+      databaseDocument.getSettings().put("Raven/DataDir", "~\\Databases\\testingDb");
+      dbCommands.getAdmin().createDatabase(databaseDocument);
+    } finally {
+      deleteDb("testingDb");
+    }
   }
 
   @Test
@@ -200,7 +192,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("testVal1", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
       result = dbCommands.put("testVal2", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
       result = dbCommands.put("testVal3", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
       result = dbCommands.put("testVal4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
@@ -243,7 +235,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
       result = dbCommands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
       result = dbCommands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
       result = dbCommands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
@@ -292,7 +284,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
 
       assertNotNull(result);
 
@@ -315,7 +307,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
       result = dbCommands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
       result = dbCommands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
       result = dbCommands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());

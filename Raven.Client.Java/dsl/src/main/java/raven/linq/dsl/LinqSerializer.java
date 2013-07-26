@@ -23,8 +23,8 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
     super(templates);
   }
 
-  public String toLinq(LinqExpressionMixin<?> query) {
-    handle(query.getExpression());
+  public String toLinq(Expression<?> expression) {
+    handle(expression);
     return toString();
   }
 
@@ -66,8 +66,7 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
 
   @Override
   public Void visit(SubQueryExpression< ? > expr, Void context) {
-    // TODO Auto-generated method stub
-    return null;
+    throw new IllegalStateException("We don't support subqueries.");
   }
 
   @Override
@@ -75,6 +74,8 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
     if (constant instanceof String) {
       append("\"").append(constant.toString()).append("\"");
     } else if (constant instanceof Number) {
+      append(constant.toString());
+    } else if (constant instanceof Boolean) {
       append(constant.toString());
     } else {
       super.visitConstant(constant);

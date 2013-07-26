@@ -1,4 +1,4 @@
-package raven.client.connection;
+package raven.client.connection.implementation;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -53,6 +53,9 @@ import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.connection.CachedRequest;
+import raven.client.connection.CreateHttpJsonRequestParams;
+import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
 import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.connection.profiling.RequestStatus;
@@ -302,7 +305,7 @@ public class HttpJsonRequest {
     }
   }
 
-  protected double calculateDuration() {
+  public double calculateDuration() {
     return sp.getTime();
   }
 
@@ -464,7 +467,10 @@ public class HttpJsonRequest {
 
       try {
         HttpEntity httpEntity = httpWebException.getHttpResponse().getEntity();
-        String readToEnd = IOUtils.toString(httpEntity.getContent());
+        String readToEnd = "";
+        if (httpEntity != null) {
+          readToEnd = IOUtils.toString(httpEntity.getContent());
+        }
 
 
         RequestResultArgs requestResultArgs = new RequestResultArgs();
@@ -577,7 +583,7 @@ public class HttpJsonRequest {
     }
     if (httpResponse.getStatusLine().getStatusCode() >= 300) {
       try {
-        String rawResponse = IOUtils.toString(httpResponse.getEntity().getContent());
+        String rawResponse = (httpResponse.getEntity() != null) ? IOUtils.toString(httpResponse.getEntity().getContent()) :"";
         throw new HttpOperationException("Server error response:" + httpResponse.getStatusLine().getStatusCode() + rawResponse, null, webRequest, httpResponse);
       } catch (IOException e) {
         throw new RuntimeException("Unable to read response", e);

@@ -1,7 +1,13 @@
 package raven.linq.dsl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.OrderSpecifier;
+import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
 import com.mysema.query.types.path.EntityPathBase;
 import com.mysema.query.types.path.ListPath;
@@ -16,6 +22,15 @@ public class IndexExpression {
     return new IndexExpression(LinqExpressionMixin.DOCS_ROOT_NAME + "." + Inflector.pluralize(objectClass.getSimpleName()));
   }
 
+  public static IndexExpression whereEntityIs(String... subClasses) {
+    List<String> plurar = new ArrayList<>();
+    for (String subClass: subClasses) {
+      plurar.add("\"" + Inflector.pluralize(subClass) + "\"");
+    }
+    String subClassesJoined = StringUtils.join(plurar, ", ");
+
+    return new IndexExpression(LinqExpressionMixin.DOCS_ROOT_NAME + ".WhereEntityIs(new string[] { " + subClassesJoined + " })");
+  }
 
   public static IndexExpression from(String customRoot) {
     return new IndexExpression(customRoot);
@@ -30,6 +45,8 @@ public class IndexExpression {
     return expressionMixin.groupBy(keySelector);
   }
 
+
+
   public IndexExpression orderBy(OrderSpecifier< ? >... orderSpecifiers) {
     return expressionMixin.orderBy(orderSpecifiers);
   }
@@ -38,8 +55,8 @@ public class IndexExpression {
     return expressionMixin.select(projection);
   }
 
-  public <S> IndexExpression selectMany(ListPath<S, ? extends EntityPathBase<S>> selector) {
-    return expressionMixin.selectMany(selector);
+  public <S> IndexExpression selectMany(ListPath<S, ? extends EntityPathBase<S>> selector, Path<?> nestedRoot) {
+    return expressionMixin.selectMany(selector, nestedRoot);
   }
 
   public String toLinq() {

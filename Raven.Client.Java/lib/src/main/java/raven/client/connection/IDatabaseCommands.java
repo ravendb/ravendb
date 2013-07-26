@@ -44,6 +44,12 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
   public Map<String, String> getOperationsHeaders();
 
   /**
+   * Admin operations, like create/delete database
+   * @return
+   */
+  public IAdminDatabaseCommands getAdmin();
+
+  /**
    * Sets the operations headers
    * @param operationsHeaders
    */

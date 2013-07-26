@@ -15,7 +15,7 @@ public class MultiDatabase {
   private static final String VALID_DB_NAME_CHARS = "[A-Za-z0-9_\\-\\.]+";
 
   public static RavenJObject createDatabaseDocument(String name) {
-    assertValidName(name);
+    assertValidDatabaseName(name);
     DatabaseDocument document = new DatabaseDocument();
     document.getSettings().put("Raven/DataDir", "~\\Databases\\" + name);
     RavenJObject doc = RavenJObject.fromObject(new DatabaseDocument());
@@ -23,7 +23,7 @@ public class MultiDatabase {
     return doc;
   }
 
-  private static void assertValidName(String name) {
+  public static void assertValidDatabaseName(String name) {
     if (name == null) {
       throw new IllegalArgumentException("name");
     }

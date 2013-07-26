@@ -3,6 +3,7 @@ package raven.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -12,18 +13,30 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import raven.abstractions.closure.Functions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.connection.IDatabaseCommands;
+import raven.client.connection.ReplicationInformer;
+import raven.client.connection.ServerClient;
+import raven.client.connection.implementation.HttpJsonRequestFactory;
+import raven.client.document.DocumentConvention;
+import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 
 public abstract class RavenDBAwareTests {
 
   @Rule
   public TestName testName = new TestName();
+
+  protected DocumentConvention convention;
+  protected HttpJsonRequestFactory factory;
+  protected ReplicationInformer replicationInformer;
+  protected ServerClient serverClient;
 
   public final static String DEFAULT_SERVER_URL = "http://localhost:8123";
 
@@ -32,6 +45,19 @@ public abstract class RavenDBAwareTests {
   public String getServerUrl() {
     return DEFAULT_SERVER_URL;
   }
+
+  @Before
+  public void init() {
+    System.setProperty("java.net.preferIPv4Stack" , "true");
+    convention = new DocumentConvention();
+    factory = new HttpJsonRequestFactory(10);
+    replicationInformer = new ReplicationInformer();
+
+    serverClient = new ServerClient(DEFAULT_SERVER_URL, convention, null,
+        new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
+        UUID.randomUUID(), new IDocumentConflictListener[0]);
+  }
+
 
   /**
    * Creates new db with name taken from test name
@@ -56,7 +82,7 @@ public abstract class RavenDBAwareTests {
     }
   }
 
-  private String getCreateDbDocument(String dbName) {
+  protected String getCreateDbDocument(String dbName) {
     RavenJObject doc = new RavenJObject();
     RavenJObject settings = new RavenJObject();
     doc.add("Settings", settings);
