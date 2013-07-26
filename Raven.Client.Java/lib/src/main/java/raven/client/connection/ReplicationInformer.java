@@ -160,38 +160,39 @@ public class ReplicationInformer {
         int replicationIndex = currentReadStripingBase % (localReplicationDestinations.size() + 1);
         // if replicationIndex == destinations count, then we want to use the master
         // if replicationIndex < 0, then we were explicitly instructed to use the master
-        if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0)
-        {
+        if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0) {
             // if it is failing, ignore that, and move to the master or any of the replicas
-            if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false))
-            {
+            if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false)) {
                 if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, resultHolder, timeoutThrown))
                     return resultHolder.value;
             }
         }
     }
 
-    if (shouldExecuteUsing(primaryUrl, currentRequest, method, true))
-    {
-        if (tryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.size() > 0, resultHolder, timeoutThrown))
+    if (shouldExecuteUsing(primaryUrl, currentRequest, method, true)) {
+        if (tryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
             return resultHolder.value;
+        }
         if (!timeoutThrown && isFirstFailure(primaryUrl) &&
-            tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown))
+            tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
             return resultHolder.value;
+        }
         incrementFailureCount(primaryUrl);
     }
 
-    for (int i = 0; i < localReplicationDestinations.size(); i++)
-    {
+    for (int i = 0; i < localReplicationDestinations.size(); i++) {
         String replicationDestination = localReplicationDestinations.get(i);
-        if (shouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
+        if (!shouldExecuteUsing(replicationDestination, currentRequest, method, false)) {
             continue;
-        if (tryOperation(operation, replicationDestination, !timeoutThrown, resultHolder, timeoutThrown))
+        }
+        if (tryOperation(operation, replicationDestination, !timeoutThrown, resultHolder, timeoutThrown)) {
             return resultHolder.value;
+        }
         if (!timeoutThrown && isFirstFailure(replicationDestination) &&
             tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, resultHolder,
-                         timeoutThrown))
+                         timeoutThrown)) {
             return resultHolder.value;
+        }
         incrementFailureCount(replicationDestination);
     }
     // this should not be thrown, but since I know the value of should...
