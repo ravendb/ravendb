@@ -51,7 +51,7 @@ public abstract class RavenDBAwareTests {
     System.setProperty("java.net.preferIPv4Stack" , "true");
     convention = new DocumentConvention();
     factory = new HttpJsonRequestFactory(10);
-    replicationInformer = new ReplicationInformer();
+    replicationInformer = new ReplicationInformer(convention);
 
     serverClient = new ServerClient(DEFAULT_SERVER_URL, convention, null,
         new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,

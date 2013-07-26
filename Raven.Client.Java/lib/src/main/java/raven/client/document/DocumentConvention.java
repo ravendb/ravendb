@@ -15,7 +15,7 @@ public class DocumentConvention {
 
   private AtomicInteger requestCount = new AtomicInteger(0);
 
-  private EnumSet<FailoverBehavior> failoverBehavior;
+  private EnumSet<FailoverBehavior> failoverBehavior = EnumSet.of(FailoverBehavior.FAIL_IMMEDIATELY);
 
   private Function1<String, Boolean> shouldCacheRequest;
 

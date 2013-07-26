@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import com.mysema.query.annotations.QueryEntity;
 
+import raven.abstractions.json.linq.RavenJObject;
 import raven.linq.dsl.IndexExpression;
 
 import raven.linq.dsl.expressions.AnonymousExpression;

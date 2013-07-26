@@ -58,9 +58,6 @@ public class ReplicationInformer {
     this.conventions = conventions;
   }
 
-  public ReplicationInformer() {
-  }
-
   public List<ReplicationDestinationData> getReplicationDestinations() {
     return this.replicationDestinations;
   }
@@ -152,7 +149,7 @@ public class ReplicationInformer {
   public <T> T executeWithReplication(HttpMethods method, String primaryUrl, int currentRequest, int currentReadStripingBase,
     Function1<String, T> operation) throws ServerClientException {
 
-    T result = null;
+    Holder<T> resultHolder = new Holder<>();
     boolean timeoutThrown = false;
 
     List<String> localReplicationDestinations = getReplicationDestinationsUrls(); // thread safe copy
@@ -163,38 +160,39 @@ public class ReplicationInformer {
         int replicationIndex = currentReadStripingBase % (localReplicationDestinations.size() + 1);
         // if replicationIndex == destinations count, then we want to use the master
         // if replicationIndex < 0, then we were explicitly instructed to use the master
-        if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0)
-        {
+        if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0) {
             // if it is failing, ignore that, and move to the master or any of the replicas
-            if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false))
-            {
-                if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, new Holder(result), timeoutThrown))
-                    return result;
+            if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false)) {
+                if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, resultHolder, timeoutThrown))
+                    return resultHolder.value;
             }
         }
     }
 
-    if (shouldExecuteUsing(primaryUrl, currentRequest, method, true))
-    {
-        if (tryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.size() > 0, new Holder(result), timeoutThrown))
-            return result;
+    if (shouldExecuteUsing(primaryUrl, currentRequest, method, true)) {
+        if (tryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
+            return resultHolder.value;
+        }
         if (!timeoutThrown && isFirstFailure(primaryUrl) &&
-            tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, new Holder(result), timeoutThrown))
-            return result;
+            tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
+            return resultHolder.value;
+        }
         incrementFailureCount(primaryUrl);
     }
 
-    for (int i = 0; i < localReplicationDestinations.size(); i++)
-    {
+    for (int i = 0; i < localReplicationDestinations.size(); i++) {
         String replicationDestination = localReplicationDestinations.get(i);
-        if (shouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
+        if (!shouldExecuteUsing(replicationDestination, currentRequest, method, false)) {
             continue;
-        if (tryOperation(operation, replicationDestination, !timeoutThrown, new Holder(result), timeoutThrown))
-            return result;
+        }
+        if (tryOperation(operation, replicationDestination, !timeoutThrown, resultHolder, timeoutThrown)) {
+            return resultHolder.value;
+        }
         if (!timeoutThrown && isFirstFailure(replicationDestination) &&
-            tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, new Holder(result),
-                         timeoutThrown))
-            return result;
+            tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, resultHolder,
+                         timeoutThrown)) {
+            return resultHolder.value;
+        }
         incrementFailureCount(replicationDestination);
     }
     // this should not be thrown, but since I know the value of should...
@@ -408,7 +406,7 @@ public class ReplicationInformer {
 
   public class FailureCounter {
 
-    private AtomicLong value;
+    private AtomicLong value = new AtomicLong();
     private Date lastCheck;
     private boolean forceCheck;
 

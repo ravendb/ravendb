@@ -62,6 +62,7 @@ import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.exceptions.HttpOperationException;
+import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.exceptions.ServerClientException;
 import raven.abstractions.exceptions.TransformCompilationException;
 import raven.abstractions.extensions.JsonExtensions;
@@ -86,7 +87,6 @@ import raven.client.utils.TimeSpan;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
-//TODO: merge changes from 470f20a547526dfe5677
 public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   private String url;
@@ -1056,22 +1056,25 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     newException.value = null;
 
     if (e.getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
-      /* TODO:
-      var error = e.TryReadErrorResponseObject(
-          new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
 
-          if (error == null)
-          {
-          return true;
-          }
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      if (e.getHttpResponse().getEntity() != null) {
+        try {
+          IOUtils.copy(e.getHttpResponse().getEntity().getContent(), baos);
+        } catch (Exception ee) {
+          //ignore
+        }
+      }
+      RavenJObject error = RavenJObject.parse(baos.toString());
+      if (error == null) {
+        return true;
+      }
+      IndexCompilationException compilationException = new IndexCompilationException(error.value(String.class, "Message"));
+      compilationException.setIndexDefinitionProperty(error.value(String.class, "IndexDefinitionProperty"));
+      compilationException.setProblematicText(error.value(String.class, "ProblematicText"));
+      newException.value = compilationException;
+      return true;
 
-                          newEx = new IndexCompilationException(error.Message, e)
-          {
-          IndexDefinitionProperty = error.IndexDefinitionProperty,
-          ProblematicText = error.ProblematicText
-          };
-
-          return true;*/
     }
 
     return e.getStatusCode() != HttpStatus.SC_NOT_FOUND;
@@ -1855,14 +1858,19 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
   }
 
   protected SuggestionQueryResult directSuggest(String index, SuggestionQuery suggestionQuery, String operationUrl) {
-    String requestUri = operationUrl + String.format("/suggest/%s?term=%s&field=%s&max=%d&distance=%s&accuracy=%.4f&popularity=%s",
+    String requestUri = operationUrl + String.format("/suggest/%s?term=%s&field=%s&max=%d&popularity=%s",
         UrlUtils.escapeDataString(index),
         UrlUtils.escapeDataString(suggestionQuery.getTerm()),
         UrlUtils.escapeDataString(suggestionQuery.getField()),
         suggestionQuery.getMaxSuggestions(),
-        UrlUtils.escapeDataString(SharpEnum.value(suggestionQuery.getDistance())),
-        suggestionQuery.getAccuracy(),
         suggestionQuery.isPopularity());
+
+    if (suggestionQuery.getDistance() != null) {
+      requestUri += "&distance=" + UrlUtils.escapeDataString(SharpEnum.value(suggestionQuery.getDistance()));
+    }
+    if (suggestionQuery.getAccuracy() != null) {
+      requestUri += "&accuracy=" + String.format("%.4f", suggestionQuery.getAccuracy());
+    }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
         new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
