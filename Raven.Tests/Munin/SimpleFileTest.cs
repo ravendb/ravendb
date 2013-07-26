@@ -8,6 +8,9 @@ using System.IO;
 
 namespace Raven.Munin.Tests
 {
+	using Raven.Abstractions.Util.Encryptors;
+	using Raven.Tests.Helpers;
+
 	public class SimpleFileTest : IDisposable
 	{
 		protected Table Table;
@@ -17,6 +20,8 @@ namespace Raven.Munin.Tests
 
 		public SimpleFileTest()
 		{
+			Encryptor.Initialize(SettingsHelper.UseFipsEncryptionAlgorithms);
+
 			tempPath = Path.GetTempPath();
 			var path = Path.Combine(tempPath, "test.ravendb");
 			if (File.Exists(path))
@@ -64,6 +69,8 @@ namespace Raven.Munin.Tests
 
 		public void Dispose()
 		{
+			Encryptor.Dispose();
+
 			PersistentSource.Dispose();
 			PersistentSource.Delete();
 		}

@@ -41,7 +41,7 @@ namespace Raven.Abstractions.Connection
 		private static KeyDerivationAlgorithmProvider sha1;
 #else
 		[ThreadStatic]
-		private static SHA1 sha1;
+		private static IHashEncryptor sha1;
 #endif
 
 		/**** Cryptography *****/
@@ -55,8 +55,8 @@ namespace Raven.Abstractions.Connection
 			throw new NotImplementedException("WinRT...");
 #else
 			if (sha1 == null)
-				sha1 = new SHA1Managed();
-			var hash = sha1.ComputeHash(bytes);
+				sha1 = Encryptor.Current.CreateHash();
+			var hash = sha1.Compute(bytes);
 			return BytesToString(hash);
 #endif
 		}

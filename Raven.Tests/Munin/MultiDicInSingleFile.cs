@@ -22,6 +22,8 @@ namespace Raven.Munin.Tests
 
 		public void Dispose()
 		{
+			Encryptor.Dispose();
+
 			persistentSource.Dispose();
 			persistentSource.Delete();
 		}

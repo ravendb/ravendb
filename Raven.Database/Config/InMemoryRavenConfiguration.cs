@@ -324,7 +324,7 @@ namespace Raven.Database.Config
 
 		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
 		{
-			using (var rsa = Encryptor.Current.CreateAsymmetrical())
+			using (var rsa = new RSACryptoServiceProvider())
 			{
 				return rsa.ExportCspBlob(true);
 			}

@@ -2,17 +2,14 @@
 #if !SILVERLIGHT
 using System.Collections.Specialized;
 #endif
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Configuration;
 using System.Linq;
-using System.Net;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document.DTC;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
@@ -20,6 +17,8 @@ using Raven.Client.Document;
 using Raven.Client.Silverlight.Connection;
 #elif NETFX_CORE
 using Raven.Client.WinRT.Connection;
+#else
+using Raven.Abstractions.Util.Encryptors;
 #endif
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
@@ -37,6 +36,8 @@ namespace Raven.Client
 	{
 		protected DocumentStoreBase()
 		{
+			InitializeEncryptor();
+
 			LastEtagHolder = new GlobalLastEtagHolder();
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
 		}
@@ -309,9 +310,17 @@ namespace Raven.Client
 			return AggressivelyCacheFor(TimeSpan.FromDays(1));
 		}
 
+#if !SILVERLIGHT && !NETFX_CORE
 		protected void InitializeEncryptor()
 		{
-			Encryptor.Initialize(UseFipsEncryptionAlgorithms);
+			var setting = ConfigurationManager.AppSettings["Raven/Encryption/FIPS"];
+
+			bool fips;
+			if (string.IsNullOrEmpty(setting) || !bool.TryParse(setting, out fips))
+				fips = UseFipsEncryptionAlgorithms;
+
+			Encryptor.Initialize(fips);
 		}
+#endif
 	}
 }

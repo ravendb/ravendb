@@ -1,10 +1,18 @@
 ﻿namespace Raven.Abstractions.Util.Encryptors
 {
-	public abstract class EncryptorBase<TSymmetricalEncryptor, TAsymmetricalEncryptor> : IEncryptor
+	using System;
+
+	public abstract class EncryptorBase<THashEncryptor, TSymmetricalEncryptor, TAsymmetricalEncryptor> : IEncryptor
+		where THashEncryptor : IHashEncryptor, new()
 		where TSymmetricalEncryptor : ISymmetricalEncryptor, new()
 		where TAsymmetricalEncryptor : IAsymmetricalEncryptor, new()
 	{
 		public abstract IHashEncryptor Hash { get; protected set; }
+
+		public IHashEncryptor CreateHash()
+		{
+			return new THashEncryptor();
+		}
 
 		public ISymmetricalEncryptor CreateSymmetrical()
 		{
@@ -34,10 +42,7 @@
 
 		public IAsymmetricalEncryptor CreateAsymmetrical(int keySize)
 		{
-			var algorithm = CreateAsymmetrical();
-			algorithm.KeySize = keySize;
-
-			return algorithm;
+			return (IAsymmetricalEncryptor)Activator.CreateInstance(typeof(TAsymmetricalEncryptor), keySize);
 		}
 	}
 }

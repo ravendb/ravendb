@@ -7,7 +7,7 @@ namespace Raven.Abstractions.Util.Encryptors
 {
 	using System.Security.Cryptography;
 
-	public sealed class DefaultEncryptor : EncryptorBase<FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
+	public sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
 	{
 		public DefaultEncryptor()
 		{
@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		public override IHashEncryptor Hash { get; protected set; }
 
-		private class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
+		public class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
 		{
 			public int StorageHashSize
 			{
@@ -29,6 +29,11 @@ namespace Raven.Abstractions.Util.Encryptors
 			public byte[] ComputeForStorage(byte[] bytes)
 			{
 				return ComputeHash(SHA256.Create(), bytes);
+			}
+
+			public byte[] ComputeForOAuth(byte[] bytes)
+			{
+				return ComputeHash(SHA1.Create(), bytes);
 			}
 
 			public byte[] Compute(byte[] bytes)

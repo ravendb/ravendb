@@ -28,7 +28,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 				var bodyData = Encoding.Unicode.GetBytes(Body);
 
-				return rsa.VerifyHash(Encryptor.Current.Hash.Compute(bodyData), CryptoConfig.MapNameToOID("SHA1"), signatureData);
+				return rsa.VerifyHash(Encryptor.Current.Hash.ComputeForOAuth(bodyData), CryptoConfig.MapNameToOID("SHA1"), signatureData);
 			}
 		}
 
@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Security.OAuth
 			var data = Encoding.Unicode.GetBytes(body);
 			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
-				var hash = Encryptor.Current.Hash.Compute(data);
+				var hash = Encryptor.Current.Hash.ComputeForOAuth(data);
 
 				rsa.ImportCspBlob(key);
 
