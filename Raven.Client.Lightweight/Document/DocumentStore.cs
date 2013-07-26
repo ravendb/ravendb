@@ -634,7 +634,7 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT && !NETFX_CORE
-			
+
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
 			rootServicePoint.UseNagleAlgorithm = false;
@@ -700,6 +700,21 @@ namespace Raven.Client.Document
 #else
 			return replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
 #endif
+			if (FailoverServers == null)
+				return result;
+
+			if (dbName == DefaultDatabase)
+			{
+				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverUrls == null)
+					result.FailoverUrls = FailoverServers.ForDefaultDatabase;
+			}
+			else
+			{
+				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverUrls == null)
+					result.FailoverUrls = FailoverServers.GetForDatabase(dbName);
+			}
+
+			return result;
 		}
 
 		/// <summary>
@@ -798,7 +813,7 @@ namespace Raven.Client.Document
 
 				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
 				{
-					DatabaseName = dbName ?? DefaultDatabase
+				    DatabaseName = dbName ?? DefaultDatabase
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -832,7 +847,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>
