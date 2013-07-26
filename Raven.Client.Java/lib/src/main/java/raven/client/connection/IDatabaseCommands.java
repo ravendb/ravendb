@@ -37,13 +37,17 @@ import raven.client.indexes.IndexDefinitionBuilder;
 
 public interface IDatabaseCommands extends IHoldProfilingInformation {
 
-  //TODO: IAdminDatabaseCommands Admin { get; }
-
   /**
    * Gets the operations headers
    * @return
    */
   public Map<String, String> getOperationsHeaders();
+
+  /**
+   * Admin operations, like create/delete database
+   * @return
+   */
+  public IAdminDatabaseCommands getAdmin();
 
   /**
    * Sets the operations headers

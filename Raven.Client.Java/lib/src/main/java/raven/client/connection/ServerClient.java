@@ -37,6 +37,7 @@ import raven.abstractions.commands.ScriptedPatchCommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.DatabaseDocument;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.Facet;
@@ -86,7 +87,7 @@ import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
 //TODO: merge changes from 470f20a547526dfe5677
-public class ServerClient implements IDatabaseCommands {
+public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   private String url;
   private final DocumentConvention convention;
@@ -2352,6 +2353,36 @@ public class ServerClient implements IDatabaseCommands {
 
   public void setExpect100Continue(boolean expect100Continue) {
     this.expect100Continue = expect100Continue;
+  }
+
+  @Override
+  public IAdminDatabaseCommands getAdmin() {
+    return (IAdminDatabaseCommands) forSystemDatabase();
+  }
+
+  @Override
+  public void createDatabase(DatabaseDocument databaseDocument) {
+    if (!databaseDocument.getSettings().containsKey("Raven/DataDir")) {
+      throw new IllegalStateException("The Raven/DataDir setting is mandatory");
+    }
+
+    String dbname = databaseDocument.getId().replaceAll("Raven/Databases/", "");
+    MultiDatabase.assertValidDatabaseName(dbname);
+
+    RavenJObject doc = RavenJObject.fromObject(databaseDocument);
+    doc.remove("Id");
+
+    try {
+      HttpJsonRequest req = createRequest(HttpMethods.PUT, "/admin/databases/" + UrlUtils.escapeDataString(dbname));
+      req.write(doc.toString());
+      req.executeRequest();
+    } catch (HttpOperationException e) {
+      EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+      throw new ServerClientException(e);
+    } catch (Exception e) {
+      throw new ServerClientException(e);
+    }
+
   }
 
 }

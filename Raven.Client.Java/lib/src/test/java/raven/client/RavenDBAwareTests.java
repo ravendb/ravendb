@@ -82,7 +82,7 @@ public abstract class RavenDBAwareTests {
     }
   }
 
-  private String getCreateDbDocument(String dbName) {
+  protected String getCreateDbDocument(String dbName) {
     RavenJObject doc = new RavenJObject();
     RavenJObject settings = new RavenJObject();
     doc.add("Settings", settings);

@@ -22,6 +22,7 @@ import raven.abstractions.commands.PutCommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.DatabaseDocument;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.JsonDocumentMetadata;
@@ -45,6 +46,18 @@ import raven.samples.Developer;
 
 public class ServerClientTest extends RavenDBAwareTests {
 
+  @Test
+  public void testCreateDb() throws Exception {
+    try {
+      IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
+      DatabaseDocument databaseDocument = new DatabaseDocument();
+      databaseDocument.setId("testingDb");
+      databaseDocument.getSettings().put("Raven/DataDir", "~\\Databases\\testingDb");
+      dbCommands.getAdmin().createDatabase(databaseDocument);
+    } finally {
+      deleteDb("testingDb");
+    }
+  }
 
   @Test
   public void testTransactionsToIsolateSaves() throws Exception {
@@ -179,7 +192,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("testVal1", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
       result = dbCommands.put("testVal2", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
       result = dbCommands.put("testVal3", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
       result = dbCommands.put("testVal4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
@@ -222,7 +235,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
       result = dbCommands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
       result = dbCommands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
       result = dbCommands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
@@ -271,7 +284,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
 
       assertNotNull(result);
 
@@ -294,7 +307,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
       PutResult result = dbCommands.put("tests/val1a", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"),
-        new RavenJObject());
+          new RavenJObject());
       result = dbCommands.put("tests/val2a", etag, RavenJObject.parse("{ \"key\" : \"val2\"}"), new RavenJObject());
       result = dbCommands.put("tests/val3a", etag, RavenJObject.parse("{ \"key\" : \"val3\"}"), new RavenJObject());
       result = dbCommands.put("tests/aval4", etag, RavenJObject.parse("{ \"key\" : \"val4\"}"), new RavenJObject());
