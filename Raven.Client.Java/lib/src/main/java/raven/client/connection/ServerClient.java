@@ -87,7 +87,6 @@ import raven.client.utils.TimeSpan;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
-//TODO: merge changes from 470f20a547526dfe5677
 public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   private String url;
@@ -1859,14 +1858,19 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
   }
 
   protected SuggestionQueryResult directSuggest(String index, SuggestionQuery suggestionQuery, String operationUrl) {
-    String requestUri = operationUrl + String.format("/suggest/%s?term=%s&field=%s&max=%d&distance=%s&accuracy=%.4f&popularity=%s",
+    String requestUri = operationUrl + String.format("/suggest/%s?term=%s&field=%s&max=%d&popularity=%s",
         UrlUtils.escapeDataString(index),
         UrlUtils.escapeDataString(suggestionQuery.getTerm()),
         UrlUtils.escapeDataString(suggestionQuery.getField()),
         suggestionQuery.getMaxSuggestions(),
-        UrlUtils.escapeDataString(SharpEnum.value(suggestionQuery.getDistance())),
-        suggestionQuery.getAccuracy(),
         suggestionQuery.isPopularity());
+
+    if (suggestionQuery.getDistance() != null) {
+      requestUri += "&distance=" + UrlUtils.escapeDataString(SharpEnum.value(suggestionQuery.getDistance()));
+    }
+    if (suggestionQuery.getAccuracy() != null) {
+      requestUri += "&accuracy=" + String.format("%.4f", suggestionQuery.getAccuracy());
+    }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
         new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
