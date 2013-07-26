@@ -88,7 +88,7 @@ namespace Raven.Abstractions.Connection
 		}
 
 #if SILVERLIGHT
-		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
+		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)
 		{
 			// http://msdn.microsoft.com/en-us/library/cc265159(v=vs.95).aspx
 			// http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsacryptoserviceprovider(v=vs.95).aspx

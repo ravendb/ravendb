@@ -299,6 +299,24 @@
     <Compile Include="..\Raven.Database\Plugins\PluginsStatus.cs">
       <Link>Imports\Plugins\PluginsStatus.cs</Link>
     </Compile>
+    <Compile Include="..\..\Shared\Raven.Abstractions\Util\Encryptors\DefaultEncryptor.cs">
+      <Link>Abstractions\Util\Encryptors\DefaultEncryptor.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Shared\Raven.Abstractions\Util\Encryptors\Encryptor.cs">
+      <Link>Abstractions\Util\Encryptors\Encryptor.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Shared\Raven.Abstractions\Util\Encryptors\EncryptorBase.cs">
+      <Link>Abstractions\Util\Encryptors\EncryptorBase.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Shared\Raven.Abstractions\Util\Encryptors\FipsEncryptor.cs">
+      <Link>Abstractions\Util\Encryptors\FipsEncryptor.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Shared\Raven.Abstractions\Util\Encryptors\HashEncryptorBase.cs">
+      <Link>Abstractions\Util\Encryptors\HashEncryptorBase.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Shared\Raven.Abstractions\Util\Encryptors\IEncryptor.cs">
+      <Link>Abstractions\Util\Encryptors\IEncryptor.cs</Link>
+    </Compile>
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />

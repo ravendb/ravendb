@@ -26,6 +26,10 @@ using Raven.Client.Util;
 
 namespace Raven.Client
 {
+	using System.Collections.Generic;
+
+	using Raven.Abstractions.Util.Encryptors;
+
 	/// <summary>
 	/// Contains implementation of some IDocumentStore operations shared by DocumentStore implementations
 	/// </summary>
@@ -297,6 +301,11 @@ namespace Raven.Client
 		public IDisposable AggressivelyCache()
 		{
 			return AggressivelyCacheFor(TimeSpan.FromDays(1));
+		}
+
+		protected void InitializeEncryptor()
+		{
+			Encryptor.Initialize(UseFipsEncryptionAlgorithms);
 		}
 	}
 }
