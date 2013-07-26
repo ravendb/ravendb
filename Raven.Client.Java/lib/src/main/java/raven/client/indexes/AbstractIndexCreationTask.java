@@ -7,7 +7,9 @@ import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Operation;
 import com.mysema.query.types.Path;
 
+import raven.abstractions.closure.Action2;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.StringDistanceTypes;
 import raven.abstractions.indexing.FieldIndexing;
 import raven.abstractions.indexing.FieldStorage;
@@ -15,8 +17,11 @@ import raven.abstractions.indexing.FieldTermVector;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.indexing.SpatialOptions;
+import raven.abstractions.indexing.SpatialOptions.SpatialSearchStrategy;
 import raven.abstractions.indexing.SpatialOptionsFactory;
 import raven.abstractions.indexing.SuggestionOptions;
+import raven.client.connection.IDatabaseCommands;
+import raven.client.connection.ServerClient;
 import raven.client.document.DocumentConvention;
 import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.LinqExpressionMixin;
@@ -91,45 +96,111 @@ public class AbstractIndexCreationTask {
   }
 
   public static Operation<?> spatialGenerate(Path<? extends Number> lat, Path<? extends Number> lng) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_GENERATE3, lat, lng);
+    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_GENERATE2, lat, lng);
   }
 
-  //TODO:  public object SpatialClustering(string fieldName, double? lat, double? lng)
-  //TODO:  object SpatialClustering(string fieldName, double? lat, double? lng,
-  //                                                                int minPrecision,
-  //                                                               int maxPrecision)
+  public Operation<?> spatialClustering(String fieldName, Path<? extends Number> lat, Path<? extends Number> lng) {
+    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_CLUSTERING3,
+        Expressions.constant(fieldName), lat, lng);
+  }
 
+  public Operation<?> spatialClustering(String fieldName, Path<? extends Number> lat, Path<? extends Number> lng, int minPrecision, int maxPrecision) {
+    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_CLUSTERING5,
+        Expressions.constant(fieldName), lat, lng, Expressions.constant(minPrecision), Expressions.constant(maxPrecision));
+  }
 
-  /*
-   * protected class SpatialIndex
-    {
-      /// <summary>
-      /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-      /// </summary>
-      /// <param name="fieldName">The field name, will be used for querying</param>
-      /// <param name="lat">Latitude</param>
-      /// <param name="lng">Longitude</param>
-      public static object Generate(string fieldName, double? lat, double? lng)
-      {
-        throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+  protected static class SpatialIndex {
+    /**
+     * Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+     * @param lat
+     * @param lng
+     * @return
+     */
+    public static Object generate(Path<? extends Number> lat, Path<? extends Number> lng) {
+      return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_INDEX_GENERATE2, lat, lng);
+    }
+
+    /**
+     * Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
+     * @param fieldName
+     * @param lat
+     * @param lng
+     * @return
+     */
+    public static Object generate(String fieldName, Path<? extends Number> lat, Path<? extends Number> lng) {
+      return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_INDEX_GENERATE3,
+          Expressions.constant(fieldName), lat, lng);
+    }
+  }
+
+  public static Object spatialGenerate(String fieldName, String shapeWKT) {
+    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_WKT_GENERATE2, Expressions.constant(fieldName), Expressions.constant(shapeWKT));
+  }
+
+  public static Object spatialGenerate(String fieldName, String shapeWKT, SpatialSearchStrategy strategy) {
+    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_WKT_GENERATE3, Expressions.constant(fieldName),
+        Expressions.constant(shapeWKT), Expressions.constant(strategy));
+  }
+
+  public static Object spatialGenerate(String fieldName, String shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel) {
+    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_WKT_GENERATE4, Expressions.constant(fieldName),
+        Expressions.constant(shapeWKT), Expressions.constant(strategy), Expressions.constant(maxTreeLevel));
+  }
+
+  //TODO:public void Execute(IDocumentStore store)
+
+  /**
+   * Executes the index creation against the specified document database using the specified conventions
+   * @param databaseCommands
+   * @param documentConvention
+   */
+  public void execute(final IDatabaseCommands databaseCommands, final DocumentConvention documentConvention) {
+    conventions = documentConvention;
+    final IndexDefinition indexDefinition = createIndexDefinition();
+    // This code take advantage on the fact that RavenDB will turn an index PUT
+    // to a noop of the index already exists and the stored definition matches
+    // the new definition.
+    databaseCommands.putIndex(getIndexName(), indexDefinition, true);
+
+    updateIndexInReplication(databaseCommands, documentConvention, new Action2<ServerClient, String>() {
+      @Override
+      public void apply(ServerClient commands, String url) {
+        commands.directPutIndex(getIndexName(), url, true, indexDefinition);
       }
+    });
+  }
 
-      /// <summary>
-      /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-      /// </summary>
-      /// <param name="lat">Latitude</param>
-      /// <param name="lng">Longitude</param>
-      public static object Generate(double? lat, double? lng)
+  private void updateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Action2<ServerClient, String> action) {
+    ServerClient serverClient = (ServerClient) databaseCommands;
+    if (serverClient == null) {
+      return ;
+    }
+
+    JsonDocument doc = serverClient.get("Raven/Replication/Destinations");
+    if (doc == null) {
+      return ;
+    }
+    /* TODO:
+    var replicationDocument =
+      documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
+    if (replicationDocument == null)
+      return;
+
+    foreach (var replicationDestination in replicationDocument.Destinations)
+    {
+      try
       {
-        throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
+          continue;
+        action(serverClient, GetReplicationUrl(replicationDestination));
+      }
+      catch (Exception e)
+      {
+        Logger.WarnException("Could not put index in replication server", e);
       }
     }
-   */
-  //TODO : public static object SpatialGenerate(string fieldName, string shapeWKT)
-  //TODO: public static object SpatialGenerate(string fieldName, string shapeWKT, SpatialSearchStrategy strategy)
-  //TODO: public static object SpatialGenerate(string fieldName, string shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel)
-  //TODO:public void Execute(IDocumentStore store)
-  //TODO: public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+    */
+  }
 
   public IndexDefinition createIndexDefinition() {
     if (conventions == null) {
@@ -166,8 +237,6 @@ public class AbstractIndexCreationTask {
   //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, ISet<TResult>> func)
   //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, HashSet<TResult>> func)
   //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, SortedSet<TResult>> func)
-
-
   //TODO: public T LoadDocument<T>(string key)
   //TODO: public T[] LoadDocument<T>(IEnumerable<string> keys)
   //TODO: protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IList<TResult>> func)

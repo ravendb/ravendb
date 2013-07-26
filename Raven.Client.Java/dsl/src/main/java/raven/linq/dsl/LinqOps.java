@@ -14,7 +14,15 @@ public class LinqOps {
   public static class Markers {
     public static final OperatorImpl<LinqExpressionMixin> CREATE_FIELD2 = new OperatorImpl<>("CREATE_FIELD2");
     public static final OperatorImpl<LinqExpressionMixin> CREATE_FIELD4 = new OperatorImpl<>("CREATE_FIELD4");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_GENERATE2 = new OperatorImpl<>("SPATIAL_GENERATE2");
     public static final OperatorImpl<LinqExpressionMixin> SPATIAL_GENERATE3 = new OperatorImpl<>("SPATIAL_GENERATE3");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_INDEX_GENERATE2 = new OperatorImpl<>("SPATIAL_INDEX_GENERATE2");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_INDEX_GENERATE3 = new OperatorImpl<>("SPATIAL_INDEX_GENERATE3");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_CLUSTERING3 = new OperatorImpl<>("SPATIAL_CLUSTERING3");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_CLUSTERING5 = new OperatorImpl<>("SPATIAL_CLUSTERING5");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_WKT_GENERATE2 = new OperatorImpl<>("SPATIAL_WKT_GENERATE2");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_WKT_GENERATE3 = new OperatorImpl<>("SPATIAL_WKT_GENERATE3");
+    public static final OperatorImpl<LinqExpressionMixin> SPATIAL_WKT_GENERATE4 = new OperatorImpl<>("SPATIAL_WKT_GENERATE4");
   }
 
   @SuppressWarnings("rawtypes")
