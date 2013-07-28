@@ -36,7 +36,6 @@ namespace Raven.Tests.Helpers
 {
 	public class RavenTestBase : IDisposable
 	{
-		private string path;
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		private readonly List<string> pathsToDelete = new List<string>();
@@ -58,24 +57,16 @@ namespace Raven.Tests.Helpers
 			bool runInMemory = true,
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
-			bool deleteDirectory = true,
-			bool deleteDirectoryOnDispose = true,
+			string dataDir = null,
 			bool enableAuthentication = false)
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (RavenTestBase)).CodeBase);
-
-			if (path.StartsWith(@"file:\", StringComparison.InvariantCultureIgnoreCase))
-				path = path.Substring(6);
-
-			path = Path.Combine(path, Path.GetFileName(Path.GetDirectoryName(NewDataPath())));
-
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var documentStore = new EmbeddableDocumentStore
 			{
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
-					DataDirectory = path,
+					DataDirectory = dataDir ?? NewDataPath(),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 					Port = 8079
@@ -90,9 +81,6 @@ namespace Raven.Tests.Helpers
 				ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
 
-				if (deleteDirectory)
-					IOExtensions.DeleteDirectory(path);
-
 				documentStore.Initialize();
 
 				if (enableAuthentication)
@@ -102,9 +90,6 @@ namespace Raven.Tests.Helpers
 				}
 
 				CreateDefaultIndexes(documentStore);
-
-				if (deleteDirectoryOnDispose)
-					documentStore.Disposed += () => ClearDatabaseDirectory(path);
 
 				return documentStore;
 			}
