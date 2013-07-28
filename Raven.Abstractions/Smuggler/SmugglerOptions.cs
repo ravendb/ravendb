@@ -10,6 +10,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Json;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
@@ -75,7 +76,7 @@ namespace Raven.Abstractions.Smuggler
 					var val = tuple.Item1.Type == JTokenType.String
 								? tuple.Item1.Value<string>()
 								: tuple.Item1.ToString(Formatting.None);
-					matchedFilter |= String.Equals(val, filter.Value, StringComparison.OrdinalIgnoreCase) ==
+					matchedFilter |= filter.Values.Any(value => String.Equals(val, value, StringComparison.OrdinalIgnoreCase)) ==
 									 filter.ShouldMatch;
 				}
 				if (matchedFilter == false)
@@ -130,7 +131,7 @@ namespace Raven.Abstractions.Smuggler
 	public class FilterSetting
 	{
 		public string Path { get; set; }
-		public string Value { get; set; }
+		public List<string> Values { get; set; }
 		public bool ShouldMatch { get; set; }
 	}
 }
