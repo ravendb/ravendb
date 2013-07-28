@@ -27,6 +27,10 @@ namespace Nevar
 
         public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
         {
+          
+          
+          
+
             _pager = pager;
             _ownsPager = ownsPager;
             _sliceComparer = NativeMethods.memcmp;
@@ -85,6 +89,11 @@ namespace Nevar
         public long OldestTransaction
         {
             get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
+        }
+
+        public int PageSize
+        {
+            get { return _pager.PageSize; }
         }
 
         public Tree GetTree(string name)

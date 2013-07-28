@@ -35,7 +35,7 @@ namespace Nevar.Trees
             }
 
             var minKeys = page.IsBranch ? 2 : 1;
-            if (page.SizeUsed >= Constants.PageMinSpace &&
+            if (page.SizeUsed >= _tx.Pager.PageMinSpace &&
                 page.NumberOfEntries >= minKeys)
                 return null; // above space/keys thresholds
 
@@ -44,7 +44,7 @@ namespace Nevar.Trees
             var sibling = SetupMoveOrMerge(cursor, page, parentPage);
 
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
-            if (sibling.SizeUsed > Constants.PageMinSpace &&
+            if (sibling.SizeUsed > _tx.Pager.PageMinSpace &&
                 sibling.NumberOfEntries > minKeys)
             {
                 // neighbor is over the min size and has enough key, can move just one key to  the current page

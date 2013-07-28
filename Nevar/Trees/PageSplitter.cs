@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Nevar.Impl;
+﻿using Nevar.Impl;
 
 namespace Nevar.Trees
 {
@@ -148,11 +147,11 @@ namespace Nevar.Trees
         ///	item is also "large" and falls on the half with
         ///	"large" nodes, it also may not fit.
         /// </summary>
-        private static int AdjustSplitPosition(Slice key, int len, Page page, int currentIndex, int splitIndex,
+        private int AdjustSplitPosition(Slice key, int len, Page page, int currentIndex, int splitIndex,
                                                       ref bool newPosition)
         {
-            var nodeSize = SizeOf.NodeEntry(key, len) + Constants.NodeOffsetSize;
-            if (page.NumberOfEntries >= 20 && nodeSize <= Constants.PageMaxSpace / 16)
+            var nodeSize = SizeOf.NodeEntry(_tx.Pager.PageMaxSpace, key, len) + Constants.NodeOffsetSize;
+            if (page.NumberOfEntries >= 20 && nodeSize <= _tx.Pager.PageMaxSpace / 16)
             {
                 return splitIndex;
             }
@@ -166,7 +165,7 @@ namespace Nevar.Trees
                     var node = page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
-                    if (pageSize > Constants.PageMaxSpace)
+                    if (pageSize > _tx.Pager.PageMaxSpace)
                     {
                         if (i <= currentIndex)
                         {
@@ -185,7 +184,7 @@ namespace Nevar.Trees
                     var node = page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
-                    if (pageSize > Constants.PageMaxSpace)
+                    if (pageSize > _tx.Pager.PageMaxSpace)
                     {
                         if (i >= currentIndex)
                         {

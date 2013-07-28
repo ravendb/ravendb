@@ -70,6 +70,10 @@ namespace Nevar.Trees
 	        if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
 	            throw new ArgumentException("Cannot add a value in a read only transaction");
 
+            if (key.Size > tx.Pager.MaxNodeSize)
+                throw new ArgumentException("Key size is too big, must be at most " + tx.Pager.MaxNodeSize + " bytes, but was " + key.Size, "key");
+
+		
 	        var cursor = new Cursor();
 	        var txInfo = tx.GetTreeInformation(this);
 
@@ -88,7 +92,7 @@ namespace Nevar.Trees
 
 	        byte* overFlowPos = null;
             var pageNumber = -1L;
-	        if (ShouldGoToOverflowPage(len))
+	        if (ShouldGoToOverflowPage(tx, len))
 	        {
 	            pageNumber = WriteToOverflowPages(tx, txInfo, len, out overFlowPos);
 	            len = -1;
@@ -110,10 +114,10 @@ namespace Nevar.Trees
 	        return dataPos;
 	    }
 
-        private static long WriteToOverflowPages(Transaction tx, TreeDataInTransaction txInfo, int overflowSize, out byte* dataPos)
+        private long WriteToOverflowPages(Transaction tx, TreeDataInTransaction txInfo, int overflowSize, out byte* dataPos)
 		{
 			
-			var numberOfPages = GetNumberOfOverflowPages(overflowSize);
+			var numberOfPages = GetNumberOfOverflowPages(tx, overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
 			overflowPageStart.OverflowSize = numberOfPages;
 			overflowPageStart.Flags = PageFlags.Overlfow;
@@ -124,14 +128,14 @@ namespace Nevar.Trees
 			return overflowPageStart.PageNumber;
 		}
 
-		private static int GetNumberOfOverflowPages(int overflowSize)
+		private int GetNumberOfOverflowPages(Transaction tx, int overflowSize)
 		{
-			return (Constants.PageSize - 1 + overflowSize) / (Constants.PageSize) + 1;
+            return (tx.Environment.PageSize - 1 + overflowSize) / (tx.Environment.PageSize) + 1;
 		}
 
-		private bool ShouldGoToOverflowPage(int len)
+		private bool ShouldGoToOverflowPage(Transaction tx, int len)
 		{
-			return len + Constants.PageHeaderSize > Constants.MaxNodeSize;
+            return len + Constants.PageHeaderSize > tx.Pager.MaxNodeSize;
 		}
 
 		private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
@@ -141,7 +145,7 @@ namespace Nevar.Trees
 			{
                 tx.ModifyCursor(this, cursor);
 			    var overflowPage = tx.GetReadOnlyPage(node->PageNumber);
-				var numberOfPages = GetNumberOfOverflowPages(overflowPage.OverflowSize);
+				var numberOfPages = GetNumberOfOverflowPages(tx, overflowPage.OverflowSize);
 				for (int i = 0; i < numberOfPages; i++)
 				{
                     tx.FreePage(overflowPage.PageNumber + i);

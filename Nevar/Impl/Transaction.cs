@@ -16,7 +16,7 @@ namespace Nevar.Impl
         private readonly StorageEnvironment _env;
         private readonly long _id;
 
-        private bool alreadyLookingForFreeSpace;
+        private bool _alreadyLookingForFreeSpace;
         private readonly TreeDataInTransaction _rootTreeData;
         private readonly TreeDataInTransaction _fresSpaceTreeData;
         private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
@@ -26,6 +26,16 @@ namespace Nevar.Impl
         private HashSet<long> _freePages = new HashSet<long>();
 
         public TransactionFlags Flags { get; private set; }
+
+        public StorageEnvironment Environment
+        {
+            get { return _env; }
+        }
+
+        public IVirtualPager Pager
+        {
+            get { return _pager; }
+        }
 
         public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags)
         {
@@ -82,7 +92,7 @@ namespace Nevar.Impl
             var newPage = AllocatePage(1);
             newPage.Dirty = true;
             var newPageNum = newPage.PageNumber;
-            NativeMethods.memcpy(newPage.Base, p.Base, Constants.PageSize);
+            NativeMethods.memcpy(newPage.Base, p.Base, _pager.PageSize);
             newPage.PageNumber = newPageNum;
             newPage.LastMatch = p.LastMatch;
             newPage.LastSearchPosition = p.LastSearchPosition;
@@ -122,7 +132,7 @@ namespace Nevar.Impl
                 NextPageNumber += num;
             }
             page.Lower = (ushort)Constants.PageHeaderSize;
-            page.Upper = Constants.PageSize;
+            page.Upper = (ushort)_pager.PageSize;
             page.Dirty = true;
             _dirtyPages[page.PageNumber] = page;
             return page;
@@ -133,10 +143,10 @@ namespace Nevar.Impl
             if (_env.FreeSpace == null)
                 return null;// this can happen the first time FreeSpace tree is created
 
-            if (alreadyLookingForFreeSpace)
+            if (_alreadyLookingForFreeSpace)
                 return null;// can't recursively find free space
 
-            alreadyLookingForFreeSpace = true;
+            _alreadyLookingForFreeSpace = true;
             try
             {
                 using (var iterator = _env.FreeSpace.Iterate(this))
@@ -202,7 +212,7 @@ namespace Nevar.Impl
             }
             finally
             {
-                alreadyLookingForFreeSpace = false;
+                _alreadyLookingForFreeSpace = false;
             }
         }
 

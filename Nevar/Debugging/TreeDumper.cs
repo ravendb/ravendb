@@ -34,7 +34,7 @@ digraph structs {
 		p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | {5:p} utilization""];
 
 ", p.PageNumber, p.Flags, p.NumberOfEntries, p.SizeLeft, p.IsLeaf ? "black" : "blue", 
-	Math.Round(((Constants.PageSize - p.SizeLeft) / (double)Constants.PageSize), 2));
+	Math.Round(((tx.Environment.PageSize - p.SizeLeft) / (double)tx.Environment.PageSize), 2));
 					var key = new Slice(SliceOptions.Key);
 					if (p.IsLeaf && showNodesEvery > 0)
 					{

@@ -12,7 +12,7 @@ namespace Nevar.Impl
 		/// size will only include the key and not the data. Sizes are always
 		/// rounded up to an even number of bytes, to guarantee 2-byte alignment
 		/// </summary>
-		public static int LeafEntry(Slice key, int len)
+        public static int LeafEntry(int pageMaxSpace, Slice key, int len)
 		{
 			var nodeSize = Constants.NodeHeaderSize;
 
@@ -22,7 +22,7 @@ namespace Nevar.Impl
 			{
 				nodeSize += len;
 
-				if (nodeSize > Constants.PageMaxSpace)
+				if (nodeSize > pageMaxSpace)
 					nodeSize -= len - Constants.PageNumberSize;
 			}
 			// else - page ref node, take no additional space
@@ -40,11 +40,11 @@ namespace Nevar.Impl
 			return sz;
 		}
 
-		public static int NodeEntry(Slice key, int len)
+		public static int NodeEntry(int pageMaxSpace,Slice key, int len)
 		{
 			if (len < 0)
 				return BranchEntry(key);
-			return LeafEntry(key, len);
+            return LeafEntry(pageMaxSpace, key, len);
 		}
 
 		public static int NodeEntry(NodeHeader* other)

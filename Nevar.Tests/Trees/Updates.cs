@@ -58,7 +58,7 @@ namespace Nevar.Tests.Trees
 			// update that is too big
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.Root.Add(tx, "1", new MemoryStream(new byte[Constants.MaxNodeSize - 25]));
+				Env.Root.Add(tx, "1", new MemoryStream(new byte[tx.Pager.MaxNodeSize - 25]));
                 RenderAndShow(tx);
 
 				tx.Commit();

@@ -107,7 +107,7 @@ namespace Nevar.Tests.Trees
 
 				tx.Commit();
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
-				if (Constants.PageSize != 4096)
+				if (tx.Environment.PageSize != 4096)
 					return;
 // ReSharper restore ConditionIsAlwaysTrueOrFalse
 				Assert.Equal(4, Env.Root.PageCount);

@@ -7,6 +7,11 @@ namespace Nevar.Impl
 	{
 		Page Get(long n);
         long NumberOfAllocatedPages { get; }
+        int PageSize { get; }
+	    int MaxNodeSize { get; }
+	    int PageMaxSpace { get; }
+	    int PageMinSpace { get; }
+
 	    void Flush();
 	}
 }
