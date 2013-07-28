@@ -18,10 +18,8 @@ using Xunit;
 
 namespace Raven.Tests.Shard.Async
 {
-	public class WhenUsingShardedServers : RemoteClientTest, IDisposable
+	public class WhenUsingShardedServers : RemoteClientTest
 	{
-		readonly string path1;
-		readonly string path2;
 		readonly RavenDbServer server1;
 		readonly RavenDbServer server2;
 		readonly Company company1;
@@ -37,17 +35,11 @@ namespace Raven.Tests.Shard.Async
 			const int port1 = 8079;
 			const int port2 = 8081;
 
-			path1 = NewDataPath("TestShardedDb1");
-			path2 = NewDataPath("TestShardedDb2");
-
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port1);
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port2);
-
 			company1 = new Company { Name = "Company1" };
 			company2 = new Company { Name = "Company2" };
 
-			server1 = GetNewServer(port1, path1);
-			server2 = GetNewServer(port2, path2);
+			server1 = GetNewServer(port1);
+			server2 = GetNewServer(port2);
 
 			shards = new List<IDocumentStore> { 
 				new DocumentStore { Identifier="Shard1", Url = "http://" + server +":"+port1}, 

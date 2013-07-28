@@ -11,8 +11,6 @@ namespace Raven.Tests.Document
 {
 	public class WhenUsingMultipleUnshardedServers : RemoteClientTest
 	{
-		private readonly string path1;
-		private readonly string path2;
 		private readonly int port1;
 		private readonly int port2;
 
@@ -20,16 +18,13 @@ namespace Raven.Tests.Document
 		{
 			port1 = 8079;
 			port2 = 8081;
-
-			path1 = NewDataPath("TestUnshardedDb1");
-			path2 = NewDataPath("TestUnshardedDb2");
 		}
 
 		[Fact]
 		public void CanInsertIntoTwoServersRunningSimultaneouslyWithoutSharding()
 		{
-			using (var server1 = GetNewServer(port1, path1))
-			using (var server2 = GetNewServer(port2, path2))
+			using (var server1 = GetNewServer(port1))
+			using (var server2 = GetNewServer(port2))
 			{
 				foreach (var port in new[] { port1, port2 })
 				{
