@@ -163,6 +163,9 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false)
 		{
+			if (dataDirectory != null)
+				pathsToDelete.Add(dataDirectory);
+
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var ravenConfiguration = new RavenConfiguration
 			{
