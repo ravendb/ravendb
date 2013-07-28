@@ -1,5 +1,4 @@
-﻿using System;
-using System.Transactions;
+﻿using System.Transactions;
 using Raven.Tests.Bugs;
 using Xunit;
 
@@ -41,9 +40,8 @@ namespace Raven.Tests.Track
 					session.Advanced.AllowNonAuthoritativeInformation = false;
 
 					var doc = session.Load<SomeDocument>(1);
-					if (doc.Data != "Data1")
-						throw new InvalidOperationException("Should be Data1");
-
+					Assert.Equal("Data1", doc.Data);
+					
 					doc.Data = "Data2";
 
 					session.SaveChanges();
