@@ -212,7 +212,7 @@ namespace Nevar.Trees
             newNode->Flags = other->Flags;
             key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
-            if (IsBranch)
+            if (IsBranch || other->Flags.HasFlag(NodeFlags.PageRef))
             {
                 newNode->PageNumber = other->PageNumber;
                 newNode->Flags = NodeFlags.PageRef;
