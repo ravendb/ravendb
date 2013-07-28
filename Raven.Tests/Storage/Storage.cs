@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.IO;
-using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Storage
@@ -22,11 +20,13 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanCreateNewFileAndThenOpenIt()
 		{
-			using (NewTransactionalStorage())
+			var dataDir = NewDataPath();
+
+			using (NewTransactionalStorage(dataDir: dataDir))
 			{
 			}
 
-			using (NewTransactionalStorage())
+			using (NewTransactionalStorage(dataDir: dataDir))
 			{
 			}
 		}
