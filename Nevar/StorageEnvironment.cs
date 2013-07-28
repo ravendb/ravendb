@@ -128,7 +128,7 @@ namespace Nevar
             tree = Tree.Create(tx, _sliceComparer);
             tree.Name = name;
             var space = tree.DirectAdd(tx, key, sizeof (TreeRootHeader));
-            tree.CopyTo((TreeRootHeader*)space);
+            tree.State.CopyTo((TreeRootHeader*)space);
 
             _trees.Add(name, tree);
 
@@ -228,8 +228,8 @@ namespace Nevar
         {
             var results = new EnvironmentStats
                 {
-                    FreePagesOverhead = FreeSpace.PageCount,
-                    RootPages = Root.PageCount,
+                    FreePagesOverhead = FreeSpace.State.PageCount,
+                    RootPages = Root.State.PageCount,
                     HeaderPages = 2
                 };
             using (Transaction tx = NewTransaction(TransactionFlags.Read))

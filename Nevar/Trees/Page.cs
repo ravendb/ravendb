@@ -256,6 +256,11 @@ namespace Nevar.Trees
             get { return _base; }
         }
 
+        public int PageMaxSpace
+        {
+            get { return _pageMaxSpace; }
+        }
+
         public void Truncate(Transaction tx, int i)
         {
             if (i >= NumberOfEntries)

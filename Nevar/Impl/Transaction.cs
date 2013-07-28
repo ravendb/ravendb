@@ -60,7 +60,8 @@ namespace Nevar.Impl
 
         public Page ModifyCursor(TreeDataInTransaction txInfo, Cursor c)
         {
-            txInfo.Root = ModifyPage(null, txInfo.Root);
+            if (txInfo.Root.Dirty == false)
+                txInfo.State.Root = ModifyPage(null, txInfo.Root);
 
             if (c.Pages.Count == 0)
                 return null;
@@ -259,8 +260,8 @@ namespace Nevar.Impl
                 if(string.IsNullOrEmpty(kvp.Key.Name))
                     continue;
 
-                var root = (TreeRootHeader*) _env.Root.DirectAdd(this, tree.Name, sizeof (TreeRootHeader));
-                tree.CopyTo(root);
+                var treePtr = (TreeRootHeader*) _env.Root.DirectAdd(this, tree.Name, sizeof (TreeRootHeader));
+                tree.State.CopyTo(treePtr);
             }
 
             FlushFreePages();
@@ -287,8 +288,8 @@ namespace Nevar.Impl
             var fileHeader = (FileHeader*)pg.Base;
             fileHeader->TransactionId = _id;
             fileHeader->LastPageNumber = NextPageNumber - 1;
-            _env.FreeSpace.CopyTo(&fileHeader->FreeSpace);
-            _env.Root.CopyTo(&fileHeader->Root);
+            _env.FreeSpace.State.CopyTo(&fileHeader->FreeSpace);
+            _env.Root.State.CopyTo(&fileHeader->Root);
         }
 
         private void FlushFreePages()

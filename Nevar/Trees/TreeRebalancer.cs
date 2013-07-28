@@ -162,11 +162,11 @@ namespace Nevar.Trees
             var node = page.GetNode(0);
             System.Diagnostics.Debug.Assert(node->Flags.HasFlag(NodeFlags.PageRef));
             _tx.ModifyCursor(txInfo, cursor);
-            txInfo.LeafPages = 1;
-            txInfo.BranchPages = 0;
-            txInfo.Depth = 1;
-            txInfo.PageCount = 1;
-            txInfo.Root = _tx.GetReadOnlyPage(node->PageNumber);
+            txInfo.State.LeafPages = 1;
+            txInfo.State.BranchPages = 0;
+            txInfo.State.Depth = 1;
+            txInfo.State.PageCount = 1;
+            txInfo.State.Root = _tx.GetReadOnlyPage(node->PageNumber);
 
             Debug.Assert(txInfo.Root.Dirty);
 

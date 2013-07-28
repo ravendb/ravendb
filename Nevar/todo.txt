@@ -1,3 +1,2 @@
 ﻿2. Run using mmap files
 3. Allow to increase size using mmap
-* Making sure that trees in tx are not changable in multi threded contexts

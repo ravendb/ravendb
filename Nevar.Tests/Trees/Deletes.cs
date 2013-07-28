@@ -22,9 +22,9 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			Assert.Equal(4, Env.Root.PageCount);
-			Assert.Equal(3, Env.Root.OverflowPages);
-
+			Assert.Equal(4, Env.Root.State.PageCount);
+			Assert.Equal(3, Env.Root.State.OverflowPages);
+                                    
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.Root.Delete(tx, "a");
@@ -33,8 +33,8 @@ namespace Nevar.Tests.Trees
 			}
 
 
-			Assert.Equal(1, Env.Root.PageCount);
-			Assert.Equal(0, Env.Root.OverflowPages);
+			Assert.Equal(1, Env.Root.State.PageCount);
+			Assert.Equal(0, Env.Root.State.OverflowPages);
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{

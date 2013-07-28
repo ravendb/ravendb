@@ -35,8 +35,8 @@ namespace Nevar.Trees
             {
                 var newRootPage = Tree.NewPage(_tx, PageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
-                _txInfo.Root = newRootPage;
-                _txInfo.Depth++;
+                _txInfo.State.Root = newRootPage;
+                _txInfo.State.Depth++;
                 _txInfo.RecordNewPage(newRootPage, 1);
 
                 // now add implicit left page

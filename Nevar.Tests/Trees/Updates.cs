@@ -23,8 +23,8 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			Assert.Equal(4, Env.Root.PageCount);
-			Assert.Equal(3, Env.Root.OverflowPages);
+            Assert.Equal(4, Env.Root.State.PageCount);
+            Assert.Equal(3, Env.Root.State.OverflowPages);
 
 			buffer = new byte[8192 * 2];
 			random.NextBytes(buffer);
@@ -38,8 +38,8 @@ namespace Nevar.Tests.Trees
 			}
 
 
-			Assert.Equal(6, Env.Root.PageCount);
-			Assert.Equal(5, Env.Root.OverflowPages);
+            Assert.Equal(6, Env.Root.State.PageCount);
+            Assert.Equal(5, Env.Root.State.OverflowPages);
 		}
 
 
@@ -66,8 +66,8 @@ namespace Nevar.Tests.Trees
 
 			}
 
-			Assert.Equal(3 , Env.Root.PageCount);
-			Assert.Equal(0, Env.Root.OverflowPages);
+            Assert.Equal(3, Env.Root.State.PageCount);
+            Assert.Equal(0, Env.Root.State.OverflowPages);
 		}
 
 		[Fact]

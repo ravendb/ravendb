@@ -9,23 +9,22 @@ using Nevar.Impl.FileHeaders;
 
 namespace Nevar.Trees
 {
-	public unsafe class Tree
+    public unsafe class Tree
 	{
-        public long BranchPages;
-        public long LeafPages;
-        public long OverflowPages;
-        public int Depth;
-        public long PageCount;
-	    public long EntriesCount;
+	    private TreeMutableState _state = new TreeMutableState();
         public string Name { get; set; }
-		private readonly SliceComparer _cmp;
 
-		public Page Root;
+        public TreeMutableState State
+        {
+            get { return _state; }
+        }
+
+        private readonly SliceComparer _cmp;
 
 	    private Tree(SliceComparer cmp, Page root)
 		{
 			_cmp = cmp;
-			Root = root;
+			_state.Root = root;
 		}
 
 
@@ -34,19 +33,28 @@ namespace Nevar.Trees
             var root = tx.GetReadOnlyPage(header->RootPageNumber);
             return new Tree(cmp, root)
                 {
-                    PageCount = header->PageCount,
-                    BranchPages = header->BranchPages,
-                    Depth = header->Depth,
-                    OverflowPages = header->OverflowPages,
-                    LeafPages = header->LeafPages,
-                    EntriesCount = header->EntriesCount
+                    _state =
+                        {
+                            PageCount = header->PageCount,
+                            BranchPages = header->BranchPages,
+                            Depth = header->Depth,
+                            OverflowPages = header->OverflowPages,
+                            LeafPages = header->LeafPages,
+                            EntriesCount = header->EntriesCount
+                        }
                 };
         }
 
 	    public static Tree Create(Transaction tx, SliceComparer cmp)
 		{
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
-			var tree = new Tree(cmp, newRootPage) { Depth = 1 };
+			var tree = new Tree(cmp, newRootPage)
+			    {
+			        _state =
+			            {
+                            Depth = 1
+			            }
+			    };
 			var txInfo = tx.GetTreeInformation(tree);
 			txInfo.RecordNewPage(newRootPage, 1);
 			return tree;
@@ -87,7 +95,7 @@ namespace Nevar.Trees
 	        }
 	        else // new item should be recorded
 	        {
-	            txInfo.EntriesCount++;
+	            txInfo.State.EntriesCount++;
 	        }
 
 	        byte* overFlowPos = null;
@@ -123,8 +131,8 @@ namespace Nevar.Trees
 			overflowPageStart.Flags = PageFlags.Overlfow;
 			overflowPageStart.OverflowSize = overflowSize;
             dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
-            txInfo.OverflowPages += numberOfPages;
-            txInfo.PageCount += numberOfPages;
+            txInfo.State.OverflowPages += numberOfPages;
+            txInfo.State.PageCount += numberOfPages;
 			return overflowPageStart.PageNumber;
 		}
 
@@ -152,8 +160,8 @@ namespace Nevar.Trees
 				}
                 var txInfo = tx.GetTreeInformation(this);
 
-				txInfo.OverflowPages -= numberOfPages;
-				txInfo.PageCount -= numberOfPages;
+                txInfo.State.OverflowPages -= numberOfPages;
+                txInfo.State.PageCount -= numberOfPages;
 			}
 			page.RemoveNode(page.LastSearchPosition);
 		}
@@ -247,7 +255,7 @@ namespace Nevar.Trees
 
             page = tx.ModifyCursor(this, cursor);
 
-            txInfo.EntriesCount--;
+            txInfo.State.EntriesCount--;
 			RemoveLeafNode(tx, cursor, page);
 			var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
 			var changedPage = page;
@@ -262,7 +270,7 @@ namespace Nevar.Trees
 		public List<Slice> KeysAsList(Transaction tx)
 		{
 			var l = new List<Slice>();
-			AddKeysToListInOrder(tx, l, Root);
+			AddKeysToListInOrder(tx, l, _state.Root);
 			return l;
 		}
 
@@ -338,21 +346,14 @@ namespace Nevar.Trees
 			                                 node->DataSize, FileAccess.Read);
 		}
 
-	    public void CopyTo(TreeRootHeader* header)
-	    {
-	        header->BranchPages = BranchPages;
-	        header->Depth = Depth;
-            header->Flags = TreeFlags.None;
-	        header->LeafPages = LeafPages;
-	        header->OverflowPages = OverflowPages;
-	        header->PageCount = PageCount;
-            header->EntriesCount = EntriesCount;
-            header->RootPageNumber = Root.PageNumber;
-	    }
-
         public override string ToString()
         {
             return Name;
+        }
+
+        internal void SetState(TreeMutableState state)
+        {
+            _state = state;
         }
 	}
 }

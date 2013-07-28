@@ -22,8 +22,8 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-			Assert.Equal(4, Env.Root.PageCount);
-			Assert.Equal(3, Env.Root.OverflowPages);
+            Assert.Equal(4, Env.Root.State.PageCount);
+            Assert.Equal(3, Env.Root.State.OverflowPages);
 		}
 
 
@@ -86,8 +86,8 @@ namespace Nevar.Tests.Trees
 			{
 				Slice key = "test";
 				Env.Root.Add(tx, key, StreamFor("value"));
-				Assert.Equal(1, Env.Root.PageCount);
-				Assert.Equal(1, Env.Root.LeafPages);
+                Assert.Equal(1, Env.Root.State.PageCount);
+                Assert.Equal(1, Env.Root.State.LeafPages);
 			}
 		}
 
@@ -110,10 +110,10 @@ namespace Nevar.Tests.Trees
 				if (tx.Environment.PageSize != 4096)
 					return;
 // ReSharper restore ConditionIsAlwaysTrueOrFalse
-				Assert.Equal(4, Env.Root.PageCount);
-				Assert.Equal(3, Env.Root.LeafPages);
-				Assert.Equal(1, Env.Root.BranchPages);
-				Assert.Equal(2, Env.Root.Depth);
+                Assert.Equal(4, Env.Root.State.PageCount);
+                Assert.Equal(3, Env.Root.State.LeafPages);
+                Assert.Equal(1, Env.Root.State.BranchPages);
+                Assert.Equal(2, Env.Root.State.Depth);
 
 			}
 		}
