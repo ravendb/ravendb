@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions;
 using Xunit;
@@ -11,6 +12,7 @@ namespace Raven.Tests.Linq
 		{
 			public string SomeProperty { get; set; }
 			public string[] StringArray { get; set; }
+			public List<string> StringList { get; set; }
 		}
 
 		[Fact]
@@ -52,6 +54,52 @@ namespace Raven.Tests.Linq
 				using (var session = store.OpenSession())
 				{
 					Assert.Equal(1, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any()));
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCountWithLengthGreaterThenZero()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc { SomeProperty = "Value", StringArray = new[] { "one", "two" } });
+					session.Store(new TestDoc { SomeProperty = "Value", StringArray = new string[0] });
+					session.Store(new TestDoc { SomeProperty = "Value", StringArray = new string[0] });
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var count = session.Query<TestDoc>()
+						.Customize(customization => customization.WaitForNonStaleResults())
+						.Count(p => p.StringArray.Length > 0 && p.SomeProperty == "Value");
+					Assert.Equal(1, count);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCountWithCountGreaterThenZero()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new TestDoc { SomeProperty = "Value", StringList = new List<string> { "one", "two" } });
+					session.Store(new TestDoc { SomeProperty = "Value", StringList = new List<string>() });
+					session.Store(new TestDoc { SomeProperty = "Value", StringList = null });
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var count = session.Query<TestDoc>()
+						.Customize(customization => customization.WaitForNonStaleResults())
+						.Count(p => p.StringList.Count > 0 && p.SomeProperty == "Value");
+					Assert.Equal(1, count);
 				}
 			}
 		}
