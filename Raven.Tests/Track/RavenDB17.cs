@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Transactions;
-using Raven.Client.Document;
 using Raven.Tests.Bugs;
 using Xunit;
 
@@ -11,11 +10,7 @@ namespace Raven.Tests.Track
 		[Fact]
 		public void CacheRespectInFlightTransaction()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				// Session #1
 				using (var scope = new TransactionScope())
@@ -24,7 +19,6 @@ namespace Raven.Tests.Track
 					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
 					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
 					                                  EnlistmentOptions.None);
-
 
 					session.Advanced.UseOptimisticConcurrency = true;
 					session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -80,7 +74,6 @@ namespace Raven.Tests.Track
 		public class SomeDocument
 		{
 			public string Data { get; set; }
-
 			public int Id { get; set; }
 		}
 	}
