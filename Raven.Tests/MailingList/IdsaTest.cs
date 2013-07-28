@@ -43,7 +43,10 @@ namespace Raven.Tests.MailingList.Idsa
 						AsProjection<CasinosSuspensionsIndex.IndexResult>().
 						ToList();
 
-					Assert.True(suspensions.All(x => x.Exemptions != null));
+					// note that suspensions[0].Exemptions will be null, because we don't have
+					// any values in the array, and we don't store empty arrays
+					Assert.NotEmpty(suspensions);
+					Assert.Null(suspensions.Single().Exemptions);
 				}
 			}
 		}
