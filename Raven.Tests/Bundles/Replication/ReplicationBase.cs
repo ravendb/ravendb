@@ -26,11 +26,8 @@ using System.Linq;
 
 namespace Raven.Tests.Bundles.Replication
 {
-	public class ReplicationBase : IDisposable
+	public class ReplicationBase : RavenTest
 	{
-		private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
-		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
-
 		protected int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
@@ -57,8 +54,9 @@ namespace Raven.Tests.Bundles.Replication
 										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 										  RunInMemory = true,
 										  Port = port,
-										  DefaultStorageTypeName = RavenTestBase.GetDefaultStorageType()
+										  DefaultStorageTypeName = GetDefaultStorageType()
 									  };
+
 			ConfigureServer(serverConfiguration);
 			if (removeDataDirectory)
 			{
@@ -71,7 +69,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			if (enableAuthorization)
 			{
-				RavenTestBase.EnableAuthentication(ravenDbServer.Database);
+				EnableAuthentication(ravenDbServer.Database);
 				ConfigureServer(serverConfiguration);
 			}
 
@@ -102,7 +100,7 @@ namespace Raven.Tests.Bundles.Replication
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = true,
 					Port = port,
-					DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+					DefaultStorageTypeName = GetDefaultStorageType()
 				},
 			};
 
@@ -134,38 +132,6 @@ namespace Raven.Tests.Bundles.Replication
 		{
 		}
 
-		public virtual void Dispose()
-		{
-			var err = new List<Exception>();
-			foreach (var documentStore in stores)
-			{
-				try
-				{
-					documentStore.Dispose();
-				}
-				catch (Exception e)
-				{
-					err.Add(e);
-				}
-			}
-
-			foreach (var ravenDbServer in servers)
-			{
-				try
-				{
-					ravenDbServer.Dispose();
-					IOExtensions.DeleteDirectory(ravenDbServer.Database.Configuration.DataDirectory);
-				}
-				catch (Exception e)
-				{
-					err.Add(e);
-				}
-			}
-
-			if (err.Count > 0)
-				throw new AggregateException(err);
-		}
-
 		public void StopDatabase(int index)
 		{
 			var previousServer = servers[index];
@@ -185,7 +151,7 @@ namespace Raven.Tests.Bundles.Replication
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = previousServer.Database.Configuration.RunInMemory,
 				Port = previousServer.Database.Configuration.Port,
-				DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
+				DefaultStorageTypeName = GetDefaultStorageType()
 			};
 			ConfigureServer(serverConfiguration);
 

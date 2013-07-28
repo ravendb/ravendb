@@ -387,11 +387,49 @@ namespace Raven.Tests.Helpers
 
 		public virtual void Dispose()
 		{
-			stores.Where(store => store != null).ForEach(store => store.Dispose());
-			servers.Where(server => server != null).ForEach(server => server.Dispose());
+			var errors = new List<Exception>();
+
+			foreach (var store in stores)
+			{
+				try
+				{
+					store.Dispose();
+				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
+			}
+
+			foreach (var server in servers)
+			{
+				try
+				{
+					server.Dispose();
+				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
+			}
+
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
-			pathsToDelete.ForEach(ClearDatabaseDirectory);
+
+			foreach (var pathToDelete in pathsToDelete)
+			{
+				try
+				{
+					ClearDatabaseDirectory(pathToDelete);
+				}
+				catch (Exception e)
+				{
+					errors.Add(e);
+				}
+			}
+
+			if (errors.Count > 0)
+				throw new AggregateException(errors);
 		}
 
 		protected static void PrintServerErrors(ServerError[] serverErrors)
