@@ -25,10 +25,9 @@ namespace Raven.Tests.MailingList.Idsa
 
 				using (var documentSession = store.OpenSession())
 				{
-
 					var casino = new Casino("cities/1", "address", "name")
 					{
-						Suspensions = new List<Suspension>()
+						Suspensions = new List<Suspension>
 						{
 							new Suspension(DateTime.UtcNow, new List<Exemption>())
 						}
