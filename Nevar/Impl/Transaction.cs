@@ -16,8 +16,9 @@ namespace Nevar.Impl
         private readonly StorageEnvironment _env;
         private readonly long _id;
 
-        private TreeDataInTransaction _rootTreeData;
-        private TreeDataInTransaction _fresSpaceTreeData;
+        private bool alreadyLookingForFreeSpace;
+        private readonly TreeDataInTransaction _rootTreeData;
+        private readonly TreeDataInTransaction _fresSpaceTreeData;
         private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
         private readonly Dictionary<long, Page> _dirtyPages = new Dictionary<long, Page>();
         private readonly long _oldestTx;
@@ -34,6 +35,11 @@ namespace Nevar.Impl
             _id = id;
             Flags = flags;
             NextPageNumber = env.NextPageNumber;
+
+            if (env.Root != null)
+                _rootTreeData = new TreeDataInTransaction(env.Root);
+            if(env.FreeSpace != null)
+                _fresSpaceTreeData = new TreeDataInTransaction(env.FreeSpace);
         }
 
         public Page ModifyCursor(Tree tree, Cursor c)
@@ -127,64 +133,76 @@ namespace Nevar.Impl
             if (_env.FreeSpace == null)
                 return null;// this can happen the first time FreeSpace tree is created
 
-            using (var iterator = _env.FreeSpace.Iterate(this))
+            if (alreadyLookingForFreeSpace)
+                return null;// can't recursively find free space
+
+            alreadyLookingForFreeSpace = true;
+            try
             {
-                if (iterator.Seek(Slice.BeforeAllKeys) == false)
-                    return null;
-                var slice = new Slice(SliceOptions.Key);
-                do
+                using (var iterator = _env.FreeSpace.Iterate(this))
                 {
-                    var node = iterator.Current;
-                    slice.Set(node);
-
-                    var txId = slice.ToInt64();
-
-                    if (_oldestTx != 0 && txId >= _oldestTx)
-                        return null;  // all the free space is tied up in active transactions
-                    var remainingPages = GetNumberOfFreePages(node);
-
-                    if (remainingPages < num)
-                        continue; // this transaction doesn't have enough pages, let us try the next one...
-
-                    // this transaction does have enough pages, now we need to see if we can find enough sequential pages
-                    var list = ReadRemainingPagesList(remainingPages, node);
-                    var start = 0;
-                    var len = 1;
-                    for (int i = 1; i < list.Count && len < num; i++)
+                    if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                        return null;
+                    var slice = new Slice(SliceOptions.Key);
+                    do
                     {
-                        if (list[i - 1] + 1 != list[i]) // hole found, try from current post
+                        var node = iterator.Current;
+                        slice.Set(node);
+
+                        var txId = slice.ToInt64();
+
+                        if (_oldestTx != 0 && txId >= _oldestTx)
+                            return null;  // all the free space is tied up in active transactions
+                        var remainingPages = GetNumberOfFreePages(node);
+
+                        if (remainingPages < num)
+                            continue; // this transaction doesn't have enough pages, let us try the next one...
+
+                        // this transaction does have enough pages, now we need to see if we can find enough sequential pages
+                        var list = ReadRemainingPagesList(remainingPages, node);
+                        var start = 0;
+                        var len = 1;
+                        for (int i = 1; i < list.Count && len < num; i++)
                         {
-                            start = i;
-                            len = 1;
-                            continue;
-                        }
-                        len++;
-                    }
-
-                    if (len != num)
-                        continue; // couldn't find enough consecutive entries, try next tx...
-
-                    if (remainingPages - len == 0) // we completely emptied this transaction
-                    {
-                        _env.FreeSpace.Delete(this, slice);
-                    }
-                    else // update with the taken pages
-                    {
-                        list.RemoveRange(start, len);
-                        using (var ms = new MemoryStream())
-                        using (var writer = new BinaryWriter(ms))
-                        {
-                            foreach (var i in list)
+                            if (list[i - 1] + 1 != list[i]) // hole found, try from current post
                             {
-                                writer.Write(i);
+                                start = i;
+                                len = 1;
+                                continue;
                             }
-                            ms.Position = 0;
-                            _env.FreeSpace.Add(this, slice, ms);
+                            len++;
                         }
-                    }
-                    return _pager.Get(list[start]);
-                } while (iterator.MoveNext());
-                return null;
+
+                        if (len != num)
+                            continue; // couldn't find enough consecutive entries, try next tx...
+
+                        var page = list[start];
+                        if (remainingPages - len == 0) // we completely emptied this transaction
+                        {
+                            _env.FreeSpace.Delete(this, slice);
+                        }
+                        else // update with the taken pages
+                        {
+                            list.RemoveRange(start, len);
+                            using (var ms = new MemoryStream())
+                            using (var writer = new BinaryWriter(ms))
+                            {
+                                foreach (var i in list)
+                                {
+                                    writer.Write(i);
+                                }
+                                ms.Position = 0;
+                                _env.FreeSpace.Add(this, slice, ms);
+                            }
+                        }
+                        return _pager.Get(page);
+                    } while (iterator.MoveNext());
+                    return null;
+                }
+            }
+            finally
+            {
+                alreadyLookingForFreeSpace = false;
             }
         }
 
@@ -217,17 +235,25 @@ namespace Nevar.Impl
             return node->DataSize;
         }
 
-        public void Commit()
+        public unsafe void Commit()
         {
             if (Flags.HasFlag(TransactionFlags.ReadWrite) == false)
                 return; // nothing to do
 
-            FlushFreePages();
-
-            foreach (var cursor in _treesInfo.Values)
+            foreach (var kvp in _treesInfo)
             {
+                var cursor = kvp.Value;
+                var tree = kvp.Key;
+
                 cursor.Flush();
+                if(string.IsNullOrEmpty(kvp.Key.Name))
+                    continue;
+
+                var root = (TreeRootHeader*) _env.Root.DirectAdd(this, tree.Name, sizeof (TreeRootHeader));
+                tree.CopyTo(root);
             }
+
+            FlushFreePages();
 
             if (_rootTreeData != null)
                 _rootTreeData.Flush();
@@ -293,9 +319,9 @@ namespace Nevar.Impl
         public TreeDataInTransaction GetTreeInformation(Tree tree)
         {
             if (tree == _env.Root)
-                return _rootTreeData ?? (_rootTreeData = new TreeDataInTransaction(tree));
+                return _rootTreeData;
             if (tree == _env.FreeSpace)
-                return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(tree));
+                return _fresSpaceTreeData;
 
             TreeDataInTransaction c;
             if (_treesInfo.TryGetValue(tree, out c))

@@ -50,7 +50,7 @@ namespace Nevar.Tests.Trees
 		    Assert.Equal(stats.FreePages + stats.FreePagesOverhead + stats.HeaderPages + stats.RootPages, 
                 Env.NextPageNumber);
 
-            Assert.Equal(old, Env.NextPageNumber);
+            Assert.True(Env.NextPageNumber - old < 2);
 		}
 	}
 }

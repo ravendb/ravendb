@@ -110,13 +110,18 @@ namespace Nevar
             var header = (TreeRootHeader*) Root.DirectRead(tx, key);
             if (header != null)
             {
-                _trees.Add(name, Tree.Open(tx, _sliceComparer, header));
+                tree = Tree.Open(tx, _sliceComparer, header);
+                tree.Name = name;
+                _trees.Add(name, tree);
+                return tree;
             }
 
             tree = Tree.Create(tx, _sliceComparer);
-
+            tree.Name = name;
             var space = tree.DirectAdd(tx, key, sizeof (TreeRootHeader));
             tree.CopyTo((TreeRootHeader*)space);
+
+            _trees.Add(name, tree);
 
             return tree;
         }
@@ -147,7 +152,7 @@ namespace Nevar
             FileHeader* e2 = GetFileHeaderFrom(snd);
 
             FileHeader* entry = e1;
-            if (e2->TransactionId < e1->TransactionId)
+            if (e2->TransactionId > e1->TransactionId)
             {
                 entry = e2;
             }

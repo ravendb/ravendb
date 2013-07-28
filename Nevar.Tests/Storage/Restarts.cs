@@ -8,7 +8,7 @@ namespace Nevar.Tests.Storage
     public class Restarts
     {
         [Fact]
-        public void DataIsKepAfterRestart()
+        public void DataIsKeptAfterRestart()
         {
             using (var pureMemoryPager = new PureMemoryPager())
             {
@@ -36,6 +36,42 @@ namespace Nevar.Tests.Storage
                     }
                 }
            }
+        }
+
+        [Fact]
+        public void DataIsKeptAfterRestartForSubTrees()
+        {
+            using (var pureMemoryPager = new PureMemoryPager())
+            {
+                using (var env = new StorageEnvironment(pureMemoryPager, ownsPager: false))
+                {
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        env.CreateTree(tx, "test");
+                        tx.Commit();
+                    }
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        env.GetTree("test").Add(tx, "test", Stream.Null);
+                        tx.Commit();
+                    }
+                }
+
+                using (var env = new StorageEnvironment(pureMemoryPager))
+                {
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        env.CreateTree(tx, "test");
+                        tx.Commit();
+                    }
+
+                    using (var tx = env.NewTransaction(TransactionFlags.Read))
+                    {
+                        Assert.NotNull(env.GetTree("test").Read(tx, "test"));
+                        tx.Commit();
+                    }
+                }
+            }
         }
     }
 }

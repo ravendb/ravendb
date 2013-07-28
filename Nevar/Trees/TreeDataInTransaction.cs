@@ -49,6 +49,7 @@
             _tree.OverflowPages = OverflowPages;
             _tree.Depth = Depth;
             _tree.PageCount = PageCount;
+            Root.Dirty = false;
             _tree.Root = Root;
             _tree.EntriesCount = EntriesCount;
         }

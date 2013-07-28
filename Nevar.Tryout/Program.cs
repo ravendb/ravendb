@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using Nevar.Debugging;
 using Nevar.Impl;
+using Nevar.Tests.Storage;
 using Nevar.Tests.Trees;
 
 namespace Nevar.Tryout
@@ -9,7 +10,7 @@ namespace Nevar.Tryout
     {
         private static void Main(string[] args)
         {
-            new FreeSpace().WillBeReused();
+            new Restarts().DataIsKeptAfterRestart();
 
             //var buf = new byte[256*3];
 
