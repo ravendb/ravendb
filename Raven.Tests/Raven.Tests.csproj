@@ -1082,9 +1082,7 @@
     <Compile Include="Spatial\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
     <Compile Include="MailingList\Everett616.cs" />
-    <Compile Include="MailingList\Idsa\Casino.cs" />
-    <Compile Include="MailingList\Idsa\CasinosSuspensionsIndex.cs" />
-    <Compile Include="MailingList\Idsa\IdsaTest.cs" />
+    <Compile Include="MailingList\IdsaTest.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
     <Compile Include="Spatial\JamesCrowley.cs" />
     <Compile Include="MailingList\Joel.cs" />
