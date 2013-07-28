@@ -7,25 +7,42 @@ namespace Nevar.Impl
 {
     public unsafe class PureMemoryPager : AbstractPager
     {
-        private readonly List<MemoryHandle> _handles = new List<MemoryHandle>();
+        private IntPtr _ptr;
+        private long _allocatedSize;
+        private byte* _base;
+        private long _allocatedPages;
+        private PagerState _pagerState;
 
-        private int SegmentSize
+        public PureMemoryPager()
         {
-            get { return PageSize * 1024; }
+            _ptr = Marshal.AllocHGlobal(MinIncreaseSize);
+            _base = (byte*)_ptr.ToPointer();
+            _allocatedPages = _allocatedSize / PageSize;
+            _pagerState = new PagerState
+                {
+                    Ptr = _ptr
+                };
+            _pagerState.AddRef();
         }
+
 
         public override long NumberOfAllocatedPages
         {
-            get { return _handles.Count * (SegmentSize / PageSize); }
+            get { return _allocatedPages; }
+        }
+
+        public override void EnsureContinious(long requestedPageNumber, int pageCount)
+        {
+            for (int i = 0; i < pageCount; i++)
+            {
+                EnsurePageExists(requestedPageNumber + i);
+            }
         }
 
         public override void Dispose()
         {
-            foreach (MemoryHandle memoryHandle in _handles)
-            {
-                Marshal.FreeHGlobal(memoryHandle.Ptr);
-            }
-            _handles.Clear();
+            _pagerState.Release();
+            _base = null;
         }
 
         public override void Flush()
@@ -43,29 +60,30 @@ namespace Nevar.Impl
 
         public override Page Get(long n)
         {
-            long index = n / SegmentSize;
-            if (index == _handles.Count)
+            EnsurePageExists(n);
+            return new Page(_base + (n * PageSize), PageMaxSpace);
+        }
+
+        private void EnsurePageExists(long n)
+        {
+            if (n >= _allocatedPages)
             {
-                AddSegment();
+                var oldSize = _allocatedSize;
+                _allocatedSize = GetNewLength(_allocatedSize);
+                _allocatedPages = _allocatedSize/PageSize;
+                var newPtr = Marshal.AllocHGlobal(new IntPtr(_allocatedSize));
+                var newBase = (byte*) newPtr.ToPointer();
+                NativeMethods.memcpy(newBase, _base, new IntPtr(oldSize));
+                _base = newBase;
+                _ptr = newPtr;
+
+                var oldPager = _pagerState;
+
+                var newPager = new PagerState {Ptr = newPtr};
+                newPager.AddRef();
+                _pagerState = newPager;
+                oldPager.Release();
             }
-            byte* pageStart = _handles[(int)index].Base + (n % SegmentSize * PageSize);
-            return new Page(pageStart, PageSize);
-        }
-
-        private void AddSegment()
-        {
-            IntPtr ptr = Marshal.AllocHGlobal(SegmentSize);
-            _handles.Add(new MemoryHandle
-                {
-                    Base = (byte*)ptr.ToPointer(),
-                    Ptr = ptr
-                });
-        }
-
-        public class MemoryHandle
-        {
-            public byte* Base;
-            public IntPtr Ptr;
         }
     }
 }

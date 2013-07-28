@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using Nevar.Impl;
@@ -81,15 +82,15 @@ namespace Nevar
 		public override string ToString()
 		{
 			// this is used for debug purposes only
-
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
 
-			if (_array != null) // an array
-			{
-				return Encoding.UTF8.GetString(_array);
-			}
-			return Marshal.PtrToStringAnsi(new IntPtr(_pointer), _pointerSize);
+		    if (Size == sizeof (long))
+		        return ToInt64().ToString(CultureInfo.InvariantCulture);
+
+		    return _array != null
+		               ? Encoding.UTF8.GetString(_array)
+		               : Marshal.PtrToStringAnsi(new IntPtr(_pointer), _pointerSize);
 		}
 
 		public int Compare(Slice other, SliceComparer cmp)

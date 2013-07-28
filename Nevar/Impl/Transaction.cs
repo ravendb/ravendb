@@ -50,7 +50,7 @@ namespace Nevar.Impl
 
             if (env.Root != null)
                 _rootTreeData = new TreeDataInTransaction(env.Root);
-            if(env.FreeSpace != null)
+            if (env.FreeSpace != null)
                 _fresSpaceTreeData = new TreeDataInTransaction(env.FreeSpace);
         }
 
@@ -130,6 +130,8 @@ namespace Nevar.Impl
             var page = TryAllocateFromFreeSpace(num);
             if (page == null) // allocate from end of file
             {
+                if (num > 1)
+                    _pager.EnsureContinious(NextPageNumber, num);
                 page = _pager.Get(NextPageNumber);
                 page.PageNumber = NextPageNumber;
                 NextPageNumber += num;
@@ -152,66 +154,45 @@ namespace Nevar.Impl
             _alreadyLookingForFreeSpace = true;
             try
             {
-                using (var iterator = _env.FreeSpace.Iterate(this))
-                {
-                    if (iterator.Seek(Slice.BeforeAllKeys) == false)
-                        return null;
-                    var slice = new Slice(SliceOptions.Key);
-                    do
-                    {
-                        var node = iterator.Current;
-                        slice.Set(node);
 
-                        var txId = slice.ToInt64();
-
-                        if (_oldestTx != 0 && txId >= _oldestTx)
-                            return null;  // all the free space is tied up in active transactions
-                        var remainingPages = GetNumberOfFreePages(node);
-
-                        if (remainingPages < num)
-                            continue; // this transaction doesn't have enough pages, let us try the next one...
-
-                        // this transaction does have enough pages, now we need to see if we can find enough sequential pages
-                        var list = ReadRemainingPagesList(remainingPages, node);
-                        var start = 0;
-                        var len = 1;
-                        for (int i = 1; i < list.Count && len < num; i++)
-                        {
-                            if (list[i - 1] + 1 != list[i]) // hole found, try from current post
-                            {
-                                start = i;
-                                len = 1;
-                                continue;
-                            }
-                            len++;
-                        }
-
-                        if (len != num)
-                            continue; // couldn't find enough consecutive entries, try next tx...
-
-                        var page = list[start];
-                        if (remainingPages - len == 0) // we completely emptied this transaction
-                        {
-                            _env.FreeSpace.Delete(this, slice);
-                        }
-                        else // update with the taken pages
-                        {
-                            list.RemoveRange(start, len);
-                            using (var ms = new MemoryStream())
-                            using (var writer = new BinaryWriter(ms))
-                            {
-                                foreach (var i in list)
-                                {
-                                    writer.Write(i);
-                                }
-                                ms.Position = 0;
-                                _env.FreeSpace.Add(this, slice, ms);
-                            }
-                        }
-                        return _pager.Get(page);
-                    } while (iterator.MoveNext());
+                var list = MergeAllFreeSpaceAvailable();
+                if (list.Count == 0)
                     return null;
+                list.Sort();
+                var start = 0;
+                var len = 1;
+                for (int i = 1; i < list.Count && len < num; i++)
+                {
+                    if (list[i - 1] + 1 != list[i]) // hole found, try from current page
+                    {
+                        start = i;
+                        len = 1;
+                        continue;
+                    }
+                    len++;
                 }
+
+                if (len != num)
+                    return null;
+
+                var page = list[start];
+                if (list.Count != len) // we still have leftover free space
+                {
+                    list.RemoveRange(start, len);
+                    using (var ms = new MemoryStream())
+                    using (var writer = new BinaryWriter(ms))
+                    {
+                        foreach (var i in list)
+                        {
+                            writer.Write(i);
+                        }
+                        ms.Position = 0;
+                        var slice = new Slice(SliceOptions.Key);
+                        slice.Set(_oldestTx - 1); // make this space immediately available
+                        _env.FreeSpace.Add(this, slice, ms);
+                    }
+                }
+                return _pager.Get(page);
             }
             finally
             {
@@ -219,23 +200,52 @@ namespace Nevar.Impl
             }
         }
 
+        private unsafe List<long> MergeAllFreeSpaceAvailable()
+        {
+            var results = new List<long>();
+            var toDelete = new List<Slice>();
+            using (var iterator = _env.FreeSpace.Iterate(this))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                    return results;
+
+                do
+                {
+                    var node = iterator.Current;
+                    var slice = new Slice(node);
+
+                    var txId = slice.ToInt64();
+
+                    if (_oldestTx != 0 && txId >= _oldestTx)
+                        break;  // all the free space after this is tied up in active transactions
+
+                    toDelete.Add(slice);
+                    var remainingPages = GetNumberOfFreePages(node);
+
+                    using (var data = Tree.StreamForNode(this, node))
+                    using (var reader = new BinaryReader(data))
+                    {
+                        for (int i = 0; i < remainingPages; i++)
+                        {
+                            results.Add(reader.ReadInt64());
+                        }
+                    }
+
+                } while (iterator.MoveNext());
+            }
+
+            foreach (var slice in toDelete)
+            {
+                _env.FreeSpace.Delete(this , slice);
+            }
+
+            return results;
+        }
+
+
         internal unsafe int GetNumberOfFreePages(NodeHeader* node)
         {
             return GetNodeDataSize(node) / Constants.PageNumberSize;
-        }
-
-        private unsafe List<long> ReadRemainingPagesList(int remainingPages, NodeHeader* node)
-        {
-            var list = new List<long>(remainingPages);
-            using (var data = Tree.StreamForNode(this, node))
-            using (var reader = new BinaryReader(data))
-            {
-                for (int i = 0; i < remainingPages; i++)
-                {
-                    list.Add(reader.ReadInt64());
-                }
-            }
-            return list;
         }
 
         internal unsafe int GetNodeDataSize(NodeHeader* node)
@@ -259,10 +269,10 @@ namespace Nevar.Impl
                 var tree = kvp.Key;
 
                 cursor.Flush();
-                if(string.IsNullOrEmpty(kvp.Key.Name))
+                if (string.IsNullOrEmpty(kvp.Key.Name))
                     continue;
 
-                var treePtr = (TreeRootHeader*) _env.Root.DirectAdd(this, tree.Name, sizeof (TreeRootHeader));
+                var treePtr = (TreeRootHeader*)_env.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
                 tree.State.CopyTo(treePtr);
             }
 

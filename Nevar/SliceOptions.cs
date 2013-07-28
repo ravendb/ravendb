@@ -4,6 +4,6 @@
 	{
 		Key = 0,
 		BeforeAllKeys = 1,
-		AfterAllKeys = 2
+		AfterAllKeys = 2,
 	}
 }

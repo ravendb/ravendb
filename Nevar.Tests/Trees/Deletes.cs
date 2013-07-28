@@ -70,7 +70,6 @@ namespace Nevar.Tests.Trees
 				 {
 					 Env.Root.Delete(tx, string.Format("{0,5}", i));
 				 }
-			     RenderAndShow(tx, 1);
 				 tx.Commit();
 			 }
 
@@ -78,7 +77,6 @@ namespace Nevar.Tests.Trees
 
              using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			 {
-                 RenderAndShow(tx, 1);
 				 var list = Env.Root.KeysAsList(tx);
 				 Assert.Equal(expected, list);
 			 }

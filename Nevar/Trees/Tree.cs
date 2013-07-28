@@ -66,7 +66,7 @@ namespace Nevar.Trees
             if (value.Length > int.MaxValue)
                 throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
             var pos = DirectAdd(tx, key, (int)value.Length);
-		 
+
             using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))
             {
                 value.CopyTo(ums);
@@ -106,17 +106,18 @@ namespace Nevar.Trees
 	            len = -1;
 	        }
 
-	        if (page.HasSpaceFor(key, len) == false)
-	        {
-	            var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, cursor, txInfo);
-	            var pos = pageSplitter.Execute();
-	            DebugValidateTree(tx, txInfo.Root);
-	            return pos;
-	        }
-
-	        var dataPos = page.AddNode(page.LastSearchPosition, key, len, pageNumber);
-
-	        page.DebugValidate(tx, _cmp, txInfo.Root);
+            byte* dataPos;
+            if (page.HasSpaceFor(key, len) == false)
+            {
+                var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, cursor, txInfo);
+                dataPos = pageSplitter.Execute();
+                DebugValidateTree(tx, txInfo.Root);
+            }
+            else
+            {
+                dataPos = page.AddNode(page.LastSearchPosition, key, len, pageNumber);
+                page.DebugValidate(tx, _cmp, txInfo.Root);
+            }
 	        if (overFlowPos != null)
 	            return overFlowPos;
 	        return dataPos;

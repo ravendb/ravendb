@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Nevar.Debugging;
 using Nevar.Impl;
 using Nevar.Tests.Storage;
@@ -10,7 +11,7 @@ namespace Nevar.Tryout
     {
         private static void Main(string[] args)
         {
-            new Restarts().DataIsKeptAfterRestart();
+            new VeryBig().CanGrowBeyondInitialSize();
 
             //var buf = new byte[256*3];
 

@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Text;
 using Nevar.Debugging;
 using Nevar.Impl;
 using Nevar.Trees;
 
-namespace Nevar.Tests.Trees
+namespace Nevar.Tests
 {
 	public abstract class StorageTest : IDisposable
 	{
 		private readonly StorageEnvironment _storageEnvironment;
-	    private PureMemoryPager _pureMemoryPager;
+	    private IVirtualPager _pager;
 
 	    public StorageEnvironment Env
 		{
@@ -21,9 +20,17 @@ namespace Nevar.Tests.Trees
 
 		protected StorageTest()
 		{
-		    _pureMemoryPager = new PureMemoryPager();
-		    _storageEnvironment = new StorageEnvironment(_pureMemoryPager);
+            //FilePager();
+            _pager = new PureMemoryPager();
+		    _storageEnvironment = new StorageEnvironment(_pager);
 		}
+
+	    private void FilePager()
+	    {
+	        if (File.Exists("test.data"))
+	            File.Delete("test.data");
+	        _pager = new MemoryMapPager("test.data");
+	    }
 
 	    protected Stream StreamFor(string val)
 		{
@@ -33,15 +40,23 @@ namespace Nevar.Tests.Trees
 		public void Dispose()
 		{
 			_storageEnvironment.Dispose();
-            _pureMemoryPager.Dispose();
+            _pager.Dispose();
 		}
 
-		protected void RenderAndShow(Transaction tx, int showEntries = 25)
+        protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)
+        {
+            if (name == null)
+                RenderAndShow(tx, Env.Root, showEntries);
+            else
+                RenderAndShow(tx, Env.GetTree(name), showEntries);
+        }
+
+		private void RenderAndShow(Transaction tx, Tree root, int showEntries = 25)
 		{
 			if (Debugger.IsAttached == false)
 				return;
 			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-			TreeDumper.Dump(tx, path, tx.GetTreeInformation(Env.Root).Root, showEntries);
+			TreeDumper.Dump(tx, path, tx.GetTreeInformation(root).Root, showEntries);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
             var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
