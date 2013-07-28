@@ -6,6 +6,7 @@ namespace Nevar.Impl
 	public interface IVirtualPager : IDisposable
 	{
 		Page Get(long n);
+        
         long NumberOfAllocatedPages { get; }
         int PageSize { get; }
 	    int MaxNodeSize { get; }
@@ -13,5 +14,10 @@ namespace Nevar.Impl
 	    int PageMinSpace { get; }
 
 	    void Flush();
+
+	    PagerState TransactionBegan();
+	    void TransactionCompleted(PagerState state);
 	}
+
+    public class PagerState{}
 }

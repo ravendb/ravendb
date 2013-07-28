@@ -201,6 +201,7 @@ namespace Nevar
                 }
                 var newTransaction = new Transaction(_pager, this, txId, flags);
                 _activeTransactions.TryAdd(txId, newTransaction);
+                newTransaction.PagerState = _pager.TransactionBegan();
                 return newTransaction;
             }
             catch (Exception)
@@ -216,6 +217,8 @@ namespace Nevar
             Transaction tx;
             if (_activeTransactions.TryRemove(txId, out tx) == false)
                 return;
+
+            _pager.TransactionCompleted(tx.PagerState);
 
             if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
                 return;

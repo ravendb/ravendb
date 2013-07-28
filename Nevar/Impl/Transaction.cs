@@ -37,6 +37,8 @@ namespace Nevar.Impl
             get { return _pager; }
         }
 
+        public PagerState PagerState { get; set; }
+
         public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags)
         {
             _pager = pager;

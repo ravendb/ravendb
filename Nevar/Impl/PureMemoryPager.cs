@@ -5,7 +5,7 @@ using Nevar.Trees;
 
 namespace Nevar.Impl
 {
-    public unsafe class PureMemoryPager : IVirtualPager
+    public unsafe class PureMemoryPager : AbstractPager
     {
         private readonly List<MemoryHandle> _handles = new List<MemoryHandle>();
 
@@ -14,18 +14,12 @@ namespace Nevar.Impl
             get { return PageSize * 1024; }
         }
 
-        public PureMemoryPager()
+        public override long NumberOfAllocatedPages
         {
-            MaxNodeSize = (PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage;
-            PageMaxSpace = PageSize - Constants.PageHeaderSize;
-            PageMinSpace = (int)(PageMaxSpace * 0.33);
+            get { return _handles.Count * (SegmentSize / PageSize); }
         }
 
-        public int PageMaxSpace { get; private set; }
-        public int MaxNodeSize { get; private set; }
-        public int PageMinSpace { get; private set; }
-
-        public void Dispose()
+        public override void Dispose()
         {
             foreach (MemoryHandle memoryHandle in _handles)
             {
@@ -34,7 +28,20 @@ namespace Nevar.Impl
             _handles.Clear();
         }
 
-        public Page Get(long n)
+        public override void Flush()
+        {
+        }
+
+        public override PagerState TransactionBegan()
+        {
+            return null;
+        }
+
+        public override void TransactionCompleted(PagerState state)
+        {
+        }
+
+        public override Page Get(long n)
         {
             long index = n / SegmentSize;
             if (index == _handles.Count)
@@ -43,20 +50,6 @@ namespace Nevar.Impl
             }
             byte* pageStart = _handles[(int)index].Base + (n % SegmentSize * PageSize);
             return new Page(pageStart, PageSize);
-        }
-
-        public long NumberOfAllocatedPages
-        {
-            get { return _handles.Count * (SegmentSize / PageSize); }
-        }
-
-        public int PageSize
-        {
-            get { return 4096; }
-        }
-
-        public void Flush()
-        {
         }
 
         private void AddSegment()
