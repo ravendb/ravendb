@@ -1,4 +1,4 @@
-﻿0. Copy on write for pages! 
-1. Multiple trees 
+﻿1. Multiple trees 
 2. Run using mmap files
-3. Allow to increase size
+3. Allow to increase size using mmap
+* PageSize not a const

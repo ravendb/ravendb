@@ -54,59 +54,71 @@ namespace Nevar.Trees
 
 		public void Add(Transaction tx, Slice key, Stream value)
 		{
-			if (value == null) throw new ArgumentNullException("value");
-			if (value.Length > int.MaxValue) throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
-            if(tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot add a value in a read only transaction");
-
-		    var cursor = new Cursor();
-            var txInfo = tx.GetTreeInformation(this);
-
-			FindPageFor(tx, key, cursor);
-
-            var page = tx.ModifyCursor(this, cursor);
-
-			if (page.LastMatch == 0) // this is an update operation
-			{
-				RemoveLeafNode(tx, cursor, page);
-			}
-			else // new item should be recorded
-			{
-                txInfo.EntriesCount++;
-			}
-
-		    var pageNumber = -1L;
-			if (ShouldGoToOverflowPage(value))
-			{
-				pageNumber = WriteToOverflowPages(tx, txInfo, value);
-				value = null;
-			}
-
-			if (page.HasSpaceFor(key, value) == false)
-			{
-			    var pageSplitter = new PageSplitter(tx, _cmp, key, value, pageNumber, cursor, txInfo);
-			    pageSplitter.Execute();
-                DebugValidateTree(tx, txInfo.Root);
-				return;
-			}
-
-			page.AddNode(page.LastSearchPosition, key, value, pageNumber);
-
-            page.DebugValidate(tx, _cmp, txInfo.Root);
+            if (value == null) throw new ArgumentNullException("value");
+            if (value.Length > int.MaxValue)
+                throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
+            var pos = DirectAdd(tx, key, (int)value.Length);
+		 
+            using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))
+            {
+                value.CopyTo(ums);
+            }
 		}
 
-        private static long WriteToOverflowPages(Transaction tx, TreeDataInTransaction txInfo, Stream value)
+	    internal byte* DirectAdd(Transaction tx, Slice key, int len)
+	    {
+	        if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+	            throw new ArgumentException("Cannot add a value in a read only transaction");
+
+	        var cursor = new Cursor();
+	        var txInfo = tx.GetTreeInformation(this);
+
+	        FindPageFor(tx, key, cursor);
+
+	        var page = tx.ModifyCursor(this, cursor);
+
+	        if (page.LastMatch == 0) // this is an update operation
+	        {
+	            RemoveLeafNode(tx, cursor, page);
+	        }
+	        else // new item should be recorded
+	        {
+	            txInfo.EntriesCount++;
+	        }
+
+	        byte* overFlowPos = null;
+            var pageNumber = -1L;
+	        if (ShouldGoToOverflowPage(len))
+	        {
+	            pageNumber = WriteToOverflowPages(tx, txInfo, len, out overFlowPos);
+	            len = -1;
+	        }
+
+	        if (page.HasSpaceFor(key, len) == false)
+	        {
+	            var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, cursor, txInfo);
+	            var pos = pageSplitter.Execute();
+	            DebugValidateTree(tx, txInfo.Root);
+	            return pos;
+	        }
+
+	        var dataPos = page.AddNode(page.LastSearchPosition, key, len, pageNumber);
+
+	        page.DebugValidate(tx, _cmp, txInfo.Root);
+	        if (overFlowPos != null)
+	            return overFlowPos;
+	        return dataPos;
+	    }
+
+        private static long WriteToOverflowPages(Transaction tx, TreeDataInTransaction txInfo, int overflowSize, out byte* dataPos)
 		{
-			var overflowSize = (int)value.Length;
+			
 			var numberOfPages = GetNumberOfOverflowPages(overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
 			overflowPageStart.OverflowSize = numberOfPages;
 			overflowPageStart.Flags = PageFlags.Overlfow;
 			overflowPageStart.OverflowSize = overflowSize;
-			using (var ums = new UnmanagedMemoryStream(overflowPageStart.Base + Constants.PageHeaderSize,
-				value.Length, value.Length, FileAccess.ReadWrite))
-			{
-				value.CopyTo(ums);
-			}
+            dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
             txInfo.OverflowPages += numberOfPages;
             txInfo.PageCount += numberOfPages;
 			return overflowPageStart.PageNumber;
@@ -117,9 +129,9 @@ namespace Nevar.Trees
 			return (Constants.PageSize - 1 + overflowSize) / (Constants.PageSize) + 1;
 		}
 
-		private bool ShouldGoToOverflowPage(Stream value)
+		private bool ShouldGoToOverflowPage(int len)
 		{
-			return value.Length + Constants.PageHeaderSize > Constants.MaxNodeSize;
+			return len + Constants.PageHeaderSize > Constants.MaxNodeSize;
 		}
 
 		private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
@@ -287,6 +299,28 @@ namespace Nevar.Trees
 				return null;
 			return StreamForNode(tx, node);
 		}
+
+        internal byte* DirectRead(Transaction tx, Slice key)
+        {
+            var cursor = new Cursor();
+            var p = FindPageFor(tx, key, cursor);
+            var node = p.Search(key, _cmp);
+
+            if (node == null)
+                return null;
+
+            var item1 = new Slice(node);
+
+            if (item1.Compare(key, _cmp) != 0)
+                return null;
+
+            if (node->Flags.HasFlag(NodeFlags.PageRef))
+            {
+                var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+                return overFlowPage.Base + Constants.PageHeaderSize;
+            }
+            return (byte*) node + node->KeySize + Constants.NodeHeaderSize;
+        }
 
 		internal static Stream StreamForNode(Transaction tx, NodeHeader* node)
 		{

@@ -162,9 +162,9 @@ namespace Nevar.Trees
 
 		}
 
-		public void AddNode(int index, Slice key, Stream value, long pageNumber)
+		public byte* AddNode(int index, Slice key, int len, long pageNumber)
 		{
-			if (HasSpaceFor(key, value) == false)
+			if (HasSpaceFor(key, len) == false)
 				throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
 
 			// move higher pointers up one slot
@@ -172,29 +172,25 @@ namespace Nevar.Trees
 			{
 				KeysOffsets[i] = KeysOffsets[i - 1];
 			}
-			var nodeSize = SizeOf.NodeEntry(key, value);
+			var nodeSize = SizeOf.NodeEntry(key, len);
 			var node = AllocateNewNode(index, key, nodeSize);
 
 			if (key.Options == SliceOptions.Key)
 				key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
-			if (value == null) // branch or overflow
+            if (len < 0) // branch or overflow
 			{
 				Debug.Assert(pageNumber != -1);
 				node->PageNumber = pageNumber;
 				node->Flags = NodeFlags.PageRef;
-				return;
+			    return null; // write nothing here
 			}
 
 			Debug.Assert(key.Options == SliceOptions.Key);
-			Debug.Assert(value != null);
 			var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
-			node->DataSize = (int)value.Length;
+			node->DataSize = len;
 			node->Flags = NodeFlags.Data;
-			using (var ums = new UnmanagedMemoryStream(dataPos, value.Length, value.Length, FileAccess.ReadWrite))
-			{
-				value.CopyTo(ums);
-			}
+		    return dataPos;
 		}
 
 		/// <summary>
@@ -308,15 +304,15 @@ namespace Nevar.Trees
 			return sb.ToString();
 		}
 
-		public bool HasSpaceFor(Slice key, Stream value)
+		public bool HasSpaceFor(Slice key, int len)
 		{
-			var requiredSpace = GetRequiredSpace(key, value);
+			var requiredSpace = GetRequiredSpace(key, len);
 			return requiredSpace <= SizeLeft;
 		}
 
-		public static int GetRequiredSpace(Slice key, Stream value)
+		public static int GetRequiredSpace(Slice key, int len)
 		{
-			return SizeOf.NodeEntry(key, value) + Constants.NodeOffsetSize;
+			return SizeOf.NodeEntry(key, len) + Constants.NodeOffsetSize;
 		}
 
 		public string this[int i]

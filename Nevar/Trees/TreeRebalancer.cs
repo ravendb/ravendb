@@ -108,20 +108,18 @@ namespace Nevar.Trees
             var fromKey = GetCurrentKeyFrom(from);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            Stream val = null;
+            byte* val = null;
             long pageNum;
             if (fromNode->Flags.HasFlag(NodeFlags.Data))
             {
-                val = new UnmanagedMemoryStream(from.Base + from.KeysOffsets[from.LastSearchPosition] + Constants.NodeHeaderSize + fromKey.Size, fromNode->DataSize);
-                pageNum = -1L;
+                val = from.Base + from.KeysOffsets[from.LastSearchPosition] + Constants.NodeHeaderSize + fromKey.Size;
+                var dataPos = to.AddNode(to.LastSearchPosition, fromKey, fromNode->DataSize, -1);
+                NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
             }
             else
             {
                 pageNum = fromNode->PageNumber;
-            }
-            using (val)
-            {
-                to.AddNode(to.LastSearchPosition, fromKey, val, pageNum);
+                to.AddNode(to.LastSearchPosition, fromKey, -1, pageNum);
             }
 
             from.RemoveNode(from.LastSearchPosition);
@@ -135,7 +133,7 @@ namespace Nevar.Trees
                 pageNumber = from.PageNumber;
             }
 
-            parentPage.AddNode(parentPage.LastSearchPosition, toKey, null, pageNumber);
+            parentPage.AddNode(parentPage.LastSearchPosition, toKey, -1, pageNumber);
         }
 
         private Slice GetCurrentKeyFrom(Page page)
