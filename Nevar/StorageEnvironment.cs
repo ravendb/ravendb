@@ -39,8 +39,13 @@ namespace Nevar
                 NextPageNumber = 2;
                 using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
                 {
-                    FreeSpace = Tree.Create(tx, _sliceComparer);
-                    Root = Tree.Create(tx, _sliceComparer);
+                    var root = Tree.Create(tx, _sliceComparer);
+                    var freeSpace = Tree.Create(tx, _sliceComparer);
+
+                    // important to first create the two trees, then set them on the env
+
+                    FreeSpace = freeSpace;
+                    Root = root;
                     tx.Commit();
                 }
             }
@@ -52,8 +57,12 @@ namespace Nevar
                 _transactionsCounter = entry->TransactionId + 1;
                 using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
                 {
-                    FreeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
-                    Root = Tree.Open(tx, _sliceComparer, &entry->Root);
+                    var root = Tree.Open(tx, _sliceComparer, &entry->Root);
+                    var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
+                  
+                    // important to first create the two trees, then set them on the env
+                    FreeSpace = freeSpace;
+                    Root = root;
 
                     tx.Commit();
                 }
