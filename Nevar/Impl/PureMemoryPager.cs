@@ -31,13 +31,7 @@ namespace Nevar.Impl
             get { return _allocatedPages; }
         }
 
-        public override void EnsureContinious(long requestedPageNumber, int pageCount)
-        {
-            for (int i = 0; i < pageCount; i++)
-            {
-                EnsurePageExists(requestedPageNumber + i);
-            }
-        }
+        
 
         public override void Dispose()
         {
@@ -64,7 +58,7 @@ namespace Nevar.Impl
             return new Page(_base + (n * PageSize), PageMaxSpace);
         }
 
-        private void EnsurePageExists(long n)
+        protected override void EnsurePageExists(long n)
         {
             if (n >= _allocatedPages)
             {

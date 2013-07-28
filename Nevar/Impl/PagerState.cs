@@ -19,7 +19,7 @@ namespace Nevar.Impl
 
         public void Release()
         {
-            if (Interlocked.Decrement(ref _refs) == 0)
+            if (Interlocked.Decrement(ref _refs) != 0)
                 return;
 
             Base = null;

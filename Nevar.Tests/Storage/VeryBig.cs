@@ -36,7 +36,6 @@ namespace Nevar.Tests.Storage
 		[Fact]
 		public void CanGrowBeyondInitialSize_Root()
 		{
-
 			var buffer = new byte[1024 * 512];
 			new Random().NextBytes(buffer);
 
@@ -44,10 +43,6 @@ namespace Nevar.Tests.Storage
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					if (i == 17)
-					{
-
-					}
 					for (int j = 0; j < 12; j++)
 					{
 						Env.Root.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));

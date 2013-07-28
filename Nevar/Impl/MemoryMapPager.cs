@@ -12,7 +12,6 @@ namespace Nevar.Impl
       
         private PagerState _pagerState;
 
-
         public MemoryMapPager(string file)
         {
             var fileInfo = new FileInfo(file);
@@ -31,32 +30,37 @@ namespace Nevar.Impl
 
         public override Page Get(long n)
         {
-            if (n >= _allocatedPages)
-            {
-                // need to allocate memory again
-                _fileStream.SetLength(GetNewLength(_fileStream.Length));
-                var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
-                                                MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
-                _pagerState.Release(); // when the last transaction using this is over, will dispose it
-
-                var accessor = mmf.CreateViewAccessor();
-                byte* p = null;
-                accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
-
-                var pagerState = new PagerState
-                    {
-                        Accessor = accessor,
-                        File = mmf,
-                        Base = p
-                    };
-                pagerState.AddRef();
-                _pagerState = pagerState;
-                _allocatedPages = accessor.Capacity / PageSize;
-            }
-            return new Page(_pagerState.Base + (n * PageSize), PageMaxSpace);
+	        EnsurePageExists(n);
+	        return new Page(_pagerState.Base + (n * PageSize), PageMaxSpace);
         }
 
-        public override void Flush()
+	    protected override void EnsurePageExists(long n)
+	    {
+		    if (n < _allocatedPages)
+			    return;
+
+		    // need to allocate memory again
+		    _fileStream.SetLength(GetNewLength(_fileStream.Length));
+		    var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
+		                                              MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
+		    _pagerState.Release(); // when the last transaction using this is over, will dispose it
+
+		    var accessor = mmf.CreateViewAccessor();
+		    byte* p = null;
+		    accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
+
+		    var pagerState = new PagerState
+			    {
+				    Accessor = accessor,
+				    File = mmf,
+				    Base = p
+			    };
+		    pagerState.AddRef();
+		    _pagerState = pagerState;
+		    _allocatedPages = accessor.Capacity/PageSize;
+	    }
+
+	    public override void Flush()
         {
             _pagerState.Accessor.Flush();
             _fileStream.Flush(true);
@@ -72,11 +76,6 @@ namespace Nevar.Impl
         public override void TransactionCompleted(PagerState state)
         {
             state.Release();
-        }
-
-        public override void EnsureContinious(long requestedPageNumber, int pageCount)
-        {
-            throw new NotImplementedException();
         }
 
         public override void Dispose()
