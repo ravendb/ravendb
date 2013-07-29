@@ -54,17 +54,14 @@ namespace Nevar.Impl
 
 		public override Page Get(long n)
 		{
-			EnsurePageExists(n);
+			EnsureContinious(n, 1);
 			return new Page(_base + (n * PageSize), PageMaxSpace);
 		}
 
-		protected override void EnsurePageExists(long n)
+		protected override void AllocateMorePages(long newLength)
 		{
-			if (n < _allocatedPages)
-				return;
-
 			var oldSize = _allocatedSize;
-			_allocatedSize = GetNewLength(_allocatedSize);
+			_allocatedSize = newLength;
 			_allocatedPages = _allocatedSize / PageSize;
 			var newPtr = Marshal.AllocHGlobal(new IntPtr(_allocatedSize));
 			var newBase = (byte*)newPtr.ToPointer();

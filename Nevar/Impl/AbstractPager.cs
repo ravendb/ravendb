@@ -27,7 +27,6 @@ namespace Nevar.Impl
 			get { return 4096; }
 		}
 
-
 		public abstract long NumberOfAllocatedPages { get; }
 
 		public abstract Page Get(long n);
@@ -40,17 +39,26 @@ namespace Nevar.Impl
 
 		public virtual void EnsureContinious(long requestedPageNumber, int pageCount)
 		{
-			for (int i = 0; i < pageCount; i++)
+			if (requestedPageNumber + pageCount < NumberOfAllocatedPages)
+				return;
+
+			// this ensure that if we want to get a range that is more than the current expansion
+			// we will increase as much as needed in one shot
+			var minRequested = (requestedPageNumber + pageCount)*PageSize;
+			var allocationSize = NumberOfAllocatedPages*PageSize;
+			while (minRequested > allocationSize)
 			{
-				EnsurePageExists(requestedPageNumber + i);
+				allocationSize = GetNewLength(allocationSize);
 			}
+
+			AllocateMorePages(allocationSize);
 		}
 
 		public abstract void Dispose();
-		protected abstract void EnsurePageExists(long n);
+		protected abstract void AllocateMorePages(long newLength);
 
 
-		protected long GetNewLength(long current)
+		private long GetNewLength(long current)
 		{
 			DateTime now = DateTime.UtcNow;
 			TimeSpan timeSinceLastIncrease = (now - _lastIncrease);

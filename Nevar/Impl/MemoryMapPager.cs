@@ -30,17 +30,14 @@ namespace Nevar.Impl
 
         public override Page Get(long n)
         {
-	        EnsurePageExists(n);
+	        EnsureContinious(n, 1);
 	        return new Page(_pagerState.Base + (n * PageSize), PageMaxSpace);
         }
 
-	    protected override void EnsurePageExists(long n)
+	    protected override void AllocateMorePages(long newLength)
 	    {
-		    if (n < _allocatedPages)
-			    return;
-
 		    // need to allocate memory again
-		    _fileStream.SetLength(GetNewLength(_fileStream.Length));
+			_fileStream.SetLength(newLength);
 		    var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
 		                                              MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
 		    _pagerState.Release(); // when the last transaction using this is over, will dispose it
