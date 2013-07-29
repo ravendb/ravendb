@@ -23,7 +23,6 @@ namespace Nevar.Tests.Storage
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-
 					for (int j = 0; j < 12; j++)
 					{
 						tree.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));

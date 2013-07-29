@@ -11,7 +11,7 @@ namespace Nevar.Tryout
     {
         private static void Main(string[] args)
         {
-			new Deletes().CanDeleteAtRoot();
+			new VeryBig().CanGrowBeyondInitialSize_Root();
 
             //var buf = new byte[256*3];
 
