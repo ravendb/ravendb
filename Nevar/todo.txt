@@ -1,2 +1,1 @@
-﻿2. Run using mmap files
-3. Allow to increase size using mmap
+﻿* Allow to expand twice in a single transaction without leaking memory
