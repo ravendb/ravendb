@@ -166,7 +166,7 @@ namespace Nevar.Trees
             txInfo.State.BranchPages = 0;
             txInfo.State.Depth = 1;
             txInfo.State.PageCount = 1;
-            txInfo.State.Root = _tx.GetReadOnlyPage(node->PageNumber);
+            txInfo.Root = _tx.GetReadOnlyPage(node->PageNumber);
 
             Debug.Assert(txInfo.Root.Dirty);
 

@@ -21,17 +21,16 @@ namespace Nevar.Trees
 
         private readonly SliceComparer _cmp;
 
-	    private Tree(SliceComparer cmp, Page root)
+	    private Tree(SliceComparer cmp, long root)
 		{
 			_cmp = cmp;
-			_state.Root = root;
+			_state.RootPageNumber = root;
 		}
 
 
 	    public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
         {
-            var root = tx.GetReadOnlyPage(header->RootPageNumber);
-            return new Tree(cmp, root)
+            return new Tree(cmp, header->RootPageNumber)
                 {
                     _state =
                         {
@@ -48,7 +47,7 @@ namespace Nevar.Trees
 	    public static Tree Create(Transaction tx, SliceComparer cmp)
 		{
 			var newRootPage = NewPage(tx, PageFlags.Leaf, 1);
-			var tree = new Tree(cmp, newRootPage)
+			var tree = new Tree(cmp, newRootPage.PageNumber)
 			    {
 			        _state =
 			            {
@@ -266,30 +265,6 @@ namespace Nevar.Trees
 			}
 
 			page.DebugValidate(tx, _cmp, txInfo.Root);
-		}
-
-		public List<Slice> KeysAsList(Transaction tx)
-		{
-			var l = new List<Slice>();
-			AddKeysToListInOrder(tx, l, _state.Root);
-			return l;
-		}
-
-		private void AddKeysToListInOrder(Transaction tx, List<Slice> l, Page page)
-		{
-			for (int i = 0; i < page.NumberOfEntries; i++)
-			{
-				var node = page.GetNode(i);
-				if (page.IsBranch)
-				{
-					var p = tx.GetReadOnlyPage(node->PageNumber);
-					AddKeysToListInOrder(tx, l, p);
-				}
-				else
-				{
-					l.Add(new Slice(node));
-				}
-			}
 		}
 
 		public Iterator Iterate(Transaction tx)

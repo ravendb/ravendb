@@ -50,6 +50,9 @@ namespace Nevar
 
                     FreeSpace = freeSpace;
                     Root = root;
+
+                    tx.UpdateRoots(root, freeSpace);
+
                     tx.Commit();
                 }
             }

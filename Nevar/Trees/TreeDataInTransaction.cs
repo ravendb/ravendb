@@ -1,17 +1,27 @@
-﻿namespace Nevar.Trees
+﻿using Nevar.Impl;
+
+namespace Nevar.Trees
 {
     public class TreeDataInTransaction
     {
         private readonly TreeMutableState _state;
         private readonly Tree _tree;
-
-        public Page Root { get { return _state.Root; } }
+        private Page _root;
 
         public TreeMutableState State
         {
             get { return _state; }
         }
 
+        public Page Root
+        {
+            get { return _root; }
+            set
+            {
+                _root = value;
+                _state.RootPageNumber = _root.PageNumber;
+            }
+        }
 
         public TreeDataInTransaction(Tree tree)
         {
@@ -39,7 +49,6 @@
 
         public void Flush()
         {
-            _state.Root.Dirty = false;
             _tree.SetState(_state);
         }
     }

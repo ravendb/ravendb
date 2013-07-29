@@ -17,8 +17,8 @@ namespace Nevar.Impl
         private readonly long _id;
 
         private bool _alreadyLookingForFreeSpace;
-        private readonly TreeDataInTransaction _rootTreeData;
-        private readonly TreeDataInTransaction _fresSpaceTreeData;
+        private TreeDataInTransaction _rootTreeData;
+        private TreeDataInTransaction _fresSpaceTreeData;
         private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
         private readonly Dictionary<long, Page> _dirtyPages = new Dictionary<long, Page>();
         private readonly long _oldestTx;
@@ -49,9 +49,15 @@ namespace Nevar.Impl
             NextPageNumber = env.NextPageNumber;
 
             if (env.Root != null)
-                _rootTreeData = new TreeDataInTransaction(env.Root);
+                _rootTreeData = new TreeDataInTransaction(env.Root)
+                    {
+                        Root = GetReadOnlyPage(env.Root.State.RootPageNumber)
+                    };
             if (env.FreeSpace != null)
-                _fresSpaceTreeData = new TreeDataInTransaction(env.FreeSpace);
+                _fresSpaceTreeData = new TreeDataInTransaction(env.FreeSpace)
+                    {
+                        Root = GetReadOnlyPage(env.FreeSpace.State.RootPageNumber)
+                    };
         }
 
         public Page ModifyCursor(Tree tree, Cursor c)
@@ -63,7 +69,7 @@ namespace Nevar.Impl
         public Page ModifyCursor(TreeDataInTransaction txInfo, Cursor c)
         {
             if (txInfo.Root.Dirty == false)
-                txInfo.State.Root = ModifyPage(null, txInfo.Root);
+                txInfo.Root = ModifyPage(null, txInfo.Root);
 
             if (c.Pages.Count == 0)
                 return null;
@@ -351,7 +357,10 @@ namespace Nevar.Impl
             {
                 return c;
             }
-            c = new TreeDataInTransaction(tree);
+            c = new TreeDataInTransaction(tree)
+                {
+                    Root = GetReadOnlyPage(tree.State.RootPageNumber)
+                };
             _treesInfo.Add(tree, c);
             return c;
         }
@@ -366,6 +375,26 @@ namespace Nevar.Impl
         {
 
             return ModifyPage(parentPage, GetReadOnlyPage(n));
+        }
+
+        internal void UpdateRoots(Tree root, Tree freeSpace)
+        {
+            if (_treesInfo.TryGetValue(root, out _rootTreeData))
+            {
+                _treesInfo.Remove(root);
+            }
+            else
+            {
+                _rootTreeData = new TreeDataInTransaction(root);
+            }
+            if (_treesInfo.TryGetValue(freeSpace, out _fresSpaceTreeData))
+            {
+                _treesInfo.Remove(freeSpace);
+            }
+            else
+            {
+                _fresSpaceTreeData = new TreeDataInTransaction(freeSpace);
+            }
         }
     }
 }

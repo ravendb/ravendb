@@ -11,8 +11,7 @@ namespace Nevar.Trees
         public long PageCount;
         public long EntriesCount;
 
-        public Page Root;
-
+        public long RootPageNumber;
 
         public void CopyTo(TreeRootHeader* header)
         {
@@ -23,7 +22,7 @@ namespace Nevar.Trees
             header->OverflowPages = OverflowPages;
             header->PageCount = PageCount;
             header->EntriesCount = EntriesCount;
-            header->RootPageNumber = Root.PageNumber;
+            header->RootPageNumber = RootPageNumber;
         }
 
         public TreeMutableState Clone()
@@ -36,7 +35,7 @@ namespace Nevar.Trees
                     LeafPages = LeafPages,
                     OverflowPages = OverflowPages,
                     PageCount = PageCount,
-                    Root = new Page(Root.Base, Root.PageMaxSpace)
+                    RootPageNumber = RootPageNumber
                 };
         }
     }

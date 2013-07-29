@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Nevar.Impl;
+using Nevar.Trees;
 using Xunit;
 
 namespace Nevar.Tests.Trees
@@ -73,13 +75,27 @@ namespace Nevar.Tests.Trees
 				 tx.Commit();
 			 }
 
-			
 
              using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			 {
-				 var list = Env.Root.KeysAsList(tx);
+                 var list = Keys(Env.Root, tx);
 				 Assert.Equal(expected, list);
 			 }
 		 }
+
+        public unsafe List<Slice> Keys(Tree t, Transaction tx)
+        {
+            var results = new List<Slice>();
+            using (var it = t.Iterate(tx))
+            {
+                if (it.Seek(Slice.BeforeAllKeys) == false)
+                    return results;
+                do
+                {
+                    results.Add(new Slice(it.Current));
+                } while (it.MoveNext());
+            }
+            return results;
+        }
 	}
 }
