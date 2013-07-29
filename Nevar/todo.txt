@@ -1,1 +1,0 @@
-﻿* Allow to expand twice in a single transaction without leaking memory

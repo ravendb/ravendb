@@ -5,7 +5,7 @@ namespace Nevar.Impl
 {
     public interface IVirtualPager : IDisposable
     {
-        Page Get(long n);
+        Page Get(Transaction tx, long n);
 
         long NumberOfAllocatedPages { get; }
         int PageSize { get; }
@@ -16,8 +16,7 @@ namespace Nevar.Impl
         void Flush();
 
         PagerState TransactionBegan();
-        void TransactionCompleted(PagerState state);
 
-        void EnsureContinious(long requestedPageNumber, int pageCount);
+        void EnsureContinious(Transaction tx, long requestedPageNumber, int pageCount);
     }
 }

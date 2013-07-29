@@ -30,7 +30,13 @@ namespace Nevar.Impl
 
 		public abstract long NumberOfAllocatedPages { get; }
 
-		public abstract Page Get(long n);
+		public Page Get(Transaction tx, long n)
+		{
+			EnsureContinious(tx, n, 1);
+			return Get(n);
+		}
+
+		protected abstract Page Get(long n);
 
 		public abstract void Flush();
 
@@ -41,12 +47,7 @@ namespace Nevar.Impl
 			return state;
 		}
 
-		public virtual void TransactionCompleted(PagerState state)
-		{
-			_pagerState.Release();
-		}
-
-		public virtual void EnsureContinious(long requestedPageNumber, int pageCount)
+		public virtual void EnsureContinious(Transaction tx, long requestedPageNumber, int pageCount)
 		{
 			if (requestedPageNumber + pageCount < NumberOfAllocatedPages)
 				return;
@@ -60,11 +61,11 @@ namespace Nevar.Impl
 				allocationSize = GetNewLength(allocationSize);
 			}
 
-			AllocateMorePages(allocationSize);
+			AllocateMorePages(tx, allocationSize);
 		}
 
 		public abstract void Dispose();
-		protected abstract void AllocateMorePages(long newLength);
+		protected abstract void AllocateMorePages(Transaction tx, long newLength);
 
 
 		private long GetNewLength(long current)

@@ -28,13 +28,12 @@ namespace Nevar.Impl
             _pagerState = new PagerState();
         }
 
-        public override Page Get(long n)
+	    protected override Page Get(long n)
         {
-	        EnsureContinious(n, 1);
 	        return new Page(_pagerState.Base + (n * PageSize), PageMaxSpace);
         }
 
-	    protected override void AllocateMorePages(long newLength)
+	    protected override void AllocateMorePages(Transaction tx, long newLength)
 	    {
 		    // need to allocate memory again
 			_fileStream.SetLength(newLength);
@@ -54,6 +53,9 @@ namespace Nevar.Impl
 			    };
 		    pagerState.AddRef(); // one for the current transaction
 			pagerState.AddRef(); // one for the pager
+
+		    tx.AddAPagerStats(_pagerState);
+
 		    _pagerState = pagerState;
 		    _allocatedPages = accessor.Capacity/PageSize;
 	    }

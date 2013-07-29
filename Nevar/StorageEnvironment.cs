@@ -27,18 +27,14 @@ namespace Nevar
 
         public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
         {
-          
-          
-          
-
             _pager = pager;
             _ownsPager = ownsPager;
             _sliceComparer = NativeMethods.memcmp;
 
             if (pager.NumberOfAllocatedPages == 0)
             {
-                WriteEmptyHeaderPage(_pager.Get(0));
-                WriteEmptyHeaderPage(_pager.Get(1));
+                WriteEmptyHeaderPage(_pager.Get(null, 0));
+                WriteEmptyHeaderPage(_pager.Get(null, 1));
 
                 NextPageNumber = 2;
                 using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
@@ -157,8 +153,8 @@ namespace Nevar
 
         private FileHeader* FindLatestFileHeadeEntry()
         {
-            Page fst = _pager.Get(0);
-            Page snd = _pager.Get(1);
+            Page fst = _pager.Get(null, 0);
+            Page snd = _pager.Get(null, 1);
 
             FileHeader* e1 = GetFileHeaderFrom(fst);
             FileHeader* e2 = GetFileHeaderFrom(snd);
@@ -204,7 +200,7 @@ namespace Nevar
                 }
                 var newTransaction = new Transaction(_pager, this, txId, flags);
                 _activeTransactions.TryAdd(txId, newTransaction);
-                newTransaction.PagerState = _pager.TransactionBegan();
+	            newTransaction.AddAPagerStats(_pager.TransactionBegan());
                 return newTransaction;
             }
             catch (Exception)
@@ -220,8 +216,6 @@ namespace Nevar
             Transaction tx;
             if (_activeTransactions.TryRemove(txId, out tx) == false)
                 return;
-
-            _pager.TransactionCompleted(tx.PagerState);
 
             if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
                 return;

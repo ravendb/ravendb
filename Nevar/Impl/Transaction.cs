@@ -24,8 +24,9 @@ namespace Nevar.Impl
         private readonly long _oldestTx;
 
         private HashSet<long> _freePages = new HashSet<long>();
+	    private HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 
-        public TransactionFlags Flags { get; private set; }
+	    public TransactionFlags Flags { get; private set; }
 
         public StorageEnvironment Environment
         {
@@ -36,8 +37,6 @@ namespace Nevar.Impl
         {
             get { return _pager; }
         }
-
-        public PagerState PagerState { get; set; }
 
         public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags)
         {
@@ -128,7 +127,7 @@ namespace Nevar.Impl
             Page page;
             if (_dirtyPages.TryGetValue(n, out page))
                 return page;
-            return _pager.Get(n);
+            return _pager.Get(this, n);
         }
 
         public Page AllocatePage(int num)
@@ -137,8 +136,8 @@ namespace Nevar.Impl
             if (page == null) // allocate from end of file
             {
                 if (num > 1)
-                    _pager.EnsureContinious(NextPageNumber, num);
-                page = _pager.Get(NextPageNumber);
+                    _pager.EnsureContinious(this, NextPageNumber, num);
+                page = _pager.Get(this, NextPageNumber);
                 page.PageNumber = NextPageNumber;
                 NextPageNumber += num;
             }
@@ -198,7 +197,7 @@ namespace Nevar.Impl
                         _env.FreeSpace.Add(this, slice, ms);
                     }
                 }
-                return _pager.Get(page);
+                return _pager.Get(this, page);
             }
             finally
             {
@@ -296,7 +295,7 @@ namespace Nevar.Impl
             // we need to do this twice, once for the data, and then once for the metadata
             _pager.Flush();
 
-            WriteHeader(_pager.Get(_id & 1)); // this will cycle between the first and second pages
+            WriteHeader(_pager.Get(this, _id & 1)); // this will cycle between the first and second pages
 
             _pager.Flush(); // and now we flush the metadata as well
         }
@@ -343,6 +342,10 @@ namespace Nevar.Impl
         public void Dispose()
         {
             _env.TransactionCompleted(_id);
+	        foreach (var pagerState in _pagerStates)
+	        {
+		        pagerState.Release();
+	        }
         }
 
         public TreeDataInTransaction GetTreeInformation(Tree tree)
@@ -396,5 +399,10 @@ namespace Nevar.Impl
                 _fresSpaceTreeData = new TreeDataInTransaction(freeSpace);
             }
         }
+
+	    public void AddAPagerStats(PagerState state)
+	    {
+		    _pagerStates.Add(state);
+	    }
     }
 }

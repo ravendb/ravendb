@@ -42,13 +42,12 @@ namespace Nevar.Impl
 		{
 		}
 
-		public override Page Get(long n)
+		protected override Page Get(long n)
 		{
-			EnsureContinious(n, 1);
 			return new Page(_base + (n * PageSize), PageMaxSpace);
 		}
 
-		protected override void AllocateMorePages(long newLength)
+		protected override void AllocateMorePages(Transaction tx, long newLength)
 		{
 			var oldSize = _allocatedSize;
 			_allocatedSize = newLength;
