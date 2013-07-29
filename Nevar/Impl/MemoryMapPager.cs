@@ -55,7 +55,8 @@ namespace Nevar.Impl
 				    File = mmf,
 				    Base = p
 			    };
-		    pagerState.AddRef();
+		    pagerState.AddRef(); // one for the current transaction
+			pagerState.AddRef(); // one for the pager
 		    _pagerState = pagerState;
 		    _allocatedPages = accessor.Capacity/PageSize;
 	    }
