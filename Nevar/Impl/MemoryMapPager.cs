@@ -64,18 +64,6 @@ namespace Nevar.Impl
             _fileStream.Flush(true);
         }
 
-        public override PagerState TransactionBegan()
-        {
-            var state = _pagerState;
-            state.AddRef();
-            return state;
-        }
-
-        public override void TransactionCompleted(PagerState state)
-        {
-            state.Release();
-        }
-
         public override void Dispose()
         {
             if (_pagerState != null)

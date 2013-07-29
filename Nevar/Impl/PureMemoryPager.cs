@@ -11,7 +11,6 @@ namespace Nevar.Impl
 		private long _allocatedSize;
 		private byte* _base;
 		private long _allocatedPages;
-		private PagerState _pagerState;
 
 		public PureMemoryPager()
 		{
@@ -40,15 +39,6 @@ namespace Nevar.Impl
 		}
 
 		public override void Flush()
-		{
-		}
-
-		public override PagerState TransactionBegan()
-		{
-			return null;
-		}
-
-		public override void TransactionCompleted(PagerState state)
 		{
 		}
 

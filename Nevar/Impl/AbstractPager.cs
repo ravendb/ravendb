@@ -5,17 +5,18 @@ namespace Nevar.Impl
 {
 	public abstract class AbstractPager : IVirtualPager
 	{
-		protected const int MinIncreaseSize = 1024*1024*4;
-		protected const int MaxIncreaseSize = 1024*1024*1024;
+		protected const int MinIncreaseSize = 1024 * 1024 * 4;
+		protected const int MaxIncreaseSize = 1024 * 1024 * 1024;
 
 		private int _increaseSize = MinIncreaseSize;
 		private DateTime _lastIncrease;
+		protected PagerState _pagerState;
 
 		protected AbstractPager()
 		{
-			MaxNodeSize = (PageSize - Constants.PageHeaderSize)/Constants.MinKeysInPage;
+			MaxNodeSize = (PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage;
 			PageMaxSpace = PageSize - Constants.PageHeaderSize;
-			PageMinSpace = (int) (PageMaxSpace*0.33);
+			PageMinSpace = (int)(PageMaxSpace * 0.33);
 		}
 
 		public int PageMaxSpace { get; private set; }
@@ -33,9 +34,17 @@ namespace Nevar.Impl
 
 		public abstract void Flush();
 
-		public abstract PagerState TransactionBegan();
+		public virtual PagerState TransactionBegan()
+		{
+			var state = _pagerState;
+			state.AddRef();
+			return state;
+		}
 
-		public abstract void TransactionCompleted(PagerState state);
+		public virtual void TransactionCompleted(PagerState state)
+		{
+			_pagerState.Release();
+		}
 
 		public virtual void EnsureContinious(long requestedPageNumber, int pageCount)
 		{
@@ -44,8 +53,8 @@ namespace Nevar.Impl
 
 			// this ensure that if we want to get a range that is more than the current expansion
 			// we will increase as much as needed in one shot
-			var minRequested = (requestedPageNumber + pageCount)*PageSize;
-			var allocationSize = NumberOfAllocatedPages*PageSize;
+			var minRequested = (requestedPageNumber + pageCount) * PageSize;
+			var allocationSize = NumberOfAllocatedPages * PageSize;
 			while (minRequested > allocationSize)
 			{
 				allocationSize = GetNewLength(allocationSize);
@@ -64,11 +73,11 @@ namespace Nevar.Impl
 			TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
 			if (timeSinceLastIncrease.TotalSeconds < 30)
 			{
-				_increaseSize = Math.Min(_increaseSize*2, MaxIncreaseSize);
+				_increaseSize = Math.Min(_increaseSize * 2, MaxIncreaseSize);
 			}
 			else if (timeSinceLastIncrease.TotalMinutes > 2)
 			{
-				_increaseSize = Math.Max(MinIncreaseSize, _increaseSize/2);
+				_increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
 			}
 			_lastIncrease = DateTime.UtcNow;
 			return current + _increaseSize;
