@@ -1,17 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Database.Server;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class FacetCountTest : IDisposable
+	public class FacetCountTest : RateTests
 	{
 		public class WodsProjection
 		{
@@ -104,31 +101,6 @@ namespace Raven.Tests.MailingList
 
 			public string FacetKey { get; set; }
 			public List<Facet> FacetList { get; set; }
-		}
-
-		private EmbeddableDocumentStore _documentStore;
-
-		public EmbeddableDocumentStore NewDocumentStore()
-		{
-			if (_documentStore != null) return _documentStore;
-
-			_documentStore = new EmbeddableDocumentStore
-			{
-				DataDirectory = "Data",
-				RunInMemory = true,
-				UseEmbeddedHttpServer = true
-			};
-
-			_documentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
-
-			_documentStore.Initialize();
-
-			return _documentStore;
-		}
-
-		public void Dispose()
-		{
-			_documentStore.Dispose();
 		}
 
 		[Fact]

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -16,12 +15,14 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetDocumentKeys()
 		{
-			using (var tx = NewTransactionalStorage())
+			var dataDir = NewDataPath();
+
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Etag.Empty,5).Select(x=>x.Key).ToArray()));
 			}

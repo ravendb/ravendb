@@ -6,6 +6,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Transactions;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -14,45 +15,22 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Database.Server;
 using Raven.Json.Linq;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using Raven.Server;
 using Raven.Tests.Indexes;
-using Xunit;
-using System.Linq;
 using Raven.Tests.Spatial;
+using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Document
 {
-	using System.Collections.Generic;
-
-	public class DocumentStoreServerTests : RemoteClientTest, IDisposable
+	public class DocumentStoreServerTests : RemoteClientTest
 	{
-		private readonly string path;
-		private readonly int port;
-		private readonly RavenDbServer server;
 		private readonly IDocumentStore documentStore;
 
 		public DocumentStoreServerTests()
 		{
-			port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-
-			server = GetNewServer(port, path);
-			documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
-		}
-
-		public override void Dispose()
-		{
-			documentStore.Dispose();
-			server.Dispose();
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
+			documentStore = NewRemoteDocumentStore();
 		}
 
 		[Fact]

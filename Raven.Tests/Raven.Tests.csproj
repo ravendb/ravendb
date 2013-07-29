@@ -202,6 +202,7 @@
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogManagerLoggingDisabedTests.cs" />
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
     <Compile Include="Abstractions\Logging\LogManagerTests.cs" />
+    <Compile Include="AssertAsync.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
@@ -512,7 +513,7 @@
     <Compile Include="Bugs\QueryingByNegative.cs" />
     <Compile Include="Bugs\QueryingByNull.cs" />
     <Compile Include="Bugs\QueryingFromIndex.cs" />
-    <Compile Include="Bugs\QueryWithPercentageSignp.cs" />
+    <Compile Include="Bugs\QueryWithPercentageSign.cs" />
     <Compile Include="Bugs\QueryWithReservedCharacters.cs" />
     <Compile Include="Bugs\RavenDbNestedPatchTesting.cs" />
     <Compile Include="Bugs\RavenDBQuery.cs" />
@@ -1081,9 +1082,7 @@
     <Compile Include="Spatial\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
     <Compile Include="MailingList\Everett616.cs" />
-    <Compile Include="MailingList\Idsa\Casino.cs" />
-    <Compile Include="MailingList\Idsa\CasinosSuspensionsIndex.cs" />
-    <Compile Include="MailingList\Idsa\IdsaTest.cs" />
+    <Compile Include="MailingList\IdsaTest.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
     <Compile Include="Spatial\JamesCrowley.cs" />
     <Compile Include="MailingList\Joel.cs" />

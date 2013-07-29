@@ -110,13 +110,15 @@ namespace Raven.Studio.Features.Tasks
 	        }
 	        else
 	        {
-	            return Collections.Where(c => c.Selected)
-	                              .Select(c => new FilterSetting()
-	                              {
-	                                  Path = "@metadata.Raven-Entity-Name",
-	                                  Value = c.Name,
-	                                  ShouldMatch = true
-	                              });
+				return new List<FilterSetting>
+				{
+					new FilterSetting
+					{
+						Path = "@metadata.Raven-Entity-Name",
+						Values = new List<string>(Collections.Where(c => c.Selected).Select(info => info.Name).ToList()),
+						ShouldMatch = true
+					}
+				};
 	        }
 	    }
 	}

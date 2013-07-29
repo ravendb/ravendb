@@ -12,11 +12,17 @@ namespace Raven.Tests.Storage
 {
 	public class DocEtag : RavenTest
 	{
+		private readonly string dataDir;
+
+		public DocEtag()
+		{
+			dataDir = NewDataPath();
+		}
 
 		[Fact]
 		public void EtagsAreAlwaysIncreasing()
 		{
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator =>
 				{
@@ -25,7 +31,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(viewer =>
 				{
@@ -40,8 +46,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetDocumentByEtag()
 		{
-
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator =>
 				{
@@ -50,7 +55,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(viewer =>
 				{
@@ -66,8 +71,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetDocumentByUpdateOrder()
 		{
-
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator =>
 				{
@@ -76,7 +80,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(viewer =>
 				{

@@ -17,8 +17,7 @@ namespace Raven.Tests.Storage
 			{
 				tx.Batch(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
 
-				tx.Batch(
-					mutator => Assert.Equal(new byte[] {1, 2}, mutator.Queue.PeekFromQueue("ayende").First().Item1));
+				tx.Batch(mutator => Assert.Equal(new byte[] {1, 2}, mutator.Queue.PeekFromQueue("ayende").First().Item1));
 			}
 		}
 

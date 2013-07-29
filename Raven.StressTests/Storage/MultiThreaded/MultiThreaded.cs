@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
@@ -12,7 +11,6 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Tests;
 using Xunit;
@@ -28,7 +26,6 @@ namespace Raven.StressTests.Storage.MultiThreaded
 		private volatile bool run = true;
 		
 		private Etag lastEtagSeen = Etag.Empty;
-		private readonly object Lock = new object();
 
 		public override void Dispose()
 		{
@@ -40,7 +37,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 		{
 			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				DataDirectory = NewDataPath(),
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInUnreliableMode,
 				DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName,
 			});
