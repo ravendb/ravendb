@@ -149,6 +149,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Reactive.Core, Version=2.1.30214.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -603,6 +604,7 @@
     <Compile Include="Issues\LongIndexAndTransformerNames.cs" />
     <Compile Include="Issues\RavenDB_1077.cs" />
     <Compile Include="Issues\RavenDB_1251_2.cs" />
+    <Compile Include="Issues\NestedPropertiesIndex_1182.cs" />
     <Compile Include="Issues\RavenDB1019.cs" />
     <Compile Include="Issues\RavenDB1025.cs" />
     <Compile Include="Issues\RavenDB1067.cs" />

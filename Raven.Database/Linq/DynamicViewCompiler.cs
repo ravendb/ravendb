@@ -32,6 +32,7 @@ namespace Raven.Database.Linq
 		private readonly CaptureSelectNewFieldNamesVisitor captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
+		private readonly TransformFromClauses transformFromClauses = new TransformFromClauses();
 
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
 			: this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new RavenConfiguration())
@@ -586,6 +587,9 @@ Reduce only fields: {2}
 					Name = Constants.DocumentIdFieldName,
 					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
+
+			variableDeclaration.AcceptVisitor(this.transformFromClauses, null);
+
 			return variableDeclaration;
 		}
 
