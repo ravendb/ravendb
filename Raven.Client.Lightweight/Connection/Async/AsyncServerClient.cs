@@ -1005,7 +1005,7 @@ namespace Raven.Client.Connection.Async
 				                                                                         "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.ExecuteWriteAsync(new RavenJObject
-			{
+		{
 				{"BackupLocation", backupLocation},
 				{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
 			}.ToString(Formatting.None));
@@ -1030,7 +1030,7 @@ namespace Raven.Client.Connection.Async
 		public Task StartIndexingAsync()
 		{
 			return ExecuteWithReplication("POST", operationUrl =>
-			{
+		{
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
 					                                                                         (operationUrl + "/admin/StartIndexing")
@@ -1059,23 +1059,6 @@ namespace Raven.Client.Connection.Async
 				                                    HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
-			});
-		}
-
-		public Task<string> GetIndexingStatusAsync()
-		{
-			return ExecuteWithReplication("GET", async operationUrl =>
-			{
-				var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-					                                                                         (operationUrl + "/admin/IndexingStatus").
-						                                                                         NoCache(), "GET", credentials, convention));
-				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior,
-				                                    HandleReplicationStatusChanges);
-
-				var result = await request.ReadResponseJsonAsync();
-				return result.Value<string>("IndexingStatus");
 			});
 		}
 
@@ -1764,7 +1747,7 @@ namespace Raven.Client.Connection.Async
 		private bool resolvingConflict;
 		private bool resolvingConflictRetries;
 
-		private async Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
+		internal async Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
