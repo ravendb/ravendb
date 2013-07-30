@@ -45,18 +45,24 @@ namespace Nevar.Impl
 		    byte* p = null;
 		    accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
-		    var pagerState = new PagerState
+			var newPager = new PagerState
 			    {
 				    Accessor = accessor,
 				    File = mmf,
 				    Base = p
 			    };
-		    pagerState.AddRef(); // one for the current transaction
-			pagerState.AddRef(); // one for the pager
+			newPager.AddRef(); // one for the pager
 
-		    tx.AddAPagerStats(_pagerState);
+			newPager.AddRef(); // one for the pager
 
-		    _pagerState = pagerState;
+			if (tx != null) // we only pass null during startup, and we don't need it there
+			{
+				newPager.AddRef(); // one for the current transaction
+				tx.AddPagerState(_pagerState);
+			}
+
+
+		    _pagerState = newPager;
 		    _allocatedPages = accessor.Capacity/PageSize;
 	    }
 

@@ -400,7 +400,7 @@ namespace Nevar.Impl
             }
         }
 
-	    public void AddAPagerStats(PagerState state)
+	    public void AddPagerState(PagerState state)
 	    {
 		    _pagerStates.Add(state);
 	    }

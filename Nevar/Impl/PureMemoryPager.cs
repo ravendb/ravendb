@@ -17,11 +17,11 @@ namespace Nevar.Impl
 			_ptr = Marshal.AllocHGlobal(MinIncreaseSize);
 			_base = (byte*)_ptr.ToPointer();
 			_allocatedPages = _allocatedSize / PageSize;
-			_pagerState = new PagerState
+			PagerState = new PagerState
 				{
 					Ptr = _ptr
 				};
-			_pagerState.AddRef();
+			PagerState.AddRef();
 		}
 
 
@@ -34,7 +34,7 @@ namespace Nevar.Impl
 
 		public override void Dispose()
 		{
-			_pagerState.Release();
+			PagerState.Release();
 			_base = null;
 		}
 
@@ -58,12 +58,18 @@ namespace Nevar.Impl
 			_base = newBase;
 			_ptr = newPtr;
 
-			var oldPager = _pagerState;
+			var oldPager = PagerState;
 
 			var newPager = new PagerState { Ptr = newPtr };
-			newPager.AddRef(); // one for the current transaction
 			newPager.AddRef(); // one for the pager
-			_pagerState = newPager;
+
+			if (tx != null) // we only pass null during startup, and we don't need it there
+			{
+				newPager.AddRef(); // one for the current transaction
+				tx.AddPagerState(PagerState);
+			}
+
+			PagerState = newPager;
 			oldPager.Release();
 		}
 	}

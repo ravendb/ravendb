@@ -20,8 +20,8 @@ namespace Nevar.Tests
 
 		protected StorageTest()
 		{
-			//FilePager();
-			_pager = new PureMemoryPager();
+			FilePager();
+			//_pager = new PureMemoryPager();
 		    _storageEnvironment = new StorageEnvironment(_pager);
 		}
 

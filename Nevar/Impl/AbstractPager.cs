@@ -10,13 +10,14 @@ namespace Nevar.Impl
 
 		private int _increaseSize = MinIncreaseSize;
 		private DateTime _lastIncrease;
-		protected PagerState _pagerState;
+		protected PagerState PagerState;
 
 		protected AbstractPager()
 		{
 			MaxNodeSize = (PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage;
 			PageMaxSpace = PageSize - Constants.PageHeaderSize;
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
+			PagerState = new PagerState();
 		}
 
 		public int PageMaxSpace { get; private set; }
@@ -42,7 +43,7 @@ namespace Nevar.Impl
 
 		public virtual PagerState TransactionBegan()
 		{
-			var state = _pagerState;
+			var state = PagerState;
 			state.AddRef();
 			return state;
 		}
