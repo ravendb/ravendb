@@ -50,7 +50,7 @@ namespace Raven.Studio.Features.Tasks
             var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
                                                    .Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
 
-            await DatabaseCommands.StartBackupAsync(backupLocation, databaseDocument);
+            await DatabaseCommands.Admin.StartBackupAsync(backupLocation, databaseDocument);
 
             var hasCompleted = false;
             var lastMessageTimeStamp = DateTime.MinValue;

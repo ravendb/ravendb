@@ -998,35 +998,6 @@ namespace Raven.Client.Connection.Async
 			return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
-		{
-			var request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(),
-				                                                                         "POST", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
-			return request.ExecuteWriteAsync(new RavenJObject
-		{
-				{"BackupLocation", backupLocation},
-				{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
-			}.ToString(Formatting.None));
-		}
-
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
-		{
-			var request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-				                                                                         (url + "/admin/restore?defrag=" + defrag)
-					                                                                         .NoCache(), "POST", credentials,
-				                                                                         convention));
-			request.AddOperationHeaders(OperationsHeaders);
-			return request.ExecuteWriteAsync(new RavenJObject
-			{
-				{"RestoreLocation", restoreLocation},
-				{"DatabaseLocation", databaseLocation},
-				{"DatabaseName", name}
-			}.ToString(Formatting.None));
-		}
-
 		public Task StartIndexingAsync()
 		{
 			return ExecuteWithReplication("POST", operationUrl =>
