@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Windows.Data;
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -22,8 +23,10 @@ namespace Raven.Studio.Infrastructure.Converters
                 stringValue = value as string;
                 stringValue = stringValue.Replace(Environment.NewLine, " ").Trim('"');
             }
-            else if (value is RavenJToken)
-                stringValue = (value as RavenJToken).ToString(Formatting.None).Trim('"');
+			else if (value is RavenJArray || value is RavenJObject)
+				stringValue = (value as RavenJToken).ToString(Formatting.None).Trim('"');
+            else if (value is RavenJValue)
+                stringValue = ((value as RavenJValue).Value ?? "").ToString();
             else if (value != null)
                 stringValue = value.ToString();
             else
