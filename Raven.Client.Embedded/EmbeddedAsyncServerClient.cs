@@ -373,42 +373,6 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
-
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
-
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
-
-		public Task StartIndexingAsync()
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
-
-		public Task StopIndexingAsync()
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
-
-		public Task<string> GetIndexingStatusAsync()
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
-
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 		{
 			// Should add a 'matches' parameter? Setting to null for now.
@@ -442,8 +406,6 @@ namespace Raven.Client.Embedded
 		}
 
 
-		#region IAsyncGlobalAdminDatabaseCommands
-
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{
 			get { return this; }
@@ -454,10 +416,6 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
-		#endregion
-
-		#region IAsyncAdminDatabaseCommands
-
 		/// <summary>
 		/// Admin operations, like create/delete database.
 		/// </summary>
@@ -466,7 +424,6 @@ namespace Raven.Client.Embedded
 			get { throw new NotSupportedException("Multiple databases are not supported in the embedded API currently"); }
 		}
 
-		#endregion
 
 		#region IAsyncInfoDatabaseCommands
 
