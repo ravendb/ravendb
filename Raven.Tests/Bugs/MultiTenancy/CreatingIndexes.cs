@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				DefaultDatabase = "Test"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("Test");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Test");
 				store.DatabaseCommands.PutIndex("TestIndex",
 												new IndexDefinitionBuilder<Test, Test>
 												{

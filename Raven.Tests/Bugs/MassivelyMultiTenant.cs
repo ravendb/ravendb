@@ -16,7 +16,7 @@ namespace Raven.Tests.Bugs
 				var databaseName = "Tenants" + i;
 					using (var documentStore = new DocumentStore {Url = "http://localhost:8079", DefaultDatabase = databaseName}.Initialize())
 				{
-					documentStore.DatabaseCommands.Admin.EnsureDatabaseExists(databaseName);
+					documentStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(databaseName);
 				}
 			}
 		}

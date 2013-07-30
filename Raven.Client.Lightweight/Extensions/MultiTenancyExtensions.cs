@@ -25,7 +25,7 @@ namespace Raven.Client.Extensions
 		/// <remarks>
 		/// This operation happens _outside_ of any transaction
 		/// </remarks>
-		public static void EnsureDatabaseExists(this IAdminDatabaseCommands self, string name, bool ignoreFailures = false)
+		public static void EnsureDatabaseExists(this IGlobalAdminDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			var serverClient = ((IDatabaseCommands)self).ForSystemDatabase() as ServerClient;
 			if (serverClient == null)
@@ -58,10 +58,10 @@ namespace Raven.Client.Extensions
 			}
 		}
 
-		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.Admin.EnsureDatabaseExists instead.")]
+		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
 		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			self.Admin.EnsureDatabaseExists(name, ignoreFailures);
+			self.GlobalAdmin.EnsureDatabaseExists(name, ignoreFailures);
 		}
 
 		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.Admin.CreateDatabase instead.")]
@@ -75,7 +75,7 @@ namespace Raven.Client.Extensions
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
-		public static async Task EnsureDatabaseExistsAsync(this IAsyncAdminDatabaseCommands self, string name, bool ignoreFailures = false)
+		public static async Task EnsureDatabaseExistsAsync(this IAsyncGlobalAdminDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			var serverClient = ((IAsyncDatabaseCommands)self).ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
@@ -101,10 +101,10 @@ namespace Raven.Client.Extensions
 			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
 		}
 
-		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.Admin.EnsureDatabaseExists instead.")]
+		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
 		public static Task EnsureDatabaseExists(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			return self.Admin.EnsureDatabaseExistsAsync(name, ignoreFailures);
+			return self.GlobalAdmin.EnsureDatabaseExistsAsync(name, ignoreFailures);
 		}
 
 		[Obsolete("The method was moved to be under the Admin property. Use the store.AsyncDatabaseCommands.Admin.CreateDatabaseAsync instead.")]

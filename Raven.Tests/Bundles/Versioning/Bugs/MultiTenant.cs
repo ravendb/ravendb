@@ -26,7 +26,7 @@ namespace Raven.Tests.Bundles.Versioning.Bugs
 			{
 				Url = "http://localhost:8079",
 			}.Initialize();
-			_documentStore.DatabaseCommands.Admin.EnsureDatabaseExists(_dbid);
+			_documentStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(_dbid);
 
 
 			// Configure the default versioning configuration

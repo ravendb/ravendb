@@ -441,7 +441,7 @@ namespace Raven.Client.Document
 
 				if (string.IsNullOrEmpty(DefaultDatabase) == false)
 				{
-					DatabaseCommands.ForSystemDatabase().Admin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}
 #endif
 
@@ -634,7 +634,7 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT && !NETFX_CORE
-
+			
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
 			rootServicePoint.UseNagleAlgorithm = false;
@@ -798,7 +798,7 @@ namespace Raven.Client.Document
 
 				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
 				{
-				    DatabaseName = dbName ?? DefaultDatabase
+					DatabaseName = dbName ?? DefaultDatabase
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -832,7 +832,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>

@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 				
 				string userId;
 
@@ -76,7 +76,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
 				using (var s = store.OpenSession("Northwind"))
 				{
@@ -105,7 +105,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
 				using (var s = store.OpenSession("Northwind"))
 				{
@@ -137,7 +137,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				DefaultDatabase = "Northwind"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
 				string userId;
 
@@ -217,7 +217,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 				var index = store.DatabaseCommands.ForDatabase("Northwind").GetIndex("Raven/DocumentsByEntityName");
 				Assert.NotNull(index);
 			}
@@ -232,7 +232,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync("Northwind");
+				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync("Northwind");
 				var index = await store.AsyncDatabaseCommands.ForDatabase("Northwind").GetIndexAsync("Raven/DocumentsByEntityName");
 				Assert.NotNull(index);
 			}

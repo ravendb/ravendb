@@ -20,7 +20,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity1 = new Company {Name = "Async Company #1"};
 				var entity2 = new Company {Name = "Async Company #2"};
@@ -48,7 +48,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1"};
 				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
@@ -73,7 +73,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
@@ -114,7 +114,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
@@ -156,7 +156,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{

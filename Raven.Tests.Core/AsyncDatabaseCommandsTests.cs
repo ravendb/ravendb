@@ -12,7 +12,7 @@ namespace Raven.Tests.Core
 			var dbname = GenerateNewDatabaseName();
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -34,7 +34,7 @@ namespace Raven.Tests.Core
 			var dbname = GenerateNewDatabaseName();
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = store.OpenAsyncSession(dbname))
 				{
@@ -54,7 +54,7 @@ namespace Raven.Tests.Core
 			var dbname = GenerateNewDatabaseName();
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var names = await store.AsyncDatabaseCommands.GetDatabaseNamesAsync(25);
 				Assert.Contains(dbname, names);

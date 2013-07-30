@@ -14,8 +14,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.Admin.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.Admin.EnsureDatabaseExists("FailoverTest");
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
 			                 store2.Url + "/databases/FailoverTest");
@@ -58,8 +58,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.Admin.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.Admin.EnsureDatabaseExists("FailoverTest");
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
 			                 store2.Url + "/databases/FailoverTest");
@@ -103,8 +103,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.Admin.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.Admin.EnsureDatabaseExists("FailoverTest");
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
 			                 store2.Url + "/databases/FailoverTest");

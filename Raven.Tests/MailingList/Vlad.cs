@@ -66,7 +66,7 @@ namespace Raven.Tests.MailingList
 
 			using (var store = NewRemoteDocumentStore())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists(dbName);
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(dbName);
 				using (var session = store.OpenSession(dbName))
 				{
 					session.Store(new SampleDoc { Number = 1, Name = "Test 1" }, "SampleDocs/1");

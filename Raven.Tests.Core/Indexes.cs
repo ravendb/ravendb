@@ -13,7 +13,7 @@ namespace Raven.Tests.Core
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = NewDocumentStore())
 			{
-				await documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				await documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				await documentStore.AsyncDatabaseCommands
 					.ForDatabase(dbname)

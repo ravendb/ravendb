@@ -27,7 +27,7 @@ namespace Raven.Tests.Silverlight
 			var store = new DocumentStore {Url = Url + Port};
 			store.Initialize();
 
-			yield return store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+			yield return store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = store.OpenAsyncSession(dbname))
 			{

@@ -17,7 +17,7 @@ namespace Raven.Tests.MailingList
 
 				Assert.Empty(dbNames);
 
-				docStore.DatabaseCommands.Admin.EnsureDatabaseExists("test");
+				docStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 
 				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
 
@@ -66,7 +66,7 @@ namespace Raven.Tests.MailingList
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var throws = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Admin.EnsureDatabaseExists("System"));
+				var throws = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("System"));
 
 				Assert.Contains(@"Cannot create a tenant database with the name 'System', that name is reserved for the actual system database", throws.Message);
 		

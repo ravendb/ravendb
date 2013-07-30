@@ -28,7 +28,7 @@ namespace Raven.Tests.Silverlight
 			var tcs = new TaskCompletionSource<DocumentChangeNotification>();
 			using (var documentStore = NewDocumentStore())
 			{
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var taskObservable = documentStore.Changes(dbname);
 				yield return taskObservable.Task;

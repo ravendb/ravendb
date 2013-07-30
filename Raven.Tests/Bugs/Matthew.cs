@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("TESTS");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("TESTS");
 
 				store.Conventions.FindTypeTagName = type =>
 				{

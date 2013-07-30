@@ -18,7 +18,7 @@ namespace Raven.Tests.Silverlight
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
 				var dbname = GenerateNewDatabaseName();
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				const string someData = "The quick brown fox jumps over the lazy dog";
 				var encoding = new UTF8Encoding();
@@ -46,7 +46,7 @@ namespace Raven.Tests.Silverlight
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
 				var dbname = GenerateNewDatabaseName();
-				yield return documentStore.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				const string someData = "The quick brown fox jumps over the lazy dog";
 				var encoding = new UTF8Encoding();

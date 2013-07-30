@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				const string tenantName = "   Tenant with some    spaces     in it ";
-				var exception = Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.Admin.EnsureDatabaseExists(tenantName));
+				var exception = Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(tenantName));
 				Assert.Equal("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + tenantName, exception.Message);
 
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
