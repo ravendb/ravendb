@@ -55,6 +55,7 @@ namespace Raven.Tests.Bugs
 			{
 				Map = "from doc in docs select new { User = ((string)null).ToString() }"
 			});
+		    var test = db.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
 
 			for (int i = 0; i < 15; i++)
 			{
@@ -66,7 +67,7 @@ namespace Raven.Tests.Bugs
 			{
 				db.TransactionalStorage.Batch(actions =>
 				{
-					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
+					isIndexStale = actions.Staleness.IsIndexStale(test, null, null);
 				});
 				if (isIndexStale == false)
 					break;
@@ -83,6 +84,7 @@ namespace Raven.Tests.Bugs
 			{
 				Map = "from doc in docs select new { User = ((string)null).ToString() }"
 			});
+		    var test = db.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
 
 			for (int i = 0; i < 150; i++)
 			{
@@ -94,7 +96,7 @@ namespace Raven.Tests.Bugs
 				bool isIndexStale = false;
 				db.TransactionalStorage.Batch(actions =>
 				{
-					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
+					isIndexStale = actions.Staleness.IsIndexStale(test, null, null);
 				});
 				if (isIndexStale == false)
 					break;

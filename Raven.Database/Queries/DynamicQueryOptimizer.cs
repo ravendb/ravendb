@@ -303,7 +303,8 @@ namespace Raven.Database.Queries
 		        {
 			        prioritizedResults = optimizerResults.OrderByDescending(result =>
 			        {
-				        var stats = accessor.Indexing.GetIndexStats(result.IndexName);
+			            var instance = this.database.IndexStorage.GetIndexInstance(result.IndexName);
+				        var stats = accessor.Indexing.GetIndexStats(instance.indexId);
 				        if (stats == null)
 							return Etag.Empty;
 
@@ -312,8 +313,7 @@ namespace Raven.Database.Queries
 				        .ThenByDescending(result =>
 				        {
 					        var abstractViewGenerator =
-						        database.IndexDefinitionStorage.GetViewGenerator(
-							        result.IndexName);
+						        database.IndexDefinitionStorage.GetViewGenerator(result.IndexName);
 					        if (abstractViewGenerator == null)
 						        return -1;
 					        return abstractViewGenerator.CountOfFields;
@@ -340,7 +340,7 @@ namespace Raven.Database.Queries
                 }).First();
             }
 
-            return new DynamicQueryOptimizerResult("<invalid index>", DynamicQueryMatchType.Failure);
+            return new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
 
 		}
 	}

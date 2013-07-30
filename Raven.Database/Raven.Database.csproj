@@ -743,6 +743,7 @@
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From42To43.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From41To42.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From39To40.cs" />

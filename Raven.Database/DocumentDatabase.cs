@@ -411,10 +411,10 @@ namespace Raven.Database
                     {
 	                    try
 	                    {
-		                    index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
-		                    index.Performance = IndexStorage.GetIndexingPerformance(index.Name);
-		                    index.IsOnRam = IndexStorage.IndexOnRam(index.Name);
-		                    var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Name);
+		                    var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
+		                    index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
+		                    index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
+		                    index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
 		                    if (indexDefinition != null)
 			                    index.LockMode = indexDefinition.LockMode;
 		                    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Name).ForEntityNames.ToList();
@@ -1037,10 +1037,10 @@ namespace Raven.Database
                                         continue;
                                 }
 
-                                string indexNameCopy = indexName;
-                                var task = actions.GetTask(x => x.Index == indexNameCopy, new RemoveFromIndexTask
+                                var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
+                                var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
                                 {
-                                    Index = indexNameCopy
+                                    Index = instance.IndexId
                                 });
                                 task.Keys.Add(key);
                             }
@@ -1158,7 +1158,7 @@ namespace Raven.Database
                 return name; // no op for the same transformer
 
             IndexDefinitionStorage.CreateAndPersistTransform(definition);
-            IndexDefinitionStorage.AddTransform(name, definition);
+            IndexDefinitionStorage.AddTransform(definition.IndexId, definition);
 
             return name;
         }
@@ -1195,7 +1195,7 @@ namespace Raven.Database
                     return name;
                 case IndexCreationOptions.Update:
                     // ensure that the code can compile
-                    new DynamicViewCompiler(name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
+                    new DynamicViewCompiler(definition.Name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
                     DeleteIndex(name);
                     break;
             }
@@ -1209,14 +1209,14 @@ namespace Raven.Database
 
             TransactionalStorage.Batch(actions =>
             {
-                actions.Indexing.AddIndex(name, definition.IsMapReduce);
+                actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
                 workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             });
 
             // The act of adding it here make it visible to other threads
             // we have to do it in this way so first we prepare all the elements of the 
             // index, then we add it to the storage in a way that make it public
-            IndexDefinitionStorage.AddIndex(name, definition);
+            IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
             InvokeSuggestionIndexing(name, definition);
 
@@ -1258,6 +1258,7 @@ namespace Raven.Database
         private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
         {
 	        definition.Name = name;
+            definition.IndexId = IndexDefinitionStorage.NextIndexId();
             definition.RemoveDefaultValues();
             IndexDefinitionStorage.ResolveAnalyzers(definition);
             var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
@@ -1274,8 +1275,14 @@ namespace Raven.Database
 
         public QueryResultWithIncludes Query(string index, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
         {
+            index = IndexDefinitionStorage.FixupIndexName(index);
             var queryStat = AddToCurrentlyRunningQueryList(index, query);
+            var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
             try
+	        var scoreExplanations = new Dictionary<string, string>();
+            var definition = IndexDefinitionStorage.GetIndexDefinition(index);
+
+            Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
             {
 
 	            index = index != null ? index.Trim() : null;
@@ -1499,6 +1506,9 @@ namespace Raven.Database
         {
             using (IndexDefinitionStorage.TryRemoveIndexContext())
             {
+                var instance = IndexDefinitionStorage.GetIndexDefinition(name);
+                if (instance == null) return;
+                name = IndexDefinitionStorage.FixupIndexName(name);
                 IndexDefinitionStorage.RemoveIndex(name);
                 IndexStorage.DeleteIndex(name);
                 //we may run into a conflict when trying to delete if the index is currently
@@ -1510,8 +1520,7 @@ namespace Raven.Database
                     {
                         TransactionalStorage.Batch(action =>
                         {
-                            action.Indexing.DeleteIndex(name);
-
+                            action.Indexing.DeleteIndex(instance.IndexId);
                             workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
                         });
 
@@ -2334,14 +2343,14 @@ namespace Raven.Database
             {
 				var indexInstance = IndexStorage.GetIndexInstance(indexName);
 	            isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
-	                      accessor.Staleness.IsIndexStale(indexName, null, null);
+	                      accessor.Staleness.IsIndexStale(indexInstance.indexId, null, null);
                 lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-                var indexStats = accessor.Indexing.GetIndexStats(indexName);
+                var indexStats = accessor.Indexing.GetIndexStats(indexInstance.indexId);
                 if (indexStats != null)
                 {
                     lastReducedEtag = indexStats.LastReducedEtag;
                 }
-                touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
+                touchCount = accessor.Staleness.GetIndexTouchCount(indexInstance.indexId);
             });
 
 

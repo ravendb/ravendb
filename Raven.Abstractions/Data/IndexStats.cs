@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Data
 {
 	public class IndexStats
 	{
-		public string Name { get; set; }
+		public int Id { get; set; }
 		public int IndexingAttempts { get; set; }
 		public int IndexingSuccesses { get; set; }
 		public int IndexingErrors { get; set; }
@@ -36,7 +36,7 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			return Name;
+		    return Id.ToString();
 		}
 	}
 

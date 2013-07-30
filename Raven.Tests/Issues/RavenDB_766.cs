@@ -15,6 +15,8 @@ namespace Raven.Tests.Issues
 
 	public class RavenDB_766 : RavenTest
 	{
+	    private int a = 100;
+	    private int b = 100;
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
@@ -24,23 +26,23 @@ namespace Raven.Tests.Issues
 			{
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("a", true);
-					accessor.Indexing.AddIndex("b", true);
+					accessor.Indexing.AddIndex(a, true);
+					accessor.Indexing.AddIndex(b, true);
 
-					accessor.MapReduce.PutMappedResult("a", "a/1", "a", new RavenJObject());
-					accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
-					accessor.MapReduce.PutMappedResult("b", "a/1", "b", new RavenJObject());
-					accessor.MapReduce.PutMappedResult("b", "a/1", "b", new RavenJObject());
+					accessor.MapReduce.PutMappedResult(a, "a/1", "a", new RavenJObject());
+					accessor.MapReduce.PutMappedResult(a, "a/2", "a", new RavenJObject());
+					accessor.MapReduce.PutMappedResult(b, "a/1", "b", new RavenJObject());
+					accessor.MapReduce.PutMappedResult(b, "a/1", "b", new RavenJObject());
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex(a));
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetMappedResultsForDebug("a", "a",0 , 10);
+					var results = accessor.MapReduce.GetMappedResultsForDebug(a, "a",0 , 10);
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetMappedResultsForDebug("b", "b",0 , 10);
+					results = accessor.MapReduce.GetMappedResultsForDebug(b, "b",0 , 10);
 					Assert.Equal(2, results.Count());
 				});
 			}
@@ -55,23 +57,23 @@ namespace Raven.Tests.Issues
 			{
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("a", true);
-					accessor.Indexing.AddIndex("b", true);
+					accessor.Indexing.AddIndex(a, true);
+					accessor.Indexing.AddIndex(b, true);
 
-					accessor.MapReduce.PutReducedResult("a", "a", 1, 1, 1, new RavenJObject());
-					accessor.MapReduce.PutReducedResult("a", "a", 1, 2, 2, new RavenJObject());
-					accessor.MapReduce.PutReducedResult("b", "b", 1, 1, 1, new RavenJObject());
-					accessor.MapReduce.PutReducedResult("b", "b", 1, 2, 2, new RavenJObject());
+					accessor.MapReduce.PutReducedResult(a, "a", 1, 1, 1, new RavenJObject());
+					accessor.MapReduce.PutReducedResult(a, "a", 1, 2, 2, new RavenJObject());
+					accessor.MapReduce.PutReducedResult(b, "b", 1, 1, 1, new RavenJObject());
+					accessor.MapReduce.PutReducedResult(b, "b", 1, 2, 2, new RavenJObject());
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex(a));
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetReducedResultsForDebug("a", "a", 1,0 , 10);
+					var results = accessor.MapReduce.GetReducedResultsForDebug(a, "a", 1,0 , 10);
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetReducedResultsForDebug("b", "b", 1,0 , 10);
+					results = accessor.MapReduce.GetReducedResultsForDebug(b, "b", 1,0 , 10);
 					Assert.Equal(2, results.Count());
 				});
 			}
@@ -86,23 +88,23 @@ namespace Raven.Tests.Issues
 			{
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("a", true);
-					accessor.Indexing.AddIndex("b", true);
+					accessor.Indexing.AddIndex(a, true);
+					accessor.Indexing.AddIndex(b, true);
 
-					accessor.MapReduce.ScheduleReductions("a", 1, new ReduceKeyAndBucket(1, "a"));
-					accessor.MapReduce.ScheduleReductions("a", 1, new ReduceKeyAndBucket(2, "a"));
-					accessor.MapReduce.ScheduleReductions("b", 1, new ReduceKeyAndBucket(1, "b"));
-					accessor.MapReduce.ScheduleReductions("b", 1, new ReduceKeyAndBucket(2, "b"));
+					accessor.MapReduce.ScheduleReductions(a, 1, new ReduceKeyAndBucket(1, "a"));
+					accessor.MapReduce.ScheduleReductions(a, 1, new ReduceKeyAndBucket(2, "a"));
+					accessor.MapReduce.ScheduleReductions(b, 1, new ReduceKeyAndBucket(1, "b"));
+					accessor.MapReduce.ScheduleReductions(b, 1, new ReduceKeyAndBucket(2, "b"));
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex(a));
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("a", new[] { "a" }, 1, true, new List<object>()){Take = 10});
+					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(a, new[] { "a" }, 1, true, new List<object>()){Take = 10});
 					Assert.Equal(0, results.Count());
 
-					results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("b", new[] { "b" }, 1, true, new List<object>()){Take = 10});
+					results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(b, new[] { "b" }, 1, true, new List<object>()){Take = 10});
 					Assert.Equal(2, results.Count());
 				});
 			}

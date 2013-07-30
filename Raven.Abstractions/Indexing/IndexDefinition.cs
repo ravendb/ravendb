@@ -18,23 +18,28 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
 		/// </summary>
-		public IndexDefinition()
-		{
+		public IndexDefinition() 
+        {
 			Maps = new HashSet<string>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
 			Fields = new List<string>();
-			Suggestions = new Dictionary<string, SuggestionOptions>();
+		    Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
 			SpatialIndexes = new Dictionary<string, SpatialOptions>();
 		}
 
-		/// <summary>
-		/// Get or set the name of the index
+	    /// <summary>
+		/// Get or set the id of this index
 		/// </summary>
-		public string Name { get; set; }
+		public int IndexId { get; set; }
+
+        /// <summary>
+        /// This is the means by which the outside world refers to this index defiintion
+        /// </summary>
+        public string Name { get; set; }
 
 		/// <summary>
 		/// Get or set the index lock mode
@@ -149,7 +154,7 @@ namespace Raven.Abstractions.Indexing
 			if (ReferenceEquals(this, other))
 				return true;
 			return Maps.SequenceEqual(other.Maps) &&
-					Equals(other.Name, Name) &&
+					Equals(other.IndexId, IndexId) &&
 					Equals(other.Reduce, Reduce) &&
 					Equals(other.TransformResults, TransformResults) &&
 					DictionaryEquals(other.Stores, Stores) &&
@@ -302,7 +307,8 @@ namespace Raven.Abstractions.Indexing
 		{
 			var indexDefinition = new IndexDefinition
 			{
-				Name = Name,
+				IndexId = IndexId,
+        Name = Name,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
 				cachedHashCodeAsBytes = cachedHashCodeAsBytes
@@ -343,9 +349,10 @@ namespace Raven.Abstractions.Indexing
 		/// Gets or sets the translator function
 		/// </summary>
 		public string TransformResults { get; set; }
-		public string Name { get; set; }
+		public int IndexId { get; set; }
+	    public string Name { get; set; }
 
-		public bool Equals(TransformerDefinition other)
+	    public bool Equals(TransformerDefinition other)
 		{
 			return string.Equals(TransformResults, other.TransformResults);
 		}
@@ -370,7 +377,7 @@ namespace Raven.Abstractions.Indexing
 
 		public override string ToString()
 		{
-			return Name ?? TransformResults;
+			return TransformResults;
 		}
 	}
 }

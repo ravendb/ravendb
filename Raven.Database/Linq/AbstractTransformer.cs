@@ -13,6 +13,7 @@ namespace Raven.Database.Linq
 		public IndexingFunc TransformResultsDefinition { get; set; }
 		public string SourceCode { get; set; }
 
+    public string Name { get { return transformerDefinition.Name; } }
 		public string ViewText { get; set; }
 
 		protected dynamic LoadDocument(object key)

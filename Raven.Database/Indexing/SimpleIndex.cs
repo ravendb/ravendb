@@ -24,12 +24,12 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Indexing
 {
-    public class SimpleIndex : Index
-    {
-        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
-            : base(directory, name, indexDefinition, viewGenerator, context)
-        {
-        }
+	public class SimpleIndex : Index
+	{
+		public SimpleIndex(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
+			: base(directory, id, indexDefinition, viewGenerator, context)
+		{
+		}
 
         public override bool IsMapReduce
         {
@@ -203,24 +203,24 @@ namespace Raven.Database.Indexing
             return upToDate;
         }
 
-        protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
-        {
-            if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
-            {
-                context.IndexStorage.StoreCommitPoint(name, new IndexCommitPoint
-                {
-                    HighestCommitedETag = itemsInfo.HighestETag,
-                    TimeStamp = LastIndexTime,
-                    SegmentsInfo = GetCurrentSegmentsInfo()
-                });
+		protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo)
+		{
+			if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
+			{
+				context.IndexStorage.StoreCommitPoint(indexId.ToString(), new IndexCommitPoint
+				{
+					HighestCommitedETag = itemsInfo.HighestETag,
+					TimeStamp = LastIndexTime,
+					SegmentsInfo = GetCurrentSegmentsInfo()
+				});
 
-                LastCommitPointStoreTime = SystemTime.UtcNow;
-            }
-            else if (itemsInfo.DeletedKeys != null && directory is RAMDirectory == false)
-            {
-                context.IndexStorage.AddDeletedKeysToCommitPoints(name, itemsInfo.DeletedKeys);
-            }
-        }
+				LastCommitPointStoreTime = SystemTime.UtcNow;
+			}
+			else if (itemsInfo.DeletedKeys != null && directory is RAMDirectory == false)
+			{
+				context.IndexStorage.AddDeletedKeysToCommitPoints(indexDefinition, itemsInfo.DeletedKeys);
+			}
+		}
 
         private IndexSegmentsInfo GetCurrentSegmentsInfo()
         {
@@ -231,13 +231,13 @@ namespace Raven.Database.Indexing
             {
                 segmentInfos.Read(directory);
 
-                result.Generation = segmentInfos.Generation;
-                result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
-                result.ReferencedFiles = segmentInfos.Files(directory, false);
-            }
-            catch (CorruptIndexException ex)
-            {
-                logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
+				result.Generation = segmentInfos.Generation;
+				result.SegmentsFileName = segmentInfos.GetCurrentSegmentFileName();
+				result.ReferencedFiles = segmentInfos.Files(directory, false);
+			}
+			catch (CorruptIndexException ex)
+			{
+				logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", indexId), ex);
 
                 result.IsIndexCorrupted = true;
             }
@@ -319,6 +319,15 @@ namespace Raven.Database.Indexing
             };
         }
 
+		public override void Remove(string[] keys, WorkContext context)
+		{
+			Write((writer, analyzer,stats) =>
+			{
+				stats.Operation = IndexingWorkStats.Status.Ignore;
+				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), indexId));
+				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
+					.Where(x => x != null)
+					.ToList();
 
         public override void Remove(string[] keys, WorkContext context)
         {

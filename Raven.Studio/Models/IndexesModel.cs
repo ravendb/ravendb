@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
@@ -34,9 +35,17 @@ namespace Raven.Studio.Models
 
 		public override Task TimerTickedAsync()
 		{
+            // NOTE: I don't know how to Silverlight - Rob
 			return DatabaseCommands
-				.GetStatisticsAsync()
-				.ContinueOnSuccessInTheUIThread(UpdateGroupedIndexList);
+				.GetIndexesAsync(0, int.MaxValue)
+				.ContinueOnSuccessInTheUIThread((indexes) =>
+				{
+				    DatabaseCommands
+				        .GetStatisticsAsync()
+				        .ContinueOnSuccessInTheUIThread((stats) => {
+                            UpdateGroupedIndexList(indexes, stats);
+				        });
+				});
 		}
 
 		public IndexItem ItemSelection
@@ -54,8 +63,10 @@ namespace Raven.Studio.Models
 		public ICommand ResetIndex { get { return resetIndex ?? (resetIndex = new ResetIndexCommand(this)); } }
 		public ICommand DeleteIndexes { get { return new DeleteIndexesCommand(this); } }
 
+		private void UpdateGroupedIndexList(IndexDefinition[] indexes, DatabaseStatistics stats)
 		public ICommand DeleteGroupIndexes
 		{
+			var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
 			get { return new DeleteIndexesCommand(this);}
 		}
 
@@ -70,6 +81,9 @@ namespace Raven.Studio.Models
 			}
 		}
 
+			var indexesAndGroupHeaders =
+				indexGroups.SelectMany(group => new IndexListItem[] {new IndexGroupHeader {Name = group.Key}}
+													.Concat(group.Select(index => new IndexItem {Name = index.Name, IndexStats = stats.Indexes.FirstOrDefault(x=>x.Id == index.IndexId)})));
 		public ICommand CollapseAll
 		{
 			get { return new ActionCommand(() =>

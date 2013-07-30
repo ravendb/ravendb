@@ -36,7 +36,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			var ramDirectory = new RAMDirectory();
 			using (new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED)){}
-			var simpleIndex = new SimpleIndex(ramDirectory, "test", new IndexDefinition
+			var simpleIndex = new SimpleIndex(ramDirectory, 0, new IndexDefinition
 			{
 				Map =
 			                                                        	@"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}",
