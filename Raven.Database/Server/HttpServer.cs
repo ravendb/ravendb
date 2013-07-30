@@ -1168,6 +1168,8 @@ namespace Raven.Database.Server
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlAllowOrigin))
 				return;
 
+			if(String.IsNullOrEmpty(ctx.Request.Headers["Origin"])) { return; }
+
 			ctx.Response.AddHeader("Access-Control-Allow-Credentials", "true");
 
 			bool originAllowed = SystemConfiguration.AccessControlAllowOrigin == "*" ||
