@@ -120,7 +120,7 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
-	    /// <summary>
+		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
@@ -1040,7 +1040,7 @@ namespace Raven.Client.Connection
 	            }
 
 	        return (httpWebResponse.StatusCode != HttpStatusCode.NotFound);
-	        }
+	    }
 
 	    /// <summary>
 		/// Puts the index definition for the specified name
@@ -1586,14 +1586,15 @@ namespace Raven.Client.Connection
 				}
 
 				// Be compitable with the resopnse from v2.0 server
-				if (jsonResponse == null || jsonResponse.Type != JTokenType.Object)
+				var serverBuild = request.ResponseHeaders.GetAsInt("Raven-Server-Build");
+				if (serverBuild < 2500)
+				{
+					if (serverBuild != 13 || (serverBuild == 13 && jsonResponse.Value<long>("OperationId") == default(long)))
+					{
 					return null;
+					}
+				}
 
-				var opId = ((RavenJObject)jsonResponse)["OperationId"];
-
-				if (opId == null || opId.Type != JTokenType.Integer)
-					return null;
-				
 				return new Operation(this, opId.Value<long>());
 			});
 		}
