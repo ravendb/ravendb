@@ -62,7 +62,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				const string dbName = "RavenDB_999";
-				store.DatabaseCommands.Admin.EnsureDatabaseExists(dbName);
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(dbName);
 				store.DatabaseCommands.GlobalAdmin.DeleteDatabase(dbName);
 
 				var databaseNames = store.DatabaseCommands.ForSystemDatabase().GetDatabaseNames(10);
@@ -77,7 +77,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				const string dbName = "RavenDB_999";
-				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbName);
+				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbName);
 				await store.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(dbName);
 
 				var databaseNames = store.DatabaseCommands.ForSystemDatabase().GetDatabaseNames(10);
@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
 			{
 				const string dbName = "RavenDB_999_Compact";
 
-				store.DatabaseCommands.Admin.EnsureDatabaseExists(dbName);
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(dbName);
 
 				store.DatabaseCommands.Put("keys/1", null, new RavenJObject() { { "test", "test" } }, new RavenJObject());
 
@@ -160,7 +160,7 @@ namespace Raven.Tests.Issues
 			{
 				const string dbName = "RavenDB_999_CompactAsync";
 
-				await store.AsyncDatabaseCommands.Admin.EnsureDatabaseExistsAsync(dbName);
+				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbName);
 
 				await store.AsyncDatabaseCommands.PutAsync("keys/1", null, new RavenJObject() {{"test", "test"}}, new RavenJObject());
 
