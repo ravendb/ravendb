@@ -100,7 +100,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		Task<T> LoadAsync<T>(string id);
 
-
 		/// <summary>
 		/// Begins the async multi-load operation
 		/// </summary>
