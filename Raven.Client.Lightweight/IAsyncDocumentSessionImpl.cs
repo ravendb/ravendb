@@ -18,6 +18,6 @@ namespace Raven.Client
 	{
 		DocumentConvention Conventions { get; }
 
-		Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes);
+		Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transfomer = null, Dictionary<string, RavenJToken> queryInputs = null);
 	}
 }
