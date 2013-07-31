@@ -103,7 +103,13 @@ namespace Raven.Storage.Managed
 		public IDisposable DisableBatchNesting()
 		{
 			disableBatchNesting.Value = new object();
-			return new DisposableAction(() => disableBatchNesting.Value = null);
+		    var old = tableStorage.CurrentTransactionId.Value;
+            tableStorage.CurrentTransactionId.Value = Guid.Empty;
+			return new DisposableAction(() =>
+			{
+			    tableStorage.CurrentTransactionId.Value = old;
+			    disableBatchNesting.Value = null;
+			});
 		}
 
 		[DebuggerNonUserCode]
@@ -113,9 +119,16 @@ namespace Raven.Storage.Managed
 			{
 				if (current.Value != null) // check again, just to be sure
 				{
-				    current.Value.IsNested = true;
-					action(current.Value);
-				    current.Value.IsNested = false;
+				    var old = current.Value.IsNested;
+                    current.Value.IsNested = true;
+				    try
+				    {
+                        action(current.Value);
+				    }
+				    finally
+				    {
+                        current.Value.IsNested = old;
+				    }
 					return;
 				}
 			}

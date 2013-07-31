@@ -109,16 +109,16 @@ namespace Raven.Client.Shard
 
         public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
         {
-			var transformer = new TTransformer().TransformerName;
-			return LoadInternal<TResult>(new[] { id }, new KeyValuePair<string, Type>[] { }, transformer).FirstOrDefault();
+            var transformer = new TTransformer().TransformerName;
+            return LoadInternal<TResult>(new[] { id }, transformer).FirstOrDefault();
         }
 
         public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
         {
-			var transformer = new TTransformer().TransformerName;
-			var configuration = new RavenLoadConfiguration();
-			configure(configuration);
-			return LoadInternal<TResult>(new[] { id }, new KeyValuePair<string, Type>[] { }, transformer, configuration.QueryInputs).FirstOrDefault();
+            var transformer = new TTransformer().TransformerName;
+            var configuration = new RavenLoadConfiguration();
+            configure(configuration);
+            return LoadInternal<TResult>(new[] { id },  transformer, configuration.QueryInputs).FirstOrDefault();
         }
 
         public T Load<T>(string id)
@@ -191,83 +191,83 @@ namespace Raven.Client.Shard
 
         public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
         {
-			return LoadInternal<TResult>(ids, new KeyValuePair<string, Type>[0], new TTransformer().TransformerName);
+            return LoadInternal<TResult>(ids, new TTransformer().TransformerName);
         }
 
         public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
         {
-			var ravenLoadConfiguration = new RavenLoadConfiguration();
-			configure(ravenLoadConfiguration);
-			return LoadInternal<TResult>(ids.ToArray(), new KeyValuePair<string, Type>[0], new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+            var ravenLoadConfiguration = new RavenLoadConfiguration();
+            configure(ravenLoadConfiguration);
+            return LoadInternal<TResult>(ids.ToArray(), new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
         }
 
-		public T[] LoadInternal<T>(string[] ids)
-		{
-			return LoadInternal<T>(ids, new KeyValuePair<string, Type>[0]);
-		}
+        private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+        {
+            throw new NotSupportedException();
+        }
 
-		private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
-		{
-			var results = new T[ids.Length];
-			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
+        public T[] LoadInternal<T>(string[] ids)
+        {
+            return LoadInternal<T>(ids, new KeyValuePair<string, Type>[0]);
+        }
 
-			if (!idsToLoad.Any())
-				return results;
+        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+        {
+            var results = new T[ids.Length];
+            var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths);
 
-			IncrementRequestCount();
+            if (!idsToLoad.Any())
+                return results;
 
-			foreach (var shard in idsToLoad)
-			{
-				var currentShardIds = shard.Select(x => x.Id).ToArray();
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
-				{
-					EntityType = typeof(T),
-					Keys = currentShardIds.ToList()
-				}, (dbCmd, i) =>
-				{
-					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
-					MultiLoadResult multiLoadResult;
-					do
-					{
-						multiLoadOperation.LogOperation();
-						using (multiLoadOperation.EnterMultiLoadContext())
-						{
-							multiLoadResult = dbCmd.Get(currentShardIds, includePaths, transformer, queryInputs);
-						}
-					} while (multiLoadOperation.SetResult(multiLoadResult));
-					return multiLoadOperation;
-				});
-				foreach (var multiLoadOperation in multiLoadOperations)
-				{
-					var loadResults = multiLoadOperation.Complete<T>();
-					for (int i = 0; i < loadResults.Length; i++)
-					{
-						if (ReferenceEquals(loadResults[i], null))
-							continue;
-						var id = currentShardIds[i];
-						var itemPosition = Array.IndexOf(ids, id);
-						if (ReferenceEquals(results[itemPosition], default(T)) == false)
-						{
-							throw new InvalidOperationException("Found document with id: " + id +
-																" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-						}
-						results[itemPosition] = loadResults[i];
-					}
-				}
-			}
-			return ids.Select(id => // so we get items that were skipped because they are already in the session cache
-			{
-				object val;
-				entitiesByKey.TryGetValue(id, out val);
-				return (T)val;
-			}).ToArray();
-		}
+            IncrementRequestCount();
 
-		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
-		{
-			return LoadInternal<T>(ids, includes, null);
-		}
+            foreach (var shard in idsToLoad)
+            {
+                var currentShardIds = shard.Select(x => x.Id).ToArray();
+                var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
+                {
+                    EntityType = typeof(T),
+                    Keys = currentShardIds.ToList()
+                }, (dbCmd, i) =>
+                {
+                    var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
+                    MultiLoadResult multiLoadResult;
+                    do
+                    {
+                        multiLoadOperation.LogOperation();
+                        using (multiLoadOperation.EnterMultiLoadContext())
+                        {
+                            multiLoadResult = dbCmd.Get(currentShardIds, includePaths);
+                        }
+                    } while (multiLoadOperation.SetResult(multiLoadResult));
+                    return multiLoadOperation;
+                });
+                foreach (var multiLoadOperation in multiLoadOperations)
+                {
+                    var loadResults = multiLoadOperation.Complete<T>();
+                    for (int i = 0; i < loadResults.Length; i++)
+                    {
+                        if (ReferenceEquals(loadResults[i], null))
+                            continue;
+                        var id = currentShardIds[i];
+                        var itemPosition = Array.IndexOf(ids, id);
+                        if (ReferenceEquals(results[itemPosition], default(T)) == false)
+                        {
+                            throw new InvalidOperationException("Found document with id: " + id +
+                                                                " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+                        }
+                        results[itemPosition] = loadResults[i];
+                    }
+                }
+            }
+            return ids.Select(id => // so we get items that were skipped because they are already in the session cache
+            {
+                object val;
+                entitiesByKey.TryGetValue(id, out val);
+                return (T)val;
+            }).ToArray();
+        }
 
         public ILoaderWithInclude<object> Include(string path)
         {
