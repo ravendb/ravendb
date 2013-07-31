@@ -1,9 +1,7 @@
-﻿using System;
-using Raven.Database.Server.Abstractions;
-
-namespace Raven.Database.Server.Responders.Admin
+﻿namespace Raven.Database.Server.Responders.Admin
 {
-	using System.Runtime;
+	using Raven.Abstractions.Util;
+	using Raven.Database.Server.Abstractions;
 
 	public class AdminGc : AdminResponder
 	{
@@ -17,17 +15,7 @@ namespace Raven.Database.Server.Responders.Admin
 			if (EnsureSystemDatabase(context) == false)
 				return;
 
-			CollectGarbage(Database, compactLoh: false);
-		}
-
-		public static void CollectGarbage(DocumentDatabase database, bool compactLoh)
-		{
-			if (compactLoh)
-				GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-			database.TransactionalStorage.ClearCaches();
-			GC.WaitForPendingFinalizers();
+			RavenGC.CollectGarbage(false, () => Database.TransactionalStorage.ClearCaches());
 		}
 	}
 }

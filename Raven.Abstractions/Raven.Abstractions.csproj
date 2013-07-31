@@ -280,6 +280,7 @@
     <Compile Include="Util\EtagUtil.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
+    <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />

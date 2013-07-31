@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Database.Server.Responders.Admin
 {
+	using Raven.Abstractions.Util;
 	using Raven.Database.Server.Abstractions;
 
 	public class AdminLohCompaction : AdminResponder
@@ -24,7 +25,7 @@ namespace Raven.Database.Server.Responders.Admin
 			if (EnsureSystemDatabase(context) == false)
 				return;
 
-			AdminGc.CollectGarbage(Database, compactLoh: true);
+			RavenGC.CollectGarbage(true, () => Database.TransactionalStorage.ClearCaches());
 		}
 	}
 }

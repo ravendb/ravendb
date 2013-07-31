@@ -30,6 +30,8 @@ using Raven.Database.Util;
 
 namespace Raven.Server
 {
+	using Raven.Abstractions.Util;
+
 	public static class Program
 	{
 		static string[] cmdLineArgs;
@@ -506,7 +508,7 @@ Configuration options:
 						              Console.WriteLine(
 										  "Starting garbage collection (without LOH compaction), current memory is: {0:#,#.##;;0} MB",
 							              before / 1024d / 1024d);
-						              AdminGc.CollectGarbage(server.Database, compactLoh: false);
+						              RavenGC.CollectGarbage(false, () => server.Database.TransactionalStorage.ClearCaches());
 						              var after = Process.GetCurrentProcess().WorkingSet64;
 						              Console.WriteLine(
 							              "Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB",
@@ -521,7 +523,7 @@ Configuration options:
 						              Console.WriteLine(
 							              "Starting garbage collection (with LOH compaction), current memory is: {0:#,#.##;;0} MB",
 							              before / 1024d / 1024d);
-						              AdminGc.CollectGarbage(server.Database, compactLoh: true);
+									  RavenGC.CollectGarbage(true, () => server.Database.TransactionalStorage.ClearCaches());
 						              var after = Process.GetCurrentProcess().WorkingSet64;
 						              Console.WriteLine(
 							              "Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB",

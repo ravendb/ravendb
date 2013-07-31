@@ -152,7 +152,7 @@ namespace Raven.Database.Indexing
 			// On the face of it, this is stupid, because OOME will not be thrown if the GC could release
 			// memory, but we are actually aware that during indexing, the GC couldn't find garbage to clean,
 			// but in here, we are AFTER the index was done, so there is likely to be a lot of garbage.
-			GC.Collect(GC.MaxGeneration);
+			RavenGC.CollectGarbage(GC.MaxGeneration);
 			autoTuner.OutOfMemoryExceptionHappened();
 		}
 

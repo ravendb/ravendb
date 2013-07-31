@@ -26,6 +26,10 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
+	using System.Runtime;
+
+	using Raven.Abstractions.Util.Encryptors;
+
 	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
@@ -59,6 +63,8 @@ namespace Raven.Database.Config
 			FilterActiveBundles();
 
 			SetupOAuth();
+
+			SetupGC();
 		}
 
 		public void Initialize()
@@ -309,6 +315,11 @@ namespace Raven.Database.Config
 			OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
 							   (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
 			OAuthTokenKey = GetOAuthKey();
+		}
+
+		private void SetupGC()
+		{
+			//GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 		}
 
 		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
