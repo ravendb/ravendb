@@ -146,7 +146,7 @@ namespace Raven.Client.Shard
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			var result = await LoadAsyncInternal<T>(new[] { id },  new TTransformer().TransformerName);
+			var result = await LoadAsyncInternal<T>(new[] { id }, new KeyValuePair<string, Type>[0], new TTransformer().TransformerName);
 			return result.FirstOrDefault();
 		}
 
@@ -154,28 +154,23 @@ namespace Raven.Client.Shard
 		{
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);
-			var result = await LoadAsyncInternal<T>(new[] { id }, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+			var result = await LoadAsyncInternal<T>(new[] { id }, new KeyValuePair<string, Type>[0], new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
 			return result.FirstOrDefault();
 		}
 
-	    private Task<T[]> LoadAsyncInternal<T>(string[] ids, string transformerName, Dictionary<string, RavenJToken> queryInputs = null)
-	    {
-	        throw new NotSupportedException();
-	    }
-
-	    public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			return LoadAsyncInternal<T>(ids, new TTransformer().TransformerName);
+			return LoadAsyncInternal<T>(ids, new KeyValuePair<string, Type>[0], new TTransformer().TransformerName);
 		}
 
 		public Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);
-			return LoadAsyncInternal<TResult>(ids.ToArray(),  new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+			return LoadAsyncInternal<TResult>(ids.ToArray(), new KeyValuePair<string, Type>[0], new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
 		}
 
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
@@ -202,7 +197,7 @@ namespace Raven.Client.Shard
 						multiLoadOperation.LogOperation();
 						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths);
+							multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs);
 						}
 					} while (multiLoadOperation.SetResult(multiLoadResult));
 					return multiLoadOperation;
@@ -232,7 +227,6 @@ namespace Raven.Client.Shard
 				return (T)val;
 			}).ToArray();
 		}
-
 
 		public IAsyncLoaderWithInclude<object> Include(string path)
 		{
