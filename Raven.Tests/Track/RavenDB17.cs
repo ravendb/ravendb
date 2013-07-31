@@ -48,7 +48,6 @@ namespace Raven.Tests.Track
 					scope.Complete();
 				}
 
-
 				// Session #3
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
