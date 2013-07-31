@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Nevar.Debugging;
 
 namespace Nevar.Trees
 {
@@ -34,6 +36,13 @@ namespace Nevar.Trees
 
         public void Push(Page p)
         {
+#if DEBUG
+            // make sure that we aren't already there
+            if (Pages.Any(page => page.PageNumber == p.PageNumber))
+            {
+                throw new InvalidOperationException("Pushed page already in cursor's stack: " + p.PageNumber);
+            }
+#endif
             Pages.AddFirst(p);
         }
 
