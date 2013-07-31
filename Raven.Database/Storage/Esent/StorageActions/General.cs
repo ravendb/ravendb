@@ -150,7 +150,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Equals(dbid, JET_DBID.Nil) == false && session != null)
 				Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
 
-			sessionAndTransactionDisposer();
+		    if (sessionAndTransactionDisposer != null)
+		        sessionAndTransactionDisposer();
 		}
 
 		public void UseLazyCommit()
