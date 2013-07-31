@@ -13,7 +13,10 @@ namespace Nevar.Tryout
     {
         private static void Main(string[] args)
         {
-			new VeryBig().CanGrowBeyondInitialSize_Root();
+            using (var veryBig = new VeryBig())
+            {
+                veryBig.CanGrowBeyondInitialSize_Root();
+            }
 
             //var buf = new byte[256*3];
 

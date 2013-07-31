@@ -200,7 +200,8 @@ namespace Nevar
                 }
                 var newTransaction = new Transaction(_pager, this, txId, flags);
                 _activeTransactions.TryAdd(txId, newTransaction);
-	            newTransaction.AddPagerState(_pager.TransactionBegan());
+                var transactionBegan = _pager.TransactionBegan();
+                newTransaction.AddPagerState(transactionBegan);
                 return newTransaction;
             }
             catch (Exception)

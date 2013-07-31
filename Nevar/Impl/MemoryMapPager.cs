@@ -10,8 +10,6 @@ namespace Nevar.Impl
         private long _allocatedPages;
         private readonly FileStream _fileStream;
       
-        private PagerState _pagerState;
-
         public MemoryMapPager(string file)
         {
             var fileInfo = new FileInfo(file);
@@ -25,12 +23,11 @@ namespace Nevar.Impl
                 _allocatedPages = file.Length / PageSize;
             }
             _fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
-            _pagerState = new PagerState();
         }
 
 	    protected override Page Get(long n)
         {
-	        return new Page(_pagerState.Base + (n * PageSize), PageMaxSpace);
+	        return new Page(PagerState.Base + (n * PageSize), PageMaxSpace);
         }
 
 	    protected override void AllocateMorePages(Transaction tx, long newLength)
@@ -39,7 +36,7 @@ namespace Nevar.Impl
 			_fileStream.SetLength(newLength);
 		    var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
 		                                              MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
-		    _pagerState.Release(); // when the last transaction using this is over, will dispose it
+            PagerState.Release(); // when the last transaction using this is over, will dispose it
 
 		    var accessor = mmf.CreateViewAccessor();
 		    byte* p = null;
@@ -53,31 +50,28 @@ namespace Nevar.Impl
 			    };
 			newPager.AddRef(); // one for the pager
 
-			newPager.AddRef(); // one for the pager
-
 			if (tx != null) // we only pass null during startup, and we don't need it there
 			{
 				newPager.AddRef(); // one for the current transaction
-				tx.AddPagerState(_pagerState);
+                tx.AddPagerState(newPager);
 			}
 
-
-		    _pagerState = newPager;
+            PagerState = newPager;
 		    _allocatedPages = accessor.Capacity/PageSize;
 	    }
 
 	    public override void Flush()
         {
-            _pagerState.Accessor.Flush();
+            PagerState.Accessor.Flush();
             _fileStream.Flush(true);
         }
 
         public override void Dispose()
         {
-            if (_pagerState != null)
+            if (PagerState != null)
             {
-                _pagerState.Release();
-                _pagerState = null;
+                PagerState.Release();
+                PagerState = null;
             }
             _fileStream.Dispose();
         }

@@ -41,6 +41,8 @@ namespace Nevar.Tests
 		{
 			_storageEnvironment.Dispose();
             _pager.Dispose();
+            if (File.Exists("test.data"))
+                File.Delete("test.data");
 		}
 
         protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)
