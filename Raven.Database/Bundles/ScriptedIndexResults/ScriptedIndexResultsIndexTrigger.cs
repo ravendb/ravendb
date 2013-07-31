@@ -135,7 +135,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                 protected override void CustomizeEngine(Jint.JintEngine jintEngine)
                 {
-                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(document => DocumentsToDelete.Remove(document))));
+                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(document => DocumentsToDelete.Add(document))));
                 }
 
                 protected override void RemoveEngineCustomizations(Jint.JintEngine jintEngine)
