@@ -166,7 +166,7 @@ namespace Nevar.Trees
 			page.RemoveNode(page.LastSearchPosition);
 		}
 
-		[Conditional("DEBUG")]
+        [Conditional("VALIDATE")]
 		private void DebugValidateTree(Transaction tx, Page root)
 		{
 			var stack = new Stack<Page>();

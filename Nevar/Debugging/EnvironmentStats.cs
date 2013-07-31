@@ -8,6 +8,7 @@ namespace Nevar.Debugging
         public long FreePagesOverhead;
         public long RootPages;
         public long HeaderPages;
+        public long UnallocatedPagesAtEndOfFile;
         public List<FreedTransaction> FreedTransactions = new List<FreedTransaction>();
 
         public class FreedTransaction

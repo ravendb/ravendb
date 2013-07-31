@@ -327,7 +327,7 @@ namespace Nevar.Trees
             get { return new Slice(GetNode(i)).ToString(); }
         }
 
-        [Conditional("DEBUG")]
+        [Conditional("VALIDATE")]
         public void DebugValidate(Transaction tx, SliceComparer comparer, Page root)
         {
             if (NumberOfEntries == 0)

@@ -231,7 +231,8 @@ namespace Nevar
                 {
                     FreePagesOverhead = FreeSpace.State.PageCount,
                     RootPages = Root.State.PageCount,
-                    HeaderPages = 2
+                    HeaderPages = 2,
+                    UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber
                 };
             using (Transaction tx = NewTransaction(TransactionFlags.Read))
             {

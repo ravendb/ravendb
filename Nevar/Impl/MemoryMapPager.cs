@@ -5,65 +5,84 @@ using Nevar.Trees;
 
 namespace Nevar.Impl
 {
+    [Flags]
+    public enum FlushMode
+    {
+        None = 0,
+        Buffers = 2,
+        Full = 4
+    }
+
     public unsafe class MemoryMapPager : AbstractPager
     {
+        private readonly FlushMode _flushMode;
         private long _allocatedPages;
         private readonly FileStream _fileStream;
-      
-        public MemoryMapPager(string file)
+
+        public MemoryMapPager(string file, FlushMode flushMode = FlushMode.Full)
         {
+            _flushMode = flushMode;
             var fileInfo = new FileInfo(file);
-            if (fileInfo.Exists == false || file.Length == 0)
+            var hasData = fileInfo.Exists == false || fileInfo.Length == 0;
+            _fileStream = fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+            if (hasData)
             {
                 _allocatedPages = 0;
-                fileInfo.Create().Close();
             }
             else
             {
-                _allocatedPages = file.Length / PageSize;
+                _allocatedPages = fileInfo.Length / PageSize;
+                PagerState = CreateNewPagerState();
             }
-            _fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
         }
 
-	    protected override Page Get(long n)
+        protected override Page Get(long n)
         {
-	        return new Page(PagerState.Base + (n * PageSize), PageMaxSpace);
+            return new Page(PagerState.Base + (n * PageSize), PageMaxSpace);
         }
 
-	    protected override void AllocateMorePages(Transaction tx, long newLength)
-	    {
-		    // need to allocate memory again
-			_fileStream.SetLength(newLength);
-		    var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
-		                                              MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
+        protected override void AllocateMorePages(Transaction tx, long newLength)
+        {
+            // need to allocate memory again
+            _fileStream.SetLength(newLength);
             PagerState.Release(); // when the last transaction using this is over, will dispose it
+            PagerState newPager = CreateNewPagerState();
 
-		    var accessor = mmf.CreateViewAccessor();
-		    byte* p = null;
-		    accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
-
-			var newPager = new PagerState
-			    {
-				    Accessor = accessor,
-				    File = mmf,
-				    Base = p
-			    };
-			newPager.AddRef(); // one for the pager
-
-			if (tx != null) // we only pass null during startup, and we don't need it there
-			{
-				newPager.AddRef(); // one for the current transaction
+            if (tx != null) // we only pass null during startup, and we don't need it there
+            {
+                newPager.AddRef(); // one for the current transaction
                 tx.AddPagerState(newPager);
-			}
+            }
 
             PagerState = newPager;
-		    _allocatedPages = accessor.Capacity/PageSize;
-	    }
+            _allocatedPages = newPager.Accessor.Capacity / PageSize;
+        }
 
-	    public override void Flush()
+        private PagerState CreateNewPagerState()
         {
+            var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
+                                                      MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
+            var accessor = mmf.CreateViewAccessor();
+            byte* p = null;
+            accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
+
+           var  newPager = new PagerState
+                {
+                    Accessor = accessor,
+                    File = mmf,
+                    Base = p
+                };
+            newPager.AddRef(); // one for the pager
+            return newPager;
+        }
+
+        public override void Flush()
+        {
+            if (_flushMode == FlushMode.None)
+                return;
+
             PagerState.Accessor.Flush();
-            _fileStream.Flush(true);
+            _fileStream.Flush(_flushMode == FlushMode.Full);
         }
 
         public override void Dispose()
