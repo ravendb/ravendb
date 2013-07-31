@@ -40,7 +40,7 @@ import raven.client.extensions.MultiDatabase;
 import com.google.common.util.concurrent.FutureCallback;
 
 // TODO: finish me
-public class ReplicationInformer {
+public class ReplicationInformer implements AutoCloseable {
 
   private static Log log = LogFactory.getLog(ReplicationInformer.class.getCanonicalName());
 
@@ -514,6 +514,12 @@ public class ReplicationInformer {
     public void setUrl(String url) {
       this.url = url;
     }
+  }
+
+  @Override
+  public void close() throws Exception {
+    // TODO Auto-generated method stub
+
   }
 
 }

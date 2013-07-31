@@ -8,7 +8,7 @@ import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.basic.Holder;
 
-public class Etag {
+public class Etag implements Comparable<Etag> {
 
   private long restarts;
   private long changes;
@@ -193,6 +193,14 @@ public class Etag {
 
   public static Etag random() {
     return new Etag(UUID.randomUUID().toString());
+  }
+
+
+  @Override
+  public int compareTo(Etag o) {
+
+    // TODO Auto-generated method stub
+    return 0;
   }
 
 

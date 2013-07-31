@@ -8,4 +8,11 @@ public interface IAdminDatabaseCommands {
    * @param databaseDocument
    */
   public void createDatabase(DatabaseDocument databaseDocument);
+
+  /**
+   *  Ensures that the database exists, creating it if needed
+   * @param name
+   * @param ignoreFailures
+   */
+  public void ensureDatabaseExists(String name, boolean ignoreFailures);
 }

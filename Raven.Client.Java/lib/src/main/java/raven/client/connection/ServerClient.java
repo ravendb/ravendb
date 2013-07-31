@@ -82,6 +82,7 @@ import raven.client.document.DocumentConvention;
 import raven.client.exceptions.ConflictException;
 import raven.client.extensions.MultiDatabase;
 import raven.client.indexes.IndexDefinitionBuilder;
+import raven.client.indexes.RavenDocumentsByEntityName;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.TimeSpan;
 import raven.client.utils.UrlUtils;
@@ -2390,6 +2391,31 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
       throw new ServerClientException(e);
     }
 
+  }
+
+  public void ensureDatabaseExists(String name, boolean ignoreFailures) {
+    ServerClient serverClient = (ServerClient) forSystemDatabase();
+    serverClient.forceReadFromMaster();
+
+    DatabaseDocument doc = MultiDatabase.createDatabaseDocument(name);
+
+    try {
+      if (serverClient.get(doc.getId()) != null) {
+        return;
+      }
+
+      serverClient.getAdmin().createDatabase(doc);
+    } catch (Exception e) {
+      if (ignoreFailures == false) {
+        throw e;
+      }
+    }
+
+    try {
+      new RavenDocumentsByEntityName().execute(serverClient.forDatabase(name), new DocumentConvention());
+    } catch (Exception e) {
+      // we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
+    }
   }
 
 }

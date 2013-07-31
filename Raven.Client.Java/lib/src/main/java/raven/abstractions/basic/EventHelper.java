@@ -2,6 +2,8 @@ package raven.abstractions.basic;
 
 import java.util.List;
 
+import raven.abstractions.closure.Action1;
+
 public class EventHelper {
 
   /**
@@ -13,6 +15,12 @@ public class EventHelper {
   public static <T extends EventArgs> void invoke(List<EventHandler<T>> delegates, Object sender, T event) {
     for (EventHandler<T> delegate : delegates) {
       delegate.handle(sender, event);
+    }
+  }
+
+  public static <T> void invoke(List<Action1<T>> sessionCreatedInternal, T session) {
+    for (Action1<T> action: sessionCreatedInternal) {
+      action.apply(session);
     }
   }
 }

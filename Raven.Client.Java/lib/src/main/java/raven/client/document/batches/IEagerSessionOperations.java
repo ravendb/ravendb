@@ -1,0 +1,11 @@
+package raven.client.document.batches;
+
+/**
+ * Allow to perform eager operations on the session
+ */
+public interface IEagerSessionOperations {
+  /**
+   * Execute all the lazy requests pending within this session
+   */
+  void executeAllPendingLazyOperations();
+}

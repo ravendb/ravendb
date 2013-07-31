@@ -8,7 +8,10 @@ import org.apache.http.HttpResponse;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
+import raven.abstractions.closure.Function3;
 import raven.abstractions.closure.Functions;
+import raven.client.connection.IDatabaseCommands;
+import raven.client.connection.ReplicationInformer;
 
 // TODO: finish me
 public class DocumentConvention {
@@ -22,6 +25,18 @@ public class DocumentConvention {
   private Function1<HttpResponse, Action1<HttpRequest>> handleForbiddenResponse;
 
   private Function1<HttpResponse, Action1<HttpRequest>> handleUnauthorizedResponse;
+
+  private Function3<String, IDatabaseCommands, Object, String> documentKeyGenerator;
+
+
+  public Function3<String, IDatabaseCommands, Object, String> getDocumentKeyGenerator() {
+    return documentKeyGenerator;
+  }
+
+
+  public void setDocumentKeyGenerator(Function3<String, IDatabaseCommands, Object, String> documentKeyGenerator) {
+    this.documentKeyGenerator = documentKeyGenerator;
+  }
 
   /* The maximum amount of time that we will wait before checking
    * that a failed node is still up or not.
@@ -140,6 +155,18 @@ public class DocumentConvention {
 
   public void setEnlistInDistributedTransactions(boolean enlistInDistributedTransactions) {
     this.enlistInDistributedTransactions = enlistInDistributedTransactions;
+  }
+
+
+  public void setDisableProfiling(boolean b) {
+    // TODO Auto-generated method stub
+
+  }
+
+
+  public ReplicationInformer getReplicationInformerFactory() {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 

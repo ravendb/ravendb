@@ -5,7 +5,6 @@ import java.util.regex.Pattern;
 
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.DatabaseDocument;
-import raven.abstractions.json.linq.RavenJObject;
 
 /**
  * Methods to create multitenant databases
@@ -14,13 +13,11 @@ public class MultiDatabase {
 
   private static final String VALID_DB_NAME_CHARS = "[A-Za-z0-9_\\-\\.]+";
 
-  public static RavenJObject createDatabaseDocument(String name) {
-    assertValidDatabaseName(name);
+  public static DatabaseDocument createDatabaseDocument(String name) {
     DatabaseDocument document = new DatabaseDocument();
+    document.setId("Raven/Databases/" + name);
     document.getSettings().put("Raven/DataDir", "~\\Databases\\" + name);
-    RavenJObject doc = RavenJObject.fromObject(new DatabaseDocument());
-    doc.remove("id");
-    return doc;
+    return document;
   }
 
   public static void assertValidDatabaseName(String name) {
