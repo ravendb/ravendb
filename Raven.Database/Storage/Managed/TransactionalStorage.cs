@@ -109,13 +109,37 @@ namespace Raven.Storage.Managed
 		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
-			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
+			if (disposerLock.IsReadLockHeld)
 			{
+                // we are currently in a nested Batch call
 				if (current.Value != null) // check again, just to be sure
 				{
+                    if (disableBatchNesting.Value != null)
+                    {
+                        // we don't allow nesting, we we have to run this in a separate thread
+                        var mres = new TaskCompletionSource<object>();
+
+                        ThreadPool.QueueUserWorkItem(state =>
+                        {
+                            try
+                            {
+                                Batch(action);
+                                mres.TrySetResult(null);
+                            }
+                            catch (Exception e)
+                            {
+                                mres.TrySetException(e);
+                            }
+                        });
+
+                        mres.Task.Wait();
+                        return;
+                    }
+
+				    var old = current.Value.IsNested;
 				    current.Value.IsNested = true;
 					action(current.Value);
-				    current.Value.IsNested = false;
+				    current.Value.IsNested = old;
 					return;
 				}
 			}
@@ -134,7 +158,7 @@ namespace Raven.Storage.Managed
 			finally
 			{
 				disposerLock.ExitReadLock();
-				if (disposed == false && disableBatchNesting.Value == null)
+				if (disposed == false)
 					current.Value = null;
 			}
 			result.InvokeOnCommit();
@@ -148,8 +172,7 @@ namespace Raven.Storage.Managed
 			using (tableStorage.BeginTransaction())
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
-				if (disableBatchNesting.Value == null)
-					current.Value = storageActionsAccessor;
+				current.Value = storageActionsAccessor;
 				action(storageActionsAccessor);
 				storageActionsAccessor.SaveAllTasks();
 				tableStorage.Commit();
