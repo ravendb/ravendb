@@ -5,7 +5,7 @@ package raven.client.document;
  */
 public class InMemoryDocumentSessionOperations {
 
-  public void getDatabaseName() {
+  public String getDatabaseName() {
     // TODO Auto-generated method stub
 
   }

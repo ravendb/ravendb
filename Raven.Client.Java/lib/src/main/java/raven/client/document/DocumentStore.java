@@ -1,6 +1,5 @@
 package raven.client.document;
 
-import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,15 +9,19 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
 import raven.abstractions.basic.VoidArgs;
+import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function3;
 import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.ConnectionStringParser;
+import raven.abstractions.data.Constants;
 import raven.abstractions.data.RavenConnectionStringOptions;
 import raven.client.DocumentStoreBase;
 import raven.client.IDocumentSession;
@@ -27,8 +30,10 @@ import raven.client.changes.IDatabaseChanges;
 import raven.client.connection.Credentials;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ReplicationInformer;
+import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.extensions.MultiDatabase;
+import raven.client.listeners.IDocumentConflictListener;
 import raven.client.util.AtomicDictionary;
 import raven.client.util.EvictItemsFromCacheBasedOnChanges;
 import raven.client.utils.Closer;
@@ -353,10 +358,10 @@ public class DocumentStore extends DocumentStoreBase {
     if (!getEnlistInDistributedTransactions())
       return;
 
-    /**TODO:
+    /*TODO:
     var pendingTransactionRecovery = new PendingTransactionRecovery(this);
     pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
-    */
+     */
   }
 
   private void initializeSecurity() {
@@ -377,24 +382,33 @@ public class DocumentStore extends DocumentStoreBase {
    */
   protected void initializeInternal() {
 
-    String rootDatabaseUrl = MultiDatabase.getRootDatabaseUrl(url);
-    /* TODO:
-    var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
-    rootServicePoint.UseNagleAlgorithm = false;
-    rootServicePoint.Expect100Continue = false;
-    rootServicePoint.ConnectionLimit = 256;
+    final String rootDatabaseUrl = MultiDatabase.getRootDatabaseUrl(url);
+    HttpParams httpParams = jsonRequestFactory.getHttpClient().getParams();
+    httpParams.setBooleanParameter(HttpConnectionParams.TCP_NODELAY, true); // disable Nagle's algorithm
 
-    databaseCommandsGenerator = () =>
-    {
-      string databaseUrl = Url;
-      if (string.IsNullOrEmpty(DefaultDatabase) == false)
-      {
-        databaseUrl = rootDatabaseUrl;
-        databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
+    databaseCommandsGenerator = new Function0<IDatabaseCommands>() {
+
+      @Override
+      public IDatabaseCommands apply() {
+        String databaseUrl = getUrl();
+        if (StringUtils.isNotEmpty(defaultDatabase)) {
+          databaseUrl = rootDatabaseUrl;
+          databaseUrl += "/databases/" + defaultDatabase;
+        }
+
+        return new ServerClient(databaseUrl, conventions, getCredentials(),
+            new ReplicationInformerGetter()
+        , null, jsonRequestFactory, currentSessionId.get(), listeners.getConflictListeners().toArray(new IDocumentConflictListener[0]));
       }
-      return new ServerClient(databaseUrl, Conventions, Credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId, listeners.ConflictListeners);
     };
-    */
+
+  }
+  private class ReplicationInformerGetter implements Function1<String, ReplicationInformer> {
+
+    @Override
+    public ReplicationInformer apply(String dbName) {
+      return getReplicationInformerForDatabase(dbName);
+    }
 
   }
 
@@ -414,56 +428,56 @@ public class DocumentStore extends DocumentStoreBase {
     return replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().apply(key));
   }
 
-    /**
-     * Setup the context for no aggressive caching
-     *
-     * This is mainly useful for internal use inside RavenDB, when we are executing
-     * queries that have been marked with WaitForNonStaleResults, we temporarily disable
-     * aggressive caching.
-     */
-    @Override
-    public AutoCloseable disableAggressiveCaching() {
-      assertInitialized();
-      final Long old = jsonRequestFactory.getAggressiveCacheDuration();
-      jsonRequestFactory.setAggressiveCacheDuration(null);
-      return new AutoCloseable() {
+  /**
+   * Setup the context for no aggressive caching
+   *
+   * This is mainly useful for internal use inside RavenDB, when we are executing
+   * queries that have been marked with WaitForNonStaleResults, we temporarily disable
+   * aggressive caching.
+   */
+  @Override
+  public AutoCloseable disableAggressiveCaching() {
+    assertInitialized();
+    final Long old = jsonRequestFactory.getAggressiveCacheDuration();
+    jsonRequestFactory.setAggressiveCacheDuration(null);
+    return new AutoCloseable() {
 
-        @Override
-        public void close() throws Exception {
-          jsonRequestFactory.setAggressiveCacheDuration(old);
-        }
-      };
-    }
-
-    /**
-     *  Subscribe to change notifications from the server
-     */
-    public IDatabaseChanges changes() {
-      return changes(null);
-    }
-
-    /**
-     * Subscribe to change notifications from the server
-     * @param database
-     * @return
-     */
-    @Override
-    public IDatabaseChanges changes(String database) {
-      assertInitialized();
-      if (database == null) {
-        database = defaultDatabase;
+      @Override
+      public void close() throws Exception {
+        jsonRequestFactory.setAggressiveCacheDuration(old);
       }
-      return databaseChanges.getOrAdd(database, new Function1<String, IDatabaseChanges>() {
+    };
+  }
 
-        @Override
-        public IDatabaseChanges apply(String database) {
-          return createDatabaseChanges(database);
-        }
-      });
+  /**
+   *  Subscribe to change notifications from the server
+   */
+  public IDatabaseChanges changes() {
+    return changes(null);
+  }
+
+  /**
+   * Subscribe to change notifications from the server
+   * @param database
+   * @return
+   */
+  @Override
+  public IDatabaseChanges changes(String database) {
+    assertInitialized();
+    if (database == null) {
+      database = defaultDatabase;
     }
+    return databaseChanges.getOrAdd(database, new Function1<String, IDatabaseChanges>() {
 
-    protected IDatabaseChanges createDatabaseChanges(String database) {
-      /*TODO:
+      @Override
+      public IDatabaseChanges apply(String database) {
+        return createDatabaseChanges(database);
+      }
+    });
+  }
+
+  protected IDatabaseChanges createDatabaseChanges(String database) {
+    /*TODO:
       if (StringUtils.isEmpty(url)) {
         throw new IllegalStateException("Changes API requires usage of server/client");
       }
@@ -484,80 +498,88 @@ public class DocumentStore extends DocumentStoreBase {
           GetReplicationInformerForDatabase(database),
           () => databaseChanges.Remove(database),
           ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
-          */
-      return null; //TODO:
-    }
-
-    /**
-     * Setup the context for aggressive caching.
-     *
-     * Aggressive caching means that we will not check the server to see whatever the response
-     * we provide is current or not, but will serve the information directly from the local cache
-     * without touching the server.
      */
-    @Override
-    public AutoCloseable aggressivelyCacheFor(long cacheDurationInMilis)
-    {
-      assertInitialized();
-      if (cacheDurationInMilis < 1000)
-        throw new IllegalArgumentException("cacheDuration must be longer than a single second");
+    return null; //TODO:
+  }
 
-      final Long old = jsonRequestFactory.getAggressiveCacheDuration();
-      jsonRequestFactory.setAggressiveCacheDuration(cacheDurationInMilis);
+  /**
+   * Setup the context for aggressive caching.
+   *
+   * Aggressive caching means that we will not check the server to see whatever the response
+   * we provide is current or not, but will serve the information directly from the local cache
+   * without touching the server.
+   */
+  @Override
+  public AutoCloseable aggressivelyCacheFor(long cacheDurationInMilis)
+  {
+    assertInitialized();
+    if (cacheDurationInMilis < 1000)
+      throw new IllegalArgumentException("cacheDuration must be longer than a single second");
 
-      aggressiveCachingUsed = true;
+    final Long old = jsonRequestFactory.getAggressiveCacheDuration();
+    jsonRequestFactory.setAggressiveCacheDuration(cacheDurationInMilis);
 
-      return new AutoCloseable() {
+    aggressiveCachingUsed = true;
 
-        @Override
-        public void close() throws Exception {
-          jsonRequestFactory.setAggressiveCacheDuration(old);
-        }
-      };
-    }
+    return new AutoCloseable() {
 
-
-
-    public int getMaxNumberOfCachedRequests() {
-      return maxNumberOfCachedRequests;
-    }
-
-    public void setMaxNumberOfCachedRequests(int value) {
-      maxNumberOfCachedRequests = value;
-      if (jsonRequestFactory != null) {
-        Closer.close(jsonRequestFactory);
+      @Override
+      public void close() throws Exception {
+        jsonRequestFactory.setAggressiveCacheDuration(old);
       }
-      jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests);
+    };
+  }
+
+
+
+  public int getMaxNumberOfCachedRequests() {
+    return maxNumberOfCachedRequests;
+  }
+
+  public void setMaxNumberOfCachedRequests(int value) {
+    maxNumberOfCachedRequests = value;
+    if (jsonRequestFactory != null) {
+      Closer.close(jsonRequestFactory);
     }
+    jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests);
+  }
 
 
-    /*TODO:
+  /*TODO:
   public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
   {
     return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
   }*/
 
-    @Override
-    protected void afterSessionCreated(InMemoryDocumentSessionOperations session) {
-      /*TODO:
-      if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
-      {
-        var databaseName = session.DatabaseName;
-        observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
-            _ => new EvictItemsFromCacheBasedOnChanges(databaseName ?? Constants.SystemDatabase,
-                CreateDatabaseChanges(databaseName),
-                jsonRequestFactory.ExpireItemsFromCache));
+  @Override
+  protected void afterSessionCreated(InMemoryDocumentSessionOperations session) {
+    if (conventions.isShouldAggressiveCacheTrackChanges() && aggressiveCachingUsed) {
+      String databaseName = session.getDatabaseName();
+      if (databaseName == null) {
+        databaseName = Constants.SYSTEM_DATABASE;
       }
-*/
-      super.afterSessionCreated(session);
+
+      observeChangesAndEvictItemsFromCacheForDatabases.putIfAbsent(databaseName,
+          new EvictItemsFromCacheBasedOnChanges(databaseName, createDatabaseChanges(databaseName), new ExpireItemsFromCacheAction()));
     }
 
+    super.afterSessionCreated(session);
+  }
+  private class ExpireItemsFromCacheAction implements Action1<String>  {
 
-/*TODO
+    @Override
+    public void apply(String db) {
+      jsonRequestFactory.expireItemsFromCache(db);
+    }
+  }
+
+
+
+  /*TODO
     public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
     {
       var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);
       return changes == null ? new CompletedTask() : changes.ConnectionTask;
     }
-    */
-  }
+   */
+}
