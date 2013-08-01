@@ -100,6 +100,9 @@ namespace Raven.Database
         [ImportMany]
         public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
+        [ImportMany]
+        public OrderedPartCollection<AbstractIndexReaderWarmer> IndexWarmers { get; set; }
+
         private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
         private long pendingTaskCounter;
@@ -194,7 +197,8 @@ namespace Raven.Database
                     ReadTriggers = ReadTriggers,
                     RaiseIndexChangeNotification = RaiseNotifications,
                     TaskScheduler = backgroundTaskScheduler,
-                    Configuration = configuration
+                    Configuration = configuration,
+                    IndexWarmers = IndexWarmers
                 };
 
                 TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
