@@ -63,13 +63,14 @@ namespace Nevar.Benchmark
         {
             using (var env = new StorageEnvironment(new MemoryMapPager(_path, flushMode)))
             {
+                var value = new byte[100];
+                new Random().NextBytes(value);
+                var ms = new MemoryStream(value); 
+                
                 for (int x = 0; x < parts; x++)
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        var value = new byte[100];
-                        new Random().NextBytes(value);
-                        var ms = new MemoryStream(value);
                         for (long i = 0; i < Count / parts; i++)
                         {
                             ms.Position = 0;
@@ -77,6 +78,10 @@ namespace Nevar.Benchmark
                         }
 
                         tx.Commit();
+                    }
+                    if (PagerState.Instances.Count != 1)
+                    {
+                        
                     }
                 }
             }
