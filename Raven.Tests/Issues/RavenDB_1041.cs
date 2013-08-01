@@ -30,12 +30,12 @@ namespace Raven.Tests.Issues
 
 			using (var session = store1.OpenSession())
 			{
-				session.Store(new ReplicatedItem {Id = "Replicated/1"});
+				session.Store(new ReplicatedItem { Id = "Replicated/1" });
 
 				session.SaveChanges();
 			}
 
-			((DocumentStore) store1).Replication.WaitAsync().Wait();
+			((DocumentStore)store1).Replication.WaitAsync().Wait();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -79,8 +79,8 @@ namespace Raven.Tests.Issues
 
 				session.SaveChanges();
 			}
-			
-			await ((DocumentStore) store1).Replication.WaitAsync();
+
+			await ((DocumentStore)store1).Replication.WaitAsync();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -101,7 +101,77 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			((DocumentStore)store1).Replication.WaitAsync(timeout:TimeSpan.FromSeconds(20)).Wait();
+			((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
+
+			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
+		}
+
+		[Fact]
+		public async Task ShouldThrowTimeoutException()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+
+			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
+
+			using (var session = store1.OpenSession())
+			{
+				session.Store(new ReplicatedItem { Id = "Replicated/1" });
+
+				session.SaveChanges();
+			}
+
+			TimeoutException timeoutException = null;
+
+			try
+			{
+				await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
+			}
+			catch (TimeoutException ex)
+			{
+				timeoutException = ex;
+			}
+
+			Assert.NotNull(timeoutException);
+			Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
+		}
+
+		[Fact]
+		public void ShouldThrowIfCannotReachEnoughDestinationServers()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+
+			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234", "http://localhost:1235"); // non of them is running
+
+			using (var session = store1.OpenSession())
+			{
+				session.Store(new ReplicatedItem { Id = "Replicated/1" });
+
+				session.SaveChanges();
+			}
+
+			var exception = Assert.Throws<AggregateException>(() => ((DocumentStore)store1).Replication.WaitAsync(replicas: 3).Wait());
+
+			Assert.Equal(2, ((AggregateException)exception.InnerExceptions[0]).InnerExceptions.Count);
+		}
+
+		[Fact]
+		public async Task CanWaitForReplicationForOneServerEvenIfTheSecondOneIsDown()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+
+			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
+
+			using (var session = store1.OpenSession())
+			{
+				session.Store(new ReplicatedItem { Id = "Replicated/1" });
+
+				session.SaveChanges();
+			}
+
+			await ((DocumentStore)store1).Replication.WaitAsync(replicas: 1);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}
