@@ -28,7 +28,14 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var user = new User {Id = "users/1234"};
-                    var teams = from team in session.Query<Team>().Customize(x => x.Include<Team>(t => t.OwnerId))
+
+                    var teams = from team in session.Query<Team>()
+                                where team.Developers.Any(d => d.UserId == user.Id)
+                                select team;
+
+                    teams.ToArray();
+
+                    teams = from team in session.Query<Team>().Customize(x => x.Include<Team>(t => t.OwnerId))
                                 where team.OwnerId == user.Id || team.Developers.Any(d => d.UserId == user.Id)
                                 select team;
 
