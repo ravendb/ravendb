@@ -30,7 +30,7 @@ namespace Raven.Database.Indexing
 
 		private int currentNumberOfWrites;
 
-	    private IndexWriter.IndexReaderWarmer _indexReaderWarmer;
+	    private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
 
 		public Directory Directory
 		{
@@ -174,7 +174,11 @@ namespace Raven.Database.Indexing
 		public RavenIndexWriter CreateRamWriter()
 		{
 			var ramDirectory = new RAMDirectory();
-			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue, TODO);
+            if (_indexReaderWarmer != null)
+            {
+                indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
+            }
+			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue, _indexReaderWarmer);
 		}
 
 		public void AddIndexesNoOptimize(Directory[] directories, int count)
