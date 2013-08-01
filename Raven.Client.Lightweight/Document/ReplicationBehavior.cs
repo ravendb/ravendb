@@ -53,10 +53,10 @@ namespace Raven.Client.Document
 				return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations
-														 .Where(
-															 x => x.Disabled == false && x.IgnoredClient == false)
-														 .Select(x => x.ClientVisibleUrl ?? x.Url)
-														 .ToList();
+			                                             .Where(
+				                                             x => x.Disabled == false && x.IgnoredClient == false)
+			                                             .Select(x => x.ClientVisibleUrl ?? x.Url)
+			                                             .ToList();
 
 
 			if (destinationsToCheck.Count == 0)
@@ -76,9 +76,9 @@ namespace Raven.Client.Document
 			{
 				throw new TimeoutException(
 					string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers, during {3}", etag,
-								  (toCheck - countDown.Count),
-								  toCheck,
-								  timeout));
+					              (toCheck - countDown.Count),
+					              toCheck,
+					              timeout));
 			}
 
 			if (errors.Count > 0 && countDown.Count > 0)
