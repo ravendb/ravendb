@@ -198,7 +198,7 @@ namespace Raven.Database
                     RaiseIndexChangeNotification = RaiseNotifications,
                     TaskScheduler = backgroundTaskScheduler,
                     Configuration = configuration,
-                    IndexWarmers = IndexReaderWarmers
+                    IndexReaderWarmers = IndexReaderWarmers
                 };
 
                 TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
