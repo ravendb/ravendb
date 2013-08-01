@@ -1,5 +1,7 @@
 package raven.abstractions.data;
 
+import java.util.UUID;
+
 //TODO: finish me
 public class Constants {
   public static final String VERSION = "1.0-SNAPSHOT";
@@ -10,6 +12,8 @@ public class Constants {
   public final static String LAST_MODIFIED = "Last-Modified";
   public final static String RAVEN_LAST_MODIFIED_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSX";
 
+
+  public final static UUID EMPTY_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
   public final static String SYSTEM_DATABASE = "<system>";
 
@@ -30,6 +34,9 @@ public class Constants {
 
 
   public static final String TEMPORARY_SCORE_VALUE = "Temp-Index-Score";
+
+
+  public static final String RAVEN_CLR_TYPE = "Raven-Clr-Type";
 
 
 }

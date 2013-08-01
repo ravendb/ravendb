@@ -50,7 +50,7 @@ public class ReplicationInformer implements AutoCloseable {
   private boolean firstTime = true;
   protected DocumentConvention conventions;
 
-  protected Date lastReplicationUpdate; // = DateTime.MinValue;
+  protected Date lastReplicationUpdate = new Date(0);
   private final Object replicationLock = new Object();
   private List<ReplicationDestinationData> replicationDestinations = new ArrayList<>();
 

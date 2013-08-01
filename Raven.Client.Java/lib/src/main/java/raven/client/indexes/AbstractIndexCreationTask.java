@@ -32,6 +32,7 @@ import raven.abstractions.indexing.SpatialOptionsFactory;
 import raven.abstractions.indexing.SuggestionOptions;
 import raven.abstractions.replication.ReplicationDestination;
 import raven.abstractions.replication.ReplicationDocument;
+import raven.client.IDocumentStore;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ServerClient;
 import raven.client.document.DocumentConvention;
@@ -161,7 +162,13 @@ public class AbstractIndexCreationTask {
         Expressions.constant(shapeWKT), Expressions.constant(strategy), Expressions.constant(maxTreeLevel));
   }
 
-  //TODO:public void Execute(IDocumentStore store)
+  /**
+   * Executes the index creation against the specified document store.
+   * @param store
+   */
+  public void execute(IDocumentStore store) {
+    store.executeIndex(this);
+  }
 
   /**
    * Executes the index creation against the specified document database using the specified conventions

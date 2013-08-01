@@ -1,5 +1,6 @@
 package raven.client.document;
 
+import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -410,7 +411,7 @@ public class DocumentStore extends DocumentStoreBase {
     if (StringUtils.isNotEmpty(dbName)) {
       key = MultiDatabase.getRootDatabaseUrl(url) + "/databases/" + dbName;
     }
-    return replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory());
+    return replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().apply(key));
   }
 
     /**

@@ -50,6 +50,7 @@ public abstract class RavenDBAwareTests {
   public void init() {
     System.setProperty("java.net.preferIPv4Stack" , "true");
     convention = new DocumentConvention();
+    convention.setEnlistInDistributedTransactions(false);
     factory = new HttpJsonRequestFactory(10);
     replicationInformer = new ReplicationInformer(convention);
 
