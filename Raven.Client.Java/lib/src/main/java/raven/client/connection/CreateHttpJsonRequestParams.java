@@ -25,11 +25,11 @@ public class CreateHttpJsonRequestParams implements Serializable {
   private boolean avoidCachingRequest;
   private HttpMethods method;
   private RavenJObject metadata;
-  private Credentials credentials;
+  private ICredentials credentials;
   private DocumentConvention convention;
   private boolean disableRequestCompression;
 
-  public CreateHttpJsonRequestParams(IHoldProfilingInformation owner, String url, HttpMethods method, RavenJObject metadata, Credentials credentials, DocumentConvention convention) {
+  public CreateHttpJsonRequestParams(IHoldProfilingInformation owner, String url, HttpMethods method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention) {
     super();
 
     this.method = method;
@@ -98,7 +98,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   /**
    * @return the credentials
    */
-  public Credentials getCredentials() {
+  public ICredentials getCredentials() {
     return credentials;
   }
 
@@ -167,7 +167,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   /**
    * @param credentials the credentials to set
    */
-  public void setCredentials(Credentials credentials) {
+  public void setCredentials(ICredentials credentials) {
     this.credentials = credentials;
   }
 

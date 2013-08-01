@@ -27,8 +27,9 @@ import raven.client.DocumentStoreBase;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.changes.IDatabaseChanges;
-import raven.client.connection.Credentials;
+import raven.client.connection.ICredentials;
 import raven.client.connection.IDatabaseCommands;
+import raven.client.connection.NetworkCredential;
 import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
@@ -53,7 +54,7 @@ public class DocumentStore extends DocumentStoreBase {
   protected Function0<IDatabaseCommands> databaseCommandsGenerator;
   private final ConcurrentMap<String, ReplicationInformer> replicationInformers = new ConcurrentHashMap<>();
   private String identifier;
-  private Credentials credentials;
+  private ICredentials credentials;
 
 
   private final AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<>();
@@ -63,7 +64,6 @@ public class DocumentStore extends DocumentStoreBase {
   private ConcurrentMap<String, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentHashMap<>();
 
   private String apiKey;
-  private String connectionStringName;
   private String defaultDatabase;
 
   /**
@@ -78,6 +78,14 @@ public class DocumentStore extends DocumentStoreBase {
    */
   public void addAfterDisposeEventHandler(EventHandler<VoidArgs> event) {
     this.afterDispose.add(event);
+  }
+
+  public String getDefaultDatabase() {
+    return defaultDatabase;
+  }
+
+  public void setDefaultDatabase(String defaultDatabase) {
+    this.defaultDatabase = defaultDatabase;
   }
 
   /**
@@ -110,18 +118,18 @@ public class DocumentStore extends DocumentStoreBase {
   }
 
   public DocumentStore() {
-    //TODO: Credentials = CredentialCache.DefaultNetworkCredentials;
+    credentials = new NetworkCredential();
     setResourceManagerId(UUID.fromString("E749BAA6-6F76-4EEF-A069-40A4378954F8"));
 
     setSharedOperationsHeaders(new HashMap<String, String>());
     setConventions(new DocumentConvention());
   }
 
-  public Credentials getCredentials() {
+  public ICredentials getCredentials() {
     return credentials;
   }
 
-  public void setCredentials(Credentials credentials) {
+  public void setCredentials(ICredentials credentials) {
     this.credentials = credentials;
   }
 
@@ -150,17 +158,9 @@ public class DocumentStore extends DocumentStoreBase {
     this.apiKey = apiKey;
   }
 
-  public String getConnectionStringName() {
-    return connectionStringName;
-  }
-
-  public void setConnectionStringName(String connectionStringName) {
-    this.connectionStringName = connectionStringName;
-    setConnectionStringSettings(getConnectionStringOptions());
-  }
-
   /**
    *  Set document store settings based on a given connection string.
+   *  Ex. Url=http://localhost:8123;
    * @param connString
    */
   public void parseConnectionString(String connString) {
@@ -190,14 +190,6 @@ public class DocumentStore extends DocumentStoreBase {
     setEnlistInDistributedTransactions(options.isEnlistInDistributedTransactions());
   }
 
-  /**
-   *  Create the connection string parser
-   */
-  protected RavenConnectionStringOptions getConnectionStringOptions() {
-    ConnectionStringParser<RavenConnectionStringOptions> connectionStringOptions = ConnectionStringParser.fromConnectionStringName(RavenConnectionStringOptions.class, connectionStringName);
-    connectionStringOptions.parse();
-    return connectionStringOptions.getConnectionStringOptions();
-  }
 
   @Override
   public void close() throws Exception {
@@ -276,7 +268,7 @@ public class DocumentStore extends DocumentStoreBase {
     }
   }
 
-  private static IDatabaseCommands setupCommands(IDatabaseCommands databaseCommands, String database, Credentials credentialsForSession, OpenSessionOptions options) {
+  private static IDatabaseCommands setupCommands(IDatabaseCommands databaseCommands, String database, ICredentials credentialsForSession, OpenSessionOptions options) {
     if (database != null) {
       databaseCommands = databaseCommands.forDatabase(database);
     }

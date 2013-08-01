@@ -197,9 +197,18 @@ public class Etag implements Comparable<Etag> {
 
 
   @Override
-  public int compareTo(Etag o) {
-
-    // TODO Auto-generated method stub
+  public int compareTo(Etag other) {
+    if (other == null) {
+      return -1;
+    }
+    long sub = restarts - other.restarts;
+    if (Math.abs(sub) > 0) {
+      return sub > 0 ? 1 : -1;
+    }
+    sub = changes - other.changes;
+    if (sub != 0) {
+      return sub > 0 ? 1 : -1;
+    }
     return 0;
   }
 

@@ -376,7 +376,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param credentialsForSession
    * @return
    */
-  public IDatabaseCommands with(Credentials credentialsForSession);
+  public IDatabaseCommands with(ICredentials credentialsForSession);
 
   /**
    * Perform a set based deletes using the specified index.

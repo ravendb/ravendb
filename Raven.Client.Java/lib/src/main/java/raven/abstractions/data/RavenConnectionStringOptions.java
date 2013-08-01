@@ -2,11 +2,11 @@ package raven.abstractions.data;
 
 import java.util.UUID;
 
-import raven.client.connection.Credentials;
+import raven.client.connection.ICredentials;
 
 public class RavenConnectionStringOptions {
-  private Credentials credentials;
-  private boolean enlistInDistributedTransactions;
+  private ICredentials credentials;
+  private boolean enlistInDistributedTransactions = true;
   private String defaultDatabase;
   private UUID resourceManagerId;
   private String url;
@@ -26,7 +26,7 @@ public class RavenConnectionStringOptions {
     return apiKey;
   }
 
-  public Credentials getCredentials() {
+  public ICredentials getCredentials() {
     return credentials;
   }
 
@@ -50,7 +50,7 @@ public class RavenConnectionStringOptions {
     this.apiKey = apiKey;
   }
 
-  public void setCredentials(Credentials credentials) {
+  public void setCredentials(ICredentials credentials) {
     this.credentials = credentials;
   }
 

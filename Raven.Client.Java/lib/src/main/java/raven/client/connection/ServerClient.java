@@ -92,7 +92,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   private String url;
   private final DocumentConvention convention;
-  private final Credentials credentials;
+  private final ICredentials credentials;
   private final Function1<String, ReplicationInformer> replicationInformerGetter;
   private String databaseName;
   private final ReplicationInformer replicationInformer;
@@ -117,7 +117,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     replicationInformer.removeFailoverStatusChanged(event);
   }
 
-  public ServerClient(String url, DocumentConvention convention, Credentials credentials, Function1<String, ReplicationInformer> replicationInformerGetter,  String databaseName,
+  public ServerClient(String url, DocumentConvention convention, ICredentials credentials, Function1<String, ReplicationInformer> replicationInformerGetter,  String databaseName,
       HttpJsonRequestFactory httpJsonRequestFactory, UUID currentSessionId, IDocumentConflictListener[] conflictListeners) {
     this.profilingInformation = ProfilingInformation.createProfilingInformation(currentSessionId);
     this.credentials = credentials;
@@ -1627,7 +1627,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
    * @return
    */
   @Override
-  public IDatabaseCommands with(Credentials credentialsForSession) {
+  public IDatabaseCommands with(ICredentials credentialsForSession) {
     return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId, conflictListeners);
   }
 
