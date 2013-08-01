@@ -105,7 +105,7 @@ namespace Nevar.Trees
 
         public NodeHeader* GetNode(int n)
         {
-            Debug.Assert(n >= 0 && n <= NumberOfEntries);
+            Debug.Assert(n >= 0 && n < NumberOfEntries);
 
             var nodeOffset = KeysOffsets[n];
             var nodeHeader = (NodeHeader*)(_base + nodeOffset);
@@ -259,6 +259,17 @@ namespace Nevar.Trees
         public int PageMaxSpace
         {
             get { return _pageMaxSpace; }
+        }
+
+        public int LastSearchPositionOrLastEntry
+        {
+
+            get
+            {
+                return LastSearchPosition == NumberOfEntries
+                         ? LastSearchPosition - 1 // after the last entry, but we want to update the last entry
+                         : LastSearchPosition;
+            }
         }
 
         public void Truncate(Transaction tx, int i)

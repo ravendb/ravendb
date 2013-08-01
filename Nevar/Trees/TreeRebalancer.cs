@@ -138,7 +138,7 @@ namespace Nevar.Trees
 
         private Slice GetCurrentKeyFrom(Page page)
         {
-            var node = page.GetNode(page.LastSearchPosition);
+            var node = page.GetNode(page.LastSearchPositionOrLastEntry);
             var key = new Slice(node);
             while (key.Size == 0)
             {

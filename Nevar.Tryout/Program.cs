@@ -13,9 +13,9 @@ namespace Nevar.Tryout
     {
         private static void Main(string[] args)
         {
-            using (var veryBig = new VeryBig())
+            var x = new FreeSpace();
             {
-                veryBig.CanGrowBeyondInitialSize_Root();
+                x.WillBeReused();
             }
 
             //var buf = new byte[256*3];

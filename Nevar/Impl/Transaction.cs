@@ -118,7 +118,7 @@ namespace Nevar.Impl
             if (parent.Dirty == false)
                 throw new InvalidOperationException("The parent page must already been dirtied, but wasn't");
 
-            var node = parent.GetNode(parent.LastSearchPosition);
+            var node = parent.GetNode(parent.LastSearchPositionOrLastEntry);
             node->PageNumber = pageNumber;
         }
 

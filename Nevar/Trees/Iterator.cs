@@ -32,7 +32,7 @@ namespace Nevar.Trees
 		{
 			get
 			{
-				if (_currentPage == null)
+				if (_currentPage == null || _currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
 					throw new InvalidOperationException("No current page was set");
 				return _currentPage.GetNode(_currentPage.LastSearchPosition);
 			}
