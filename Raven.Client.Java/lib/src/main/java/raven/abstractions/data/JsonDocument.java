@@ -18,12 +18,12 @@ public class JsonDocument {
   private RavenJObject dataAsJson;
   private RavenJObject metadata;
   private String key;
-  private boolean nonAuthoritativeInformation;
+  private Boolean nonAuthoritativeInformation;
   private Etag etag;
   private Date lastModified;
   private Float tempIndexScore;
 
-  public JsonDocument(RavenJObject dataAsJson, RavenJObject metadata, String key, boolean nonAuthoritativeInformation, Etag etag, Date lastModified) {
+  public JsonDocument(RavenJObject dataAsJson, RavenJObject metadata, String key, Boolean nonAuthoritativeInformation, Etag etag, Date lastModified) {
     super();
     this.dataAsJson = dataAsJson;
     this.metadata = metadata;
@@ -80,7 +80,7 @@ public class JsonDocument {
   /**
    * @return the nonAuthoritativeInformation
    */
-  public boolean isNonAuthoritativeInformation() {
+  public Boolean isNonAuthoritativeInformation() {
     return nonAuthoritativeInformation;
   }
 
@@ -122,7 +122,7 @@ public class JsonDocument {
   /**
    * @param nonAuthoritativeInformation the nonAuthoritativeInformation to set
    */
-  public void setNonAuthoritativeInformation(boolean nonAuthoritativeInformation) {
+  public void setNonAuthoritativeInformation(Boolean nonAuthoritativeInformation) {
     this.nonAuthoritativeInformation = nonAuthoritativeInformation;
   }
 

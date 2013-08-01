@@ -3,6 +3,7 @@ package raven.abstractions.data;
 import java.util.UUID;
 
 import raven.client.connection.ICredentials;
+import raven.client.connection.NetworkCredential;
 
 public class RavenConnectionStringOptions {
   private ICredentials credentials;
@@ -73,7 +74,9 @@ public class RavenConnectionStringOptions {
   @Override
   public String toString() {
     String user = "<none>";
-    //TODO: extract from credentials
+    if (credentials != null) {
+      user = ((NetworkCredential)credentials).getUserName();
+    }
     return String.format("Url: %s, User: %s, EnlistInDistributedTransactions: %s, DefaultDatabase: %s, ResourceManagerId: %s, Api Key: %s",
         url, user, enlistInDistributedTransactions, defaultDatabase, resourceManagerId, apiKey);
   }

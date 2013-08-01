@@ -1,5 +1,10 @@
 package raven.client.document;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+
 import raven.client.connection.IDatabaseCommands;
 
 /**
@@ -7,7 +12,8 @@ import raven.client.connection.IDatabaseCommands;
  */
 public class MultiTypeHiLoKeyGenerator {
   private final int capacity;
-  //TODO: finish me!
+  private final Object generatorLock = new Object();
+  private Map<String, HiLoKeyGenerator> keyGeneratorsByTag = new HashMap<>();
 
   /**
    * Initializes a new instance of the {@link MultiTypeHiLoKeyGenerator} class.
@@ -17,8 +23,32 @@ public class MultiTypeHiLoKeyGenerator {
     this.capacity = capacity;
   }
 
+  /**
+   * Generates the document key.
+   * @param databaseCommands
+   * @param conventions
+   * @param entity
+   * @return
+   */
   public String generateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, Object entity) {
-    //TODO :
-    return null;
+    String typeTagName = conventions.getTypeTagName(entity.getClass());
+    if (StringUtils.isEmpty(typeTagName)) { //ignore empty tags
+      return null;
+    }
+    String tag = conventions.getTransformTypeTagNameToDocumentKeyPrefix().apply(typeTagName);
+    if (keyGeneratorsByTag.containsKey(tag)) {
+      return keyGeneratorsByTag.get(tag).generateDocumentKey(databaseCommands, conventions, entity);
+    }
+    HiLoKeyGenerator value = null;
+    synchronized (generatorLock) {
+      if (keyGeneratorsByTag.containsKey(tag)) {
+        return keyGeneratorsByTag.get(tag).generateDocumentKey(databaseCommands, conventions, entity);
+      }
+
+      value = new HiLoKeyGenerator(tag, capacity);
+      keyGeneratorsByTag.put(tag, value);
+    }
+
+    return value.generateDocumentKey(databaseCommands, conventions, entity);
   }
 }
