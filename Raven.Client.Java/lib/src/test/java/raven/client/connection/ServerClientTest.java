@@ -210,13 +210,13 @@ public class ServerClientTest extends RavenDBAwareTests {
       assertEquals(2, jsonDocumentList.size());
 
       jsonDocumentList = dbCommands.getDocuments(0, 10);
-      assertEquals(4, jsonDocumentList.size());
+      assertEquals(5, jsonDocumentList.size());
 
       jsonDocumentList = dbCommands.getDocuments(2, 10);
-      assertEquals(2, jsonDocumentList.size());
+      assertEquals(3, jsonDocumentList.size());
 
       List<JsonDocument> metaOnly = dbCommands.getDocuments(0, 100, true);
-      assertEquals(4, metaOnly.size());
+      assertEquals(5, metaOnly.size());
       assertEquals(0, metaOnly.get(0).getDataAsJson().getCount());
 
 
@@ -314,29 +314,29 @@ public class ServerClientTest extends RavenDBAwareTests {
       assertNotNull(result);
 
       List<JsonDocument> jsonDocumentList = dbCommands.getDocuments(0, 5);
-      assertEquals(4, jsonDocumentList.size());
+      assertEquals(5, jsonDocumentList.size());
 
       JsonDocument jsonDocument = dbCommands.get("tests/val1a");
 
       dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
 
       jsonDocumentList = dbCommands.getDocuments(0, 5);
-      assertEquals(3, jsonDocumentList.size());
+      assertEquals(4, jsonDocumentList.size());
 
       jsonDocument = dbCommands.get("tests/val2a");
       dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
       jsonDocumentList = dbCommands.getDocuments(0, 5);
-      assertEquals(2, jsonDocumentList.size());
+      assertEquals(3, jsonDocumentList.size());
 
       jsonDocument = dbCommands.get("tests/val3a");
       dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
       jsonDocumentList = dbCommands.getDocuments(0, 5);
-      assertEquals(1, jsonDocumentList.size());
+      assertEquals(2, jsonDocumentList.size());
 
       jsonDocument = dbCommands.get("tests/aval4");
       dbCommands.delete(jsonDocument.getKey(), jsonDocument.getEtag());
       jsonDocumentList = dbCommands.getDocuments(0, 5);
-      assertEquals(0, jsonDocumentList.size());
+      assertEquals(1, jsonDocumentList.size());
 
     } finally {
       deleteDb();

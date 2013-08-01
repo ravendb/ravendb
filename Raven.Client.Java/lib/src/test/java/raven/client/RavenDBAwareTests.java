@@ -13,7 +13,9 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -38,12 +40,42 @@ public abstract class RavenDBAwareTests {
   protected ReplicationInformer replicationInformer;
   protected ServerClient serverClient;
 
-  public final static String DEFAULT_SERVER_URL = "http://localhost:8123";
+  public final static int DEFAULT_SERVER_PORT_1 = 8123;
+  public final static int DEFAULT_SERVER_PORT_2 = 8124;
+  public final static String DEFAULT_SERVER_URL_1 = "http://localhost:" + DEFAULT_SERVER_PORT_1;
+  public final static String DEFAULT_SERVER_URL_2 = "http://localhost:" + DEFAULT_SERVER_PORT_2;
 
-  private HttpClient client = new DefaultHttpClient();
+  public final static String DEFAULT_SERVER_RUNNER_URL = "http://localhost:8585/servers";
+
+  protected static HttpClient client = new DefaultHttpClient();
 
   public String getServerUrl() {
-    return DEFAULT_SERVER_URL;
+    return DEFAULT_SERVER_URL_1;
+  }
+
+  public String getServerUrl(int i) {
+    if (i == 1) {
+      return DEFAULT_SERVER_URL_1;
+    }
+    return DEFAULT_SERVER_URL_2;
+  }
+
+  @BeforeClass
+  public static void startServerBefore() throws Exception {
+    try {
+      startServer(DEFAULT_SERVER_PORT_1);
+    } finally {
+
+    }
+  }
+
+  @AfterClass
+  public static void stopServerAfter() throws Exception {
+    try {
+      stopServer(DEFAULT_SERVER_PORT_1);
+    } finally {
+
+    }
   }
 
   @Before
@@ -54,7 +86,7 @@ public abstract class RavenDBAwareTests {
     factory = new HttpJsonRequestFactory(10);
     replicationInformer = new ReplicationInformer(convention);
 
-    serverClient = new ServerClient(DEFAULT_SERVER_URL, convention, null,
+    serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, null,
         new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
         UUID.randomUUID(), new IDocumentConflictListener[0]);
   }
@@ -64,13 +96,21 @@ public abstract class RavenDBAwareTests {
    * Creates new db with name taken from test name
    */
   protected void createDb() throws Exception {
-    createDb(getDbName());
+    createDb(1);
+  }
+
+  protected void createDb(int i) throws Exception {
+    createDb(getDbName(), i);
   }
 
   protected void createDb(String dbName) throws Exception {
+    createDb(dbName, 1);
+  }
+
+  protected void createDb(String dbName, int i) throws Exception {
     HttpPut put = null;
     try {
-      put = new HttpPut(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
+      put = new HttpPut(getServerUrl(i) + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
       put.setEntity(new StringEntity(getCreateDbDocument(dbName), ContentType.APPLICATION_JSON));
       HttpResponse httpResponse = client.execute(put);
       if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
@@ -83,14 +123,61 @@ public abstract class RavenDBAwareTests {
     }
   }
 
+  protected void startServer() throws Exception{
+    startServer(DEFAULT_SERVER_PORT_1);
+  }
+
+  protected void stopServer() throws Exception{
+    stopServer(DEFAULT_SERVER_PORT_1);
+  }
+
+  protected static void startServer(int port) throws Exception {
+    HttpPut put = null;
+    try {
+      put = new HttpPut(DEFAULT_SERVER_RUNNER_URL);
+      put.setEntity(new StringEntity(getCreateServerDocument(port), ContentType.APPLICATION_JSON));
+      HttpResponse httpResponse = client.execute(put);
+      if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
+      }
+    } finally {
+      if (put != null) {
+        put.releaseConnection();
+      }
+    }
+  }
+
+  protected static void stopServer(int port) throws Exception {
+    HttpDelete delete = null;
+    try {
+      delete = new HttpDelete(DEFAULT_SERVER_RUNNER_URL + "?port=" + port);
+      HttpResponse httpResponse = client.execute(delete);
+      if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
+      }
+    } finally {
+      if (delete != null) {
+        delete.releaseConnection();
+      }
+    }
+  }
+
+
   protected String getCreateDbDocument(String dbName) {
     RavenJObject doc = new RavenJObject();
     RavenJObject settings = new RavenJObject();
     doc.add("Settings", settings);
     settings.add("Raven/DataDir", RavenJValue.fromObject("~\\Databases\\" + dbName));
-    settings.add("Raven/ActiveBundles", RavenJValue.fromObject("Raven/ActiveBundles"));
+    settings.add("Raven/ActiveBundles", RavenJValue.fromObject("Replication"));
     doc.add("SecuredSettings", new RavenJObject());
     doc.add("Disabled", new RavenJValue(false));
+    return doc.toString();
+  }
+
+  protected static String getCreateServerDocument(int port) {
+    RavenJObject doc = new RavenJObject();
+    doc.add("Port", new RavenJValue(port));
+    doc.add("RunInMemory", new RavenJValue(true));
     return doc.toString();
   }
 
@@ -115,20 +202,32 @@ public abstract class RavenDBAwareTests {
     return result;
   }
 
-  protected void deleteDb() throws Exception {
-    deleteDb(getDbName());
-  }
 
   protected String getDbName() {
     return testName.getMethodName();
   }
 
 
+  protected void deleteDb() throws Exception {
+    deleteDb(getDbName(), 1);
+  }
+
+
+  protected void deleteDb(int i) throws Exception {
+    deleteDb(getDbName(), i);
+  }
+
   protected void deleteDb(String dbName) throws Exception {
+    deleteDb(dbName, 1);
+  }
+
+
+
+  protected void deleteDb(String dbName, int i) throws Exception {
 
     HttpDelete deleteMethod = null;
     try {
-      deleteMethod = new HttpDelete(getServerUrl() + "/admin/databases/" + UrlUtils.escapeDataString(dbName) + "?hard-delete=true");
+      deleteMethod = new HttpDelete(getServerUrl(i) + "/admin/databases/" + UrlUtils.escapeDataString(dbName) + "?hard-delete=true");
       HttpResponse httpResponse = client.execute(deleteMethod);
       if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
         throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
