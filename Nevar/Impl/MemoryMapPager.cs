@@ -5,14 +5,6 @@ using Nevar.Trees;
 
 namespace Nevar.Impl
 {
-    [Flags]
-    public enum FlushMode
-    {
-        None = 0,
-        Buffers = 2,
-        Full = 4
-    }
-
     public unsafe class MemoryMapPager : AbstractPager
     {
         private readonly FlushMode _flushMode;
@@ -32,6 +24,7 @@ namespace Nevar.Impl
             else
             {
                 _allocatedPages = fileInfo.Length / PageSize;
+                PagerState.Release();
                 PagerState = CreateNewPagerState();
             }
         }

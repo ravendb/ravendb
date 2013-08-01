@@ -10,7 +10,7 @@ namespace Nevar.Impl
 
 		private int _increaseSize = MinIncreaseSize;
 		private DateTime _lastIncrease;
-		protected PagerState PagerState;
+        public PagerState PagerState { get; protected set; }
 
 		protected AbstractPager()
 		{
@@ -18,6 +18,7 @@ namespace Nevar.Impl
 			PageMaxSpace = PageSize - Constants.PageHeaderSize;
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
 			PagerState = new PagerState();
+            PagerState.AddRef();
 		}
 
 		public int PageMaxSpace { get; private set; }
@@ -31,8 +32,12 @@ namespace Nevar.Impl
 
 		public abstract long NumberOfAllocatedPages { get; }
 
-		public Page Get(Transaction tx, long n)
+		public Page Get(Transaction tx, long n, bool errorOnChange = false)
 		{
+            if (n + 1 > NumberOfAllocatedPages && errorOnChange)
+            {
+                throw new InvalidOperationException("Cannot increase size of the pager when errorOnChange is set to true");
+            }
 			EnsureContinious(tx, n, 1);
 			return Get(n);
 		}
@@ -50,7 +55,7 @@ namespace Nevar.Impl
 
 		public virtual void EnsureContinious(Transaction tx, long requestedPageNumber, int pageCount)
 		{
-			if (requestedPageNumber + pageCount < NumberOfAllocatedPages)
+			if (requestedPageNumber + pageCount <= NumberOfAllocatedPages)
 				return;
 
 			// this ensure that if we want to get a range that is more than the current expansion

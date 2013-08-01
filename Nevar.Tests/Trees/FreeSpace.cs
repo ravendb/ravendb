@@ -23,6 +23,7 @@ namespace Nevar.Tests.Trees
 
 				tx.Commit();
 			}
+            var before = Env.Stats();
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -34,7 +35,7 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-		    var old = Env.NextPageNumber;
+            var old = Env.NextPageNumber;
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
@@ -42,13 +43,13 @@ namespace Nevar.Tests.Trees
 					Env.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
 				}
 
+                RenderAndShow(tx, 1);
 				tx.Commit();
 			}
 
-		    var stats = Env.Stats();
+		    var after = Env.Stats();
 
-		    Assert.Equal(stats.FreePages + stats.FreePagesOverhead + stats.HeaderPages + stats.RootPages, 
-                Env.NextPageNumber);
+		    Assert.Equal(after.RootPages, before.RootPages);
 
             Assert.True(Env.NextPageNumber - old < 2);
 		}

@@ -24,9 +24,10 @@ namespace Nevar.Impl
         private readonly long _oldestTx;
 
         private HashSet<long> _freePages = new HashSet<long>();
-	    private HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
+	    private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
+        private readonly List<long> _freeSpace;
 
-	    public TransactionFlags Flags { get; private set; }
+        public TransactionFlags Flags { get; private set; }
 
         public StorageEnvironment Environment
         {
@@ -47,16 +48,10 @@ namespace Nevar.Impl
             Flags = flags;
             NextPageNumber = env.NextPageNumber;
 
-            if (env.Root != null)
-                _rootTreeData = new TreeDataInTransaction(env.Root)
-                    {
-                        Root = GetReadOnlyPage(env.Root.State.RootPageNumber)
-                    };
-            if (env.FreeSpace != null)
-                _fresSpaceTreeData = new TreeDataInTransaction(env.FreeSpace)
-                    {
-                        Root = GetReadOnlyPage(env.FreeSpace.State.RootPageNumber)
-                    };
+            if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
+                return;
+
+            _freeSpace = MergeAllFreeSpaceAvailable();
         }
 
         public Page ModifyCursor(Tree tree, Cursor c)
@@ -148,7 +143,7 @@ namespace Nevar.Impl
             return page;
         }
 
-        private unsafe Page TryAllocateFromFreeSpace(int num)
+        private Page TryAllocateFromFreeSpace(int num)
         {
             if (_env.FreeSpace == null)
                 return null;// this can happen the first time FreeSpace tree is created
@@ -160,15 +155,13 @@ namespace Nevar.Impl
             try
             {
 
-                var list = MergeAllFreeSpaceAvailable();
-                if (list.Count == 0)
+                if (_freeSpace == null || _freeSpace.Count == 0)
                     return null;
-                list.Sort();
                 var start = 0;
                 var len = 1;
-                for (int i = 1; i < list.Count && len < num; i++)
+                for (int i = 1; i < _freeSpace.Count && len < num; i++)
                 {
-                    if (list[i - 1] + 1 != list[i]) // hole found, try from current page
+                    if (_freeSpace[i - 1] + 1 != _freeSpace[i]) // hole found, try from current page
                     {
                         start = i;
                         len = 1;
@@ -180,23 +173,8 @@ namespace Nevar.Impl
                 if (len != num)
                     return null;
 
-                var page = list[start];
-                if (list.Count != len) // we still have leftover free space
-                {
-                    list.RemoveRange(start, len);
-                    using (var ms = new MemoryStream())
-                    using (var writer = new BinaryWriter(ms))
-                    {
-                        foreach (var i in list)
-                        {
-                            writer.Write(i);
-                        }
-                        ms.Position = 0;
-                        var slice = new Slice(SliceOptions.Key);
-                        slice.Set(_oldestTx - 1); // make this space immediately available
-                        _env.FreeSpace.Add(this, slice, ms);
-                    }
-                }
+                var page = _freeSpace[start];
+                _freeSpace.RemoveRange(start, len);
                 return _pager.Get(this, page);
             }
             finally
@@ -205,9 +183,30 @@ namespace Nevar.Impl
             }
         }
 
+        private void SaveOldFreeSpace()
+        {
+            if (_freeSpace.Count > 0)
+                return;
+            using (var ms = new MemoryStream())
+            using (var writer = new BinaryWriter(ms))
+            {
+                foreach (var i in _freeSpace)
+                {
+                    writer.Write(i);
+                }
+                ms.Position = 0;
+                var slice = new Slice(SliceOptions.Key);
+                slice.Set(_oldestTx - 1); // make this space immediately available
+                _env.FreeSpace.Add(this, slice, ms);
+            }
+        }
+
         private unsafe List<long> MergeAllFreeSpaceAvailable()
         {
             var results = new List<long>();
+            if(_env.FreeSpace == null)
+                return results;
+
             var toDelete = new List<Slice>();
             using (var iterator = _env.FreeSpace.Iterate(this))
             {
@@ -243,7 +242,7 @@ namespace Nevar.Impl
             {
                 _env.FreeSpace.Delete(this , slice);
             }
-
+            results.Sort();
             return results;
         }
 
@@ -281,7 +280,9 @@ namespace Nevar.Impl
                 tree.State.CopyTo(treePtr);
             }
 
-            FlushFreePages();
+            SaveOldFreeSpace(); // this is free space that is available right now
+
+            FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
 
             if (_rootTreeData != null)
                 _rootTreeData.Flush();
@@ -351,9 +352,27 @@ namespace Nevar.Impl
         public TreeDataInTransaction GetTreeInformation(Tree tree)
         {
             if (tree == _env.Root)
+            {
+                if (_rootTreeData == null)
+                {
+                    _rootTreeData = new TreeDataInTransaction(_env.Root)
+                        {
+                            Root = GetReadOnlyPage(_env.Root.State.RootPageNumber)
+                        };
+                }
                 return _rootTreeData;
+            }
             if (tree == _env.FreeSpace)
+            {
+                if (_fresSpaceTreeData == null)
+                {
+                    _fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpace)
+                    {
+                        Root = GetReadOnlyPage(_env.FreeSpace.State.RootPageNumber)
+                    };
+                }
                 return _fresSpaceTreeData;
+            }
 
             TreeDataInTransaction c;
             if (_treesInfo.TryGetValue(tree, out c))

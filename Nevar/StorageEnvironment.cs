@@ -198,11 +198,11 @@ namespace Nevar
                     _txWriter.Wait();
                     txLockTaken = true;
                 }
-                var newTransaction = new Transaction(_pager, this, txId, flags);
-                _activeTransactions.TryAdd(txId, newTransaction);
-                var transactionBegan = _pager.TransactionBegan();
-                newTransaction.AddPagerState(transactionBegan);
-                return newTransaction;
+                var tx = new Transaction(_pager, this, txId, flags);
+                _activeTransactions.TryAdd(txId, tx);
+                var state = _pager.TransactionBegan();
+                tx.AddPagerState(state);
+                return tx;
             }
             catch (Exception)
             {
