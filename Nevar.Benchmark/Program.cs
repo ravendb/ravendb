@@ -79,10 +79,6 @@ namespace Nevar.Benchmark
 
                         tx.Commit();
                     }
-                    if (PagerState.Instances.Count != 1)
-                    {
-                        
-                    }
                 }
             }
         }

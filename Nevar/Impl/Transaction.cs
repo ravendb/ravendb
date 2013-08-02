@@ -25,7 +25,7 @@ namespace Nevar.Impl
 
         private HashSet<long> _freePages = new HashSet<long>();
 	    private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
-        private readonly List<long> _freeSpace;
+        private List<long> _freeSpace;
 
         public TransactionFlags Flags { get; private set; }
 
@@ -47,12 +47,19 @@ namespace Nevar.Impl
             _id = id;
             Flags = flags;
             NextPageNumber = env.NextPageNumber;
-
-            if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
-                return;
-
-            _freeSpace = MergeAllFreeSpaceAvailable();
         }
+
+		/// <summary>
+		/// This method will find all the currently free space in the database and make it easily available 
+		/// for the transaction. This has to be called _after_ the transaction has already been setup.
+		/// </summary>
+		public void GatherFreeSpace()
+		{
+			if (Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+				throw new InvalidOperationException("Cannot gather free space in a read only transaction");
+
+			_freeSpace = MergeAllFreeSpaceAvailable();
+		}
 
         public Page ModifyCursor(Tree tree, Cursor c)
         {
@@ -185,7 +192,7 @@ namespace Nevar.Impl
 
         private void SaveOldFreeSpace()
         {
-            if (_freeSpace.Count > 0)
+			if (_freeSpace == null || _freeSpace.Count > 0)
                 return;
             using (var ms = new MemoryStream())
             using (var writer = new BinaryWriter(ms))

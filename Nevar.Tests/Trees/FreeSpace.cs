@@ -43,7 +43,6 @@ namespace Nevar.Tests.Trees
 					Env.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
 				}
 
-                RenderAndShow(tx, 1);
 				tx.Commit();
 			}
 

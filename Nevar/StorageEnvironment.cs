@@ -202,6 +202,11 @@ namespace Nevar
                 _activeTransactions.TryAdd(txId, tx);
                 var state = _pager.TransactionBegan();
                 tx.AddPagerState(state);
+
+
+	            if (flags.HasFlag(TransactionFlags.ReadWrite))
+		            tx.GatherFreeSpace();
+
                 return tx;
             }
             catch (Exception)
