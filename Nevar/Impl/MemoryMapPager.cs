@@ -84,9 +84,8 @@ namespace Nevar.Impl
 			if (_flushMode == FlushMode.None || sortedPagesToFlush.Count == 0)
 				return;
 
-
 			// here we try to optimize the amount of work we do, we will only 
-			// flush the actual dirty pages, and we will do so in seqeuqntial order
+			// flush the actual dirty pages, and we will do so in sequential order
 			// ideally, this will save the OS the trouble of actually having to flush the 
 			// entire range
 			long start = sortedPagesToFlush[0];
