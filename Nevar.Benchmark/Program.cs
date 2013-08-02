@@ -17,32 +17,32 @@ namespace Nevar.Benchmark
 		{
 			InitRandomNumbers();
 
-			//Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-			//Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-			//Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+			Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
+			Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
+			Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-			//Time("fill seq none 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None, 10 * 1000));
-			//Time("fill seq buff 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
-			//Time("fill seq sync 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
-			
-			//Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-			//Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-			//Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+			Time("fill seq none 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None, 10 * 1000));
+			Time("fill seq buff 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
+			Time("fill seq sync 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
 
-			//Time("fill rnd none 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, 10 * 1000));
+			Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+			Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+			Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+
+			Time("fill rnd none 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, 10 * 1000));
 			Time("fill rnd buff 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
-			//Time("fill rnd sync 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
+			Time("fill rnd sync 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
 
-			//Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+			Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-			//Time("read seq", ReadOneTransaction, delete: false);
-			//Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
-			//Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
-			//Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
-			//Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
-			//Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+			Time("read seq", ReadOneTransaction, delete: false);
+			Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
+			Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
+			Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
+			Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
+			Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-			//Time("fill seq non then read seq", ReadAndWriteOneTransaction);
+			Time("fill seq non then read seq", ReadAndWriteOneTransaction);
 		}
 
 		private static void InitRandomNumbers()

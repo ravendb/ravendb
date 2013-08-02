@@ -301,7 +301,9 @@ namespace Nevar.Impl
 
             // Because we don't know in what order the OS will flush the pages 
             // we need to do this twice, once for the data, and then once for the metadata
-	        _pager.Flush(_dirtyPages.Keys.OrderBy(x => x).ToList());
+	        var sortedPagesToFlush = _dirtyPages.Select(x => x.Value.PageNumber).Distinct().ToList();
+			sortedPagesToFlush.Sort();
+	        _pager.Flush(sortedPagesToFlush);
 
             WriteHeader(_pager.Get(this, _id & 1)); // this will cycle between the first and second pages
 
