@@ -1,14 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using Nevar.Trees;
 
 namespace Nevar.Impl
 {
 	public abstract class AbstractPager : IVirtualPager
 	{
-		protected const int MinIncreaseSize = 1024 * 1024 * 4;
-		protected const int MaxIncreaseSize = 1024 * 1024 * 1024;
+		protected const int MinIncreaseSize =   1 * 1024 * 1024;
+		protected const int MaxIncreaseSize = 256 * 1024 * 1024;
 
-		private int _increaseSize = MinIncreaseSize;
+		private long _increaseSize = MinIncreaseSize;
 		private DateTime _lastIncrease;
         public PagerState PagerState { get; protected set; }
 
@@ -44,7 +45,7 @@ namespace Nevar.Impl
 
 		protected abstract Page Get(long n);
 
-		public abstract void Flush();
+		public abstract void Flush(List<long> sortedPagesToFlush);
 
 		public virtual PagerState TransactionBegan()
 		{
@@ -71,7 +72,7 @@ namespace Nevar.Impl
 		}
 
 		public abstract void Dispose();
-		protected abstract void AllocateMorePages(Transaction tx, long newLength);
+		public abstract void AllocateMorePages(Transaction tx, long newLength);
 
 
 		private long GetNewLength(long current)
@@ -87,7 +88,18 @@ namespace Nevar.Impl
 				_increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
 			}
 			_lastIncrease = DateTime.UtcNow;
-			return current + _increaseSize;
+			// At any rate, we won't do an increase by over 25% of current size, to prevent huge empty spaces
+			// and the first size we allocate is 256 pages (1MB)
+			// 
+			// The reasoning behind this is that we want to make sure that we increase in size very slowly at first
+			// because users tend to be sensitive to a lot of "wasted" space. 
+			// We also consider the fact that small increases in small files would probably result in cheaper costs, and as
+			// the file size increases, we will reserve more & more from the OS.
+			// This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
+			// eager to reserve space
+			current = Math.Max(current, 256 * PageSize);
+			var actualIncrease = Math.Min(_increaseSize, current / 4);
+			return current + actualIncrease;
 		}
 	}
 }
