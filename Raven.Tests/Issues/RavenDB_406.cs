@@ -17,12 +17,12 @@ namespace Raven.Tests.Issues
 	public class RavenDB_406 : RavenTest
 	{
 		[Fact]
-		public void LoadResultShoudBeUpToDateEvenIfAggresiveCacheIsEnabled()
+		public void LoadResultShoudBeUpToDateEvenIfAggressiveCacheIsEnabled()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
+				store.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User()
@@ -72,12 +72,12 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void QueryResultShoudBeUpToDateEvenIfAggresiveCacheIsEnabled()
+		public void QueryResultShoudBeUpToDateEvenIfAggressiveCacheIsEnabled()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
+				store.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;
 				new RavenDocumentsByEntityName().Execute(store);
 
 				using (var session = store.OpenSession())
@@ -134,7 +134,7 @@ namespace Raven.Tests.Issues
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079"}.Initialize())
 			{
-				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
+				store.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;
 
 				store.DatabaseCommands.EnsureDatabaseExists("Northwind_1");
 				store.DatabaseCommands.EnsureDatabaseExists("Northwind_2");
@@ -218,7 +218,7 @@ namespace Raven.Tests.Issues
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
-				store.Conventions.ShouldSaveChangesForceAggresiveCacheCheck = false;
+				store.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User()
