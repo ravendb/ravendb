@@ -78,7 +78,7 @@ namespace Raven.Smuggler
 			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
 			            			              {
 													  Path = key,
-													  ShouldMatch = true,
+													  ShouldMatch = false,
 													  Values = new List<string>{val}
 			            			              })
 			            			},
