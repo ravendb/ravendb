@@ -26,8 +26,10 @@ namespace Nevar.Impl
         private HashSet<long> _freePages = new HashSet<long>();
 	    private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
         private List<long> _freeSpace;
+	    private Slice _freeSpaceKey;
+	    private int _originalFreeSpaceCount;
 
-        public TransactionFlags Flags { get; private set; }
+	    public TransactionFlags Flags { get; private set; }
 
         public StorageEnvironment Environment
         {
@@ -53,12 +55,63 @@ namespace Nevar.Impl
 		/// This method will find all the currently free space in the database and make it easily available 
 		/// for the transaction. This has to be called _after_ the transaction has already been setup.
 		/// </summary>
-		public void GatherFreeSpace()
+		public unsafe void GatherFreeSpace()
 		{
 			if (Flags.HasFlag(TransactionFlags.ReadWrite) == false)
 				throw new InvalidOperationException("Cannot gather free space in a read only transaction");
 
-			_freeSpace = MergeAllFreeSpaceAvailable();
+			_freeSpace = new List<long>();
+			if (_env.FreeSpace == null)
+				return;
+
+			var toDelete = new List<Slice>();
+			using (var iterator = _env.FreeSpace.Iterate(this))
+			{
+				if (iterator.Seek(Slice.BeforeAllKeys) == false)
+					return;
+
+				do
+				{
+					var node = iterator.Current;
+					var slice = new Slice(node);
+
+					var txId = slice.ToInt64();
+
+					if (_oldestTx != 0 && txId >= _oldestTx)
+						break;  // all the free space after this is tied up in active transactions
+
+					toDelete.Add(slice);
+					var remainingPages = GetNumberOfFreePages(node);
+
+					using (var data = Tree.StreamForNode(this, node))
+					using (var reader = new BinaryReader(data))
+					{
+						for (int i = 0; i < remainingPages; i++)
+						{
+							_freeSpace.Add(reader.ReadInt64());
+						}
+					}
+
+				} while (iterator.MoveNext());
+			}
+
+			_freeSpace.Sort();
+
+			_freeSpaceKey = toDelete[0]; // this is always the oldest
+
+			// if we have just one transaction record with free space, no need to touch it, we can
+			// just record that and change that if we need to later on
+			if (toDelete.Count == 1)
+			{
+				_originalFreeSpaceCount = _freeSpace.Count;
+				return;
+			}
+			_originalFreeSpaceCount = -1; // force merging of all the available transactions into one transaction free space record
+
+			foreach (var slice in toDelete)
+			{
+				_env.FreeSpace.Delete(this, slice);
+			}
 		}
 
         public Page ModifyCursor(Tree tree, Cursor c)
@@ -192,8 +245,13 @@ namespace Nevar.Impl
 
         private void SaveOldFreeSpace()
         {
-			if (_freeSpace == null || _freeSpace.Count > 0)
+			if (_freeSpace == null || _freeSpace.Count == _originalFreeSpaceCount)
                 return;
+			if (_freeSpace.Count == 0)
+			{
+				_env.FreeSpace.Delete(this, _freeSpaceKey);
+				return;
+			}
             using (var ms = new MemoryStream())
             using (var writer = new BinaryWriter(ms))
             {
@@ -202,57 +260,9 @@ namespace Nevar.Impl
                     writer.Write(i);
                 }
                 ms.Position = 0;
-                var slice = new Slice(SliceOptions.Key);
-                slice.Set(_oldestTx - 1); // make this space immediately available
-                _env.FreeSpace.Add(this, slice, ms);
+                _env.FreeSpace.Add(this, _freeSpaceKey, ms);
             }
         }
-
-        private unsafe List<long> MergeAllFreeSpaceAvailable()
-        {
-            var results = new List<long>();
-            if(_env.FreeSpace == null)
-                return results;
-
-            var toDelete = new List<Slice>();
-            using (var iterator = _env.FreeSpace.Iterate(this))
-            {
-                if (iterator.Seek(Slice.BeforeAllKeys) == false)
-                    return results;
-
-                do
-                {
-                    var node = iterator.Current;
-                    var slice = new Slice(node);
-
-                    var txId = slice.ToInt64();
-
-                    if (_oldestTx != 0 && txId >= _oldestTx)
-                        break;  // all the free space after this is tied up in active transactions
-
-                    toDelete.Add(slice);
-                    var remainingPages = GetNumberOfFreePages(node);
-
-                    using (var data = Tree.StreamForNode(this, node))
-                    using (var reader = new BinaryReader(data))
-                    {
-                        for (int i = 0; i < remainingPages; i++)
-                        {
-                            results.Add(reader.ReadInt64());
-                        }
-                    }
-
-                } while (iterator.MoveNext());
-            }
-
-            foreach (var slice in toDelete)
-            {
-                _env.FreeSpace.Delete(this , slice);
-            }
-            results.Sort();
-            return results;
-        }
-
 
         internal unsafe int GetNumberOfFreePages(NodeHeader* node)
         {
@@ -287,9 +297,11 @@ namespace Nevar.Impl
                 tree.State.CopyTo(treePtr);
             }
 
-            SaveOldFreeSpace(); // this is free space that is available right now
+			FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
 
-            FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
+			// this is free space that is available right now, HAS to be after flushing free space, since old space might be used
+			// to write the new free pages
+            SaveOldFreeSpace();
 
             if (_rootTreeData != null)
                 _rootTreeData.Flush();
