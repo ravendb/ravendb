@@ -38,8 +38,9 @@ namespace Nevar.Impl
 			_base = null;
 		}
 
-		public override void Flush()
+		public override void Flush(List<long> sortedPagesToFlush)
 		{
+			//nothing to do here
 		}
 
 		protected override Page Get(long n)
@@ -47,8 +48,11 @@ namespace Nevar.Impl
 			return new Page(_base + (n * PageSize), PageMaxSpace);
 		}
 
-		protected override void AllocateMorePages(Transaction tx, long newLength)
+		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
+			if (newLength <= _allocatedSize)
+				throw new ArgumentException("Cannot set the legnth to less than the current length");
+
 			var oldSize = _allocatedSize;
 			_allocatedSize = newLength;
 			_allocatedPages = _allocatedSize / PageSize;

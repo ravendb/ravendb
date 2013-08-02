@@ -301,11 +301,11 @@ namespace Nevar.Impl
 
             // Because we don't know in what order the OS will flush the pages 
             // we need to do this twice, once for the data, and then once for the metadata
-            _pager.Flush();
+	        _pager.Flush(_dirtyPages.Keys.OrderBy(x => x).ToList());
 
             WriteHeader(_pager.Get(this, _id & 1)); // this will cycle between the first and second pages
 
-            _pager.Flush(); // and now we flush the metadata as well
+			_pager.Flush(new List<long> { _id & 1 }); // and now we flush the metadata as well
         }
 
         private unsafe void WriteHeader(Page pg)

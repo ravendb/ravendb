@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Nevar.Trees;
 
 namespace Nevar.Impl
@@ -8,6 +9,7 @@ namespace Nevar.Impl
         PagerState PagerState { get; }
 
         Page Get(Transaction tx, long n, bool errorOnChange = false);
+		void AllocateMorePages(Transaction tx, long newLength);
 
         long NumberOfAllocatedPages { get; }
         int PageSize { get; }
@@ -15,7 +17,7 @@ namespace Nevar.Impl
         int PageMaxSpace { get; }
         int PageMinSpace { get; }
 
-        void Flush();
+		void Flush(List<long> sortedPagesToFlush);
 
         PagerState TransactionBegan();
 

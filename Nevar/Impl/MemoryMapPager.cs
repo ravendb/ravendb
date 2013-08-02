@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Runtime.InteropServices;
 using Nevar.Trees;
 
 namespace Nevar.Impl
@@ -10,6 +12,11 @@ namespace Nevar.Impl
         private readonly FlushMode _flushMode;
         private long _allocatedPages;
         private readonly FileStream _fileStream;
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
+
 
         public MemoryMapPager(string file, FlushMode flushMode = FlushMode.Full)
         {
@@ -34,8 +41,11 @@ namespace Nevar.Impl
             return new Page(PagerState.Base + (n * PageSize), PageMaxSpace);
         }
 
-        protected override void AllocateMorePages(Transaction tx, long newLength)
-        {
+	    public override void AllocateMorePages(Transaction tx, long newLength)
+	    {
+		    if (newLength <= _fileStream.Length)
+			    throw new ArgumentException("Cannot set the legnth to less than the current length");
+
             // need to allocate memory again
             _fileStream.SetLength(newLength);
             PagerState.Release(); // when the last transaction using this is over, will dispose it
@@ -69,14 +79,37 @@ namespace Nevar.Impl
             return newPager;
         }
 
-        public override void Flush()
+		public override void Flush(List<long> sortedPagesToFlush)
         {
-            if (_flushMode == FlushMode.None)
+            if (_flushMode == FlushMode.None || sortedPagesToFlush.Count == 0)
                 return;
 
-            PagerState.Accessor.Flush();
-            _fileStream.Flush(_flushMode == FlushMode.Full);
+			// here we try to optimize the amount of work we do, we will only 
+			// flush the actual dirty pages, and we will do so in seqeuqntial order
+			// ideally, this will save the OS the trouble of actually having to flush the 
+			// entire range
+			long start = sortedPagesToFlush[0];
+			int count = 1;
+			for (int i = 1; i < sortedPagesToFlush.Count; i++)
+			{
+				if (start + i != sortedPagesToFlush[i])
+				{
+					FlushPages(start, count);
+					start = sortedPagesToFlush[i];
+					count = 1;
+				}
+			}
+			FlushPages(start, count);
+
+			if (_flushMode == FlushMode.Full)
+				_fileStream.Flush(true);
         }
+
+		private void FlushPages(long startPage, int count)
+		{
+			//Console.WriteLine("Flushing {0,8:#,#} pages from {1,8:#,#}", count, count);
+			FlushViewOfFile(PagerState.Base + (startPage*PageSize), new IntPtr(count*PageSize));
+		}
 
         public override void Dispose()
         {
