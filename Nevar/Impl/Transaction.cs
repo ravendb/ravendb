@@ -334,29 +334,27 @@ namespace Nevar.Impl
         private void FlushFreePages()
         {
             var slice = new Slice(SliceOptions.Key);
-            slice.Set(_id);
+			// transaction ids in free pages are 56 bits (64 - 8)
+			// the right most bits are reserved for iteration counters
+	        byte iterationCounter = 1;
             while (_freePages.Count != 0)
             {
-                using (var ms = new MemoryStream())
+				slice.Set(_id << 8 | iterationCounter);
+	            iterationCounter++;
+				using (var ms = new MemoryStream())
                 using (var binaryWriter = new BinaryWriter(ms))
                 {
                     foreach (var freePage in _freePages.OrderBy(x => x))
                     {
                         binaryWriter.Write(freePage);
                     }
-                    var old = _freePages;
-                    _freePages = new HashSet<long>();
+					_freePages.Clear();
 
                     ms.Position = 0;
 
                     // this may cause additional pages to be freed, so we need need the while loop to track them all
                     _env.FreeSpace.Add(this, slice, ms);
                     ms.Position = 0; // so if we have additional freed pages, they will be added
-
-                    if (_freePages.Count != 0)
-                    {
-                        _freePages.UnionWith(old);
-                    }
                 }
             }
         }
