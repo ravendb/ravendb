@@ -84,8 +84,7 @@ namespace Nevar.Impl
 			if (_flushMode == FlushMode.None || sortedPagesToFlush.Count == 0)
 				return;
 
-			var rangesToFlush = GetPageRangesToFlush(sortedPagesToFlush);
-			foreach (var tuple in rangesToFlush)
+			foreach (var tuple in GetPageRangesToFlush(sortedPagesToFlush))
 			{
 				FlushPages(tuple.Item1, tuple.Item2);
 			}
@@ -94,9 +93,8 @@ namespace Nevar.Impl
 				_fileStream.Flush(true);
 		}
 
-		private static List<Tuple<long, long>> GetPageRangesToFlush(List<long> sortedPagesToFlush)
+		private static IEnumerable<Tuple<long, long>> GetPageRangesToFlush(List<long> sortedPagesToFlush)
 		{
-			var rangesToFlush = new List<Tuple<long, long>>();
 			// here we try to optimize the amount of work we do, we will only 
 			// flush the actual dirty pages, and we will do so in sequential order
 			// ideally, this will save the OS the trouble of actually having to flush the 
@@ -114,12 +112,11 @@ namespace Nevar.Impl
 					count += difference;
 					continue;
 				}
-				rangesToFlush.Add(Tuple.Create(start, count));
+				yield return Tuple.Create(start, count);
 				start = sortedPagesToFlush[i];
 				count = 1;
 			}
-			rangesToFlush.Add(Tuple.Create(start, count));
-			return rangesToFlush;
+			yield return  Tuple.Create(start, count);
 		}
 
 		private void FlushPages(long startPage, long count)
