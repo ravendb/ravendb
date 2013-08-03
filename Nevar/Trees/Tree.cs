@@ -124,7 +124,6 @@ namespace Nevar.Trees
 
         private long WriteToOverflowPages(Transaction tx, TreeDataInTransaction txInfo, int overflowSize, out byte* dataPos)
 		{
-			
 			var numberOfPages = GetNumberOfOverflowPages(tx, overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
 			overflowPageStart.OverflowSize = numberOfPages;
@@ -151,7 +150,7 @@ namespace Nevar.Trees
 			var node = page.GetNode(page.LastSearchPosition);
 			if (node->Flags.HasFlag(NodeFlags.PageRef)) // this is an overflow pointer
 			{
-                tx.ModifyCursor(this, cursor);
+				tx.ModifyCursor(this, cursor);
 			    var overflowPage = tx.GetReadOnlyPage(node->PageNumber);
 				var numberOfPages = GetNumberOfOverflowPages(tx, overflowPage.OverflowSize);
 				for (int i = 0; i < numberOfPages; i++)
