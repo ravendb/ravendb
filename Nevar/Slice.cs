@@ -86,9 +86,12 @@ namespace Nevar
 				return Options.ToString();
 
 		    if (Size == sizeof (long))
-		        return ToInt64().ToString(CultureInfo.InvariantCulture);
+		    {
+			    var val = ToInt64();
+			    return (val >> 8).ToString(CultureInfo.InvariantCulture) + ", " + (byte) val;
+		    }
 
-		    return _array != null
+			return _array != null
 		               ? Encoding.UTF8.GetString(_array)
 		               : Marshal.PtrToStringAnsi(new IntPtr(_pointer), _pointerSize);
 		}
