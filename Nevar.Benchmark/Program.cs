@@ -10,7 +10,7 @@ namespace Nevar.Benchmark
 	public class Program
 	{
 		private static HashSet<long> _randomNumbers;
-		public const int Count = 1000 * 1000;
+		public const int Count = 10 * 1000;
 		private const string _path = @"bench.data";
 
 		public static void Main()
@@ -25,13 +25,13 @@ namespace Nevar.Benchmark
 			//Time("fill seq buff 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
 			//Time("fill seq sync 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
 
-			Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-			Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-			Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+			//Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+			//Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+			//Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-			Time("fill rnd none 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, 10 * 1000));
+			//Time("fill rnd none 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, 10 * 1000));
 			Time("fill rnd buff 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
-			Time("fill rnd sync 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
+			//Time("fill rnd sync 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
 
 			//Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
@@ -51,15 +51,15 @@ namespace Nevar.Benchmark
 
 			using (
 				var f = new FileStream(_path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
-				                       fileFlagNoBuffering))
+									   fileFlagNoBuffering))
 			{
-				
+
 			}
 		}
 
 		private static void InitRandomNumbers()
 		{
-			var random = new Random();
+			var random = new Random(1337 ^ 13);
 			_randomNumbers = new HashSet<long>();
 			while (_randomNumbers.Count < Count)
 			{
@@ -87,10 +87,10 @@ namespace Nevar.Benchmark
 				var value = new byte[100];
 				new Random().NextBytes(value);
 				var ms = new MemoryStream(value);
-				
+
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					memoryMapPager.AllocateMorePages(tx, 1024*1024*768);
+					memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
 					tx.Commit();
 				}
 
@@ -125,7 +125,7 @@ namespace Nevar.Benchmark
 					tx.Commit();
 				}
 
-				
+
 				sw.Start();
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
@@ -176,7 +176,7 @@ namespace Nevar.Benchmark
 			}
 		}
 
-		private static void FillSeqMultipleTransaction(Stopwatch sw,FlushMode flushMode, int parts)
+		private static void FillSeqMultipleTransaction(Stopwatch sw, FlushMode flushMode, int parts)
 		{
 			var memoryMapPager = new MemoryMapPager(_path, flushMode);
 			using (var env = new StorageEnvironment(memoryMapPager))
@@ -287,7 +287,7 @@ namespace Nevar.Benchmark
 					memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
 					tx.Commit();
 				}
-				
+
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var ms = new MemoryStream(value);
