@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
 using System.Runtime;
@@ -13,32 +14,29 @@ namespace Nevar.Tryout
     {
         private static void Main(string[] args)
         {
-            var x = new FreeSpace();
-            {
-                x.WillBeReused();
-            }
+	        Console.WriteLine(new LinkedList<int>().First == null);
 
-            //var buf = new byte[256*3];
+	        //var buf = new byte[256*3];
 
-            //using (var storage = new StorageEnvironment(new PureMemoryPager()))
-            //{
-            //    using (Transaction tx = storage.NewTransaction(TransactionFlags.ReadWrite))
-            //    {
-            //        for (int i = 0; i < 5000; i++)
-            //        {
-            //            storage.Root.Add(tx, i.ToString("00000"), new MemoryStream(buf));
-            //        }
+	        //using (var storage = new StorageEnvironment(new PureMemoryPager()))
+	        //{
+	        //    using (Transaction tx = storage.NewTransaction(TransactionFlags.ReadWrite))
+	        //    {
+	        //        for (int i = 0; i < 5000; i++)
+	        //        {
+	        //            storage.Root.Add(tx, i.ToString("00000"), new MemoryStream(buf));
+	        //        }
 
-            //        tx.Commit();
-            //    }
+	        //        tx.Commit();
+	        //    }
 
-            //    using (Transaction tx = storage.NewTransaction(TransactionFlags.Read))
-            //    {
-            //        DebugStuff.RenderAndShow(tx, storage.Root.Root, 1);
-            //    }
+	        //    using (Transaction tx = storage.NewTransaction(TransactionFlags.Read))
+	        //    {
+	        //        DebugStuff.RenderAndShow(tx, storage.Root.Root, 1);
+	        //    }
 
 
-            //}
+	        //}
         }
     }
 }

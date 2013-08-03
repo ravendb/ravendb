@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Nevar.Debugging;
 using Nevar.Impl;
 
 namespace Nevar.Benchmark
@@ -10,39 +11,39 @@ namespace Nevar.Benchmark
 	public class Program
 	{
 		private static HashSet<long> _randomNumbers;
-		public const int Count = 10 * 1000;
-		private const string _path = @"bench.data";
+		public const int Count = 1000 * 1000;
+		private const string Path = @"bench.data";
 
 		public static void Main()
 		{
 			InitRandomNumbers();
 
-			//Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-			//Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-			//Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+			Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
+			Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
+			Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-			//Time("fill seq none 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None, 10 * 1000));
-			//Time("fill seq buff 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
-			//Time("fill seq sync 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
+			Time("fill seq none 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None, 10 * 1000));
+			Time("fill seq buff 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
+			Time("fill seq sync 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
 
-			//Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-			//Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-			//Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+			Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+			Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+			Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-			//Time("fill rnd none 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, 10 * 1000));
+			Time("fill rnd none 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, 10 * 1000));
 			Time("fill rnd buff 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
-			//Time("fill rnd sync 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
+			Time("fill rnd sync 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
 
-			//Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+			Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-			//Time("read seq", ReadOneTransaction, delete: false);
-			//Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
-			//Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
-			//Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
-			//Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
-			//Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+			Time("read seq", ReadOneTransaction, delete: false);
+			Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
+			Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
+			Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
+			Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
+			Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-			//Time("fill seq non then read parallel 4", sw => ReadAndWriteOneTransaction(sw, 4));
+			Time("fill seq non then read parallel 4", sw => ReadAndWriteOneTransaction(sw, 4));
 		}
 
 		private static void FlushOSBuffer()
@@ -50,7 +51,7 @@ namespace Nevar.Benchmark
 			const FileOptions fileFlagNoBuffering = (FileOptions)0x20000000;
 
 			using (
-				var f = new FileStream(_path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
+				var f = new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
 									   fileFlagNoBuffering))
 			{
 
@@ -69,8 +70,8 @@ namespace Nevar.Benchmark
 
 		private static void Time(string name, Action<Stopwatch> action, bool delete = true)
 		{
-			if (File.Exists(_path) && delete)
-				File.Delete(_path);
+			if (File.Exists(Path) && delete)
+				File.Delete(Path);
 			else
 				FlushOSBuffer();
 			var sp = new Stopwatch();
@@ -81,7 +82,7 @@ namespace Nevar.Benchmark
 
 		private static void FillRandomOneTransaction(Stopwatch sw, FlushMode flushMode)
 		{
-			var memoryMapPager = new MemoryMapPager(_path, flushMode);
+			var memoryMapPager = new MemoryMapPager(Path, flushMode);
 			using (var env = new StorageEnvironment(memoryMapPager))
 			{
 				var value = new byte[100];
@@ -112,7 +113,7 @@ namespace Nevar.Benchmark
 
 		private static void FillSeqOneTransaction(Stopwatch sw, FlushMode flushMode)
 		{
-			var memoryMapPager = new MemoryMapPager(_path, flushMode);
+			var memoryMapPager = new MemoryMapPager(Path, flushMode);
 			using (var env = new StorageEnvironment(memoryMapPager))
 			{
 				var value = new byte[100];
@@ -143,7 +144,7 @@ namespace Nevar.Benchmark
 
 		private static void FillRandomMultipleTransaction(Stopwatch sw, FlushMode flushMode, int parts)
 		{
-			var memoryMapPager = new MemoryMapPager(_path, flushMode);
+			var memoryMapPager = new MemoryMapPager(Path, flushMode);
 			using (var env = new StorageEnvironment(memoryMapPager))
 			{
 				var value = new byte[100];
@@ -160,6 +161,7 @@ namespace Nevar.Benchmark
 				var enumerator = _randomNumbers.GetEnumerator();
 				for (int x = 0; x < parts; x++)
 				{
+					
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						for (long i = 0; i < Count / parts; i++)
@@ -178,7 +180,7 @@ namespace Nevar.Benchmark
 
 		private static void FillSeqMultipleTransaction(Stopwatch sw, FlushMode flushMode, int parts)
 		{
-			var memoryMapPager = new MemoryMapPager(_path, flushMode);
+			var memoryMapPager = new MemoryMapPager(Path, flushMode);
 			using (var env = new StorageEnvironment(memoryMapPager))
 			{
 				var value = new byte[100];
@@ -213,7 +215,7 @@ namespace Nevar.Benchmark
 
 		private static void ReadOneTransaction_Parallel(Stopwatch sw, int parts)
 		{
-			using (var env = new StorageEnvironment(new MemoryMapPager(_path)))
+			using (var env = new StorageEnvironment(new MemoryMapPager(Path)))
 			{
 				var countdownEvent = new CountdownEvent(parts);
 
@@ -251,7 +253,7 @@ namespace Nevar.Benchmark
 
 		private static void ReadOneTransaction(Stopwatch sw)
 		{
-			using (var env = new StorageEnvironment(new MemoryMapPager(_path)))
+			using (var env = new StorageEnvironment(new MemoryMapPager(Path)))
 			{
 				sw.Start();
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
@@ -276,7 +278,7 @@ namespace Nevar.Benchmark
 
 		private static void ReadAndWriteOneTransaction(Stopwatch sw, int parts)
 		{
-			var memoryMapPager = new MemoryMapPager(_path, FlushMode.None);
+			var memoryMapPager = new MemoryMapPager(Path, FlushMode.None);
 			using (var env = new StorageEnvironment(memoryMapPager))
 			{
 				var value = new byte[100];
