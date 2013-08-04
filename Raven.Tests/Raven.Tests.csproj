@@ -573,6 +573,7 @@
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\BulkInsertDatabaseUrl.cs" />
+    <Compile Include="Issues\RavenDB_1251_2.cs" />
     <Compile Include="Issues\RavenDB1019.cs" />
     <Compile Include="Issues\RavenDB1025.cs" />
     <Compile Include="Issues\RavenDB1067.cs" />
@@ -598,6 +599,7 @@
     <Compile Include="Issues\RavenDB_1107.cs" />
     <Compile Include="Issues\RavenDB_1165.cs" />
     <Compile Include="Issues\RavenDB_1235.cs" />
+    <Compile Include="Issues\RavenDB_1251_1.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
