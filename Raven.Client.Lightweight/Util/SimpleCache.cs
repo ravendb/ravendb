@@ -129,7 +129,7 @@ namespace Raven.Client.Util
 				DateTime lastWrite;
 				if (lastWritePerDb.TryGetValue(value.Database, out lastWrite))
 				{
-					if (value.Time < lastWrite)
+					if (value.Time <= lastWrite)
 						value.ForceServerCheck = true;
 				}
 			}

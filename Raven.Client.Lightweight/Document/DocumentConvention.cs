@@ -100,7 +100,7 @@ namespace Raven.Client.Document
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
-			ShouldSaveChangesForceAggresiveCacheCheck = true;
+			ShouldSaveChangesForceAggressiveCacheCheck = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -466,7 +466,7 @@ namespace Raven.Client.Document
 		/// This will make any outdated data revalidated, and will work nicely as long as you have just a 
 		/// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
 		/// </summary>
-		public bool ShouldSaveChangesForceAggresiveCacheCheck { get; set; }
+		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
 
 
 #if !SILVERLIGHT
