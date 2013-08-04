@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Indexing;
@@ -40,11 +41,13 @@ namespace Raven.Tests.Issues
 				{
 					var d = new Duration(TimeSpan.FromHours(-1.5));
 
-					var result = session.Query<Foo>()
-					                    .Customize(x => x.WaitForNonStaleResults())
-					                    .Where(x => x.Bar > d)
-					                    .OrderByDescending(x => x.Bar)
-					                    .ToList();
+					var q = session.Query<Foo>()
+					               .Customize(x => x.WaitForNonStaleResults())
+								   //.Customize(x=> ((DocumentQuery<Foo>)x).OrderByDescending("Bar_Range"))
+								   .Where(x => x.Bar > d)
+					               .OrderByDescending(x => x.Bar);
+					Debug.WriteLine(q);
+					var result = q.ToList();
 
 					Assert.Equal(4, result.Count);
 					Assert.True(result[0].Bar > result[1].Bar);

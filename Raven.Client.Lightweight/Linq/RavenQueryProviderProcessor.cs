@@ -1156,15 +1156,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 		}
 
-	    static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
-        {
-            typeof(int),
-            typeof(long),
-            typeof(float),
-            typeof(decimal),
-            typeof(double),
-            typeof(TimeSpan)
-        };
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
 			var result = GetMemberDirect(expression.Body);
@@ -1178,9 +1169,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof (string);
             }
 
-
-		    if (requireOrderByToUseRange.Contains(fieldType))
-                fieldName = fieldName + "_Range";
+			if (this.queryGenerator.Conventions.UsesRangeType(fieldType))
+				fieldName = fieldName + "_Range";
 			luceneQuery.AddOrder(fieldName, descending, fieldType);
 		}
 

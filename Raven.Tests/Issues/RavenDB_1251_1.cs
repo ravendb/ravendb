@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Tests.Helpers;
 using Xunit;
@@ -32,12 +33,13 @@ namespace Raven.Tests.Issues
 				{
 					var t = TimeSpan.FromHours(-1.5);
 
-					var result = session.Query<Foo>()
-										.Customize(x => x.WaitForNonStaleResults())
-										.Where(x => x.Bar > t)
-										.OrderByDescending(x => x.Bar)
-										.ToList();
-
+					var q = session.Query<Foo>()
+								   .Customize(x => x.WaitForNonStaleResults())
+								   .Where(x => x.Bar > t)
+								   .OrderByDescending(x => x.Bar);
+					Debug.WriteLine(q);
+					var result = q.ToList();
+					
 					Assert.Equal(4, result.Count);
 					Assert.True(result[0].Bar > result[1].Bar);
 					Assert.True(result[1].Bar > result[2].Bar);
