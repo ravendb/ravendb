@@ -23,7 +23,9 @@ namespace Nevar
 
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 
+        private List<long> _availableFreeSpace = new List<long>();
         private long _transactionsCounter;
+        private Slice _availableFreeSpaceKey;
 
         public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
         {
@@ -205,7 +207,7 @@ namespace Nevar
 
 
 	            if (flags.HasFlag(TransactionFlags.ReadWrite))
-		            tx.GatherFreeSpace();
+                    tx.SetAvailableFreeSpace(_availableFreeSpace, _availableFreeSpaceKey);
 
                 return tx;
             }
@@ -274,6 +276,12 @@ namespace Nevar
             }
 
             return results;
+        }
+
+        public void SetFreeSpace(List<long> freeSpace, Slice freeSpaceKey)
+        {
+            _availableFreeSpace = freeSpace;
+            _availableFreeSpaceKey = freeSpaceKey;
         }
     }
 }
