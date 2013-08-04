@@ -124,6 +124,11 @@ namespace Nevar.Trees
             get { return _header->Flags.HasFlag(PageFlags.Branch); }
         }
 
+		public bool IsOverlfow
+		{
+			get { return _header->Flags.HasFlag(PageFlags.Overlfow); }
+		}
+
         public ushort NumberOfEntries
         {
             get

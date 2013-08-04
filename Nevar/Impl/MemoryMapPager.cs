@@ -14,6 +14,8 @@ namespace Nevar.Impl
 		private long _allocatedPages;
 		private readonly FileStream _fileStream;
 
+		private int numberOfFlushes;
+
 		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
@@ -86,19 +88,23 @@ namespace Nevar.Impl
 			if (_flushMode == FlushMode.None || sortedPagesToFlush.Count == 0)
 				return;
 
-            var pageRangesToFlush = GetPageRangesToFlush(sortedPagesToFlush).ToList();
-            foreach (var tuple in pageRangesToFlush)
-            {
-                FlushPages(tuple.Item1, tuple.Item2);
-            }
+			var pageRangesToFlush = GetPageRangesToFlush(sortedPagesToFlush).ToList();
+			foreach (var tuple in pageRangesToFlush)
+			{
+				FlushPages(tuple.Item1, tuple.Item2);
+			}
 
-            //if (sortedPagesToFlush.Count != 1)
-            //{
-            //    Console.WriteLine("tx {3,4:#,#} with {0:#,#} pages - {1:#,#}kb writes and {2} seeks", sortedPagesToFlush.Count,
-            //                      (sortedPagesToFlush.Count*PageSize)/1024,
-            //                      pageRangesToFlush.Count,
-            //                      i++);
-            //}
+			var pages = sortedPagesToFlush.Select(Get).ToList();
+
+			Console.WriteLine("Flush {3,6:#,#} with {0,3:#,#} pages - {1,3:#,#} kb writes and {2,3} seeks ({4,3:#,#;;0} leaves, {5,3:#,#;;0} branches, {6,3:#,#;;0} overflows)",
+							sortedPagesToFlush.Count,
+			                  (sortedPagesToFlush.Count*PageSize)/1024,
+			                  pageRangesToFlush.Count,
+			                  numberOfFlushes++,
+							  pages.Count(x=>x.IsLeaf),
+							  pages.Count(x=>x.IsBranch),
+							  pages.Count(x=>x.IsOverlfow)
+							  );
 		}
 
 		public override void Flush(long headerPageId)
