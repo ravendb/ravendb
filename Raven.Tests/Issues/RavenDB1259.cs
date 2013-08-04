@@ -10,7 +10,7 @@ namespace Raven.Tests.Issues
     /// <summary>
     /// If Transformer can not find entity then should return null rather than NullReference
     /// </summary>
-    public class ReturnNullWhenTransformerCanNotFindEntity : RavenTestBase
+    public class RavenDB1259 : RavenTestBase
     {
         [Fact]
         public void Should_throw_invalid_operation_exception_when_production_area_does_not_exist_and_using_transformer()
