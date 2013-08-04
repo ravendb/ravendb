@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class TestStream : RavenTestBase
+    public class RavenDB1261 : RavenTestBase
     {
         public class Student
         {
