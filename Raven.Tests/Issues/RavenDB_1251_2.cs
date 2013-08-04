@@ -43,8 +43,7 @@ namespace Raven.Tests.Issues
 
 					var q = session.Query<Foo>()
 					               .Customize(x => x.WaitForNonStaleResults())
-								   //.Customize(x=> ((DocumentQuery<Foo>)x).OrderByDescending("Bar_Range"))
-								   .Where(x => x.Bar > d)
+					               .Where(x => x.Bar > d)
 					               .OrderByDescending(x => x.Bar);
 					Debug.WriteLine(q);
 					var result = q.ToList();
