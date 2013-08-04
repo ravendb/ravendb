@@ -39,6 +39,7 @@ namespace Raven.Database.Indexing
 		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
+        public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
 		public string DatabaseName { get; set; }
 
 		public DateTime LastWorkTime { get; private set; }
