@@ -43,6 +43,16 @@ namespace Nevar.Impl
 			//nothing to do here
 		}
 
+		public override void Flush(long headerPageId)
+		{
+			// also nothing to do
+		}
+
+		public override void Sync()
+		{
+			// nothing to do here
+		}
+
 		protected override Page Get(long n)
 		{
 			return new Page(_base + (n * PageSize), PageMaxSpace);

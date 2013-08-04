@@ -80,7 +80,7 @@ namespace Nevar.Impl
 			return newPager;
 		}
 
-	    //private static int i = 0;
+	    
 		public override void Flush(List<long> sortedPagesToFlush)
 		{
 			if (_flushMode == FlushMode.None || sortedPagesToFlush.Count == 0)
@@ -99,8 +99,16 @@ namespace Nevar.Impl
             //                      pageRangesToFlush.Count,
             //                      i++);
             //}
+		}
 
-		    if (_flushMode == FlushMode.Full)
+		public override void Flush(long headerPageId)
+		{
+			FlushPages(headerPageId, 1);
+		}
+
+		public override void Sync()
+		{
+			if (_flushMode == FlushMode.Full)
 				_fileStream.Flush(true);
 		}
 

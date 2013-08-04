@@ -46,6 +46,8 @@ namespace Nevar.Impl
 		protected abstract Page Get(long n);
 
 		public abstract void Flush(List<long> sortedPagesToFlush);
+		public abstract void Flush(long headerPageId);
+		public abstract void Sync();
 
 		public virtual PagerState TransactionBegan()
 		{
