@@ -78,7 +78,7 @@ namespace Raven.Database.Indexing
 		///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
 		///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
 		/// </summary>
-		public IEnumerable<AbstractField> CreateFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO)
+        public IEnumerable<AbstractField> CreateFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO, Field.Index? analyzed = null)
 		{
 			if (string.IsNullOrWhiteSpace(name))
 				throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
@@ -91,13 +91,13 @@ namespace Raven.Database.Indexing
 			if (viewGenerator.IsSpatialField(name))
 				return viewGenerator.GetSpatialField(name).CreateIndexableFields(value);
 
-			return CreateRegularFields(name, value, defaultStorage, nestedArray, defaultTermVector);
+            return CreateRegularFields(name, value, defaultStorage, nestedArray, defaultTermVector, analyzed);
 		}
 
-		private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO)
+		private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO, Field.Index? analyzed = null)
 		{
 
-			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
+            var fieldIndexingOptions = analyzed ?? indexDefinition.GetIndex(name, null);
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
 			var termVector = indexDefinition.GetTermVector(name, defaultTermVector);
 
@@ -180,7 +180,7 @@ namespace Raven.Database.Indexing
 					if (CanCreateFieldsForNestedArray(itemToIndex, fieldIndexingOptions))
 					{
 						multipleItemsSameFieldCount.Add(count++);
-						foreach (var field in CreateFields(name, itemToIndex, storage, nestedArray: true))
+						foreach (var field in CreateFields(name, itemToIndex, storage, nestedArray: true, defaultTermVector: defaultTermVector, analyzed: analyzed))
 						{
 							yield return field;
 						}

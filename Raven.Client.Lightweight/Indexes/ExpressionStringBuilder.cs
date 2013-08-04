@@ -626,7 +626,7 @@ namespace Raven.Client.Indexes
 
 			SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
 			{
-				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
 				{
 					Out("((");
 					Out(ConvertTypeToCSharpKeyword(rightOp.Type));
@@ -637,7 +637,7 @@ namespace Raven.Client.Indexes
 				Out(str);
 				Out(' ');
 				Visit(rightOp, innerPrecedence);
-				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
 				{
 					Out("))");
 				}
@@ -865,13 +865,14 @@ namespace Raven.Client.Indexes
 			type = nonNullableType ?? type;
 			var isNullableType = nonNullableType != null;
 
+
 			// we only cast enums and types is mscorlib. We don't support anything else
 			// because the VB compiler like to put converts all over the place, and include
 			// types that we can't really support (only exists on the client)
 			if (ShouldConvert(type) == false)
 				return;
-
-			Out("(");
+            
+            Out("(");
 			Out(ConvertTypeToCSharpKeyword(type));
 
 			if (isNullableType && nonNullableType != typeof(Guid))
