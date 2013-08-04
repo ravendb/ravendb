@@ -705,6 +705,7 @@
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
+    <Compile Include="MailingList\DynamicFieldNoAnalysisStillAnalyzesTest.cs" />
     <Compile Include="MailingList\DynamicObjectTests.cs" />
     <Compile Include="MailingList\FacetCountTest.cs" />
     <Compile Include="MailingList\FacetHits.cs" />
