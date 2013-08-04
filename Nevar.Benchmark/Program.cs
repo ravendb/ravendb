@@ -12,38 +12,40 @@ namespace Nevar.Benchmark
 	{
 		private static HashSet<long> _randomNumbers;
 		public const int Count = 1000 * 1000;
-		private const string Path = @"bench.data";
+	    public const int ItemsPerTransaction = 100;
+        private const int Transactions = 100;
+        private const string Path = @"e:\data\bench.data";
 
-		public static void Main()
+	    public static void Main()
 		{
-			InitRandomNumbers();
+			_randomNumbers = InitRandomNumbers(Count);
 
-			Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-			Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-			Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+            //Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            //Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
+            //Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-			Time("fill seq none 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None, 10 * 1000));
-			Time("fill seq buff 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
-			Time("fill seq sync 10,000 tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
+            //Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None, Transactions));
+            //Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers, Transactions));
+            //Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full, Transactions));
 
-			Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-			Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-			Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+            //Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+            //Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+            //Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-			Time("fill rnd none 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, 10 * 1000));
-			Time("fill rnd buff 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers, 10 * 1000));
-			Time("fill rnd sync 10,000 tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full, 10 * 1000));
+            //Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None, Transactions));
+            //Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers, Transactions));
+            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
-			Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            //Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-			Time("read seq", ReadOneTransaction, delete: false);
-			Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
-			Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
-			Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
-			Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
-			Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+            //Time("read seq", ReadOneTransaction, delete: false);
+            //Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
+            //Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
+            //Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
+            //Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
+            //Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-			Time("fill seq non then read parallel 4", sw => ReadAndWriteOneTransaction(sw, 4));
+            //Time("fill seq non then read parallel 4", sw => ReadAndWriteOneTransaction(sw, 4));
 		}
 
 		private static void FlushOSBuffer()
@@ -58,14 +60,15 @@ namespace Nevar.Benchmark
 			}
 		}
 
-		private static void InitRandomNumbers()
+        private static HashSet<long> InitRandomNumbers(int count)
 		{
 			var random = new Random(1337 ^ 13);
-			_randomNumbers = new HashSet<long>();
-			while (_randomNumbers.Count < Count)
+			var randomNumbers = new HashSet<long>();
+			while (randomNumbers.Count < count)
 			{
-				_randomNumbers.Add(random.Next(0, int.MaxValue));
+				randomNumbers.Add(random.Next(0, int.MaxValue));
 			}
+		    return randomNumbers;
 		}
 
 		private static void Time(string name, Action<Stopwatch> action, bool delete = true)
@@ -75,9 +78,10 @@ namespace Nevar.Benchmark
 			else
 				FlushOSBuffer();
 			var sp = new Stopwatch();
+		    Console.Write("{0,-35}: running...", name);
 			action(sp);
 
-			Console.WriteLine("{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Count / sp.Elapsed.TotalSeconds);
+			Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions*ItemsPerTransaction / sp.Elapsed.TotalSeconds);
 		}
 
 		private static void FillRandomOneTransaction(Stopwatch sw, FlushMode flushMode)
@@ -142,7 +146,7 @@ namespace Nevar.Benchmark
 			}
 		}
 
-		private static void FillRandomMultipleTransaction(Stopwatch sw, FlushMode flushMode, int parts)
+		private static void FillRandomMultipleTransaction(Stopwatch sw, FlushMode flushMode)
 		{
 			var memoryMapPager = new MemoryMapPager(Path, flushMode);
 			using (var env = new StorageEnvironment(memoryMapPager))
@@ -159,12 +163,11 @@ namespace Nevar.Benchmark
 
 				sw.Start();
 				var enumerator = _randomNumbers.GetEnumerator();
-				for (int x = 0; x < parts; x++)
+				for (int x = 0; x < Transactions; x++)
 				{
-					
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						for (long i = 0; i < Count / parts; i++)
+						for (long i = 0; i < ItemsPerTransaction; i++)
 						{
 							ms.Position = 0;
 							enumerator.MoveNext();

@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using Nevar.Trees;
+using System.Linq;
 
 namespace Nevar.Impl
 {
@@ -79,21 +80,31 @@ namespace Nevar.Impl
 			return newPager;
 		}
 
+	    //private static int i = 0;
 		public override void Flush(List<long> sortedPagesToFlush)
 		{
 			if (_flushMode == FlushMode.None || sortedPagesToFlush.Count == 0)
 				return;
 
-			foreach (var tuple in GetPageRangesToFlush(sortedPagesToFlush))
-			{
-				FlushPages(tuple.Item1, tuple.Item2);
-			}
+            var pageRangesToFlush = GetPageRangesToFlush(sortedPagesToFlush).ToList();
+            foreach (var tuple in pageRangesToFlush)
+            {
+                FlushPages(tuple.Item1, tuple.Item2);
+            }
 
-			if (_flushMode == FlushMode.Full)
+            //if (sortedPagesToFlush.Count != 1)
+            //{
+            //    Console.WriteLine("tx {3,4:#,#} with {0:#,#} pages - {1:#,#}kb writes and {2} seeks", sortedPagesToFlush.Count,
+            //                      (sortedPagesToFlush.Count*PageSize)/1024,
+            //                      pageRangesToFlush.Count,
+            //                      i++);
+            //}
+
+		    if (_flushMode == FlushMode.Full)
 				_fileStream.Flush(true);
 		}
 
-		private static IEnumerable<Tuple<long, long>> GetPageRangesToFlush(List<long> sortedPagesToFlush)
+		private IEnumerable<Tuple<long, long>> GetPageRangesToFlush(List<long> sortedPagesToFlush)
 		{
 			// here we try to optimize the amount of work we do, we will only 
 			// flush the actual dirty pages, and we will do so in sequential order
@@ -109,7 +120,7 @@ namespace Nevar.Impl
 				// we call flush, so we need to balance those needs.
 				if (difference < 32)
 				{
-					count += difference;
+				    count += difference;
 					continue;
 				}
 				yield return Tuple.Create(start, count);
@@ -119,7 +130,8 @@ namespace Nevar.Impl
 			yield return  Tuple.Create(start, count);
 		}
 
-		private void FlushPages(long startPage, long count)
+
+	    private void FlushPages(long startPage, long count)
 		{
 			long numberOfBytesToFlush = count*PageSize;
 			long start = startPage*PageSize;
