@@ -89,7 +89,7 @@ namespace Nevar
 		    if (Size == sizeof (long))
 		    {
 			    var val = ToInt64();
-			    return (val >> 8).ToString(CultureInfo.InvariantCulture) + ", " + (byte) val;
+			    return (val >> 8).ToString(CultureInfo.InvariantCulture) + "/" + (byte) val;
 		    }
 
 			return _array != null

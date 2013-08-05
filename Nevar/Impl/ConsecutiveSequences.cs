@@ -76,6 +76,10 @@ namespace Nevar.Impl
                 }
                 v = start;
                 Count -= num;
+                if (_current.Count == 0)
+                {
+                    _current = null;
+                }
                 return true;
             }
 			
