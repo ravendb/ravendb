@@ -13,7 +13,7 @@ namespace Nevar.Impl
         private long _freeSpaceKeyTxId = -1;
         private int _originalFreeSpaceCount;
         private bool _alreadyLookingForFreeSpace;
-        private readonly ConsecutiveSequences _freeSpace = new ConsecutiveSequences();
+        private readonly ConsecutiveSequences _freeSpace = new ConsecutiveSequences(4);
         private int _lastTransactionPageUsage;
 
         public FreeSpaceCollector(StorageEnvironment env)

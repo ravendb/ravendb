@@ -6,23 +6,29 @@ namespace Nevar.Impl
 {
 	public class ConsecutiveSequences : IEnumerable<long>
 	{
-		private class Seq
+	    private readonly int _minSequence;
+
+	    private class Seq
 		{
 			public long Start;
 			public int Count;
-			public int AllocatingFor;
 
 			public override string ToString()
 			{
-				return string.Format("Start: {0}, Count: {1}, AllocatingFor: {2}", Start, Count, AllocatingFor);
+				return string.Format("Start: {0}, Count: {1}", Start, Count);
 			}
 		}
 
-		public int Count { get; set; }
+	    public ConsecutiveSequences(int minSequence = 1)
+	    {
+	        _minSequence = minSequence;
+	    }
+
+	    public int Count { get; set; }
 
 		private readonly Dictionary<long, Seq> _sequencesByLast = new Dictionary<long, Seq>();
 		private readonly Dictionary<long, Seq> _sequencesByFirst = new Dictionary<long, Seq>();
-		private readonly Dictionary<int, Seq> _sequencesByAllocationSize = new Dictionary<int, Seq>();
+	    private Seq _current;
 
 		public void Add(long v)
 		{
@@ -54,46 +60,37 @@ namespace Nevar.Impl
 
 		public bool TryAllocate(int num, out long v)
 		{
-			var allocationSize = NextPowerOfTwo(num);
-			Seq seq;
-			if (_sequencesByAllocationSize.TryGetValue(allocationSize, out seq))
-			{
-				var start = seq.Start;
-				seq.Count -= num;
-				seq.Start += num;
-				_sequencesByFirst.Remove(start);
-				if (seq.Count == 0)
-				{
-					_sequencesByLast.Remove(start);
-				}
-				else
-				{
-					_sequencesByFirst.Add(seq.Start, seq);
-				}
-				if (seq.Count < allocationSize) // can't serve the next request for this size
-				{
-					seq.AllocatingFor = 0;
-					_sequencesByAllocationSize.Remove(allocationSize);
-				}
-				v = start;
-				Count -= num;
-				return true;
-			}
-
+            if (_current != null && _current.Count >= num)
+            {
+                var start = _current.Start;
+                _current.Count -= num;
+                _current.Start += num;
+                _sequencesByFirst.Remove(start);
+                if (_current.Count == 0)
+                {
+                    _sequencesByLast.Remove(start);
+                }
+                else
+                {
+                    _sequencesByFirst.Add(_current.Start, _current);
+                }
+                v = start;
+                Count -= num;
+                return true;
+            }
+			
 			// let us try to find a sequence long enough that is suitable
 			// we find the largest sequence that can serve, to make sure that we are serving from it
 			// for as long as we can
-			seq = _sequencesByLast.Values.Where(x => x.AllocatingFor == 0 && x.Count >= allocationSize)
+			_current = _sequencesByLast.Values.Where(x => x.Count >= num && x.Count >= _minSequence)
 			                .OrderByDescending(x => x.Count)
 			                .FirstOrDefault();
-			if (seq == null)
+			if (_current == null)
 			{
 				v = -1;
 				return false;
 			}
 
-			seq.AllocatingFor = allocationSize;
-			_sequencesByAllocationSize.Add(allocationSize, seq);
 			return TryAllocate(num, out v);
 		}
 
