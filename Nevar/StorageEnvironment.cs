@@ -28,56 +28,69 @@ namespace Nevar
 
         public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
         {
-            _pager = pager;
-            _ownsPager = ownsPager;
-            _freeSpaceCollector = new FreeSpaceCollector(this);
-            _sliceComparer = NativeMethods.memcmp;
+	        try
+	        {
+		        _pager = pager;
+		        _ownsPager = ownsPager;
+		        _freeSpaceCollector = new FreeSpaceCollector(this);
+		        _sliceComparer = NativeMethods.memcmp;
 
-            if (pager.NumberOfAllocatedPages == 0)
-            {
-                WriteEmptyHeaderPage(_pager.Get(null, 0));
-                WriteEmptyHeaderPage(_pager.Get(null, 1));
+		        Setup(pager);
 
-                NextPageNumber = 2;
-                using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
-                {
-                    var root = Tree.Create(tx, _sliceComparer);
-                    var freeSpace = Tree.Create(tx, _sliceComparer);
-
-                    // important to first create the two trees, then set them on the env
-
-                    FreeSpace = freeSpace;
-                    Root = root;
-
-                    tx.UpdateRoots(root, freeSpace);
-
-                    tx.Commit();
-                }
-            }
-            else // existing db, let us load it
-            {
-                // the first two pages are allocated for double buffering tx commits
-                FileHeader* entry = FindLatestFileHeadeEntry();
-                NextPageNumber = entry->LastPageNumber + 1;
-                _transactionsCounter = entry->TransactionId + 1;
-                using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
-                {
-                    var root = Tree.Open(tx, _sliceComparer, &entry->Root);
-                    var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
-                  
-                    // important to first create the two trees, then set them on the env
-                    FreeSpace = freeSpace;
-                    Root = root;
-
-                    tx.Commit();
-                }
-            }
-
-            FreeSpace.Name = "Free Space";
-            Root.Name = "Root";
+		        FreeSpace.Name = "Free Space";
+		        Root.Name = "Root";
+	        }
+	        catch (Exception)
+	        {
+		        if (ownsPager)
+			        pager.Dispose();
+	        }
         }
 
-        public long NextPageNumber { get; set; }
+	    private void Setup(IVirtualPager pager)
+	    {
+		    if (pager.NumberOfAllocatedPages == 0)
+		    {
+			    WriteEmptyHeaderPage(_pager.Get(null, 0));
+			    WriteEmptyHeaderPage(_pager.Get(null, 1));
+
+			    NextPageNumber = 2;
+			    using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
+			    {
+				    var root = Tree.Create(tx, _sliceComparer);
+				    var freeSpace = Tree.Create(tx, _sliceComparer);
+
+				    // important to first create the two trees, then set them on the env
+
+				    FreeSpace = freeSpace;
+				    Root = root;
+
+				    tx.UpdateRoots(root, freeSpace);
+
+				    tx.Commit();
+			    }
+			    return;
+		    }
+		    // existing db, let us load it
+
+		    // the first two pages are allocated for double buffering tx commits
+		    FileHeader* entry = FindLatestFileHeadeEntry();
+		    NextPageNumber = entry->LastPageNumber + 1;
+		    _transactionsCounter = entry->TransactionId + 1;
+		    using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
+		    {
+			    var root = Tree.Open(tx, _sliceComparer, &entry->Root);
+			    var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
+
+			    // important to first create the two trees, then set them on the env
+			    FreeSpace = freeSpace;
+			    Root = root;
+
+			    tx.Commit();
+		    }
+	    }
+
+	    public long NextPageNumber { get; set; }
 
         public SliceComparer SliceComparer
         {
