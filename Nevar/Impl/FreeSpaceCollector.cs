@@ -13,57 +13,57 @@ namespace Nevar.Impl
         private Slice _freeSpaceKey;
         private int _originalFreeSpaceCount;
         private bool _alreadyLookingForFreeSpace;
-		private readonly ConsecutiveSequences _freeSpace = new ConsecutiveSequences();
-	    private int _lastTransactionPageUsage;
+        private readonly ConsecutiveSequences _freeSpace = new ConsecutiveSequences();
+        private int _lastTransactionPageUsage;
 
-	    public FreeSpaceCollector(StorageEnvironment env)
+        public FreeSpaceCollector(StorageEnvironment env)
         {
             _env = env;
         }
 
-		public Page TryAllocateFromFreeSpace(Transaction tx, int num)
-		{
-			if (_env.FreeSpace == null)
-				return null;// this can happen the first time FreeSpace tree is created
+        public Page TryAllocateFromFreeSpace(Transaction tx, int num)
+        {
+            if (_env.FreeSpace == null)
+                return null;// this can happen the first time FreeSpace tree is created
 
-			if (_alreadyLookingForFreeSpace)
-				return null;// can't recursively find free space
+            if (_alreadyLookingForFreeSpace)
+                return null;// can't recursively find free space
 
-			_alreadyLookingForFreeSpace = true;
-			try
-			{
-				while (true)
-				{
-					long page;
-					if (_freeSpace.TryAllocate(num, out page))
-					{
-						var newPage = tx.Pager.Get(tx, page);
-						newPage.PageNumber = page;
-						return newPage;
-					}
+            _alreadyLookingForFreeSpace = true;
+            try
+            {
+                while (true)
+                {
+                    long page;
+                    if (_freeSpace.TryAllocate(num, out page))
+                    {
+                        var newPage = tx.Pager.Get(tx, page);
+                        newPage.PageNumber = page;
+                        return newPage;
+                    }
 
-					if (_freeSpaceGatheredMinTx >= tx.Id)
-						return null;
-					GatherFreeSpace(tx);
-				}
-			}
-			finally
-			{
-				_alreadyLookingForFreeSpace = false;
-			}
-		}
+                    if (_freeSpaceGatheredMinTx >= tx.Id)
+                        return null;
+                    GatherFreeSpace(tx);
+                }
+            }
+            finally
+            {
+                _alreadyLookingForFreeSpace = false;
+            }
+        }
 
 
-	    public void LastTransactionPageUsage(int pages)
-		{
-			if (pages == _lastTransactionPageUsage)
-				return;
+        public void LastTransactionPageUsage(int pages)
+        {
+            if (pages == _lastTransactionPageUsage)
+                return;
 
-			// if there is a difference, we apply 1/4 the difference to the current value
-			// this is to make sure that we don't suddenly spike the required pages per transaction
-			// just because of one abnormally large / small transaction
-			_lastTransactionPageUsage += (pages - _lastTransactionPageUsage)/4;
-		}
+            // if there is a difference, we apply 1/4 the difference to the current value
+            // this is to make sure that we don't suddenly spike the required pages per transaction
+            // just because of one abnormally large / small transaction
+            _lastTransactionPageUsage += (pages - _lastTransactionPageUsage) / 4;
+        }
 
 
         public void SaveOldFreeSpace(Transaction tx)
@@ -71,11 +71,13 @@ namespace Nevar.Impl
             if (_freeSpace.Count == _originalFreeSpaceCount)
                 return;
             Debug.Assert(_freeSpaceKey != null);
-            if (_freeSpace.Count == 0)
+
+            foreach (var slice in GetOldTransactionsToDelete(tx))
             {
-                _env.FreeSpace.Delete(tx, _freeSpaceKey);
-                return;
+                _env.FreeSpace.Delete(tx, slice);
             }
+
+
             using (var ms = new MemoryStream())
             using (var writer = new BinaryWriter(ms))
             {
@@ -83,8 +85,33 @@ namespace Nevar.Impl
                 {
                     writer.Write(i);
                 }
+                ms.Position = 0;
                 _env.FreeSpace.Add(tx, _freeSpaceKey, ms);
             }
+        }
+
+        private unsafe IEnumerable<Slice> GetOldTransactionsToDelete(Transaction tx)
+        {
+            Debug.Assert(_freeSpaceKey != null);
+            
+            var toDelete = new List<Slice>();
+
+            using (var it = _env.FreeSpace.Iterate(tx))
+            {
+                if (it.Seek(Slice.BeforeAllKeys) == false)
+                    return toDelete;
+
+                do
+                {
+                    var slice = new Slice(it.Current);
+
+                    if (slice.Compare(_freeSpaceKey, _env.SliceComparer) > 0)
+                        break;
+
+                    toDelete.Add(slice);
+                } while (it.MoveNext());
+            }
+            return toDelete;
         }
 
         /// <summary>
@@ -107,8 +134,9 @@ namespace Nevar.Impl
             var toDelete = new List<Slice>();
             using (var iterator = _env.FreeSpace.Iterate(tx))
             {
-                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                if (iterator.Seek(_freeSpaceKey ?? Slice.BeforeAllKeys) == false)
                     return;
+
 #if DEBUG
                 var additions = new HashSet<long>();
 #endif
@@ -116,6 +144,10 @@ namespace Nevar.Impl
                 {
                     var node = iterator.Current;
                     var slice = new Slice(node);
+
+                    if (_freeSpaceKey != null &&
+                        slice.Compare(_freeSpaceKey, _env.SliceComparer) <= 0) // we already have this in memory, so we can just skip it
+                        continue;
 
                     var txId = slice.ToInt64() >> 8;
 
@@ -131,8 +163,8 @@ namespace Nevar.Impl
                         for (int i = 0; i < remainingPages; i++)
                         {
                             var pageNum = reader.ReadInt64();
-                            Debug.Assert(pageNum >= 2 && pageNum <= tx.Pager.NumberOfAllocatedPages);
 #if DEBUG
+                            Debug.Assert(pageNum >= 2 && pageNum <= tx.Pager.NumberOfAllocatedPages);
                             var condition = additions.Add(pageNum);
                             Debug.Assert(condition); // free page number HAVE to be unique
 #endif
@@ -146,21 +178,9 @@ namespace Nevar.Impl
             if (toDelete.Count == 0)
                 return;
 
-            _freeSpaceKey = toDelete[0]; // this is always the oldest
-
-            // if we have just one transaction record with free space, no need to touch it, we can
-            // just record that and change that if we need to later on
-            if (toDelete.Count == 1)
-            {
-                _originalFreeSpaceCount = _freeSpace.Count;
-                return;
-            }
-            _originalFreeSpaceCount = -1; // force merging of all the available transactions into one transaction free space record
-
-            foreach (var slice in toDelete)
-            {
-                _env.FreeSpace.Delete(tx, slice);
-            }
+            _freeSpaceKey = toDelete[toDelete.Count - 1].Clone(); // this is the latest available
+            // we record the current amount we have, so we know if we need to skip past it
+            _originalFreeSpaceCount = _freeSpace.Count;
         }
     }
 }

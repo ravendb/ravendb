@@ -169,5 +169,22 @@ namespace Nevar
 
 			return *(long*) _pointer;
 		}
+
+	    public Slice Clone()
+	    {
+            var buffer = new byte[Size];
+            if (_array == null)
+            {
+                fixed (byte* dest = buffer)
+                {
+                    NativeMethods.memcpy(dest, _pointer, _pointerSize);
+                }
+            }
+            else
+            {
+                Buffer.BlockCopy(_array, 0, buffer, 0, Size);
+            }
+            return new Slice(buffer);
+	    }
 	}
 }
