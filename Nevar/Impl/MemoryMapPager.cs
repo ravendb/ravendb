@@ -94,17 +94,17 @@ namespace Nevar.Impl
 				FlushPages(tuple.Item1, tuple.Item2);
 			}
 
-			var pages = sortedPagesToFlush.Select(Get).ToList();
+			//var pages = sortedPagesToFlush.Select(Get).ToList();
 
-			Console.WriteLine("Flush {3,6:#,#} with {0,3:#,#} pages - {1,3:#,#} kb writes and {2,3} seeks ({4,3:#,#;;0} leaves, {5,3:#,#;;0} branches, {6,3:#,#;;0} overflows)",
-							sortedPagesToFlush.Count,
-			                  (sortedPagesToFlush.Count*PageSize)/1024,
-			                  pageRangesToFlush.Count,
-			                  numberOfFlushes++,
-							  pages.Count(x=>x.IsLeaf),
-							  pages.Count(x=>x.IsBranch),
-							  pages.Count(x=>x.IsOverlfow)
-							  );
+			//Console.WriteLine("Flush {3,6:#,#} with {0,3:#,#} pages - {1,3:#,#} kb writes and {2,3} seeks ({4,3:#,#;;0} leaves, {5,3:#,#;;0} branches, {6,3:#,#;;0} overflows)",
+			//				sortedPagesToFlush.Count,
+			//				  (sortedPagesToFlush.Count*PageSize)/1024,
+			//				  pageRangesToFlush.Count,
+			//				  numberOfFlushes++,
+			//				  pages.Count(x=>x.IsLeaf),
+			//				  pages.Count(x=>x.IsBranch),
+			//				  pages.Count(x=>x.IsOverlfow)
+			//				  );
 		}
 
 		public override void Flush(long headerPageId)

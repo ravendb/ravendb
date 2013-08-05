@@ -13,10 +13,9 @@ namespace Nevar.Impl
         private Slice _freeSpaceKey;
         private int _originalFreeSpaceCount;
         private bool _alreadyLookingForFreeSpace;
-        private readonly List<long> _freeSpace = new List<long>();
+		private readonly ConsecutiveSequences _freeSpace = new ConsecutiveSequences();
 	    private int _lastTransactionPageUsage;
-	    private int _allocateFrom;
-	    public int _allocateUntil;
+
 	    public FreeSpaceCollector(StorageEnvironment env)
         {
             _env = env;
@@ -35,17 +34,13 @@ namespace Nevar.Impl
 			{
 				while (true)
 				{
-					if (_freeSpace.Count == 0)
+					long page;
+					if (_freeSpace.TryAllocate(num, out page))
 					{
-						if (_freeSpaceGatheredMinTx >= tx.Id)
-							return null;
-						GatherFreeSpace(tx);
-						continue;
+						var newPage = tx.Pager.Get(tx, page);
+						newPage.PageNumber = page;
+						return newPage;
 					}
-
-					var p = TryAllocatingFromFreeSpace(tx, num);
-					if (p != null)
-						return p;
 
 					if (_freeSpaceGatheredMinTx >= tx.Id)
 						return null;
@@ -58,30 +53,6 @@ namespace Nevar.Impl
 			}
 		}
 
-	    private Page TryAllocatingFromFreeSpace(Transaction tx, int num)
-	    {
-		    var start = 0;
-		    var len = 1;
-		    for (int i = 1; i < _freeSpace.Count && (len < num); i++)
-		    {
-			    if (_freeSpace[i - 1] + 1 != _freeSpace[i]) // hole found, try from current page
-			    {
-				    start = i;
-				    len = 1;
-				    continue;
-			    }
-			    len++;
-		    }
-
-		    if (len != num)
-			    return null;
-
-		    var page = _freeSpace[start];
-		    _freeSpace.RemoveRange(start, len);
-		    var newPage = tx.Pager.Get(tx, page);
-		    newPage.PageNumber = page;
-		    return newPage; // return newPage;
-	    }
 
 	    public void LastTransactionPageUsage(int pages)
 		{
@@ -112,8 +83,6 @@ namespace Nevar.Impl
                 {
                     writer.Write(i);
                 }
-                _freeSpace.Clear(); // this is no longer usable
-                ms.Position = 0;
                 _env.FreeSpace.Add(tx, _freeSpaceKey, ms);
             }
         }
@@ -176,8 +145,6 @@ namespace Nevar.Impl
 
             if (toDelete.Count == 0)
                 return;
-
-            _freeSpace.Sort();
 
             _freeSpaceKey = toDelete[0]; // this is always the oldest
 
