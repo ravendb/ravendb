@@ -73,7 +73,8 @@ namespace Nevar.Impl
 				return false;
 			Debug.Assert(_freeSpaceKeyTxId != -1);
 
-			foreach (var slice in GetOldTransactionsToDelete(tx))
+			var oldTransactionsToDelete = GetOldTransactionsToDelete(tx);
+			foreach (var slice in oldTransactionsToDelete)
 			{
 				_env.FreeSpace.Delete(tx, slice);
 			}
@@ -97,7 +98,7 @@ namespace Nevar.Impl
 			return true;
 		}
 
-		private unsafe IEnumerable<Slice> GetOldTransactionsToDelete(Transaction tx)
+		private unsafe List<Slice> GetOldTransactionsToDelete(Transaction tx)
 		{
 			var toDelete = new List<Slice>();
 
@@ -113,7 +114,7 @@ namespace Nevar.Impl
 					if (slice.ToInt64() > _freeSpaceKeyTxId)
 						break;
 
-					toDelete.Add(slice);
+					toDelete.Add(slice.Clone());
 				} while (it.MoveNext());
 			}
 			return toDelete;
