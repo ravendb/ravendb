@@ -23,7 +23,7 @@ namespace Nevar.Benchmark
 			//Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
 			//Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
-			Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
+			//Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
 			//Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
 			//Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
@@ -31,7 +31,7 @@ namespace Nevar.Benchmark
 			//Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
 			//Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-			//Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+			Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
 			//Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
 			//Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));

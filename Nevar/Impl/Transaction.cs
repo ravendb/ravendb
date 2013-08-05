@@ -198,6 +198,9 @@ namespace Nevar.Impl
             sortedPagesToFlush.Sort();
             _pager.Flush(sortedPagesToFlush);
 
+			if (_freeSpaceCollector != null)
+				_freeSpaceCollector.LastTransactionPageUsage(sortedPagesToFlush.Count);
+
             WriteHeader(_pager.Get(this, _id & 1)); // this will cycle between the first and second pages
 
             _pager.Flush(_id & 1); // and now we flush the metadata as well

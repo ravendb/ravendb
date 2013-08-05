@@ -14,11 +14,86 @@ namespace Nevar.Impl
         private int _originalFreeSpaceCount;
         private bool _alreadyLookingForFreeSpace;
         private readonly List<long> _freeSpace = new List<long>();
-
-        public FreeSpaceCollector(StorageEnvironment env)
+	    private int _lastTransactionPageUsage;
+	    private int _allocateFrom;
+	    public int _allocateUntil;
+	    public FreeSpaceCollector(StorageEnvironment env)
         {
             _env = env;
         }
+
+		public Page TryAllocateFromFreeSpace(Transaction tx, int num)
+		{
+			if (_env.FreeSpace == null)
+				return null;// this can happen the first time FreeSpace tree is created
+
+			if (_alreadyLookingForFreeSpace)
+				return null;// can't recursively find free space
+
+			_alreadyLookingForFreeSpace = true;
+			try
+			{
+				while (true)
+				{
+					if (_freeSpace.Count == 0)
+					{
+						if (_freeSpaceGatheredMinTx >= tx.Id)
+							return null;
+						GatherFreeSpace(tx);
+						continue;
+					}
+
+					var p = TryAllocatingFromFreeSpace(tx, num);
+					if (p != null)
+						return p;
+
+					if (_freeSpaceGatheredMinTx >= tx.Id)
+						return null;
+					GatherFreeSpace(tx);
+				}
+			}
+			finally
+			{
+				_alreadyLookingForFreeSpace = false;
+			}
+		}
+
+	    private Page TryAllocatingFromFreeSpace(Transaction tx, int num)
+	    {
+		    var start = 0;
+		    var len = 1;
+		    for (int i = 1; i < _freeSpace.Count && (len < num); i++)
+		    {
+			    if (_freeSpace[i - 1] + 1 != _freeSpace[i]) // hole found, try from current page
+			    {
+				    start = i;
+				    len = 1;
+				    continue;
+			    }
+			    len++;
+		    }
+
+		    if (len != num)
+			    return null;
+
+		    var page = _freeSpace[start];
+		    _freeSpace.RemoveRange(start, len);
+		    var newPage = tx.Pager.Get(tx, page);
+		    newPage.PageNumber = page;
+		    return newPage; // return newPage;
+	    }
+
+	    public void LastTransactionPageUsage(int pages)
+		{
+			if (pages == _lastTransactionPageUsage)
+				return;
+
+			// if there is a difference, we apply 1/4 the difference to the current value
+			// this is to make sure that we don't suddenly spike the required pages per transaction
+			// just because of one abnormally large / small transaction
+			_lastTransactionPageUsage += (pages - _lastTransactionPageUsage)/4;
+		}
+
 
         public void SaveOldFreeSpace(Transaction tx)
         {
@@ -120,62 +195,5 @@ namespace Nevar.Impl
                 _env.FreeSpace.Delete(tx, slice);
             }
         }
-
-        public Page TryAllocateFromFreeSpace(Transaction tx, int num)
-        {
-            if (_env.FreeSpace == null)
-                return null;// this can happen the first time FreeSpace tree is created
-
-            if (_alreadyLookingForFreeSpace)
-                return null;// can't recursively find free space
-
-            _alreadyLookingForFreeSpace = true;
-            try
-            {
-
-                var start = 0;
-                var len = 1;
-
-                while (true)
-                {
-                    if (_freeSpace.Count == 0)
-                    {
-                        if (_freeSpaceGatheredMinTx >= tx.Id)
-                            return null;
-                        GatherFreeSpace(tx);
-                        continue;
-                    }
-
-                    for (int i = 1; i < _freeSpace.Count && (len < num); i++)
-                    {
-                        if (_freeSpace[i - 1] + 1 != _freeSpace[i]) // hole found, try from current page
-                        {
-                            start = i;
-                            len = 1;
-                            continue;
-                        }
-                        len++;
-                    }
-
-                    if (len == num)
-                        break;
-
-                    if (_freeSpaceGatheredMinTx >= tx.Id)
-                        return null;
-                    GatherFreeSpace(tx);
-                }
-
-                var page = _freeSpace[start];
-                _freeSpace.RemoveRange(start, len);
-                var newPage = tx.Pager.Get(tx, page);
-                newPage.PageNumber = page;
-                return newPage;
-            }
-            finally
-            {
-                _alreadyLookingForFreeSpace = false;
-            }
-        }
-         
     }
 }
