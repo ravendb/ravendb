@@ -88,7 +88,7 @@ namespace Nevar.Trees
                 sibling = _tx.GetModifiedPage(parentPage, parentPage.GetNode(1)->PageNumber);
                 parentPage.LastSearchPosition = 0;
                 sibling.LastSearchPosition = 0;
-                page.LastSearchPosition = page.NumberOfEntries + 1;
+                page.LastSearchPosition = page.NumberOfEntries;
                 parentPage.LastSearchPosition = 1;
             }
             else // there is at least 1 page to our left
