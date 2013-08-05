@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using Nevar.Impl;
@@ -157,6 +158,7 @@ namespace Nevar
 
 		public void Set(long val)
 		{
+		    val = IPAddress.HostToNetworkOrder(val);
 			_array = BitConverter.GetBytes(val);
 		}
 
@@ -165,9 +167,9 @@ namespace Nevar
 			Debug.Assert(Size == sizeof(long));
 
 			if (_array != null)
-				return BitConverter.ToInt64(_array, 0);
+                return IPAddress.NetworkToHostOrder(BitConverter.ToInt64(_array, 0));
 
-			return *(long*) _pointer;
+            return IPAddress.NetworkToHostOrder(*(long*)_pointer);
 		}
 
 	    public Slice Clone()

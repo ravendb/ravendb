@@ -151,7 +151,7 @@ namespace Nevar.Impl
                     var node = iterator.Current;
                     var slice = new Slice(node);
 
-                    if (_freeSpaceKeyTxId <= slice.ToInt64()) // we already have this in memory, so we can just skip it
+                    if (_freeSpaceKeyTxId >= slice.ToInt64()) // we already have this in memory, so we can just skip it
                         continue;
 
                     var txId = slice.ToInt64() >> 8;
