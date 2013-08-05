@@ -51,5 +51,10 @@ namespace Nevar.Trees
         {
             _tree.SetState(_state);
         }
+
+		public override string ToString()
+		{
+			return _tree.Name + " " + _state.EntriesCount;
+		}
     }
 }

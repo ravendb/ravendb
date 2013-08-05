@@ -323,7 +323,7 @@ namespace Nevar.Trees
 
         public override string ToString()
         {
-            return Name;
+	        return Name + " " + State.EntriesCount;
         }
 
         internal void SetState(TreeMutableState state)
