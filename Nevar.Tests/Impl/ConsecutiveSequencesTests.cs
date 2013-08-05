@@ -16,8 +16,7 @@ namespace Nevar.Tests.Impl
 		[Fact]
 		public void WhenHasOneItemWillReturnIt()
 		{
-			var cs = new ConsecutiveSequences();
-			cs.Add(5);
+			var cs = new ConsecutiveSequences {5};
 			long l;
 			Assert.True(cs.TryAllocate(1, out l));
 			Assert.Equal(5, l);
@@ -26,9 +25,7 @@ namespace Nevar.Tests.Impl
 		[Fact]
 		public void WhenHasSeqWillReturnIt()
 		{
-			var cs = new ConsecutiveSequences();
-			cs.Add(5);
-			cs.Add(6);
+			var cs = new ConsecutiveSequences {5, 6};
 			long l;
 			Assert.True(cs.TryAllocate(1, out l));
 			Assert.Equal(5, l);
@@ -39,10 +36,7 @@ namespace Nevar.Tests.Impl
 		[Fact]
 		public void WillDetectSequenceOutOfOrder1()
 		{
-			var cs = new ConsecutiveSequences();
-			cs.Add(5);
-			cs.Add(18);
-			cs.Add(6);
+			var cs = new ConsecutiveSequences {5, 18, 6};
 
 			long l;
 			Assert.True(cs.TryAllocate(1, out l));
@@ -56,10 +50,7 @@ namespace Nevar.Tests.Impl
 		[Fact]
 		public void WillDetectSequenceOutOfOrder2()
 		{
-			var cs = new ConsecutiveSequences();
-			cs.Add(6);
-			cs.Add(18);
-			cs.Add(5);
+			var cs = new ConsecutiveSequences {6, 18, 5};
 
 			long l;
 			Assert.True(cs.TryAllocate(1, out l));

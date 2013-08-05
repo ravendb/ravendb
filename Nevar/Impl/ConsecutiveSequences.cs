@@ -61,14 +61,19 @@ namespace Nevar.Impl
 				var start = seq.Start;
 				seq.Count -= num;
 				seq.Start += num;
+				_sequencesByFirst.Remove(start);
+				if (seq.Count == 0)
+				{
+					_sequencesByLast.Remove(start);
+				}
+				else
+				{
+					_sequencesByFirst.Add(seq.Start, seq);
+				}
 				if (seq.Count < allocationSize) // can't serve the next request for this size
 				{
 					seq.AllocatingFor = 0;
 					_sequencesByAllocationSize.Remove(allocationSize);
-					if (seq.Count == 0)
-					{
-						_sequencesByLast.Remove(start);
-					}
 				}
 				v = start;
 				Count -= num;
