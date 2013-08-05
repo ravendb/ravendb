@@ -10,7 +10,7 @@ namespace Nevar.Impl
     {
         private readonly StorageEnvironment _env;
         private long _freeSpaceGatheredMinTx;
-        private Slice _freeSpaceKey;
+        private long _freeSpaceKeyTxId = -1;
         private int _originalFreeSpaceCount;
         private bool _alreadyLookingForFreeSpace;
         private readonly ConsecutiveSequences _freeSpace = new ConsecutiveSequences();
@@ -70,7 +70,7 @@ namespace Nevar.Impl
         {
             if (_freeSpace.Count == _originalFreeSpaceCount)
                 return;
-            Debug.Assert(_freeSpaceKey != null);
+            Debug.Assert(_freeSpaceKeyTxId != -1);
 
             foreach (var slice in GetOldTransactionsToDelete(tx))
             {
@@ -86,14 +86,14 @@ namespace Nevar.Impl
                     writer.Write(i);
                 }
                 ms.Position = 0;
-                _env.FreeSpace.Add(tx, _freeSpaceKey, ms);
+                var slice = new Slice(SliceOptions.Key);
+                slice.Set(_freeSpaceKeyTxId);
+                _env.FreeSpace.Add(tx, slice, ms);
             }
         }
 
         private unsafe IEnumerable<Slice> GetOldTransactionsToDelete(Transaction tx)
         {
-            Debug.Assert(_freeSpaceKey != null);
-            
             var toDelete = new List<Slice>();
 
             using (var it = _env.FreeSpace.Iterate(tx))
@@ -105,7 +105,7 @@ namespace Nevar.Impl
                 {
                     var slice = new Slice(it.Current);
 
-                    if (slice.Compare(_freeSpaceKey, _env.SliceComparer) > 0)
+                    if (slice.ToInt64() > _freeSpaceKeyTxId)
                         break;
 
                     toDelete.Add(slice);
@@ -134,7 +134,13 @@ namespace Nevar.Impl
             var toDelete = new List<Slice>();
             using (var iterator = _env.FreeSpace.Iterate(tx))
             {
-                if (iterator.Seek(_freeSpaceKey ?? Slice.BeforeAllKeys) == false)
+                var key = Slice.BeforeAllKeys;
+                if (_freeSpaceKeyTxId != -1)
+                {
+                    key = new Slice(SliceOptions.Key);
+                    key.Set(_freeSpaceKeyTxId);
+                } 
+                if (iterator.Seek(key) == false)
                     return;
 
 #if DEBUG
@@ -145,8 +151,7 @@ namespace Nevar.Impl
                     var node = iterator.Current;
                     var slice = new Slice(node);
 
-                    if (_freeSpaceKey != null &&
-                        slice.Compare(_freeSpaceKey, _env.SliceComparer) <= 0) // we already have this in memory, so we can just skip it
+                    if (_freeSpaceKeyTxId <= slice.ToInt64()) // we already have this in memory, so we can just skip it
                         continue;
 
                     var txId = slice.ToInt64() >> 8;
@@ -178,7 +183,7 @@ namespace Nevar.Impl
             if (toDelete.Count == 0)
                 return;
 
-            _freeSpaceKey = toDelete[toDelete.Count - 1].Clone(); // this is the latest available
+            _freeSpaceKeyTxId = toDelete[toDelete.Count - 1].ToInt64(); // this is the latest available
             // we record the current amount we have, so we know if we need to skip past it
             _originalFreeSpaceCount = _freeSpace.Count;
         }
