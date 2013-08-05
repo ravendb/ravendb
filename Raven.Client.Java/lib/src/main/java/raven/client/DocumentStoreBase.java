@@ -65,6 +65,8 @@ public abstract class DocumentStoreBase implements IDocumentStore {
     this.wasDisposed = wasDisposed;
   }
 
+  public abstract boolean hasJsonRequestFactory();
+
   public Map<String, String> getSharedOperationsHeaders() {
     return sharedOperationsHeaders;
   }

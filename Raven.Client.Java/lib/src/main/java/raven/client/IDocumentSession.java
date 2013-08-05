@@ -1,5 +1,6 @@
 package raven.client;
 
+import java.util.Collection;
 import java.util.UUID;
 
 import com.mysema.query.types.Path;
@@ -12,7 +13,7 @@ import raven.client.linq.IRavenQueryable;
 /**
  * Interface for document session
  */
-public interface IDocumentSession {
+public interface IDocumentSession extends AutoCloseable {
 
   /**
    * Get the accessor for advanced operations
@@ -51,7 +52,7 @@ public interface IDocumentSession {
    * @param ids
    * @return
    */
-  public <T> T[] load(Class<T> clazz, Iterable<String> ids);
+  public <T> T[] load(Class<T> clazz, Collection<String> ids);
 
   /**
    * Loads the specified entity with the specified id after applying
@@ -125,7 +126,7 @@ public interface IDocumentSession {
    * @param indexName Name of the index.
    * @return
    */
-  public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName);
+  //TODO: public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName);
 
   /**
    * Queries the specified index.
@@ -134,14 +135,14 @@ public interface IDocumentSession {
    * @param Whatever we are querying a map/reduce index (modify how we treat identifier properties)
    * @return
    */
-  public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce);
+//TODO: public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce);
 
   /**
    * Dynamically queries RavenDB.
    * @param clazz
    * @return
    */
-  public <T> IRavenQueryable<T> query(Class<T> clazz);
+//TODO: public <T> IRavenQueryable<T> query(Class<T> clazz);
 
   /**
    * Queries the index specified by indexCreator.
@@ -149,21 +150,21 @@ public interface IDocumentSession {
    * @param indexCreator
    * @return
    */
-  public <T> IRavenQueryable<T> query(Class<T> clazz, Class<AbstractIndexCreationTask> indexCreator);
+//TODO: public <T> IRavenQueryable<T> query(Class<T> clazz, Class<AbstractIndexCreationTask> indexCreator);
 
   /**
    * Begin a load while including the specified path
    * @param path
    * @return
    */
-  public ILoaderWithInclude<Object> include(String path);
+//TODO: public ILoaderWithInclude<Object> include(String path);
 
   /**
    * Begin a load while including the specified path
    * @param path
    * @return
    */
-  public <T> ILoaderWithInclude<T> include(Path<?> path);
+//TODO: public <T> ILoaderWithInclude<T> include(Path<?> path);
 
   //TODO: should we include this method? : ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
 
@@ -203,6 +204,19 @@ public interface IDocumentSession {
    * Saves all the changes to the Raven server.
    */
   public void saveChanges();
+
+  /**
+   * Stores the specified dynamic entity.
+   * @param entity
+   */
+  public void store(Object entity);
+
+  /**
+   *  Stores the specified dynamic entity, under the specified id
+   * @param entity
+   * @param id The id to store this entity under. If other entity exists with the same id it will be overridden
+   */
+  public void store(Object entity, String id);
 
   /**
    * Stores the specified entity with the specified etag

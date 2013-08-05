@@ -1,13 +1,21 @@
 package raven.client.document;
 
-import static org.junit.Assert.assertEquals;
+import raven.client.IDocumentSession;
+import raven.samples.Person;
 
 public class DocumentStoreTest {
   public static void main(String[] args) {
     try (DocumentStore documentStore = new DocumentStore()) {
       documentStore.parseConnectionString("Url=http://localhost:8123;");
+      documentStore.initialize();
 
-      assertEquals("http://localhost:8123", documentStore.getUrl());
+      try (IDocumentSession session = documentStore.openSession()) {
+
+
+        session.store(new Person());
+        session.saveChanges();
+      }
+
 
     } catch (Exception e) {
       e.printStackTrace();

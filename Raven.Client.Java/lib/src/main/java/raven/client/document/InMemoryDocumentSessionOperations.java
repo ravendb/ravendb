@@ -1,13 +1,1031 @@
 package raven.client.document;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
+
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang.StringUtils;
+
+import com.google.common.base.Defaults;
+
+import raven.abstractions.basic.Holder;
+import raven.abstractions.closure.Action1;
+import raven.abstractions.closure.Action3;
+import raven.abstractions.closure.Function1;
+import raven.abstractions.commands.DeleteCommandData;
+import raven.abstractions.commands.ICommandData;
+import raven.abstractions.commands.PutCommandData;
+import raven.abstractions.data.BatchResult;
+import raven.abstractions.data.Constants;
+import raven.abstractions.data.Etag;
+import raven.abstractions.data.HttpMethods;
+import raven.abstractions.data.JsonDocument;
+import raven.abstractions.exceptions.ConcurrencyException;
+import raven.abstractions.exceptions.ReadVetoException;
+import raven.abstractions.extensions.JsonExtensions;
+import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.util.IncludesUtil;
+import raven.client.DocumentStoreBase;
+import raven.client.IDocumentStore;
+import raven.client.connection.HttpExtensions;
+import raven.client.exceptions.NonAuthoritativeInformationException;
+import raven.client.exceptions.NonUniqueObjectException;
+import raven.client.listeners.IDocumentConversionListener;
+import raven.client.listeners.IDocumentDeleteListener;
+import raven.client.listeners.IDocumentStoreListener;
+import raven.client.util.ObjectReferenceEqualityMap;
+import raven.client.util.ObjectReferenceEqualitySet;
+import raven.client.utils.Closer;
+
 /**
  * Abstract implementation for in memory session operations
  */
-public class InMemoryDocumentSessionOperations {
+public abstract class InMemoryDocumentSessionOperations implements AutoCloseable {
+
+  private static AtomicInteger counter;
+
+  private final int hash = counter.incrementAndGet();
+
+  protected boolean generateDocumentKeysOnStore = true;
+  //session id
+  private UUID id;
+
+  private String databaseName;
+
+  //TODO: protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+
+  //The entities waiting to be deleted
+  protected final ObjectReferenceEqualitySet<Object> deletedEntities = new ObjectReferenceEqualitySet<>();
+
+  //Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
+  protected final Set<String> knownMissingIds = new HashSet<>();
+
+  private Map<String, Object> externalState;
+
+  private boolean hasEnlisted;
+
+  private static ThreadLocal<Map<String, Set<String>>> _registeredStoresInTransaction;
+
+  // hold the data required to manage the data for RavenDB's Unit of Work
+  protected final Map<Object, DocumentMetadata> entitiesAndMetadata = new ObjectReferenceEqualityMap<>();
+
+  // Translate between a key and its associated entity
+  protected final Map<String, Object> entitiesByKey = new HashMap<>();
+
+  protected final String dbName;
+  private final DocumentStoreBase documentStore;
+
+  // all the listeners for this session
+  protected final DocumentSessionListeners listeners;
+
+  private int numberOfRequests;
+  private Long nonAuthoritativeInformationTimeout;
+  private UUID resourceManagerId;
+  private int maxNumberOfRequestsPerSession;
+  private boolean useOptimisticConcurrency;
+  public boolean allowNonAuthoritativeInformation;
+
+  private final List<ICommandData> deferedCommands = new ArrayList<ICommandData>();
+  public GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
+  public EntityToJson entityToJson;
+
+  /**
+   * Gets the number of entities held in memory to manage Unit of Work
+   * @return
+   */
+  public int getNumberOfEntitiesInUnitOfWork() {
+    return entitiesAndMetadata.size();
+  }
+
+  public int getNumberOfRequests() {
+    return numberOfRequests;
+  }
+
+  // The document store associated with this session
+  public IDocumentStore getDocumentStore() {
+    return documentStore;
+  }
+
+  private static Map<String, Set<String>> getRegisteredStoresInTransaction() {
+    if (_registeredStoresInTransaction.get() == null) {
+      _registeredStoresInTransaction.set(new HashMap<String, Set<String>>());
+    }
+    return _registeredStoresInTransaction.get();
+  }
+
+  public Map<String, Object> getExternalState() {
+    if (externalState == null)  {
+      externalState = new HashMap<String, Object>();
+    }
+    return externalState;
+  }
+
+  public UUID getId() {
+    return id;
+  }
+
+  protected void setDatabaseName(String databaseName) {
+    this.databaseName = databaseName;
+  }
 
   public String getDatabaseName() {
-    // TODO Auto-generated method stub
+    return databaseName;
+  }
+
+  /**
+   * Initializes a new instance of the {@link InMemoryDocumentSessionOperations} class.
+   * @param dbName
+   * @param documentStore
+   * @param listeners
+   * @param id
+   */
+  protected InMemoryDocumentSessionOperations(String dbName,
+      DocumentStoreBase documentStore,
+      DocumentSessionListeners listeners,
+      UUID id) {
+    this.id = id;
+    this.dbName = dbName;
+    this.documentStore = documentStore;
+    this.listeners = listeners;
+    this.resourceManagerId = documentStore.getResourceManagerId();
+    this.useOptimisticConcurrency = false;
+    this.allowNonAuthoritativeInformation = true;
+    this.nonAuthoritativeInformationTimeout = 15 * 1000L;
+    this.maxNumberOfRequestsPerSession = documentStore.getConventions().getMaxNumberOfRequestsPerSession();
+    this.generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, new Function1<Object, String>() {
+      @Override
+      public String apply(Object entity) {
+        return generateKey(entity);
+      }
+    });
+    this.entityToJson = new EntityToJson(documentStore, listeners);
+  }
+
+  /**
+   * Gets the timeout to wait for authoritative information if encountered non authoritative document.
+   * @return
+   */
+  public Long getNonAuthoritativeInformationTimeout() {
+    return nonAuthoritativeInformationTimeout;
+  }
+
+  /**
+   * Sets the timeout to wait for authoritative information if encountered non authoritative document.
+   * @param nonAuthoritativeInformationTimeout
+   */
+  public void setNonAuthoritativeInformationTimeout(Long nonAuthoritativeInformationTimeout) {
+    this.nonAuthoritativeInformationTimeout = nonAuthoritativeInformationTimeout;
+  }
+
+  /**
+   * Gets the store identifier for this session.
+   * The store identifier is the identifier for the particular RavenDB instance.
+   * @return
+   */
+  public String getStoreIdentifier() {
+    return documentStore.getIdentifier() + ";" + getDatabaseName();
+  }
+
+  /**
+   * Gets the conventions used by this session
+   *
+   * This instance is shared among all sessions, changes to the {@link DocumentConvention} should be done
+   * via the {@link IDocumentStore} instance, not on a single session.
+   * @return
+   */
+  public DocumentConvention getConventions() {
+    return documentStore.getConventions();
+  }
+
+  /**
+   * The transaction resource manager identifier
+   * @return
+   */
+  public UUID getResourceManagerId() {
+    return resourceManagerId;
+  }
+
+  /**
+   * Gets the max number of requests per session.
+   * If the {@link #numberOfRequest} rise above {@link #maxNumberOfRequestsPerSession}>, an exception will be thrown.
+   *
+   * @return
+   */
+  public int getMaxNumberOfRequestsPerSession() {
+    return maxNumberOfRequestsPerSession;
+  }
+
+  /**
+   * Sets the max number of requests per session.
+   * If the {@link #numberOfRequest} rise above {@link #maxNumberOfRequestsPerSession}>, an exception will be thrown.
+   * @param maxNumberOfRequestsPerSession
+   */
+  public void setMaxNumberOfRequestsPerSession(int maxNumberOfRequestsPerSession) {
+    this.maxNumberOfRequestsPerSession = maxNumberOfRequestsPerSession;
+  }
+
+  /**
+   * Gets a value indicating whether the session should use optimistic concurrency.
+   * When set to <c>true</c>, a check is made so that a change made behind the session back would fail
+   * and raise {@link ConcurrencyException}
+   * @return
+   */
+  public boolean isUseOptimisticConcurrency() {
+    return useOptimisticConcurrency;
+  }
+
+  /**
+   * Sets a value indicating whether the session should use optimistic concurrency.
+   * When set to <c>true</c>, a check is made so that a change made behind the session back would fail
+   * and raise {@link ConcurrencyException}
+   * @return
+   */
+  public void setUseOptimisticConcurrency(boolean useOptimisticConcurrency) {
+    this.useOptimisticConcurrency = useOptimisticConcurrency;
+  }
+
+  /**
+   * Gets the ETag for the specified entity.
+   *
+   * If the entity is transient, it will load the etag from the store
+   * and associate the current state of the entity with the etag from the server.
+   *
+   * @param instance
+   * @return
+   */
+  public <T> Etag getEtagFor(T instance) {
+    return getDocumentMetadata(instance).getEtag();
+  }
+
+  /**
+   * Gets the metadata for the specified entity.
+   * @param instance
+   * @return
+   */
+  public <T> RavenJObject getMetadataFor(T instance) {
+    return getDocumentMetadata(instance).getMetadata();
+  }
+
+  private <T> DocumentMetadata getDocumentMetadata(T instance) {
+    DocumentMetadata value;
+    if (entitiesAndMetadata.containsKey(instance)) {
+      return entitiesAndMetadata.get(instance);
+    } else {
+      Holder<String> idHolder = new Holder<>();
+
+      if (generateEntityIdOnTheClient.tryGetIdFromInstance((Object)instance, idHolder)) {
+        assertNoNonUniqueInstance(instance, idHolder.value);
+        JsonDocument jsonDocument = getJsonDocument(idHolder.value);
+        entitiesByKey.put(idHolder.value, instance);
+
+        value = new DocumentMetadata();
+        value.setEtag(useOptimisticConcurrency ? Etag.empty(): null);
+        value.setKey(idHolder.value);
+        value.setOriginalMetadata(jsonDocument.getMetadata());
+        value.setMetadata(jsonDocument.getMetadata().cloneToken());
+        value.setOriginalValue(new RavenJObject());
+
+      } else {
+        throw new IllegalStateException("Could not find the document key for " + instance);
+      }
+      return value;
+    }
+  }
+
+  /**
+   * Get the json document by key from the store
+   * @param documentKey
+   * @return
+   */
+  protected abstract JsonDocument getJsonDocument(String documentKey);
+
+  /**
+   * Returns whatever a document with the specified id is loaded in the
+   * current session
+   * @param id
+   * @return
+   */
+  public boolean isLoaded(String id) {
+    return entitiesByKey.containsKey(id);
+  }
+
+  /**
+   * Returns whatever a document with the specified id is deleted
+   * or known to be missing
+   * @param id
+   * @return
+   */
+  public boolean isDeleted(String id) {
+    return knownMissingIds.contains(id);
+  }
+
+  /**
+   * Gets the document id.
+   * @param instance
+   * @return
+   */
+  public String getDocumentId(Object instance) {
+    if (instance == null)
+      return null;
+    DocumentMetadata metadata = entitiesAndMetadata.get(instance);
+    if (metadata == null) {
+      return null;
+    }
+    return metadata.getKey();
+  }
+
+  /**
+   * Gets a value indicating whether any of the entities tracked by the session has changes.
+   */
+  public boolean hasChanges() {
+    if (deletedEntities.size() > 0) {
+      return true;
+    }
+    for (Map.Entry<Object, DocumentMetadata> pair : entitiesAndMetadata.entrySet()) {
+      if (entityChanged(pair.getKey(), pair.getValue())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Determines whether the specified entity has changed.
+   *
+   * @param entity
+   * @return
+   */
+  public boolean hasChanged(Object entity) {
+    DocumentMetadata value;
+    if (entitiesAndMetadata.containsKey(entity)) {
+      value = entitiesAndMetadata.get(entity);
+      return entityChanged(entity, value);
+    } else {
+      return false;
+    }
+  }
+
+  public void incrementRequestCount() {
+    if (++numberOfRequests > maxNumberOfRequestsPerSession)
+      throw new IllegalStateException(String.format("The maximum number of requests (%d) allowed for this session has been reached."  +
+          "Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and " +
+          "Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves (call SaveChanges() only once)." +
+          "You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is" +
+          "advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a" +
+          "more responsive application.", maxNumberOfRequestsPerSession));
+  }
+
+  /**
+   * Tracks the entity inside the unit of work
+   * @param entityType
+   * @param documentFound
+   * @return
+   */
+  public Object trackEntity(Class<?> entityType, JsonDocument documentFound) {
+    if (Boolean.TRUE.equals(documentFound.isNonAuthoritativeInformation()) && !allowNonAuthoritativeInformation) {
+      throw new NonAuthoritativeInformationException("Document " + documentFound.getKey() +
+          " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+    }
+    if (Boolean.TRUE.equals(documentFound.getMetadata().value(Boolean.class, Constants.RAVEN_DOCUMENT_DOES_NOT_EXISTS))) {
+      return getDefaultValue(entityType); // document is not really there.
+    }
+    if (!documentFound.getMetadata().containsKey("@etag")) {
+      documentFound.getMetadata().add("@etag", new RavenJValue(documentFound.getEtag().toString()));
+    }
+    if (!documentFound.getMetadata().containsKey(Constants.LAST_MODIFIED)) {
+      documentFound.getMetadata().add(Constants.LAST_MODIFIED, new RavenJValue(documentFound.getLastModified()));
+    }
+
+    return trackEntity(entityType, documentFound.getKey(), documentFound.getDataAsJson(), documentFound.getMetadata(), false);
+  }
+
+  /**
+   * Tracks the entity.
+   * @param entityType
+   * @param key
+   * @param document
+   * @param metadata
+   * @param noTracking
+   * @return
+   */
+  Object trackEntity(Class<?> entityType, String key, RavenJObject document, RavenJObject metadata, boolean noTracking) {
+    document.remove("@metadata");
+    Object entity;
+    if (entitiesByKey.containsKey(key)) {
+      // the local instance may have been changed, we adhere to the current Unit of Work
+      // instance, and return that, ignoring anything new.
+      return entitiesByKey.get(key);
+    } else {
+      entity = convertToEntity(entityType, key, document, metadata);
+    }
+
+    String etag = metadata.value(String.class, "@etag");
+
+    if (metadata.value(Boolean.TYPE, "Non-Authoritative-Information") && !allowNonAuthoritativeInformation) {
+      throw new NonAuthoritativeInformationException("Document " + key +
+          " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+    }
+
+    if (!noTracking) {
+      DocumentMetadata docMeta = new DocumentMetadata();
+      docMeta.setOriginalMetadata(document);
+      docMeta.setMetadata(metadata);
+      docMeta.setOriginalMetadata(metadata.cloneToken());
+      docMeta.setEtag(HttpExtensions.etagHeaderToEtag(etag));
+      docMeta.setKey(key);
+
+      entitiesAndMetadata.put(entity, docMeta);
+      entitiesByKey.put(key, entity);
+    }
+
+    return entity;
+  }
+
+  /**
+   * Converts the json document to an entity.
+   * @param entityType
+   * @param id
+   * @param documentFound
+   * @param metadata
+   * @return
+   */
+  Object convertToEntity(Class<?> entityType, String id, RavenJObject documentFound, RavenJObject metadata) {
+    try {
+      if (RavenJObject.class.equals(entityType)) {
+        return documentFound.cloneToken();
+      }
+      Object defaultValue = getDefaultValue(entityType);
+      Object entity = defaultValue;
+      ensureNotReadVetoed(metadata);
+
+      AutoCloseable disposable = null;
+      DefaultRavenContractResolver defaultRavenContractResolver = (DefaultRavenContractResolver) getConventions().getJsonContractResolver();
+      if (defaultRavenContractResolver != null) {
+        disposable = defaultRavenContractResolver.registerForExtensionData(new Action3<Object, String, RavenJToken>() {
+          @Override
+          public void apply(Object o, String key, RavenJToken value) {
+            registerMissingProperties(o, key, value);
+          }
+        });
+      }
+
+      try {
+        String documentType = getConventions().getClrType(id, documentFound, metadata);
+        if (documentType != null) {
+          Class< ? > type = Class.forName(documentType);
+          if (type != null) {
+            entity = JsonExtensions.getDefaultObjectMapper().readValue(documentFound.toString(), type);
+          }
+        }
+
+        generateEntityIdOnTheClient.trySetIdentity(entity, id);
+        for (IDocumentConversionListener documentConversionListener: listeners.getConversionListeners()) {
+          documentConversionListener.documentToEntity(id, entity, documentFound, metadata);
+        }
+
+        return entity;
+      } finally {
+        Closer.close(disposable);
+      }
+
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
 
   }
-//TODO:
+
+  private void registerMissingProperties(Object o, String key, RavenJToken value) {
+    if (!entityToJson.getMissingDictionary().containsKey(o)) {
+      entityToJson.getMissingDictionary().put(o, new HashMap<String, RavenJToken>());
+    }
+    Map<String, RavenJToken> dictionary = entityToJson.getMissingDictionary().get(o);
+    dictionary.put(key, value);
+  }
+
+  /**
+   * Gets the default value of the specified type.
+   * @param type
+   * @return
+   */
+  static Object getDefaultValue(Class<?> type) {
+    return Defaults.defaultValue(type);
+  }
+
+  /**
+   *
+   * Gets  a value indicating whether non authoritative information is allowed.
+   * Non authoritative information is document that has been modified by a transaction that hasn't been committed.
+   * The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
+   * will fail, because it is already modified.
+   * If set to <c>false</c>, the session will wait nonAuthoritativeInformationTimeout for the transaction to commit to get an
+   * authoritative information. If the wait is longer than nonAuthoritativeInformationTimeout, NonAuthoritativeInformationException is thrown.
+   * @return  true  if non authoritative information is allowed; otherwise, <c>false</c>.
+   */
+  public boolean isAllowNonAuthoritativeInformation() {
+    return allowNonAuthoritativeInformation;
+  }
+
+  /**
+   * Sets  a value indicating whether non authoritative information is allowed.
+   * Non authoritative information is document that has been modified by a transaction that hasn't been committed.
+   * The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
+   * will fail, because it is already modified.
+   * If set to <c>false</c>, the session will wait nonAuthoritativeInformationTimeout for the transaction to commit to get an
+   * authoritative information. If the wait is longer than nonAuthoritativeInformationTimeout, NonAuthoritativeInformationException is thrown.
+   */
+  public void setAllowNonAuthoritativeInformation(boolean allowNonAuthoritativeInformation) {
+    this.allowNonAuthoritativeInformation = allowNonAuthoritativeInformation;
+  }
+
+  /**
+   * Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.
+   */
+  public <T> void delete(T entity) {
+    if (entity == null) {
+      throw new IllegalArgumentException("Entity is null");
+    }
+    if (!entitiesAndMetadata.containsKey(entity)) {
+      throw new IllegalStateException(entity + " is not associated with the session, cannot delete unknown entity instance");
+    }
+    DocumentMetadata value = entitiesAndMetadata.get(entity);
+    if (value.getOriginalMetadata().containsKey(Constants.RAVEN_READ_ONLY) && value.getOriginalMetadata().value(Boolean.class, Constants.RAVEN_READ_ONLY)) {
+      throw new IllegalStateException(entity + " is marked as read only and cannot be deleted");
+    }
+
+    deletedEntities.add(entity);
+    knownMissingIds.add(value.getKey());
+  }
+
+  private static void ensureNotReadVetoed(RavenJObject metadata) {
+    RavenJToken readVetoToken = metadata.get("Raven-Read-Veto");
+    if (readVetoToken instanceof RavenJObject) {
+      RavenJObject readVeto = (RavenJObject) readVetoToken;
+      String s = readVeto.value(String.class, "Reason");
+      throw new ReadVetoException(
+          "Document could not be read because of a read veto.\n"  +
+              "The read was vetoed by: " + readVeto.value(String.class, "Trigger") + "\n" +
+              "Veto reason: " + s
+          );
+    } else {
+      return;
+    }
+  }
+
+  /**
+   * Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
+   * @param entity
+   */
+  public void store(Object entity) {
+    Holder<String> id = new Holder<>();
+
+    boolean hasId = generateEntityIdOnTheClient.tryGetIdFromInstance(entity, id);
+    storeInternal(entity, null, null, hasId == false);
+  }
+
+  /**
+   * Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
+   * @param entity
+   * @param etag
+   */
+  public void store(Object entity, Etag etag) {
+    storeInternal(entity, etag, null, true);
+  }
+
+  /**
+   * Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
+   * @param entity
+   * @param id
+   */
+  public void store(Object entity, String id) {
+    storeInternal(entity, null, id, false);
+  }
+
+  /**
+   * Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
+   * @param entity
+   * @param etag
+   * @param id
+   */
+  public void store(Object entity, Etag etag, String id) {
+    storeInternal(entity, etag, id, true);
+  }
+
+  private void storeInternal(Object entity, Etag etag, String id, boolean forceConcurrencyCheck) {
+    if (entity == null) {
+      throw new IllegalArgumentException("entity is null");
+    }
+
+    if (entitiesAndMetadata.containsKey(entity)) {
+      DocumentMetadata value = entitiesAndMetadata.get(entity);
+      if (etag != null) {
+        value.setEtag(etag);
+      }
+      value.setForceConcurrencyCheck(forceConcurrencyCheck);
+      return;
+    }
+
+    if (id == null) {
+      if (generateDocumentKeysOnStore) {
+        id = generateEntityIdOnTheClient.generateDocumentKeyForStorage(entity);
+      } else {
+        rememberEntityForDocumentKeyGeneration(entity);
+      }
+    } else {
+      // Store it back into the Id field so the client has access to to it
+      generateEntityIdOnTheClient.trySetIdentity(entity, id);
+    }
+
+    // we make the check here even if we just generated the key
+    // users can override the key generation behavior, and we need
+    // to detect if they generate duplicates.
+    assertNoNonUniqueInstance(entity, id);
+
+    RavenJObject metadata = new RavenJObject();
+    String tag = documentStore.getConventions().getTypeTagName(entity.getClass());
+    if (tag != null) {
+      metadata.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue(tag));
+    }
+    if (id != null) {
+      knownMissingIds.remove(id);
+    }
+    storeEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
+  }
+
+
+  protected abstract String generateKey(Object entity);
+
+  protected void rememberEntityForDocumentKeyGeneration(Object entity) {
+    throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
+  }
+
+  protected void storeEntityInUnitOfWork(String id, Object entity, Etag etag, RavenJObject metadata, boolean forceConcurrencyCheck) {
+    DocumentMetadata meta = new DocumentMetadata();
+    meta.setKey(id);
+    meta.setMetadata(metadata);
+    meta.setOriginalMetadata(new RavenJObject());
+    meta.setEtag(etag);
+    meta.setOriginalValue(new RavenJObject());
+    meta.setForceConcurrencyCheck(forceConcurrencyCheck);
+
+    entitiesAndMetadata.put(entity, meta);
+
+    if (id != null) {
+      entitiesByKey.put(id, entity);
+    }
+  }
+
+  protected void assertNoNonUniqueInstance(Object entity, String id) {
+    if (id == null || id.endsWith("/") || !entitiesByKey.containsKey(id) || entitiesByKey.get(id) == entity) {
+      return;
+    }
+
+    throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
+  }
+
+  /**
+   * Creates the put entity command.
+   * @param entity
+   * @param documentMetadata
+   * @return
+   */
+  protected ICommandData createPutEntityCommand(Object entity, DocumentMetadata documentMetadata) {
+
+    Holder<String> idHolder = new Holder<>();
+
+    if (generateEntityIdOnTheClient.tryGetIdFromInstance(entity, idHolder) &&
+        documentMetadata.getKey() != null &&
+        !documentMetadata.getKey().equalsIgnoreCase(idHolder.value)) {
+      throw new IllegalStateException("Entity " + entity.getClass().getName() + " had document key '" +
+          documentMetadata.getKey() + "' but now has document key property '" + idHolder.value + "'.\n" +
+          "You cannot change the document key property of a entity loaded into the session");
+    }
+
+    RavenJObject json = entityToJson.convertEntityToJson(documentMetadata.getKey(), entity, documentMetadata.getMetadata());
+
+    Etag etag = (isUseOptimisticConcurrency() || documentMetadata.isForceConcurrencyCheck() )? ( documentMetadata.getEtag() != null ? documentMetadata.getEtag() : Etag.empty() ) : null;
+
+    PutCommandData putCommand = new PutCommandData();
+    putCommand.setDocument(json);
+    putCommand.setEtag(etag);
+    putCommand.setKey(documentMetadata.getKey());
+    putCommand.setMetadata(documentMetadata.getMetadata().cloneToken());
+    return putCommand;
+
+  }
+
+  /**
+   * Updates the batch results.
+   * @param batchResults
+   * @param saveChangesData
+   */
+  protected void updateBatchResults(List<BatchResult> batchResults, SaveChangesData saveChangesData) {
+    if (documentStore.hasJsonRequestFactory() && getConventions().isShouldAggressiveCacheTrackChanges() && batchResults.size() != 0) {
+      documentStore.getJsonRequestFactory().expireItemsFromCache(databaseName != null ? databaseName : Constants.SYSTEM_DATABASE);
+    }
+    for (int i = saveChangesData.getDeferredCommandsCount(); i < batchResults.size(); i++) {
+      BatchResult batchResult = batchResults.get(i);
+      if (!HttpMethods.PUT.equals(batchResult.getMethod())) {
+        continue;
+      }
+
+      Object entity = saveChangesData.getEntities().get(i - saveChangesData.getDeferredCommandsCount());
+      if (!entitiesAndMetadata.containsKey(entity)) {
+        continue;
+      }
+      DocumentMetadata documentMetadata = entitiesAndMetadata.get(entity);
+      batchResult.getMetadata().add("@etag", new RavenJValue(batchResult.getEtag()));
+      entitiesByKey.put(batchResult.getKey(), entity);
+
+      documentMetadata.setEtag(batchResult.getEtag());
+      documentMetadata.setKey(batchResult.getKey());
+      documentMetadata.setOriginalMetadata(batchResult.getMetadata().cloneToken());
+      documentMetadata.setMetadata(batchResult.getMetadata());
+      documentMetadata.setOriginalValue(entityToJson.convertEntityToJson(documentMetadata.getKey(), entity, documentMetadata.getMetadata()));
+
+      generateEntityIdOnTheClient.trySetIdentity(entity, batchResult.getKey());
+
+      for (IDocumentStoreListener documentStoreListener : listeners.getStoreListeners()) {
+        documentStoreListener.afterStore(batchResult.getKey(), entity, batchResult.getMetadata());
+      }
+    }
+
+    BatchResult lastPut = null;
+    for (int i = batchResults.size() - 1; i >=0; i--) {
+      if (batchResults.get(i).getMethod().equals("PUT")) {
+        lastPut = batchResults.get(i);
+        break;
+      }
+    }
+    if (lastPut == null) {
+      return ;
+    }
+
+    documentStore.getLastEtagHolder().updateLastWrittenEtag(lastPut.getEtag());
+  }
+
+  /**
+   * Prepares for save changes.
+   * @return
+   */
+  protected SaveChangesData prepareForSaveChanges() {
+    getEntityToJson().getCachedJsonDocs().clear();
+
+    SaveChangesData result = new SaveChangesData();
+    result.setEntities(new ArrayList<>());
+    result.setCommands(new ArrayList<ICommandData>(deferedCommands));
+    result.setDeferredCommandsCount(deferedCommands.size());
+
+    deferedCommands.clear();
+
+    if (documentStore.getEnlistInDistributedTransactions()) {
+      tryEnlistInAmbientTransaction();
+    }
+
+    prepareForEntitiesDeletion(result);
+    prepareForEntitiesPuts(result);
+
+    return result;
+  }
+
+  private void prepareForEntitiesPuts(SaveChangesData result) {
+    for (Map.Entry<Object, DocumentMetadata> pair: entitiesAndMetadata.entrySet()) {
+      if (entityChanged(pair.getKey(), pair.getValue())) {
+        for (IDocumentStoreListener documentStoreListener :listeners.getStoreListeners()) {
+
+          if (documentStoreListener.beforeStore(pair.getValue().getKey(), pair.getKey(), pair.getValue().getMetadata(), pair.getValue().getOriginalValue())) {
+            entityToJson.getCachedJsonDocs().remove(pair.getKey());
+          }
+        }
+        result.getEntities().add(pair.getKey());
+
+        if (pair.getValue().getKey() != null) {
+          entitiesByKey.remove(pair.getValue().getKey());
+        }
+        result.getCommands().add(createPutEntityCommand(pair.getKey(), pair.getValue()));
+      }
+    }
+  }
+
+  private void prepareForEntitiesDeletion(SaveChangesData result) {
+    DocumentMetadata value = null;
+
+    List<String> keysToDelete = new ArrayList<>();
+
+    for (Object deletedEntity: deletedEntities) {
+      if (entitiesAndMetadata.containsKey(deletedEntity)) {
+        value = entitiesAndMetadata.get(deletedEntity);
+        if (!value.getOriginalMetadata().containsKey(Constants.RAVEN_READ_ONLY) ||
+            !value.getOriginalMetadata().value(boolean.class, Constants.RAVEN_READ_ONLY)) {
+          keysToDelete.add(value.getKey());
+        }
+      }
+    }
+    for(String key: keysToDelete) {
+      Etag etag = null;
+      Object existingEntity = null;
+      DocumentMetadata metadata = null;
+      if (entitiesByKey.containsKey(key)) {
+        existingEntity = entitiesByKey.get(key);
+        if (entitiesAndMetadata.containsKey(existingEntity)) {
+          metadata = entitiesAndMetadata.get(existingEntity);
+        }
+        entitiesAndMetadata.remove(existingEntity);
+        entitiesByKey.remove(key);
+      }
+
+      etag = isUseOptimisticConcurrency() ? etag : null;
+      result.getEntities().add(existingEntity);
+      for (IDocumentDeleteListener deleteListener: listeners.getDeleteListeners()) {
+        deleteListener.beforeDelete(key, existingEntity, metadata != null ? metadata.getMetadata(): null);
+      }
+      DeleteCommandData delCmd = new DeleteCommandData();
+      delCmd.setEtag(etag);
+      delCmd.setKey(key);
+
+      result.getCommands().add(delCmd);
+    }
+    deletedEntities.clear();
+  }
+
+  protected void tryEnlistInAmbientTransaction() {
+    /*TODO:
+    if (hasEnlisted || Transaction.Current == null)
+      return;
+
+    HashSet<string> registered;
+    var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
+    if (RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
+    {
+      RegisteredStoresInTransaction[localIdentifier] =
+          registered = new HashSet<string>();
+    }
+
+    if (registered.Add(StoreIdentifier))
+    {
+      var transactionalSession = (ITransactionalDocumentSession)this;
+      var ravenClientEnlistment = new RavenClientEnlistment(documentStore, transactionalSession, () =>
+      {
+        RegisteredStoresInTransaction.Remove(localIdentifier);
+        if (documentStore.WasDisposed)
+          throw new ObjectDisposedException("RavenDB Session");
+      });
+      if(documentStore.TransactionRecoveryStorage is VolatileOnlyTransactionRecoveryStorage)
+        Transaction.Current.EnlistVolatile(ravenClientEnlistment, EnlistmentOptions.None);
+      else
+        Transaction.Current.EnlistDurable(ResourceManagerId, ravenClientEnlistment, EnlistmentOptions.None);
+    }
+    hasEnlisted = true;
+     */
+  }
+
+
+  /**
+   * Mark the entity as read only, change tracking won't apply
+   * to such an entity. This can be done as an optimization step, so
+   * we don't need to check the entity for changes.
+   * @param entity
+   */
+  public void markReadOnly(Object entity) {
+    getMetadataFor(entity).add(Constants.RAVEN_READ_ONLY, new RavenJValue(true));
+  }
+
+  /**
+   * Determines if the entity have changed.
+   * @param entity
+   * @param documentMetadata
+   * @return
+   */
+  protected boolean entityChanged(Object entity, DocumentMetadata documentMetadata) {
+    if (documentMetadata == null) {
+      return true;
+    }
+
+    Holder<String> idHolder = new Holder<>();
+    if (generateEntityIdOnTheClient.tryGetIdFromInstance(entity, idHolder) &&
+        !StringUtils.equalsIgnoreCase(documentMetadata.getKey(), idHolder.value)) {
+      return true;
+    }
+
+    // prevent saves of a modified read only entity
+    if (documentMetadata.getOriginalMetadata().containsKey(Constants.RAVEN_READ_ONLY)
+        && documentMetadata.getOriginalMetadata().value(boolean.class, Constants.RAVEN_READ_ONLY)
+        && documentMetadata.getMetadata().containsKey(Constants.RAVEN_READ_ONLY)
+        && documentMetadata.getMetadata().value(boolean.class, Constants.RAVEN_READ_ONLY)) {
+      return false;
+    }
+
+    RavenJObject newObj = entityToJson.convertEntityToJson(documentMetadata.getKey(), entity, documentMetadata.getMetadata());
+    return RavenJToken.deepEquals(newObj, documentMetadata.getOriginalValue()) == false ||
+        RavenJToken.deepEquals(documentMetadata.getMetadata(), documentMetadata.getOriginalMetadata()) == false;
+  }
+
+  /**
+   * Evicts the specified entity from the session.
+   * Remove the entity from the delete queue and stops tracking changes for this entity.
+   */
+  public <T> void evict(T entity) {
+    if (entitiesAndMetadata.containsKey(entity)) {
+      DocumentMetadata value = entitiesAndMetadata.get(entity);
+      entitiesAndMetadata.remove(entity);
+      entitiesByKey.remove(value.getKey());
+    }
+    deletedEntities.remove(entity);
+  }
+
+  /**
+   * Clears this instance.
+   * Remove all entities from the delete queue and stops tracking changes for all entities.
+   */
+  public void clear() {
+    entitiesAndMetadata.clear();
+    deletedEntities.clear();
+    entitiesByKey.clear();
+  }
+
+  public EntityToJson getEntityToJson() {
+    return entityToJson;
+  }
+
+  public GenerateEntityIdOnTheClient getGenerateEntityIdOnTheClient() {
+    return generateEntityIdOnTheClient;
+  }
+
+
+  /**
+   * Defer commands to be executed on saveChanges()
+   */
+  public void defer(ICommandData... commands) {
+    for (ICommandData command: commands) {
+      deferedCommands.add(command);
+    }
+  }
+  /**
+   * Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+   */
+  public void close() {
+    //empty by design
+  }
+
+  /**
+   * Clears the enlistment.
+   */
+  protected void clearEnlistment() {
+    hasEnlisted = false;
+  }
+
+  protected void logBatch(SaveChangesData data) {
+    /*TODO:
+    log.Debug(() =>
+    {
+      var sb = new StringBuilder()
+      .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+      .AppendLine();
+      foreach (var commandData in data.Commands)
+      {
+        sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+      }
+      return sb.ToString();
+    }); */
+  }
+
+  public void registerMissing(String id) {
+    knownMissingIds.add(id);
+  }
+  public void registerMissingIncludes(Collection<RavenJObject> results, Collection<String> includes) {
+    if (includes == null || includes.isEmpty()){
+      return;
+    }
+
+    for (RavenJObject result : results) {
+      for (String include: includes) {
+        IncludesUtil.include(result, include, new Action1<String>() {
+          @Override
+          public void apply(String id) {
+              if (id == null) {
+                return;
+              }
+              if (isLoaded(id) == false) {
+                registerMissing(id);
+              }
+          }
+        });
+      }
+    }
+  }
+  @Override
+  public int hashCode() {
+    return hash;
+  }
+
+
 }

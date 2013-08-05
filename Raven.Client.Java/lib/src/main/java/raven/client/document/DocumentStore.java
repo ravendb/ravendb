@@ -45,7 +45,7 @@ import raven.client.utils.Closer;
 public class DocumentStore extends DocumentStoreBase {
 
   // The current session id - only used during construction
-  protected static ThreadLocal<UUID> currentSessionId;
+  protected static ThreadLocal<UUID> currentSessionId = new ThreadLocal<>();
 
   private final static int DEFAULT_NUMBER_OF_CACHED_REQUESTS = 2048;
   private int maxNumberOfCachedRequests = DEFAULT_NUMBER_OF_CACHED_REQUESTS;
@@ -100,6 +100,7 @@ public class DocumentStore extends DocumentStoreBase {
   public boolean hasJsonRequestFactory() {
     return true;
   }
+
   public HttpJsonRequestFactory getJsonRequestFactory() {
     return jsonRequestFactory;
   }

@@ -39,4 +39,7 @@ public class Constants {
   public static final String RAVEN_CLR_TYPE = "Raven-Clr-Type";
 
 
+  public static final String RAVEN_READ_ONLY = "Raven-Read-Only";
+
+
 }

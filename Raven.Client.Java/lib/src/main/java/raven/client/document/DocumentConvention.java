@@ -16,6 +16,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.codehaus.jackson.map.DeserializationProblemHandler;
 
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
@@ -73,6 +74,8 @@ public class DocumentConvention implements Serializable {
   private Function1<Class<?>, String> findClrTypeName;
 
   private Function3<Object, Class<?>, Boolean, String> findFullDocumentKeyFromNonStringIdentifier;
+
+  private DeserializationProblemHandler jsonContractResolver; //TODO: // find all usages in introduce them
 
   private Function1<Class<?>, String> findTypeTagName;
 
@@ -187,6 +190,7 @@ public class DocumentConvention implements Serializable {
     });
 
     setIdentityPartsSeparator("/");
+    setJsonContractResolver(new DefaultRavenContractResolver());
 
     setMaxNumberOfRequestsPerSession(30);
     setReplicationInformerFactory(new Function1<String, ReplicationInformer>() {
@@ -295,6 +299,14 @@ public class DocumentConvention implements Serializable {
    */
   public List<ITypeConverter> getIdentityTypeConvertors() {
     return identityTypeConvertors;
+  }
+
+  public DeserializationProblemHandler getJsonContractResolver() {
+    return jsonContractResolver;
+  }
+
+  public void setJsonContractResolver(DeserializationProblemHandler jsonContractResolver) {
+    this.jsonContractResolver = jsonContractResolver;
   }
 
   /**
