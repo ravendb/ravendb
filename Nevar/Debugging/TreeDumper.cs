@@ -48,7 +48,7 @@ digraph structs {
 							}
 							var node = p.GetNode(i);
 							key.Set(node);
-							writer.WriteLine("{0} - {2} {1:#,#}", key.Size == 8 ? key.ToInt64().ToString(CultureInfo.InvariantCulture) : key, 
+							writer.WriteLine("{0} - {2} {1:#,#}",key, 
                                 node->DataSize, node->Flags == NodeFlags.None ? "Size" : "Page");
 						}
 						writer.WriteLine("\"];");

@@ -70,7 +70,17 @@ namespace Nevar.Impl
             while (node != null)
             {
                 var parent = node.Next != null ? node.Next.Value : null;
-                node.Value = ModifyPage(parent, node.Value);
+				
+				// those might be changed by allocating a new page
+	            var lastSearchPosition = node.Value.LastSearchPosition;
+	            var lastMatch = node.Value.LastMatch;
+
+	            node.Value = ModifyPage(parent, node.Value);
+				// so we need to restore them
+	            node.Value.LastSearchPosition = lastSearchPosition;
+	            node.Value.LastMatch = lastMatch;
+
+
                 node = node.Previous;
             }
 	        txInfo.Root = c.Pages.Last.Value;
