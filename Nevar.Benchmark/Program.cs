@@ -30,8 +30,8 @@ namespace Nevar.Benchmark
 			//Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
 			//Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-			//Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-			Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+			Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
+			//Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
 			//Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
 			//Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
@@ -75,7 +75,7 @@ namespace Nevar.Benchmark
 			else
 				FlushOsBuffer();
 			var sp = new Stopwatch();
-			Console.WriteLine("{0,-35}: running...", name);
+			Console.Write("{0,-35}: running...", name);
 			action(sp);
 
 			Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions * ItemsPerTransaction / sp.Elapsed.TotalSeconds);
