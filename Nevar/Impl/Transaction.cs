@@ -59,11 +59,12 @@ namespace Nevar.Impl
 
         public Page ModifyCursor(TreeDataInTransaction txInfo, Cursor c)
         {
-            if (txInfo.Root.Dirty == false)
-                txInfo.Root = ModifyPage(null, txInfo.Root);
-
             if (c.Pages.Count == 0)
-                return null;
+            {
+				if (txInfo.Root.Dirty == false)
+					txInfo.Root = ModifyPage(null, txInfo.Root); 
+				return null;
+            }
 
             var node = c.Pages.Last;
             while (node != null)
@@ -72,14 +73,15 @@ namespace Nevar.Impl
                 node.Value = ModifyPage(parent, node.Value);
                 node = node.Previous;
             }
+	        txInfo.Root = c.Pages.Last.Value;
             return c.Pages.First.Value;
         }
 
         private unsafe Page ModifyPage(Page parent, Page p)
         {
-            if (p.Dirty)
+			if (p.Dirty)
                 return p;
-
+			
             Page page;
             if (_dirtyPages.TryGetValue(p.PageNumber, out page))
             {
@@ -96,8 +98,8 @@ namespace Nevar.Impl
             newPage.PageNumber = newPageNum;
             newPage.LastMatch = p.LastMatch;
             newPage.LastSearchPosition = p.LastSearchPosition;
-            _dirtyPages[p.PageNumber] = newPage;
-            FreePage(p.PageNumber);
+			FreePage(p.PageNumber);
+			_dirtyPages[p.PageNumber] = newPage;
             UpdateParentPageNumber(parent, newPage.PageNumber);
             return newPage;
         }
@@ -176,14 +178,25 @@ namespace Nevar.Impl
                 tree.State.CopyTo(treePtr);
             }
 
-            FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
+	        byte iterationCount = 1;
+			FlushFreePages(ref iterationCount);   // this is the the free space that is available when all concurrent transactions are done
 
             // this is free space that is available right now, HAS to be after flushing free space, since old space might be used
             // to write the new free pages
             if (_freeSpaceCollector != null)
-                _freeSpaceCollector.SaveOldFreeSpace(this);
+            {
+	            var changed = _freeSpaceCollector.SaveOldFreeSpace(this);
+				// saving old free space might have create more free space
+				// at this point we would won't use any free space and just flush any additional
+				// free pages once and for all
+				_freeSpaceCollector = null;
+				if (changed)
+	            {
+					FlushFreePages(ref iterationCount);
+	            }
+            }
 
-            if (_rootTreeData != null)
+	        if (_rootTreeData != null)
                 _rootTreeData.Flush();
 
             if (_fresSpaceTreeData != null)
@@ -217,12 +230,11 @@ namespace Nevar.Impl
             _env.Root.State.CopyTo(&fileHeader->Root);
         }
 
-        private void FlushFreePages()
+		private void FlushFreePages(ref byte iterationCounter)
         {
             var slice = new Slice(SliceOptions.Key);
             // transaction ids in free pages are 56 bits (64 - 8)
             // the right most bits are reserved for iteration counters
-            byte iterationCounter = 1;
             while (_freedPages.Count != 0)
             {
                 slice.Set(_id << 8 | iterationCounter);
@@ -286,9 +298,15 @@ namespace Nevar.Impl
 
         public void FreePage(long pageNumber)
         {
-            Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);
+	        Page page;
+	        if (_dirtyPages.TryGetValue(pageNumber, out page))
+	        {
+		        page.Dirty = false;
+		        _dirtyPages.Remove(pageNumber);
+	        }
 #if DEBUG
-            var success = _freedPages.Add(pageNumber);
+			Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);
+			var success = _freedPages.Add(pageNumber);
             Debug.Assert(success);
 #else
             _freedPages.Add(pageNumber);
