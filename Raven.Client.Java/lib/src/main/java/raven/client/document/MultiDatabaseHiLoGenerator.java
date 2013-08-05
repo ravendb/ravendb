@@ -21,7 +21,8 @@ public class MultiDatabaseHiLoGenerator {
     if (key == null) {
       key = Constants.SYSTEM_DATABASE;
     }
-    MultiTypeHiLoKeyGenerator generator = generators.putIfAbsent(dbName, new MultiTypeHiLoKeyGenerator(capacity));
+    generators.putIfAbsent(key, new MultiTypeHiLoKeyGenerator(capacity));
+    MultiTypeHiLoKeyGenerator generator = generators.get(key);
     return generator.generateDocumentKey(databaseCommands, conventions, entity);
   }
 }

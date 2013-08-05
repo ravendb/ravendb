@@ -52,7 +52,7 @@ import raven.client.utils.Closer;
  */
 public abstract class InMemoryDocumentSessionOperations implements AutoCloseable {
 
-  private static AtomicInteger counter;
+  private static AtomicInteger counter = new AtomicInteger();
 
   private final int hash = counter.incrementAndGet();
 

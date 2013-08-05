@@ -41,10 +41,9 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
       throw new IllegalStateException(snapshotMsg != null ? snapshotMsg
         : "Cannot modify a snapshot, this is probably a bug");
     }
-    if (containsKey(key)) {
-      throw new IllegalArgumentException("An item with the same key has already been added: " + key);
+    if (!containsKey(key)) {
+      count++;
     }
-    count++;
     localChanges.put(key, value);
     return value;
   }

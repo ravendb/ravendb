@@ -418,7 +418,8 @@ public class DocumentStore extends DocumentStoreBase {
     if (StringUtils.isNotEmpty(dbName)) {
       key = MultiDatabase.getRootDatabaseUrl(url) + "/databases/" + dbName;
     }
-    return replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().apply(key));
+    replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().apply(key));
+    return replicationInformers.get(key);
   }
 
   /**
@@ -551,7 +552,6 @@ public class DocumentStore extends DocumentStoreBase {
       if (databaseName == null) {
         databaseName = Constants.SYSTEM_DATABASE;
       }
-
       observeChangesAndEvictItemsFromCacheForDatabases.putIfAbsent(databaseName,
           new EvictItemsFromCacheBasedOnChanges(databaseName, createDatabaseChanges(databaseName), new ExpireItemsFromCacheAction()));
     }

@@ -44,7 +44,8 @@ public class AtomicDictionary<T> implements Iterable<Entry<String, T>> {
       if (val != null) {
         return val;
       }
-      synchronized (locks.putIfAbsent(key, new Object())) {
+      locks.putIfAbsent(key, new Object());
+      synchronized (locks.get(key)) {
         val = items.get(key);
         if (val == null) {
           val = actualGenerator.apply(closureValue);
@@ -68,7 +69,8 @@ public class AtomicDictionary<T> implements Iterable<Entry<String, T>> {
     ReadLock readLock = globalLocker.readLock();
     try {
       readLock.lock();
-      return locks.putIfAbsent(key, new Object());
+      locks.putIfAbsent(key, new Object());
+      return locks.get(key);
     } finally {
       readLock.unlock();
     }

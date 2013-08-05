@@ -11,9 +11,11 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
+import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.impl.client.DecompressingHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.StandardHttpRequestRetryHandler;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
@@ -56,7 +58,8 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
   public HttpJsonRequestFactory(int maxNumberOfCachedRequests) {
     super();
-    this.httpClient = new DefaultHttpClient();
+    ClientConnectionManager cm = new PoolingClientConnectionManager();
+    this.httpClient = new DefaultHttpClient(cm);
     this.gzipHttpClient = new DecompressingHttpClient(this.httpClient);
     this.httpClient.setHttpRequestRetryHandler(new StandardHttpRequestRetryHandler(0, false));
     this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
