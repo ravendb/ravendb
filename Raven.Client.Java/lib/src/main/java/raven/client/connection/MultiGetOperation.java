@@ -11,13 +11,13 @@ import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
 
 import raven.abstractions.closure.Action2;
-import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.GetRequest;
 import raven.abstractions.data.GetResponse;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.client.connection.implementation.HttpJsonRequest;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.connection.profiling.IHoldProfilingInformation;
+import raven.client.connection.profiling.RequestResultArgs;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 

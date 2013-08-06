@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 
 public final class HighlightedField {
 
@@ -46,7 +46,7 @@ public final class HighlightedField {
   }
 
 
-  public static boolean TryParse(String value, Holder<HighlightedField> result)
+  public static boolean TryParse(String value, Reference<HighlightedField> result)
   {
     result.value = null;
 

@@ -19,7 +19,7 @@ import org.junit.Test;
 import org.mockito.cglib.core.CollectionUtils;
 import org.mockito.cglib.core.Transformer;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
@@ -158,7 +158,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       waitForNonStaleIndexes(dbCommands);
 
       IndexQuery query = new IndexQuery();
-      Holder<QueryHeaderInformation> queryHeaderInfo = new Holder<>();
+      Reference<QueryHeaderInformation> queryHeaderInfo = new Reference<>();
       Iterator<RavenJObject> iterator = dbCommands.streamQuery("companies/simple", query, queryHeaderInfo);
 
       Set<String> companyNames = new HashSet<>();

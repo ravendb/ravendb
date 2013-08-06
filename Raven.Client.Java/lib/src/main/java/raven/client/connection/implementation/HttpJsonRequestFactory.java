@@ -21,7 +21,6 @@ import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
 import raven.abstractions.closure.Action2;
 import raven.abstractions.connection.WebRequestEventArgs;
-import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJToken;
@@ -29,6 +28,7 @@ import raven.client.connection.CachedRequest;
 import raven.client.connection.CachedRequestOp;
 import raven.client.connection.CreateHttpJsonRequestParams;
 import raven.client.connection.profiling.IHoldProfilingInformation;
+import raven.client.connection.profiling.RequestResultArgs;
 import raven.client.extensions.MultiDatabase;
 import raven.client.util.SimpleCache;
 

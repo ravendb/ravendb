@@ -5,7 +5,7 @@ package raven.abstractions.basic;
  *
  * @param <T>
  */
-public class Holder<T> {
+public class Reference<T> {
   /**
    * The value contained in the holder.
    */
@@ -14,7 +14,7 @@ public class Holder<T> {
   /**
    * Creates a new holder with a <code>null</code> value.
    */
-  public Holder() {
+  public Reference() {
   }
 
   /**
@@ -22,7 +22,7 @@ public class Holder<T> {
    *
    * @param value The value to be stored in the holder.
    */
-  public Holder(T value) {
+  public Reference(T value) {
       this.value = value;
   }
 }

@@ -6,10 +6,9 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.xml.ws.Holder;
-
 import org.apache.commons.lang.StringUtils;
 
+import raven.abstractions.basic.Reference;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.utils.UrlUtils;
 
@@ -23,14 +22,14 @@ public class IndexQuery {
    * Initializes a new instance of the {@link IndexQuery} class.
    */
   public IndexQuery() {
-    totalSize = new Holder<Integer>();
-    skippedResults = new Holder<Integer>();
+    totalSize = new Reference<Integer>();
+    skippedResults = new Reference<Integer>();
     pageSize = 128;
   }
 
   private boolean pageSizeSet;
   private String query;
-  private Holder<Integer> totalSize;
+  private Reference<Integer> totalSize;
   private Map<String, RavenJToken> queryInputs;
   private int start;
   private EnumSet<AggregationOperation> aggregationOperation;
@@ -42,7 +41,7 @@ public class IndexQuery {
   private String defaultField;
   private QueryOperator defaultOperator = QueryOperator.OR;
   private boolean skipTransformResults;
-  private Holder<Integer> skippedResults;
+  private Reference<Integer> skippedResults;
   private boolean debugOptionGetIndexEntires;
   private HighlightedField[] highlightedFields;
   private String[] highlighterPreTags;
@@ -120,13 +119,13 @@ public class IndexQuery {
 
 
 
-  public Holder<Integer> getSkippedResults() {
+  public Reference<Integer> getSkippedResults() {
     return skippedResults;
   }
 
 
 
-  public void setSkippedResults(Holder<Integer> skippedResults) {
+  public void setSkippedResults(Reference<Integer> skippedResults) {
     this.skippedResults = skippedResults;
   }
 
@@ -232,7 +231,7 @@ public class IndexQuery {
     this.queryInputs = queryInputs;
   }
 
-  public Holder<Integer> getTotalSize() {
+  public Reference<Integer> getTotalSize() {
     return totalSize;
   }
 
@@ -456,7 +455,7 @@ public class IndexQuery {
       clone.defaultField = defaultField;
       clone.defaultOperator = defaultOperator;
       clone.skipTransformResults = skipTransformResults;
-      clone.skippedResults = new Holder<Integer>(skippedResults.value);
+      clone.skippedResults = new Reference<Integer>(skippedResults.value);
       clone.debugOptionGetIndexEntires = debugOptionGetIndexEntires;
       clone.highlightedFields = new HighlightedField[highlightedFields.length];
       for (int i = 0; i < highlightedFields.length; i++) {

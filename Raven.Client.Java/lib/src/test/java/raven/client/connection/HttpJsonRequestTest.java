@@ -31,7 +31,6 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import raven.abstractions.basic.EventHandler;
-import raven.abstractions.connection.profiling.RequestResultArgs;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.exceptions.HttpOperationException;
@@ -40,6 +39,7 @@ import raven.abstractions.json.linq.RavenJToken;
 import raven.client.RavenDBAwareTests;
 import raven.client.connection.implementation.HttpJsonRequest;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
+import raven.client.connection.profiling.RequestResultArgs;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 

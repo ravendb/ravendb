@@ -146,7 +146,7 @@ public class SerializationHelper {
     result.setKey(docKey);
     result.setLastModified(getLastModifiedDate(headers));
     result.setMetadata(meta);
-    result.setMonAuthoritativeInformation(responseStatusCode == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION);
+    result.setNonAuthoritativeInformation(responseStatusCode == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION);
     return result;
   }
 

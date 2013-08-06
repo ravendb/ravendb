@@ -1,4 +1,4 @@
-package raven.abstractions.connection.profiling;
+package raven.client.connection.profiling;
 
 import java.util.Date;
 import java.util.Map;

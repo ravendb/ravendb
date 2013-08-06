@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.commands.ICommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
@@ -332,7 +332,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param queryHeaderInfo
    * @return
    */
-  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Holder<QueryHeaderInformation> queryHeaderInfo) ;
+  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo) ;
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches

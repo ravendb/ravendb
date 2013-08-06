@@ -15,7 +15,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.base.Defaults;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.exceptions.JsonReaderException;
 import raven.abstractions.exceptions.JsonWriterException;
 import raven.abstractions.extensions.JsonExtensions;
@@ -273,7 +273,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
     return properties.iterator();
   }
 
-  public boolean tryGetValue(String name, Holder<RavenJToken> value) {
+  public boolean tryGetValue(String name, Reference<RavenJToken> value) {
     return properties.tryGetValue(name, value);
   }
 

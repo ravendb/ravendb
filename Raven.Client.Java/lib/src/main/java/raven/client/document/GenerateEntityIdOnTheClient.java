@@ -4,7 +4,7 @@ import java.lang.reflect.Field;
 
 import org.apache.commons.lang.reflect.FieldUtils;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Function1;
 import raven.client.IDocumentStore;
 import raven.client.Converters.ITypeConverter;
@@ -28,7 +28,7 @@ public class GenerateEntityIdOnTheClient {
    * @param string
    * @return
    */
-  public boolean tryGetIdFromInstance(Object entity, Holder<String> idHolder) {
+  public boolean tryGetIdFromInstance(Object entity, Reference<String> idHolder) {
     try {
       Field identityProperty = getIdentityProperty(entity.getClass());
       if (identityProperty != null) {
@@ -55,7 +55,7 @@ public class GenerateEntityIdOnTheClient {
    * @return
    */
   public String getOrGenerateDocumentKey(Object entity) {
-    Holder<String> idHolder = new Holder<>();
+    Reference<String> idHolder = new Reference<>();
     tryGetIdFromInstance(entity, idHolder);
     String id = idHolder.value;
     if (id == null) {

@@ -3,7 +3,6 @@ package raven.client.connection.profiling;
 import java.util.UUID;
 
 import raven.abstractions.closure.Function1;
-import raven.abstractions.connection.profiling.RequestResultArgs;
 
 public class ProfilingContext {
   private final ConcurrentLruSet<ProfilingInformation> leastRecentlyUsedCache = new ConcurrentLruSet<>(NUMBER_OF_SESSIONS_TO_TRACK, null);

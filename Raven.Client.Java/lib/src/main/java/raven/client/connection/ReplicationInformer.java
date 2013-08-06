@@ -21,7 +21,7 @@ import org.apache.commons.logging.LogFactory;
 import raven.abstractions.basic.EventArgs;
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.HttpMethods;
@@ -145,8 +145,8 @@ public class ReplicationInformer implements AutoCloseable {
   public <T> T executeWithReplication(HttpMethods method, String primaryUrl, int currentRequest,
     int currentReadStripingBase, Function1<String, T> operation) throws ServerClientException {
 
-    Holder<T> resultHolder = new Holder<>();
-    Holder<Boolean> timeoutThrown = new Holder<>();
+    Reference<T> resultHolder = new Reference<>();
+    Reference<Boolean> timeoutThrown = new Reference<>();
     timeoutThrown.value = Boolean.FALSE;
 
     List<String> localReplicationDestinations = getReplicationDestinationsUrls(); // thread safe copy
@@ -201,7 +201,7 @@ public class ReplicationInformer implements AutoCloseable {
   }
 
   protected <T> boolean tryOperation(Function1<String, T> operation, String operationUrl, boolean avoidThrowing,
-    Holder<T> result, Holder<Boolean> wasTimeout) {
+    Reference<T> result, Reference<Boolean> wasTimeout) {
     try {
       result.value = operation.apply(operationUrl);
       resetFailureCount(operationUrl);
@@ -230,7 +230,7 @@ public class ReplicationInformer implements AutoCloseable {
     return false;
   }
 
-  public boolean isServerDown(Exception e, Holder<Boolean> timeout) {
+  public boolean isServerDown(Exception e, Reference<Boolean> timeout) {
     timeout.value = Boolean.FALSE;
     if (e instanceof SocketTimeoutException) {
       timeout.value = Boolean.TRUE;

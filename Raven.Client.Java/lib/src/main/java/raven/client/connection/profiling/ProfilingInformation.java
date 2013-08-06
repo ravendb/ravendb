@@ -9,7 +9,6 @@ import java.util.UUID;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Delegates;
-import raven.abstractions.connection.profiling.RequestResultArgs;
 
 /**
  *  Information about a particular session

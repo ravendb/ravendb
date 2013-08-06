@@ -14,7 +14,7 @@ import raven.abstractions.json.linq.RavenJValue;
  * - Etag
  * - Metadata
  */
-public class JsonDocument {
+public class JsonDocument implements IJsonDocumentMetadata {
   private RavenJObject dataAsJson;
   private RavenJObject metadata;
   private String key;
@@ -80,7 +80,7 @@ public class JsonDocument {
   /**
    * @return the nonAuthoritativeInformation
    */
-  public Boolean isNonAuthoritativeInformation() {
+  public Boolean getNonAuthoritativeInformation() {
     return nonAuthoritativeInformation;
   }
 

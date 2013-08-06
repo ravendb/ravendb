@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 
 public class Etag implements Comparable<Etag> {
 
@@ -89,7 +89,7 @@ public class Etag implements Comparable<Etag> {
     return new Etag(bytesToLong(arr1), bytesToLong(arr2));
   }
 
-  public static boolean tryParse(String str, Holder<Etag> etag) {
+  public static boolean tryParse(String str, Reference<Etag> etag) {
     try {
       Etag value = parse(str);
       etag.value = value;

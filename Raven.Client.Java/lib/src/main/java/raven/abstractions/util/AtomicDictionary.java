@@ -1,4 +1,4 @@
-package raven.client.util;
+package raven.abstractions.util;
 
 import java.util.Collection;
 import java.util.Iterator;

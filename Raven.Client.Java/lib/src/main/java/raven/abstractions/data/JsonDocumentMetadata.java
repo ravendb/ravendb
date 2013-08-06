@@ -4,11 +4,11 @@ import java.util.Date;
 
 import raven.abstractions.json.linq.RavenJObject;
 
-public class JsonDocumentMetadata {
+public class JsonDocumentMetadata implements IJsonDocumentMetadata {
 
   private RavenJObject metadata;
   private String key;
-  private Boolean monAuthoritativeInformation;
+  private Boolean nonAuthoritativeInformation;
   private Etag etag;
   private Date lastModified;
 
@@ -43,8 +43,8 @@ public class JsonDocumentMetadata {
   /**
    * @return the monAuthoritativeInformation
    */
-  public Boolean getMonAuthoritativeInformation() {
-    return monAuthoritativeInformation;
+  public Boolean getNonAuthoritativeInformation() {
+    return nonAuthoritativeInformation;
   }
 
   /**
@@ -76,10 +76,10 @@ public class JsonDocumentMetadata {
   }
 
   /**
-   * @param monAuthoritativeInformation the monAuthoritativeInformation to set
+   * @param monAuthoritativeInformation the nonAuthoritativeInformation to set
    */
-  public void setMonAuthoritativeInformation(Boolean monAuthoritativeInformation) {
-    this.monAuthoritativeInformation = monAuthoritativeInformation;
+  public void setNonAuthoritativeInformation(Boolean nonAuthoritativeInformation) {
+    this.nonAuthoritativeInformation = nonAuthoritativeInformation;
   }
 
 }

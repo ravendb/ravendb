@@ -2,7 +2,7 @@ package raven.client.listeners;
 
 import java.util.List;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.data.JsonDocument;
 
 /**
@@ -10,5 +10,5 @@ import raven.abstractions.data.JsonDocument;
  */
 public interface IDocumentConflictListener {
 
-  public boolean tryResolveConflict(String key, List<JsonDocument> results, Holder<JsonDocument> resolvedDocument);
+  public boolean tryResolveConflict(String key, List<JsonDocument> results, Reference<JsonDocument> resolvedDocument);
 }

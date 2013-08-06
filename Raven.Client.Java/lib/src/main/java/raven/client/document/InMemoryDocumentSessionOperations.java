@@ -16,7 +16,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Defaults;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Function1;
@@ -281,7 +281,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     if (entitiesAndMetadata.containsKey(instance)) {
       return entitiesAndMetadata.get(instance);
     } else {
-      Holder<String> idHolder = new Holder<>();
+      Reference<String> idHolder = new Reference<>();
 
       if (generateEntityIdOnTheClient.tryGetIdFromInstance((Object)instance, idHolder)) {
         assertNoNonUniqueInstance(instance, idHolder.value);
@@ -392,7 +392,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    * @return
    */
   public Object trackEntity(Class<?> entityType, JsonDocument documentFound) {
-    if (Boolean.TRUE.equals(documentFound.isNonAuthoritativeInformation()) && !allowNonAuthoritativeInformation) {
+    if (Boolean.TRUE.equals(documentFound.getNonAuthoritativeInformation()) && !allowNonAuthoritativeInformation) {
       throw new NonAuthoritativeInformationException("Document " + documentFound.getKey() +
           " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
     }
@@ -586,7 +586,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    * @param entity
    */
   public void store(Object entity) {
-    Holder<String> id = new Holder<>();
+    Reference<String> id = new Reference<>();
 
     boolean hasId = generateEntityIdOnTheClient.tryGetIdFromInstance(entity, id);
     storeInternal(entity, null, null, hasId == false);
@@ -700,7 +700,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    */
   protected ICommandData createPutEntityCommand(Object entity, DocumentMetadata documentMetadata) {
 
-    Holder<String> idHolder = new Holder<>();
+    Reference<String> idHolder = new Reference<>();
 
     if (generateEntityIdOnTheClient.tryGetIdFromInstance(entity, idHolder) &&
         documentMetadata.getKey() != null &&
@@ -910,7 +910,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       return true;
     }
 
-    Holder<String> idHolder = new Holder<>();
+    Reference<String> idHolder = new Reference<>();
     if (generateEntityIdOnTheClient.tryGetIdFromInstance(entity, idHolder) &&
         !StringUtils.equalsIgnoreCase(documentMetadata.getKey(), idHolder.value)) {
       return true;

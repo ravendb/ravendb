@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 
 public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, Iterable<Map.Entry<String, RavenJToken>> {
 
@@ -252,9 +252,9 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
     return new DictionaryInterator();
   }
 
-  public boolean tryGetValue(String key, Holder<RavenJToken> value) {
+  public boolean tryGetValue(String key, Reference<RavenJToken> value) {
     value.value = null;
-    Holder<RavenJToken> unsafeVal = new Holder<RavenJToken>();
+    Reference<RavenJToken> unsafeVal = new Reference<RavenJToken>();
     if (localChanges != null && localChanges.containsKey(key)) {
       unsafeVal.value = localChanges.get(key);
       if (DELETED_MARKER.equals(unsafeVal.value)) return false;

@@ -26,7 +26,7 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
 import raven.abstractions.basic.EventHandler;
-import raven.abstractions.basic.Holder;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Function0;
@@ -348,7 +348,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
         }
 
         for(IDocumentConflictListener conflictListener: conflictListeners) {
-          Holder<JsonDocument> resolvedDocument = new Holder<>();
+          Reference<JsonDocument> resolvedDocument = new Reference<>();
           if (conflictListener.tryResolveConflict(key, results, resolvedDocument)) {
             put(key, etag, resolvedDocument.value.getDataAsJson(), resolvedDocument.value.getMetadata());
             return null;
@@ -1035,7 +1035,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     } catch (HttpOperationException e) {
       try {
 
-        Holder<RuntimeException> newException = new Holder<>();
+        Reference<RuntimeException> newException = new Reference<>();
         if (shouldRethrowIndexException(e, newException)) {
           if (newException.value != null) {
             throw new TransformCompilationException(newException.value.getMessage(), newException.value);
@@ -1052,7 +1052,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     }
   }
 
-  private boolean shouldRethrowIndexException(HttpOperationException e, Holder<RuntimeException> newException) {
+  private boolean shouldRethrowIndexException(HttpOperationException e, Reference<RuntimeException> newException) {
     newException.value = null;
 
     if (e.getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR) {
@@ -1097,7 +1097,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
       }
     } catch (HttpOperationException e) {
       try {
-        Holder<RuntimeException> newException = new Holder<>();
+        Reference<RuntimeException> newException = new Reference<>();
         if (shouldRethrowIndexException(e, newException)) {
           if (newException.value != null) {
             throw newException.value;
@@ -1124,7 +1124,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
         return responseJson.value(String.class, "Index");
       } catch (HttpOperationException e) {
         try {
-          Holder<RuntimeException> newException = new Holder<>();
+          Reference<RuntimeException> newException = new Reference<>();
           if (shouldRethrowIndexException(e, newException)) {
             if (newException != null) {
               throw newException.value;
@@ -1170,7 +1170,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     });
   }
 
-  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Holder<QueryHeaderInformation> queryHeaderInfo) {
+  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo) {
     ensureIsNotNullOrEmpty(index, "index");
     String path = query.getIndexQueryUrl(url, index, "streams/query", false);
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(

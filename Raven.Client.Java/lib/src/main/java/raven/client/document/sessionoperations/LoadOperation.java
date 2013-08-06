@@ -48,7 +48,7 @@ public class LoadOperation {
       return false;
     }
     return
-        Boolean.TRUE.equals(documentFound.isNonAuthoritativeInformation())
+        Boolean.TRUE.equals(documentFound.getNonAuthoritativeInformation())
         && sessionOperations.isAllowNonAuthoritativeInformation() == false
         && (new Date().getTime() - spStart) < sessionOperations.getNonAuthoritativeInformationTimeout();
   }

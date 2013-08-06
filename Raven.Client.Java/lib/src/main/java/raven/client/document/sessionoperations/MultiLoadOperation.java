@@ -61,7 +61,7 @@ public class MultiLoadOperation {
       return false;
     }
     for (JsonDocument doc : results) {
-      if (doc != null && !Boolean.TRUE.equals(doc.isNonAuthoritativeInformation())) {
+      if (doc != null && !Boolean.TRUE.equals(doc.getNonAuthoritativeInformation())) {
         return false;
       }
     }
