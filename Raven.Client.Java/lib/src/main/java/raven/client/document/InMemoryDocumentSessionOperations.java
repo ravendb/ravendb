@@ -3,7 +3,6 @@ package raven.client.document;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -989,12 +988,14 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
   protected void logBatch(SaveChangesData data) {
 
-    StringBuilder sb = new StringBuilder();
-    sb.append(String.format("Saving %d changes to %s\n", data.getCommands().size(), getStoreIdentifier()));
-    for (ICommandData commandData : data.getCommands()) {
-      sb.append(String.format("\t%s %s\n", commandData.getMethod(), commandData.getKey()));
+    if (log.isDebugEnabled()) {
+      StringBuilder sb = new StringBuilder();
+      sb.append(String.format("Saving %d changes to %s\n", data.getCommands().size(), getStoreIdentifier()));
+      for (ICommandData commandData : data.getCommands()) {
+        sb.append(String.format("\t%s %s\n", commandData.getMethod(), commandData.getKey()));
+      }
+      log.debug(sb.toString());
     }
-    log.debug(sb.toString());
   }
 
   public void registerMissing(String id) {
@@ -1010,12 +1011,12 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
         IncludesUtil.include(result, include, new Action1<String>() {
           @Override
           public void apply(String id) {
-              if (id == null) {
-                return;
-              }
-              if (isLoaded(id) == false) {
-                registerMissing(id);
-              }
+            if (id == null) {
+              return;
+            }
+            if (isLoaded(id) == false) {
+              registerMissing(id);
+            }
           }
         });
       }

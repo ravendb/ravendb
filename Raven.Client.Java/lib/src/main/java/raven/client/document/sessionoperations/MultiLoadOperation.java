@@ -14,11 +14,13 @@ import raven.abstractions.closure.Function0;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.logging.ILog;
+import raven.abstractions.logging.LogManager;
 import raven.client.connection.SerializationHelper;
 import raven.client.document.InMemoryDocumentSessionOperations;
 
 public class MultiLoadOperation {
-  //TODO: private static readonly ILog log = LogManager.GetCurrentClassLogger();
+  private static final ILog log = LogManager.getCurrentClassLogger();
 
   private final InMemoryDocumentSessionOperations sessionOperations;
   protected Function0<AutoCloseable> disableAllCaching;
@@ -41,7 +43,7 @@ public class MultiLoadOperation {
     if (ids == null) {
       return;
     }
-    //TODO: log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
+    log.debug("Bulk loading ids [%s] from %s", StringUtils.join(ids, ", "), sessionOperations.getStoreIdentifier());
   }
 
   public AutoCloseable enterMultiLoadContext() {

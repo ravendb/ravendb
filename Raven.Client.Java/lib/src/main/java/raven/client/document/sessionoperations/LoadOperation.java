@@ -6,11 +6,13 @@ import com.google.common.base.Defaults;
 
 import raven.abstractions.closure.Function0;
 import raven.abstractions.data.JsonDocument;
+import raven.abstractions.logging.ILog;
+import raven.abstractions.logging.LogManager;
 import raven.client.document.InMemoryDocumentSessionOperations;
 
 public class LoadOperation {
 
-  //TODO: private static readonly ILog log = LogManager.GetCurrentClassLogger();
+  private static final ILog log = LogManager.getCurrentClassLogger();
   private final InMemoryDocumentSessionOperations sessionOperations;
   private final Function0<AutoCloseable> disableAllCaching;
   private final String id;
@@ -30,7 +32,7 @@ public class LoadOperation {
   }
 
   public void logOperation() {
-    //TODO:   log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
+    log.debug("Loading document [%s] from %s", id, sessionOperations.getStoreIdentifier());
   }
 
   public AutoCloseable enterLoadContext() {
