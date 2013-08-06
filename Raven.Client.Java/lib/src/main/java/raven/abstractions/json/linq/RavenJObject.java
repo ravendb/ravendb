@@ -1,6 +1,7 @@
 package raven.abstractions.json.linq;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import raven.abstractions.extensions.JsonExtensions;
 
 public class RavenJObject extends RavenJToken implements Iterable<Entry<String, RavenJToken>> {
 
+  private final Comparator<String> comparer;
   /**
    * Creates a {@link RavenJObject} from an object.
    * @param o The object that will be used to create {@link RavenJObject}
@@ -128,21 +130,29 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
     }
   }
 
-  private DictionaryWithParentSnapshot properties = new DictionaryWithParentSnapshot();
+  private DictionaryWithParentSnapshot properties;
 
   public RavenJObject() {
-    // empty by design
+    this((Comparator<String>)null);
   }
+
+  public RavenJObject(Comparator<String> comparator) {
+    this.comparer = comparator;
+    this.properties = new DictionaryWithParentSnapshot(comparator);
+  }
+
 
   public RavenJObject(DictionaryWithParentSnapshot snapshot) {
     properties = snapshot;
+    this.comparer = null;
   }
 
   public RavenJObject(RavenJObject other) {
-    properties = new DictionaryWithParentSnapshot();
+    properties = new DictionaryWithParentSnapshot(other.comparer);
     for (Map.Entry<String, RavenJToken> kv : other.getProperties().entrySet()) {
       properties.put(kv.getKey(), kv.getValue());
     }
+    this.comparer = other.comparer;
   }
 
   public void add(String propertyName, RavenJToken token) {
@@ -204,6 +214,14 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   @Override
   public boolean isSnapshot() {
     return properties.isSnapshot();
+  }
+
+  public RavenJObject withCaseInsensitivePropertyNames() {
+    DictionaryWithParentSnapshot props = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
+    for (Map.Entry<String, RavenJToken> property: properties) {
+      props.put(property.getKey(), property.getValue());
+    }
+    return new RavenJObject(props);
   }
 
   public boolean remove(String propertyName) {

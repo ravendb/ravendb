@@ -68,7 +68,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
    */
   public RavenJObject getMetadata() {
     if (metadata == null) {
-      metadata = new RavenJObject();
+      metadata = new RavenJObject(String.CASE_INSENSITIVE_ORDER);
     }
     return metadata;
   }

@@ -24,7 +24,7 @@ import raven.abstractions.json.linq.RavenJValue;
 public class DictionaryWithParentSnapshotTest {
   @Test
   public void baseTest() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.put("name", new RavenJValue("Marcin"));
 
     assertFalse(map.isEmpty());
@@ -44,16 +44,16 @@ public class DictionaryWithParentSnapshotTest {
     assertNotNull("It should contain DELETE_MARKER", localChanges.get("name"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void canDuplicateKeys() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.put("name", RavenJValue.parse("5"));
     map.put("name", RavenJValue.parse("5"));
   }
 
   @Test
   public void testClear() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.put("name1", RavenJValue.parse("5"));
     map.put("name2", RavenJValue.parse("5"));
     map.clear();
@@ -62,14 +62,14 @@ public class DictionaryWithParentSnapshotTest {
 
   @Test(expected = IllegalStateException.class)
   public void testCannotModifySnapshot() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.ensureSnapshot();
     map.put("key", RavenJToken.fromObject("a"));
   }
 
   @Test
   public void testValues() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.put("name1", RavenJValue.parse("5"));
     map.put("test", RavenJValue.parse("null"));
     map.put("@id", RavenJValue.fromObject("c"));
@@ -85,19 +85,19 @@ public class DictionaryWithParentSnapshotTest {
 
   @Test(expected =  IllegalStateException.class)
   public void testContainsValue() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.containsValue("any");
   }
 
-  @Test(expected =  IllegalStateException.class)
+  @Test
   public void testEntrySet() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
-    map.entrySet();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
+    assertNotNull(map.entrySet());
   }
 
   @Test
   public void testPutAll() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     Map<String, RavenJToken> toInsert = new HashMap<>();
     toInsert.put("#id", RavenJValue.parse("null"));
     map.putAll(toInsert);
@@ -106,7 +106,7 @@ public class DictionaryWithParentSnapshotTest {
 
   @Test
   public void testEmptyKeyset() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     assertTrue(map.keySet().isEmpty());
     map.ensureSnapshot();
     DictionaryWithParentSnapshot snapshot = map.createSnapshot();
@@ -115,7 +115,7 @@ public class DictionaryWithParentSnapshotTest {
 
   @Test
   public void testWithParents() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.put("name1", RavenJValue.parse("5"));
     map.put("@id", RavenJValue.fromObject("c"));
     map.remove("@id");
@@ -156,7 +156,7 @@ public class DictionaryWithParentSnapshotTest {
 
   @Test
   public void testIteration() {
-    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot();
+    DictionaryWithParentSnapshot map = new DictionaryWithParentSnapshot(String.CASE_INSENSITIVE_ORDER);
     map.put("p1", RavenJValue.parse("5"));
     map.put("@id", RavenJValue.fromObject("c"));
     map.remove("@id");
@@ -172,7 +172,7 @@ public class DictionaryWithParentSnapshotTest {
       keys.add(entry.getKey());
     }
 
-    Set<String> expectedKeys = new HashSet<>(Arrays.asList("p1", "p2", "@id", "ch2", "ch1"));
+    Set<String> expectedKeys = new HashSet<>(Arrays.asList("ch2", "ch1", "p2", "p1"));
     assertEquals(expectedKeys, keys);
 
   }

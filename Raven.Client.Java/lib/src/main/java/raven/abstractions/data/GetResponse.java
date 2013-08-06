@@ -1,7 +1,7 @@
 package raven.abstractions.data;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import raven.abstractions.json.linq.RavenJToken;
 
@@ -11,7 +11,7 @@ public class GetResponse {
   private Map<String, String> headers;
   private int status;
   public GetResponse() {
-    headers = new HashMap<String, String>();
+    headers = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
   }
   public Map<String, String> getHeaders() {
     return headers;

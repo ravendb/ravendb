@@ -2,34 +2,44 @@ package raven.abstractions.json.linq;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import raven.abstractions.basic.Reference;
 
 public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, Iterable<Map.Entry<String, RavenJToken>> {
 
+  private final Comparator<String> comparer;
+
   private static final RavenJToken DELETED_MARKER = new RavenJValue("*DeletedMarker*", JTokenType.NULL);
 
   private final DictionaryWithParentSnapshot parentSnapshot;
   private int count;
-  private Map<String, RavenJToken> localChanges = new HashMap<>();
+  private Map<String, RavenJToken> localChanges;
   private String snapshotMsg;
   private boolean snapshot;
 
   public Map<String, RavenJToken> getLocalChanges() {
+    if (localChanges == null) {
+      localChanges = new TreeMap<String, RavenJToken> (comparer);
+    }
     return localChanges;
   }
 
-  public DictionaryWithParentSnapshot() {
-    this(null);
+  public DictionaryWithParentSnapshot(Comparator<String> comparer) {
+    this.comparer = comparer;
+    this.parentSnapshot = null;
   }
+
 
   public DictionaryWithParentSnapshot(DictionaryWithParentSnapshot previous) {
     this.parentSnapshot = previous;
+    this.comparer = previous.comparer;
   }
 
   /* (non-Javadoc)
@@ -44,7 +54,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
     if (!containsKey(key)) {
       count++;
     }
-    localChanges.put(key, value);
+    getLocalChanges().put(key, value);
     return value;
   }
 
@@ -55,8 +65,8 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
   public boolean containsKey(Object keyObject) {
     String key = (String) keyObject;
     RavenJToken token;
-    if (localChanges.containsKey(key)) {
-      token = localChanges.get(key);
+    if (getLocalChanges().containsKey(key)) {
+      token = getLocalChanges().get(key);
       if (token == DELETED_MARKER) {
         return false;
       }
@@ -70,7 +80,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
    */
   @Override
   public Set<String> keySet() {
-    if (localChanges.isEmpty()) {
+    if (getLocalChanges().isEmpty()) {
       if (parentSnapshot != null) {
         return parentSnapshot.keySet();
       }
@@ -80,13 +90,13 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
     Set<String> ret = new HashSet<>();
     if (parentSnapshot != null) {
       for (String key : parentSnapshot.keySet()) {
-        if (!localChanges.containsKey(key)) {
+        if (!getLocalChanges().containsKey(key)) {
           ret.add(key);
         }
       }
     }
-    for (String key : localChanges.keySet()) {
-      if (localChanges.containsKey(key) && localChanges.get(key) != DELETED_MARKER) {
+    for (String key : getLocalChanges().keySet()) {
+      if (getLocalChanges().containsKey(key) && getLocalChanges().get(key) != DELETED_MARKER) {
         ret.add(key);
       }
     }
@@ -113,20 +123,20 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
       }
     }
 
-    if (!localChanges.containsKey(key)) {
+    if (!getLocalChanges().containsKey(key)) {
       if (parentHasIt && parentToken != DELETED_MARKER) {
-        localChanges.put(key, DELETED_MARKER);
+        getLocalChanges().put(key, DELETED_MARKER);
         count--;
         return parentToken;
       }
       return null;
     }
-    RavenJToken token = localChanges.get(key);
+    RavenJToken token = getLocalChanges().get(key);
     if (token == DELETED_MARKER) {
       return null;
     }
     count--;
-    localChanges.put(key, DELETED_MARKER);
+    getLocalChanges().put(key, DELETED_MARKER);
     return token;
   }
 
@@ -136,8 +146,8 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
   @Override
   public RavenJToken get(Object keyObject) {
     String key = (String) keyObject;
-    if (localChanges.containsKey(key)) {
-      RavenJToken unsafeVal = localChanges.get(key);
+    if (getLocalChanges().containsKey(key)) {
+      RavenJToken unsafeVal = getLocalChanges().get(key);
       if (unsafeVal == DELETED_MARKER) {
         return null;
       }
@@ -255,8 +265,8 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
   public boolean tryGetValue(String key, Reference<RavenJToken> value) {
     value.value = null;
     Reference<RavenJToken> unsafeVal = new Reference<RavenJToken>();
-    if (localChanges != null && localChanges.containsKey(key)) {
-      unsafeVal.value = localChanges.get(key);
+    if (getLocalChanges() != null && getLocalChanges().containsKey(key)) {
+      unsafeVal.value = getLocalChanges().get(key);
       if (DELETED_MARKER.equals(unsafeVal.value)) return false;
 
       value = unsafeVal;
@@ -301,7 +311,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
       }
       if (localIterator == null) {
         Map<String, RavenJToken> entrySetMap = new HashMap<>();
-        for (Map.Entry<String, RavenJToken> entry: localChanges.entrySet()) {
+        for (Map.Entry<String, RavenJToken> entry: getLocalChanges().entrySet()) {
           if (entry.getValue() != DELETED_MARKER) {
             entrySetMap.put(entry.getKey(), entry.getValue());
           }

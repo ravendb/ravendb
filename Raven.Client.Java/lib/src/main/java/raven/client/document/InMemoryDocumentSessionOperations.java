@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,6 +37,8 @@ import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.logging.ILog;
+import raven.abstractions.logging.LogManager;
 import raven.abstractions.util.IncludesUtil;
 import raven.client.DocumentStoreBase;
 import raven.client.IDocumentStore;
@@ -43,8 +48,7 @@ import raven.client.exceptions.NonUniqueObjectException;
 import raven.client.listeners.IDocumentConversionListener;
 import raven.client.listeners.IDocumentDeleteListener;
 import raven.client.listeners.IDocumentStoreListener;
-import raven.client.util.ObjectReferenceEqualityMap;
-import raven.client.util.ObjectReferenceEqualitySet;
+import raven.client.util.IdentityHashSet;
 import raven.client.utils.Closer;
 
 /**
@@ -62,13 +66,13 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
   private String databaseName;
 
-  //TODO: protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+  protected static final ILog log = LogManager.getCurrentClassLogger();
 
   //The entities waiting to be deleted
-  protected final ObjectReferenceEqualitySet<Object> deletedEntities = new ObjectReferenceEqualitySet<>();
+  protected final Set<Object> deletedEntities = new IdentityHashSet<>();
 
   //Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
-  protected final Set<String> knownMissingIds = new HashSet<>();
+  protected final Set<String> knownMissingIds =  new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
   private Map<String, Object> externalState;
 
@@ -77,10 +81,10 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   private static ThreadLocal<Map<String, Set<String>>> _registeredStoresInTransaction;
 
   // hold the data required to manage the data for RavenDB's Unit of Work
-  protected final Map<Object, DocumentMetadata> entitiesAndMetadata = new ObjectReferenceEqualityMap<>();
+  protected final Map<Object, DocumentMetadata> entitiesAndMetadata = new IdentityHashMap<>();
 
   // Translate between a key and its associated entity
-  protected final Map<String, Object> entitiesByKey = new HashMap<>();
+  protected final Map<String, Object> entitiesByKey = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
   protected final String dbName;
   private final DocumentStoreBase documentStore;
@@ -984,18 +988,13 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   }
 
   protected void logBatch(SaveChangesData data) {
-    /*TODO:
-    log.Debug(() =>
-    {
-      var sb = new StringBuilder()
-      .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
-      .AppendLine();
-      foreach (var commandData in data.Commands)
-      {
-        sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
-      }
-      return sb.ToString();
-    }); */
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("Saving %d changes to %s\n", data.getCommands().size(), getStoreIdentifier()));
+    for (ICommandData commandData : data.getCommands()) {
+      sb.append(String.format("\t%s %s\n", commandData.getMethod(), commandData.getKey()));
+    }
+    log.debug(sb.toString());
   }
 
   public void registerMissing(String id) {

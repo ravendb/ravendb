@@ -1,7 +1,7 @@
 package raven.abstractions.data;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
 
@@ -39,8 +39,8 @@ public class GetRequest {
     return url + "?" + query;
   }
 
-  public GetRequest() {
-    headers = new HashMap<String, String>();
+  public void getRequest() {
+    headers = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
   }
 
 }

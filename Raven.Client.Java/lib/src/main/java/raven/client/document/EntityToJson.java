@@ -1,6 +1,7 @@
 package raven.client.document;
 
 import java.lang.reflect.Field;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 import raven.abstractions.data.Constants;
@@ -10,7 +11,6 @@ import raven.abstractions.json.linq.RavenJValue;
 import raven.client.IDocumentStore;
 import raven.client.listeners.IDocumentConversionListener;
 import raven.client.listeners.IExtendedDocumentConversionListener;
-import raven.client.util.ObjectReferenceEqualityMap;
 
 public class EntityToJson {
   private final IDocumentStore documentStore;
@@ -18,20 +18,20 @@ public class EntityToJson {
   //All the listeners for this session
   private DocumentSessionListeners listeners;
 
-  private ObjectReferenceEqualityMap<Object, Map<String, RavenJToken>> missingDictionary = new ObjectReferenceEqualityMap<>();
+  private IdentityHashMap<Object, Map<String, RavenJToken>> missingDictionary = new IdentityHashMap<>();
 
-  private ObjectReferenceEqualityMap<Object, RavenJObject> cachedJsonDocs;
+  private IdentityHashMap<Object, RavenJObject> cachedJsonDocs;
 
 
-  public ObjectReferenceEqualityMap<Object, RavenJObject> getCachedJsonDocs() {
+  public IdentityHashMap<Object, RavenJObject> getCachedJsonDocs() {
     return cachedJsonDocs;
   }
 
-  public ObjectReferenceEqualityMap<Object, Map<String, RavenJToken>> getMissingDictionary() {
+  public IdentityHashMap<Object, Map<String, RavenJToken>> getMissingDictionary() {
     return missingDictionary;
   }
 
-  public void setMissingDictionary(ObjectReferenceEqualityMap<Object, Map<String, RavenJToken>> missingDictionary) {
+  public void setMissingDictionary(IdentityHashMap<Object, Map<String, RavenJToken>> missingDictionary) {
     this.missingDictionary = missingDictionary;
   }
 
@@ -118,7 +118,7 @@ public class EntityToJson {
    * @return
    */
   public AutoCloseable entitiesToJsonCachingScope() {
-    cachedJsonDocs = new ObjectReferenceEqualityMap<>();
+    cachedJsonDocs = new IdentityHashMap<>();
     return new DisposeCachedJsonDocs();
   }
 

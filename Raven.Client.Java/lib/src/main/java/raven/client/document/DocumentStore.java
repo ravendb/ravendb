@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.lang.StringUtils;
@@ -52,12 +53,13 @@ public class DocumentStore extends DocumentStoreBase {
   private boolean aggressiveCachingUsed;
 
   protected Function0<IDatabaseCommands> databaseCommandsGenerator;
-  private final ConcurrentMap<String, ReplicationInformer> replicationInformers = new ConcurrentHashMap<>();
+
+  private final ConcurrentMap<String, ReplicationInformer> replicationInformers =  new ConcurrentSkipListMap<>(String.CASE_INSENSITIVE_ORDER);
   private String identifier;
   private ICredentials credentials;
 
 
-  private final AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<>();
+  private final AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
   private HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DEFAULT_NUMBER_OF_CACHED_REQUESTS);
 
 

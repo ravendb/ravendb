@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.TreeSet;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -20,7 +21,7 @@ import raven.abstractions.json.linq.RavenJValue;
  * Extensions for handling metadata
  */
 public class MetadataExtensions {
-  public final static Set<String> HEADERS_TO_IGNORE_CLIENT = new HashSet<>();
+  public final static Set<String> HEADERS_TO_IGNORE_CLIENT = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
   static {
     // Raven internal headers
     HEADERS_TO_IGNORE_CLIENT.add("Raven-Server-Build");
@@ -121,7 +122,7 @@ public class MetadataExtensions {
       return null;
     }
 
-    RavenJObject metadata = new RavenJObject();
+    RavenJObject metadata = new RavenJObject(String.CASE_INSENSITIVE_ORDER);
     for (Entry<String, RavenJToken> header : self) {
       if (header.getKey().startsWith("Temp")) {
         continue;
@@ -152,7 +153,7 @@ public class MetadataExtensions {
    * @return
    */
   public static RavenJObject filterHeaders(Map<String, String> headers) {
-    RavenJObject metadata = new RavenJObject();
+    RavenJObject metadata = new RavenJObject(String.CASE_INSENSITIVE_ORDER);
     for (Entry<String, String> header : headers.entrySet()) {
       if (header.getKey().startsWith("Temp")) {
         continue;

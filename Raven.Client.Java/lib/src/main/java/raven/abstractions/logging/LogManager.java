@@ -7,7 +7,7 @@ public class LogManager {
   private static ILogManager currentLogManager;
 
   public static ILog getCurrentClassLogger() {
-    return getLogger(Thread.currentThread().getStackTrace()[1].getClassName());
+    return getLogger(Thread.currentThread().getStackTrace()[2].getClassName());
   }
 
   public static ILog getLogger(String name) {
