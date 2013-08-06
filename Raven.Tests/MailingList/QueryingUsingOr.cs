@@ -28,35 +28,26 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void ShouldWork()
         {
-            using (var _documentStore = NewDocumentStore())
+            using (var documentStore = NewDocumentStore())
             {
-                _documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
-                _documentStore.Initialize();
+                documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
+                documentStore.Initialize();
 
-                using (var session = _documentStore.OpenSession())
+                using (var session = documentStore.OpenSession())
                 {
                     session.Store(new Foo());
                     session.Store(new Foo());
                     session.SaveChanges();
                 }
 
-                using (var session = _documentStore.OpenSession())
-                {
-                    var bar = session.Query<Foo>().Where(foo => foo.ExpirationTime == null).ToList();
-                    Assert.Equal(2, bar.Count);
-                }
-
-                using (var session = _documentStore.OpenSession())
+             
+                using (var session = documentStore.OpenSession())
                 {
                     var bar = session.Query<Foo>().Where(foo => foo.ExpirationTime == null || foo.ExpirationTime > DateTime.Now).ToList();
+                    WaitForUserToContinueTheTest(documentStore);
                     Assert.Equal(2, bar.Count);
                 }
 
-                using (var session = _documentStore.OpenSession())
-                {
-                    var bar = session.Query<Foo>().Where(foo => foo.ExpirationTime == null | foo.ExpirationTime > DateTime.Now).ToList();
-                    Assert.Equal(2, bar.Count);
-                }
             }
         }
     }
