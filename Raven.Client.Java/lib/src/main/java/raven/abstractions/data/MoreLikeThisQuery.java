@@ -222,7 +222,7 @@ public class MoreLikeThisQuery {
       pathSuffix = documentId;
     }
 
-    uri.append(String.format("/morelikethis/?index=%s&docid=%s&", UrlUtils.escapeDataString(indexName), UrlUtils.escapeDataString(pathSuffix)));
+    uri.append(String.format("/morelikethis/?index=%s&docid=%s&", UrlUtils.escapeUriString(indexName), UrlUtils.escapeDataString(pathSuffix)));
     if (fields != null) {
       for (String field: fields) {
         uri.append("fields=").append(field).append("&");

@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Map.Entry;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
@@ -229,6 +230,21 @@ public class RavenJObjectsTest {
     assertEquals(JTokenType.BYTES, new RavenJValue("test".getBytes()).getType());
     assertEquals(JTokenType.INTEGER, new RavenJValue(new Date()).getType());
   }
+
+
+  @Test
+  public void testDontIterateOnDeleted() throws Exception {
+    RavenJObject obj = new RavenJObject();
+    obj.add("Id", new RavenJValue(5));
+    obj.remove("Id");
+    int count = 0;
+    for (Entry<String, RavenJToken> prop: obj) {
+      count ++;
+    }
+    assertEquals(0, count);
+  }
+
+
 
   @Test
   public void testHashCodeAndEqual() throws Exception {

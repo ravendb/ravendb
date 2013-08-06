@@ -97,7 +97,7 @@ public class GenerateEntityIdOnTheClient {
         for (ITypeConverter converter : documentStore.getConventions().getIdentityTypeConvertors()) {
           if (converter.canConvertFrom(propertyOrFieldType)) {
             FieldUtils.writeField(field, entity, converter.convertTo(documentStore.getConventions().getFindIdValuePartForValueTypeConversion().apply(entity, id)), true);
-            break;
+            return;
           }
         }
         throw new IllegalArgumentException("Could not convert identity to type " + propertyOrFieldType +

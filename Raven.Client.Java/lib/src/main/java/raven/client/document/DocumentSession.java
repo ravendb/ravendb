@@ -14,6 +14,7 @@ import com.mysema.commons.lang.Pair;
 import com.mysema.query.types.Path;
 
 import raven.abstractions.closure.Action1;
+import raven.abstractions.closure.Function0;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
@@ -228,7 +229,12 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
     incrementRequestCount();
 
-    LoadOperation loadOperation = new LoadOperation(this, databaseCommands.disableAllCaching(), id);
+    LoadOperation loadOperation = new LoadOperation(this, new Function0<AutoCloseable>() {
+      @Override
+      public AutoCloseable apply() {
+        return databaseCommands.disableAllCaching();
+      }
+    }, id);
     boolean retry;
     do {
       loadOperation.logOperation();

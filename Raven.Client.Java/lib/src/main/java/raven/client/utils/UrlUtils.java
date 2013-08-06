@@ -23,6 +23,11 @@ public class UrlUtils {
     }
   }
 
+  public static String escapeUriString(String input) {
+    //TODO: find usages of escapeDataString and escapeUriString
+    return input;
+  }
+
   public static String unescapeDataString(String input) {
     try {
       if (input == null) {

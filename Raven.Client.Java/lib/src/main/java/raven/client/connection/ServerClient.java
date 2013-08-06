@@ -452,7 +452,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
       metadata.set("ETag", new RavenJValue(etag.toString()));
     }
     if (key != null) {
-      key = UrlUtils.escapeDataString(key);
+      key = UrlUtils.escapeUriString(key);
     }
 
     String requestUrl = operationUrl + "/docs/" + ((key != null) ? key : "");
@@ -1859,7 +1859,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   protected SuggestionQueryResult directSuggest(String index, SuggestionQuery suggestionQuery, String operationUrl) {
     String requestUri = operationUrl + String.format("/suggest/%s?term=%s&field=%s&max=%d&popularity=%s",
-        UrlUtils.escapeDataString(index),
+        UrlUtils.escapeUriString(index),
         UrlUtils.escapeDataString(suggestionQuery.getTerm()),
         UrlUtils.escapeDataString(suggestionQuery.getField()),
         suggestionQuery.getMaxSuggestions(),
@@ -2077,7 +2077,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   protected List<String> directGetTerms(String operationUrl, String index, String field, String fromValue, int pageSize) {
     String requestUri = operationUrl + String.format("/terms/%s?field=%s&pageSize=%d&fromValue=%s",
-        UrlUtils.escapeDataString(index),
+        UrlUtils.escapeUriString(index),
         UrlUtils.escapeDataString(field),
         pageSize,
         UrlUtils.escapeDataString(fromValue != null ? fromValue : ""));
@@ -2116,7 +2116,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   protected FacetResults directGetFacets(String operationUrl, String index, IndexQuery query, String facetSetupDoc, int start, Integer pageSize) {
     String requestUri = operationUrl + String.format("/facets/%s?facetDoc=%s&%s&facetStart=%d&facetPageSize=%d",
-        UrlUtils.escapeDataString(index),
+        UrlUtils.escapeUriString(index),
         UrlUtils.escapeDataString(facetSetupDoc),
         query.getMinimalQueryString(),
         start,
@@ -2158,7 +2158,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   protected FacetResults directGetFacets(String operationUrl, String index, IndexQuery query, String facetsJson, int start, Integer pageSize, HttpMethods method) {
     String requestUri = operationUrl + String.format("/facets/%s?%s&facetStart=%d&facetPageSize=%d",
-        UrlUtils.escapeDataString(index),
+        UrlUtils.escapeUriString(index),
         query.getMinimalQueryString(),
         start,
         pageSize);

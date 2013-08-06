@@ -219,7 +219,12 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
    */
   @Override
   public Set<Entry<String, RavenJToken>> entrySet() {
-    throw new IllegalStateException("Not implemeneted. Use keySet instead.");
+    Set<Entry<String, RavenJToken>> entries = new HashSet<>();
+    Iterator<java.util.Map.Entry<String, RavenJToken>> iterator = iterator();
+    while (iterator.hasNext()) {
+      entries.add(iterator.next());
+    }
+    return entries;
   }
 
   /* (non-Javadoc)
@@ -295,7 +300,14 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
         }
       }
       if (localIterator == null) {
-        localIterator = localChanges.entrySet().iterator();
+        Map<String, RavenJToken> entrySetMap = new HashMap<>();
+        for (Map.Entry<String, RavenJToken> entry: localChanges.entrySet()) {
+          if (entry.getValue() != DELETED_MARKER) {
+            entrySetMap.put(entry.getKey(), entry.getValue());
+          }
+        }
+        localIterator = entrySetMap.entrySet().iterator();
+
       }
       return localIterator;
     }

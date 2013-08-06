@@ -1,5 +1,7 @@
 package raven.client.document;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import raven.client.IDocumentSession;
 
 public class DocumentStoreTest {
@@ -10,9 +12,15 @@ public class DocumentStoreTest {
       documentStore.initialize();
 
       try (IDocumentSession session = documentStore.openSession()) {
-
-        session.store(new Animal());
+        Animal a = new Animal();
+        a.setName("Dog");
+        session.store(a);
         session.saveChanges();
+        assertNotNull(a.getId());
+
+        Integer animalId = a.getId();
+        Animal animal = session.load(Animal.class, animalId);
+        assertEquals("Dog", animal.getName());
       }
 
 

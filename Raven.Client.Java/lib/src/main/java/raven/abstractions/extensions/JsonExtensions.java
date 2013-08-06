@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.Version;
 import org.codehaus.jackson.map.DeserializationConfig;
@@ -31,6 +32,7 @@ public class JsonExtensions {
         objectMapper = new ObjectMapper();
         objectMapper.setPropertyNamingStrategy(new DotNetNamingStrategy());
         objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
+        objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
         jsonFactory = objectMapper.getJsonFactory();
 
         objectMapper.registerModule(createCustomSerializeModule());
