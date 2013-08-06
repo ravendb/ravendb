@@ -128,6 +128,18 @@ public class DocumentStore extends DocumentStoreBase {
     setConventions(new DocumentConvention());
   }
 
+  public DocumentStore(String url) {
+    this();
+    this.url = url;
+  }
+
+  public DocumentStore(String url, String defaultDb) {
+    this();
+    this.url = url;
+    this.defaultDatabase = defaultDb;
+  }
+
+
   public ICredentials getCredentials() {
     return credentials;
   }
@@ -267,7 +279,7 @@ public class DocumentStore extends DocumentStoreBase {
       afterSessionCreated(session);
       return session;
     } finally {
-      currentSessionId = null;
+      currentSessionId.set(null);
     }
   }
 

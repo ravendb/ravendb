@@ -66,11 +66,11 @@ public class RavenTransactionAccessor {
   }
 
   public static TransactionInformation getTransactionInformation() {
-    Stack<TransactionInformation> stack = currentRavenTransactions.get();
+    Stack<TransactionInformation> stack = getCurrentRavenTransactions();
     if (!stack.isEmpty() && isSupressExplicitRavenTransaction() == false) {
       return currentRavenTransactions.get().peek();
     }
-    throw new IllegalStateException("Unable to find transaction");
+    return null;
   }
 
   public static AutoCloseable supressExplicitRavenTransaction() {
