@@ -757,7 +757,7 @@ namespace Raven.Client.Document
 			for (int index = 0; index < orderByfields.Length; index++)
 			{
 				var fld = orderByfields[index];
-				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].Type));
+				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
 			}
 			return this;
 		}
@@ -787,7 +787,7 @@ namespace Raven.Client.Document
             for (int index = 0; index < orderByfields.Length; index++)
             {
                 var fld = orderByfields[index];
-                sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].Type));
+                sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
             }
             return this;
 		}
