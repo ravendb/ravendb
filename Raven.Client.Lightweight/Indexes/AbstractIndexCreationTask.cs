@@ -265,7 +265,9 @@ namespace Raven.Client.Indexes
 				AnalyzersStrings = AnalyzersStrings,
 				Map = Map,
 				Reduce = Reduce,
+#pragma warning disable 612,618
 				TransformResults = TransformResults,
+#pragma warning restore 612,618
 				Stores = Stores,
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
