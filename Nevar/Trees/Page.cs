@@ -13,10 +13,6 @@ namespace Nevar.Trees
         private readonly byte* _base;
         private readonly PageHeader* _header;
 
-        private bool _hasSnapshot;
-        private int _snapshotLastMatch;
-        private int _snapshotLastSearchPos;
-
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
@@ -379,26 +375,6 @@ namespace Nevar.Trees
 
                 prev = current;
             }
-        }
-
-        public void SnaphostPosition()
-        {
-            if (_hasSnapshot)
-                return; // keep original snaphost
-
-            _hasSnapshot = true;
-            _snapshotLastMatch = LastMatch;
-            _snapshotLastSearchPos = LastSearchPosition;
-        }
-
-        public void RestorePosition()
-        {
-            if (_hasSnapshot == false)
-                return; // nothing to do
-
-            _hasSnapshot = false;
-            LastMatch = _snapshotLastMatch;
-            LastSearchPosition = _snapshotLastSearchPos;
         }
     }
 }

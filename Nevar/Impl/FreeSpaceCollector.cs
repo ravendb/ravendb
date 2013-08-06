@@ -46,15 +46,7 @@ namespace Nevar.Impl
 					if (_freeSpaceGatheredMinTx >= tx.Id)
 						return null;
 
-                    tx.SnapshotPositionsOfDirtyPages();
-				    try
-				    {
-                        GatherFreeSpace(tx);
-				    }
-				    finally 
-				    {
-				        tx.RestoreDirtyPagesSnapshot();
-				    }
+					GatherFreeSpace(tx);
 				}
 			}
 			finally

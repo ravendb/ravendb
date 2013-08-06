@@ -115,22 +115,6 @@ namespace Nevar.Impl
             node->PageNumber = pageNumber;
         }
 
-        public void SnapshotPositionsOfDirtyPages()
-        {
-            foreach (var dirtyPage in _dirtyPages.Values)
-            {
-                dirtyPage.SnaphostPosition();
-            }
-        }
-
-        public void RestoreDirtyPagesSnapshot()
-        {
-            foreach (var dirtyPage in _dirtyPages.Values)
-            {
-                dirtyPage.RestorePosition();
-            }
-        }
-
         public Page GetReadOnlyPage(long n)
         {
             Page page;
