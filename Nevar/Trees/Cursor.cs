@@ -8,7 +8,7 @@ namespace Nevar.Trees
     public class Cursor
     {
         public LinkedList<Page> Pages = new LinkedList<Page>();
-
+		
         public Page ParentPage
         {
             get
@@ -56,5 +56,10 @@ namespace Nevar.Trees
             Pages.RemoveFirst();
             return p;
         }
+
+	    public Page GetPage(long p)
+	    {
+		    return Pages.FirstOrDefault(x => x.PageNumber == p);
+	    }
     }
 }

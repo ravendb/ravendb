@@ -87,7 +87,7 @@ namespace Nevar.Trees
             {
                 _tx.ModifyCursor(_txInfo, c);
                 parentPage.LastSearchPosition = 1;
-                sibling = _tx.GetModifiedPage(parentPage, parentPage.GetNode(1)->PageNumber);
+				sibling = _tx.ModifyPage(parentPage, parentPage.GetNode(1)->PageNumber, c);
                 parentPage.LastSearchPosition = 0;
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries;
@@ -97,7 +97,7 @@ namespace Nevar.Trees
             {
                 _tx.ModifyCursor(_txInfo, c);
                 parentPage.LastSearchPosition--;
-                sibling = _tx.GetModifiedPage(parentPage, parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber);
+                sibling = _tx.ModifyPage(parentPage, parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, c);
                 parentPage.LastSearchPosition++;
                 sibling.LastSearchPosition = sibling.NumberOfEntries - 1;
                 page.LastSearchPosition = 0;
@@ -160,14 +160,17 @@ namespace Nevar.Trees
                 return; // cannot do anything here
             }
             // in this case, we have a root pointer with just one pointer, we can just swap it out
-            var node = page.GetNode(0);
-            System.Diagnostics.Debug.Assert(node->Flags.HasFlag(NodeFlags.PageRef));
-            _tx.ModifyCursor(txInfo, cursor);
+            
+			var node = page.GetNode(0);
+            Debug.Assert(node->Flags.HasFlag(NodeFlags.PageRef));
+            
+			_tx.ModifyCursor(txInfo, cursor);
             txInfo.State.LeafPages = 1;
             txInfo.State.BranchPages = 0;
             txInfo.State.Depth = 1;
             txInfo.State.PageCount = 1;
-            txInfo.Root = _tx.GetReadOnlyPage(node->PageNumber);
+
+			txInfo.Root = _tx.ModifyPage(null, node->PageNumber, cursor);
 
             Debug.Assert(txInfo.Root.Dirty);
 
