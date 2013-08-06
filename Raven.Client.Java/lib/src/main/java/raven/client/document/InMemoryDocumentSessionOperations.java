@@ -96,7 +96,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   private UUID resourceManagerId;
   private int maxNumberOfRequestsPerSession;
   private boolean useOptimisticConcurrency;
-  public boolean allowNonAuthoritativeInformation;
+  private boolean allowNonAuthoritativeInformation;
 
   private final List<ICommandData> deferedCommands = new ArrayList<ICommandData>();
   public GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
@@ -109,6 +109,8 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   public int getNumberOfEntitiesInUnitOfWork() {
     return entitiesAndMetadata.size();
   }
+
+
 
   public int getNumberOfRequests() {
     return numberOfRequests;

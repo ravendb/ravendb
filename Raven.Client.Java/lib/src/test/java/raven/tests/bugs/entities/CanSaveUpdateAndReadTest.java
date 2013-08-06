@@ -1,5 +1,7 @@
 package raven.tests.bugs.entities;
 
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Test;
 
 import raven.client.IDocumentSession;
@@ -7,7 +9,7 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 
-public class CanSaveUpdateAndRead extends RemoteClientTest {
+public class CanSaveUpdateAndReadTest extends RemoteClientTest {
 
 
 
@@ -28,8 +30,8 @@ public class CanSaveUpdateAndRead extends RemoteClientTest {
 
       try (IDocumentSession s = store.openSession()) {
         Event e = s.load(Event.class, "events/1");
-        /*TODO var entityName = s.Advanced.GetMetadataFor(e)["Raven-Entity-Name"].Value<string>();
-        Assert.Equal("Events", entityName); */
+        String entityName = s.advanced().getMetadataFor(e).value(String.class, "Raven-Entity-Name");
+        assertEquals("Events", entityName);
       }
     }
   }

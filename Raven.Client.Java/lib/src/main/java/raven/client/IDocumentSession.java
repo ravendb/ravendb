@@ -22,7 +22,7 @@ public interface IDocumentSession extends AutoCloseable {
    * property to avoid cluttering the API
    * @return
    */
-  public ISyncAdvancedSessionOperation getAdvanced();
+  public ISyncAdvancedSessionOperation advanced();
 
   /**
    * Marks the specified entity for deletion. The entity will be deleted when IDocumentSession.SaveChanges is called.

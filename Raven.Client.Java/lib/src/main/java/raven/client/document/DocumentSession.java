@@ -11,7 +11,6 @@ import java.util.UUID;
 
 import com.google.common.base.Defaults;
 import com.mysema.commons.lang.Pair;
-import com.mysema.query.types.Path;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
@@ -89,7 +88,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * Note: Those operations are rarely needed, and have been moved to a separate
    * property to avoid cluttering the API
    */
-  public ISyncAdvancedSessionOperation getAdvanced() {
+  public ISyncAdvancedSessionOperation advanced() {
     return this;
   }
 
