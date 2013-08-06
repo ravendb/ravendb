@@ -46,8 +46,11 @@ namespace Nevar.Impl
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
-			if (newLength <= _fileStream.Length)
+			if (newLength < _fileStream.Length)
 				throw new ArgumentException("Cannot set the legnth to less than the current length");
+
+		    if (newLength == _fileStream.Length)
+		        return;
 
 			// need to allocate memory again
 			_fileStream.SetLength(newLength);

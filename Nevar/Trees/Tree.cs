@@ -97,7 +97,8 @@ namespace Nevar.Trees
 	            txInfo.State.EntriesCount++;
 	        }
 
-	        byte* overFlowPos = null;
+            var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
+            byte* overFlowPos = null;
             var pageNumber = -1L;
 	        if (ShouldGoToOverflowPage(tx, len))
 	        {
@@ -114,7 +115,7 @@ namespace Nevar.Trees
             }
             else
             {
-                dataPos = page.AddNode(page.LastSearchPosition, key, len, pageNumber);
+                dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber);
                 page.DebugValidate(tx, _cmp, txInfo.Root);
             }
 	        if (overFlowPos != null)
@@ -255,10 +256,10 @@ namespace Nevar.Trees
             page = tx.ModifyCursor(this, cursor);
 
             txInfo.State.EntriesCount--;
-			RemoveLeafNode(tx, cursor, page);
+            RemoveLeafNode(tx, cursor, page);
 			var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
 			var changedPage = page;
-			while (changedPage != null)
+            while (changedPage != null)
 			{
 				changedPage = treeRebalancer.Execute(cursor, changedPage);
 			}

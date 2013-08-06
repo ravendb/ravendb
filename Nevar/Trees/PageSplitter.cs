@@ -113,7 +113,8 @@ namespace Nevar.Trees
             }
             else
             {
-                dataPos = _page.AddNode(_page.LastSearchPosition, _newKey, _len, _pageNumber);
+                var pos = _page.NodePositionFor(_newKey, _cmp);
+                dataPos = _page.AddNode(pos, _newKey, _len, _pageNumber);
                 _cursor.Push(_page);
             }
             return dataPos;

@@ -45,7 +45,16 @@ namespace Nevar.Impl
 
 					if (_freeSpaceGatheredMinTx >= tx.Id)
 						return null;
-					GatherFreeSpace(tx);
+
+                    tx.SnapshotPositionsOfDirtyPages();
+				    try
+				    {
+                        GatherFreeSpace(tx);
+				    }
+				    finally 
+				    {
+				        tx.RestoreDirtyPagesSnapshot();
+				    }
 				}
 			}
 			finally
@@ -74,6 +83,9 @@ namespace Nevar.Impl
 			Debug.Assert(_freeSpaceKeyTxId != -1);
 
 			var oldTransactionsToDelete = GetOldTransactionsToDelete(tx);
+            if (oldTransactionsToDelete.Count== 4 &&
+                oldTransactionsToDelete[0].ToString() == "1269/3") { }
+
 			foreach (var slice in oldTransactionsToDelete)
 			{
 				_env.FreeSpace.Delete(tx, slice);

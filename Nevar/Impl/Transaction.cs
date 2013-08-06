@@ -61,29 +61,19 @@ namespace Nevar.Impl
         {
             if (c.Pages.Count == 0)
             {
-				if (txInfo.Root.Dirty == false)
-					txInfo.Root = ModifyPage(null, txInfo.Root); 
-				return null;
+                if (txInfo.Root.Dirty == false)
+                    txInfo.Root = ModifyPage(null, txInfo.Root);
+                return null;
             }
 
             var node = c.Pages.Last;
             while (node != null)
             {
                 var parent = node.Next != null ? node.Next.Value : null;
-				
-				// those might be changed by allocating a new page
-	            var lastSearchPosition = node.Value.LastSearchPosition;
-	            var lastMatch = node.Value.LastMatch;
-
-	            node.Value = ModifyPage(parent, node.Value);
-				// so we need to restore them
-	            node.Value.LastSearchPosition = lastSearchPosition;
-	            node.Value.LastMatch = lastMatch;
-
-
+                node.Value = ModifyPage(parent, node.Value);
                 node = node.Previous;
             }
-	        txInfo.Root = c.Pages.Last.Value;
+            txInfo.Root = c.Pages.Last.Value;
             return c.Pages.First.Value;
         }
 
@@ -100,7 +90,6 @@ namespace Nevar.Impl
                 UpdateParentPageNumber(parent, page.PageNumber);
                 return page;
             }
-
             var newPage = AllocatePage(1);
             newPage.Dirty = true;
             var newPageNum = newPage.PageNumber;
@@ -124,6 +113,22 @@ namespace Nevar.Impl
 
             var node = parent.GetNode(parent.LastSearchPositionOrLastEntry);
             node->PageNumber = pageNumber;
+        }
+
+        public void SnapshotPositionsOfDirtyPages()
+        {
+            foreach (var dirtyPage in _dirtyPages.Values)
+            {
+                dirtyPage.SnaphostPosition();
+            }
+        }
+
+        public void RestoreDirtyPagesSnapshot()
+        {
+            foreach (var dirtyPage in _dirtyPages.Values)
+            {
+                dirtyPage.RestorePosition();
+            }
         }
 
         public Page GetReadOnlyPage(long n)
@@ -325,7 +330,6 @@ namespace Nevar.Impl
 
         public Page GetModifiedPage(Page parentPage, long n)
         {
-
             return ModifyPage(parentPage, GetReadOnlyPage(n));
         }
 

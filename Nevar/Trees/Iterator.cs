@@ -11,7 +11,6 @@ namespace Nevar.Trees
 		private readonly Cursor _cursor;
 		private Page _currentPage;
 
-
 		public Iterator(Tree tree, Transaction tx, SliceComparer cmp)
 		{
 			_tree = tree;

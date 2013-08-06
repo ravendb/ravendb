@@ -40,8 +40,10 @@ namespace Nevar.Trees
                 return null; // above space/keys thresholds
 
             Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
-
+            
             var sibling = SetupMoveOrMerge(cursor, page, parentPage);
+
+            Debug.Assert(sibling.PageNumber != page.PageNumber);
 
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
             if (sibling.SizeUsed > _tx.Pager.PageMinSpace &&
@@ -105,35 +107,34 @@ namespace Nevar.Trees
 
         private void MoveNode(Page parentPage, Page from, Page to)
         {
-            var fromKey = GetCurrentKeyFrom(from);
+            var originalFromKeyStart = GetCurrentKeyFrom(from);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            byte* val = null;
-            long pageNum;
             if (fromNode->Flags.HasFlag(NodeFlags.Data))
             {
-                val = from.Base + from.KeysOffsets[from.LastSearchPosition] + Constants.NodeHeaderSize + fromKey.Size;
-                var dataPos = to.AddNode(to.LastSearchPosition, fromKey, fromNode->DataSize, -1);
+                byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
+                var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1);
                 NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
             }
             else
             {
-                pageNum = fromNode->PageNumber;
-                to.AddNode(to.LastSearchPosition, fromKey, -1, pageNum);
+                long pageNum = fromNode->PageNumber;
+                to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum);
             }
 
             from.RemoveNode(from.LastSearchPosition);
 
             parentPage.RemoveNode(parentPage.LastSearchPosition);
-            var toKey = GetCurrentKeyFrom(from); // get the next smallest key it has
+            var newFromKey = GetCurrentKeyFrom(from); // get the next smallest key it has now
 
             var pageNumber = to.PageNumber;
-            if (fromKey.Compare(GetCurrentKeyFrom(to), _cmp) > 0)
+            // the current page is implicit left, so need to update it the _next_ entry
+            if (parentPage.LastSearchPosition == 1) 
             {
                 pageNumber = from.PageNumber;
             }
 
-            parentPage.AddNode(parentPage.LastSearchPosition, toKey, -1, pageNumber);
+            parentPage.AddNode(parentPage.LastSearchPosition, newFromKey, -1, pageNumber);
         }
 
         private Slice GetCurrentKeyFrom(Page page)

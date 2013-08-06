@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -11,6 +12,11 @@ namespace Nevar.Trees
     {
         private readonly byte* _base;
         private readonly PageHeader* _header;
+
+        private bool _hasSnapshot;
+        private int _snapshotLastMatch;
+        private int _snapshotLastSearchPos;
+
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
@@ -350,6 +356,7 @@ namespace Nevar.Trees
                 return;
 
             var prev = new Slice(GetNode(0));
+            var pages = new HashSet<long>();
             for (int i = 1; i < NumberOfEntries; i++)
             {
                 var node = GetNode(i);
@@ -361,8 +368,37 @@ namespace Nevar.Trees
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
                 }
 
+                if (node->Flags.HasFlag(NodeFlags.PageRef))
+                {
+                    if (pages.Add(node->PageNumber) == false)
+                    {
+                        DebugStuff.RenderAndShow(tx, root, 1);
+                        throw new InvalidOperationException("The page " + PageNumber + " references same page multiple times");
+                    }
+                }
+
                 prev = current;
             }
+        }
+
+        public void SnaphostPosition()
+        {
+            if (_hasSnapshot)
+                return; // keep original snaphost
+
+            _hasSnapshot = true;
+            _snapshotLastMatch = LastMatch;
+            _snapshotLastSearchPos = LastSearchPosition;
+        }
+
+        public void RestorePosition()
+        {
+            if (_hasSnapshot == false)
+                return; // nothing to do
+
+            _hasSnapshot = false;
+            LastMatch = _snapshotLastMatch;
+            LastSearchPosition = _snapshotLastSearchPos;
         }
     }
 }
