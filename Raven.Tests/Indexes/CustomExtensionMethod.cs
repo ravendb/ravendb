@@ -33,6 +33,7 @@ namespace Raven.Tests.Indexes
 
 	public static class CustomExtensionMethods
 	{
+		[RavenMethod]
 		public static string DoSomething(this string s)
 		{
 			// implementation details are not important.
