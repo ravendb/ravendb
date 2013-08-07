@@ -76,6 +76,7 @@
     <Compile Include="Document\DTC\LocalDirectoryTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
+    <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />
     <Compile Include="Shard\ShardedRavenQueryInspector.cs" />
