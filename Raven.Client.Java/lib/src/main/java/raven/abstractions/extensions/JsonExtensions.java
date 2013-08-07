@@ -13,6 +13,7 @@ import org.codehaus.jackson.map.MapperConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.codehaus.jackson.map.deser.std.FromStringDeserializer;
+import org.codehaus.jackson.map.deser.std.StdDeserializer;
 import org.codehaus.jackson.map.introspect.AnnotatedField;
 import org.codehaus.jackson.map.introspect.AnnotatedMethod;
 import org.codehaus.jackson.map.introspect.AnnotatedParameter;
@@ -20,6 +21,7 @@ import org.codehaus.jackson.map.module.SimpleModule;
 
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
+import raven.abstractions.json.linq.RavenJToken;
 
 public class JsonExtensions {
   private static ObjectMapper objectMapper;
@@ -44,7 +46,21 @@ public class JsonExtensions {
   private static SimpleModule createCustomSerializeModule() {
     SimpleModule module = new SimpleModule("customSerializers", new Version(1, 0, 0, null));
     module.addDeserializer(Etag.class, new EtagDeserializer(Etag.class));
+    module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer(RavenJToken.class));
     return module;
+  }
+
+  public static class RavenJTokenDeserializer extends StdDeserializer<RavenJToken> {
+
+    protected RavenJTokenDeserializer(Class< ? > vc) {
+      super(vc);
+    }
+
+    @Override
+    public RavenJToken deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+      return RavenJToken.load(jp);
+    }
+
   }
 
   public static class EtagDeserializer extends FromStringDeserializer<Etag> {

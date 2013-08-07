@@ -2044,7 +2044,15 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
       httpJsonRequest.write(postedData);
       RavenJArray results = (RavenJArray)httpJsonRequest.readResponseJson();
-      GetResponse[] responses = results.values(GetResponse.class).toArray(new GetResponse[0]);
+
+      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(results.toString(), GetResponse[].class);
+
+      /*
+      List<GetResponse> responsesList = new ArrayList<>();
+      for (RavenJObject resp : results.values(RavenJObject.class)) {
+        responsesList.add(new GetResponse(resp));
+      }
+      GetResponse[] responses = responsesList.toArray(new GetResponse[0]);*/
 
 
       // 1.0 servers return result as string, not as an object, need to convert here

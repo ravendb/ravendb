@@ -9,6 +9,11 @@ public class GetRequest {
   private String url;
   private Map<String, String> headers;
   private String query;
+
+  public GetRequest() {
+    this.headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+  }
+
   public Map<String, String> getHeaders() {
     return headers;
   }
@@ -37,10 +42,6 @@ public class GetRequest {
       return url + query;
     }
     return url + "?" + query;
-  }
-
-  public void getRequest() {
-    headers = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
   }
 
 }

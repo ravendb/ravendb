@@ -14,6 +14,7 @@ import raven.client.connection.profiling.ProfilingContext;
 import raven.client.connection.profiling.ProfilingInformation;
 import raven.client.document.DocumentConvention;
 import raven.client.document.DocumentSessionListeners;
+import raven.client.document.DocumentStore;
 import raven.client.document.InMemoryDocumentSessionOperations;
 import raven.client.document.dtc.ITransactionRecoveryStorage;
 import raven.client.document.dtc.VolatileOnlyTransactionRecoveryStorage;
@@ -91,6 +92,11 @@ public abstract class DocumentStoreBase implements IDocumentStore {
 
   public void setConventions(DocumentConvention conventions) {
     this.conventions = conventions;
+  }
+
+  public DocumentStore withConventions(DocumentConvention conventions) {
+    this.conventions = conventions;
+    return (DocumentStore) this;
   }
 
   public String getUrl() {

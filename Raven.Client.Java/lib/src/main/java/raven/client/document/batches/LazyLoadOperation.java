@@ -29,7 +29,7 @@ public class LazyLoadOperation<T> implements ILazyOperation {
 
   public GetRequest createRequest() {
     GetRequest request = new GetRequest();
-    request.setUrl("/docs" + UrlUtils.escapeDataString(key));
+    request.setUrl("/docs/" + UrlUtils.escapeDataString(key));
     return request;
   }
 

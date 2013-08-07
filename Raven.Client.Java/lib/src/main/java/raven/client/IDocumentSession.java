@@ -3,7 +3,10 @@ package raven.client;
 import java.util.Collection;
 import java.util.UUID;
 
+import com.mysema.query.types.Path;
+
 import raven.abstractions.data.Etag;
+import raven.client.document.ILoaderWithInclude;
 
 /**
  * Interface for document session
@@ -152,14 +155,14 @@ public interface IDocumentSession extends AutoCloseable {
    * @param path
    * @return
    */
-//TODO: public ILoaderWithInclude<Object> include(String path);
+  public ILoaderWithInclude include(String path);
 
   /**
    * Begin a load while including the specified path
    * @param path
    * @return
    */
-//TODO: public <T> ILoaderWithInclude<T> include(Path<?> path);
+   public ILoaderWithInclude include(Path<?> path);
 
   //TODO: should we include this method? : ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
 

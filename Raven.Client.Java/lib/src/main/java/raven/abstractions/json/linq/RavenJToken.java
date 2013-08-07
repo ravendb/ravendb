@@ -339,16 +339,20 @@ public abstract class RavenJToken {
     return ret;
   }
 
-  public RavenJToken selectToken(String path, boolean errorWhenNoMatch) throws Exception {
+  public RavenJToken selectToken(String path) {
+    return selectToken(path, false);
+  }
+
+  public RavenJToken selectToken(String path, boolean errorWhenNoMatch) {
     RavenJPath p = new RavenJPath(path);
     return p.evaluate(this, errorWhenNoMatch);
   }
 
-  public RavenJToken selectToken(RavenJPath path) throws Exception {
+  public RavenJToken selectToken(RavenJPath path) {
     return selectToken(path, false);
   }
 
-  public RavenJToken selectToken(RavenJPath path, boolean errorWhenNoMatch) throws Exception {
+  public RavenJToken selectToken(RavenJPath path, boolean errorWhenNoMatch) {
     return path.evaluate(this, errorWhenNoMatch);
   }
 

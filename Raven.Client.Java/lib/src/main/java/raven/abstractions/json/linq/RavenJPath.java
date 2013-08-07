@@ -11,20 +11,21 @@ public class RavenJPath {
   private List<Object> parts;
   private int currentIndex;
 
-  public RavenJPath(String expression) throws Exception {
+  public RavenJPath(String expression) {
     this.expression = expression;
     this.parts = new ArrayList<>();
     parseMain();
   }
 
-  private void parseMain() throws Exception {
-    int currentPartStartIndex = this.currentIndex;
-    boolean followingIndexer = false;
+  private void parseMain() {
+    try {
+      int currentPartStartIndex = this.currentIndex;
+      boolean followingIndexer = false;
 
-    while (this.currentIndex < this.expression.length()) {
-      char currentChar = this.expression.charAt(this.currentIndex);
+      while (this.currentIndex < this.expression.length()) {
+        char currentChar = this.expression.charAt(this.currentIndex);
 
-      switch (currentChar) {
+        switch (currentChar) {
         case '[':
         case '(':
           if (this.currentIndex > currentPartStartIndex) {
@@ -50,14 +51,17 @@ public class RavenJPath {
         default:
           if (followingIndexer) throw new Exception("Unexpected character following indexer: " + currentChar);
           break;
+        }
+
+        this.currentIndex++;
       }
 
-      this.currentIndex++;
-    }
-
-    if (this.currentIndex > currentPartStartIndex) {
-      String member = this.expression.substring(currentPartStartIndex, this.currentIndex - currentPartStartIndex);
-      parts.add(member);
+      if (this.currentIndex > currentPartStartIndex) {
+        String member = this.expression.substring(currentPartStartIndex, this.currentIndex - currentPartStartIndex);
+        parts.add(member);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Unable to evaluate path");
     }
   }
 
@@ -107,19 +111,19 @@ public class RavenJPath {
           RavenJArray array = (RavenJArray) current;
           if (array != null) {
             switch (propertyName) {
-              case "Count":
-              case "count":
-              case "Length":
-              case "length":
-              case "Size":
-              case "size":
-                current = new RavenJValue(array.size());
-                break;
-              default:
-                if (errorWhenNoMatch){
-                  throw new RavenJPathEvaluationException("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
-                }
-                break;
+            case "Count":
+            case "count":
+            case "Length":
+            case "length":
+            case "Size":
+            case "size":
+              current = new RavenJValue(array.size());
+              break;
+            default:
+              if (errorWhenNoMatch){
+                throw new RavenJPathEvaluationException("Property '" + propertyName + "' not valid on " + current.getType().name() + ".");
+              }
+              break;
             }
             continue;
           }
