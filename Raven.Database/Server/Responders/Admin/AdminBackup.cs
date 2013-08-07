@@ -6,6 +6,7 @@
 
 using System.Security.Principal;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
@@ -34,6 +35,10 @@ namespace Raven.Database.Server.Responders.Admin
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
+			if (backupRequest.DatabaseDocument == null)
+			{
+				backupRequest.DatabaseDocument = SystemDatabase.Get("Raven/Databases/" + Database.Name, null).DataAsJson.JsonDeserialization<DatabaseDocument>();
+			}
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 			context.SetStatusToCreated(BackupStatus.RavenBackupStatusDocumentKey);
 		}

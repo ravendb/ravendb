@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Smuggler;
@@ -115,5 +116,10 @@ namespace Raven.Studio.Features.Tasks
 
             return DatabaseTaskOutcome.Succesful;
         }
+
+		public override void OnError()
+		{
+
+		}
     }
 }
