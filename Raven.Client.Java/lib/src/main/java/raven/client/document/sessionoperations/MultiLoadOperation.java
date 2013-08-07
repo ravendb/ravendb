@@ -8,8 +8,8 @@ import java.util.List;
 import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Defaults;
-import com.mysema.commons.lang.Pair;
 
+import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.MultiLoadResult;
@@ -25,14 +25,14 @@ public class MultiLoadOperation {
   private final InMemoryDocumentSessionOperations sessionOperations;
   protected Function0<AutoCloseable> disableAllCaching;
   private final String[] ids;
-  private final Pair<String, Class<?>>[] includes;
+  private final Tuple<String, Class<?>>[] includes;
   boolean firstRequest = true;
   JsonDocument[] results;
   JsonDocument[] includeResults;
 
   private long spStart;
 
-  public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Function0<AutoCloseable> disableAllCaching, String[] ids, Pair<String, Class<?>>[] includes) {
+  public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Function0<AutoCloseable> disableAllCaching, String[] ids, Tuple<String, Class<?>>[] includes) {
     this.sessionOperations = sessionOperations;
     this.disableAllCaching = disableAllCaching;
     this.ids = ids;
@@ -77,7 +77,7 @@ public class MultiLoadOperation {
   public <T> T[] complete(Class<T> clazz) {
     for (int i = 0; i < includeResults.length; i++) {
       JsonDocument include = includeResults[i];
-      Class<?> entityType = (this.includes.length > i) ? this.includes[i].getSecond() : Object.class;
+      Class<?> entityType = (this.includes.length > i) ? this.includes[i].getItem2() : Object.class;
       sessionOperations.trackEntity(entityType, include);
     }
 
@@ -97,8 +97,8 @@ public class MultiLoadOperation {
     List<String> includePaths = null;
     if (this.includes != null) {
       includePaths = new ArrayList<>();
-      for (Pair<String, Class<?>> pair : this.includes) {
-        includePaths.add(pair.getFirst());
+      for (Tuple<String, Class<?>> pair : this.includes) {
+        includePaths.add(pair.getItem1());
       }
     }
 

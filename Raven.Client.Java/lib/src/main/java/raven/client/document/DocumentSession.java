@@ -7,30 +7,40 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
-import com.google.common.base.Defaults;
-import com.mysema.commons.lang.Pair;
-
+import raven.abstractions.basic.Lazy;
+import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.data.BatchResult;
-import raven.abstractions.data.Etag;
+import raven.abstractions.data.GetRequest;
+import raven.abstractions.data.GetResponse;
 import raven.abstractions.data.JsonDocument;
+import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
-import raven.client.DocumentStoreBase;
 import raven.client.IDocumentSessionImpl;
 import raven.client.ISyncAdvancedSessionOperation;
 import raven.client.ITransactionalDocumentSession;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.document.batches.IEagerSessionOperations;
+import raven.client.document.batches.ILazyLoaderWithInclude;
 import raven.client.document.batches.ILazyOperation;
 import raven.client.document.batches.ILazySessionOperations;
+import raven.client.document.batches.LazyLoadOperation;
+import raven.client.document.batches.LazyMultiLoadOperation;
+import raven.client.document.batches.LazyMultiLoaderWithInclude;
+import raven.client.document.batches.LazyStartsWithOperation;
 import raven.client.document.sessionoperations.LoadOperation;
-import raven.client.indexes.AbstractIndexCreationTask;
+import raven.client.document.sessionoperations.MultiLoadOperation;
 import raven.client.linq.IDocumentQueryGenerator;
-import raven.client.linq.IRavenQueryable;
+import raven.client.utils.Closer;
+
+import com.google.common.base.Defaults;
+import com.mysema.query.types.Path;
 
 /**
  * Implements Unit of Work for accessing the RavenDB server
@@ -55,14 +65,14 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * Access the lazy operations
    * @return
    */
-  public ILazySessionOperations getLazily() {
+  public ILazySessionOperations lazily() {
     return this;
   }
 
   /**
    * Access the eager operations
    */
-  public IEagerSessionOperations getEagerly() {
+  public IEagerSessionOperations eagerly() {
     return this;
   }
 
@@ -95,125 +105,128 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Begin a load while including the specified path
    */
-  /* TODO:
-  ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
-  {
-    return new LazyMultiLoaderWithInclude<T>(this).Include(path);
-  }*/
+  public ILazyLoaderWithInclude lazyInclude(Path<?> path) {
+    return new LazyMultiLoaderWithInclude(this).lazyInclude(path);
+  }
 
   /**
    * Loads the specified ids.
    */
-  /*TODO
-  Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
-  {
-    return Lazily.Load<T>(ids, null);
-  } */
+  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, String... ids) {
+    return lazyLoad(clazz, Arrays.asList(ids), null);
+  }
 
   /**
    * Loads the specified ids.
    */
-  /*TODO:
-  Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
-  {
-    return Lazily.Load<T>(ids, null);
-  }*/
+  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, Collection<String> ids) {
+    return lazyLoad(clazz, ids, null);
+  }
 
   /**
    * Loads the specified id.
    */
-  /*TODO
-  Lazy<T> ILazySessionOperations.Load<T>(string id)
-  {
-    return Lazily.Load(id, (Action<T>) null);
-  } */
+  public <T> Lazy<T> lazyLoad(Class<T> clazz, String id) {
+    return lazyLoad(clazz, id, null);
+  }
+
 
   /**
    * Loads the specified ids and a function to call when it is evaluated
    */
-  /*TODO
-  public Lazy<T[]> Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
-  {
-    return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
-  }*/
+  @SuppressWarnings("unchecked")
+  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Collection<String> ids, Action1<TResult[]> onEval) {
+    return lazyLoadInternal(clazz, ids.toArray(new String[0]), new Tuple[0], onEval);
+  }
 
   /**
    * Loads the specified id and a function to call when it is evaluated
    */
-  /*TODO
-  public Lazy<T> Load<T>(string id, Action<T> onEval)
-  {
-    if (IsLoaded(id))
-      return new Lazy<T>(() => Load<T>(id));
-    var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
-    return AddLazyOperation(lazyLoadOperation, onEval);
-  }*/
+  public <T> Lazy<T> lazyLoad(final Class<T> clazz, final String id, Action1<T> onEval) {
+    if (isLoaded(id)) {
+      return new Lazy<T>(new Function0<T>() {
+        @Override
+        public T apply() {
+          return load(clazz, id);
+        }
+      });
+    }
+    LazyLoadOperation<T> lazyLoadOperation = new LazyLoadOperation<T>(clazz, id, new LoadOperation(this, new DisableAllCachingCallback(), id));
+    return addLazyOperation(lazyLoadOperation, onEval);
+  }
+
+  public <T> Lazy<T> lazyLoad(Class<T> clazz, Number id, Action1<T> onEval) {
+    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    return lazyLoad(clazz, documentKey, onEval);
+  }
+
+  public <T> Lazy<T> lazyLoad(Class<T> clazz, UUID id, Action1<T> onEval) {
+    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    return lazyLoad(clazz, documentKey, onEval);
+  }
+
+  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, Number... ids) {
+    List<String> documentKeys = new ArrayList<>();
+    for (Number id : ids) {
+      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+    }
+    return lazyLoad(clazz, documentKeys, null);
+  }
+
+  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, UUID... ids) {
+    List<String> documentKeys = new ArrayList<>();
+    for (UUID id : ids) {
+      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+    }
+    return lazyLoad(clazz, documentKeys, null);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Action1<TResult[]> onEval, Number... ids) {
+    List<String> documentKeys = new ArrayList<>();
+    for (Number id : ids) {
+      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+    }
+    return lazyLoadInternal(clazz, documentKeys.toArray(new String[0]), new Tuple[0], onEval);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Action1<TResult[]> onEval, UUID... ids) {
+    List<String> documentKeys = new ArrayList<>();
+    for (UUID id : ids) {
+      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+    }
+    return lazyLoadInternal(clazz, documentKeys.toArray(new String[0]), new Tuple[0], onEval);
+  }
 
   /**
-   * Loads the specified entities with the specified id after applying
-   *  conventions on the provided id to get the real document id.
-   *  This method allows you to call:
-   *  Load{Post}(1)
-   *  And that call will internally be translated to
-   *  Load{Post}("posts/1");
-   *  Or whatever your conventions specify.
+   * Begin a load while including the specified path
    */
-  /*TODO
-  Lazy<T> ILazySessionOperations.Load<T>(ValueType id, Action<T> onEval)
-  {
-    var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-    return Lazily.Load(documentKey, onEval);
+  public ILazyLoaderWithInclude lazyInclude(String path) {
+    return new LazyMultiLoaderWithInclude(this).lazyInclude(path);
   }
 
-  Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
-  {
-    var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-    return Lazily.Load<T>(documentKeys, null);
+  public <T> Lazy<T> lazyLoad(Class<T> clazz, Number id) {
+    return lazyLoad(clazz, id, (Action1<T>) null);
   }
 
-  Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
-  {
-    var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-    return Lazily.Load<T>(documentKeys, null);
+  public <T> Lazy<T> lazyLoad(Class<T> clazz, UUID id) {
+    return lazyLoad(clazz, id, (Action1<T>) null);
   }
 
-  Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
-  {
-    var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-    return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
+  private class DisableAllCachingCallback implements Function0<AutoCloseable> {
+    @Override
+    public AutoCloseable apply() {
+      return databaseCommands.disableAllCaching();
+    }
   }
-
-  /// <summary>
-  /// Begin a load while including the specified path
-  /// </summary>
-  /// <param name="path">The path.</param>
-  ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
-  {
-    return new LazyMultiLoaderWithInclude<object>(this).Include(path);
-  }
-
-  /// <summary>
-  /// Loads the specified entities with the specified id after applying
-  /// conventions on the provided id to get the real document id.
-  /// </summary>
-  /// <remarks>
-  /// This method allows you to call:
-  /// Load{Post}(1)
-  /// And that call will internally be translated to
-  /// Load{Post}("posts/1");
-  ///
-  /// Or whatever your conventions specify.
-  /// </remarks>
-  Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
-  {
-    return Lazily.Load(id, (Action<T>) null);
-  }
-   */
-
 
   /**
    * Loads the specified entity with the specified id.
    */
+  @SuppressWarnings("unchecked")
   public <T> T load(Class<T> clazz, String id) {
     if (id == null) {
       throw new IllegalArgumentException("The document id cannot be null");
@@ -228,12 +241,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
     incrementRequestCount();
 
-    LoadOperation loadOperation = new LoadOperation(this, new Function0<AutoCloseable>() {
-      @Override
-      public AutoCloseable apply() {
-        return databaseCommands.disableAllCaching();
-      }
-    }, id);
+    LoadOperation loadOperation = new LoadOperation(this, new DisableAllCachingCallback(), id);
     boolean retry;
     do {
       loadOperation.logOperation();
@@ -295,6 +303,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return loadInternal(clazz, ids, transformer, null);
   }
 
+  @SuppressWarnings("unchecked")
   private <T> T[] loadInternal(Class<T> clazz, String[] ids, String transformer, Map<String, RavenJToken> queryInputs) {
     if (ids.length == 0) {
       return (T[]) Array.newInstance(clazz, 0);
@@ -347,8 +356,8 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
 
 
-  public <T> T[] loadInternal(Class<T> clazz, String[] ids, Pair<String, Class<?>>[] includes) {
-    /*TODO
+  @SuppressWarnings("unchecked")
+  public <T> T[] loadInternal(Class<T> clazz, String[] ids, Tuple<String, Class<?>>[] includes) {
     if (ids.length == 0) {
       return (T[]) Array.newInstance(clazz, 0);
     }
@@ -356,64 +365,62 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     List<String> includePaths = null;
     if (includes != null) {
       includePaths = new ArrayList<>();
-      for (Pair<String, Class<?>> item: includes) {
-        includePaths.add(item.getFirst());
+      for (Tuple<String, Class<?>> item: includes) {
+        includePaths.add(item.getItem1());
       }
     }
 
     incrementRequestCount();
 
-    var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
-    MultiLoadResult multiLoadResult;
-    do
-    {
-      multiLoadOperation.LogOperation();
-      using (multiLoadOperation.EnterMultiLoadContext())
-      {
-        multiLoadResult = DatabaseCommands.Get(ids, includePaths);
+    MultiLoadOperation multiLoadOperation = new MultiLoadOperation(this, new DisableAllCachingCallback(), ids, includes);
+    MultiLoadResult multiLoadResult = null;
+    do {
+      multiLoadOperation.logOperation();
+      try (AutoCloseable context = multiLoadOperation.enterMultiLoadContext()) {
+        multiLoadResult = databaseCommands.get(ids, includePaths.toArray(new String[0]));
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
-    } while (multiLoadOperation.SetResult(multiLoadResult));
+    } while (multiLoadOperation.setResult(multiLoadResult));
 
-    return multiLoadOperation.Complete<T>();
-     */
-    return null; //TODO: delete me
+    return multiLoadOperation.complete(clazz);
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T[] loadInternal(Class<T> clazz, String[] ids) {
-    /*TODO
-    if (ids.Length == 0)
-      return new T[0];
-
-    // only load documents that aren't already cached
-    var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
-
-    if (idsOfNotExistingObjects.Length > 0)
-    {
-      IncrementRequestCount();
-      var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
-      MultiLoadResult multiLoadResult;
-      do
-      {
-        multiLoadOperation.LogOperation();
-        using (multiLoadOperation.EnterMultiLoadContext())
-        {
-          multiLoadResult = DatabaseCommands.Get(idsOfNotExistingObjects, null);
-        }
-      } while (multiLoadOperation.SetResult(multiLoadResult));
-
-      multiLoadOperation.Complete<T>();
+    if (ids.length == 0) {
+      return (T[]) Array.newInstance(clazz, 0);
     }
 
-    return ids.Select(id =>
-    {
-      object val;
-      entitiesByKey.TryGetValue(id, out val);
-      return (T) val;
-    }).ToArray();
-     */
-    return null; //TODO delete me
+    // only load documents that aren't already cached
+    Set<String> idsOfNotExistingObjects = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    for (String id: ids) {
+      if (!isLoaded(id) && !isDeleted(id)) {
+        idsOfNotExistingObjects.add(id);
+      }
+    }
+
+    if (idsOfNotExistingObjects.size() > 0) {
+      incrementRequestCount();
+      MultiLoadOperation multiLoadOperation = new MultiLoadOperation(this, new DisableAllCachingCallback(), idsOfNotExistingObjects.toArray(new String[0]), null);
+      MultiLoadResult multiLoadResult = null;
+      do {
+        multiLoadOperation.logOperation();
+        try (AutoCloseable context = multiLoadOperation.enterMultiLoadContext()) {
+          multiLoadResult = databaseCommands.get(idsOfNotExistingObjects.toArray(new String[0]), null);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      } while (multiLoadOperation.setResult(multiLoadResult));
+
+      multiLoadOperation.complete(clazz);
+    }
+
+    List<Object> result = new ArrayList<>();
+    for (String id: ids) {
+      result.add(entitiesByKey.get(id));
+    }
+    return (T[]) result.toArray();
   }
 
   /*TODO
@@ -446,28 +453,30 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Refreshes the specified entity from Raven server.
    */
-  /*TODO
   public <T> void refresh(T entity) {
     DocumentMetadata value;
-    if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-      throw new InvalidOperationException("Cannot refresh a transient instance");
-    IncrementRequestCount();
-    var jsonDocument = DatabaseCommands.Get(value.Key);
-    if (jsonDocument == null)
-      throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
-
-    value.Metadata = jsonDocument.Metadata;
-    value.OriginalMetadata = (RavenJObject) jsonDocument.Metadata.CloneToken();
-    value.ETag = jsonDocument.Etag;
-    value.OriginalValue = jsonDocument.DataAsJson;
-    var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
+    if (!entitiesAndMetadata.containsKey(entity)) {
+      throw new IllegalStateException("Cannot refresh a transient instance");
+    }
+    value = entitiesAndMetadata.get(entity);
+    incrementRequestCount();
+    JsonDocument jsonDocument = databaseCommands.get(value.getKey());
+    if (jsonDocument == null) {
+      throw new IllegalStateException("Document '" + value.getKey() + "' no longer exists and was probably deleted");
+    }
+    value.setMetadata(jsonDocument.getMetadata());
+    value.setOriginalMetadata(jsonDocument.getMetadata().cloneToken());
+    value.setEtag(jsonDocument.getEtag());
+    value.setOriginalValue(jsonDocument.getDataAsJson());
+    Object newEntity = convertToEntity(entity.getClass(), value.getKey(), jsonDocument.getDataAsJson(), jsonDocument.getMetadata());
+    /*TODO
     foreach (var property in entity.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
     {
       if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
         continue;
       property.SetValue(entity, property.GetValue(newEntity, null), null);
-    }
-  }*/
+    }*/
+  }
 
 
   /**
@@ -489,31 +498,20 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Begin a load while including the specified path
    */
-  public ILoaderWithInclude<Object> include(String path) {
-    return null; //TODO: delete me
-    //TODO return new MultiLoaderWithInclude<object>(this).Include(path);
+  public ILoaderWithInclude include(String path) {
+    return new MultiLoaderWithInclude(this).include(path);
   }
 
+  /**
+   * Begin a load while including the specified path
+   * @param path
+   * @return
+   */
+  public ILoaderWithInclude include(Path<?> path) {
+    return new MultiLoaderWithInclude(this).include(path);
+  }
   /*TODO:
-    /// <summary>
-    /// Begin a load while including the specified path
-    /// </summary>
-    /// <param name="path">The path.</param>
-    /// <returns></returns>
-    public ILoaderWithInclude<T> include<T>(Expression<Func<T, object>> path)
-    {
-      return new MultiLoaderWithInclude<T>(this).Include(path);
-    }
 
-    /// <summary>
-    /// Begin a load while including the specified path
-    /// </summary>
-    /// <param name="path">The path.</param>
-    /// <returns></returns>
-    public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
-    {
-      return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
-    }
 
     public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
     {
@@ -736,38 +734,38 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       return Advanced.LuceneQuery<T>(indexName, isMapReduce);
     }
 
-    /// <summary>
-    /// Create a new query for <typeparam name="T"/>
-    /// </summary>
-    IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
-    {
-      throw new NotSupportedException();
-    }
+   */
+  @SuppressWarnings("unchecked")
+  protected <T> Lazy<T> addLazyOperation(final ILazyOperation operation, final Action1<T> onEval) {
+    pendingLazyOperations.add(operation);
+    Lazy<T> lazyValue = new Lazy<>(new Function0<T>() {
+      @Override
+      public T apply() {
+        executeAllPendingLazyOperations();
+        return (T) operation.getResult();
+      }
+    });
 
-    internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
-    {
-      pendingLazyOperations.Add(operation);
-      var lazyValue = new Lazy<T>(() =>
-      {
-        ExecuteAllPendingLazyOperations();
-        return (T) operation.Result;
+    if (onEval != null) {
+      onEvaluateLazy.put(operation, new Action1<Object>() {
+        @Override
+        public void apply(Object theResult) {
+          onEval.apply((T)theResult);
+        }
       });
-
-      if (onEval != null)
-        onEvaluateLazy[operation] = theResult => onEval((T) theResult);
-
-        return lazyValue;
     }
+    return lazyValue;
+  }
 
-    /// <summary>
-    /// Register to lazily load documents and include
-    /// </summary>
-    public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
-    {
-      var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
-      var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
-      return AddLazyOperation(lazyOp, onEval);
-    }*/
+
+  /**
+   * Register to lazily load documents and include
+   */
+  public <T> Lazy<T[]> lazyLoadInternal(Class<T> clazz, String[] ids, Tuple<String, Class<?>>[] includes, Action1<T[]> onEval) {
+    MultiLoadOperation multiLoadOperation = new MultiLoadOperation(this, new DisableAllCachingCallback(), ids, includes);
+    LazyMultiLoadOperation<T> lazyOp = new LazyMultiLoadOperation<T>(clazz, multiLoadOperation, ids, includes);
+    return addLazyOperation(lazyOp, onEval);
+  }
 
   public void executeAllPendingLazyOperations() {
     if (pendingLazyOperations.size() == 0)
@@ -793,52 +791,35 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   private boolean executeLazyOperationsSingleStep() {
-    /*TODO
-      var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
-      try
-      {
-        if (DatabaseCommands is ServerClient) // server mode
-        {
-          var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
-          var responses = DatabaseCommands.MultiGet(requests);
-          for (int i = 0; i < pendingLazyOperations.Count; i++)
-          {
-            if (responses[i].RequestHasErrors())
-            {
-              throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-                  Environment.NewLine + responses[i].Result);
+      List<AutoCloseable> disposables = new ArrayList<>();
+      for (ILazyOperation lazyOp: pendingLazyOperations) {
+        AutoCloseable context = lazyOp.enterContext();
+        if (context != null) {
+          disposables.add(context);
+        }
+      }
+
+      try {
+        List<GetRequest> requests = new ArrayList<>();
+        for (ILazyOperation lazyOp: pendingLazyOperations) {
+          requests.add(lazyOp.createRequest());
+        }
+        GetResponse[] responses = databaseCommands.multiGet(requests.toArray(new GetRequest[0]));
+        for (int i = 0; i < pendingLazyOperations.size(); i++) {
+            if (responses[i].isRequestHasErrors()) {
+              throw new IllegalStateException("Got an error from server, status code: " + responses[i].getStatus()  + "\n" + responses[i].getResult());
             }
-            pendingLazyOperations[i].HandleResponse(responses[i]);
-            if (pendingLazyOperations[i].RequiresRetry)
-            {
+            pendingLazyOperations.get(i).handleResponse(responses[i]);
+            if (pendingLazyOperations.get(i).isRequiresRetry()) {
               return true;
             }
           }
           return false;
-        }
-        else // embedded mode
-        {
-          var responses = pendingLazyOperations.Select(x => x.ExecuteEmbedded(DatabaseCommands)).ToArray();
-          for (int i = 0; i < pendingLazyOperations.Count; i++)
-          {
-            pendingLazyOperations[i].HandleEmbeddedResponse(responses[i]);
-            if (pendingLazyOperations[i].RequiresRetry)
-            {
-              return true;
-            }
-          }
-          return false;
+      } finally {
+        for (AutoCloseable closable: disposables) {
+          Closer.close(closable);
         }
       }
-      finally
-      {
-        foreach (var disposable in disposables)
-        {
-          disposable.Dispose();
-        }
-      }
-     */
-    return false;//TODO: delete me
   }
 
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix) {
@@ -853,6 +834,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return loadStartingWith(clazz, keyPrefix, matches, start, 25);
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
     List<JsonDocument> results = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize);
     for (JsonDocument doc: results) {
@@ -861,19 +843,23 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return results.toArray((T[])Array.newInstance(clazz, 0));
   }
 
+  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix) {
+    return lazyLoadStartingWith(clazz, keyPrefix, null, 0, 25);
+  }
 
+  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix, String matches) {
+    return lazyLoadStartingWith(clazz, keyPrefix, matches, 0, 25);
+  }
 
+  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start) {
+    return lazyLoadStartingWith(clazz, keyPrefix, matches, start, 25);
+  }
 
+  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
+    LazyStartsWithOperation<T> operation = new LazyStartsWithOperation<T>(clazz, keyPrefix, matches, start, pageSize, this);
+    return addLazyOperation(operation, null);
+  }
 
-
-  /*TODO
-    Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)
-    {
-      var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, start, pageSize, this);
-
-      return AddLazyOperation<T[]>(operation, null);
-    }
-   */
 
 
 }

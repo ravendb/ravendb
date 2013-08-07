@@ -2,7 +2,6 @@ package raven.client.document.batches;
 
 import raven.abstractions.data.GetRequest;
 import raven.abstractions.data.GetResponse;
-import raven.client.connection.IDatabaseCommands;
 
 public interface ILazyOperation {
   public GetRequest createRequest();
@@ -10,7 +9,5 @@ public interface ILazyOperation {
   public boolean isRequiresRetry();
   public void handleResponse(GetResponse response);
   public AutoCloseable enterContext();
-  public Object executeEmbedded(IDatabaseCommands commands);
-  public void handleEmbeddedResponse(Object result);
 
 }

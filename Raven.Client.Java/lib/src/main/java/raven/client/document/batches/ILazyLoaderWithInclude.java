@@ -1,31 +1,33 @@
-package raven.client.document;
+package raven.client.document.batches;
 
 import java.util.Collection;
 import java.util.UUID;
 
+import raven.abstractions.basic.Lazy;
 import com.mysema.query.types.Path;
 
 /**
  * Fluent interface for specifying include paths
- * for loading documents
- *
+ * for loading documents lazily
  * @param <T>
+ * NOTE: Java version does not contain method load that skips class parameter - since we can't track type in method signature based on Path object
  */
-public interface ILoaderWithInclude {
+public interface ILazyLoaderWithInclude {
 
   /**
    * Includes the specified path.
    * @param path
    * @return
    */
-  public MultiLoaderWithInclude include(String path);
+  public ILazyLoaderWithInclude lazyInclude(String path);
 
   /**
-   * Includes the specified path.
+   * Includes the specified path
    * @param path
    * @return
    */
-  public MultiLoaderWithInclude include(Path<?> path);
+  public ILazyLoaderWithInclude lazyInclude(Path<?> path);
+
 
   /**
    * Loads the specified ids.
@@ -33,15 +35,14 @@ public interface ILoaderWithInclude {
    * @param ids
    * @return
    */
-  public <TResult> TResult[] load(Class<TResult> clazz, String... ids);
+  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, String... ids);
 
   /**
    * Loads the specified ids.
-   * @param clazz
    * @param ids
    * @return
    */
-  public <TResult> TResult[] load(Class<TResult> clazz, Collection<String> ids);
+  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Collection<String> ids);
 
   /**
    * Loads the specified id.
@@ -49,71 +50,60 @@ public interface ILoaderWithInclude {
    * @param id
    * @return
    */
-  public <TResult> TResult load(Class<TResult> clazz, String id);
+  public <TResult> Lazy<TResult> lazyLoad(Class<TResult> clazz, String id);
 
   /**
    * Loads the specified entity with the specified id after applying
    * conventions on the provided id to get the real document id.
    *
    * This method allows you to call:
-   * load(Post.class, 1)
+   * lazyLoad(Post.class, 1)
    * And that call will internally be translated to
-   * load(Post.class, "posts/1");
-   *
-   * Or whatever your conventions specify.
+   * lazyLoad(Post.class, "posts/1")
    * @param clazz
    * @param id
    * @return
    */
-  public <TResult> TResult load(Class<TResult> clazz, Number id);
+  public <TResult> Lazy<TResult> lazyLoad(Class<TResult> clazz, Number id);
 
   /**
    * Loads the specified entity with the specified id after applying
    * conventions on the provided id to get the real document id.
    *
    * This method allows you to call:
-   * load(Post.class, 1)
+   * lazyLoad(Post.class, 1)
    * And that call will internally be translated to
-   * load(Post.class, "posts/1");
-   *
-   * Or whatever your conventions specify.
+   * lazyLoad(Post.class, "posts/1")
    * @param clazz
    * @param id
    * @return
    */
-  public <TResult> TResult load(Class<TResult> clazz, UUID id);
+  public <TResult> Lazy<TResult> lazyLoad(Class<TResult> clazz, UUID id);
 
   /**
-   * Loads the specified entity with the specified id after applying
+   * Loads the specified entities with the specified id after applying
    * conventions on the provided id to get the real document id.
    *
    * This method allows you to call:
-   * load(Post.class, 1, 2, 3)
+   * lazyLoad(Post.class, 1,2,3);
    * And that call will internally be translated to
-   * load(Post.class, "posts/1", "posts/2", "posts/3");
+   * lazyLoad(Post.class, "posts/1", "posts/2", "posts/3")
    *
    * Or whatever your conventions specify.
-   * @param clazz
-   * @param id
-   * @return
    */
-  public <TResult> TResult[] load(Class<TResult> clazz, UUID... ids);
+  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Number... ids);
 
   /**
-   * Loads the specified entity with the specified id after applying
+   * Loads the specified entities with the specified id after applying
    * conventions on the provided id to get the real document id.
    *
    * This method allows you to call:
-   * load(Post.class, 1, 2, 3)
+   * lazyLoad(Post.class, 1,2,3);
    * And that call will internally be translated to
-   * load(Post.class, "posts/1", "posts/2", "posts/3");
+   * lazyLoad(Post.class, "posts/1", "posts/2", "posts/3")
    *
    * Or whatever your conventions specify.
-   * @param clazz
-   * @param id
-   * @return
    */
-  public <TResult> TResult[] load(Class<TResult> clazz, Number... ids);
-
+  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, UUID... ids);
 
 }

@@ -1,7 +1,8 @@
 package raven.client;
 
-import com.mysema.commons.lang.Pair;
-
+import raven.abstractions.basic.Lazy;
+import raven.abstractions.basic.Tuple;
+import raven.abstractions.closure.Action1;
 import raven.client.document.DocumentConvention;
 import raven.client.document.batches.IEagerSessionOperations;
 import raven.client.document.batches.ILazySessionOperations;
@@ -15,7 +16,7 @@ public interface IDocumentSessionImpl extends IDocumentSession, ILazySessionOper
 
   public <T> T[] loadInternal(Class<T> clazz, String[] ids);
 
-  public <T> T[] loadInternal(Class<T> clazz, String[] ids, Pair<String, Class<?>>[] includes);
+  public <T> T[] loadInternal(Class<T> clazz, String[] ids, Tuple<String, Class<?>>[] includes);
 
-  //TODO: Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval);
+  <T> Lazy<T[]> lazyLoadInternal(Class<T> clazz, String[] ids, Tuple<String, Class<?>>[] includes, Action1<T[]> onEval);
 }

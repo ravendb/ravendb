@@ -3,12 +3,7 @@ package raven.client;
 import java.util.Collection;
 import java.util.UUID;
 
-import com.mysema.query.types.Path;
-
 import raven.abstractions.data.Etag;
-import raven.client.document.ILoaderWithInclude;
-import raven.client.indexes.AbstractIndexCreationTask;
-import raven.client.linq.IRavenQueryable;
 
 /**
  * Interface for document session
