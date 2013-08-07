@@ -41,7 +41,7 @@ namespace Raven.Database.Indexing
 			}
 			digitsHash /= 1024; // will force concentration of more items under the normal case to the same bucket
 
-			return Math.Abs(digitsHash) + Math.Abs(nonDigitsHash) % (1024 * 1024);
+			return (Math.Abs(digitsHash) + Math.Abs(nonDigitsHash)) % (1024 * 1024);
 		}
 	}
 }
