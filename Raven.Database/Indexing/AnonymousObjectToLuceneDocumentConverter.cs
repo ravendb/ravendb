@@ -129,7 +129,11 @@ namespace Raven.Database.Indexing
 				if (((DynamicNullObject)value).IsExplicitNull)
 				{
 					var sortOptions = indexDefinition.GetSortOption(name);
-					if (sortOptions != null && sortOptions.Value != SortOptions.None)
+					if (sortOptions != null && 
+                        sortOptions.Value != SortOptions.None && 
+                        sortOptions.Value != SortOptions.String && 
+                        sortOptions.Value != SortOptions.StringVal && 
+                        sortOptions.Value != SortOptions.Custom)
 					{
 						yield break; // we don't emit null for sorting	
 					}
