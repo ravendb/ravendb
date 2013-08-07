@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Models;
@@ -81,5 +82,10 @@ namespace Raven.Studio.Features.Tasks
 
             return DatabaseTaskOutcome.Succesful;
         }
+
+		public override void OnError()
+		{
+
+		}
     }
 }

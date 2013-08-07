@@ -183,5 +183,10 @@ namespace Raven.Studio.Features.Tasks
             Report(String.Format("Wrote {0} documents  in {1:#,#;;0} ms",
                                  batch.Count, sw.ElapsedMilliseconds));
         }
+
+		public override void OnError()
+		{
+
+		}
     }
 }

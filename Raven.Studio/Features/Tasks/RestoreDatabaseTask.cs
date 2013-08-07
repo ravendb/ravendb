@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Client.Connection.Async;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Tasks
 {
@@ -28,6 +29,8 @@ namespace Raven.Studio.Features.Tasks
             this.defrag = defrag;
         }
 
+	    private int reportedMessageCount = 0;
+
         protected override async Task<DatabaseTaskOutcome> RunImplementation()
         {
             await DatabaseCommands.ForSystemDatabase().DeleteDocumentAsync("Raven/Restore/Status");
@@ -36,7 +39,7 @@ namespace Raven.Studio.Features.Tasks
             await DatabaseCommands.StartRestoreAsync(backupLocation, databaseLocation, DatabaseName);
 
             var restoreFinished = false;
-            var reportedMessageCount = 0;
+            reportedMessageCount = 0;
 
             while (!restoreFinished)
             {
@@ -66,12 +69,32 @@ namespace Raven.Studio.Features.Tasks
                     }
 
                     restoreFinished =
-                        statusMessages.Last()
-                                      .Contains("The new database was created") || statusMessages.Last().Contains("Restore Canceled");
+                        statusMessages.Last().Contains("The new database was created") ||
+						statusMessages.Last().Contains("Restore Canceled") ||
+						statusMessages.Last().Contains("A database name must be supplied if the restore location does not contain a valid Database.Document file") ||
+						statusMessages.Last().Contains("Cannot do an online restore for the <system> database") ||
+						statusMessages.Last().Contains("Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name");
                 }
             }
 
             return DatabaseTaskOutcome.Succesful;
         }
+
+	    public override void OnError()
+	    {
+		    DatabaseCommands.ForSystemDatabase().GetAsync("Raven/Restore/Status").ContinueOnSuccessInTheUIThread(
+			    doc =>
+			    {
+				    if (doc == null)
+					    return;
+
+				    var statusMessages = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
+				    foreach (var statusMessage in statusMessages.Skip(reportedMessageCount))
+				    {
+					    Report(statusMessage);
+					    reportedMessageCount++;
+				    }
+			    });
+	    }
     }
 }
