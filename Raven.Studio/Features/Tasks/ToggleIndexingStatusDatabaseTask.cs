@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 
 namespace Raven.Studio.Features.Tasks
@@ -50,5 +51,10 @@ namespace Raven.Studio.Features.Tasks
 
             return DatabaseTaskOutcome.Succesful;
         }
+
+		public override void OnError()
+		{
+			
+		}
     }
 }
