@@ -81,46 +81,48 @@ namespace Nevar.Trees
                 throw new ArgumentException("Key size is too big, must be at most " + tx.Pager.MaxNodeSize + " bytes, but was " + key.Size, "key");
 
 		
-	        var cursor = new Cursor();
-	        var txInfo = tx.GetTreeInformation(this);
+	       using (var cursor = tx.NewCursor(this))
+	       {
+               var txInfo = tx.GetTreeInformation(this);
 
-	        FindPageFor(tx, key, cursor);
+               FindPageFor(tx, key, cursor);
 
-	        var page = tx.ModifyCursor(this, cursor);
+               var page = tx.ModifyCursor(this, cursor);
 
-	        if (page.LastMatch == 0) // this is an update operation
-	        {
-	            RemoveLeafNode(tx, cursor, page);
-	        }
-	        else // new item should be recorded
-	        {
-	            txInfo.State.EntriesCount++;
-	        }
+               if (page.LastMatch == 0) // this is an update operation
+               {
+                   RemoveLeafNode(tx, cursor, page);
+               }
+               else // new item should be recorded
+               {
+                   txInfo.State.EntriesCount++;
+               }
 
-            var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
-            byte* overFlowPos = null;
-            var pageNumber = -1L;
-	        if (ShouldGoToOverflowPage(tx, len))
-	        {
-	            pageNumber = WriteToOverflowPages(tx, txInfo, len, out overFlowPos);
-	            len = -1;
-	        }
+               var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
+               byte* overFlowPos = null;
+               var pageNumber = -1L;
+               if (ShouldGoToOverflowPage(tx, len))
+               {
+                   pageNumber = WriteToOverflowPages(tx, txInfo, len, out overFlowPos);
+                   len = -1;
+               }
 
-            byte* dataPos;
-            if (page.HasSpaceFor(key, len) == false)
-            {
-                var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, cursor, txInfo);
-                dataPos = pageSplitter.Execute();
-                DebugValidateTree(tx, txInfo.RootPageNumber);
-            }
-            else
-            {
-                dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber);
-                page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
-            }
-	        if (overFlowPos != null)
-	            return overFlowPos;
-	        return dataPos;
+               byte* dataPos;
+               if (page.HasSpaceFor(key, len) == false)
+               {
+                   var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, cursor, txInfo);
+                   dataPos = pageSplitter.Execute();
+                   DebugValidateTree(tx, txInfo.RootPageNumber);
+               }
+               else
+               {
+                   dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber);
+                   page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
+               }
+               if (overFlowPos != null)
+                   return overFlowPos;
+               return dataPos;
+	       }
 	    }
 
         private long WriteToOverflowPages(Transaction tx, TreeDataInTransaction txInfo, int overflowSize, out byte* dataPos)
@@ -246,25 +248,27 @@ namespace Nevar.Trees
             if (tx.Flags==(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot delete a value in a read only transaction");
 
 			var txInfo = tx.GetTreeInformation(this);
-		    var cursor = new Cursor();
-			var page = FindPageFor(tx, key, cursor);
-
-            page.NodePositionFor(key, _cmp);
-			if (page.LastMatch != 0)
-				return; // not an exact match, can't delete
-
-            page = tx.ModifyCursor(this, cursor);
-
-            txInfo.State.EntriesCount--;
-            RemoveLeafNode(tx, cursor, page);
-			var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
-			var changedPage = page;
-            while (changedPage != null)
+			using (var cursor = tx.NewCursor(this))
 			{
-				changedPage = treeRebalancer.Execute(cursor, changedPage);
-			}
+                var page = FindPageFor(tx, key, cursor);
 
-			page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
+                page.NodePositionFor(key, _cmp);
+                if (page.LastMatch != 0)
+                    return; // not an exact match, can't delete
+
+                page = tx.ModifyCursor(this, cursor);
+
+                txInfo.State.EntriesCount--;
+                RemoveLeafNode(tx, cursor, page);
+                var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
+                var changedPage = page;
+                while (changedPage != null)
+                {
+                    changedPage = treeRebalancer.Execute(cursor, changedPage);
+                }
+
+                page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
+			}
 		}
 
 		public Iterator Iterate(Transaction tx)
@@ -274,40 +278,44 @@ namespace Nevar.Trees
 
 		public Stream Read(Transaction tx, Slice key)
 		{
-			var cursor = new Cursor();
-			var p = FindPageFor(tx, key, cursor);
-			var node = p.Search(key, _cmp);
+			using (var cursor = tx.NewCursor(this))
+			{
+                var p = FindPageFor(tx, key, cursor);
+                var node = p.Search(key, _cmp);
 
-			if (node == null)
-				return null;
+                if (node == null)
+                    return null;
 
-			var item1 = new Slice(node);
+                var item1 = new Slice(node);
 
-			if (item1.Compare(key, _cmp) != 0)
-				return null;
-			return StreamForNode(tx, node);
+                if (item1.Compare(key, _cmp) != 0)
+                    return null;
+                return StreamForNode(tx, node);
+			}
 		}
 
         internal byte* DirectRead(Transaction tx, Slice key)
         {
-            var cursor = new Cursor();
-            var p = FindPageFor(tx, key, cursor);
-            var node = p.Search(key, _cmp);
-
-            if (node == null)
-                return null;
-
-            var item1 = new Slice(node);
-
-            if (item1.Compare(key, _cmp) != 0)
-                return null;
-
-            if (node->Flags==(NodeFlags.PageRef))
+            using (var cursor = tx.NewCursor(this))
             {
-                var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-                return overFlowPage.Base + Constants.PageHeaderSize;
+                var p = FindPageFor(tx, key, cursor);
+                var node = p.Search(key, _cmp);
+
+                if (node == null)
+                    return null;
+
+                var item1 = new Slice(node);
+
+                if (item1.Compare(key, _cmp) != 0)
+                    return null;
+
+                if (node->Flags == (NodeFlags.PageRef))
+                {
+                    var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+                    return overFlowPage.Base + Constants.PageHeaderSize;
+                }
+                return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
             }
-            return (byte*) node + node->KeySize + Constants.NodeHeaderSize;
         }
 
 		internal static Stream StreamForNode(Transaction tx, NodeHeader* node)

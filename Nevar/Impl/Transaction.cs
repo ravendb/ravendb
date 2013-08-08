@@ -334,5 +334,10 @@ namespace Nevar.Impl
 		{
 			_freeSpaceCollector = freeSpaceCollector;
 		}
+
+	    public Cursor NewCursor(Tree tree)
+	    {
+	        return new Cursor();
+	    }
 	}
 }

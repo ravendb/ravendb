@@ -16,7 +16,7 @@ namespace Nevar.Trees
 			_tree = tree;
 			_tx = tx;
 			_cmp = cmp;
-			_cursor = new Cursor();
+			_cursor = tx.NewCursor(_tree);
 		}
 
 		public bool Seek(Slice key)
@@ -64,7 +64,7 @@ namespace Nevar.Trees
 
 		public void Dispose()
 		{
-			
+		    _cursor.Dispose();
 		}
 	}
 }

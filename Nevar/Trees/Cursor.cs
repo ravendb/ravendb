@@ -5,10 +5,15 @@ using Nevar.Debugging;
 
 namespace Nevar.Trees
 {
-    public class Cursor
+    public class Cursor : IDisposable
     {
         public LinkedList<Page> Pages = new LinkedList<Page>();
-		
+
+        public Cursor()
+        {
+            
+        }
+
         public Page ParentPage
         {
             get
@@ -61,5 +66,10 @@ namespace Nevar.Trees
 	    {
 		    return Pages.FirstOrDefault(x => x.PageNumber == p);
 	    }
+
+        public void Dispose()
+        {
+            
+        }
     }
 }
