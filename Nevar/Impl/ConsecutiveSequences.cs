@@ -9,14 +9,14 @@ namespace Nevar.Impl
     {
         private readonly int _minSequence;
 
-        private class Seq
+        public class Seq
         {
             public long Start;
             public int Count;
 
             public override string ToString()
             {
-                return string.Format("Start: {0}, Count: {1}", Start, Count);
+                return string.Format("Start: {0},Count: {1}",Start,Count);
             }
         }
 
@@ -27,22 +27,33 @@ namespace Nevar.Impl
 
         public int Count { get; set; }
 
-        private readonly Dictionary<long, Seq> _sequencesByLast = new Dictionary<long, Seq>();
-        private readonly Dictionary<long, Seq> _sequencesByFirst = new Dictionary<long, Seq>();
+        private readonly Dictionary<long,Seq> _sequencesByLast = new Dictionary<long,Seq>();
+        private readonly Dictionary<long,Seq> _sequencesByFirst = new Dictionary<long,Seq>();
         private Seq _current;
+
+        /// <summary>
+        /// This assumes that the caller code will not try to send overlapping sequences
+        /// </summary>
+        public void Load(long start,int count)
+        {
+            var seq = new Seq { Start = start,Count = count };
+            _sequencesByFirst[start] = seq;
+            _sequencesByLast[start + count] = seq;
+            Count += count;
+        }
 
         public void Add(long v)
         {
             Debug.Assert(_sequencesByFirst.ContainsKey(v) == false);
             Count++;
             Seq seq;
-            if (_sequencesByLast.TryGetValue(v, out seq) == false)
+            if (_sequencesByLast.TryGetValue(v,out seq) == false)
             {
-                if (_sequencesByFirst.TryGetValue(v + 1, out seq) == false)
+                if (_sequencesByFirst.TryGetValue(v + 1,out seq) == false)
                 {
-                    var value = new Seq { Start = v, Count = 1 };
-                    _sequencesByLast.Add(v + 1, value);
-                    _sequencesByFirst.Add(v, value);
+                    var value = new Seq { Start = v,Count = 1 };
+                    _sequencesByLast.Add(v + 1,value);
+                    _sequencesByFirst.Add(v,value);
                 }
                 else
                 {
@@ -51,7 +62,7 @@ namespace Nevar.Impl
                     seq.Count++;
                     seq.Start = v;
                     Seq prev;
-                    while (_sequencesByLast.TryGetValue(seq.Start + seq.Count, out prev)) // merge backward
+                    while (_sequencesByLast.TryGetValue(seq.Start + seq.Count,out prev)) // merge backward
                     {
                         _sequencesByFirst.Remove(prev.Start);
                         _sequencesByLast.Remove(prev.Start + prev.Count);
@@ -59,8 +70,8 @@ namespace Nevar.Impl
                         seq.Count += prev.Count;
                         seq.Start = prev.Start;
                     }
-                    _sequencesByFirst.Add(seq.Start, seq);
-                    _sequencesByLast.Add(seq.Start + seq.Count, seq);
+                    _sequencesByFirst.Add(seq.Start,seq);
+                    _sequencesByLast.Add(seq.Start + seq.Count,seq);
                 }
             }
             else
@@ -68,19 +79,19 @@ namespace Nevar.Impl
                 _sequencesByLast.Remove(v);
                 seq.Count++;
                 Seq next;
-                while (_sequencesByFirst.TryGetValue(seq.Start + seq.Count, out next)) // merge forward
+                while (_sequencesByFirst.TryGetValue(seq.Start + seq.Count,out next)) // merge forward
                 {
                     _sequencesByFirst.Remove(next.Start);
                     _sequencesByLast.Remove(next.Start + next.Count);
 
                     seq.Count += next.Count;
                 }
-                _sequencesByLast.Add(seq.Start + seq.Count, seq);
+                _sequencesByLast.Add(seq.Start + seq.Count,seq);
             }
             Debug.Assert(_sequencesByFirst.Count == _sequencesByLast.Count);
         }
 
-        public bool TryAllocate(int num, out long v)
+        public bool TryAllocate(int num,out long v)
         {
             if (_current != null && _current.Count >= num)
             {
@@ -95,7 +106,7 @@ namespace Nevar.Impl
                 }
                 else
                 {
-                    _sequencesByFirst.Add(_current.Start, _current);
+                    _sequencesByFirst.Add(_current.Start,_current);
                 }
                 v = start;
                 Count -= num;
@@ -107,7 +118,7 @@ namespace Nevar.Impl
             }
 
             // let us try to find a sequence long enough that is suitable
-            // we find the largest sequence that can serve, to make sure that we are serving from it
+            // we find the largest sequence that can serve,to make sure that we are serving from it
             // for as long as we can
             _current = _sequencesByLast.Values.Where(x => x.Count >= num && x.Count >= _minSequence)
                             .OrderByDescending(x => x.Count)
@@ -118,20 +129,7 @@ namespace Nevar.Impl
                 return false;
             }
 
-            return TryAllocate(num, out v);
-        }
-
-        //http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-        int NextPowerOfTwo(int v)
-        {
-            v--;
-            v |= v >> 1;
-            v |= v >> 2;
-            v |= v >> 4;
-            v |= v >> 8;
-            v |= v >> 16;
-            v++;
-            return v;
+            return TryAllocate(num,out v);
         }
 
         public IEnumerator<long> GetEnumerator()
@@ -140,7 +138,7 @@ namespace Nevar.Impl
             {
                 for (int i = 0; i < seq.Count; i++)
                 {
-                    yield return i + seq.Start;
+                    yield return seq.Start + i;
                 }
             }
         }
