@@ -172,8 +172,6 @@ namespace Nevar.Benchmark
 						}
 
 						tx.Commit();
-                        if(x%100==0)
-					    Console.WriteLine("tx " + x);
 					}
 				}
 				sw.Stop();

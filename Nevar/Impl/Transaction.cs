@@ -20,7 +20,7 @@ namespace Nevar.Impl
 		private TreeDataInTransaction _fresSpaceTreeData;
 		private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
 		private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
-
+        private readonly Dictionary<Tree, List<Cursor>> _cursorsByTrees = new Dictionary<Tree, List<Cursor>>();
 		private readonly HashSet<long> _freedPages = new HashSet<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private FreeSpaceCollector _freeSpaceCollector;
@@ -65,7 +65,7 @@ namespace Nevar.Impl
 			while (node != null)
 			{
 				var parent = node.Next != null ? node.Next.Value : null;
-				node.Value = ModifyPage(parent, node.Value.PageNumber, c);
+				node.Value = ModifyPage(txInfo.Tree, parent, node.Value.PageNumber, c);
 				node = node.Previous;
 			}
 
@@ -74,7 +74,7 @@ namespace Nevar.Impl
 			return c.Pages.First.Value;
 		}
 
-		public unsafe Page ModifyPage(Page parent, long p, Cursor c)
+		public unsafe Page ModifyPage(Tree tree, Page parent, long p, Cursor c)
 		{
 			long dirtyPageNum;
 			Page page;
@@ -82,6 +82,7 @@ namespace Nevar.Impl
 			{
 				page = c.GetPage(dirtyPageNum) ?? _pager.Get(this, dirtyPageNum);
 				page.Dirty = true;
+			    UpdateOtherCursors(tree, p, page.PageNumber, c);
 				UpdateParentPageNumber(parent, page.PageNumber);
 				return page;
 			}
@@ -96,10 +97,35 @@ namespace Nevar.Impl
 			FreePage(p);
 			_dirtyPages[p] = newPage.PageNumber;
 			UpdateParentPageNumber(parent, newPage.PageNumber);
+            UpdateOtherCursors(tree, p, page.PageNumber, c);
 			return newPage;
 		}
 
-		private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
+	    public void UpdateOtherCursors(Tree tree, long original, long newPage, Cursor c)
+	    {
+	        List<Cursor> list;
+	        if (_cursorsByTrees.TryGetValue(tree, out list) == false)
+	            return;
+
+	        foreach (var cursor in list)
+	        {
+	            if(cursor == c)
+                    continue;
+
+	            var node = cursor.Pages.First;
+	            while (node != null)
+	            {
+                    if (node.Value.PageNumber == original)
+                    {
+                        node.Value = GetReadOnlyPage(newPage);
+                    }
+
+	                node = node.Next;
+	            }
+	        }
+	    }
+
+	    private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
 		{
 			if (parent == null)
 				return;
@@ -337,7 +363,12 @@ namespace Nevar.Impl
 
 	    public Cursor NewCursor(Tree tree)
 	    {
-	        return new Cursor();
+	        var newCursor = new Cursor();
+	        List<Cursor> list;
+	        if(_cursorsByTrees.TryGetValue(tree, out list) == false)
+                _cursorsByTrees.Add(tree, list = new List<Cursor>()); 
+            list.Add(newCursor);
+	        return newCursor;
 	    }
 	}
 }

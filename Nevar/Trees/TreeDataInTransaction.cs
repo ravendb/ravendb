@@ -16,6 +16,11 @@
             set { _state.RootPageNumber = value; }
         }
 
+        public Tree Tree
+        {
+            get { return _tree; }
+        }
+
         public TreeDataInTransaction(Tree tree)
         {
             _tree = tree;

@@ -40,7 +40,7 @@ namespace Nevar.Trees
                 return null; // above space/keys thresholds
 
             Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
-            
+
             var sibling = SetupMoveOrMerge(cursor, page, parentPage);
 
             Debug.Assert(sibling.PageNumber != page.PageNumber);
@@ -87,7 +87,7 @@ namespace Nevar.Trees
             {
                 _tx.ModifyCursor(_txInfo, c);
                 parentPage.LastSearchPosition = 1;
-				sibling = _tx.ModifyPage(parentPage, parentPage.GetNode(1)->PageNumber, c);
+                sibling = _tx.ModifyPage(_txInfo.Tree, parentPage, parentPage.GetNode(1)->PageNumber, c);
                 parentPage.LastSearchPosition = 0;
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries;
@@ -97,7 +97,7 @@ namespace Nevar.Trees
             {
                 _tx.ModifyCursor(_txInfo, c);
                 parentPage.LastSearchPosition--;
-                sibling = _tx.ModifyPage(parentPage, parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, c);
+                sibling = _tx.ModifyPage(_txInfo.Tree, parentPage, parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, c);
                 parentPage.LastSearchPosition++;
                 sibling.LastSearchPosition = sibling.NumberOfEntries - 1;
                 page.LastSearchPosition = 0;
@@ -110,7 +110,7 @@ namespace Nevar.Trees
             var originalFromKeyStart = GetCurrentKeyFrom(from);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            if (fromNode->Flags==(NodeFlags.Data))
+            if (fromNode->Flags == (NodeFlags.Data))
             {
                 byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
                 var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1);
@@ -129,7 +129,7 @@ namespace Nevar.Trees
 
             var pageNumber = to.PageNumber;
             // the current page is implicit left, so need to update it the _next_ entry
-            if (parentPage.LastSearchPosition == 1) 
+            if (parentPage.LastSearchPosition == 1)
             {
                 pageNumber = from.PageNumber;
             }
@@ -160,19 +160,18 @@ namespace Nevar.Trees
                 return; // cannot do anything here
             }
             // in this case, we have a root pointer with just one pointer, we can just swap it out
-            
-			var node = page.GetNode(0);
-            Debug.Assert(node->Flags==(NodeFlags.PageRef));
-            
-			_tx.ModifyCursor(txInfo, cursor);
+
+            var node = page.GetNode(0);
+            Debug.Assert(node->Flags == (NodeFlags.PageRef));
+
+            _tx.ModifyCursor(txInfo, cursor);
             txInfo.State.LeafPages = 1;
             txInfo.State.BranchPages = 0;
             txInfo.State.Depth = 1;
             txInfo.State.PageCount = 1;
 
-            var rootPage = _tx.ModifyPage(null, node->PageNumber, cursor);
+            var rootPage = _tx.ModifyPage(_txInfo.Tree, null, node->PageNumber, cursor);
             txInfo.RootPageNumber = rootPage.PageNumber;
-            //TODO: Fixup any cursors
 
             Debug.Assert(rootPage.Dirty);
 
