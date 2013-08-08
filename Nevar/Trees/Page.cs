@@ -118,17 +118,17 @@ namespace Nevar.Trees
 
         public bool IsLeaf
         {
-            get { return _header->Flags.HasFlag(PageFlags.Leaf); }
+            get { return _header->Flags==(PageFlags.Leaf); }
         }
 
         public bool IsBranch
         {
-            get { return _header->Flags.HasFlag(PageFlags.Branch); }
+            get { return _header->Flags==(PageFlags.Branch); }
         }
 
 		public bool IsOverlfow
 		{
-			get { return _header->Flags.HasFlag(PageFlags.Overlfow); }
+			get { return _header->Flags==(PageFlags.Overlfow); }
 		}
 
         public ushort NumberOfEntries
@@ -219,7 +219,7 @@ namespace Nevar.Trees
             newNode->Flags = other->Flags;
             key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
-            if (IsBranch || other->Flags.HasFlag(NodeFlags.PageRef))
+            if (IsBranch || other->Flags==(NodeFlags.PageRef))
             {
                 newNode->PageNumber = other->PageNumber;
                 newNode->Flags = NodeFlags.PageRef;
@@ -242,7 +242,7 @@ namespace Nevar.Trees
 
             var node = (NodeHeader*)(_base + newNodeOffset);
             node->KeySize = key.Size;
-            node->Flags = NodeFlags.None;
+            node->Flags = 0;
             return node;
         }
 
@@ -364,7 +364,7 @@ namespace Nevar.Trees
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
                 }
 
-                if (node->Flags.HasFlag(NodeFlags.PageRef))
+                if (node->Flags==(NodeFlags.PageRef))
                 {
                     if (pages.Add(node->PageNumber) == false)
                     {

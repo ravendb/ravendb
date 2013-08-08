@@ -33,15 +33,15 @@ namespace Nevar.Trees
         {
             _state.PageCount++;
             var flags = p.Flags;
-            if (flags.HasFlag(PageFlags.Branch))
+            if (flags==(PageFlags.Branch))
             {
                 _state.BranchPages++;
             }
-            else if (flags.HasFlag(PageFlags.Leaf))
+            else if (flags==(PageFlags.Leaf))
             {
                 _state.LeafPages++;
             }
-            else if (flags.HasFlag(PageFlags.Overlfow))
+            else if (flags==(PageFlags.Overlfow))
             {
                 _state.OverflowPages += num;
             }

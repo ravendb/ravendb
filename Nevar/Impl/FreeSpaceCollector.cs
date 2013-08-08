@@ -130,7 +130,7 @@ namespace Nevar.Impl
 		/// </summary>
 		private unsafe void GatherFreeSpace(Transaction tx)
 		{
-			if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+			if (tx.Flags!=(TransactionFlags.ReadWrite))
 				throw new InvalidOperationException("Cannot gather free space in a read only transaction");
 			if (_freeSpaceGatheredMinTx >= tx.Id)
 				return;

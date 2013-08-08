@@ -20,7 +20,7 @@ namespace Nevar.Trees
 		public int GetNodeSize()
 		{
 			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + 
-				  (Flags.HasFlag(NodeFlags.PageRef) ? Constants.PageNumberSize : DataSize);
+				  (Flags == (NodeFlags.PageRef) ? Constants.PageNumberSize : DataSize);
 		}
 	}
 }

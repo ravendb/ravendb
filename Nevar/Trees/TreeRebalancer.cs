@@ -110,7 +110,7 @@ namespace Nevar.Trees
             var originalFromKeyStart = GetCurrentKeyFrom(from);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            if (fromNode->Flags.HasFlag(NodeFlags.Data))
+            if (fromNode->Flags==(NodeFlags.Data))
             {
                 byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
                 var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1);
@@ -162,7 +162,7 @@ namespace Nevar.Trees
             // in this case, we have a root pointer with just one pointer, we can just swap it out
             
 			var node = page.GetNode(0);
-            Debug.Assert(node->Flags.HasFlag(NodeFlags.PageRef));
+            Debug.Assert(node->Flags==(NodeFlags.PageRef));
             
 			_tx.ModifyCursor(txInfo, cursor);
             txInfo.State.LeafPages = 1;

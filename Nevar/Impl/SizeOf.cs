@@ -50,7 +50,7 @@ namespace Nevar.Impl
 		public static int NodeEntry(NodeHeader* other)
 		{
 			var sz = other->KeySize + Constants.NodeHeaderSize;
-			if (other->Flags.HasFlag(NodeFlags.Data))
+			if (other->Flags==(NodeFlags.Data))
 				sz += other->DataSize;
 
 			sz += sz & 1;

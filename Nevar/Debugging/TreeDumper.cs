@@ -49,7 +49,7 @@ digraph structs {
 							var node = p.GetNode(i);
 							key.Set(node);
 							writer.WriteLine("{0} - {2} {1:#,#}",key, 
-                                node->DataSize, node->Flags == NodeFlags.None ? "Size" : "Page");
+                                node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
 						}
 						writer.WriteLine("\"];");
 					}

@@ -74,7 +74,7 @@ namespace Nevar.Trees
 
 	    internal byte* DirectAdd(Transaction tx, Slice key, int len)
 	    {
-	        if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+	        if (tx.Flags==(TransactionFlags.ReadWrite) == false)
 	            throw new ArgumentException("Cannot add a value in a read only transaction");
 
             if (key.Size > tx.Pager.MaxNodeSize)
@@ -149,7 +149,7 @@ namespace Nevar.Trees
 		private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
 		{
 			var node = page.GetNode(page.LastSearchPosition);
-			if (node->Flags.HasFlag(NodeFlags.PageRef)) // this is an overflow pointer
+			if (node->Flags==(NodeFlags.PageRef)) // this is an overflow pointer
 			{
 				tx.ModifyCursor(this, cursor);
 			    var overflowPage = tx.GetReadOnlyPage(node->PageNumber);
@@ -190,7 +190,7 @@ namespace Nevar.Trees
 		{
 			var p = tx.GetTreeInformation(this).Root;
 			cursor.Push(p);
-			while (p.Flags.HasFlag(PageFlags.Branch))
+			while (p.Flags==(PageFlags.Branch))
 			{
 				int nodePos;
 				if (key.Options == SliceOptions.BeforeAllKeys)
@@ -243,7 +243,7 @@ namespace Nevar.Trees
 
 		public void Delete(Transaction tx, Slice key)
 		{
-            if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot delete a value in a read only transaction");
+            if (tx.Flags==(TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot delete a value in a read only transaction");
 
 			var txInfo = tx.GetTreeInformation(this);
 		    var cursor = new Cursor();
@@ -302,7 +302,7 @@ namespace Nevar.Trees
             if (item1.Compare(key, _cmp) != 0)
                 return null;
 
-            if (node->Flags.HasFlag(NodeFlags.PageRef))
+            if (node->Flags==(NodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
                 return overFlowPage.Base + Constants.PageHeaderSize;
@@ -312,7 +312,7 @@ namespace Nevar.Trees
 
 		internal static Stream StreamForNode(Transaction tx, NodeHeader* node)
 		{
-			if (node->Flags.HasFlag(NodeFlags.PageRef))
+			if (node->Flags==(NodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
 				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize,

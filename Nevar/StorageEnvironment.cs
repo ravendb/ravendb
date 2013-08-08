@@ -120,7 +120,7 @@ namespace Nevar
 
         public Tree CreateTree(Transaction tx, string name)
         {
-            if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+            if (tx.Flags==(TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new tree with a read only transaction");
             
             Tree tree;
@@ -201,13 +201,11 @@ namespace Nevar
 
         public Transaction NewTransaction(TransactionFlags flags)
         {
-            if(flags == TransactionFlags.None)
-                throw new ArgumentException("Cannot use None as a transaction flag");
             bool txLockTaken = false;
             try
             {
                 long txId = _transactionsCounter;
-                if (flags.HasFlag(TransactionFlags.ReadWrite))
+                if (flags==(TransactionFlags.ReadWrite))
                 {
                     txId = _transactionsCounter + 1;
                     _txWriter.Wait();
@@ -219,7 +217,7 @@ namespace Nevar
                 tx.AddPagerState(state);
 
 
-                if (flags.HasFlag(TransactionFlags.ReadWrite))
+                if (flags==(TransactionFlags.ReadWrite))
                     tx.SetFreeSpaceCollector(_freeSpaceCollector);
 
                 return tx;
@@ -238,7 +236,7 @@ namespace Nevar
             if (_activeTransactions.TryRemove(txId, out tx) == false)
                 return;
 
-            if (tx.Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+            if (tx.Flags!=(TransactionFlags.ReadWrite))
                 return;
 
             _transactionsCounter = txId;

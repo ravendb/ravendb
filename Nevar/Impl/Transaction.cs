@@ -150,7 +150,7 @@ namespace Nevar.Impl
 
 		internal unsafe int GetNodeDataSize(NodeHeader* node)
 		{
-			if (node->Flags.HasFlag(NodeFlags.PageRef)) // lots of data, enough to overflow!
+			if (node->Flags==(NodeFlags.PageRef)) // lots of data, enough to overflow!
 			{
 				var overflowPage = GetReadOnlyPage(node->PageNumber);
 				return overflowPage.OverflowSize;
@@ -160,7 +160,7 @@ namespace Nevar.Impl
 
 		public unsafe void Commit()
 		{
-			if (Flags.HasFlag(TransactionFlags.ReadWrite) == false)
+			if (Flags!=(TransactionFlags.ReadWrite))
 				return; // nothing to do
 
 			foreach (var kvp in _treesInfo)
