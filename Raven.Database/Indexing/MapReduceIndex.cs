@@ -141,7 +141,17 @@ namespace Raven.Database.Indexing
 				{
 					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
 					actions.General.MaybePulseTransaction();
-				}
+                    foreach (var childDocumentKey in referencedDocument.Value)
+                    {
+                        context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex
+                            .AddOrUpdate(childDocumentKey, new ConcurrentBag<string> { referencedDocument.Key },
+                                (key, parentKeyCollection) =>
+                                {
+                                    parentKeyCollection.Add(referencedDocument.Key);
+                                    return parentKeyCollection;
+                                });
+                    }
+                }
 			}
 
 			var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
