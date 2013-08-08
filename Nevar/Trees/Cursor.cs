@@ -2,16 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using Nevar.Debugging;
+using Nevar.Impl;
 
 namespace Nevar.Trees
 {
     public class Cursor : IDisposable
     {
+        private readonly Tree _tree;
+        private readonly Transaction _transaction;
         public LinkedList<Page> Pages = new LinkedList<Page>();
 
-        public Cursor()
+        public Cursor(Tree tree, Transaction transaction)
         {
-            
+            _tree = tree;
+            _transaction = transaction;
         }
 
         public Page ParentPage
@@ -69,7 +73,7 @@ namespace Nevar.Trees
 
         public void Dispose()
         {
-            
+            _transaction.RemoveCursor(_tree, this);
         }
     }
 }

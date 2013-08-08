@@ -107,17 +107,18 @@ namespace Nevar.Impl
 	        if (_cursorsByTrees.TryGetValue(tree, out list) == false)
 	            return;
 
-	        foreach (var cursor in list)
+            var readOnlyPage = GetReadOnlyPage(newPage);
+            foreach (var cursor in list)
 	        {
 	            if(cursor == c)
                     continue;
 
-	            var node = cursor.Pages.First;
+                var node = cursor.Pages.First;
 	            while (node != null)
 	            {
                     if (node.Value.PageNumber == original)
                     {
-                        node.Value = GetReadOnlyPage(newPage);
+                        node.Value = readOnlyPage;
                     }
 
 	                node = node.Next;
@@ -363,12 +364,20 @@ namespace Nevar.Impl
 
 	    public Cursor NewCursor(Tree tree)
 	    {
-	        var newCursor = new Cursor();
+	        var newCursor = new Cursor(tree, this);
 	        List<Cursor> list;
 	        if(_cursorsByTrees.TryGetValue(tree, out list) == false)
                 _cursorsByTrees.Add(tree, list = new List<Cursor>()); 
             list.Add(newCursor);
 	        return newCursor;
+	    }
+
+	    public void RemoveCursor(Tree tree, Cursor cursor)
+	    {
+            List<Cursor> list;
+	        if (_cursorsByTrees.TryGetValue(tree, out list) == false)
+	            return;
+            list.Remove(cursor);
 	    }
 	}
 }
