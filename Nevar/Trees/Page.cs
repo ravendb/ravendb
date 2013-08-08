@@ -346,7 +346,7 @@ namespace Nevar.Trees
         }
 
         [Conditional("VALIDATE")]
-        public void DebugValidate(Transaction tx, SliceComparer comparer, Page root)
+        public void DebugValidate(Transaction tx, SliceComparer comparer, long root)
         {
             if (NumberOfEntries == 0)
                 return;

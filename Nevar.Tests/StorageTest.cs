@@ -58,7 +58,8 @@ namespace Nevar.Tests
 			if (Debugger.IsAttached == false)
 				return;
 			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-			TreeDumper.Dump(tx, path, tx.GetTreeInformation(root).Root, showEntries);
+		    var rootPageNumber = tx.GetTreeInformation(root).RootPageNumber;
+            TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
             var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);

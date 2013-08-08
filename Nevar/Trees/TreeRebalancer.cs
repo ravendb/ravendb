@@ -170,12 +170,14 @@ namespace Nevar.Trees
             txInfo.State.Depth = 1;
             txInfo.State.PageCount = 1;
 
-			txInfo.Root = _tx.ModifyPage(null, node->PageNumber, cursor);
+            var rootPage = _tx.ModifyPage(null, node->PageNumber, cursor);
+            txInfo.RootPageNumber = rootPage.PageNumber;
+            //TODO: Fixup any cursors
 
-            Debug.Assert(txInfo.Root.Dirty);
+            Debug.Assert(rootPage.Dirty);
 
             cursor.Pop();
-            cursor.Push(txInfo.Root);
+            cursor.Push(rootPage);
 
             _tx.FreePage(page.PageNumber);
         }

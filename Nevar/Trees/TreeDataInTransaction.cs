@@ -1,26 +1,19 @@
-﻿using Nevar.Impl;
-
-namespace Nevar.Trees
+﻿namespace Nevar.Trees
 {
     public class TreeDataInTransaction
     {
         private readonly TreeMutableState _state;
         private readonly Tree _tree;
-        private Page _root;
 
         public TreeMutableState State
         {
             get { return _state; }
         }
 
-        public Page Root
+        public long RootPageNumber
         {
-            get { return _root; }
-            set
-            {
-                _root = value;
-                _state.RootPageNumber = _root.PageNumber;
-            }
+            get { return _state.RootPageNumber; }
+            set { _state.RootPageNumber = value; }
         }
 
         public TreeDataInTransaction(Tree tree)
@@ -33,15 +26,15 @@ namespace Nevar.Trees
         {
             _state.PageCount++;
             var flags = p.Flags;
-            if (flags==(PageFlags.Branch))
+            if (flags == (PageFlags.Branch))
             {
                 _state.BranchPages++;
             }
-            else if (flags==(PageFlags.Leaf))
+            else if (flags == (PageFlags.Leaf))
             {
                 _state.LeafPages++;
             }
-            else if (flags==(PageFlags.Overlfow))
+            else if (flags == (PageFlags.Overlfow))
             {
                 _state.OverflowPages += num;
             }
@@ -52,9 +45,9 @@ namespace Nevar.Trees
             _tree.SetState(_state);
         }
 
-		public override string ToString()
-		{
-			return _tree.Name + " " + _state.EntriesCount;
-		}
+        public override string ToString()
+        {
+            return _tree.Name + " " + _state.EntriesCount;
+        }
     }
 }

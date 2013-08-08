@@ -111,12 +111,12 @@ namespace Nevar.Trees
             {
                 var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, cursor, txInfo);
                 dataPos = pageSplitter.Execute();
-                DebugValidateTree(tx, txInfo.Root);
+                DebugValidateTree(tx, txInfo.RootPageNumber);
             }
             else
             {
                 dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber);
-                page.DebugValidate(tx, _cmp, txInfo.Root);
+                page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
             }
 	        if (overFlowPos != null)
 	            return overFlowPos;
@@ -167,14 +167,15 @@ namespace Nevar.Trees
 		}
 
         [Conditional("VALIDATE")]
-		private void DebugValidateTree(Transaction tx, Page root)
+		private void DebugValidateTree(Transaction tx, long rootPageNumber)
 		{
 			var stack = new Stack<Page>();
+            var root = tx.GetReadOnlyPage(rootPageNumber);
 			stack.Push(root);
 			while (stack.Count > 0)
 			{
 				var p = stack.Pop();
-				p.DebugValidate(tx, _cmp, root);
+				p.DebugValidate(tx, _cmp, rootPageNumber);
 				if (p.IsBranch == false)
 					continue;
 				for (int i = 0; i < p.NumberOfEntries; i++)
@@ -184,11 +185,10 @@ namespace Nevar.Trees
 			}
 		}
 
-
-
 		public Page FindPageFor(Transaction tx, Slice key, Cursor cursor)
 		{
-			var p = tx.GetTreeInformation(this).Root;
+		    var treeDataInTransaction = tx.GetTreeInformation(this);
+            var p = tx.GetReadOnlyPage(treeDataInTransaction.RootPageNumber);
 			cursor.Push(p);
 			while (p.Flags==(PageFlags.Branch))
 			{
@@ -264,7 +264,7 @@ namespace Nevar.Trees
 				changedPage = treeRebalancer.Execute(cursor, changedPage);
 			}
 
-			page.DebugValidate(tx, _cmp, txInfo.Root);
+			page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
 		}
 
 		public Iterator Iterate(Transaction tx)

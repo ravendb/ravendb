@@ -35,7 +35,8 @@ namespace Nevar.Trees
             {
                 var newRootPage = Tree.NewPage(_tx, PageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
-                _txInfo.Root = newRootPage;
+                _txInfo.RootPageNumber = newRootPage.PageNumber;
+                // TODO: Need to update other concurrent cursors!
                 _txInfo.State.Depth++;
                 _txInfo.RecordNewPage(newRootPage, 1);
 
