@@ -2,6 +2,6 @@
 {
     public enum TreeFlags : byte
     {
-        None = 0
+        None = 0,
     }
 }

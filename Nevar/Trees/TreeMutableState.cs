@@ -10,14 +10,15 @@ namespace Nevar.Trees
         public int Depth;
         public long PageCount;
         public long EntriesCount;
+	    public TreeFlags Flags;
 
         public long RootPageNumber;
 
         public void CopyTo(TreeRootHeader* header)
         {
+			header->Flags = Flags;
             header->BranchPages = BranchPages;
             header->Depth = Depth;
-            header->Flags = TreeFlags.None;
             header->LeafPages = LeafPages;
             header->OverflowPages = OverflowPages;
             header->PageCount = PageCount;
@@ -35,6 +36,7 @@ namespace Nevar.Trees
                     LeafPages = LeafPages,
                     OverflowPages = OverflowPages,
                     PageCount = PageCount,
+					Flags = Flags,
                     RootPageNumber = RootPageNumber
                 };
         }
