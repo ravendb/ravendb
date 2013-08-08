@@ -8,15 +8,9 @@ namespace Nevar.Trees
 {
     public class Cursor : IDisposable
     {
-        private readonly Tree _tree;
-        private readonly Transaction _transaction;
         public LinkedList<Page> Pages = new LinkedList<Page>();
+        private Dictionary<long, Page> pagesByNum = new Dictionary<long, Page>(); 
 
-        public Cursor(Tree tree, Transaction transaction)
-        {
-            _tree = tree;
-            _transaction = transaction;
-        }
 
         public Page ParentPage
         {
@@ -53,6 +47,7 @@ namespace Nevar.Trees
             }
 #endif
             Pages.AddFirst(p);
+            pagesByNum[p.PageNumber] = p;
         }
 
         public Page Pop()
@@ -63,17 +58,20 @@ namespace Nevar.Trees
             }
             Page p = Pages.First.Value;
             Pages.RemoveFirst();
+            pagesByNum.Remove(p.PageNumber);
             return p;
         }
 
 	    public Page GetPage(long p)
 	    {
-		    return Pages.FirstOrDefault(x => x.PageNumber == p);
+	        Page page;
+	        if (pagesByNum.TryGetValue(p, out page))
+	            return page;
+	        return null;
 	    }
 
         public void Dispose()
         {
-            _transaction.RemoveCursor(_tree, this);
         }
     }
 }

@@ -35,12 +35,9 @@ namespace Nevar.Trees
             {
                 var newRootPage = Tree.NewPage(_tx, PageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
-                var original = _txInfo.RootPageNumber;
                 _txInfo.RootPageNumber = newRootPage.PageNumber;
                 _txInfo.State.Depth++;
                 _txInfo.RecordNewPage(newRootPage, 1);
-
-                _tx.UpdateOtherCursors(_txInfo.Tree, original, newRootPage.PageNumber, _cursor);
 
                 // now add implicit left page
                 newRootPage.AddNode(0, Slice.BeforeAllKeys, -1, _page.PageNumber);
