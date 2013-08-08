@@ -1617,6 +1617,10 @@ namespace Raven.Client.Indexes
 				}
 				return false;
 			}
+
+			if (node.Method.GetCustomAttributes(typeof (RavenMethodAttribute), false).Length != 0)
+				return false;
+
 			return true;
 		}
 

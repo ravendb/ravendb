@@ -560,6 +560,7 @@
     <Compile Include="Faceted\DynamicFacets.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="Faceted\FacetTestBase.cs" />
+    <Compile Include="Indexes\CustomExtensionMethod.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
     <Compile Include="Indexes\IndexLocking.cs" />
     <Compile Include="Indexes\Recovery\MapReduceRecoveryTestIndex.cs" />
