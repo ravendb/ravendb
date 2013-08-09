@@ -174,6 +174,30 @@ namespace Raven.Tests.Queries
 		}
 
 		[Fact]
+		public void can_include_by_primary_valuetype_id()
+		{
+			using (var session = store.OpenSession())
+			{
+				session.Store(new Customer2 { Id = 1 });
+				session.Store(new Order2 { Id = 1 });
+
+				session.SaveChanges();
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var order = session.Include<Order2, Customer2>(x => x.Id)
+					.Load("order2s/1");
+
+				// this will not require querying the server!
+				var cust = session.Load<Customer2>(order.Id);
+
+				Assert.NotNull(cust);
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+			}
+		}
+
+		[Fact]
 		public void can_include_by_primary_list_of_strings()
 		{
 			using (var session = store.OpenSession())
@@ -383,6 +407,7 @@ namespace Raven.Tests.Queries
 
 		public class Order2
 		{
+			public int Id { get; set; }
 			public int Customer2Id { get; set; }
 			public Guid[] Supplier2Ids { get; set; }
 			public Referral2 Refferal2 { get; set; }
