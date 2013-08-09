@@ -121,9 +121,7 @@ namespace Nevar.Impl
 
 		public Page AllocatePage(int num)
 		{
-			Page page = null;
-			if (_freeSpaceRepository != null)
-				page = _freeSpaceRepository.TryAllocateFromFreeSpace(this, num);
+			Page page = _freeSpaceRepository.TryAllocateFromFreeSpace(this, num);
 			if (page == null) // allocate from end of file
 			{
 				if (num > 1)

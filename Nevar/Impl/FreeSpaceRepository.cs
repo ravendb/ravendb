@@ -115,8 +115,40 @@ namespace Nevar.Impl
 			_env.FreeSpaceRoot.Delete(tx, old.Key);
 		}
 
+		public long GetFreePageCount()
+		{
+			long freePages = 0;
+			using (var tx = _env.NewTransaction(TransactionFlags.Read))
+			using (var it = _env.FreeSpaceRoot.Iterate(tx))
+			{
+				var key = new Slice(SliceOptions.Key);
+				if (it.Seek(Slice.BeforeAllKeys) == false)
+				{
+					return 0;
+				}
+				do
+				{
+					key.Set(it.Current);
+
+					if (key.StartsWith(_sectionsPrefix, _env.SliceComparer) || key.StartsWith(_txPrefix, _env.SliceComparer))
+					{
+						var dataSize = NodeHeader.GetDataSize(tx, it.Current);
+						freePages += dataSize/sizeof (long) - 1;
+					}
+					else
+					{
+						Debug.Assert(false, "invalid key in free space tree: " + key);
+					}
+
+				} while (it.MoveNext());
+			}
+			return freePages;
+
+		}
+
 		private bool SetupNextSection(Transaction tx, Slice key)
 		{
+			UpdateSections(tx, _env.OldestTransaction);
 			int currentMax = 0;
 			NodeHeader* current = null;
 			bool hasMatch = key != null &&
@@ -155,7 +187,6 @@ namespace Nevar.Impl
 			int minFreeSpace = _minimumFreePagesInSectionSet ?
 				_minimumFreePagesInSection :
 				Math.Min(256, (_lastTransactionPageUsage * 3) / 2);
-
 
 			using (var it = _env.FreeSpaceRoot.Iterate(tx))
 			{

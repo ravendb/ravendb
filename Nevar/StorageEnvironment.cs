@@ -248,6 +248,7 @@ namespace Nevar
 		{
 			return new EnvironmentStats
 				{
+					FreePages = _freeSpaceRepository.GetFreePageCount(),
 					FreePagesOverhead = FreeSpaceRoot.State.PageCount,
 					RootPages = Root.State.PageCount,
 					HeaderPages = 2,
