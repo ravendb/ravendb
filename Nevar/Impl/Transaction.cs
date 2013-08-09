@@ -207,7 +207,7 @@ namespace Nevar.Impl
 			var fileHeader = (FileHeader*)pg.Base;
 			fileHeader->TransactionId = _id;
 			fileHeader->LastPageNumber = NextPageNumber - 1;
-			_env.FreeSpace.State.CopyTo(&fileHeader->FreeSpace);
+			_env.FreeSpaceRoot.State.CopyTo(&fileHeader->FreeSpace);
 			_env.Root.State.CopyTo(&fileHeader->Root);
 		}
 
@@ -232,7 +232,7 @@ namespace Nevar.Impl
 					ms.Position = 0;
 
 					// this may cause additional pages to be freed, so we need need the while loop to track them all
-					_env.FreeSpace.Add(this, slice, ms);
+					_env.FreeSpaceRoot.Add(this, slice, ms);
 					ms.Position = 0; // so if we have additional freed pages, they will be added
 				}
 			}
@@ -256,11 +256,11 @@ namespace Nevar.Impl
 						RootPageNumber = _env.Root.State.RootPageNumber
 					});
 			}
-			if (tree == _env.FreeSpace)
+			if (tree == _env.FreeSpaceRoot)
 			{
-				return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpace)
+				return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpaceRoot)
 					{
-						RootPageNumber = _env.FreeSpace.State.RootPageNumber
+						RootPageNumber = _env.FreeSpaceRoot.State.RootPageNumber
 					});
 			}
 

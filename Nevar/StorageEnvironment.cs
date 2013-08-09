@@ -37,7 +37,7 @@ namespace Nevar
 
 				Setup(pager);
 
-				FreeSpace.Name = "Free Space";
+				FreeSpaceRoot.Name = "Free Space";
 				Root.Name = "Root";
 			}
 			catch (Exception)
@@ -62,7 +62,7 @@ namespace Nevar
 
 					// important to first create the two trees, then set them on the env
 
-					FreeSpace = freeSpace;
+					FreeSpaceRoot = freeSpace;
 					Root = root;
 
 					tx.UpdateRoots(root, freeSpace);
@@ -83,7 +83,7 @@ namespace Nevar
 				var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
 
 				// important to first create the two trees, then set them on the env
-				FreeSpace = freeSpace;
+				FreeSpaceRoot = freeSpace;
 				Root = root;
 
 				tx.Commit();
@@ -92,13 +92,18 @@ namespace Nevar
 
 		public long NextPageNumber { get; set; }
 
+		public FreeSpaceRepository FreeSpaceRepository
+		{
+			get { return _freeSpaceRepository; }
+		}
+
 		public SliceComparer SliceComparer
 		{
 			get { return _sliceComparer; }
 		}
 
 		public Tree Root { get; private set; }
-		public Tree FreeSpace { get; private set; }
+		public Tree FreeSpaceRoot { get; private set; }
 
 		public long OldestTransaction
 		{
@@ -243,7 +248,7 @@ namespace Nevar
 		{
 			return new EnvironmentStats
 				{
-					FreePagesOverhead = FreeSpace.State.PageCount,
+					FreePagesOverhead = FreeSpaceRoot.State.PageCount,
 					RootPages = Root.State.PageCount,
 					HeaderPages = 2,
 					UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber

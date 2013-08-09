@@ -63,6 +63,8 @@ namespace Nevar.Impl
 		private bool _currentChanged;
 		private readonly Slice _sectionsPrefix = "sect/";
 		private readonly Slice _txPrefix = "tx/";
+		private int _minimumFreePagesInSection;
+		private bool _minimumFreePagesInSectionSet;
 
 		public FreeSpaceRepository(StorageEnvironment env)
 		{
@@ -71,19 +73,26 @@ namespace Nevar.Impl
 
 		public Page TryAllocateFromFreeSpace(Transaction tx, int num)
 		{
-			if (_env.FreeSpace == null)
-				return null;// this can happen the first time FreeSpace tree is created
+			if (_env.FreeSpaceRoot == null)
+				return null;// this can happen the first time FreeSpaceRoot tree is created
 
 			if (_current == null || _current.Pages.Count == 0)
 			{
 				var old = _current;
-				_current = null;
-				_currentKey = null;
-				_currentChanged = false;
-				var hasNextSection = TryFindNextSection(tx);
-				DeleteSection(tx, old);
-				if (hasNextSection == false)
-					return null;
+				try
+				{
+					if (SetupNextSection(tx, _currentKey) == false)
+					{
+						_current = null;
+						_currentKey = null;
+						_currentChanged = false;
+						return null;
+					}
+				}
+				finally
+				{
+					DeleteSection(tx, old);
+				}
 			}
 
 			Debug.Assert(_current != null);
@@ -103,18 +112,18 @@ namespace Nevar.Impl
 		{
 			if (old == null)
 				return;
-			_env.FreeSpace.Delete(tx, old.Key);
+			_env.FreeSpaceRoot.Delete(tx, old.Key);
 		}
 
-		private bool TryFindNextSection(Transaction tx)
+		private bool SetupNextSection(Transaction tx, Slice key)
 		{
 			int currentMax = 0;
 			NodeHeader* current = null;
-			bool hasMatch = _currentKey != null &&
-				TryFindNextSection(tx, _currentKey, null, ref current, ref currentMax);
+			bool hasMatch = key != null &&
+				TryFindSection(tx, key, key, null, ref current, ref currentMax);
 			if (hasMatch == false) // wrap to the beginning 
 			{
-				if (TryFindNextSection(tx, _sectionsPrefix, _currentKey, ref current, ref currentMax) == false)
+				if (TryFindSection(tx, key, _sectionsPrefix, key, ref current, ref currentMax) == false)
 					return false;
 			}
 			Debug.Assert(current != null);
@@ -138,15 +147,17 @@ namespace Nevar.Impl
 			_currentKey = _current.Key;
 			_currentChanged = false;
 
-			
 			return true;
 		}
 
-		private bool TryFindNextSection(Transaction tx, Slice start, Slice end, ref NodeHeader* current, ref int currentMax)
+		private bool TryFindSection(Transaction tx, Slice currentKey, Slice start, Slice end, ref NodeHeader* current, ref int currentMax)
 		{
-			var minFreeSpace = Math.Min(256, (_lastTransactionPageUsage * 3) / 2);
+			int minFreeSpace = _minimumFreePagesInSectionSet ?
+				_minimumFreePagesInSection :
+				Math.Min(256, (_lastTransactionPageUsage * 3) / 2);
 
-			using (var it = _env.FreeSpace.Iterate(tx))
+
+			using (var it = _env.FreeSpaceRoot.Iterate(tx))
 			{
 				it.RequiredPrefix = _sectionsPrefix;
 				it.MaxKey = end;
@@ -158,6 +169,12 @@ namespace Nevar.Impl
 				{
 					if (current != null)
 						triesAfterFindingSuitable--;
+
+					if (currentKey != null)
+					{
+						if (_currentKey.Compare(new Slice(it.Current), _env.SliceComparer) == 0)
+							continue; // skip current one
+					}
 
 					var nodeSize = NodeHeader.GetDataSize(tx, it.Current);
 					var numberOfFreePages = nodeSize / sizeof(long);
@@ -218,7 +235,7 @@ namespace Nevar.Impl
 					}
 
 					ms.Position = 0;
-					_env.FreeSpace.Add(tx, section.Key, ms);
+					_env.FreeSpaceRoot.Add(tx, section.Key, ms);
 				}
 			}
 
@@ -235,7 +252,7 @@ namespace Nevar.Impl
 				Pages = new List<long>(),
 				Id = sectionId
 			};
-			using (var stream = _env.FreeSpace.Read(tx, key))
+			using (var stream = _env.FreeSpaceRoot.Read(tx, key))
 			{
 				if (stream == null)
 					return section;
@@ -260,7 +277,7 @@ namespace Nevar.Impl
 			// read all the freed transactions to memory, we expect this
 			// number to be pretty small, so we don't worry about holding it all 
 			// in memory
-			using (var it = _env.FreeSpace.Iterate(tx))
+			using (var it = _env.FreeSpaceRoot.Iterate(tx))
 			{
 				it.RequiredPrefix = _txPrefix;
 
@@ -315,6 +332,16 @@ namespace Nevar.Impl
 					Id = id,
 					Pages = new List<long>(freedPages)
 				});
+		}
+
+		public int MinimumFreePagesInSection
+		{
+			get { return _minimumFreePagesInSection; }
+			set
+			{
+				_minimumFreePagesInSectionSet = true;
+				_minimumFreePagesInSection = value;
+			}
 		}
 	}
 }

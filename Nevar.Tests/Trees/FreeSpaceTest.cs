@@ -14,7 +14,9 @@ namespace Nevar.Tests.Trees
 			var buffer = new byte[512];
 			random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			Env.FreeSpaceRepository.MinimumFreePagesInSection = 1;
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
 				{
@@ -23,7 +25,7 @@ namespace Nevar.Tests.Trees
 
 				tx.Commit();
 			}
-            var before = Env.Stats();
+			var before = Env.Stats();
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -35,8 +37,8 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-            var old = Env.NextPageNumber;
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			var old = Env.NextPageNumber;
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (int i = 0; i < 25; i++)
 				{
@@ -46,11 +48,11 @@ namespace Nevar.Tests.Trees
 				tx.Commit();
 			}
 
-		    var after = Env.Stats();
+			var after = Env.Stats();
 
-		    Assert.Equal(after.RootPages, before.RootPages);
+			Assert.Equal(after.RootPages, before.RootPages);
 
-            Assert.True(Env.NextPageNumber - old < 2);
+			Assert.True(Env.NextPageNumber - old < 2);
 		}
 	}
 }
