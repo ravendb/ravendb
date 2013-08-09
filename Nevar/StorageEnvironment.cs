@@ -221,6 +221,8 @@ namespace Nevar
 				var state = _pager.TransactionBegan();
 				tx.AddPagerState(state);
 
+				if(flags==TransactionFlags.ReadWrite)
+					_freeSpaceRepository.UpdateSections(tx, OldestTransaction);
 				return tx;
 			}
 			catch (Exception)

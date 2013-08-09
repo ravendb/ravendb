@@ -171,8 +171,6 @@ namespace Nevar.Impl
 				tree.State.CopyTo(treePtr);
 			}
 
-			_freeSpaceRepository.UpdateSections(this, _env.OldestTransaction);
-
 			FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
 
 			if (_rootTreeData != null)
@@ -180,6 +178,13 @@ namespace Nevar.Impl
 
 			if (_fresSpaceTreeData != null)
 				_fresSpaceTreeData.Flush();
+
+#if DEBUG
+			if (_env.Root != null && _env.FreeSpaceRoot != null)
+			{
+				Debug.Assert(_env.Root.State.RootPageNumber != _env.FreeSpaceRoot.State.RootPageNumber);
+			}
+#endif
 
 			_env.NextPageNumber = NextPageNumber;
 

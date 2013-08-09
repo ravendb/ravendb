@@ -148,7 +148,6 @@ namespace Nevar.Impl
 
 		private bool SetupNextSection(Transaction tx, Slice key)
 		{
-			UpdateSections(tx, _env.OldestTransaction);
 			int currentMax = 0;
 			NodeHeader* current = null;
 			bool hasMatch = key != null &&
