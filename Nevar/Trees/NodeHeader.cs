@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.IO;
+using System.Runtime.InteropServices;
 using Nevar.Impl;
 
 namespace Nevar.Trees
@@ -21,6 +22,29 @@ namespace Nevar.Trees
 		{
 			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + 
 				  (Flags == (NodeFlags.PageRef) ? Constants.PageNumberSize : DataSize);
+		}
+
+
+		public unsafe static Stream Stream(Transaction tx, NodeHeader* node)
+		{
+			if (node->Flags == (NodeFlags.PageRef))
+			{
+				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize,
+												 overFlowPage.OverflowSize, FileAccess.Read);
+			}
+			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize,
+											 node->DataSize, FileAccess.Read);
+		}
+
+		public unsafe static int GetDataSize(Transaction tx, NodeHeader* node)
+		{
+			if (node->Flags == (NodeFlags.PageRef))
+			{
+				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
+				return overFlowPage.OverflowSize;
+			}
+			return node->DataSize;
 		}
 	}
 }

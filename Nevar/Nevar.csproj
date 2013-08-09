@@ -45,13 +45,12 @@
   <ItemGroup>
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Impl\AbstractPager.cs" />
-    <Compile Include="Impl\ConsecutiveSequences.cs" />
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\FlushMode.cs" />
-    <Compile Include="Impl\FreeSpaceCollector.cs" />
+    <Compile Include="Impl\FreeSpaceRepository.cs" />
     <Compile Include="Impl\IVirtualPager.cs" />
     <Compile Include="Impl\MemoryMapPager.cs" />
     <Compile Include="Impl\PagerState.cs" />

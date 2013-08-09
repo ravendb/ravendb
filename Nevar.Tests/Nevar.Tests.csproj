@@ -47,14 +47,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Impl\ConsecutiveSequencesTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Restarts.cs" />
     <Compile Include="Storage\VeryBig.cs" />
     <Compile Include="Trees\Basic.cs" />
     <Compile Include="Trees\Deletes.cs" />
-    <Compile Include="Trees\FreeSpace.cs" />
+    <Compile Include="Trees\FreeSpaceTest.cs" />
     <Compile Include="Trees\Iteration.cs" />
     <Compile Include="Trees\MultipleTrees.cs" />
     <Compile Include="StorageTest.cs" />

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Nevar.Impl;
 
 namespace Nevar.Debugging
 {
@@ -9,13 +10,5 @@ namespace Nevar.Debugging
         public long RootPages;
         public long HeaderPages;
         public long UnallocatedPagesAtEndOfFile;
-        public List<FreedTransaction> FreedTransactions = new List<FreedTransaction>();
-
-        public class FreedTransaction
-        {
-            public long Id;
-            public List<long> Pages = new List<long>();
-        }
-
     }
 }

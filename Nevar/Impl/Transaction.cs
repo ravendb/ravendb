@@ -20,9 +20,9 @@ namespace Nevar.Impl
 		private TreeDataInTransaction _fresSpaceTreeData;
 		private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
 		private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
-		private readonly HashSet<long> _freedPages = new HashSet<long>();
+		private readonly List<long> _freedPages = new List<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
-		private FreeSpaceCollector _freeSpaceCollector;
+		private FreeSpaceRepository _freeSpaceRepository;
 
 		public TransactionFlags Flags { get; private set; }
 
@@ -41,11 +41,12 @@ namespace Nevar.Impl
 			get { return _id; }
 		}
 
-		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags)
+		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, FreeSpaceRepository freeSpaceRepository)
 		{
 			_pager = pager;
 			_env = env;
 			_id = id;
+			_freeSpaceRepository = freeSpaceRepository;
 			Flags = flags;
 			NextPageNumber = env.NextPageNumber;
 		}
@@ -121,8 +122,8 @@ namespace Nevar.Impl
 		public Page AllocatePage(int num)
 		{
 			Page page = null;
-			if (_freeSpaceCollector != null)
-				page = _freeSpaceCollector.TryAllocateFromFreeSpace(this, num);
+			if (_freeSpaceRepository != null)
+				page = _freeSpaceRepository.TryAllocateFromFreeSpace(this, num);
 			if (page == null) // allocate from end of file
 			{
 				if (num > 1)
@@ -172,23 +173,9 @@ namespace Nevar.Impl
 				tree.State.CopyTo(treePtr);
 			}
 
-			byte iterationCount = 1;
-			FlushFreePages(ref iterationCount);   // this is the the free space that is available when all concurrent transactions are done
+			_freeSpaceRepository.UpdateSections(this, _env.OldestTransaction);
 
-			// this is free space that is available right now, HAS to be after flushing free space, since old space might be used
-			// to write the new free pages
-			if (_freeSpaceCollector != null)
-			{
-				var changed = _freeSpaceCollector.SaveOldFreeSpace(this);
-				// saving old free space might have create more free space
-				// at this point we would won't use any free space and just flush any additional
-				// free pages once and for all
-				_freeSpaceCollector = null;
-				if (changed)
-				{
-					FlushFreePages(ref iterationCount);
-				}
-			}
+			FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
 
 			if (_rootTreeData != null)
 				_rootTreeData.Flush();
@@ -205,8 +192,8 @@ namespace Nevar.Impl
 			sortedPagesToFlush.Sort();
 			_pager.Flush(sortedPagesToFlush);
 
-			if (_freeSpaceCollector != null)
-				_freeSpaceCollector.LastTransactionPageUsage(sortedPagesToFlush.Count);
+			if (_freeSpaceRepository != null)
+				_freeSpaceRepository.LastTransactionPageUsage(sortedPagesToFlush.Count);
 
 			WriteHeader(_pager.Get(this, _id & 1)); // this will cycle between the first and second pages
 
@@ -224,19 +211,19 @@ namespace Nevar.Impl
 			_env.Root.State.CopyTo(&fileHeader->Root);
 		}
 
-		private void FlushFreePages(ref byte iterationCounter)
+		private void FlushFreePages()
 		{
-			var slice = new Slice(SliceOptions.Key);
-			// transaction ids in free pages are 56 bits (64 - 8)
-			// the right most bits are reserved for iteration counters
+			int iterationCounter = 0;
 			while (_freedPages.Count != 0)
 			{
-				slice.Set(_id << 8 | iterationCounter);
+				Slice slice = string.Format("tx/{0:0000000000000000000}/{1}", _id, iterationCounter);
+				
 				iterationCounter++;
 				using (var ms = new MemoryStream())
 				using (var binaryWriter = new BinaryWriter(ms))
 				{
-					foreach (var freePage in _freedPages.OrderBy(x => x))
+					_freeSpaceRepository.RegisterFreePages(slice, _id, _freedPages);
+					foreach (var freePage in _freedPages)
 					{
 						binaryWriter.Write(freePage);
 					}
@@ -295,11 +282,10 @@ namespace Nevar.Impl
 			_dirtyPages.Remove(pageNumber);
 #if DEBUG
 			Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);
-			var success = _freedPages.Add(pageNumber);
-			Debug.Assert(success);
-#else
-            _freedPages.Add(pageNumber);
+			Debug.Assert(_freedPages.Contains(pageNumber) == false);
 #endif
+			_freedPages.Add(pageNumber);
+
 		}
 
 
@@ -326,12 +312,6 @@ namespace Nevar.Impl
 		public void AddPagerState(PagerState state)
 		{
 			_pagerStates.Add(state);
-		}
-
-
-		public void SetFreeSpaceCollector(FreeSpaceCollector freeSpaceCollector)
-		{
-			_freeSpaceCollector = freeSpaceCollector;
 		}
 
 	    public Cursor NewCursor(Tree tree)

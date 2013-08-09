@@ -292,7 +292,7 @@ namespace Nevar.Trees
 
 				if (item.Compare(key, _cmp) != 0)
 					return null;
-				return StreamForNode(tx, node);
+				return NodeHeader.Stream(tx, node);
 			}
 		}
 
@@ -318,18 +318,6 @@ namespace Nevar.Trees
 				}
 				return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
 			}
-		}
-
-		internal static Stream StreamForNode(Transaction tx, NodeHeader* node)
-		{
-			if (node->Flags == (NodeFlags.PageRef))
-			{
-				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize,
-												 overFlowPage.OverflowSize, FileAccess.Read);
-			}
-			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize,
-											 node->DataSize, FileAccess.Read);
 		}
 
 		public override string ToString()

@@ -24,7 +24,7 @@ namespace Nevar
 		private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 
 		private long _transactionsCounter;
-		private readonly FreeSpaceCollector _freeSpaceCollector;
+		private readonly FreeSpaceRepository _freeSpaceRepository;
 
 		public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
@@ -32,7 +32,7 @@ namespace Nevar
 			{
 				_pager = pager;
 				_ownsPager = ownsPager;
-				_freeSpaceCollector = new FreeSpaceCollector(this);
+				_freeSpaceRepository = new FreeSpaceRepository(this);
 				_sliceComparer = NativeMethods.memcmp;
 
 				Setup(pager);
@@ -55,7 +55,7 @@ namespace Nevar
 				WriteEmptyHeaderPage(_pager.Get(null, 1));
 
 				NextPageNumber = 2;
-				using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
+				using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite, _freeSpaceRepository))
 				{
 					var root = Tree.Create(tx, _sliceComparer);
 					var freeSpace = Tree.Create(tx, _sliceComparer);
@@ -77,7 +77,7 @@ namespace Nevar
 			FileHeader* entry = FindLatestFileHeadeEntry();
 			NextPageNumber = entry->LastPageNumber + 1;
 			_transactionsCounter = entry->TransactionId + 1;
-			using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite))
+			using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite, _freeSpaceRepository))
 			{
 				var root = Tree.Open(tx, _sliceComparer, &entry->Root);
 				var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
@@ -211,14 +211,10 @@ namespace Nevar
 					_txWriter.Wait();
 					txLockTaken = true;
 				}
-				var tx = new Transaction(_pager, this, txId, flags);
+				var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository);
 				_activeTransactions.TryAdd(txId, tx);
 				var state = _pager.TransactionBegan();
 				tx.AddPagerState(state);
-
-
-				if (flags == (TransactionFlags.ReadWrite))
-					tx.SetFreeSpaceCollector(_freeSpaceCollector);
 
 				return tx;
 			}
@@ -245,48 +241,13 @@ namespace Nevar
 
 		public EnvironmentStats Stats()
 		{
-			var results = new EnvironmentStats
+			return new EnvironmentStats
 				{
 					FreePagesOverhead = FreeSpace.State.PageCount,
 					RootPages = Root.State.PageCount,
 					HeaderPages = 2,
 					UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber
 				};
-			using (Transaction tx = NewTransaction(TransactionFlags.Read))
-			{
-				using (Iterator it = FreeSpace.Iterate(tx))
-				{
-					var slice = new Slice(SliceOptions.Key);
-					if (it.Seek(Slice.BeforeAllKeys))
-					{
-						do
-						{
-							slice.Set(it.Current);
-
-							var ft = new EnvironmentStats.FreedTransaction
-								{
-									Id = slice.ToInt64()
-								};
-
-							results.FreedTransactions.Add(ft);
-
-							int numberOfFreePages = tx.GetNumberOfFreePages(it.Current);
-							results.FreePages += numberOfFreePages;
-							using (Stream data = Tree.StreamForNode(tx, it.Current))
-							using (var reader = new BinaryReader(data))
-							{
-								for (int i = 0; i < numberOfFreePages; i++)
-								{
-									ft.Pages.Add(reader.ReadInt64());
-								}
-							}
-						} while (it.MoveNext());
-					}
-				}
-				tx.Commit();
-			}
-
-			return results;
 		}
 	}
 }

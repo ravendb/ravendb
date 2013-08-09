@@ -86,12 +86,6 @@ namespace Nevar
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
 
-		    if (Size == sizeof (long))
-		    {
-			    var val = ToInt64();
-			    return (val >> 8).ToString(CultureInfo.InvariantCulture) + "/" + (byte) val;
-		    }
-
 			return _array != null
 		               ? Encoding.UTF8.GetString(_array)
 		               : Marshal.PtrToStringAnsi(new IntPtr(_pointer), _pointerSize);
@@ -100,15 +94,21 @@ namespace Nevar
 		public int Compare(Slice other, SliceComparer cmp)
 		{
 			Debug.Assert(Options == SliceOptions.Key);
-			var r = CompareData(other, cmp);
+			var r = CompareData(other, cmp, Math.Min(Size, other.Size));
 			if (r != 0)
 				return r;
 			return Size - other.Size;
 		}
 
-		private int CompareData(Slice other, SliceComparer cmp)
+		public bool StartsWith(Slice other, SliceComparer cmp)
 		{
-			var size = Math.Min(Size, other.Size);
+			if (Size < other.Size)
+				return false;
+			return CompareData(other, cmp, other.Size) == 0;
+		}
+
+		private int CompareData(Slice other, SliceComparer cmp, ushort size)
+		{
 			if (_array != null)
 			{
 				fixed (byte* a = _array)
@@ -156,21 +156,6 @@ namespace Nevar
 			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);
 		}
 
-		public void Set(long val)
-		{
-		    val = IPAddress.HostToNetworkOrder(val);
-			_array = BitConverter.GetBytes(val);
-		}
-
-		public long ToInt64()
-		{
-			Debug.Assert(Size == sizeof(long));
-
-			if (_array != null)
-                return IPAddress.NetworkToHostOrder(BitConverter.ToInt64(_array, 0));
-
-            return IPAddress.NetworkToHostOrder(*(long*)_pointer);
-		}
 
 	    public Slice Clone()
 	    {

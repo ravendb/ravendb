@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Nevar.Tests.Trees
 {
-	public class FreeSpace : StorageTest
+	public class FreeSpaceTest : StorageTest
 	{
 		[Fact]
 		public void WillBeReused()

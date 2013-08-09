@@ -24,7 +24,12 @@ namespace Nevar.Trees
 			_currentPage = _tree.FindPageFor(_tx, key, _cursor);
 			_cursor.Pop();
 			var node = _currentPage.Search(key, _cmp);
-			return node != null;
+			if (node == null)
+			{
+				return false;
+			}
+
+			return ValidateCurrentKey();
 		}
 
 		public NodeHeader* Current
@@ -52,6 +57,8 @@ namespace Nevar.Trees
                         _currentPage = _tx.GetReadOnlyPage(node->PageNumber);
 						_currentPage.LastSearchPosition = 0;
 					}
+					if (ValidateCurrentKey() == false)
+						return false;
 					return true;// there is another entry in this page
 				}
 				if (_cursor.Pages.Count == 0)
@@ -62,9 +69,30 @@ namespace Nevar.Trees
 			return false;
 		}
 
+		private bool ValidateCurrentKey()
+		{
+			if (RequiredPrefix != null)
+			{
+				var currentKey = new Slice(Current);
+				if (currentKey.StartsWith(RequiredPrefix, _cmp) == false)
+					return false;
+			}
+			if (MaxKey != null)
+			{
+				var currentKey = new Slice(Current);
+				if (currentKey.Compare(MaxKey, _cmp) >= 0)
+					return false;
+			}
+			return true;
+		}
+
 		public void Dispose()
 		{
 		    _cursor.Dispose();
 		}
+
+		public Slice RequiredPrefix { get; set; }
+
+		public Slice MaxKey { get; set; }
 	}
 }
