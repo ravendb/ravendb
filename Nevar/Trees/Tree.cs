@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
+using Nevar.Debugging;
 using Nevar.Impl;
 using Nevar.Impl.FileHeaders;
 
@@ -171,11 +171,13 @@ namespace Nevar.Trees
 		}
 
 		[Conditional("VALIDATE")]
-		private void DebugValidateTree(Transaction tx, long rootPageNumber)
+		public void DebugValidateTree(Transaction tx, long rootPageNumber)
 		{
+			var pages = new HashSet<long>();
 			var stack = new Stack<Page>();
 			var root = tx.GetReadOnlyPage(rootPageNumber);
 			stack.Push(root);
+			pages.Add(rootPageNumber);
 			while (stack.Count > 0)
 			{
 				var p = stack.Pop();
@@ -184,7 +186,13 @@ namespace Nevar.Trees
 					continue;
 				for (int i = 0; i < p.NumberOfEntries; i++)
 				{
-					stack.Push(tx.GetReadOnlyPage(p.GetNode(i)->PageNumber));
+					var page = p.GetNode(i)->PageNumber;
+					if (pages.Add(page) == false)
+					{
+						DebugStuff.RenderAndShow(tx, rootPageNumber, 1);
+						throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
+					}
+					stack.Push(tx.GetReadOnlyPage(page));
 				}
 			}
 		}
@@ -328,6 +336,28 @@ namespace Nevar.Trees
 		internal void SetState(TreeMutableState state)
 		{
 			_state = state;
+		}
+
+		public List<long> AllPages(Transaction tx)
+		{
+			var results = new List<long>();
+			var txInfo = tx.GetTreeInformation(this);
+			var stack = new Stack<Page>();
+			var root = tx.GetReadOnlyPage(txInfo.RootPageNumber);
+			stack.Push(root);
+			while (stack.Count > 0)
+			{
+				var p = stack.Pop();
+				results.Add(p.PageNumber);
+				if (p.IsBranch == false)
+					continue;
+				for (int i = 0; i < p.NumberOfEntries; i++)
+				{
+					var page = p.GetNode(i)->PageNumber;
+					stack.Push(tx.GetReadOnlyPage(page));
+				}
+			}
+			return results;
 		}
 	}
 }

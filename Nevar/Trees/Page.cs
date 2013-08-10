@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
 using Nevar.Debugging;
 using Nevar.Impl;
@@ -187,18 +186,18 @@ namespace Nevar.Trees
             if (key.Options == SliceOptions.Key)
                 key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
-            if (len < 0) // branch or overflow
+			if (len < 0) // branch or overflow
             {
                 Debug.Assert(pageNumber != -1);
                 node->PageNumber = pageNumber;
-                node->Flags = NodeFlags.PageRef;
+	            node->Flags = NodeFlags.PageRef;
                 return null; // write nothing here
             }
 
             Debug.Assert(key.Options == SliceOptions.Key);
             var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
             node->DataSize = len;
-            node->Flags = NodeFlags.Data;
+	        node->Flags = NodeFlags.Data;
             return dataPos;
         }
 
