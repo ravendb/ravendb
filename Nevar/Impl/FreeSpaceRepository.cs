@@ -240,7 +240,7 @@ namespace Nevar.Impl
 						current = it.Current;
 						currentMax = pageCount;
 					}
-					
+
 				} while (it.MoveNext() && triesAfterFindingSuitable >= 0);
 			}
 			return current != null;
@@ -324,19 +324,25 @@ namespace Nevar.Impl
 				if (stream == null)
 					return section;
 
-				using (var reader = new BinaryReader(stream))
-				{
-					var savedSectionId = reader.ReadInt64();
-					Debug.Assert(savedSectionId == sectionId);
-					var largestSequence = reader.ReadInt32();
-					var pageCount = reader.ReadInt32();
-					for (int i = 0; i < pageCount; i++)
-					{
-						section.Sequences.Add(reader.ReadInt64());
-					}
-					Debug.Assert(largestSequence == section.Sequences.LargestSequence);
-				}
+				var savedSectionId = ReadSectionPages(stream, section);
+				Debug.Assert(savedSectionId == sectionId);
 				return section;
+			}
+		}
+
+		private static long ReadSectionPages(Stream stream, Section section)
+		{
+			using (var reader = new BinaryReader(stream))
+			{
+				var savedSectionId = reader.ReadInt64();
+				var largestSequence = reader.ReadInt32();
+				var pageCount = reader.ReadInt32();
+				for (int i = 0; i < pageCount; i++)
+				{
+					section.Sequences.Add(reader.ReadInt64());
+				}
+				Debug.Assert(largestSequence == section.Sequences.LargestSequence);
+				return savedSectionId;
 			}
 		}
 
@@ -434,6 +440,41 @@ namespace Nevar.Impl
 				WriteSection(tx, _current);
 				_currentChanged = false;
 			}
+		}
+
+		public List<long> AllPages(Transaction tx)
+		{
+			var results = new List<long>();
+
+			foreach (var freedTransaction in _freedTransactions)
+			{
+				results.AddRange(freedTransaction.Pages);
+			}
+
+			if (_current != null)
+				results.AddRange(_current.Sequences);
+
+			using (var it = _env.FreeSpaceRoot.Iterate(tx))
+			{
+				it.RequiredPrefix = _sectionsPrefix;
+
+				if (it.Seek(_sectionsPrefix) == false)
+					return results;
+
+				do
+				{
+					if (_currentKey != null && _currentKey.Compare(new Slice(it.Current), _env.SliceComparer) == 0)
+						continue;
+					using (var stream = NodeHeader.Stream(tx, it.Current))
+					{
+						var section = new Section();
+						ReadSectionPages(stream, section);
+						results.AddRange(section.Sequences);
+					}
+				} while (it.MoveNext());
+			}
+
+			return results;
 		}
 	}
 }

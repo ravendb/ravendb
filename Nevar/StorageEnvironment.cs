@@ -221,7 +221,7 @@ namespace Nevar
 				var state = _pager.TransactionBegan();
 				tx.AddPagerState(state);
 
-				if(flags==TransactionFlags.ReadWrite)
+				if (flags == TransactionFlags.ReadWrite)
 					_freeSpaceRepository.UpdateSections(tx, OldestTransaction);
 				return tx;
 			}
@@ -244,6 +244,23 @@ namespace Nevar
 
 			_transactionsCounter = txId;
 			_txWriter.Release();
+		}
+
+		public Dictionary<string,List<long>> AllPages(Transaction tx)
+		{
+			var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
+				{
+					{"Root", Root.AllPages(tx)},
+					{"Free Space Overhead", FreeSpaceRoot.AllPages(tx)},
+					{"Free Pages", _freeSpaceRepository.AllPages(tx)}
+				};
+
+			foreach (var tree in _trees)
+			{
+				results.Add(tree.Key, tree.Value.AllPages(tx));
+			}
+
+			return results;
 		}
 
 		public EnvironmentStats Stats()

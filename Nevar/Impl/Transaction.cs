@@ -162,10 +162,10 @@ namespace Nevar.Impl
 
 			foreach (var kvp in _treesInfo)
 			{
-				var cursor = kvp.Value;
+				var txInfo = kvp.Value;
 				var tree = kvp.Key;
-
-				cursor.Flush();
+				tree.DebugValidateTree(this,txInfo.RootPageNumber);
+				txInfo.Flush();
 				if (string.IsNullOrEmpty(kvp.Key.Name))
 					continue;
 
@@ -176,10 +176,16 @@ namespace Nevar.Impl
 			FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
 
 			if (_rootTreeData != null)
+			{
+				_env.Root.DebugValidateTree(this,_rootTreeData.RootPageNumber);
 				_rootTreeData.Flush();
+			}
 
 			if (_fresSpaceTreeData != null)
+			{
+				_env.FreeSpaceRoot.DebugValidateTree(this, _fresSpaceTreeData.RootPageNumber);
 				_fresSpaceTreeData.Flush();
+			}
 
 #if DEBUG
 			if (_env.Root != null && _env.FreeSpaceRoot != null)
@@ -284,6 +290,7 @@ namespace Nevar.Impl
 
 		public void FreePage(long pageNumber)
 		{
+			if(pageNumber == 45){}
 			_dirtyPages.Remove(pageNumber);
 #if DEBUG
 			Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);
