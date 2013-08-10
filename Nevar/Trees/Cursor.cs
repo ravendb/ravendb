@@ -39,15 +39,8 @@ namespace Nevar.Trees
 
         public void Push(Page p)
         {
-#if DEBUG
-            // make sure that we aren't already there
-            if (Pages.Any(page => page.PageNumber == p.PageNumber))
-            {
-                throw new InvalidOperationException("Pushed page already in cursor's stack: " + p.PageNumber);
-            }
-#endif
             Pages.AddFirst(p);
-            pagesByNum[p.PageNumber] = p;
+            pagesByNum.Add(p.PageNumber, p);
         }
 
         public Page Pop()
