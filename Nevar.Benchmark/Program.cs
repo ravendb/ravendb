@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Nevar.Debugging;
 using Nevar.Impl;
+using System.Linq;
 
 namespace Nevar.Benchmark
 {
@@ -173,10 +175,6 @@ namespace Nevar.Benchmark
 				var enumerator = _randomNumbers.GetEnumerator();
 				for (int x = 0; x < Transactions; x++)
 				{
-					if (x == 226)
-					{
-						
-					}
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						for (long i = 0; i < ItemsPerTransaction; i++)
