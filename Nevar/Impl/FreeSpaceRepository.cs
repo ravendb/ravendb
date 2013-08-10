@@ -425,9 +425,9 @@ namespace Nevar.Impl
 				}
 				if (_current.Sequences.Count == 0)
 				{
+					_current = null; // make sure that we don't allocate from this while deleting it
 					_env.FreeSpaceRoot.Delete(tx, _currentKey);
 					_currentKey = null;
-					_current = null;
 					_currentChanged = false;
 					return;
 				}
