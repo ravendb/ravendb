@@ -12,17 +12,27 @@ namespace Nevar.Benchmark
 		private static HashSet<long> _randomNumbers;
 		public const int ItemsPerTransaction = 100;
 		private const int Transactions = 10 * 1000;
-        private const string Path = @"bench.data";
+		private const string Path = @"bench.data";
 
 		public static void Main()
 		{
+#if DEBUG
+			var oldfg = Console.ForegroundColor;
+			var oldbg = Console.BackgroundColor;
+			Console.ForegroundColor = ConsoleColor.Red;
+			Console.BackgroundColor = ConsoleColor.Yellow;
+			Console.Beep();
+			Console.WriteLine("Dude, you are running benchmark in debug mode?!");
+			Console.ForegroundColor = oldfg;
+			Console.BackgroundColor = oldbg;
+#endif
 			_randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
 			//Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
 			//Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
 			//Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
+			//Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
 			//Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
 			//Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
@@ -30,20 +40,21 @@ namespace Nevar.Benchmark
 			//Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
 			//Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-			//Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-			//Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
-			//Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
+			Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
+			Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+			Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
-			//Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+			Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-			//Time("read seq", ReadOneTransaction, delete: false);
-			//Time("read parallel 1", ReadOneTransaction_Parallel, delete: false);
-			//Time("read parallel 2", ReadOneTransaction_Parallel, delete: false);
-			//Time("read parallel 4", ReadOneTransaction_Parallel, delete: false);
-			//Time("read parallel 8", ReadOneTransaction_Parallel, delete: false);
-			//Time("read parallel 16", ReadOneTransaction_Parallel, delete: false);
+			Time("read seq", ReadOneTransaction, delete: false);
+			Time("read parallel 1", ReadOneTransaction_Parallel, delete: false);
+			Time("read parallel 2", ReadOneTransaction_Parallel, delete: false);
+			Time("read parallel 4", ReadOneTransaction_Parallel, delete: false);
+			Time("read parallel 8", ReadOneTransaction_Parallel, delete: false);
+			Time("read parallel 16", ReadOneTransaction_Parallel, delete: false);
 
-			//Time("fill seq non then read parallel 4", ReadAndWriteOneTransaction);
+			Time("fill seq non then read parallel 4", ReadAndWriteOneTransaction);
+
 		}
 
 		private static void FlushOsBuffer()
@@ -162,6 +173,10 @@ namespace Nevar.Benchmark
 				var enumerator = _randomNumbers.GetEnumerator();
 				for (int x = 0; x < Transactions; x++)
 				{
+					if (x == 226)
+					{
+						
+					}
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						for (long i = 0; i < ItemsPerTransaction; i++)
