@@ -47,6 +47,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Impl\ConsecutiveSequencesTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Restarts.cs" />

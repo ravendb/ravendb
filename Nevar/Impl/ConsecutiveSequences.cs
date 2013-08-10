@@ -7,8 +7,6 @@ namespace Nevar.Impl
 {
     public class ConsecutiveSequences : IEnumerable<long>
     {
-        private readonly int _minSequence;
-
         public class Seq
         {
             public long Start;
@@ -20,27 +18,25 @@ namespace Nevar.Impl
             }
         }
 
-        public ConsecutiveSequences(int minSequence = 1)
-        {
-            _minSequence = minSequence;
-        }
-
         public int Count { get; set; }
 
-        private readonly Dictionary<long,Seq> _sequencesByLast = new Dictionary<long,Seq>();
-        private readonly Dictionary<long,Seq> _sequencesByFirst = new Dictionary<long,Seq>();
-        private Seq _current;
+	    public int LargestSequence
+	    {
+		    get
+		    {
+			    for (int i = _sequencesBySize.Count - 1; i >= 0; i--)
+			    {
+				    var key = _sequencesBySize.Keys[i];
+				    if (_sequencesBySize[key].Count > 0)
+					    return key;
+			    }
+			    return 0;
+		    }
+	    }
 
-        /// <summary>
-        /// This assumes that the caller code will not try to send overlapping sequences
-        /// </summary>
-        public void Load(long start,int count)
-        {
-            var seq = new Seq { Start = start,Count = count };
-            _sequencesByFirst[start] = seq;
-            _sequencesByLast[start + count] = seq;
-            Count += count;
-        }
+	    private readonly Dictionary<long,Seq> _sequencesByLast = new Dictionary<long,Seq>();
+        private readonly Dictionary<long,Seq> _sequencesByFirst = new Dictionary<long,Seq>();
+		private readonly SortedList<int, HashSet<Seq>> _sequencesBySize = new SortedList<int, HashSet<Seq>>();
 
         public void Add(long v)
         {
@@ -51,14 +47,16 @@ namespace Nevar.Impl
             {
                 if (_sequencesByFirst.TryGetValue(v + 1,out seq) == false)
                 {
-                    var value = new Seq { Start = v,Count = 1 };
-                    _sequencesByLast.Add(v + 1,value);
-                    _sequencesByFirst.Add(v,value);
+                    seq = new Seq { Start = v,Count = 1 };
+					_sequencesByLast.Add(v + 1, seq);
+					_sequencesByFirst.Add(v, seq);
+	                GetSetBySize(1).Add(seq);
                 }
                 else
                 {
                     _sequencesByFirst.Remove(v + 1);
                     _sequencesByLast.Remove(seq.Start + seq.Count);
+	                var prevCount = seq.Count;
                     seq.Count++;
                     seq.Start = v;
                     Seq prev;
@@ -72,11 +70,14 @@ namespace Nevar.Impl
                     }
                     _sequencesByFirst.Add(seq.Start,seq);
                     _sequencesByLast.Add(seq.Start + seq.Count,seq);
+					GetSetBySize(prevCount).Remove(seq);
+					GetSetBySize(seq.Count).Add(seq);
                 }
             }
             else
             {
                 _sequencesByLast.Remove(v);
+	            var prevCount = seq.Count;
                 seq.Count++;
                 Seq next;
                 while (_sequencesByFirst.TryGetValue(seq.Start + seq.Count,out next)) // merge forward
@@ -87,52 +88,78 @@ namespace Nevar.Impl
                     seq.Count += next.Count;
                 }
                 _sequencesByLast.Add(seq.Start + seq.Count,seq);
+				GetSetBySize(prevCount).Remove(seq);
+				GetSetBySize(seq.Count).Add(seq);
             }
             Debug.Assert(_sequencesByFirst.Count == _sequencesByLast.Count);
         }
 
-        public bool TryAllocate(int num,out long v)
-        {
-            if (_current != null && _current.Count >= num)
-            {
-                var start = _current.Start;
-                var end = start + _current.Count;
-                _current.Count -= num;
-                _current.Start += num;
-                _sequencesByFirst.Remove(start);
-                if (_current.Count == 0)
-                {
-                    _sequencesByLast.Remove(end);
-                }
-                else
-                {
-                    _sequencesByFirst.Add(_current.Start,_current);
-                }
-                v = start;
-                Count -= num;
-                if (_current.Count == 0)
-                {
-                    _current = null;
-                }
-                return true;
-            }
+	    private HashSet<Seq> GetSetBySize(int size)
+	    {
+		    HashSet<Seq> set;
+		    if (_sequencesBySize.TryGetValue(size, out set) == false)
+		    {
+			    _sequencesBySize.Add(size, set = new HashSet<Seq>());
+		    }
+		    return set;
+	    }
 
-            // let us try to find a sequence long enough that is suitable
-            // we find the largest sequence that can serve,to make sure that we are serving from it
-            // for as long as we can
-            _current = _sequencesByLast.Values.Where(x => x.Count >= num && x.Count >= _minSequence)
-                            .OrderByDescending(x => x.Count)
-                            .FirstOrDefault();
-            if (_current == null)
-            {
-                v = -1;
-                return false;
-            }
+	    public bool TryAllocate(int num, out long v)
+	    {
+			if (_sequencesBySize.Count == 0)
+			{
+				v = -1;
+				return false;
+			}
+		    HashSet<Seq> set;
+		    if (_sequencesBySize.TryGetValue(num, out set) && set.Count > 0)// this should catch a lot of size 1
+		    {
+			    v = AllocateFrom(num, set);
+			    return true;
+		    }
+		    if (_sequencesBySize.Keys[_sequencesBySize.Count - 1] < num) // there is no way we can find a match
+		    {
+			    v = -1;
+			    return false;
+		    }
+			// can probably do binary search, but easier to just scan for now
+		    for (int i = 0; i < _sequencesBySize.Count; i++)
+		    {
+			    var key = _sequencesBySize.Keys[i];
+			    set = _sequencesBySize[key];
+			    if (key >= num && set.Count > 0)
+			    {
+				    v = AllocateFrom(num, set);
+				    return true;
+			    }
+		    }
+		    v = -1;
+		    return false;
+	    }
 
-            return TryAllocate(num,out v);
-        }
+	    private long AllocateFrom(int num, HashSet<Seq> set)
+	    {
+		    var seq = set.First();
+			set.Remove(seq);
+			var start = seq.Start;
+			var end = start + seq.Count;
+			seq.Count -= num;
+			seq.Start += num;
+			_sequencesByFirst.Remove(start);
+			if (seq.Count == 0)
+			{
+				_sequencesByLast.Remove(end);
+			}
+			else
+			{
+				_sequencesByFirst.Add(seq.Start, seq);
+				GetSetBySize(seq.Count).Add(seq);
+			}
+			Count -= num;
+		    return start;
+	    }
 
-        public IEnumerator<long> GetEnumerator()
+	    public IEnumerator<long> GetEnumerator()
         {
             foreach (var seq in _sequencesByFirst.Values)
             {

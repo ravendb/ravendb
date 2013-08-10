@@ -15,7 +15,7 @@ namespace Nevar.Tryout
     {
         private static void Main(string[] args)
         {
-            new FreeSpaceTest().WillBeReused();
+            new MultiTransactions().ShouldWork();
         }
     }
 }

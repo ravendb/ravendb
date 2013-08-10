@@ -157,6 +157,8 @@ namespace Nevar.Impl
 		{
 			if (Flags!=(TransactionFlags.ReadWrite))
 				return; // nothing to do
+			
+			_freeSpaceRepository.FlushCurrentSection(this);
 
 			foreach (var kvp in _treesInfo)
 			{

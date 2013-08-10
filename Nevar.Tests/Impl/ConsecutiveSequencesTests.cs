@@ -40,11 +40,12 @@ namespace Nevar.Tests.Impl
 
 			long l;
 			Assert.True(cs.TryAllocate(1, out l));
+			Assert.Equal(18, l);
+			Assert.True(cs.TryAllocate(1, out l));
 			Assert.Equal(5, l);
 			Assert.True(cs.TryAllocate(1, out l));
 			Assert.Equal(6, l);
-			Assert.True(cs.TryAllocate(1, out l));
-			Assert.Equal(18, l);
+
 		}
 
 		[Fact]
@@ -54,11 +55,11 @@ namespace Nevar.Tests.Impl
 
 			long l;
 			Assert.True(cs.TryAllocate(1, out l));
+			Assert.Equal(18, l);
+			Assert.True(cs.TryAllocate(1, out l));
 			Assert.Equal(5, l);
 			Assert.True(cs.TryAllocate(1, out l));
 			Assert.Equal(6, l);
-			Assert.True(cs.TryAllocate(1, out l));
-			Assert.Equal(18, l);
 		}
 	}
 }

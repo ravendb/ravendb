@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 using Nevar.Trees;
 
 namespace Nevar.Impl
@@ -34,7 +33,7 @@ namespace Nevar.Impl
 	/// The structure of a section in storage is:
 	/// 
 	/// key = sect/[section id] (lexically sorted)
-	/// value - int64 id, int64* - freed pages
+	/// value - int64 id, int32 largestSeq, int32 pageCount,  int64* - freed pages
 	/// 
 	/// </summary>
 	public unsafe class FreeSpaceRepository
@@ -46,7 +45,7 @@ namespace Nevar.Impl
 		{
 			public Slice Key;
 			public long Id;
-			public List<long> Pages = new List<long>();
+			public ConsecutiveSequences Sequences = new ConsecutiveSequences();
 		}
 
 		public class FreedTransaction
@@ -76,12 +75,25 @@ namespace Nevar.Impl
 			if (_env.FreeSpaceRoot == null)
 				return null;// this can happen the first time FreeSpaceRoot tree is created
 
-			if (_current == null || _current.Pages.Count == 0)
+			long page;
+			if (_current == null ||
+				_current.Sequences.TryAllocate(num, out page) == false)
 			{
+				if (_current != null)
+				{
+					// now we need to decide whatever we discard the current section (in favor of a better one?)
+					// or just let this write go to the end of the file
+					if (_current.Sequences.Count > _lastTransactionPageUsage * 2)
+					{
+						// we still have a lot of free pages here we can use, let us continue using this section
+						return null;
+					}
+				}
+				// need to find a new one
 				var old = _current;
 				try
 				{
-					if (SetupNextSection(tx, _currentKey) == false)
+					if (SetupNextSection(tx, num, _currentKey) == false)
 					{
 						_current = null;
 						_currentKey = null;
@@ -91,28 +103,29 @@ namespace Nevar.Impl
 				}
 				finally
 				{
-					DeleteSection(tx, old);
+					DiscardSection(tx, old);
 				}
+
+				return TryAllocateFromFreeSpace(tx, num);
 			}
 
-			Debug.Assert(_current != null);
-			Debug.Assert(_current.Pages.Count > 0);
-			var index = _current.Pages.Count - 1;//end
-			var page = _current.Pages[index];
-			_current.Pages.RemoveAt(index);
-
 			_currentChanged = true;
-
 			var newPage = tx.Pager.Get(tx, page);
 			newPage.PageNumber = page;
 			return newPage;
 		}
 
-		private void DeleteSection(Transaction tx, Section old)
+		private void DiscardSection(Transaction tx, Section old)
 		{
 			if (old == null)
 				return;
-			_env.FreeSpaceRoot.Delete(tx, old.Key);
+			if (old.Sequences.Count == 0)
+			{
+				_env.FreeSpaceRoot.Delete(tx, old.Key);
+				return;
+			}
+
+			WriteSection(tx, old);
 		}
 
 		public long GetFreePageCount()
@@ -133,7 +146,7 @@ namespace Nevar.Impl
 					if (key.StartsWith(_sectionsPrefix, _env.SliceComparer) || key.StartsWith(_txPrefix, _env.SliceComparer))
 					{
 						var dataSize = NodeHeader.GetDataSize(tx, it.Current);
-						freePages += dataSize/sizeof (long) - 1;
+						freePages += dataSize / sizeof(long) - 1;
 					}
 					else
 					{
@@ -146,15 +159,14 @@ namespace Nevar.Impl
 
 		}
 
-		private bool SetupNextSection(Transaction tx, Slice key)
+		private bool SetupNextSection(Transaction tx, int num, Slice key)
 		{
-			int currentMax = 0;
 			NodeHeader* current = null;
 			bool hasMatch = key != null &&
-				TryFindSection(tx, key, key, null, ref current, ref currentMax);
+				TryFindSection(tx, num, key, key, null, out current);
 			if (hasMatch == false) // wrap to the beginning 
 			{
-				if (TryFindSection(tx, key, _sectionsPrefix, key, ref current, ref currentMax) == false)
+				if (TryFindSection(tx, num, key, _sectionsPrefix, key, out current) == false)
 					return false;
 			}
 			Debug.Assert(current != null);
@@ -162,16 +174,19 @@ namespace Nevar.Impl
 			_current = new Section
 				{
 					Key = new Slice(current).Clone(),
-					Pages = new List<long>(),
+					Sequences = new ConsecutiveSequences(),
 				};
 
 			using (var stream = NodeHeader.Stream(tx, current))
 			using (var reader = new BinaryReader(stream))
 			{
 				_current.Id = reader.ReadInt64();
-				for (var i = 1; i < currentMax; i++)
+				var largestSeq = reader.ReadInt32();
+				Debug.Assert(largestSeq >= num);
+				var pageCount = reader.ReadInt32();
+				for (var i = 1; i < pageCount; i++)
 				{
-					_current.Pages.Add(reader.ReadInt64());
+					_current.Sequences.Add(reader.ReadInt64());
 				}
 			}
 
@@ -181,12 +196,14 @@ namespace Nevar.Impl
 			return true;
 		}
 
-		private bool TryFindSection(Transaction tx, Slice currentKey, Slice start, Slice end, ref NodeHeader* current, ref int currentMax)
+		private bool TryFindSection(Transaction tx, int minSeq, Slice currentKey, Slice start, Slice end, out NodeHeader* current)
 		{
 			int minFreeSpace = _minimumFreePagesInSectionSet ?
 				_minimumFreePagesInSection :
 				Math.Min(256, (_lastTransactionPageUsage * 3) / 2);
 
+			current = null;
+			int currentMax = 0;
 			using (var it = _env.FreeSpaceRoot.Iterate(tx))
 			{
 				it.RequiredPrefix = _sectionsPrefix;
@@ -206,13 +223,24 @@ namespace Nevar.Impl
 							continue; // skip current one
 					}
 
-					var nodeSize = NodeHeader.GetDataSize(tx, it.Current);
-					var numberOfFreePages = nodeSize / sizeof(long);
-					if (numberOfFreePages < minFreeSpace || numberOfFreePages < currentMax)
-						continue;
+					using (var stream = NodeHeader.Stream(tx, it.Current))
+					using (var reader = new BinaryReader(stream))
+					{
+						stream.Position = sizeof(long);
+						var largestSeq = reader.ReadInt32();
+						if (largestSeq < minSeq)
+							continue;
 
-					current = it.Current;
-					currentMax = numberOfFreePages;
+						var pageCount = reader.ReadInt32();
+
+						if (pageCount < minFreeSpace || pageCount < currentMax)
+							continue;
+
+
+						current = it.Current;
+						currentMax = pageCount;
+					}
+					
 				} while (it.MoveNext() && triesAfterFindingSuitable >= 0);
 			}
 			return current != null;
@@ -239,37 +267,46 @@ namespace Nevar.Impl
 					}
 
 					if (section == _current)
-						_currentChanged = true;
-
-					section.Pages.Add(page);
-				}
-			}
-
-			using (var ms = new MemoryStream())
-			{
-				foreach (var section in sections.Values)
-				{
-					if (_currentChanged == false && section == _current)
-						continue; // we can skip this
-
-					section.Pages.Sort((x, y) => x.CompareTo(y) * -1); // desc sort
-					ms.SetLength(0);
-
-					using (var writer = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true))
 					{
-						writer.Write(section.Id);
-						foreach (var page in section.Pages)
-						{
-							writer.Write(page);
-						}
+						_currentChanged = true;
 					}
 
-					ms.Position = 0;
-					_env.FreeSpaceRoot.Add(tx, section.Key, ms);
+					section.Sequences.Add(page);
 				}
 			}
 
-			_currentChanged = false;
+
+			foreach (var section in sections.Values)
+			{
+				if (section == _current)
+					continue; // persisted at the end of the transaction, anyway
+				WriteSection(tx, section);
+			}
+		}
+
+		private void WriteSection(Transaction tx, Section section)
+		{
+			var size = sizeof(long) +  // id
+				sizeof(int) + // largest sequence
+				 sizeof(int) + // page count
+				 sizeof(long) * section.Sequences.Count;
+
+			// we have to do it this way because the act of writing the free space
+			// may change it, so we first allocate it (and deal with all the changes)
+			// then we write the values
+
+			var ptr = _env.FreeSpaceRoot.DirectAdd(tx, section.Key, size);
+			using (var ums = new UnmanagedMemoryStream(ptr, size, size, FileAccess.ReadWrite))
+			using (var writer = new BinaryWriter(ums))
+			{
+				writer.Write(section.Id);
+				writer.Write(section.Sequences.LargestSequence);
+				writer.Write(section.Sequences.Count);
+				foreach (var page in section.Sequences)
+				{
+					writer.Write(page);
+				}
+			}
 		}
 
 		private Section LoadSection(Transaction tx, long sectionId)
@@ -279,8 +316,8 @@ namespace Nevar.Impl
 			var section = new Section
 			{
 				Key = key,
-				Pages = new List<long>(),
-				Id = sectionId
+				Id = sectionId,
+				Sequences = new ConsecutiveSequences()
 			};
 			using (var stream = _env.FreeSpaceRoot.Read(tx, key))
 			{
@@ -291,12 +328,13 @@ namespace Nevar.Impl
 				{
 					var savedSectionId = reader.ReadInt64();
 					Debug.Assert(savedSectionId == sectionId);
-
-					var pageCount = stream.Length / sizeof(long) - 1;
+					var largestSequence = reader.ReadInt32();
+					var pageCount = reader.ReadInt32();
 					for (int i = 0; i < pageCount; i++)
 					{
-						section.Pages.Add(reader.ReadInt64());
+						section.Sequences.Add(reader.ReadInt64());
 					}
+					Debug.Assert(largestSequence == section.Sequences.LargestSequence);
 				}
 				return section;
 			}
@@ -371,6 +409,30 @@ namespace Nevar.Impl
 			{
 				_minimumFreePagesInSectionSet = true;
 				_minimumFreePagesInSection = value;
+			}
+		}
+
+		public void FlushCurrentSection(Transaction tx)
+		{
+			// the act of flushing the current section
+			// may cause us to move to another section
+			// need to handle this scenario
+			while (true)
+			{
+				if (_current == null || _currentChanged == false)
+				{
+					return;
+				}
+				if (_current.Sequences.Count == 0)
+				{
+					_env.FreeSpaceRoot.Delete(tx, _currentKey);
+					_currentKey = null;
+					_current = null;
+					_currentChanged = false;
+					return;
+				}
+				WriteSection(tx, _current);
+				_currentChanged = false;
 			}
 		}
 	}
