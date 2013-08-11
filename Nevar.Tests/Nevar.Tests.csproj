@@ -58,6 +58,7 @@
     <Compile Include="Trees\Iteration.cs" />
     <Compile Include="Trees\MultipleTrees.cs" />
     <Compile Include="StorageTest.cs" />
+    <Compile Include="Trees\Rebalance.cs" />
     <Compile Include="Trees\Updates.cs" />
   </ItemGroup>
   <ItemGroup>
