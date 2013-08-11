@@ -26,10 +26,20 @@ namespace Nevar.Trees
             }
 
             var parentPage = cursor.ParentPage;
-            if (page.NumberOfEntries == 0)
+            if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
-                // empty page, just delete it and fixup parent
-                parentPage.RemoveNode(parentPage.LastSearchPosition);
+                // need to delete the implicit left page, shift right 
+                if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2) 
+                {
+                    var newImplicit = parentPage.GetNode(1)->PageNumber;
+                    parentPage.AddNode(0, Slice.Empty, -1, newImplicit);
+                    parentPage.RemoveNode(1); 
+                    parentPage.RemoveNode(1);
+                }
+                else // will be set to rights by the next rebalance call
+                {
+                    parentPage.RemoveNode(parentPage.LastSearchPosition);
+                }
                 cursor.Pop();
                 return parentPage;
             }
@@ -72,11 +82,11 @@ namespace Nevar.Trees
             for (int i = 0; i < right.NumberOfEntries; i++)
             {
                 right.LastSearchPosition = i;
-                var key = GetCurrentKeyFrom(right);
+                var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
                 var node = right.GetNode(i);
                 left.CopyNodeDataToEndOfPage(node, key);
             }
-            parentPage.RemoveNode(parentPage.LastSearchPosition); // unlink the right sibling
+            parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
             _tx.FreePage(right.PageNumber);
         }
 
@@ -112,7 +122,7 @@ namespace Nevar.Trees
 
         private void MoveNode(Page parentPage, Page from, Page to)
         {
-            var originalFromKeyStart = GetCurrentKeyFrom(from);
+            var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             if (fromNode->Flags == (NodeFlags.Data))
@@ -130,26 +140,25 @@ namespace Nevar.Trees
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
             parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
-            var newKey = GetCurrentKeyFrom(to); // get the next smallest key it has now
-
+          
+            var newKey = GetActualKey(to, 0); // get the next smallest key it has now
             var pageNumber = to.PageNumber;
-            // the current page is implicit left, so need to update it the _next_ entry
-            if (parentPage.LastSearchPosition == 1)
+            if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
             {
-                newKey = GetCurrentKeyFrom(from);
                 pageNumber = from.PageNumber;
+                newKey = GetActualKey(from, 0);
             }
 
             parentPage.AddNode(parentPage.LastSearchPosition, newKey, -1, pageNumber);
         }
 
-        private Slice GetCurrentKeyFrom(Page page)
+        private Slice GetActualKey(Page page, int pos)
         {
-            var node = page.GetNode(page.LastSearchPositionOrLastEntry);
+            var node = page.GetNode(pos);
             var key = new Slice(node);
             while (key.Size == 0)
             {
-                System.Diagnostics.Debug.Assert(page.LastSearchPosition == 0 && page.IsBranch);
+                Debug.Assert(page.LastSearchPosition == 0 && page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
                 key.Set(node);
