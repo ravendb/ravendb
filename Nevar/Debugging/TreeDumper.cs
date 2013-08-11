@@ -95,7 +95,7 @@ digraph structs {
 		private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
 		{
 			string keyStr;
-			if (i == 0)
+			if (i == 0 && key.Size == 0)
 			{
 				key.Set(p.GetNode(1));
 				keyStr = "(lt " + key + ")";
