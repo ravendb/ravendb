@@ -158,7 +158,7 @@ namespace Nevar.Impl
 			if (Flags!=(TransactionFlags.ReadWrite))
 				return; // nothing to do
 			
-			_freeSpaceRepository.FlushCurrentSection(this);
+			_freeSpaceRepository.FlushFreeState(this);
 
 			foreach (var kvp in _treesInfo)
 			{
@@ -290,7 +290,6 @@ namespace Nevar.Impl
 
 		public void FreePage(long pageNumber)
 		{
-			if(pageNumber == 45){}
 			_dirtyPages.Remove(pageNumber);
 #if DEBUG
 			Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);

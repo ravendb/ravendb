@@ -181,11 +181,13 @@ namespace Nevar.Benchmark
 						{
 							ms.Position = 0;
 							enumerator.MoveNext();
+                            if(x == 374 && i == 88){}
 							env.Root.Add(tx, (enumerator.Current).ToString("0000000000000000"), ms);
 						}
-
 						tx.Commit();
 					}
+                    if(x % 100 == 0 && x> 0)
+                        Console.WriteLine(x);
 				}
 				sw.Stop();
 			}
