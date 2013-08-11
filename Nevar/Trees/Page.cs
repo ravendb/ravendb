@@ -274,8 +274,8 @@ namespace Nevar.Trees
 
             get
             {
-                return LastSearchPosition == NumberOfEntries
-                         ? LastSearchPosition - 1 // after the last entry, but we want to update the last entry
+                return LastSearchPosition >= NumberOfEntries
+                         ? NumberOfEntries - 1 // after the last entry, but we want to update the last entry
                          : LastSearchPosition;
             }
         }

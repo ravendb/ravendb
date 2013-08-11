@@ -139,7 +139,8 @@ namespace Nevar.Trees
 
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
-            parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
+            var pos = parentPage.LastSearchPositionOrLastEntry;
+            parentPage.RemoveNode(pos);
           
             var newKey = GetActualKey(to, 0); // get the next smallest key it has now
             var pageNumber = to.PageNumber;
@@ -149,7 +150,7 @@ namespace Nevar.Trees
                 newKey = GetActualKey(from, 0);
             }
 
-            parentPage.AddNode(parentPage.LastSearchPosition, newKey, -1, pageNumber);
+            parentPage.AddNode(pos, newKey, -1, pageNumber);
         }
 
         private Slice GetActualKey(Page page, int pos)
