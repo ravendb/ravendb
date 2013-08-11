@@ -56,7 +56,7 @@ namespace Nevar.Impl
 		}
 
 		private readonly LinkedList<FreedTransaction> _freedTransactions = new LinkedList<FreedTransaction>();
-
+        private readonly List<Slice> transactionsToClear = new List<Slice>();
 		private Section _current;
 		private Slice _currentKey;
 		private bool _currentChanged;
@@ -249,15 +249,16 @@ namespace Nevar.Impl
 		public void UpdateSections(Transaction tx, long oldestTx)
 		{
 			var sections = new Dictionary<long, Section>();
-			if (_current != null)
-				sections[_current.Id] = _current;
 
-			while (_freedTransactions.First != null && _freedTransactions.First.Value.Id < oldestTx)
+            if (_current != null)
+                sections[_current.Id] = _current;
+
+            while (_freedTransactions.First != null && _freedTransactions.First.Value.Id < oldestTx)
 			{
 				var val = _freedTransactions.First.Value;
 				_freedTransactions.RemoveFirst();
-
-				foreach (var page in val.Pages)
+			    transactionsToClear.Add(val.Key);
+                foreach (var page in val.Pages)
 				{
 					var sectionId = page / 1024;
 					Section section;
@@ -274,7 +275,6 @@ namespace Nevar.Impl
 					section.Sequences.Add(page);
 				}
 			}
-
 
 			foreach (var section in sections.Values)
 			{
@@ -418,8 +418,15 @@ namespace Nevar.Impl
 			}
 		}
 
-		public void FlushCurrentSection(Transaction tx)
+		public void FlushFreeState(Transaction tx)
 		{
+            foreach (var slice in transactionsToClear)
+            {
+                _env.FreeSpaceRoot.Delete(tx, slice);
+            }
+
+            transactionsToClear.Clear();
+
 			// the act of flushing the current section
 			// may cause us to move to another section
 			// need to handle this scenario
