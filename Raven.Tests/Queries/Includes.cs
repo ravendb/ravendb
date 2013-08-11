@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Linq;
@@ -400,7 +401,7 @@ namespace Raven.Tests.Queries
 		public class Order2
 		{
 			public int Customer2Id { get; set; }
-			public string Customer2IdString { get { return Customer2Id.ToString(); } }
+			public string Customer2IdString { get { return Customer2Id.ToString(CultureInfo.InvariantCulture); } }
 			public Guid[] Supplier2Ids { get; set; }
 			public Referral2 Refferal2 { get; set; }
 			public LineItem2[] LineItem2s { get; set; }
