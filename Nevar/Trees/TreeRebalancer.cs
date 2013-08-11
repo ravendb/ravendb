@@ -41,7 +41,7 @@ namespace Nevar.Trees
 
             Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
-            var sibling = SetupMoveOrMerge(cursor, page, parentPage);
+           var sibling = SetupMoveOrMerge(cursor, page, parentPage);
 
             Debug.Assert(sibling.PageNumber != page.PageNumber);
 
@@ -96,9 +96,14 @@ namespace Nevar.Trees
             else // there is at least 1 page to our left
             {
                 _tx.ModifyCursor(_txInfo, c);
+                var beyondLast = parentPage.LastSearchPosition == parentPage.NumberOfEntries;
+                if (beyondLast)
+                    parentPage.LastSearchPosition--;
                 parentPage.LastSearchPosition--;
                 sibling = _tx.ModifyPage(_txInfo.Tree, parentPage, parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, c);
                 parentPage.LastSearchPosition++;
+                if (beyondLast)
+                    parentPage.LastSearchPosition++;
                 sibling.LastSearchPosition = sibling.NumberOfEntries - 1;
                 page.LastSearchPosition = 0;
             }
@@ -122,9 +127,9 @@ namespace Nevar.Trees
                 to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum);
             }
 
-            from.RemoveNode(from.LastSearchPosition);
+            from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
-            parentPage.RemoveNode(parentPage.LastSearchPosition);
+            parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
             var newFromKey = GetCurrentKeyFrom(from); // get the next smallest key it has now
 
             var pageNumber = to.PageNumber;
