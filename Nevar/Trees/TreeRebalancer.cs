@@ -130,16 +130,17 @@ namespace Nevar.Trees
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
             parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
-            var newFromKey = GetCurrentKeyFrom(from); // get the next smallest key it has now
+            var newKey = GetCurrentKeyFrom(to); // get the next smallest key it has now
 
             var pageNumber = to.PageNumber;
             // the current page is implicit left, so need to update it the _next_ entry
             if (parentPage.LastSearchPosition == 1)
             {
+                newKey = GetCurrentKeyFrom(from);
                 pageNumber = from.PageNumber;
             }
 
-            parentPage.AddNode(parentPage.LastSearchPosition, newFromKey, -1, pageNumber);
+            parentPage.AddNode(parentPage.LastSearchPosition, newKey, -1, pageNumber);
         }
 
         private Slice GetCurrentKeyFrom(Page page)
