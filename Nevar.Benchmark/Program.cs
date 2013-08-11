@@ -175,6 +175,7 @@ namespace Nevar.Benchmark
 				var enumerator = _randomNumbers.GetEnumerator();
 				for (int x = 0; x < Transactions; x++)
 				{
+					if(x==1954){}
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						for (long i = 0; i < ItemsPerTransaction; i++)
@@ -185,7 +186,7 @@ namespace Nevar.Benchmark
 						}
                         tx.Commit();
 					}
-                    if(x % 100 == 0 && x> 0)
+                    if(x % 250 == 0 && x> 0)
                         Console.WriteLine(x);
 				}
 				sw.Stop();

@@ -44,6 +44,9 @@ namespace Nevar.Tests.Trees
 
                  RenderAndShow(tx, 1);
 
+				 Env.Root.Delete(tx, "3");
+				 RenderAndShow(tx, 1);
+
                  tx.Commit();
              }
          }
