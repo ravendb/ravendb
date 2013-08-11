@@ -173,6 +173,7 @@ namespace Nevar.Trees
 
         public byte* AddNode(int index, Slice key, int len, long pageNumber)
         {
+            Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
             if (HasSpaceFor(key, len) == false)
                 throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
