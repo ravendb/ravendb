@@ -155,7 +155,6 @@ namespace Nevar.Trees
 			var node = page.GetNode(page.LastSearchPosition);
 			if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
 			{
-				tx.ModifyCursor(this, cursor);
 				var overflowPage = tx.GetReadOnlyPage(node->PageNumber);
 				var numberOfPages = GetNumberOfOverflowPages(tx, overflowPage.OverflowSize);
 				for (int i = 0; i < numberOfPages; i++)
