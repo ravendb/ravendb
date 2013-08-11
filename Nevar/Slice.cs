@@ -14,6 +14,7 @@ namespace Nevar
 	{
 		public static Slice AfterAllKeys = new Slice(SliceOptions.AfterAllKeys);
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
+	    public static Slice Empty = new Slice(new byte[0]);
 
 		private ushort _pointerSize;
 		public SliceOptions Options;

@@ -144,6 +144,7 @@ namespace Nevar.Trees
 
         public void RemoveNode(int index)
         {
+            Debug.Assert(IsBranch == false || index > 0 || NumberOfEntries == 2); // cannot remove implicit left in branches, unless as part of removing this node entirely
             Debug.Assert(index < NumberOfEntries);
 
             var node = GetNode(index);
@@ -172,6 +173,7 @@ namespace Nevar.Trees
 
         public byte* AddNode(int index, Slice key, int len, long pageNumber)
         {
+            Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
             if (HasSpaceFor(key, len) == false)
                 throw new InvalidOperationException("The page is full and cannot add an entry, this is probably a bug");
 
