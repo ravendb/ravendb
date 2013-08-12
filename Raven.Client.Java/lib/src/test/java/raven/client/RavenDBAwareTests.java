@@ -40,12 +40,15 @@ public abstract class RavenDBAwareTests {
   protected ReplicationInformer replicationInformer;
   protected ServerClient serverClient;
 
+  public final static String DEFAULT_HOST = "ppekrol.vpn.ais.pl";
   public final static int DEFAULT_SERVER_PORT_1 = 8123;
   public final static int DEFAULT_SERVER_PORT_2 = 8124;
-  public final static String DEFAULT_SERVER_URL_1 = "http://localhost:" + DEFAULT_SERVER_PORT_1;
-  public final static String DEFAULT_SERVER_URL_2 = "http://localhost:" + DEFAULT_SERVER_PORT_2;
+  public final static String DEFAULT_SERVER_URL_1 = "http://" + DEFAULT_HOST + ":" + DEFAULT_SERVER_PORT_1;
+  public final static String DEFAULT_SERVER_URL_2 = "http://" + DEFAULT_HOST + ":" + DEFAULT_SERVER_PORT_2;
 
-  public final static String DEFAULT_SERVER_RUNNER_URL = "http://localhost:8585/servers";
+  public final static int DEFAULT_RUNNER_PORT = 8585;
+
+  public final static String DEFAULT_SERVER_RUNNER_URL = "http://" + DEFAULT_HOST + ":" + DEFAULT_RUNNER_PORT + "/servers";
 
   protected static HttpClient client = new DefaultHttpClient();
 

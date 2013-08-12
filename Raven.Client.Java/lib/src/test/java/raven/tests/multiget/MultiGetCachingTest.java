@@ -1,5 +1,7 @@
 package raven.tests.multiget;
 
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Test;
 
 import raven.client.IDocumentSession;
@@ -19,13 +21,13 @@ public class MultiGetCachingTest extends RemoteClientTest {
 
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
       try (IDocumentSession session = store.openSession()) {
-          session.store(new User());
-          session.store(new User());
-          session.saveChanges();
+        session.store(new User());
+        session.store(new User());
+        session.saveChanges();
       }
 
-      //TODO: WaitForAllRequestsToComplete(server);
-      //TODO: server.Server.ResetNumberOfRequests();
+      waitForAllRequestsToComplete();
+      int requests = getNumberOfRequests();
 
       for (int i = 0; i < 5; i++) {
         try (IDocumentSession session = store.openSession()) {
@@ -38,12 +40,125 @@ public class MultiGetCachingTest extends RemoteClientTest {
         }
       }
 
-      //TODO: WaitForAllRequestsToComplete(server);
-      //TODO: Assert.Equal(1, server.Server.NumberOfRequests);
-
+      waitForAllRequestsToComplete();
+      assertNumberOfRequests(1, requests);
 
     }
   }
+
+  @Test
+  public void canAggressivelyCachePartOfMultiGet_SimpleFirst() throws Exception {
+
+    DocumentConvention conventions = new DocumentConvention();
+    conventions.setShouldAggressiveCacheTrackChanges(false);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new User());
+        session.store(new User());
+        session.saveChanges();
+      }
+
+      waitForAllRequestsToComplete();
+      int requests = getNumberOfRequests();
+
+      try (IDocumentSession session = store.openSession()) {
+        try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
+          session.load(User.class, new String[] { "users/1" });
+        }
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
+          session.advanced().lazily().lazyLoad(User.class, new String[] { "users/1" });
+          session.advanced().lazily().lazyLoad(User.class, "users/2");
+          session.advanced().eagerly().executeAllPendingLazyOperations();
+        }
+      }
+
+      waitForAllRequestsToComplete();
+      assertNumberOfRequests(2, requests);
+      assertEquals(1, store.getJsonRequestFactory().getNumOfCachedRequests());
+
+    }
+  }
+
+  @Test
+  public void canAggressivelyCachePartOfMultiGet_DirectLoad() throws Exception {
+
+    DocumentConvention conventions = new DocumentConvention();
+    conventions.setShouldAggressiveCacheTrackChanges(false);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new User());
+        session.store(new User());
+        session.saveChanges();
+      }
+
+      waitForAllRequestsToComplete();
+      int requests = getNumberOfRequests();
+
+      try (IDocumentSession session = store.openSession()) {
+        try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
+          session.load(User.class, "users/1");
+        }
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
+          session.advanced().lazily().lazyLoad(User.class, "users/1");
+          session.advanced().lazily().lazyLoad(User.class, "users/2");
+          session.advanced().eagerly().executeAllPendingLazyOperations();
+        }
+      }
+
+      waitForAllRequestsToComplete();
+      assertNumberOfRequests(2, requests);
+      assertEquals(1, store.getJsonRequestFactory().getNumOfCachedRequests());
+
+    }
+  }
+
+  @Test
+  public void canAggressivelyCachePartOfMultiGet_BatchFirst() throws Exception {
+
+    DocumentConvention conventions = new DocumentConvention();
+    conventions.setShouldAggressiveCacheTrackChanges(false);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new User());
+        session.store(new User());
+        session.saveChanges();
+      }
+
+      waitForAllRequestsToComplete();
+      int requests = getNumberOfRequests();
+
+      try (IDocumentSession session = store.openSession()) {
+        try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
+          session.advanced().lazily().lazyLoad(User.class, new String[] { "users/1" });
+          session.advanced().eagerly().executeAllPendingLazyOperations();
+        }
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
+          session.load(User.class, new String[] { "users/1" });
+        }
+      }
+
+      waitForAllRequestsToComplete();
+      assertNumberOfRequests(1, requests);
+      assertEquals(1, store.getJsonRequestFactory().getNumOfCachedRequests());
+
+    }
+  }
+
+
+
+
 
   //TODO: other tests
 }
