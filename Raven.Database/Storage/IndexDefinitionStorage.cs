@@ -383,11 +383,6 @@ namespace Raven.Database.Storage
             return new DisposableAction(currentlyIndexingLock.ExitReadLock);
         }
 
-        public bool IsIndexing
-        {
-            get { return currentlyIndexingLock.IsReadLockHeld; }
-        }
-
         public void RemoveTransformer(string name)
         {
             AbstractTransformer ignoredViewGenerator;
