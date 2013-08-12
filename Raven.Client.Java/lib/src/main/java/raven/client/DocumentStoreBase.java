@@ -80,7 +80,7 @@ public abstract class DocumentStoreBase implements IDocumentStore {
     indexCreationTask.execute(getDatabaseCommands(), getConventions());
   }
   public void executeTransformer(AbstractTransformerCreationTask transformerCreationTask) {
-    //TODO:
+    transformerCreationTask.execute(getDatabaseCommands(), getConventions());
   }
 
   public DocumentConvention getConventions() {
