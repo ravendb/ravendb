@@ -1376,7 +1376,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var q = queryGenerator.Query<T>(indexName, isMapReduce);
 
 			luceneQuery = (IAbstractDocumentQuery<T>) q;
-
+		    luceneQuery.SetResultTransformer(resultsTransformer);
 			VisitExpression(expression);
 
 			if (customizeQuery != null)

@@ -935,9 +935,9 @@ namespace Raven.Client.Document
 		/// Sets a transformer to use after executing a query
 		/// </summary>
 		/// <param name="resultsTransformer"></param>
-		public IAsyncDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 		{
-	        this.resultsTransformer = resultsTransformer;
+		    base.SetResultTransformer(resultsTransformer);
 	        return this;
 		}
 	}

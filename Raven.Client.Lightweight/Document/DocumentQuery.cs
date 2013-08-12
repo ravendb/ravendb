@@ -64,9 +64,9 @@ namespace Raven.Client.Document
 			return SelectFields<TProjection>(fields, projections);
 		}
 
-	    public IDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 	    {
-	        this.resultsTransformer = resultsTransformer;
+	        base.SetResultTransformer(resultsTransformer);
 	        return this;
 	    }
 
