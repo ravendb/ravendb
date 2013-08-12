@@ -1,4 +1,5 @@
-﻿using Nevar.Impl;
+﻿using System.Diagnostics;
+using Nevar.Impl;
 
 namespace Nevar.Trees
 {
@@ -56,8 +57,22 @@ namespace Nevar.Trees
                 // sequential inserts, at that point, we are going to keep the current page as is and create a new 
                 // page, this will allow us to do minimal amount of work to get the best density
 
-                AddSeperatorToParentPage(rightPage, _newKey);
-                var pos = rightPage.AddNode(0, _newKey, _len, _pageNumber);
+                byte* pos;
+                if (_page.IsBranch)
+                {
+                    // here we steal the last entry from the current page so we maintain the implicit null left entry
+                    var node = _page.GetNode(_page.NumberOfEntries - 1);
+                    Debug.Assert(node->Flags == NodeFlags.PageRef);
+                    rightPage.AddNode(0, Slice.Empty, -1, node->PageNumber);
+                    pos = rightPage.AddNode(1, _newKey, _len, _pageNumber);
+                    AddSeperatorToParentPage(rightPage, new Slice(node));
+                    _page.RemoveNode(_page.NumberOfEntries - 1);
+                }
+                else
+                {
+                    AddSeperatorToParentPage(rightPage, _newKey);
+                    pos = rightPage.AddNode(0, _newKey, _len, _pageNumber);
+                }
                 _cursor.Push(rightPage);
                 return pos;
             }
