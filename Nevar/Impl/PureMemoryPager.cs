@@ -10,26 +10,18 @@ namespace Nevar.Impl
 		private IntPtr _ptr;
 		private long _allocatedSize;
 		private byte* _base;
-		private long _allocatedPages;
 
 		public PureMemoryPager()
 		{
 			_ptr = Marshal.AllocHGlobal(MinIncreaseSize);
 			_base = (byte*)_ptr.ToPointer();
-			_allocatedPages = _allocatedSize / PageSize;
+			NumberOfAllocatedPages = _allocatedSize / PageSize;
 			PagerState = new PagerState
 				{
 					Ptr = _ptr
 				};
 			PagerState.AddRef();
 		}
-
-
-		public override long NumberOfAllocatedPages
-		{
-			get { return _allocatedPages; }
-		}
-
 
 
 		public override void Dispose()
@@ -65,7 +57,7 @@ namespace Nevar.Impl
 
 			var oldSize = _allocatedSize;
 			_allocatedSize = newLength;
-			_allocatedPages = _allocatedSize / PageSize;
+            NumberOfAllocatedPages = _allocatedSize / PageSize;
 			var newPtr = Marshal.AllocHGlobal(new IntPtr(_allocatedSize));
 			var newBase = (byte*)newPtr.ToPointer();
 			NativeMethods.memcpy(newBase, _base, new IntPtr(oldSize));

@@ -11,15 +11,11 @@ namespace Nevar.Impl
 	public unsafe class MemoryMapPager : AbstractPager
 	{
 		private readonly FlushMode _flushMode;
-		private long _allocatedPages;
 		private readonly FileStream _fileStream;
-
-		private int numberOfFlushes;
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
-
 
 		public MemoryMapPager(string file, FlushMode flushMode = FlushMode.Full)
 		{
@@ -29,11 +25,11 @@ namespace Nevar.Impl
 			_fileStream = fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
 			if (hasData)
 			{
-				_allocatedPages = 0;
+				NumberOfAllocatedPages = 0;
 			}
 			else
 			{
-				_allocatedPages = fileInfo.Length / PageSize;
+                NumberOfAllocatedPages = fileInfo.Length / PageSize;
 				PagerState.Release();
 				PagerState = CreateNewPagerState();
 			}
@@ -64,7 +60,7 @@ namespace Nevar.Impl
 			}
 
 			PagerState = newPager;
-			_allocatedPages = newPager.Accessor.Capacity / PageSize;
+			NumberOfAllocatedPages = newPager.Accessor.Capacity / PageSize;
 		}
 
 		private PagerState CreateNewPagerState()
@@ -164,7 +160,5 @@ namespace Nevar.Impl
 			}
 			_fileStream.Dispose();
 		}
-
-		public override long NumberOfAllocatedPages { get { return _allocatedPages; } }
 	}
 }

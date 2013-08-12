@@ -31,7 +31,7 @@ namespace Nevar.Impl
 			get { return 4096; }
 		}
 
-		public abstract long NumberOfAllocatedPages { get; }
+        public long NumberOfAllocatedPages { get; protected set; }
 
 		public Page Get(Transaction tx, long n, bool errorOnChange = false)
 		{

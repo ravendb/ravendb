@@ -31,31 +31,31 @@ namespace Nevar.Benchmark
             _randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
             Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-            Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-            Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+            //Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
+            //Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
-            Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
-            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
+            //Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
+            //Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
+            //Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
-            Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-            Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-            Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+            //Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+            //Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+            //Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-            Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
-            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
+            //Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
+            //Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+            //Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
-            Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            //Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-            Time("read seq", ReadOneTransaction, delete: false);
-            Time("read parallel 1", ReadOneTransaction_Parallel, delete: false);
-            Time("read parallel 2", ReadOneTransaction_Parallel, delete: false);
-            Time("read parallel 4", ReadOneTransaction_Parallel, delete: false);
-            Time("read parallel 8", ReadOneTransaction_Parallel, delete: false);
-            Time("read parallel 16", ReadOneTransaction_Parallel, delete: false);
+            //Time("read seq", ReadOneTransaction, delete: false);
+            //Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
+            //Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
+            //Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
+            //Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
+            //Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-            Time("fill seq non then read parallel 4", ReadAndWriteOneTransaction);
+            //Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
 
         }
 
@@ -225,14 +225,14 @@ namespace Nevar.Benchmark
         }
 
 
-        private static void ReadOneTransaction_Parallel(Stopwatch sw)
+        private static void ReadOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
             using (var env = new StorageEnvironment(new MemoryMapPager(Path)))
             {
-                var countdownEvent = new CountdownEvent(Transactions * ItemsPerTransaction);
+                var countdownEvent = new CountdownEvent(concurrency);
 
                 sw.Start();
-                for (int i = 0; i < Transactions; i++)
+                for (int i = 0; i < concurrency; i++)
                 {
                     var currentBase = i;
                     ThreadPool.QueueUserWorkItem(state =>
@@ -240,7 +240,7 @@ namespace Nevar.Benchmark
                         using (var tx = env.NewTransaction(TransactionFlags.Read))
                         {
                             var ms = new byte[100];
-                            for (int j = 0; j < ItemsPerTransaction; j++)
+                            for (int j = 0; j < ((ItemsPerTransaction * Transactions) / concurrency); j++)
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
@@ -288,7 +288,7 @@ namespace Nevar.Benchmark
             }
         }
 
-        private static void ReadAndWriteOneTransaction(Stopwatch sw)
+        private static void ReadAndWriteOneTransaction(Stopwatch sw, int concurrency)
         {
             var memoryMapPager = new MemoryMapPager(Path, FlushMode.None);
             using (var env = new StorageEnvironment(memoryMapPager))
@@ -314,10 +314,10 @@ namespace Nevar.Benchmark
                     tx.Commit();
                 }
 
-                var countdownEvent = new CountdownEvent(Transactions * ItemsPerTransaction);
+                var countdownEvent = new CountdownEvent(concurrency);
 
                 sw.Start();
-                for (int i = 0; i < Transactions; i++)
+                for (int i = 0; i < concurrency; i++)
                 {
                     var currentBase = i;
                     ThreadPool.QueueUserWorkItem(state =>
@@ -325,7 +325,7 @@ namespace Nevar.Benchmark
                         using (var tx = env.NewTransaction(TransactionFlags.Read))
                         {
                             var ms = new byte[100];
-                            for (int j = 0; j < ItemsPerTransaction; j++)
+                            for (int j = 0; j < ((ItemsPerTransaction*Transactions)/concurrency); j++)
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
