@@ -361,5 +361,25 @@ namespace Raven.Database.Indexing
 			var indexDefinition = context.IndexDefinitionStorage.GetIndexDefinition(indexesStat.Name);
 			return indexDefinition != null && indexDefinition.IsMapReduce;
 		}
+
+        protected override System.Collections.Concurrent.ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
+        {
+            get
+            {
+                return context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
+            }
+            set
+            {
+                context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex = value;
+            }
+        }
+
+        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
+        {
+            get
+            {
+                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
+            }
+        }
 	}
 }

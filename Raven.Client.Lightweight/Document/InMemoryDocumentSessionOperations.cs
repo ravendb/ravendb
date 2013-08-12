@@ -1185,10 +1185,14 @@ more responsive application.
 				{
 					IncludesUtil.Include(result, include, id =>
 					{
-						if (id == null)
-							return;
+					    if (id == null)
+					        return false;
 						if (IsLoaded(id) == false)
-							RegisterMissing(id);
+						{
+						    RegisterMissing(id);
+						    return false;
+						}
+					    return true;
 					});
 				}
 			}

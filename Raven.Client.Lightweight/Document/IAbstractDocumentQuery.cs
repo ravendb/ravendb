@@ -346,5 +346,6 @@ namespace Raven.Client.Document
 
 		void Intersect();
 		void AddRootType(Type type);
+	    void SetResultTransformer(string resultsTransformer);
 	}
 }

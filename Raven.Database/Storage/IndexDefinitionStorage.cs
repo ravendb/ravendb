@@ -381,7 +381,6 @@ namespace Raven.Database.Storage
             currentlyIndexingLock.EnterReadLock();
 
             return new DisposableAction(currentlyIndexingLock.ExitReadLock);
-
         }
 
         public void RemoveTransformer(string name)

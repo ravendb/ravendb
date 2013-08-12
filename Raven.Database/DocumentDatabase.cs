@@ -817,7 +817,8 @@ namespace Raven.Database
                                 }, metadata);
                             });
 
-						workContext.ShouldNotifyAboutWork(() => "PUT " + key);
+                        ScheduleDocumentsForReindexIfNeeded(key);
+                        workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                     }
                     else
                     {
@@ -1058,12 +1059,25 @@ namespace Raven.Database
                                                                                sequentialUuidGenerator);
                         deleted = doc != null;
                     }
+
+                    ScheduleDocumentsForReindexIfNeeded(key);
                     workContext.ShouldNotifyAboutWork(() => "DEL " + key);
                 });
 
                 metadata = metadataVar;
                 return deleted;
             }
+        }
+
+        private void ScheduleDocumentsForReindexIfNeeded(string key)
+        {
+            var queue = workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
+            if (queue != null)
+                queue.Enqueue(key);
+
+            queue = workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
+            if (queue!= null)
+                queue.Enqueue(key);
         }
 
         public bool HasTransaction(string txId)
@@ -2351,7 +2365,9 @@ namespace Raven.Database
 	                    try
 	                    {
 							RemoveReservedProperties(doc.DataAsJson);
-							RemoveMetadataReservedProperties(doc.Metadata);
+							RemoveMetadataReservedProperties(doc.Metadata);                                                       
+
+                            ScheduleDocumentsForReindexIfNeeded(doc.Key);
 
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);

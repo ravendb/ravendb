@@ -58,20 +58,22 @@ namespace Raven.Database.Server.Responders
 		}
 		
 
-		private void LoadId(string value)
+		private bool LoadId(string value)
 		{
-			if(value == null)
-				return;
+		    if (value == null)
+		        return false;
 
-			if (LoadedIds.Add(value) == false)
-				return;
+		    if (LoadedIds.Add(value) == false)
+		        return true;
 
 			var includedDoc = Database.Get(value, TransactionInformation);
-			if (includedDoc == null) 
-				return;
+		    if (includedDoc == null)
+		        return false;
 
 			Debug.Assert(includedDoc.Etag != null);
 			Add(includedDoc.Etag, includedDoc.ToJson());
+
+		    return true;
 		}
 	}
 }

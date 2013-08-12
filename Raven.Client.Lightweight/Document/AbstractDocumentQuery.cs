@@ -324,7 +324,7 @@ namespace Raven.Client.Document
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
 
-			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}
@@ -2114,5 +2114,10 @@ If you really want to do in memory filtering on the data returned from the query
 				: conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
 			return propertyName;
 		}
+
+        public void SetResultTransformer(string resultsTransformer)
+	    {
+            this.resultsTransformer = resultsTransformer;
+	    }
 	}
 }

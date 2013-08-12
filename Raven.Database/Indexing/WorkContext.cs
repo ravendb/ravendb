@@ -37,6 +37,13 @@ namespace Raven.Database.Indexing
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
+
+	    public WorkContext()
+	    {
+            ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
+            ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
+	    }
+
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
         public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
@@ -58,6 +65,15 @@ namespace Raven.Database.Indexing
 		{
 			LastWorkTime = SystemTime.UtcNow;
 		}
+
+        public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex { get; private set; }
+        public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex { get; private set; }
+
+        /// <summary>
+        /// holds keys of documents that need to be reindexed - since they were added/updated/deleted
+        /// </summary>
+        public ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress_SimpleIndex { get; set; }
+        public ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress_ReduceIndex { get; set; }
 
 		public InMemoryRavenConfiguration Configuration { get; set; }
 		public IndexStorage IndexStorage { get; set; }
@@ -418,7 +434,7 @@ namespace Raven.Database.Indexing
 
 		public DocumentDatabase Database { get; set; }
 
-		public void AddFutureBatch(FutureBatchStats futureBatchStat)
+	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
 			futureBatchStats.Add(futureBatchStat);
 			if (futureBatchStats.Count <= 30)
