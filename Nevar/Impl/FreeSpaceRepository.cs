@@ -86,7 +86,7 @@ namespace Nevar.Impl
                 {
                     // now we need to decide whatever we discard the current section (in favor of a better one?)
                     // or just let this write go to the end of the file
-                    if (_current.Sequences.Count > _lastTransactionPageUsage * 2)
+                    if (_current.Sequences.Count > _lastTransactionPageUsage)
                     {
                         // we still have a lot of free pages here we can use, let us continue using this section
                         return null;
@@ -212,7 +212,7 @@ namespace Nevar.Impl
         {
             int minFreeSpace = _minimumFreePagesInSectionSet ?
                 _minimumFreePagesInSection :
-                Math.Min(256, (_lastTransactionPageUsage * 3) / 2);
+                Math.Min(256, _lastTransactionPageUsage);
 
             current = null;
             int currentMax = 0;
