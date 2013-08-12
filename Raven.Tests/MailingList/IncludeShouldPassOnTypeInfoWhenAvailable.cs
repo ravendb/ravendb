@@ -1,13 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using Raven.Abstractions.Data;
-using Raven.Client;
+﻿using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Client.Linq;
-
 using Xunit;
 
 namespace Raven.Tests.MailingList
