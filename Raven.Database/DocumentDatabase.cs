@@ -44,7 +44,6 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Storage.Managed;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using BitConverter = System.BitConverter;
@@ -1072,11 +1071,13 @@ namespace Raven.Database
 
         private void ScheduleDocumentsForReindexIfNeeded(string key)
         {
-            if (workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex != null)
-                workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex.Enqueue(key);
+            var queue = workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
+            if (queue != null)
+                queue.Enqueue(key);
 
-            if (workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex != null)
-                workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex.Enqueue(key);
+            queue = workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
+            if (queue!= null)
+                queue.Enqueue(key);
         }
 
         public bool HasTransaction(string txId)
