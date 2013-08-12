@@ -16,6 +16,7 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.client.utils.UrlUtils;
 
 /**
  * Extensions for handling metadata
@@ -201,7 +202,7 @@ public class MetadataExtensions {
       return RavenJArray.parse(val);
     }
     //TODO: parse dates
-    return new RavenJValue(val); //TODO: do we need unescape?
+    return new RavenJValue(UrlUtils.unescapeDataString(val));
   }
 
 }

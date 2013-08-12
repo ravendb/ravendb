@@ -164,8 +164,6 @@ public interface IDocumentSession extends AutoCloseable {
    */
    public ILoaderWithInclude include(Path<?> path);
 
-  //TODO: should we include this method? : ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
-
   /* TODO:
     /// <summary>
     /// Performs a load that will use the specified results transformer against the specified id

@@ -27,6 +27,7 @@ import raven.abstractions.closure.Function4;
 import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Constants;
 import raven.abstractions.extensions.JsonExtensions;
+import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.client.Converters.ITypeConverter;
 import raven.client.Converters.Int32Converter;
@@ -115,6 +116,8 @@ public class DocumentConvention implements Serializable {
    * that a failed node is still up or not.
    * Default: 5 minutes */
   private long maxFailoverCheckPeriod = 300000;
+
+  private final Map<String, SortOptions> customDefaultSortOptions = new HashMap<>();
 
 
   public DocumentConvention() {
@@ -942,39 +945,34 @@ public class DocumentConvention implements Serializable {
   //TODO  public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
   //TODO: private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
-  //TODO: private readonly Dictionary<string, SortOptions> customDefaultSortOptions = new Dictionary<string, SortOptions>();
+
   //TODO: private readonly List<Type> customRangeTypes = new List<Type>();
 
   //TODO: public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
 
   //TODO: public bool TryConvertValueForQuery(string fieldName, object value, QueryValueConvertionType convertionType, out string strValue)
 
-  /*TODO:
-   * public SortOptions GetDefaultSortOption(string typeName)
-    {
-      switch (typeName)
-      {
-        case "Int16":
-          return SortOptions.Short;
-        case "Int32":
-          return SortOptions.Int;
-        case "Int64":
-        case "TimeSpan":
-          return SortOptions.Long;
-        case "Double":
-        case "Decimal":
-          return SortOptions.Double;
-        case "Single":
-          return SortOptions.Float;
-        case "String":
-          return SortOptions.String;
+  public SortOptions getDefaultSortOption(String typeName) {
+
+    switch (typeName) {
+      case "java.lang.Short":
+        return SortOptions.SHORT;
+      case "java.lang.Integer":
+        return SortOptions.INT;
+      case "java.lang.Long":
+        return SortOptions.LONG;
+      case "java.lang.Double":
+        return SortOptions.DOUBLE;
+      case "java.lang.Float":
+        return SortOptions.FLOAT;
+      case "java.lang.String":
+        return SortOptions.STRING;
         default:
-          return customDefaultSortOptions.ContainsKey(typeName)
-                   ? customDefaultSortOptions[typeName]
-                   : SortOptions.String;
-      }
+          return customDefaultSortOptions.containsKey(typeName)? customDefaultSortOptions.get(typeName) : SortOptions.STRING;
     }
-   */
+  }
+
+
 
   /* TODO:
    * public bool UsesRangeType(object o)

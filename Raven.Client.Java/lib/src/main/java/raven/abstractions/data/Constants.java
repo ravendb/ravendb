@@ -4,6 +4,7 @@ import java.util.UUID;
 
 //TODO: finish me
 public class Constants {
+
   public static final String VERSION = "1.0-SNAPSHOT";
 
 

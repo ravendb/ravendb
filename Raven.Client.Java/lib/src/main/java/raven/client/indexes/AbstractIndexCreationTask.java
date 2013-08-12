@@ -93,8 +93,6 @@ public class AbstractIndexCreationTask {
     return getClass().getName().replace('_', '/');
   }
 
-  //TODO: protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
-
   protected Operation<?> createField(String name, Path<?> value, boolean stored, boolean analyzed) {
     return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.CREATE_FIELD4,
         Expressions.constant(name), value, Expressions.constant(stored), Expressions.constant(analyzed));
@@ -289,7 +287,10 @@ public class AbstractIndexCreationTask {
     return recurseOp;
   }
 
-  //TODO: public T LoadDocument<T>(string key)
+  public <T extends EntityPathBase<?>> T loadDocument(Class<T> dslClass, String key) {
+    return null; //TODO finish me
+  }
+
   //TODO: public T[] LoadDocument<T>(IEnumerable<string> keys)
   //TODO: protected RavenJObject MetadataFor(object doc)
   //TODO: protected RavenJObject AsDocument(object doc)
