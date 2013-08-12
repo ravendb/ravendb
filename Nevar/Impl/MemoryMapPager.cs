@@ -12,8 +12,9 @@ namespace Nevar.Impl
 	{
 		private readonly FlushMode _flushMode;
 		private readonly FileStream _fileStream;
+	    private int numberOfFlushes;
 
-		[DllImport("kernel32.dll", SetLastError = true)]
+	    [DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
 
@@ -92,18 +93,23 @@ namespace Nevar.Impl
 			{
 				FlushPages(tuple.Item1, tuple.Item2);
 			}
+		    numberOfFlushes++;
+		    if (
+		        new[] {1, 2, 3, 27, 28, 29, 1153, 1154, 1155, 4441, 4442, 4443, 7707, 7708, 7709, 9069, 9070, 9071}.Contains(
+		            numberOfFlushes) == false)
+		        return;
 
-            //var pages = sortedPagesToFlush.Select(Get).ToList();
+            var pages = sortedPagesToFlush.Select(Get).ToList();
 
-            //Console.WriteLine("Flush {3,6:#,#} with {0,3:#,#} pages - {1,3:#,#} kb writes and {2,3} seeks ({4,3:#,#;;0} leaves, {5,3:#,#;;0} branches, {6,3:#,#;;0} overflows)",
-            //                sortedPagesToFlush.Count,
-            //                  (sortedPagesToFlush.Count * PageSize) / 1024,
-            //                  pageRangesToFlush.Count,
-            //                  numberOfFlushes++,
-            //                  pages.Count(x => x.IsLeaf),
-            //                  pages.Count(x => x.IsBranch),
-            //                  pages.Count(x => x.IsOverlfow)
-            //                  );
+            Console.WriteLine("Flush {3,6:#,#} with {0,3:#,#} pages - {1,3:#,#} kb writes and {2,3} seeks ({4,3:#,#;;0} leaves, {5,3:#,#;;0} branches, {6,3:#,#;;0} overflows)",
+                            sortedPagesToFlush.Count,
+                              (sortedPagesToFlush.Count * PageSize) / 1024,
+                              pageRangesToFlush.Count,
+                              numberOfFlushes,
+                              pages.Count(x => x.IsLeaf),
+                              pages.Count(x => x.IsBranch),
+                              pages.Count(x => x.IsOverlfow)
+                              );
 		}
 
 		public override void Flush(long headerPageId)

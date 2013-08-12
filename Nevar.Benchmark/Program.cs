@@ -13,7 +13,7 @@ namespace Nevar.Benchmark
     {
         private static HashSet<long> _randomNumbers;
         public const int ItemsPerTransaction = 100;
-        private const int Transactions = 10 * 1000;
+        private const int Transactions = 10*1000;
         private const string Path = @"bench.data";
 
         public static void Main()
@@ -30,7 +30,7 @@ namespace Nevar.Benchmark
 #endif
             _randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
-            Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            //Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
             //Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
             //Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
@@ -43,7 +43,7 @@ namespace Nevar.Benchmark
             //Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
             //Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-            //Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
             //Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
             //Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
@@ -88,7 +88,7 @@ namespace Nevar.Benchmark
             else
                 FlushOsBuffer();
             var sp = new Stopwatch();
-            Console.Write("{0,-35}: running...", name);
+            Console.WriteLine("{0,-35}: running...", name);
             action(sp);
 
             Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions * ItemsPerTransaction / sp.Elapsed.TotalSeconds);
