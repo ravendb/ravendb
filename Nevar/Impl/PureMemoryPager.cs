@@ -26,6 +26,7 @@ namespace Nevar.Impl
 
 		public override void Dispose()
 		{
+            base.Dispose();
 			PagerState.Release();
 			_base = null;
 		}

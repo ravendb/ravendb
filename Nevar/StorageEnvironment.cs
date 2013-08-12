@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Nevar.Debugging;
 using Nevar.Impl;
@@ -26,7 +27,7 @@ namespace Nevar
 		private long _transactionsCounter;
 		private readonly FreeSpaceRepository _freeSpaceRepository;
 
-		public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
+	    public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
 			try
 			{
@@ -37,13 +38,13 @@ namespace Nevar
 
 				Setup(pager);
 
-				FreeSpaceRoot.Name = "Free Space";
+
+			    FreeSpaceRoot.Name = "Free Space";
 				Root.Name = "Root";
 			}
 			catch (Exception)
 			{
-				if (ownsPager)
-					pager.Dispose();
+				Dispose();
 			}
 		}
 
@@ -115,7 +116,7 @@ namespace Nevar
 			get { return _pager.PageSize; }
 		}
 
-		public Tree GetTree(string name)
+	    public Tree GetTree(string name)
 		{
 			Tree tree;
 			if (_trees.TryGetValue(name, out tree))

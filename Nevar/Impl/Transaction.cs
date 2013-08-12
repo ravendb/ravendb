@@ -22,7 +22,7 @@ namespace Nevar.Impl
 		private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
 		private readonly List<long> _freedPages = new List<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
-		private FreeSpaceRepository _freeSpaceRepository;
+		private readonly FreeSpaceRepository _freeSpaceRepository;
 
 		public TransactionFlags Flags { get; private set; }
 
@@ -41,7 +41,12 @@ namespace Nevar.Impl
 			get { return _id; }
 		}
 
-		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, FreeSpaceRepository freeSpaceRepository)
+	    public Page TempPage
+	    {
+            get { return _pager.TempPage; }
+	    }
+
+	    public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, FreeSpaceRepository freeSpaceRepository)
 		{
 			_pager = pager;
 			_env = env;

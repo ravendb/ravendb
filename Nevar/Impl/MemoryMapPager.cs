@@ -153,6 +153,7 @@ namespace Nevar.Impl
 
 		public override void Dispose()
 		{
+            base.Dispose();
 			if (PagerState != null)
 			{
 				PagerState.Release();

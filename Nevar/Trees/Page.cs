@@ -293,7 +293,7 @@ namespace Nevar.Trees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            var copy = tx.AllocatePage(1);
+            var copy = tx.TempPage;
             copy.Flags = Flags;
             for (int j = 0; j < i; j++)
             {
@@ -305,7 +305,6 @@ namespace Nevar.Trees
 
             Upper = copy.Upper;
             Lower = copy.Lower;
-            tx.FreePage(copy.PageNumber);
 
             if (LastSearchPosition > i)
                 LastSearchPosition = i;

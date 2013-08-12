@@ -11,6 +11,8 @@ namespace Nevar.Impl
         Page Get(Transaction tx, long n, bool errorOnChange = false);
 		void AllocateMorePages(Transaction tx, long newLength);
 
+        Page TempPage { get; }
+
         long NumberOfAllocatedPages { get; }
         int PageSize { get; }
         int MaxNodeSize { get; }
