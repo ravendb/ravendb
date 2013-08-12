@@ -279,7 +279,7 @@ namespace Raven.Database.Indexing
             try
             {
                 var documentKeysAddedWhileIndexingInProgress = DocumentKeysAddedWhileIndexingInProgress;
-                if (documentKeysAddedWhileIndexingInProgress != null && documentKeysAddedWhileIndexingInProgress.Count == 0)
+                if (documentKeysAddedWhileIndexingInProgress == null || documentKeysAddedWhileIndexingInProgress.Count == 0)
                     return;
 
                 transactionalStorage.Batch(actions =>
