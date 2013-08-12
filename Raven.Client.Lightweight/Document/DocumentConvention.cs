@@ -70,7 +70,7 @@ namespace Raven.Client.Document
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
-			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
+			DefaultQueryingConsistency = ConsistencyOptions.None;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";

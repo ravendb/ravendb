@@ -324,7 +324,7 @@ namespace Raven.Client.Document
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
 
-			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}
