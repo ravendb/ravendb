@@ -58,13 +58,15 @@ namespace Nevar.Impl
         private readonly LinkedList<FreedTransaction> _freedTransactions = new LinkedList<FreedTransaction>();
         private readonly List<Slice> _recordsToDelete = new List<Slice>();
         private readonly List<Section> _recordsToUpdate = new List<Section>();
-        private Section _current;
+
         private Slice _currentKey;
         private bool _currentChanged;
         private readonly Slice _sectionsPrefix = "sect/";
         private readonly Slice _txPrefix = "tx/";
         private int _minimumFreePagesInSection;
         private bool _minimumFreePagesInSectionSet;
+        private bool _writingFreSpace;
+        private Section _current;
 
         public FreeSpaceRepository(StorageEnvironment env)
         {
@@ -96,15 +98,15 @@ namespace Nevar.Impl
                 {
                     if (SetupNextSection(tx, num, _currentKey) == false)
                     {
-                        _current = null;
                         _currentKey = null;
+                        _current = null;
                         _currentChanged = false;
                         return null;
                     }
                 }
                 finally
                 {
-                    DiscardSection(tx, old);
+                    DiscardSection(old);
                 }
 
                 return TryAllocateFromFreeSpace(tx, num);
@@ -116,7 +118,7 @@ namespace Nevar.Impl
             return newPage;
         }
 
-        private void DiscardSection(Transaction tx, Section old)
+        private void DiscardSection(Section old)
         {
             if (old == null)
                 return;
@@ -166,19 +168,24 @@ namespace Nevar.Impl
 
         private bool SetupNextSection(Transaction tx, int num, Slice key)
         {
+            if (_writingFreSpace)
+                return false; // can't find next section when we are already writing a section
             NodeHeader* current = null;
             bool hasMatch = key != null &&
                 TryFindSection(tx, num, key, key, null, out current);
             if (hasMatch == false) // wrap to the beginning 
             {
                 if (TryFindSection(tx, num, key, _sectionsPrefix, key, out current) == false)
+                {
                     return false;
+                }
             }
             Debug.Assert(current != null);
 
+            _currentKey = new Slice(current).Clone();
             _current = new Section
                 {
-                    Key = new Slice(current).Clone(),
+                    Key = _currentKey,
                     Sequences = new ConsecutiveSequences(),
                 };
 
@@ -195,7 +202,7 @@ namespace Nevar.Impl
                 }
             }
 
-            _currentKey = _current.Key;
+            Debug.Assert(_currentKey != null);
             _currentChanged = false;
 
             return true;
@@ -301,21 +308,30 @@ namespace Nevar.Impl
                  sizeof(int) + // page count
                  sizeof(long) * section.Sequences.Count;
 
-            // we have to do it this way because the act of writing the free space
-            // may change it, so we first allocate it (and deal with all the changes)
-            // then we write the values
-
-            var ptr = _env.FreeSpaceRoot.DirectAdd(tx, section.Key, size);
-            using (var ums = new UnmanagedMemoryStream(ptr, size, size, FileAccess.ReadWrite))
-            using (var writer = new BinaryWriter(ums))
+            _writingFreSpace = true;
+            try
             {
-                writer.Write(section.Id);
-                writer.Write(section.Sequences.LargestSequence);
-                writer.Write(section.Sequences.Count);
-                foreach (var page in section.Sequences)
+
+                // we have to do it this way because the act of writing the free space
+                // may change it, so we first allocate it (and deal with all the changes)
+                // then we write the values
+
+                var ptr = _env.FreeSpaceRoot.DirectAdd(tx, section.Key, size);
+                using (var ums = new UnmanagedMemoryStream(ptr, size, size, FileAccess.ReadWrite))
+                using (var writer = new BinaryWriter(ums))
                 {
-                    writer.Write(page);
+                    writer.Write(section.Id);
+                    writer.Write(section.Sequences.LargestSequence);
+                    writer.Write(section.Sequences.Count);
+                    foreach (var page in section.Sequences)
+                    {
+                        writer.Write(page);
+                    }
                 }
+            }
+            finally
+            {
+                _writingFreSpace = false;
             }
         }
 
@@ -465,10 +481,12 @@ namespace Nevar.Impl
                 }
                 if (_current.Sequences.Count == 0)
                 {
-                    _current = null; // make sure that we don't allocate from this while deleting it
-                    _env.FreeSpaceRoot.Delete(tx, _currentKey);
+                    Debug.Assert(_currentKey != null);
+                    var old = _currentKey;
                     _currentKey = null;
                     _currentChanged = false;
+                    _current = null; // make sure that we don't allocate from this while deleting it
+                    _env.FreeSpaceRoot.Delete(tx, old);
                     return;
                 }
                 WriteSection(tx, _current);
