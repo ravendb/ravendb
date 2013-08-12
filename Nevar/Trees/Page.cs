@@ -211,12 +211,16 @@ namespace Nevar.Trees
         internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
         {
             Debug.Assert(SizeOf.NodeEntry(other) + Constants.NodeOffsetSize <= SizeLeft);
-
+            
             var index = NumberOfEntries;
 
             var nodeSize = SizeOf.NodeEntry(other);
 
             key = key ?? new Slice(other);
+
+            Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
+
+
             var newNode = AllocateNewNode(index, key, nodeSize);
             newNode->Flags = other->Flags;
             key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);

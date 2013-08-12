@@ -113,7 +113,10 @@ namespace Nevar.Trees
             for (int i = splitIndex; i < nKeys; i++)
             {
                 var node = _page.GetNode(i);
-                rightPage.CopyNodeDataToEndOfPage(node);
+                if (_page.IsBranch && rightPage.NumberOfEntries == 0)
+                    rightPage.CopyNodeDataToEndOfPage(node, Slice.Empty);
+                else
+                    rightPage.CopyNodeDataToEndOfPage(node);
             }
             _page.Truncate(_tx, splitIndex);
 
