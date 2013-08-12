@@ -180,6 +180,12 @@ namespace Nevar.Trees
 			while (stack.Count > 0)
 			{
 				var p = stack.Pop();
+                if (p.NumberOfEntries == 0 && p != root)
+                {
+                    DebugStuff.RenderAndShow(tx, rootPageNumber, 1);
+                    throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
+
+                }
 				p.DebugValidate(tx, _cmp, rootPageNumber);
 				if (p.IsBranch == false)
 					continue;
