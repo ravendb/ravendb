@@ -143,6 +143,16 @@ namespace Raven.Database.Indexing
 						foreach (var referencedDocument in result)
 						{
 							actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+						    foreach (var childDocumentKey in referencedDocument.Value)
+						    {
+						        context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex
+                                    .AddOrUpdate(childDocumentKey, new ConcurrentBag<string> { referencedDocument.Key },
+						                (key, parentKeyCollection) =>
+						                {
+                                            parentKeyCollection.Add(referencedDocument.Key);
+                                            return parentKeyCollection;
+						                });
+						    }
 						}
 					}
 
