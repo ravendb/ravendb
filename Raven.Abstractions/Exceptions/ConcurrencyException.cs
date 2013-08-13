@@ -49,8 +49,8 @@ namespace Raven.Abstractions.Exceptions
 		/// <exception cref="T:System.ArgumentNullException">The <paramref name="info"/> parameter is null. </exception>
 		/// <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
 		protected ConcurrencyException(
-			SerializationInfo info,
-			StreamingContext context) : base(info, context)
+			System.Runtime.Serialization.SerializationInfo info,
+			System.Runtime.Serialization.StreamingContext context) : base(info, context)
 		{
 		}
 #endif
