@@ -40,7 +40,7 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if SILERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConcurrencyException"/> class.
 		/// </summary>
