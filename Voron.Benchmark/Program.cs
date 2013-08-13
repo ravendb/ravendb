@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Voron.Debugging;
 using Voron.Impl;
 
 namespace Voron.Benchmark
@@ -181,6 +182,10 @@ namespace Voron.Benchmark
                             enumerator.MoveNext();
                             env.Root.Add(tx, (enumerator.Current).ToString("0000000000000000"), ms);
                         }
+						if (x == 3588)
+						{
+							DebugStuff.RenderAndShow(tx, tx.GetTreeInformation(env.FreeSpaceRoot).RootPageNumber, 1);
+						}
                         tx.Commit();
                     }
                 }
