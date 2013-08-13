@@ -470,7 +470,10 @@ namespace Raven.Database.Indexing
 		private void CreateIndexWriter()
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate);
+		    IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
+		                                                          ? new IndexReaderWarmersWrapper(name, context.IndexReaderWarmers)
+		                                                          : null;
+			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
 		}
 
 		private void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)

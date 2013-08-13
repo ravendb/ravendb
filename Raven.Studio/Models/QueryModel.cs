@@ -235,6 +235,7 @@ namespace Raven.Studio.Models
 	    #region Sorting
 
 		public const string SortByDescSuffix = " DESC";
+		public const string SortByRangeSuffix = "_Range";
 
 		public class StringRef : NotifyPropertyChangedBase
 		{
@@ -309,7 +310,9 @@ namespace Raven.Studio.Models
 			foreach (var item in items)
 			{
 				SortByOptions.Add(item);
-				SortByOptions.Add(item + SortByDescSuffix);
+				SortByOptions.Add(item + SortByDescSuffix); 
+				SortByOptions.Add(item + SortByRangeSuffix);
+				SortByOptions.Add(item + SortByRangeSuffix + SortByDescSuffix );
 			}
 		}
 		

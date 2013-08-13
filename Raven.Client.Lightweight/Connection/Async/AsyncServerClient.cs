@@ -611,7 +611,7 @@ namespace Raven.Client.Connection.Async
 				metadata["ETag"] = new RavenJValue(etag);
 
 			if (key != null)
-				key = Uri.EscapeUriString(key);
+				key = Uri.EscapeDataString(key);
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, opUrl + "/docs/" + key, method, metadata, credentials, convention)

@@ -291,8 +291,6 @@
 				<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
 					<ContextMenu:MenuItem Header="Delete index"
                                           Command="{Binding DeleteIndex}"/>
-					<ContextMenu:MenuItem Header="Promote to auto index"
-                                          Command="{Binding PromoteIndex}"/>
 					<ContextMenu:MenuItem Header="Reset index"
                                           Command="{Binding ResetIndex}"/>
 				</ContextMenu:ContextMenu>

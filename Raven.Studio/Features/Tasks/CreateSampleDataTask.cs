@@ -15,6 +15,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -58,5 +59,10 @@ namespace Raven.Studio.Features.Tasks
 
             return DatabaseTaskOutcome.Succesful;
         }
+
+		public override void OnError()
+		{
+
+		}
     }
 }

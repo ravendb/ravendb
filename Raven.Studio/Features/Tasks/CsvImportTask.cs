@@ -3,27 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Kent.Boogaart.KBCsv;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Json.Linq;
-using Raven.Studio.Commands;
-using Raven.Studio.Infrastructure;
 using Path = System.IO.Path;
-using TaskStatus = Raven.Studio.Models.TaskStatus;
 
 namespace Raven.Studio.Features.Tasks
 {
@@ -69,9 +57,9 @@ namespace Raven.Studio.Features.Tasks
                 var batch = new List<RavenJObject>();
                 var columns = header.Values.Where(x => x.StartsWith("@") == false).ToArray();
 
+				batch.Clear();
                 foreach (var record in csvReader.DataRecords)
                 {
-                    batch.Clear();
                     var document = new RavenJObject();
                     string id = null;
                     RavenJObject metadata = null;
@@ -112,6 +100,7 @@ namespace Raven.Studio.Features.Tasks
                     if (batch.Count >= BatchSize)
                     {
                         await FlushBatch(batch);
+						batch.Clear();
                     }
                 }
 
@@ -183,5 +172,10 @@ namespace Raven.Studio.Features.Tasks
             Report(String.Format("Wrote {0} documents  in {1:#,#;;0} ms",
                                  batch.Count, sw.ElapsedMilliseconds));
         }
+
+		public override void OnError()
+		{
+
+		}
     }
 }

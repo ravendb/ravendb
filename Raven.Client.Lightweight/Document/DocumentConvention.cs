@@ -70,7 +70,7 @@ namespace Raven.Client.Document
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
-			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
+			DefaultQueryingConsistency = ConsistencyOptions.None;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
@@ -100,7 +100,7 @@ namespace Raven.Client.Document
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
-			ShouldSaveChangesForceAggresiveCacheCheck = true;
+			ShouldSaveChangesForceAggressiveCacheCheck = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -466,7 +466,7 @@ namespace Raven.Client.Document
 		/// This will make any outdated data revalidated, and will work nicely as long as you have just a 
 		/// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
 		/// </summary>
-		public bool ShouldSaveChangesForceAggresiveCacheCheck { get; set; }
+		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
 
 
 #if !SILVERLIGHT
@@ -820,10 +820,20 @@ namespace Raven.Client.Document
 		/// of the index at a time prior to T.
 		/// This is ensured by the server, and require no action from the client
 		/// </summary>
-		MonotonicRead,
+		None,
 		/// <summary>
 		///  After updating a documents, will only accept queries which already indexed the updated value.
 		/// </summary>
-		QueryYourWrites,
+		AlwaysWaitForNonStaleResultsAsOfLastWrite,
+		/// <summary>
+		/// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead
+		/// </summary>
+		[Obsolete("Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead")]
+		QueryYourWrites = AlwaysWaitForNonStaleResultsAsOfLastWrite,
+		/// <summary>
+		/// Use None, instead
+		/// </summary>
+		[Obsolete("Use None, instead")]
+		MonotonicRead = None
 	}
 }

@@ -560,6 +560,7 @@
     <Compile Include="Faceted\DynamicFacets.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="Faceted\FacetTestBase.cs" />
+    <Compile Include="Indexes\CustomExtensionMethod.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
     <Compile Include="Indexes\IndexLocking.cs" />
     <Compile Include="Indexes\Recovery\MapReduceRecoveryTestIndex.cs" />
@@ -573,10 +574,15 @@
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\BulkInsertDatabaseUrl.cs" />
+    <Compile Include="Issues\RavenDB_1251_2.cs" />
     <Compile Include="Issues\RavenDB1019.cs" />
     <Compile Include="Issues\RavenDB1025.cs" />
     <Compile Include="Issues\RavenDB1067.cs" />
     <Compile Include="Issues\RavenDB1229.cs" />
+    <Compile Include="Issues\RavenDB1247.cs" />
+    <Compile Include="Issues\RavenDB1259.cs" />
+    <Compile Include="Issues\RavenDB1260.cs" />
+    <Compile Include="Issues\RavenDB1261.cs" />
     <Compile Include="Issues\RavenDB937.cs" />
     <Compile Include="Issues\DatabaseReloadingTests.cs" />
     <Compile Include="Issues\RavenDB1009.cs" />
@@ -595,6 +601,9 @@
     <Compile Include="Issues\RavenDB_1088.cs" />
     <Compile Include="Issues\RavenDB_1107.cs" />
     <Compile Include="Issues\RavenDB_1165.cs" />
+    <Compile Include="Issues\RavenDB_1235.cs" />
+    <Compile Include="Issues\RavenDB_1251_1.cs" />
+    <Compile Include="Issues\RavenDB_1288.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -614,6 +623,7 @@
     <Compile Include="Issues\RavenDB_895.cs" />
     <Compile Include="Issues\RavenDB_967.cs" />
     <Compile Include="Issues\RavenDB_993.cs" />
+    <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
     <Compile Include="LicenseProviderPluginTest.cs" />
@@ -693,12 +703,14 @@
     <Compile Include="MailingList\CanReduceAndTransform.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
+    <Compile Include="MailingList\ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CoalescingOperatorWithStringARray.cs" />
     <Compile Include="MailingList\ConcurrencyTests.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
+    <Compile Include="MailingList\DynamicFieldNoAnalysisStillAnalyzesTest.cs" />
     <Compile Include="MailingList\DynamicObjectTests.cs" />
     <Compile Include="MailingList\FacetCountTest.cs" />
     <Compile Include="MailingList\FacetHits.cs" />
@@ -712,6 +724,7 @@
     <Compile Include="MailingList\Edin.cs" />
     <Compile Include="MailingList\FailingBulkInsertTest.cs" />
     <Compile Include="MailingList\FailingChangesApiTests.cs" />
+    <Compile Include="MailingList\FailingIndex.cs" />
     <Compile Include="MailingList\FailingProjection.cs" />
     <Compile Include="MailingList\Failing_lucene_query_where_in_tests.cs" />
     <Compile Include="MailingList\FilteredIndexTest.cs" />
@@ -726,6 +739,7 @@
     <Compile Include="MailingList\HttpIdTest.cs" />
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
+    <Compile Include="MailingList\IndexTest2.cs" />
     <Compile Include="MailingList\IndexWithEnumNullableFailingUnitTest.cs" />
     <Compile Include="MailingList\InIssues.cs" />
     <Compile Include="MailingList\InQueries.cs" />
@@ -766,6 +780,7 @@
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOn_A_Prefix.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
+    <Compile Include="MailingList\QueryingUsingOr.cs" />
     <Compile Include="MailingList\QueryOnItems.cs" />
     <Compile Include="MailingList\RacielRod.cs" />
     <Compile Include="MailingList\RavenCountTest.cs" />
@@ -792,6 +807,7 @@
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
     <Compile Include="MailingList\StreamSortTest.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
+    <Compile Include="MailingList\SuggestAsync.cs" />
     <Compile Include="MailingList\Tamir.cs" />
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TermVectorsInMultiMapIndexes.cs" />

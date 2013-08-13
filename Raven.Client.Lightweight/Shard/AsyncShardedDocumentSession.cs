@@ -146,7 +146,7 @@ namespace Raven.Client.Shard
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			var result = await LoadAsyncInternal<T>(new[] { id },  new TTransformer().TransformerName);
+			var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName);
 			return result.FirstOrDefault();
 		}
 
@@ -154,25 +154,20 @@ namespace Raven.Client.Shard
 		{
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);
-			var result = await LoadAsyncInternal<T>(new[] { id }, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+			var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
 			return result.FirstOrDefault();
 		}
 
-	    private Task<T[]> LoadAsyncInternal<T>(string[] ids, string transformerName, Dictionary<string, RavenJToken> queryInputs = null)
-	    {
-	        throw new NotSupportedException();
-	    }
-
-	    public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			return LoadAsyncInternal<T>(ids, new TTransformer().TransformerName);
+			return LoadAsyncInternal<T>(ids, null, new TTransformer().TransformerName);
 		}
 
 		public Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);
-			return LoadAsyncInternal<TResult>(ids.ToArray(),  new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+			return LoadAsyncInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
 		}
 
 		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
@@ -233,6 +228,102 @@ namespace Raven.Client.Shard
 			}).ToArray();
 		}
 
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+		{
+			var results = new T[ids.Length];
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
+
+			if (!idsToLoad.Any())
+				return results;
+
+			IncrementRequestCount();
+
+			if (typeof(T).IsArray)
+			{
+				foreach (var shard in idsToLoad)
+				{
+					var currentShardIds = shard.Select(x => x.Id).ToArray();
+					var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
+							new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
+							async (dbCmd, i) =>
+							{
+								// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
+								// With a single Id
+								var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs))
+															.Results
+															.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+															.Select(values =>
+															{
+																var array = values.Select(y =>
+																{
+																	HandleInternalMetadata(y);
+																	return ConvertToEntity<T>(null, y, new RavenJObject());
+																}).ToArray();
+																var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
+																Array.Copy(array, newArray, array.Length);
+																return newArray;
+															})
+															.Cast<T>()
+															.ToArray();
+
+								return arrayOfArrays;
+							});
+
+					return shardResults.SelectMany(x => x).ToArray();
+				}
+			}
+
+			foreach (var shard in idsToLoad)
+			{
+				var currentShardIds = shard.Select(x => x.Id).ToArray();
+				var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
+						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
+						async (dbCmd, i) =>
+						{
+							var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs))
+								.Results
+								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+								.Select(JsonExtensions.ToJObject)
+								.Select(
+										x =>
+										{
+											HandleInternalMetadata(x);
+											return ConvertToEntity<T>(null, x, new RavenJObject());
+										})
+								.Cast<T>()
+								.ToArray();
+
+							if (items.Length > currentShardIds.Length)
+							{
+								throw new InvalidOperationException(
+									String.Format(
+										"A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
+										transformer,
+										typeof(T).Name));
+							}
+
+							return items;
+						});
+
+				foreach (var shardResult in shardResults)
+				{
+					for (int i = 0; i < shardResult.Length; i++)
+					{
+						if (ReferenceEquals(shardResult[i], null))
+							continue;
+						var id = currentShardIds[i];
+						var itemPosition = Array.IndexOf(ids, id);
+						if (ReferenceEquals(results[itemPosition], default(T)) == false)
+							throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+
+						results[itemPosition] = shardResult[i];
+					}
+				}
+			}
+
+			return results;
+		}
 
 		public IAsyncLoaderWithInclude<object> Include(string path)
 		{
@@ -254,12 +345,12 @@ namespace Raven.Client.Shard
 		#region Queries
 
 		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
-		                                                                    RavenQueryStatistics ravenQueryStatistics,
-		                                                                    RavenQueryHighlightings highlightings)
+																			RavenQueryStatistics ravenQueryStatistics,
+																			RavenQueryHighlightings highlightings)
 		{
 #if !SILVERLIGHT
 			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
-				 null, 
+				 null,
 				 shardDbCommands.Values.ToList());
 #else
 			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
@@ -293,18 +384,18 @@ namespace Raven.Client.Shard
 								.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
 		}
 
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            var index = new TIndexCreator();
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var index = new TIndexCreator();
 
-            return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
-        }
+			return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
+		}
 
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
@@ -337,17 +428,17 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-	    public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
-	    {
-            throw new NotSupportedException("Streams are currently not supported by sharded document store");
-	    }
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
 
-	    public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
-	    {
-            throw new NotSupportedException("Streams are currently not supported by sharded document store");
-	    }
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
 
-	    #endregion
+		#endregion
 
 		/// <summary>
 		/// Saves all the changes to the Raven server.

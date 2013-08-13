@@ -266,7 +266,9 @@ namespace Raven.Client.Shard
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
 			return Query<T>(indexName)
+#pragma warning disable 612,618
 				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
+#pragma warning restore 612,618
 		}
 
 		/// <summary>
@@ -282,7 +284,9 @@ namespace Raven.Client.Shard
 				Conventions = Conventions
 			};
 			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
+#pragma warning disable 612,618
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
+#pragma warning restore 612,618
 		}
 
 		/// <summary>
