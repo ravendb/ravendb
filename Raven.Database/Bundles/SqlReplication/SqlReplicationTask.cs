@@ -165,13 +165,16 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
 
-				Etag latestEtag = null;
+				Etag latestEtag = null, lastBatchEtag = null;
 				if (documents.Count != 0)
-					latestEtag = documents[documents.Count - 1].Etag;
-
+					lastBatchEtag = documents[documents.Count - 1].Etag;
+				
 				var replicationDuration = Stopwatch.StartNew();
 				documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
-
+				
+				if (documents.Count != 0)
+					latestEtag = documents[documents.Count - 1].Etag;
+				
 				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
 
 				foreach (var relevantConfig in relevantConfigs)
@@ -198,6 +201,8 @@ namespace Raven.Database.Bundles.SqlReplication
 							if (lastReplicatedEtag.LastDocEtag.CompareTo(latestEtag) <= 0)
 								lastReplicatedEtag.LastDocEtag = latestEtag;
 						}
+
+						latestEtag = Etag.Max(latestEtag, lastBatchEtag);
 						SaveNewReplicationStatus(localReplicationStatus, latestEtag);
 					}
 					else // no point in waiting if we just saved a new doc
@@ -270,6 +275,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						latestEtag = Etag.Max(latestEtag, currentLatestEtag);
 					}
 
+					latestEtag = Etag.Max(latestEtag, lastBatchEtag);
 					SaveNewReplicationStatus(localReplicationStatus, latestEtag);
 				}
 				finally
@@ -384,9 +390,6 @@ namespace Raven.Database.Bundles.SqlReplication
 					leastReplicatedEtag = lastEtag;
 			}
 			var calculateSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
-
-			if (calculateSynchronizationEtag == lastLatestEtag)
-				return calculateSynchronizationEtag.IncrementBy(1);
 
 			return calculateSynchronizationEtag;
 		}

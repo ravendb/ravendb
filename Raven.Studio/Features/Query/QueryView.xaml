@@ -29,6 +29,7 @@
 			<Behaviors:FocusElementAction TargetName="QueryEditor"/>
 		</i:EventTrigger>
 	</i:Interaction.Triggers>
+	
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
@@ -209,8 +210,7 @@
 
 		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>
-				<RowDefinition Height="*"
-							   MinHeight="200" />
+				<RowDefinition Height="*"/>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="3*" />
 			</Grid.RowDefinitions>
