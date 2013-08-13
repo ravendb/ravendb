@@ -7,6 +7,8 @@ import com.mysema.query.types.Path;
 
 import raven.abstractions.data.Etag;
 import raven.client.document.ILoaderWithInclude;
+import raven.client.indexes.AbstractIndexCreationTask;
+import raven.client.linq.IRavenQueryable;
 
 /**
  * Interface for document session
@@ -124,7 +126,7 @@ public interface IDocumentSession extends AutoCloseable {
    * @param indexName Name of the index.
    * @return
    */
-  //TODO: public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName);
+  public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName);
 
   /**
    * Queries the specified index.
@@ -133,14 +135,14 @@ public interface IDocumentSession extends AutoCloseable {
    * @param Whatever we are querying a map/reduce index (modify how we treat identifier properties)
    * @return
    */
-//TODO: public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce);
+   public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce);
 
   /**
    * Dynamically queries RavenDB.
    * @param clazz
    * @return
    */
-//TODO: public <T> IRavenQueryable<T> query(Class<T> clazz);
+   public <T> IRavenQueryable<T> query(Class<T> clazz);
 
   /**
    * Queries the index specified by indexCreator.
@@ -148,7 +150,7 @@ public interface IDocumentSession extends AutoCloseable {
    * @param indexCreator
    * @return
    */
-//TODO: public <T> IRavenQueryable<T> query(Class<T> clazz, Class<AbstractIndexCreationTask> indexCreator);
+   public <T> IRavenQueryable<T> query(Class<T> clazz, Class<? extends AbstractIndexCreationTask> indexCreator);
 
   /**
    * Begin a load while including the specified path

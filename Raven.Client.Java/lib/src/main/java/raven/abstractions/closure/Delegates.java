@@ -34,4 +34,25 @@ public class Delegates {
     return new Delegate3<>();
   }
 
+  public static <X> Action1<X> combine(final Action1<X> first, final Action1<X> second) {
+    if (first == null) {
+      return second;
+    }
+    if (second == null) {
+      return first;
+    }
+    return new Action1<X>() {
+
+      @Override
+      public void apply(X input) {
+        if (first != null) {
+          first.apply(input);
+        }
+        if (second != null) {
+          second.apply(input);
+        }
+      }
+    };
+  }
+
 }

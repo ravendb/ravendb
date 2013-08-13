@@ -1,9 +1,17 @@
 package raven.tests.multiget;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static com.mysema.query.alias.Alias.*;
+
+import java.util.List;
+
 
 import org.junit.Test;
 
+import raven.abstractions.basic.Lazy;
+import raven.abstractions.closure.Action1;
+import raven.client.IDocumentQueryCustomization;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
@@ -152,6 +160,66 @@ public class MultiGetCachingTest extends RemoteClientTest {
       waitForAllRequestsToComplete();
       assertNumberOfRequests(1, requests);
       assertEquals(1, store.getJsonRequestFactory().getNumOfCachedRequests());
+
+    }
+  }
+
+
+  @Test
+  public void canCacheLazyQueryResults() throws Exception {
+
+    DocumentConvention conventions = new DocumentConvention();
+    conventions.setShouldAggressiveCacheTrackChanges(false);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        User u = new User();
+        u.setName("oren");
+        session.store(u);
+        session.store(new User());
+        u = new User();
+        u.setName("ayende");
+        session.store(u);
+        session.store(new User());
+        session.saveChanges();
+      }
+
+      User u = alias(User.class, "u");
+
+
+      try (IDocumentSession session = store.openSession()) {
+        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
+          @Override
+          public void apply(IDocumentQueryCustomization input) {
+            input.waitForNonStaleResults();
+          }
+        }).where($(u.getName()).eq("test")).toList();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        int requests = session.advanced().getNumberOfRequests();
+        Lazy<List<User>> result1 = session.query(User.class).where($(u.getName()).eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where($(u.getName()).eq("ayende")).lazily();
+        assertNotNull(result2.getValue());
+
+        assertNumberOfRequests(1, requests);
+        assertNotNull(result1.getValue());
+        assertNumberOfRequests(1, requests);
+        assertEquals(0, store.getJsonRequestFactory().getNumOfCachedRequests());
+
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        int requests = session.advanced().getNumberOfRequests();
+        Lazy<List<User>> result1 = session.query(User.class).where($(u.getName()).eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where($(u.getName()).eq("ayende")).lazily();
+        assertNotNull(result2.getValue());
+
+        assertNumberOfRequests(1, requests);
+        assertNotNull(result1.getValue());
+        assertNumberOfRequests(1, requests);
+        assertEquals(2, store.getJsonRequestFactory().getNumOfCachedRequests());
+      }
 
     }
   }

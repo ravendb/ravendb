@@ -22,9 +22,12 @@ import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.IDocumentQuery;
 import raven.client.IDocumentSessionImpl;
 import raven.client.ISyncAdvancedSessionOperation;
 import raven.client.ITransactionalDocumentSession;
+import raven.client.RavenQueryHighlightings;
+import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.document.batches.IEagerSessionOperations;
 import raven.client.document.batches.ILazyLoaderWithInclude;
@@ -36,7 +39,12 @@ import raven.client.document.batches.LazyMultiLoaderWithInclude;
 import raven.client.document.batches.LazyStartsWithOperation;
 import raven.client.document.sessionoperations.LoadOperation;
 import raven.client.document.sessionoperations.MultiLoadOperation;
+import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.linq.IDocumentQueryGenerator;
+import raven.client.linq.IRavenQueryable;
+import raven.client.linq.RavenQueryInspector;
+import raven.client.linq.RavenQueryProvider;
+import raven.client.util.Types;
 import raven.client.utils.Closer;
 
 import com.google.common.base.Defaults;
@@ -423,33 +431,46 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return (T[]) result.toArray();
   }
 
-  /*TODO
-  /// <summary>
-  /// Queries the specified index using Linq.
-  /// </summary>
-  /// <typeparam name="T">The result of the query</typeparam>
-  /// <param name="indexName">Name of the index.</param>
-  /// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
-  public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
-  {
-    var ravenQueryStatistics = new RavenQueryStatistics();
-    var highlightings = new RavenQueryHighlightings();
-    var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, DatabaseCommands, null, isMapReduce);
-    return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, DatabaseCommands, null, isMapReduce);
+  /**
+   * Queries the specified index.
+   * @param clazz
+   * @param indexName
+   * @return
+   */
+  public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName) {
+    return query(clazz, indexName, false);
   }
 
-  /// <summary>
-  /// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
-  /// </summary>
-  /// <typeparam name="T">The result of the query</typeparam>
-  /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-  /// <returns></returns>
-  public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-  {
-    var indexCreator = new TIndexCreator();
-    return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
-  }
+  /**
+   * Queries the specified index.
+   * @param clazz The result of the query
+   * @param indexName Name of the index.
+   * @param isMapReduce Whatever we are querying a map/reduce index (modify how we treat identifier properties)
+   * @return
    */
+  public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce) {
+    RavenQueryStatistics ravenQueryStatistics = new RavenQueryStatistics();
+    RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
+    RavenQueryProvider<T> ravenQueryProvider = new RavenQueryProvider<T>(clazz, this, indexName, ravenQueryStatistics, highlightings, getDatabaseCommands(), isMapReduce);
+    return new RavenQueryInspector<T>(clazz, ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, getDatabaseCommands(), isMapReduce);
+  }
+
+  /**
+   * Queries the index specified by tIndexCreator using Linq.
+   * @param clazz The result of the query
+   * @param tIndexCreator The type of the index creator
+   * @return
+   */
+  public <T> IRavenQueryable<T> query(Class<T> clazz, Class<? extends AbstractIndexCreationTask> tIndexCreator) {
+    try {
+      AbstractIndexCreationTask indexCreator = tIndexCreator.newInstance();
+      return query(clazz, indexCreator.getIndexName(), indexCreator.isMapReduce());
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new RuntimeException(tIndexCreator.getName() + " does not have argumentless constructor.");
+    }
+  }
+
+
   /**
    * Refreshes the specified entity from Raven server.
    */
@@ -648,29 +669,34 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
   }
 
-  /*TODO:
-    /// <summary>
-    /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-    /// </summary>
-    /// <typeparam name="T">The result of the query</typeparam>
-    /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-    /// <returns></returns>
-    public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-    {
-      var index = new TIndexCreator();
-      return LuceneQuery<T>(index.IndexName, index.IsMapReduce);
+  /**
+   * Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+   * @param clazz The result of the query
+   * @param indexClazz The type of the index creator.
+   * @return
+   */
+  public <T, TIndexCreator extends AbstractIndexCreationTask> IDocumentQuery<T> luceneQuery(Class<T> clazz, Class<TIndexCreator> indexClazz) {
+    try {
+      TIndexCreator index = indexClazz.newInstance();
+      return luceneQuery(clazz, index.getIndexName(), index.isMapReduce());
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new RuntimeException(indexClazz.getName() + " does not have argumentless constructor.");
     }
+  }
 
-    /// <summary>
-    /// Query the specified index using Lucene syntax
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="indexName">Name of the index.</param>
-    /// <returns></returns>
-    public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
-    {
-      return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
-    }*/
+  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName) {
+    return luceneQuery(clazz, indexName, false);
+  }
+
+  /// <summary>
+  /// Query the specified index using Lucene syntax
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  /// <param name="indexName">Name of the index.</param>
+  /// <returns></returns>
+  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce) {
+    return new DocumentQuery(clazz, this, getDatabaseCommands(), null, indexName, null, null, listeners.getQueryListeners(), isMapReduce);
+  }
 
   /**
    * Commits the specified tx id.
@@ -698,43 +724,39 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     clearEnlistment();
   }
 
+  /**
+   * Query RavenDB dynamically using
+   * @param clazz
+   * @return
+   */
+  public <T> IRavenQueryable<T> query(Class<T> clazz) {
+    String indexName = "dynamic";
+    if (Types.isEntityType(clazz)) {
+      indexName += "/" + getConventions().getTypeTagName(clazz);
+    }
+    return query(clazz, indexName);
+  }
+
+
+  /**
+   * Dynamically query RavenDB using Lucene syntax
+   */
+  public <T> IDocumentQuery<T> luceneQuery(Class<?> clazz) {
+    String indexName = "dynamic";
+    if (Types.isEntityType(clazz)) {
+      indexName += "/" + getConventions().getTypeTagName(clazz);
+    }
+    return advanced().luceneQuery(clazz, indexName);
+  }
   /*TODO
     /// <summary>
-    /// Query RavenDB dynamically using LINQ
+    ///  <typeparam name="T"/>
     /// </summary>
-    /// <typeparam name="T">The result of the query</typeparam>
-    public IRavenQueryable<T> Query<T>()
-    {
-      var indexName = "dynamic";
-      if (typeof(T).IsEntityType())
-      {
-        indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-      }
-      return Query<T>(indexName);
-    }
-
-    /// <summary>
-    /// Dynamically query RavenDB using Lucene syntax
-    /// </summary>
-    public IDocumentQuery<T> LuceneQuery<T>()
-    {
-      string indexName = "dynamic";
-      if (typeof(T).IsEntityType())
-      {
-        indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-      }
-      return Advanced.LuceneQuery<T>(indexName);
-    }
-
-    /// <summary>
-    /// Create a new query for <typeparam name="T"/>
-    /// </summary>
-    IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
+    public IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
     {
       return Advanced.LuceneQuery<T>(indexName, isMapReduce);
-    }
+    }*/
 
-   */
   @SuppressWarnings("unchecked")
   protected <T> Lazy<T> addLazyOperation(final ILazyOperation operation, final Action1<T> onEval) {
     pendingLazyOperations.add(operation);
@@ -791,35 +813,35 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   private boolean executeLazyOperationsSingleStep() {
-      List<AutoCloseable> disposables = new ArrayList<>();
-      for (ILazyOperation lazyOp: pendingLazyOperations) {
-        AutoCloseable context = lazyOp.enterContext();
-        if (context != null) {
-          disposables.add(context);
-        }
+    List<AutoCloseable> disposables = new ArrayList<>();
+    for (ILazyOperation lazyOp: pendingLazyOperations) {
+      AutoCloseable context = lazyOp.enterContext();
+      if (context != null) {
+        disposables.add(context);
       }
+    }
 
-      try {
-        List<GetRequest> requests = new ArrayList<>();
-        for (ILazyOperation lazyOp: pendingLazyOperations) {
-          requests.add(lazyOp.createRequest());
+    try {
+      List<GetRequest> requests = new ArrayList<>();
+      for (ILazyOperation lazyOp: pendingLazyOperations) {
+        requests.add(lazyOp.createRequest());
+      }
+      GetResponse[] responses = databaseCommands.multiGet(requests.toArray(new GetRequest[0]));
+      for (int i = 0; i < pendingLazyOperations.size(); i++) {
+        if (responses[i].isRequestHasErrors()) {
+          throw new IllegalStateException("Got an error from server, status code: " + responses[i].getStatus()  + "\n" + responses[i].getResult());
         }
-        GetResponse[] responses = databaseCommands.multiGet(requests.toArray(new GetRequest[0]));
-        for (int i = 0; i < pendingLazyOperations.size(); i++) {
-            if (responses[i].isRequestHasErrors()) {
-              throw new IllegalStateException("Got an error from server, status code: " + responses[i].getStatus()  + "\n" + responses[i].getResult());
-            }
-            pendingLazyOperations.get(i).handleResponse(responses[i]);
-            if (pendingLazyOperations.get(i).isRequiresRetry()) {
-              return true;
-            }
-          }
-          return false;
-      } finally {
-        for (AutoCloseable closable: disposables) {
-          Closer.close(closable);
+        pendingLazyOperations.get(i).handleResponse(responses[i]);
+        if (pendingLazyOperations.get(i).isRequiresRetry()) {
+          return true;
         }
       }
+      return false;
+    } finally {
+      for (AutoCloseable closable: disposables) {
+        Closer.close(closable);
+      }
+    }
   }
 
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix) {
