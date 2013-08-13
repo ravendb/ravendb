@@ -165,6 +165,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							}
 
 							UploadToServer(filePath, localBackupConfigs);
+							IOExtensions.DeleteDirectory(filePath);
 
 							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
 							localBackupStatus.LastDocsEtag = options.LastDocsEtag;
