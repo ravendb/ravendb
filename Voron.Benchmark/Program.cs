@@ -12,7 +12,7 @@ namespace Voron.Benchmark
     {
         private static HashSet<long> _randomNumbers;
         public const int ItemsPerTransaction = 100;
-        private const int Transactions = 10*1000;
+        private const int Transactions = 10 * 1000;
         private const string Path = @"bench.data";
 
         public static void Main()
@@ -29,32 +29,32 @@ namespace Voron.Benchmark
 #endif
             _randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
-            //Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-            //Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-            //Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+            Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
+            Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-            //Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
-            //Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
-            //Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
+            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
+            Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
+            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
-            //Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-            //Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-            //Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+            Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+            Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+            Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-            //Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
+            Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
             Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
-            //Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
+            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
-            //Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-            //Time("read seq", ReadOneTransaction, delete: false);
-            //Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
-            //Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
-            //Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
-            //Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
-            //Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+            Time("read seq", ReadOneTransaction, delete: false);
+            Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
+            Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
+            Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
+            Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
+            Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-            //Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
+            Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
 
         }
 
@@ -87,7 +87,7 @@ namespace Voron.Benchmark
             else
                 FlushOsBuffer();
             var sp = new Stopwatch();
-            Console.WriteLine("{0,-35}: running...", name);
+            Console.Write("{0,-35}: running...", name);
             action(sp);
 
             Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions * ItemsPerTransaction / sp.Elapsed.TotalSeconds);
@@ -157,8 +157,8 @@ namespace Voron.Benchmark
 
         private static void FillRandomMultipleTransaction(Stopwatch sw, FlushMode flushMode)
         {
-            var memoryMapPager = new MemoryMapPager(Path, flushMode);
-            using (var env = new StorageEnvironment(memoryMapPager))
+            var pager = new MemoryMapPager(Path, flushMode);
+            using (var env = new StorageEnvironment(pager))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -166,7 +166,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    pager.AllocateMorePages(tx, 1024 * 1024 * 768);
                     tx.Commit();
                 }
 
@@ -183,6 +183,10 @@ namespace Voron.Benchmark
                             env.Root.Add(tx, (enumerator.Current).ToString("0000000000000000"), ms);
                         }
                         tx.Commit();
+                    }
+                    if (x % 100 == 0)
+                    {
+                        Console.WriteLine(x);
                     }
                 }
                 sw.Stop();
@@ -324,7 +328,7 @@ namespace Voron.Benchmark
                         using (var tx = env.NewTransaction(TransactionFlags.Read))
                         {
                             var ms = new byte[100];
-                            for (int j = 0; j < ((ItemsPerTransaction*Transactions)/concurrency); j++)
+                            for (int j = 0; j < ((ItemsPerTransaction * Transactions) / concurrency); j++)
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
