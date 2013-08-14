@@ -32,6 +32,7 @@ import raven.abstractions.closure.Function2;
 import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.HighlightedField;
 import raven.abstractions.data.IndexQuery;
@@ -68,7 +69,7 @@ import raven.client.spatial.SpatialCriteriaFactory;
  */
 public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQuery<T, TSelf>> implements IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T> {
 
-  protected Class<T> clazz; //typeof (T)
+  protected Class<T> clazz; //typeof (T) //TODO: assign this value!
 
   protected boolean isSpatialQuery;
   protected String spatialFieldName, queryShape;
@@ -265,12 +266,13 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return 15 * 1000;
   }
 
-  public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession, IDatabaseCommands databaseCommands, String indexName, String[] fieldsToFetch, String[] projectionFields,
-      IDocumentQueryListener[] queryListeners, boolean isMapReduce) {
+  public AbstractDocumentQuery(Class<T> clazz, InMemoryDocumentSessionOperations theSession, IDatabaseCommands databaseCommands, String indexName, String[] fieldsToFetch, String[] projectionFields,
+      List<IDocumentQueryListener> queryListeners, boolean isMapReduce) {
+    this.clazz = clazz;
     this.theDatabaseCommands = databaseCommands;
     this.projectionFields = projectionFields;
     this.fieldsToFetch = fieldsToFetch;
-    this.queryListeners = queryListeners;
+    this.queryListeners = queryListeners.toArray(new IDocumentQueryListener[0]);
     this.isMapReduce = isMapReduce;
     this.indexName = indexName;
     this.theSession = theSession;
@@ -295,6 +297,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   protected AbstractDocumentQuery(AbstractDocumentQuery<T, TSelf> other) {
+    clazz = other.clazz;
     theDatabaseCommands = other.theDatabaseCommands;
     indexName = other.indexName;
     linqPathProvider = other.linqPathProvider;
@@ -321,6 +324,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     disableEntitiesTracking = other.disableEntitiesTracking;
     disableCaching = other.disableCaching;
     shouldExplainScores = other.shouldExplainScores;
+    isMapReduce = false;
+    fieldsToFetch = null;
 
     afterQueryExecuted(new Action1<QueryResult>() {
       @Override
@@ -390,14 +395,14 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected TSelf generateQueryWithinRadiusOf(String fieldName, double radius, double latitude, double longitude) {
     generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, 0.025, (SpatialUnits) null);
-    return (TSelf)this;
+    return (TSelf) this;
   }
-
 
   protected TSelf generateQueryWithinRadiusOf(String fieldName, double radius, double latitude, double longitude, double distanceErrorPct) {
-    generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distanceErrorPct,(SpatialUnits) null);
-    return (TSelf)this;
+    generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distanceErrorPct, (SpatialUnits) null);
+    return (TSelf) this;
   }
+
   /**
    * Filter matches to be inside the specified radius
    * @param fieldName
@@ -473,14 +478,15 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   //TODO: we omit  public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
   @Override
-  public IDocumentQueryCustomization include(Path<?> path) {
+  public IDocumentQueryCustomization include(Path< ? > path) {
     include(ExpressionExtensions.toPropertyPath(path));
     return this;
   }
+
   protected QueryOperation initializeQueryOperation(Action2<String, String> setOperationHeaders) {
     IndexQuery indexQuery = getIndexQuery();
 
-    if(beforeQueryExecutionAction != null) {
+    if (beforeQueryExecutionAction != null) {
       beforeQueryExecutionAction.apply(indexQuery);
     }
     /*TODO
@@ -544,12 +550,12 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected void clearSortHints(IDatabaseCommands dbCommands) {
     Set<String> keys = new HashSet<>();
-    for (String key: dbCommands.getOperationsHeaders().keySet()) {
+    for (String key : dbCommands.getOperationsHeaders().keySet()) {
       if (key.startsWith("SortHint")) {
         keys.add(key);
       }
     }
-    for (String key: keys) {
+    for (String key : keys) {
       dbCommands.getOperationsHeaders().remove(key);
     }
   }
@@ -603,7 +609,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     LazyQueryOperation lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
     lazyQueryOperation.SetHeaders(headers);
 
-    return ((DocumentSession)theSession).addLazyOperation(lazyQueryOperation, onEval);
+    return ((DocumentSession) theSession).addLazyOperation(lazyQueryOperation, onEval);
   }
 
   protected void executeBeforeQueryListeners() {
@@ -629,7 +635,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return this;
   }
 
-
   /**
    * Order the search results randomly using the specified seed
    * this is useful if you want to have repeatable random queries
@@ -646,7 +651,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   @Override
-  public IDocumentQueryCustomization transformResults(Function2<IndexQuery,Collection<Object>, Collection<Object>> resultsTransformer) {
+  public IDocumentQueryCustomization transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
     this.transformResultsFunc = resultsTransformer;
     return this;
   }
@@ -665,7 +670,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   public IDocumentQueryCustomization setHighlighterTags(String preTag, String postTag) {
-    this.setHighlighterTags(new String[] { preTag},  new String[] { postTag} );
+    this.setHighlighterTags(new String[] { preTag }, new String[] { postTag });
     return this;
   }
 
@@ -700,30 +705,33 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param descending If set to true [descending]
    * @param fieldType The type of the field to be sorted.
    */
-  public void addOrder(String fieldName, boolean descending, Class<?> fieldType) {
+  public void addOrder(String fieldName, boolean descending, Class< ? > fieldType) {
     WhereParams whereParamas = new WhereParams();
     whereParamas.setFieldName(fieldName);
     fieldName = ensureValidFieldName(whereParamas);
     fieldName = descending ? "-" + fieldName : fieldName;
     orderByFields = (String[]) ArrayUtils.add(orderByFields, fieldName);
-    sortByHints.add(new Tuple<String, Class<?>>(fieldName, fieldType));
+    sortByHints.add(new Tuple<String, Class< ? >>(fieldName, fieldType));
   }
 
   //TODO public virtual IEnumerator<T> GetEnumerator() {
 
   @Override
-  public void take(int count) {
+  public IDocumentQuery<T> take(int count) {
     pageSize = count;
+    return (IDocumentQuery<T>) this;
   }
 
   @Override
-  public void skip(int count) {
+  public IDocumentQuery<T> skip(int count) {
     start = count;
+    return (IDocumentQuery<T>) this;
   }
 
-  public void where(String whereClause) {
+  public IDocumentQuery<T> where(String whereClause) {
     appendSpaceIfNeeded(queryText.length() > 0 && queryText.charAt(queryText.length() - 1) != '(');
     queryText.append(whereClause);
+    return (IDocumentQuery<T>) this;
   }
 
   private void appendSpaceIfNeeded(boolean shouldAppendSpace) {
@@ -736,31 +744,36 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Matches exact value
    * @param fieldName
    * @param value
+   * @return
    */
-  public void whereEquals(String fieldName, Object value) {
-    WhereParams whereParams = new WhereParams();;
+  public IDocumentQuery<T> whereEquals(String fieldName, Object value) {
+    WhereParams whereParams = new WhereParams();
+    ;
     whereParams.setFieldName(fieldName);
     whereParams.setValue(value);
     whereEquals(whereParams);
+    return (IDocumentQuery<T>) this;
   }
 
-  public void whereEquals(String fieldName, Object value, boolean isAnalyzed) {
+  public IDocumentQuery<T> whereEquals(String fieldName, Object value, boolean isAnalyzed) {
     WhereParams whereParams = new WhereParams();
     whereParams.setAllowWildcards(isAnalyzed);
     whereParams.setAnalyzed(isAnalyzed);
     whereParams.setFieldName(fieldName);
     whereParams.setValue(value);
     whereEquals(whereParams);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Simplified method for opening a new clause within the query
    */
-  public void openSubclause() {
+  public IDocumentQuery<T> openSubclause() {
     currentClauseDepth++;
     appendSpaceIfNeeded(queryText.length() > 0 && queryText.charAt(queryText.length() - 1) != '(');
     negateIfNeeded();
     queryText.append("(");
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -770,24 +783,26 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param aggregationOperation
    * @param string
    */
-  public void groupBy(AggregationOperation aggregationOperation, String... fieldsToGroupBy) {
+  public IDocumentQuery<T> groupBy(AggregationOperation aggregationOperation, String... fieldsToGroupBy) {
     groupByFields = fieldsToGroupBy;
     aggregationOp = aggregationOperation;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Simplified method for closing a clause within the query
    */
-  public void closeSubclause() {
+  public IDocumentQuery<T> closeSubclause() {
     currentClauseDepth--;
     queryText.append(")");
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Matches exact value
    * @param whereParams
    */
-  public void whereEquals(WhereParams whereParams) {
+  public IDocumentQuery<T> whereEquals(WhereParams whereParams) {
     ensureValidFieldName(whereParams);
     String transformToEqualValue = transformToEqualValue(whereParams);
     lastEquality = new Tuple<String, String>(whereParams.getFieldName(), transformToEqualValue);
@@ -798,6 +813,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     queryText.append(RavenQuery.escapeField(whereParams.getFieldName()));
     queryText.append(":");
     queryText.append(transformToEqualValue);
+    return (IDocumentQuery<T>) this;
   }
 
   private String ensureValidFieldName(WhereParams whereParams) {
@@ -846,16 +862,12 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     Collection<Object> list = new ArrayList<>(values);
 
-    if(list.size() == 0) {
-      queryText.append("@emptyIn<")
-      .append(fieldName)
-      .append(">:(no-results)");
+    if (list.size() == 0) {
+      queryText.append("@emptyIn<").append(fieldName).append(">:(no-results)");
       return (IDocumentQuery<T>) this;
     }
 
-    queryText.append("@in<")
-    .append(fieldName)
-    .append(">:(");
+    queryText.append("@in<").append(fieldName).append(">:(");
 
     boolean first = true;
     addItemToInClause(fieldName, list, first);
@@ -866,8 +878,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   private void addItemToInClause(String fieldName, Collection<Object> list, boolean first) {
     for (Object value : list) {
       if (value instanceof Collection) {
-        addItemToInClause(fieldName, (Collection<Object>)value, first);
-        return ;
+        addItemToInClause(fieldName, (Collection<Object>) value, first);
+        return;
       }
       if (first == false) {
         queryText.append(",");
@@ -888,7 +900,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.s
    */
-  public void whereStartsWith(String fieldName, Object value) {
+  public IDocumentQuery<T> whereStartsWith(String fieldName, Object value) {
     // NOTE: doesn't fully match startsWith semantics
     WhereParams whereParams = new WhereParams();
     whereParams.setFieldName(fieldName);
@@ -896,6 +908,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     whereParams.setAnalyzed(true);
     whereParams.setAllowWildcards(true);
     whereEquals(whereParams);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -903,7 +916,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field
    * @param value The value.
    */
-  public void whereEndsWith(String fieldName, Object value) {
+  public IDocumentQuery<T> whereEndsWith(String fieldName, Object value) {
     // http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
     // You cannot use a * or ? symbol as the first character of a search
 
@@ -914,6 +927,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     whereParams.setAllowWildcards(true);
     whereParams.setAnalyzed(true);
     whereEquals(whereParams);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -922,11 +936,11 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param start The start.
    * @param end The end.
    */
-  public void whereBetween(String fieldName, Object start, Object end) {
+  public IDocumentQuery<T> whereBetween(String fieldName, Object start, Object end) {
     appendSpaceIfNeeded(queryText.length() > 0);
 
-    if ((start != null? start : end) != null) {
-      sortByHints.add(new Tuple<String, Class<?>>(fieldName, (start != null? start : end).getClass()));
+    if ((start != null ? start : end) != null) {
+      sortByHints.add(new Tuple<String, Class< ? >>(fieldName, (start != null ? start : end).getClass()));
     }
 
     negateIfNeeded();
@@ -945,6 +959,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     queryText.append(" TO ");
     queryText.append(end == null ? "NULL" : transformToRangeValue(endParams));
     queryText.append("}");
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -953,10 +968,10 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param start The start.
    * @param end The end.
    */
-  public void whereBetweenOrEqual(String fieldName, Object start, Object end) {
+  public IDocumentQuery<T> whereBetweenOrEqual(String fieldName, Object start, Object end) {
     appendSpaceIfNeeded(queryText.length() > 0);
     if ((start != null ? start : end) != null) {
-      sortByHints.add(new Tuple<String, Class<?>>(fieldName, (start != null? start : end).getClass()));
+      sortByHints.add(new Tuple<String, Class< ? >>(fieldName, (start != null ? start : end).getClass()));
     }
 
     negateIfNeeded();
@@ -974,6 +989,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     endWhere.setValue(end);
     queryText.append(end == null ? "NULL" : transformToRangeValue(endWhere));
     queryText.append("]");
+    return (IDocumentQuery<T>) this;
   }
 
   private String getFieldNameForRangeQueries(String fieldName, Object start, Object end) {
@@ -997,8 +1013,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
-  public void whereGreaterThan(String fieldName, Object value) {
+  public IDocumentQuery<T> whereGreaterThan(String fieldName, Object value) {
     whereBetween(fieldName, value, null);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1006,8 +1023,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
-  public void whereGreaterThanOrEqual(String fieldName, Object value) {
+  public IDocumentQuery<T> whereGreaterThanOrEqual(String fieldName, Object value) {
     whereBetweenOrEqual(fieldName, value, null);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1015,8 +1033,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
-  public void whereLessThan(String fieldName, Object value) {
+  public IDocumentQuery<T> whereLessThan(String fieldName, Object value) {
     whereBetween(fieldName, null, value);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1024,28 +1043,32 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value the value.
    */
-  public void whereLessThanOrEqual(String fieldName, Object value) {
+  public IDocumentQuery<T> whereLessThanOrEqual(String fieldName, Object value) {
     whereBetweenOrEqual(fieldName, null, value);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    *  Add an AND to the query
    */
-  public void andAlso() {
+  public IDocumentQuery<T> andAlso() {
     if (queryText.length() < 1)
-      return;
+      return (IDocumentQuery<T>) this;
 
     queryText.append(" AND");
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Add an OR to the query
    */
-  public void orElse() {
-    if (queryText.length() < 1)
-      return;
+  public IDocumentQuery<T> orElse() {
+    if (queryText.length() < 1) {
+      return (IDocumentQuery<T>) this;
+    }
 
     queryText.append(" OR");
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1055,12 +1078,12 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
    * @param boost boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight
    */
-  public void boost(double boost) {
+  public IDocumentQuery<T> boost(Double boost) {
     if (queryText.length() < 1) {
       throw new IllegalStateException("Missing where clause");
     }
 
-    if (boost <= 0) {
+    if (boost <= 0.0) {
       throw new IllegalArgumentException("Boost factor must be a positive number");
     }
 
@@ -1068,6 +1091,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       // 1.0 is the default
       queryText.append("^").append(boost);
     }
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1076,7 +1100,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
    * @param fuzzy 0.0 to 1.0 where 1.0 means closer match
    */
-  public void fuzzy(double fuzzy) {
+  public IDocumentQuery<T> fuzzy(Double fuzzy) {
     if (queryText.length() < 1) {
       throw new IllegalStateException("Missing where clause");
     }
@@ -1096,6 +1120,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       // 0.5 is the default
       queryText.append(fuzzy);
     }
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1104,7 +1129,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
    * @param proximity number of words within
    */
-  public void proximity(int proximity) {
+  public IDocumentQuery<T> proximity(int proximity) {
     if (queryText.length() < 1) {
       throw new IllegalStateException("Missing where clause");
     }
@@ -1119,6 +1144,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     }
 
     queryText.append("~").append(proximity);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1127,8 +1153,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
    * @param fields The fields.
    */
-  public void orderBy(String... fields) {
+  public IDocumentQuery<T> orderBy(String... fields) {
     orderByFields = (String[]) ArrayUtils.addAll(orderByFields, fields);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1139,7 +1166,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    */
   public void orderByDescending(String... fields) {
     List<String> fieldsTranformed = new ArrayList<>();
-    for (String field: fields) {
+    for (String field : fields) {
       fieldsTranformed.add(makeFieldSortDescending(field));
     }
     orderBy(fieldsTranformed.toArray(new String[0]));
@@ -1342,6 +1369,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     return indexQuery;
   }
+
   //TODO: private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
 
   public void search(String fieldName, String searchTerms) {
@@ -1360,21 +1388,21 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     negateIfNeeded();
     switch (escapeQueryOptions) {
-      case ESCAPE_ALL:
-        searchTerms = RavenQuery.escape(searchTerms, false, false);
-        break;
-      case ALLOW_POSTFIX_WILDCARD:
-        searchTerms = RavenQuery.escape(searchTerms, false, false);
-        searchTerms = espacePostfixWildcard.replace(searchTerms, "*");
-        break;
-      case ALLOW_ALL_WILDCARDS:
-        searchTerms = RavenQuery.escape(searchTerms, false, false);
-        searchTerms = searchTerms.replace("\\*", "*");
-        break;
-      case RAW_QUERY:
-        break;
-      default:
-        throw new IllegalArgumentException("Value:" + escapeQueryOptions);
+    case ESCAPE_ALL:
+      searchTerms = RavenQuery.escape(searchTerms, false, false);
+      break;
+    case ALLOW_POSTFIX_WILDCARD:
+      searchTerms = RavenQuery.escape(searchTerms, false, false);
+      searchTerms = espacePostfixWildcard.replace(searchTerms, "*");
+      break;
+    case ALLOW_ALL_WILDCARDS:
+      searchTerms = RavenQuery.escape(searchTerms, false, false);
+      searchTerms = searchTerms.replace("\\*", "*");
+      break;
+    case RAW_QUERY:
+      break;
+    default:
+      throw new IllegalArgumentException("Value:" + escapeQueryOptions);
     }
     lastEquality = Tuple.create(fieldName, "(" + searchTerms + ")");
 
@@ -1579,7 +1607,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     rootTypes.add(type);
   }
 
-  public String getMemberQueryPathForOrderBy(Expression<?> expression) {
+  public String getMemberQueryPathForOrderBy(Expression< ? > expression) {
     String memberQueryPath = getMemberQueryPath(expression);
     var memberExpression = linqPathProvider.getMemberExpression(expression);
     if (DocumentConvention.UsesRangeType(memberExpression.Type))
@@ -1587,17 +1615,15 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return memberQueryPath;
   }
 
-  public String getMemberQueryPath(Expression<?> expression)
-  {
+  public String getMemberQueryPath(Expression< ? > expression) {
     var result = linqPathProvider.getPath(expression);
     result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
 
     if (expression.NodeType == ExpressionType.ArrayLength)
       result.Path += ".Length";
 
-    var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
-      ? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
-      : conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
+    var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
+        : conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
     return propertyName;
   }
 

@@ -9,6 +9,7 @@ import com.mysema.query.types.Predicate;
 
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
+import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.data.Facet;
@@ -69,7 +70,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   }
 
   @Override
-  public Entry<String, String> getLastEqualityTerm() {
+  public Tuple<String, String> getLastEqualityTerm() {
     // TODO Auto-generated method stub
     return null;
   }

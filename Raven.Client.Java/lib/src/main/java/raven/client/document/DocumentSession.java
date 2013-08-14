@@ -696,7 +696,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @return
    */
   public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce) {
-    return new DocumentQuery(clazz, this, getDatabaseCommands(), null, indexName, null, null, listeners.getQueryListeners(), isMapReduce);
+    return new DocumentQuery<T>(clazz, this, getDatabaseCommands(), indexName, null, null, listeners.getQueryListeners(), isMapReduce);
   }
 
   /**
@@ -742,21 +742,13 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Dynamically query RavenDB using Lucene syntax
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<?> clazz) {
+  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz) {
     String indexName = "dynamic";
     if (Types.isEntityType(clazz)) {
       indexName += "/" + getConventions().getTypeTagName(clazz);
     }
     return advanced().luceneQuery(clazz, indexName);
   }
-  /*TODO
-    /// <summary>
-    ///  <typeparam name="T"/>
-    /// </summary>
-    public IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
-    {
-      return Advanced.LuceneQuery<T>(indexName, isMapReduce);
-    }*/
 
   @SuppressWarnings("unchecked")
   protected <T> Lazy<T> addLazyOperation(final ILazyOperation operation, final Action1<T> onEval) {

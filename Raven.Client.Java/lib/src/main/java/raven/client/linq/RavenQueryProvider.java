@@ -19,7 +19,6 @@ import raven.client.IDocumentQueryCustomization;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
-import raven.tests.bugs.User;
 
 public class RavenQueryProvider<T> implements IRavenQueryProvider {
 
@@ -167,10 +166,11 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   /**
    * Convert the expression to a Lucene query
    */
+  @SuppressWarnings("unchecked")
   public <S> IDocumentQuery<S> toLuceneQuery(Class<S> clazz, Expression<?> expression) {
     RavenQueryProviderProcessor<T> processor = getQueryProviderProcessor(this.clazz);
     IDocumentQuery<S> result = (IDocumentQuery<S>) processor.getLuceneQueryFor(expression);
-    result.setResultTranformer(resultTranformer);
+    result.setResultTransformer(resultTranformer);
     return result;
   }
 

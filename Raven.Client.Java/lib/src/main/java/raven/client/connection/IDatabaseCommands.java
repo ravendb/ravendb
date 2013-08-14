@@ -12,6 +12,7 @@ import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.GetRequest;
 import raven.abstractions.data.GetResponse;
@@ -487,6 +488,17 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public FacetResults getFacets(String index, IndexQuery query, String facetSetupDoc, int start, Integer pageSize);
+
+  /**
+   * Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+   * @param index
+   * @param query
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults getFacets(final String index, final IndexQuery query, final List<Facet> facets, final int start, final Integer pageSize) ;
 
   /**
    *  Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing

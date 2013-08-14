@@ -2,7 +2,6 @@ package raven.client;
 
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 
 import com.mysema.query.types.Path;
 

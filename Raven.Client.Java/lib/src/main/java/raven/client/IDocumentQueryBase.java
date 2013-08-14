@@ -610,13 +610,13 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * Simplified method for opening a new clause within the query
    * @return
    */
-  public TSelf openSubclause ();
+  public TSelf openSubclause();
 
   /**
    * Simplified method for closing a clause within the query
    * @return
    */
-  public TSelf closeSubclause ();
+  public TSelf closeSubclause();
 
   /**
    * Perform a search for documents which fields that match the searchTerms.
