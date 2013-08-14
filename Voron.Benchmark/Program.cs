@@ -13,7 +13,7 @@ namespace Voron.Benchmark
         private static HashSet<long> _randomNumbers;
         public const int ItemsPerTransaction = 100;
         private const int Transactions = 10 * 1000;
-        private const string Path = @"bench.data";
+        private const string Path = @"e:\data\bench.data";
 
         public static void Main()
         {
@@ -183,10 +183,6 @@ namespace Voron.Benchmark
                             env.Root.Add(tx, (enumerator.Current).ToString("0000000000000000"), ms);
                         }
                         tx.Commit();
-                    }
-                    if (x % 100 == 0)
-                    {
-                        Console.WriteLine(x);
                     }
                 }
                 sw.Stop();
