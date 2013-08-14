@@ -58,6 +58,7 @@ namespace Voron.Impl
         private readonly LinkedList<FreedTransaction> _freedTransactions = new LinkedList<FreedTransaction>();
         private readonly List<Slice> _recordsToDelete = new List<Slice>();
         private readonly List<Section> _recordsToUpdate = new List<Section>();
+        private readonly List<Slice> _recordsToSkip = new List<Slice>();
 
         private Slice _currentKey;
         private bool _currentChanged;
@@ -123,10 +124,11 @@ namespace Voron.Impl
             if (old == null)
                 return;
 
+            _recordsToSkip.Add(old.Key);
+
             // because this is called during allocation, we can't 
             // do write ops on the tree, instead, we register this
             // to be done during transaction flush
-
             if (old.Sequences.Count == 0)
             {
                 _recordsToDelete.Add(old.Key);
@@ -227,8 +229,7 @@ namespace Voron.Impl
                 do
                 {
                     var key = new Slice(it.Current);
-                    if (_recordsToDelete.Exists(x => x.Compare(key, _env.SliceComparer) == 0) ||
-                        _recordsToUpdate.Exists(x => x.Key.Compare(key, _env.SliceComparer) == 0))
+                    if (_recordsToSkip.Exists(x => x.Compare(key, _env.SliceComparer) == 0))
                         continue; // if it is marked in memory for either update / delete, we don't want it
 
                     if (current != null)
@@ -275,6 +276,7 @@ namespace Voron.Impl
                 var val = _freedTransactions.First.Value;
                 _freedTransactions.RemoveFirst();
                 _recordsToDelete.Add(val.Key);
+                _recordsToSkip.Add(val.Key);
                 foreach (var page in val.Pages)
                 {
                     var sectionId = page / 1024;
@@ -477,6 +479,7 @@ namespace Voron.Impl
             {
                 if (_current == null || _currentChanged == false)
                 {
+                    _recordsToSkip.Clear();
                     return;
                 }
                 if (_current.Sequences.Count == 0)
@@ -486,12 +489,22 @@ namespace Voron.Impl
                     _currentKey = null;
                     _currentChanged = false;
                     _current = null; // make sure that we don't allocate from this while deleting it
-                    _env.FreeSpaceRoot.Delete(tx, old);
+                    
+                    _writingFreSpace = true; //we don't want to recurse into free space while deleting the empty free space
+                    try
+                    {
+                        _env.FreeSpaceRoot.Delete(tx, old);
+                    }
+                    finally
+                    {
+                        _writingFreSpace = false;
+                    }
                     return;
                 }
                 WriteSection(tx, _current);
                 _currentChanged = false;
             }
+
         }
 
         public List<long> AllPages(Transaction tx)

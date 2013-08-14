@@ -36,7 +36,7 @@ namespace Voron.Impl
 
 		private readonly Dictionary<long, Seq> _sequencesByLast = new Dictionary<long, Seq>();
 		private readonly Dictionary<long, Seq> _sequencesByFirst = new Dictionary<long, Seq>();
-		private readonly SortedList<int, HashSet<Seq>> _sequencesBySize = new SortedList<int, HashSet<Seq>>();
+        private readonly SortedList<int, List<Seq>> _sequencesBySize = new SortedList<int, List<Seq>>();
 
 		public void Add(long v)
 		{
@@ -96,7 +96,7 @@ namespace Voron.Impl
 
 		private void RemoveFromSetBySize(int size, Seq seq)
 		{
-			HashSet<Seq> set;
+			List<Seq> set;
 			if (_sequencesBySize.TryGetValue(size, out set) == false)
 				return;
 			set.Remove(seq);
@@ -107,12 +107,13 @@ namespace Voron.Impl
 
 		private void AddToSetBySize(int size, Seq seq)
 		{
-			HashSet<Seq> set;
-			if (_sequencesBySize.TryGetValue(size, out set) == false)
+			List<Seq> list;
+			if (_sequencesBySize.TryGetValue(size, out list) == false)
 			{
-				_sequencesBySize.Add(size, set = new HashSet<Seq>());
+                _sequencesBySize.Add(size, list = new List<Seq>());
 			}
-			set.Add(seq);
+		    Debug.Assert(list.Exists(x => x.Start == seq.Start) == false);
+			list.Add(seq);
 		}
 
 		public bool TryAllocate(int num, out long v)
@@ -122,7 +123,7 @@ namespace Voron.Impl
 				v = -1;
 				return false;
 			}
-			HashSet<Seq> set;
+            List<Seq> set;
 			if (_sequencesBySize.TryGetValue(num, out set) && set.Count > 0)// this should catch a lot of size 1
 			{
 				v = AllocateFrom(num, set);
@@ -148,9 +149,9 @@ namespace Voron.Impl
 			return false;
 		}
 
-		private long AllocateFrom(int num, HashSet<Seq> set)
-		{
-			var seq = set.First();
+        private long AllocateFrom(int num, List<Seq> set)
+        {
+            var seq = set[0];
 			RemoveFromSetBySize(seq.Count, seq);
 			var start = seq.Start;
 			var end = start + seq.Count;
