@@ -18,7 +18,7 @@ namespace Voron.Trees
 
         public Page Execute(Cursor cursor, Page page)
         {
-            if (cursor.Pages.Count <= 1) // the root page
+            if (cursor.PageCount <= 1) // the root page
             {
                 RebalanceRoot(cursor, _txInfo, page);
                 return null;

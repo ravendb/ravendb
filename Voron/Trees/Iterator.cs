@@ -61,7 +61,7 @@ namespace Voron.Trees
 						return false;
 					return true;// there is another entry in this page
 				}
-				if (_cursor.Pages.Count == 0)
+				if (_cursor.PageCount == 0)
 					break;
 				_currentPage = _cursor.Pop();
 			}
