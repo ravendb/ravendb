@@ -11,7 +11,8 @@
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
              xmlns:Delay="clr-namespace:Delay" 
 			 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
-             mc:Ignorable="d"
+			 xmlns:generic="clr-namespace:System.Collections.Generic;assembly=mscorlib"
+			 mc:Ignorable="d"
 			 x:Name="this"
 			 x:Class="Raven.Studio.Features.Indexes.IndexesListView"
 			 d:DesignWidth="600"
@@ -19,145 +20,134 @@
 			 d:DataContext="{d:DesignInstance Models:IndexesModel}">
 
 	<UserControl.Resources>
-		<Converters:DataTemplateSelectorConverter x:Key="DataTemplateSelectorConverter">
-			<Converters:DataTemplateSelectorConverter.DataTemplates>
-				<Converters:TargetedDataTemplate TargetType="Raven.Studio.Models.IndexItem">
-					<Converters:TargetedDataTemplate.Template>
-						<DataTemplate DataType="Models:IndexItem">
-							<Grid Width="390"
-								  Height="35">
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="*" />
-								</Grid.ColumnDefinitions>
-								<Border BorderThickness="1"
-										Margin="0"
-										CornerRadius="4">
-									<Border.Effect>
-										<DropShadowEffect Opacity="0.28"
-														  BlurRadius="7"
-														  ShadowDepth="1"
-														  Direction="0" />
-									</Border.Effect>
-									<Border.Background>
-										<LinearGradientBrush EndPoint="0.5,1"
-															 StartPoint="0.5,0">
-											<GradientStop Color="#FFFEFEFE"
-														  Offset="0.025" />
-											<GradientStop Color="#FFF1F1F1"
-														  Offset="0.825" />
-										</LinearGradientBrush>
-									</Border.Background>
-								</Border>
-
-								<Grid Margin="4">
-									<Grid.ColumnDefinitions>
-										<ColumnDefinition Width="Auto" />
-										<ColumnDefinition Width="*" />
-										<ColumnDefinition Width="Auto" />
-										<ColumnDefinition Width="Auto" />
-										<ColumnDefinition Width="Auto" />
-									</Grid.ColumnDefinitions>
-									<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
-										   Stretch="None"
-										   VerticalAlignment="Center"
-										   Margin="2"
-										   Grid.Column="0" />
-									<HyperlinkButton Content="{Binding ModifiedName}"
-													 Command="{StaticResource NavigateToCommand}"
-													 CommandParameter="{Binding Name, StringFormat=/query/\{0\}}"
-													 VerticalAlignment="Center"
-													 HorizontalAlignment="Left"
-													 FontStyle="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontStyle}}"
-													 Foreground="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontColor}}"
-													 Style="{StaticResource Style_Link_Index_Name}"
-													 ToolTipService.ToolTip="{Binding Name}"
-													 Grid.Column="1" />
-									<HyperlinkButton Grid.Column="2"
-													 Command="{Binding MakeIndexPersisted}"
-													 VerticalAlignment="Center"
-													 Style="{StaticResource Style_Button_MouseOverChrome}"
-													 Padding="4"
-													 Margin="2"
-													 ToolTipService.ToolTip="Make Index Persisted"
-													 Visibility="{Binding CanPersist, Converter={StaticResource BooleanToVisibility}}">
-										<HyperlinkButton.Content>
-											<Image Source="{StaticResource Image_Index_Down}"
-												   Stretch="None" />
-										</HyperlinkButton.Content>
-									</HyperlinkButton>
-									<Delay:PopupButton 
-                                        x:Name="LockModePopupButton"
-                                        Grid.Column="3"
-													 VerticalPopupAlignment="Center"
-													 Padding="4"
-													 Margin="2"
-													 ToolTipService.ToolTip="Change Lock of index">
-										<StackPanel Orientation="Horizontal">
-											<Image Source="{Binding LockImage}"
-												   Stretch="None" VerticalAlignment="Center"/>
-										</StackPanel>
-										<Delay:PopupButton.PopupContent>
-											<Border Background="{StaticResource Brush_ToolbarBackground}"
+		<DataTemplate x:Key="IndexItemTemplate" DataType="Models:IndexItem">
+				<Grid Width="390" Height="35">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+					<Border BorderThickness="1"
+							Margin="0"
+							CornerRadius="4">
+						<Border.Effect>
+							<DropShadowEffect Opacity="0.28"
+											  BlurRadius="7"
+											  ShadowDepth="1"
+											  Direction="0" />
+						</Border.Effect>
+						<Border.Background>
+							<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+								<GradientStop Color="#FFFEFEFE" Offset="0.025" />
+								<GradientStop Color="#FFF1F1F1" Offset="0.825" />
+							</LinearGradientBrush>
+						</Border.Background>
+					</Border>
+					<Grid Margin="4">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
+							   Stretch="None"
+							   VerticalAlignment="Center"
+							   Margin="2"
+							   Grid.Column="0" />
+						<HyperlinkButton Content="{Binding ModifiedName}"
+										 Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="{Binding Name, StringFormat=/query/\{0\}}"
+										 VerticalAlignment="Center"
+										 HorizontalAlignment="Left"
+										 FontStyle="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontStyle}}"
+										 Foreground="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontColor}}"
+										 Style="{StaticResource Style_Link_Index_Name}"
+										 ToolTipService.ToolTip="{Binding Name}"
+										 Grid.Column="1" />
+						<HyperlinkButton Grid.Column="2"
+										 Command="{Binding MakeIndexPersisted}"
+										 VerticalAlignment="Center"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 Padding="4"
+										 Margin="2"
+										 ToolTipService.ToolTip="Make Index Persisted"
+										 Visibility="{Binding CanPersist, Converter={StaticResource BooleanToVisibility}}">
+							<HyperlinkButton.Content>
+								<Image Source="{StaticResource Image_Index_Down}" Stretch="None" />
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+						<Delay:PopupButton 
+							x:Name="LockModePopupButton"
+							Grid.Column="3"
+							VerticalPopupAlignment="Center"
+							Padding="4"
+							Margin="2"
+							ToolTipService.ToolTip="Change Lock of index">
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{Binding LockImage}" Stretch="None" VerticalAlignment="Center"/>
+							</StackPanel>
+							<Delay:PopupButton.PopupContent>
+								<Border Background="{StaticResource Brush_ToolbarBackground}"
 													BorderThickness="1"
 													BorderBrush="Gray"
 													Margin="0,0,0,0">
-											<StackPanel>
-                                                <i:Interaction.Triggers>
-                                                    <Behaviors:HandledMouseLeftButtonUpTrigger>
-                                                            <Behaviors:CloseSplitButtonPopupAction TargetName="LockModePopupButton"/>
-                                                    </Behaviors:HandledMouseLeftButtonUpTrigger>
-                                                </i:Interaction.Triggers>
-													<HyperlinkButton Command="{Binding UnlockIndex}" 
+									<StackPanel>
+										<i:Interaction.Triggers>
+											<Behaviors:HandledMouseLeftButtonUpTrigger>
+												<Behaviors:CloseSplitButtonPopupAction TargetName="LockModePopupButton"/>
+											</Behaviors:HandledMouseLeftButtonUpTrigger>
+										</i:Interaction.Triggers>
+										<HyperlinkButton Command="{Binding UnlockIndex}" 
 																	 Style="{StaticResource Style_Button_MouseOverChrome}"
 																	 VerticalAlignment="Center">
-														<HyperlinkButton.Content>
-															<StackPanel Orientation="Horizontal">
-																<Image Source="{StaticResource Image_Lock_Open_Tiny}"
+											<HyperlinkButton.Content>
+												<StackPanel Orientation="Horizontal">
+													<Image Source="{StaticResource Image_Lock_Open_Tiny}"
 																	   Stretch="None"
 																	   VerticalAlignment="Center"
 																	   Margin="4,0,4,0" />
-																<TextBlock Text="Unlock Index"
+													<TextBlock Text="Unlock Index"
 																		   VerticalAlignment="Center" />
-															</StackPanel>
-														</HyperlinkButton.Content>
-													</HyperlinkButton>
-
-													<HyperlinkButton  Command="{Binding LockIgnoreIndex}"
-																	 Style="{StaticResource Style_Button_MouseOverChrome}"
-																	 VerticalAlignment="Center">
-														<HyperlinkButton.Content>
-															<StackPanel Orientation="Horizontal">
-																<Image Source="{StaticResource Image_Lock_Tiny}"
-																	   Stretch="None"
-																	   VerticalAlignment="Center"
-																	   Margin="4,0,4,0" />
-																<TextBlock Text="Locked (Ignore)"
-																		   VerticalAlignment="Center" />
-															</StackPanel>
-														</HyperlinkButton.Content>
-													</HyperlinkButton>
-
-													<HyperlinkButton  Command="{Binding LockErrorIndex}"
-																	 Style="{StaticResource Style_Button_MouseOverChrome}"
-																	 VerticalAlignment="Center">
-														<HyperlinkButton.Content>
-															<StackPanel Orientation="Horizontal">
-																<Image Source="{StaticResource Image_Lock_Error_Tiny}"
-																	   Stretch="None"
-																	   VerticalAlignment="Center"
-																	   Margin="4,0,4,0" />
-																<TextBlock Text="Locked (Error)"
-																		   VerticalAlignment="Center" />
-															</StackPanel>
-														</HyperlinkButton.Content>
-													</HyperlinkButton>
 												</StackPanel>
-											</Border>
-											
-										</Delay:PopupButton.PopupContent>
-									</Delay:PopupButton>
-		
-									<HyperlinkButton Grid.Column="4"
+											</HyperlinkButton.Content>
+										</HyperlinkButton>
+
+										<HyperlinkButton  Command="{Binding LockIgnoreIndex}"
+																	 Style="{StaticResource Style_Button_MouseOverChrome}"
+																	 VerticalAlignment="Center">
+											<HyperlinkButton.Content>
+												<StackPanel Orientation="Horizontal">
+													<Image Source="{StaticResource Image_Lock_Tiny}"
+																	   Stretch="None"
+																	   VerticalAlignment="Center"
+																	   Margin="4,0,4,0" />
+													<TextBlock Text="Locked (Ignore)"
+																		   VerticalAlignment="Center" />
+												</StackPanel>
+											</HyperlinkButton.Content>
+										</HyperlinkButton>
+
+										<HyperlinkButton  Command="{Binding LockErrorIndex}"
+																	 Style="{StaticResource Style_Button_MouseOverChrome}"
+																	 VerticalAlignment="Center">
+											<HyperlinkButton.Content>
+												<StackPanel Orientation="Horizontal">
+													<Image Source="{StaticResource Image_Lock_Error_Tiny}"
+																	   Stretch="None"
+																	   VerticalAlignment="Center"
+																	   Margin="4,0,4,0" />
+													<TextBlock Text="Locked (Error)"
+																		   VerticalAlignment="Center" />
+												</StackPanel>
+											</HyperlinkButton.Content>
+										</HyperlinkButton>
+									</StackPanel>
+								</Border>
+
+							</Delay:PopupButton.PopupContent>
+						</Delay:PopupButton>
+
+						<HyperlinkButton Grid.Column="4"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding Name, StringFormat=/indexes/\{0\}}"
 													 VerticalAlignment="Center"
@@ -165,34 +155,14 @@
 													 Padding="4"
 													 Margin="2"
 													 ToolTipService.ToolTip="Edit Index">
-										<HyperlinkButton.Content>
-											<Image Source="{StaticResource Image_Edit_Small}"
+							<HyperlinkButton.Content>
+								<Image Source="{StaticResource Image_Edit_Small}"
 												   Stretch="None" />
-										</HyperlinkButton.Content>
-									</HyperlinkButton>
-								</Grid>
-							</Grid>
-						</DataTemplate>
-					</Converters:TargetedDataTemplate.Template>
-				</Converters:TargetedDataTemplate>
-				<Converters:TargetedDataTemplate TargetType="Raven.Studio.Models.IndexGroupHeader">
-					<Converters:TargetedDataTemplate.Template>
-						<DataTemplate DataType="Models:IndexGroupHeader">
-							<Grid Width="390"
-								  Height="35">
-								<TextBlock Text="{Binding Name}"
-										   Style="{StaticResource Style_TextBlock_GroupHeader}"
-										   VerticalAlignment="Center" />
-							</Grid>
-						</DataTemplate>
-					</Converters:TargetedDataTemplate.Template>
-				</Converters:TargetedDataTemplate>
-			</Converters:DataTemplateSelectorConverter.DataTemplates>
-		</Converters:DataTemplateSelectorConverter>
-		<DataTemplate x:Key="IndexItemTemplate">
-			<ContentControl ContentTemplate="{Binding Converter={StaticResource DataTemplateSelectorConverter}}"
-							Content="{Binding}" />
-		</DataTemplate>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+					</Grid>
+				</Grid>
+			</DataTemplate>
 	</UserControl.Resources>
 
 	<toolkit:HeaderedContentControl Grid.Column="2"
@@ -281,12 +251,29 @@
 		<ListBox x:Name="IndexesList" 
                  Style="{StaticResource Style_ListBox_Indexes}"
                  ItemsSource="{Binding GroupedIndexes}"
-                 ItemTemplate="{StaticResource IndexItemTemplate}"
                  Margin="10,5">
-			<i:Interaction.Behaviors>
-				<Behaviors:SelectItemOnRightClick/>
-				<Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
-			</i:Interaction.Behaviors>
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid Width="410">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
+						<TextBlock Text="{Binding GroupName}"
+								   Style="{StaticResource Style_TextBlock_GroupHeader}"
+								   VerticalAlignment="Center" />
+						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_Indexes}"
+								 ItemsSource="{Binding Indexes}"
+								 ItemTemplate="{StaticResource IndexItemTemplate}">
+							<i:Interaction.Behaviors>
+								<Behaviors:SelectItemOnRightClick/>
+								<Behaviors:BindSelectedItemsBehavior Target="{Binding DataContext.ItemSelection, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}}"/>
+							</i:Interaction.Behaviors>
+						</ListBox>
+					</Grid>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+			
 			<ContextMenu:ContextMenuService.ContextMenu>
 				<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
 					<ContextMenu:MenuItem Header="Delete index"

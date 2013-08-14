@@ -1,28 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Commands;
-using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class IndexListItem
+	public class IndexGroup
 	{
-	    public string Name { get; set; }
-	}
+		public string GroupName { get; set; }
+		public List<IndexItem> Indexes { get; set; }
 
-	public class IndexGroupHeader : IndexListItem
-	{
+		public IndexGroup(string groupName)
+		{
+			GroupName = groupName;
+			Indexes = new List<IndexItem>();
+		}
 	}
-
-	public class IndexItem : IndexListItem
+	public class IndexItem
 	{
+		public string Name { get; set; }
+		public string GroupName { get; set; }
 		public IndexStats IndexStats { get; set; }
 		public string ModifiedName
 		{

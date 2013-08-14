@@ -415,6 +415,7 @@ namespace Raven.Database
 		                    var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Name);
 		                    if (indexDefinition != null)
 			                    index.LockMode = indexDefinition.LockMode;
+		                    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Name).ForEntityNames.ToList();
 	                    }
 	                    catch (Exception)
 	                    {

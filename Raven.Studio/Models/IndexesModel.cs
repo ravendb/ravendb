@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
+using IndexStats = Raven.Abstractions.Data.IndexStats;
 
 namespace Raven.Studio.Models
 {
@@ -15,7 +15,9 @@ namespace Raven.Studio.Models
 	{
 		private ICommand deleteIndex;
 		private ICommand resetIndex;
-		public ObservableCollection<IndexListItem> GroupedIndexes { get; private set; }
+		private ItemSelection<IndexItem> itemSelection;
+		public ObservableCollection<IndexItem> Indexes { get; private set; }
+		public ObservableCollection<IndexGroup> GroupedIndexes { get; private set; }
 
 		public IndexesModel()
 		{
@@ -23,8 +25,8 @@ namespace Raven.Studio.Models
 			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 																	   "/indexes";
-			GroupedIndexes =
-				new ObservableCollection<IndexListItem>();
+			Indexes = new ObservableCollection<IndexItem>();
+			GroupedIndexes = new ObservableCollection<IndexGroup>();
 			ItemSelection = new ItemSelection<IndexItem>();
 		}
 
@@ -35,7 +37,11 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccessInTheUIThread(UpdateGroupedIndexList);
 		}
 
-		public ItemSelection<IndexItem> ItemSelection { get; private set; }
+		public ItemSelection<IndexItem> ItemSelection
+		{
+			get { return itemSelection; }
+			private set { itemSelection = value; }
+		}
 
 		public ICommand DeleteIndex { get { return deleteIndex ?? (deleteIndex = new DeleteIndexCommand(this)); } }
 		public ICommand ResetIndex { get { return resetIndex ?? (resetIndex = new ResetIndexCommand(this)); } }
@@ -43,47 +49,50 @@ namespace Raven.Studio.Models
 
 		private void UpdateGroupedIndexList(DatabaseStatistics statistics)
 		{
-			var indexes = statistics.Indexes;
+			Indexes.Clear();
+			Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem{Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats}));
 			var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
 
-			var indexGroups = from index in indexes
-							  let groupDetails = GetIndexGroup(index.Name)
-							  let indexGroup = groupDetails.Item1
-							  let indexOrder = groupDetails.Item2
-							  orderby indexOrder
-							  group index by indexGroup;
-
-			var indexesAndGroupHeaders =
-				indexGroups.SelectMany(group => new IndexListItem[] {new IndexGroupHeader {Name = group.Key}}
-													.Concat(group.Select(index => new IndexItem {Name = index.Name, IndexStats = index})));
-
 			GroupedIndexes.Clear();
-			GroupedIndexes.AddRange(indexesAndGroupHeaders.ToList());
+			var groups = new List<IndexGroup>();
+			foreach (var indexItem in Indexes)
+			{
+				var groupItem = groups.FirstOrDefault(@group => group.GroupName == indexItem.GroupName);
+				if (groupItem == null)
+				{
+					groupItem = new IndexGroup(indexItem.GroupName);
+					groups.Add(groupItem);
+				}
+
+				groupItem.Indexes.Add(indexItem);
+			}
+
+			GroupedIndexes.AddRange(groups.OrderBy(@group => group.GroupName));
 
 			var selection = GroupedIndexes.OfType<IndexItem>().Where(i => currentSelection.Contains(i.Name));
 
 			ItemSelection.SetDesiredSelection(selection);
+			OnPropertyChanged(() => GroupedIndexes);
 		}
 
-		private Tuple<string, int> GetIndexGroup(string indexName)
+		private string GetIndexGroup(IndexStats index)
 		{
-			if (indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
-				return Tuple.Create("Auto Indexes", 2);
-			return Tuple.Create("Indexes", 3);
+			if (index.ForEntityName.Count == 1)
+				return index.ForEntityName.First();
+			return "Others";
 		}
 
-		public List<IndexListItem> IndexesOfPriority(string deleteItems)
+		public List<IndexItem> IndexesOfPriority(string deleteItems)
 		{
 			if (deleteItems == "All")
-				return GroupedIndexes.ToList();
+				return Indexes.ToList();
 			if (deleteItems == "Idle")
 				return
-					GroupedIndexes.Where(
-						item => item is IndexItem && ((IndexItem) item).IndexStats.Priority.HasFlag(IndexingPriority.Idle)).ToList();
+					Indexes.Where(item => item.IndexStats.Priority.HasFlag(IndexingPriority.Idle)).ToList();
 			if (deleteItems == "Disabled")
-				return GroupedIndexes.Where(item => item is IndexItem && ((IndexItem)item).IndexStats.Priority.HasFlag(IndexingPriority.Disabled)).ToList();
+				return Indexes.Where(item => item.IndexStats.Priority.HasFlag(IndexingPriority.Disabled)).ToList();
 			if (deleteItems == "Abandoned")
-				return GroupedIndexes.Where(item => item is IndexItem && ((IndexItem)item).IndexStats.Priority.HasFlag(IndexingPriority.Abandoned)).ToList();
+				return Indexes.Where(item => item.IndexStats.Priority.HasFlag(IndexingPriority.Abandoned)).ToList();
 
 			return null;
 		}

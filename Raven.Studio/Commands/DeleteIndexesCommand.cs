@@ -44,8 +44,8 @@ namespace Raven.Studio.Commands
 					else
 					{
 						ApplicationModel.Current.AddInfoNotification("Index " + indexName + " successfully deleted");
-						var deletedItem = model.GroupedIndexes.OfType<IndexItem>().FirstOrDefault(item => item.Name == indexName);
-						model.GroupedIndexes.Remove(deletedItem);
+						var deletedItem = model.Indexes.FirstOrDefault(item => item.Name == indexName);
+						model.Indexes.Remove(deletedItem);
 					}
 				}
 
