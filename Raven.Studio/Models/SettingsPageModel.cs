@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Extensions;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -131,6 +132,24 @@ namespace Raven.Studio.Models
 			}
 			else
 				Settings.SelectedSection.Value = Settings.Sections[0];
+	    }
+
+	    public override bool CanLeavePage()
+	    {
+		    var unsavedSections = new List<string>();
+		    foreach (var settingsSectionModel in Settings.Sections)
+		    {
+			    settingsSectionModel.CheckForChanges();
+			    if(settingsSectionModel.HasUnsavedChanges)
+					unsavedSections.Add(settingsSectionModel.SectionName);
+		    }
+
+		    if (unsavedSections.Count != 0)
+			    return AskUser.Confirmation("Settings",
+				    string.Format("There are unsaved changes in these sections: {0}. Are you sure you want to continue?"
+					    , string.Join(", ", unsavedSections)));
+
+		    return base.CanLeavePage();
 	    }
 
 	    private void RegisterToDatabaseChange()

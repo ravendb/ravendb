@@ -364,10 +364,10 @@ namespace Raven.Studio.Commands
 			        break;
 			}
 
-            settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.AwsSecretKey;
-			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.AwsAccessKey;
-            settingsModel.DatabaseDocument.SecuredSettings["Raven/AzureStorageKey"] = periodicBackup.AzureStorageKey;
-            settingsModel.DatabaseDocument.Settings["Raven/AzureStorageAccount"] = periodicBackup.AzureStorageAccount;
+            settingsModel.DatabaseDocument.SecuredSettings["Raven/AWSSecretKey"] = periodicBackup.PeriodicBackupSettings.AwsSecretKey;
+			settingsModel.DatabaseDocument.Settings["Raven/AWSAccessKey"] = periodicBackup.PeriodicBackupSettings.AwsAccessKey;
+			settingsModel.DatabaseDocument.SecuredSettings["Raven/AzureStorageKey"] = periodicBackup.PeriodicBackupSettings.AzureStorageKey;
+			settingsModel.DatabaseDocument.Settings["Raven/AzureStorageAccount"] = periodicBackup.PeriodicBackupSettings.AzureStorageAccount;
 
 			string activeBundles;
 			settingsModel.DatabaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);

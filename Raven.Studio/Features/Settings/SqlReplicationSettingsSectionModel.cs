@@ -38,6 +38,7 @@ namespace Raven.Studio.Features.Settings
 			AvailableObjects = new ObservableCollection<string>();
 			UpdateAvailableCollections();
 			SqlReplicationConfigs = new ObservableCollection<SqlReplicationConfigModel>();
+			OriginalSqlReplicationConfigs = new ObservableCollection<SqlReplicationConfigModel>();
 			SelectedReplication = new Observable<SqlReplicationConfigModel>();
 			SelectedTable = new Observable<SqlReplicationTable>();
 			FirstItemOfCollection = new Observable<RavenJObject>();
@@ -61,6 +62,29 @@ namespace Raven.Studio.Features.Settings
 				"System.Data.SqlServerCe.3.5",
 				"Npgsql"
 			};
+		}
+
+		public override void CheckForChanges()
+		{
+			if(HasUnsavedChanges)
+				return;
+
+			if (OriginalSqlReplicationConfigs.Count != SqlReplicationConfigs.Count)
+			{
+				HasUnsavedChanges = true;
+				return;
+			}
+
+			foreach (var sqlReplicationConfigModel in SqlReplicationConfigs)
+			{
+				if (
+					sqlReplicationConfigModel.Equals(
+						OriginalSqlReplicationConfigs.FirstOrDefault(model => model.Name == sqlReplicationConfigModel.Name)) == false)
+				{
+					HasUnsavedChanges = true;
+					return;
+				}
+			}
 		}
 
 		private void UpdateScript()
@@ -189,6 +213,7 @@ namespace Raven.Studio.Features.Settings
 		}
 
 		public ObservableCollection<SqlReplicationConfigModel> SqlReplicationConfigs { get; set; }
+		public ObservableCollection<SqlReplicationConfigModel> OriginalSqlReplicationConfigs { get; set; }
 
 		private void HandleDeleteReplication(object parameter)
 		{
@@ -218,6 +243,7 @@ namespace Raven.Studio.Features.Settings
 					foreach (var doc in documents)
 					{
 						SqlReplicationConfigs.Add(SqlReplicationConfigModel.FromSqlReplicationConfig(doc));
+						OriginalSqlReplicationConfigs.Add(SqlReplicationConfigModel.FromSqlReplicationConfig(doc));
 					}
 					if (SqlReplicationConfigs.Any())
 					{

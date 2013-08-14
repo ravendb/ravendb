@@ -7,6 +7,52 @@ namespace Raven.Studio.Features.Bundles
 {
 	public class SqlReplicationConfigModel : ViewModel
 	{
+		protected bool Equals(SqlReplicationConfigModel other)
+		{
+			var baseEquals = string.Equals(Name, other.Name) && string.Equals(Script, other.Script) &&
+			       string.Equals(FactoryName, other.FactoryName) && string.Equals(ConnectionString, other.ConnectionString) &&
+			       string.Equals(ConnectionStringName, other.ConnectionStringName) &&
+			       string.Equals(ConnectionStringSettingName, other.ConnectionStringSettingName) && string.Equals(Id, other.Id) &&
+			       string.Equals(RavenEntityName, other.RavenEntityName) && Disabled.Equals(other.Disabled) &&
+			       Equals(SqlReplicationTables.Count, other.SqlReplicationTables.Count);
+			if (baseEquals == false)
+				return false;
+
+			for (int i = 0; i < SqlReplicationTables.Count; i++)
+			{
+				if (SqlReplicationTables[i].Equals(other.SqlReplicationTables[i]) == false)
+					return false;
+			}
+
+			return true;
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((SqlReplicationConfigModel) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = (name != null ? name.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (script != null ? script.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (factoryName != null ? factoryName.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (connectionString != null ? connectionString.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (connectionStringName != null ? connectionStringName.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (connectionStringSettingName != null ? connectionStringSettingName.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (id != null ? id.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (ravenEntityName != null ? ravenEntityName.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ disabled.GetHashCode();
+				hashCode = (hashCode*397) ^ (sqlReplicationTables != null ? sqlReplicationTables.GetHashCode() : 0);
+				return hashCode;
+			}
+		}
+
 		private string name;
 		private string script;
 		private string factoryName;
