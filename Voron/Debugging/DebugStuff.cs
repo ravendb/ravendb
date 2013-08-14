@@ -8,6 +8,12 @@ namespace Voron.Debugging
 {
 	public class DebugStuff
 	{
+        [Conditional("DEBUG")]
+        public static void RenderFreeSpace(Transaction tx)
+        {
+            RenderAndShow(tx, tx.GetTreeInformation(tx.Environment.FreeSpaceRoot).RootPageNumber, 1);
+        }
+
 		[Conditional("DEBUG")]
 		public static void RenderAndShow(Transaction tx, long startPageNumber, int showNodesEvery = 25, string format = "svg")
 		{
