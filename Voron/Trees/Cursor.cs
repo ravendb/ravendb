@@ -6,8 +6,16 @@ namespace Voron.Trees
     public class Cursor : IDisposable
     {
         public LinkedList<Page> Pages = new LinkedList<Page>();
-        private Dictionary<long, Page> pagesByNum = new Dictionary<long, Page>(); 
+        private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>(); 
 
+        public void Update(LinkedListNode<Page> node, Page newVal)
+        {
+            if (node.Value.PageNumber == newVal.PageNumber)
+                return;
+            _pagesByNum[node.Value.PageNumber] = newVal;
+            _pagesByNum.Add(newVal.PageNumber, newVal);
+            node.Value = newVal;
+        }
 
         public Page ParentPage
         {
@@ -34,10 +42,15 @@ namespace Voron.Trees
             }
         }
 
+        public int PageCount
+        {
+            get { return Pages.Count; }
+        }
+
         public void Push(Page p)
         {
             Pages.AddFirst(p);
-            pagesByNum.Add(p.PageNumber, p);
+            _pagesByNum.Add(p.PageNumber, p);
         }
 
         public Page Pop()
@@ -48,14 +61,14 @@ namespace Voron.Trees
             }
             Page p = Pages.First.Value;
             Pages.RemoveFirst();
-            pagesByNum.Remove(p.PageNumber);
+            _pagesByNum.Remove(p.PageNumber);
             return p;
         }
 
 	    public Page GetPage(long p)
 	    {
 	        Page page;
-	        if (pagesByNum.TryGetValue(p, out page))
+	        if (_pagesByNum.TryGetValue(p, out page))
 	            return page;
 	        return null;
 	    }

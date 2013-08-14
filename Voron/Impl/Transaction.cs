@@ -70,7 +70,7 @@ namespace Voron.Impl
 			while (node != null)
 			{
 				var parent = node.Next != null ? node.Next.Value : null;
-				node.Value = ModifyPage(txInfo.Tree, parent, node.Value.PageNumber, c);
+                c.Update(node, ModifyPage(txInfo.Tree, parent, node.Value.PageNumber, c));
 				node = node.Previous;
 			}
 
