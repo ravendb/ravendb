@@ -48,6 +48,7 @@ public class IndexQuery {
   private String[] highlighterPostTags;
   private String resultsTransformer;
   private boolean disableCaching;
+  private boolean explainScores;
 
   public String getResultsTransformer() {
     return resultsTransformer;
@@ -112,6 +113,13 @@ public class IndexQuery {
   }
 
 
+  public boolean isExplainScores() {
+    return explainScores;
+  }
+
+  public void setExplainScores(boolean explainScores) {
+    this.explainScores = explainScores;
+  }
 
   public void setDebugOptionGetIndexEntires(boolean debugOptionGetIndexEntires) {
     this.debugOptionGetIndexEntires = debugOptionGetIndexEntires;

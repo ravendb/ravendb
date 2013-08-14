@@ -5,12 +5,11 @@ import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
 import raven.client.document.DocumentConvention;
 import raven.client.document.batches.IEagerSessionOperations;
-import raven.client.document.batches.ILazySessionOperations;
 
 /**
  * Interface for document session which holds the internal operations
  */
-public interface IDocumentSessionImpl extends IDocumentSession, ILazySessionOperations, IEagerSessionOperations {
+public interface IDocumentSessionImpl extends IDocumentSession, IEagerSessionOperations {
 
   public DocumentConvention getConventions();
 

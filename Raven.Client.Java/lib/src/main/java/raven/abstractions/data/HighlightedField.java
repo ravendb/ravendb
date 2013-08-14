@@ -88,7 +88,7 @@ public final class HighlightedField {
   }
 
   @Override
-  public HighlightedField clone() throws CloneNotSupportedException {
+  public HighlightedField clone() {
     return new HighlightedField(field, fragmentLength, fragmentCount, fragmentsField);
   }
 

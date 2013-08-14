@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -50,7 +51,6 @@ import raven.abstractions.util.RavenQuery;
 import raven.client.EscapeQueryOptions;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQuery;
-import raven.client.IDocumentQueryCustomization;
 import raven.client.IDocumentSession;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
@@ -67,7 +67,7 @@ import raven.client.spatial.SpatialCriteriaFactory;
  * A query against a Raven index
  *
  */
-public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQuery<T, TSelf>> implements IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T> {
+public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQuery<T, TSelf>> implements IRavenQueryInspector, IAbstractDocumentQuery<T> {
 
   protected Class<T> clazz; //typeof (T) //TODO: assign this value!
 
@@ -79,7 +79,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   private final LinqPathProvider linqPathProvider;
   protected Action1<IndexQuery> beforeQueryExecutionAction;
 
-  protected final Set<Class<T>> rootTypes = new HashSet<>(); //TODO: add typeof(T)
+  protected final Set<Class<?>> rootTypes = new HashSet<>(); //TODO: add typeof(T)
 
   static Map<Class< ? >, Function1<Object, String>> implicitStringsCache = new HashMap<Class< ? >, Function1<Object, String>>();
 
@@ -233,6 +233,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   protected Etag cutoffEtag;
   private QueryOperator defaultOperator;
 
+  private static final Pattern espacePostfixWildcard =  new Regex("\\\*(\s|$)"); //TODO: convert me
+
   /**
    * Get the name of the index being queried
    */
@@ -336,62 +338,21 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   @Override
-  public IDocumentQueryCustomization include(String path) {
+  public IDocumentQuery<T> include(String path) {
     includes.add(path);
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   @Override
-  public IDocumentQueryCustomization waitForNonStaleResults(long waitTimeout) {
+  public IDocumentQuery<T> waitForNonStaleResults(long waitTimeout) {
     theWaitForNonStaleResults = true;
     cutoffEtag = null;
     cutoff = null;
     timeout = waitTimeout;
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
-  @Override
-  public IDocumentQueryCustomization sortByDistance() {
-    orderBy(Constants.DISTANCE_FIELD_NAME);
-    return this;
-  }
 
-  @Override
-  public IDocumentQueryCustomization withinRadiusOf(double radius, double latitude, double longitude) {
-    generateQueryWithinRadiusOf(Constants.DEFAULT_SPATIAL_FIELD_NAME, radius, latitude, longitude);
-    return this;
-  }
-
-  @Override
-  public IDocumentQueryCustomization withinRadiusOf(String fieldName, double radius, double latitude, double longitude) {
-    generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
-    return this;
-  }
-
-  @Override
-  public IDocumentQueryCustomization withinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits) {
-    generateQueryWithinRadiusOf(Constants.DEFAULT_SPATIAL_FIELD_NAME, radius, latitude, longitude, 0.025, radiusUnits);
-    return this;
-  }
-
-  @Override
-  public IDocumentQueryCustomization withinRadiusOf(String fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits) {
-    generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, 0.025, radiusUnits);
-    return this;
-  }
-
-  @Override
-  public IDocumentQueryCustomization relatesToShape(String fieldName, String shapeWKT, SpatialRelation rel) {
-    generateSpatialQueryData(fieldName, shapeWKT, rel);
-    return this;
-  }
-
-  @Override
-  public IDocumentQueryCustomization spatial(String fieldName, Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
-    SpatialCriteria criteria = clause.apply(new SpatialCriteriaFactory());
-    generateSpatialQueryData(fieldName, criteria);
-    return this;
-  }
 
   protected TSelf generateQueryWithinRadiusOf(String fieldName, double radius, double latitude, double longitude) {
     generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, 0.025, (SpatialUnits) null);
@@ -416,6 +377,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return generateSpatialQueryData(fieldName, SpatialIndexQuery.getQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.WITHIN, distanceErrorPct, radiusUnits);
   }
 
+  @SuppressWarnings("unchecked")
   protected TSelf generateSpatialQueryData(String fieldName, String shapeWKT, SpatialRelation relation) {
     generateSpatialQueryData(fieldName, shapeWKT, relation, 0.025, null);
     return (TSelf) this;
@@ -468,19 +430,22 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (TSelf) this;
   }
 
-  public void usingDefaultField(String field) {
+  @SuppressWarnings("unchecked")
+  public IDocumentQuery<T> usingDefaultField(String field) {
     defaultField = field;
+    return (IDocumentQuery<T>) this;
   }
 
-  public void usingDefaultOperator(QueryOperator operator) {
+  public IDocumentQuery<T> usingDefaultOperator(QueryOperator operator) {
     defaultOperator = operator;
+    return (IDocumentQuery<T>) this;
   }
 
   //TODO: we omit  public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
   @Override
-  public IDocumentQueryCustomization include(Path< ? > path) {
+  public IDocumentQuery<T> include(Path< ? > path) {
     include(ExpressionExtensions.toPropertyPath(path));
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   protected QueryOperation initializeQueryOperation(Action2<String, String> setOperationHeaders) {
@@ -614,7 +579,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected void executeBeforeQueryListeners() {
     for (IDocumentQueryListener documentQueryListener : queryListeners) {
-      documentQueryListener.beforeQueryExecuted(this);
+      documentQueryListener.beforeQueryExecuted(new DocumentQueryCustomiation((DocumentQuery< ? >) this));
     }
   }
 
@@ -630,9 +595,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Order the search results randomly
    */
   @Override
-  public IDocumentQueryCustomization randomOrdering() {
+  public IDocumentQuery<T> randomOrdering() {
     addOrder(Constants.RANDOM_FIELD_NAME + ";" + UUID.randomUUID(), false);
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -640,54 +605,49 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * this is useful if you want to have repeatable random queries
    */
   @Override
-  public IDocumentQueryCustomization randomOrdering(String seed) {
+  public IDocumentQuery<T> randomOrdering(String seed) {
     addOrder(Constants.RANDOM_FIELD_NAME + ";" + seed, false);
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
-  public IDocumentQueryCustomization beforeQueryExecution(Action1<IndexQuery> action) {
+  public IDocumentQuery<T> beforeQueryExecution(Action1<IndexQuery> action) {
     beforeQueryExecutionAction = Delegates.combine(beforeQueryExecutionAction, action);
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
-  @Override
-  public IDocumentQueryCustomization transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
-    this.transformResultsFunc = resultsTransformer;
-    return this;
-  }
 
   @Override
-  public IDocumentQueryCustomization highlight(String fieldName, int fragmentLength, int fragmentCount, String fragmentsField) {
+  public IDocumentQuery<T> highlight(String fieldName, int fragmentLength, int fragmentCount, String fragmentsField) {
     highlightedFields.add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   @Override
-  public IDocumentQueryCustomization highlight(String fieldName, int fragmentLength, int fragmentCount, Reference<FieldHighlightings> fieldHighlightings) {
+  public IDocumentQuery<T> highlight(String fieldName, int fragmentLength, int fragmentCount, Reference<FieldHighlightings> fieldHighlightings) {
     highlightedFields.add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
     fieldHighlightings.value = highlightings.addField(fieldName);
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
-  public IDocumentQueryCustomization setHighlighterTags(String preTag, String postTag) {
+  public IDocumentQuery<T> setHighlighterTags(String preTag, String postTag) {
     this.setHighlighterTags(new String[] { preTag }, new String[] { postTag });
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
-  public IDocumentQueryCustomization setHighlighterTags(String[] preTags, String[] postTags) {
+  public IDocumentQuery<T> setHighlighterTags(String[] preTags, String[] postTags) {
     highlighterPreTags = preTags;
     highlighterPostTags = postTags;
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
-  public IDocumentQueryCustomization noTracking() {
+  public IDocumentQuery<T> noTracking() {
     disableEntitiesTracking = true;
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
-  public IDocumentQueryCustomization noCaching() {
+  public IDocumentQuery<T> noCaching() {
     disableCaching = true;
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -695,8 +655,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param descending If set to true [descending]
    */
-  public void addOrder(String fieldName, boolean descending) {
+  public IDocumentQuery<T> addOrder(String fieldName, boolean descending) {
     addOrder(fieldName, descending, null);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -705,29 +666,34 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param descending If set to true [descending]
    * @param fieldType The type of the field to be sorted.
    */
-  public void addOrder(String fieldName, boolean descending, Class< ? > fieldType) {
+  @SuppressWarnings("unchecked")
+  public IDocumentQuery<T> addOrder(String fieldName, boolean descending, Class< ? > fieldType) {
     WhereParams whereParamas = new WhereParams();
     whereParamas.setFieldName(fieldName);
     fieldName = ensureValidFieldName(whereParamas);
     fieldName = descending ? "-" + fieldName : fieldName;
     orderByFields = (String[]) ArrayUtils.add(orderByFields, fieldName);
     sortByHints.add(new Tuple<String, Class< ? >>(fieldName, fieldType));
+    return (IDocumentQuery<T>) this;
   }
 
   //TODO public virtual IEnumerator<T> GetEnumerator() {
 
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> take(int count) {
     pageSize = count;
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> skip(int count) {
     start = count;
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> where(String whereClause) {
     appendSpaceIfNeeded(queryText.length() > 0 && queryText.charAt(queryText.length() - 1) != '(');
     queryText.append(whereClause);
@@ -755,6 +721,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEquals(String fieldName, Object value, boolean isAnalyzed) {
     WhereParams whereParams = new WhereParams();
     whereParams.setAllowWildcards(isAnalyzed);
@@ -768,6 +735,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Simplified method for opening a new clause within the query
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> openSubclause() {
     currentClauseDepth++;
     appendSpaceIfNeeded(queryText.length() > 0 && queryText.charAt(queryText.length() - 1) != '(');
@@ -783,6 +751,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param aggregationOperation
    * @param string
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> groupBy(AggregationOperation aggregationOperation, String... fieldsToGroupBy) {
     groupByFields = fieldsToGroupBy;
     aggregationOp = aggregationOperation;
@@ -792,6 +761,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Simplified method for closing a clause within the query
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> closeSubclause() {
     currentClauseDepth--;
     queryText.append(")");
@@ -802,6 +772,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Matches exact value
    * @param whereParams
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEquals(WhereParams whereParams) {
     ensureValidFieldName(whereParams);
     String transformToEqualValue = transformToEqualValue(whereParams);
@@ -856,7 +827,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param values
    */
   @SuppressWarnings("unchecked")
-  public IDocumentQuery<T> whereIn(String fieldName, Collection<Object> values) {
+  public IDocumentQuery<T> whereIn(String fieldName, Collection<? super Object> values) {
     appendSpaceIfNeeded(queryText.length() > 0 && !Character.isWhitespace(queryText.charAt(queryText.length() - 1)));
     negateIfNeeded();
 
@@ -900,6 +871,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.s
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereStartsWith(String fieldName, Object value) {
     // NOTE: doesn't fully match startsWith semantics
     WhereParams whereParams = new WhereParams();
@@ -916,6 +888,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field
    * @param value The value.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEndsWith(String fieldName, Object value) {
     // http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
     // You cannot use a * or ? symbol as the first character of a search
@@ -936,6 +909,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param start The start.
    * @param end The end.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereBetween(String fieldName, Object start, Object end) {
     appendSpaceIfNeeded(queryText.length() > 0);
 
@@ -968,6 +942,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param start The start.
    * @param end The end.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereBetweenOrEqual(String fieldName, Object start, Object end) {
     appendSpaceIfNeeded(queryText.length() > 0);
     if ((start != null ? start : end) != null) {
@@ -1013,6 +988,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereGreaterThan(String fieldName, Object value) {
     whereBetween(fieldName, value, null);
     return (IDocumentQuery<T>) this;
@@ -1023,6 +999,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereGreaterThanOrEqual(String fieldName, Object value) {
     whereBetweenOrEqual(fieldName, value, null);
     return (IDocumentQuery<T>) this;
@@ -1033,6 +1010,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereLessThan(String fieldName, Object value) {
     whereBetween(fieldName, null, value);
     return (IDocumentQuery<T>) this;
@@ -1043,6 +1021,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value the value.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereLessThanOrEqual(String fieldName, Object value) {
     whereBetweenOrEqual(fieldName, null, value);
     return (IDocumentQuery<T>) this;
@@ -1051,6 +1030,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    *  Add an AND to the query
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> andAlso() {
     if (queryText.length() < 1)
       return (IDocumentQuery<T>) this;
@@ -1120,7 +1100,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       // 0.5 is the default
       queryText.append(fuzzy);
     }
-    return (IDocumentQuery<T>) this;
+    return ((IDocumentQuery<T>) this);
   }
 
   /**
@@ -1164,12 +1144,13 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
    * @param fields The fields.
    */
-  public void orderByDescending(String... fields) {
+  public IDocumentQuery<T> orderByDescending(String... fields) {
     List<String> fieldsTranformed = new ArrayList<>();
     for (String field : fields) {
       fieldsTranformed.add(makeFieldSortDescending(field));
     }
     orderBy(fieldsTranformed.toArray(new String[0]));
+    return (IDocumentQuery<T>) this;
   }
 
   String makeFieldSortDescending(String field) {
@@ -1182,29 +1163,29 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Instructs the query to wait for non stale results as of now.
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOfNow() {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOfNow() {
     theWaitForNonStaleResults = true;
     cutoff = new Date();
     timeout = getDefaultTimeout();
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Instructs the query to wait for non stale results as of now for the specified timeout.
    * @param waitTimeout The wait timeout in milis
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOfNow(long waitTimeout) {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOfNow(long waitTimeout) {
     theWaitForNonStaleResults = true;
     cutoff = new Date();
     timeout = waitTimeout;
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Instructs the query to wait for non stale results as of the cutoff date.
    * @param cutOff The cut off.
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Date cutOff) {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOf(Date cutOff) {
     return waitForNonStaleResultsAsOf(cutOff, getDefaultTimeout());
   }
 
@@ -1213,28 +1194,28 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param cutOff The cut off.
    * @param waitTimeout the wait timeout in milis
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Date cutOff, long waitTimeout) {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOf(Date cutOff, long waitTimeout) {
     theWaitForNonStaleResults = true;
     cutoff = cutOff; //TODO: ToUniversalTime();
     timeout = waitTimeout;
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Instructs the query to wait for non stale results as of the cutoff etag.
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Etag cutOffEtag) {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOf(Etag cutOffEtag) {
     return waitForNonStaleResultsAsOf(cutOffEtag, getDefaultTimeout());
   }
 
   /**
    * Instructs the query to wait for non stale results as of the cutoff etag.
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Etag cutOffEtag, long waitTimeout) {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOf(Etag cutOffEtag, long waitTimeout) {
     theWaitForNonStaleResults = true;
     timeout = waitTimeout;
     cutoffEtag = cutOffEtag;
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1243,7 +1224,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
    * However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results.
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOfLastWrite() {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOfLastWrite() {
     return waitForNonStaleResultsAsOfLastWrite(getDefaultTimeout());
   }
 
@@ -1253,28 +1234,29 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
    * However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results.
    */
-  public IDocumentQueryCustomization waitForNonStaleResultsAsOfLastWrite(long waitTimeout) {
+  public IDocumentQuery<T> waitForNonStaleResultsAsOfLastWrite(long waitTimeout) {
     theWaitForNonStaleResults = true;
     timeout = waitTimeout;
     cutoffEtag = theSession.getDocumentStore().getLastWrittenEtag();
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * EXPERT ONLY: Instructs the query to wait for non stale results.
    * This shouldn't be used outside of unit tests unless you are well aware of the implications
    */
-  public IDocumentQueryCustomization waitForNonStaleResults() {
+  public IDocumentQuery<T> waitForNonStaleResults() {
     waitForNonStaleResults(getDefaultTimeout());
-    return this;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
    * Provide statistics about the query, such as total count of matching records
    * @param stats
    */
-  public void statistics(Reference<RavenQueryStatistics> stats) {
+  public IDocumentQuery<T> statistics(Reference<RavenQueryStatistics> stats) {
     stats.value = queryStats;
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1328,7 +1310,11 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       spatialIndexQuery.setDistanceErrorPercentage(distanceErrorPct);
       spatialIndexQuery.setDefaultField(defaultField);
       spatialIndexQuery.setDefaultOperator(defaultOperator);
-      spatialIndexQuery.setHighlightedFields(highlightedFields) //TODO: highlightedFields.Select(x => x.Clone()).ToArray(),
+      List<HighlightedField> highlightFldCopy = new ArrayList<>();
+      for (HighlightedField highFld: highlightedFields) {
+        highlightFldCopy.add(highFld.clone());
+      }
+      spatialIndexQuery.setHighlightedFields(highlightFldCopy.toArray(new HighlightedField[0]));
       spatialIndexQuery.setHighlighterPreTags(highlighterPreTags);
       spatialIndexQuery.setHighlighterPostTags(highlighterPostTags);
       spatialIndexQuery.setResultsTransformer(resultsTransformer);
@@ -1355,7 +1341,11 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     indexQuery.setFieldsToFetch(fieldsToFetch);
     indexQuery.setDefaultField(defaultField);
     indexQuery.setDefaultOperator(defaultOperator);
-    indexQuery.setHighlightedFields(highlightedFields) //TODO: highlightedFields.Select(x => x.Clone()).ToArray(),
+    List<HighlightedField> highlightFldCopy = new ArrayList<>();
+    for (HighlightedField highFld: highlightedFields) {
+      highlightFldCopy.add(highFld.clone());
+    }
+    indexQuery.setHighlightedFields(highlightFldCopy.toArray(new HighlightedField[0]));
     indexQuery.setHighlighterPreTags(highlighterPreTags);
     indexQuery.setHighlighterPostTags(highlighterPostTags);
     indexQuery.setResultsTransformer(resultsTransformer);
@@ -1370,10 +1360,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return indexQuery;
   }
 
-  //TODO: private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
-
-  public void search(String fieldName, String searchTerms) {
+  public IDocumentQuery<T> search(String fieldName, String searchTerms) {
     search(fieldName, searchTerms, EscapeQueryOptions.RAW_QUERY);
+    return (IDocumentQuery<T>) this;
   }
 
   /**
@@ -1383,7 +1372,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param searchTerms
    * @param escapeQueryOptions
    */
-  public void search(String fieldName, String searchTerms, EscapeQueryOptions escapeQueryOptions) {
+  public IDocumentQuery<T> search(String fieldName, String searchTerms, EscapeQueryOptions escapeQueryOptions) {
     queryText.append(' ');
 
     negateIfNeeded();
@@ -1450,7 +1439,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return whereParams.isAnalyzed() ? strValue : "[[" + strValue + "]]";
     }
 
-    if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Equality, out strValue))
+    if (conventions.tryConvertValueForQuery(whereParams.getFieldName(), whereParams.getValue(), QueryValueConvertionType.EQUALITY, out strValue))
       return strValue;
 
     if (whereParams.Value is ValueType)
@@ -1461,15 +1450,11 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return escaped;
     }
 
-    var result = GetImplicitStringConvertion(whereParams.Value.GetType());
-    if(result != null)
-    {
-      return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
-    }
+    // NOTE: implicit conversion is not supported in java
 
     var jsonSerializer = conventions.CreateSerializer();
     var ravenJTokenWriter = new RavenJTokenWriter();
-    jsonSerializer.Serialize(ravenJTokenWriter, whereParams.Value);
+    jsonSerializer.Serialize(ravenJTokenWriter, whereParams.getValue());
     var term = ravenJTokenWriter.Token.ToString(Formatting.None);
     if(term.Length > 1 && term[0] == '"' && term[term.Length-1] == '"')
     {
@@ -1479,43 +1464,13 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     {
       case JTokenType.Object:
       case JTokenType.Array:
-        return "[[" + RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, false) + "]]";
+        return "[[" + RavenQuery.Escape(term, whereParams.isAllowWildcards && whereParams.isAnalyzed, false) + "]]";
 
       default:
-        return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+        return RavenQuery.Escape(term, whereParams.isAllowWildcards() && whereParams.isAnalyzed(), true);
     }
   }
 
-  private Function1<Object, String> getImplicitStringConvertion(Class<?> type) {
-    if(type == null)
-      return null;
-
-    Func<object, string> value;
-    var localStringsCache = implicitStringsCache;
-    if(localStringsCache.TryGetValue(type,out value))
-      return value;
-
-    var methodInfo = type.GetMethod("op_Implicit", new[] {type});
-
-    if (methodInfo == null || methodInfo.ReturnType != typeof(string))
-    {
-      implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
-      {
-        {type, null}
-      };
-      return null;
-    }
-
-    var arg = Expression.Parameter(typeof(object), "self");
-
-    var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
-
-    implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
-      {
-        {type, func}
-      };
-    return func;
-  }
 
   private String transformToRangeValue(WhereParams whereParams) {
     if (whereParams.getValue() == null) {
@@ -1578,7 +1533,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       sb.Remove(0, 1);
     }
 
-    return RavenQuery.Escape(sb.ToString(), false, true);
+    return RavenQuery.escape(sb.ToString(), false, true);
   }
 
   /**
@@ -1599,19 +1554,36 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return lastEquality;
   }
 
-  public void intersect() {
+  public IDocumentQuery<T> intersect() {
     queryText.append(Constants.INTERSECT_SEPARATOR);
+    return (IDocumentQuery<T>) this;
   }
 
   public void addRootType(Class<T> type) {
     rootTypes.add(type);
   }
 
+  protected String[] getMemberQueryPaths(Expression<?> ...expressions) {
+    List<String> result = new ArrayList<>();
+    for (Expression<?> expr: expressions) {
+      result.add(getMemberQueryPath(expr));
+    }
+    return result.toArray(new String[0]);
+  }
+
+  protected String[] getMemberQueryPathsForOrderBy(Expression<?> ...expressions) {
+    List<String> result = new ArrayList<>();
+    for (Expression<?> expr: expressions) {
+      result.add(getMemberQueryPathForOrderBy(expr));
+    }
+    return result.toArray(new String[0]);
+  }
+
   public String getMemberQueryPathForOrderBy(Expression< ? > expression) {
     String memberQueryPath = getMemberQueryPath(expression);
-    var memberExpression = linqPathProvider.getMemberExpression(expression);
-    if (DocumentConvention.UsesRangeType(memberExpression.Type))
+    if (getDocumentConvention().usesRangeType(expression.getType())) {
       return memberQueryPath + "_Range";
+    }
     return memberQueryPath;
   }
 
@@ -1622,8 +1594,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if (expression.NodeType == ExpressionType.ArrayLength)
       result.Path += ".Length";
 
-    var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
-        : conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
+    String propertyName = indexName == null || indexName.toLowerCase().startsWith("dynamic/")
+        ? conventions.findPropertyNameForDynamicIndex(clazz, indexName, "", result.Path)
+        : conventions.findPropertyNameForIndex(clazz, indexName, "", result.Path);
     return propertyName;
   }
 

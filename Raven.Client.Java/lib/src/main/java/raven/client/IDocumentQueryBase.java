@@ -290,7 +290,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight
    * @return
    */
-  public TSelf boost(Number boost);
+  public TSelf boost(Double boost);
 
   /**
    * Specifies a fuzziness factor to the single word term in the last where clause
@@ -299,7 +299,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param fuzzy 0.0 to 1.0 where 1.0 means closer match
    * @return
    */
-  public TSelf fuzzy (Number fuzzy);
+  public TSelf fuzzy (Double fuzzy);
 
   /**
    * Specifies a proximity distance for the phrase in the last where clause

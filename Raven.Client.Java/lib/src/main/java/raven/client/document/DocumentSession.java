@@ -56,8 +56,8 @@ import com.mysema.query.types.Path;
  */
 public class DocumentSession extends InMemoryDocumentSessionOperations implements IDocumentSessionImpl, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator {
 
-  private final List<ILazyOperation> pendingLazyOperations = new ArrayList<>();
-  private final Map<ILazyOperation, Action1<Object>> onEvaluateLazy = new HashMap<ILazyOperation, Action1<Object>>();
+  protected final List<ILazyOperation> pendingLazyOperations = new ArrayList<>();
+  protected final Map<ILazyOperation, Action1<Object>> onEvaluateLazy = new HashMap<ILazyOperation, Action1<Object>>();
 
   private IDatabaseCommands databaseCommands;
 
@@ -74,7 +74,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @return
    */
   public ILazySessionOperations lazily() {
-    return this;
+    return new LazySessionOperations(this);
   }
 
   /**
@@ -110,121 +110,9 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return this;
   }
 
-  /**
-   * Begin a load while including the specified path
-   */
-  public ILazyLoaderWithInclude lazyInclude(Path<?> path) {
-    return new LazyMultiLoaderWithInclude(this).lazyInclude(path);
-  }
-
-  /**
-   * Loads the specified ids.
-   */
-  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, String... ids) {
-    return lazyLoad(clazz, Arrays.asList(ids), null);
-  }
-
-  /**
-   * Loads the specified ids.
-   */
-  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, Collection<String> ids) {
-    return lazyLoad(clazz, ids, null);
-  }
-
-  /**
-   * Loads the specified id.
-   */
-  public <T> Lazy<T> lazyLoad(Class<T> clazz, String id) {
-    return lazyLoad(clazz, id, null);
-  }
 
 
-  /**
-   * Loads the specified ids and a function to call when it is evaluated
-   */
-  @SuppressWarnings("unchecked")
-  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Collection<String> ids, Action1<TResult[]> onEval) {
-    return lazyLoadInternal(clazz, ids.toArray(new String[0]), new Tuple[0], onEval);
-  }
-
-  /**
-   * Loads the specified id and a function to call when it is evaluated
-   */
-  public <T> Lazy<T> lazyLoad(final Class<T> clazz, final String id, Action1<T> onEval) {
-    if (isLoaded(id)) {
-      return new Lazy<T>(new Function0<T>() {
-        @Override
-        public T apply() {
-          return load(clazz, id);
-        }
-      });
-    }
-    LazyLoadOperation<T> lazyLoadOperation = new LazyLoadOperation<T>(clazz, id, new LoadOperation(this, new DisableAllCachingCallback(), id));
-    return addLazyOperation(lazyLoadOperation, onEval);
-  }
-
-  public <T> Lazy<T> lazyLoad(Class<T> clazz, Number id, Action1<T> onEval) {
-    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
-    return lazyLoad(clazz, documentKey, onEval);
-  }
-
-  public <T> Lazy<T> lazyLoad(Class<T> clazz, UUID id, Action1<T> onEval) {
-    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
-    return lazyLoad(clazz, documentKey, onEval);
-  }
-
-  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, Number... ids) {
-    List<String> documentKeys = new ArrayList<>();
-    for (Number id : ids) {
-      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
-    }
-    return lazyLoad(clazz, documentKeys, null);
-  }
-
-  public <T> Lazy<T[]> lazyLoad(Class<T> clazz, UUID... ids) {
-    List<String> documentKeys = new ArrayList<>();
-    for (UUID id : ids) {
-      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
-    }
-    return lazyLoad(clazz, documentKeys, null);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Action1<TResult[]> onEval, Number... ids) {
-    List<String> documentKeys = new ArrayList<>();
-    for (Number id : ids) {
-      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
-    }
-    return lazyLoadInternal(clazz, documentKeys.toArray(new String[0]), new Tuple[0], onEval);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Action1<TResult[]> onEval, UUID... ids) {
-    List<String> documentKeys = new ArrayList<>();
-    for (UUID id : ids) {
-      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
-    }
-    return lazyLoadInternal(clazz, documentKeys.toArray(new String[0]), new Tuple[0], onEval);
-  }
-
-  /**
-   * Begin a load while including the specified path
-   */
-  public ILazyLoaderWithInclude lazyInclude(String path) {
-    return new LazyMultiLoaderWithInclude(this).lazyInclude(path);
-  }
-
-  public <T> Lazy<T> lazyLoad(Class<T> clazz, Number id) {
-    return lazyLoad(clazz, id, (Action1<T>) null);
-  }
-
-  public <T> Lazy<T> lazyLoad(Class<T> clazz, UUID id) {
-    return lazyLoad(clazz, id, (Action1<T>) null);
-  }
-
-  private class DisableAllCachingCallback implements Function0<AutoCloseable> {
+  protected class DisableAllCachingCallback implements Function0<AutoCloseable> {
     @Override
     public AutoCloseable apply() {
       return databaseCommands.disableAllCaching();
@@ -772,7 +660,6 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return lazyValue;
   }
 
-
   /**
    * Register to lazily load documents and include
    */
@@ -858,22 +745,6 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return results.toArray((T[])Array.newInstance(clazz, 0));
   }
 
-  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix) {
-    return lazyLoadStartingWith(clazz, keyPrefix, null, 0, 25);
-  }
-
-  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix, String matches) {
-    return lazyLoadStartingWith(clazz, keyPrefix, matches, 0, 25);
-  }
-
-  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start) {
-    return lazyLoadStartingWith(clazz, keyPrefix, matches, start, 25);
-  }
-
-  public <T> Lazy<T[]> lazyLoadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
-    LazyStartsWithOperation<T> operation = new LazyStartsWithOperation<T>(clazz, keyPrefix, matches, start, pageSize, this);
-    return addLazyOperation(operation, null);
-  }
 
 
 

@@ -11,7 +11,6 @@ import raven.abstractions.data.AggregationOperation;
 import raven.client.EscapeQueryOptions;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQuery;
-import raven.client.IDocumentQueryCustomization;
 import raven.client.WhereParams;
 
 /**
@@ -34,7 +33,7 @@ public interface IAbstractDocumentQuery<T> {
    *  Instruct the query to wait for non stale result for the specified wait timeout.
    * @param waitTimeout The wait timeout in milis
    */
-  public IDocumentQueryCustomization waitForNonStaleResults(long waitTimeout);
+  public IDocumentQuery<T> waitForNonStaleResults(long waitTimeout);
 
   /**
    * Gets the fields for projection
@@ -46,7 +45,7 @@ public interface IAbstractDocumentQuery<T> {
    *  Order the search results randomly
    * @return
    */
-  public IDocumentQueryCustomization randomOrdering();
+  public IDocumentQuery<T> randomOrdering();
 
   /**
    * Order the search results randomly using the specified seed
@@ -54,14 +53,14 @@ public interface IAbstractDocumentQuery<T> {
    * @param seed
    * @return
    */
-  public IDocumentQueryCustomization randomOrdering(String seed);
+  public IDocumentQuery<T> randomOrdering(String seed);
 
   /**
    * Adds an ordering for a specific field to the query
    * @param fieldName Name of the field.
    * @param descending If set to true [descending]
    */
-  public void addOrder(String fieldName, boolean descending);
+  public IDocumentQuery<T> addOrder(String fieldName, boolean descending);
 
   /**
    * Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
@@ -69,21 +68,21 @@ public interface IAbstractDocumentQuery<T> {
    * @param descending If set to true [descending]
    * @param fieldType the type of the field to be sorted
    */
-  public void addOrder(String fieldName, boolean descending, Class<?> fieldType);
+  public IDocumentQuery<T> addOrder(String fieldName, boolean descending, Class<?> fieldType);
 
   /**
    * Includes the specified path in the query, loading the document specified in that path
    * @param path
    * @return
    */
-  public IDocumentQueryCustomization include(Path<?> path);
+  public IDocumentQuery<T> include(Path<?> path);
 
   /**
    * Includes the specified path in the query, loading the document specified in that path
    * @param path
    * @return
    */
-  public IDocumentQueryCustomization include(String path);
+  public IDocumentQuery<T> include(String path);
 
 
   /**
@@ -298,7 +297,7 @@ public interface IAbstractDocumentQuery<T> {
    * @param fragmentsField The field in query results item to put highlighing into.
    * @return
    */
-  public IDocumentQueryCustomization highlight(String fieldName, int fragmentLength, int fragmentCount, String fragmentsField);
+  public IDocumentQuery<T> highlight(String fieldName, int fragmentLength, int fragmentCount, String fragmentsField);
 
   /**
    * Adds matches highlighting for the specified field.
@@ -311,7 +310,7 @@ public interface IAbstractDocumentQuery<T> {
    * @param highlightings The maximum number of fragments for the field.
    * @return
    */
-  public IDocumentQueryCustomization highlight(String fieldName, int fragmentLength, int fragmentCount, Reference<FieldHighlightings> highlightings);
+  public IDocumentQuery<T> highlight(String fieldName, int fragmentLength, int fragmentCount, Reference<FieldHighlightings> highlightings);
 
   /**
    * Sets the tags to highlight matches with.
@@ -319,7 +318,7 @@ public interface IAbstractDocumentQuery<T> {
    * @param postTag Postfix tag.
    * @return
    */
-  public IDocumentQueryCustomization setHighlighterTags(String preTag, String postTag);
+  public IDocumentQuery<T> setHighlighterTags(String preTag, String postTag);
 
   /**
    * Sets the tags to highlight matches with.
@@ -327,7 +326,7 @@ public interface IAbstractDocumentQuery<T> {
    * @param postTags Postfix tags.
    * @return
    */
-  public IDocumentQueryCustomization setHighlighterTags(String[] preTags, String[] postTags);
+  public IDocumentQuery<T> setHighlighterTags(String[] preTags, String[] postTags);
 
   /**
    * Instructs the query to wait for non stale results as of now.
@@ -388,7 +387,7 @@ public interface IAbstractDocumentQuery<T> {
    */
   public Tuple<String, String> getLastEqualityTerm();
 
-  public void intersect();
+  public IDocumentQuery<T> intersect();
 
   public void addRootType(Class<T> type);
 

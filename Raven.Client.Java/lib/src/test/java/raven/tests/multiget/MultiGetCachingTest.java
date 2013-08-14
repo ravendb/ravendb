@@ -40,8 +40,8 @@ public class MultiGetCachingTest extends RemoteClientTest {
       for (int i = 0; i < 5; i++) {
         try (IDocumentSession session = store.openSession()) {
           try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
-            session.advanced().lazily().lazyLoad(User.class, "users/1");
-            session.advanced().lazily().lazyLoad(User.class, "users/2");
+            session.advanced().lazily().load(User.class, "users/1");
+            session.advanced().lazily().load(User.class, "users/2");
 
             session.advanced().eagerly().executeAllPendingLazyOperations();
           }
@@ -78,8 +78,8 @@ public class MultiGetCachingTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
-          session.advanced().lazily().lazyLoad(User.class, new String[] { "users/1" });
-          session.advanced().lazily().lazyLoad(User.class, "users/2");
+          session.advanced().lazily().load(User.class, new String[] { "users/1" });
+          session.advanced().lazily().load(User.class, "users/2");
           session.advanced().eagerly().executeAllPendingLazyOperations();
         }
       }
@@ -115,8 +115,8 @@ public class MultiGetCachingTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
-          session.advanced().lazily().lazyLoad(User.class, "users/1");
-          session.advanced().lazily().lazyLoad(User.class, "users/2");
+          session.advanced().lazily().load(User.class, "users/1");
+          session.advanced().lazily().load(User.class, "users/2");
           session.advanced().eagerly().executeAllPendingLazyOperations();
         }
       }
@@ -146,7 +146,7 @@ public class MultiGetCachingTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         try (AutoCloseable context = session.advanced().getDocumentStore().aggressivelyCacheFor(5 * 60 * 1000)) {
-          session.advanced().lazily().lazyLoad(User.class, new String[] { "users/1" });
+          session.advanced().lazily().load(User.class, new String[] { "users/1" });
           session.advanced().eagerly().executeAllPendingLazyOperations();
         }
       }
