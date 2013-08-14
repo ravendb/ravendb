@@ -2,6 +2,7 @@ package raven.client;
 
 import raven.client.document.batches.IEagerSessionOperations;
 import raven.client.document.batches.ILazySessionOperations;
+import raven.client.indexes.AbstractIndexCreationTask;
 
 /**
  * Advanced synchronous session operations
@@ -64,26 +65,37 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    */
   public IEagerSessionOperations eagerly();
 
-  /*TODO
-  /// <summary>
-  /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-  /// </summary>
-  /// <typeparam name="T">The result of the query</typeparam>
-  /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-  /// <returns></returns>
-  IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+  /**
+   * Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+   * @param clazz The result class of the query.
+   * @param indexClass The type of the index creator.
+   * @return
+   */
+  public <T, S extends AbstractIndexCreationTask> IDocumentQuery<T> luceneQuery(Class<T> clazz, Class<S> indexClass);
 
-  /// <summary>
-  /// Query the specified index using Lucene syntax
-  /// </summary>
-  /// <param name="indexName">Name of the index.</param>
-  /// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
-  IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false);
+  /**
+   * Query the specified index using Lucene syntax
+   * @param indexName Name of the index.
+   * @param isMapReduce Control how we treat identifier properties in map/reduce indexes
+   * @return
+   */
+  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce);
 
-  /// <summary>
-  /// Dynamically query RavenDB using Lucene syntax
-  /// </summary>
-  IDocumentQuery<T> LuceneQuery<T>();*/
+  /**
+   * Query the specified index using Lucene syntax
+   * @param indexName Name of the index.
+   * @param isMapReduce Control how we treat identifier properties in map/reduce indexes
+   * @return
+   */
+  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName);
+
+
+  /**
+   * Dynamically query RavenDB using Lucene syntax
+   * @param clazz
+   * @return
+   */
+  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz);
 
   /**
    * Gets the document URL for the specified entity.

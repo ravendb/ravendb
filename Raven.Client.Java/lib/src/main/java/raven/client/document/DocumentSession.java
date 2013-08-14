@@ -688,12 +688,13 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return luceneQuery(clazz, indexName, false);
   }
 
-  /// <summary>
-  /// Query the specified index using Lucene syntax
-  /// </summary>
-  /// <typeparam name="T"></typeparam>
-  /// <param name="indexName">Name of the index.</param>
-  /// <returns></returns>
+  /**
+   * Query the specified index using Lucene syntax
+   * @param clazz
+   * @param indexName Name of the index.
+   * @param isMapReduce
+   * @return
+   */
   public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce) {
     return new DocumentQuery(clazz, this, getDatabaseCommands(), null, indexName, null, null, listeners.getQueryListeners(), isMapReduce);
   }

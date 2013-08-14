@@ -1,5 +1,6 @@
 package raven.client.linq;
 
+import raven.client.IDocumentQuery;
 import raven.client.document.DocumentConvention;
 
 /**
@@ -12,12 +13,10 @@ public interface IDocumentQueryGenerator {
    */
   public DocumentConvention getConventions();
 
-  /*TODO might cause conflict with IDocumentSession.Query()
-  /// <summary>
-  /// Create a new query for <typeparam name="T"/>
-  /// </summary>
-  IDocumentQuery<T> Query<T>(string indexName, bool isMapReduce);
-  */
+  /**
+   * Create a new query for
+   */
+  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce);
 
 
 }

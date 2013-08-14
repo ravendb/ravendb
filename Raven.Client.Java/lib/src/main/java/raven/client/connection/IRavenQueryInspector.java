@@ -1,8 +1,8 @@
 package raven.client.connection;
 
 import java.util.List;
-import java.util.Map;
 
+import raven.abstractions.basic.Tuple;
 import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.IndexQuery;
@@ -37,7 +37,7 @@ public interface IRavenQueryInspector {
    * The last term that we asked the query to use equals on
    * @return
    */
-  public Map.Entry<String, String> getLastEqualityTerm();
+  public Tuple<String, String> getLastEqualityTerm();
 
   /**
    * Get the index query for this query

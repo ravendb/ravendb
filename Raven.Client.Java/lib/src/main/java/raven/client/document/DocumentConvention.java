@@ -119,6 +119,8 @@ public class DocumentConvention implements Serializable {
 
   private final Map<String, SortOptions> customDefaultSortOptions = new HashMap<>();
 
+  private final List<Class<?>> customRangeTypes = new ArrayList<>();
+
 
   public DocumentConvention() {
 
@@ -946,7 +948,7 @@ public class DocumentConvention implements Serializable {
 
   //TODO: private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
 
-  //TODO: private readonly List<Type> customRangeTypes = new List<Type>();
+
 
   //TODO: public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
 
@@ -955,41 +957,39 @@ public class DocumentConvention implements Serializable {
   public SortOptions getDefaultSortOption(String typeName) {
 
     switch (typeName) {
-      case "java.lang.Short":
-        return SortOptions.SHORT;
-      case "java.lang.Integer":
-        return SortOptions.INT;
-      case "java.lang.Long":
-        return SortOptions.LONG;
-      case "java.lang.Double":
-        return SortOptions.DOUBLE;
-      case "java.lang.Float":
-        return SortOptions.FLOAT;
-      case "java.lang.String":
-        return SortOptions.STRING;
-        default:
-          return customDefaultSortOptions.containsKey(typeName)? customDefaultSortOptions.get(typeName) : SortOptions.STRING;
+    case "java.lang.Short":
+      return SortOptions.SHORT;
+    case "java.lang.Integer":
+      return SortOptions.INT;
+    case "java.lang.Long":
+      return SortOptions.LONG;
+    case "java.lang.Double":
+      return SortOptions.DOUBLE;
+    case "java.lang.Float":
+      return SortOptions.FLOAT;
+    case "java.lang.String":
+      return SortOptions.STRING;
+    default:
+      return customDefaultSortOptions.containsKey(typeName)? customDefaultSortOptions.get(typeName) : SortOptions.STRING;
     }
   }
 
 
 
-  /* TODO:
-   * public bool UsesRangeType(object o)
-    {
-      if (o == null)
-        return false;
-      var type = o as Type ?? o.GetType();
-      var nonNullable = Nullable.GetUnderlyingType(type);
-      if (nonNullable != null)
-        type = nonNullable;
+  public boolean usesRangeType(Object o) {
+    if (o == null) {
+      return false;
+    }
+    Class<?> type = o.getClass();
+    if (o instanceof Class) {
+      type = (Class< ? >) o;
+    }
 
-      if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
-          type == typeof (decimal) || type == typeof (TimeSpan))
-        return true;
-
-      return customRangeTypes.Contains(type);
-    } */
+    if (Integer.class.equals(type) || Long.class.equals(type) || Double.class.equals(type) || Float.class.equals(type)) {
+      return true;
+    }
+    return customRangeTypes.contains(type);
+  }
 
   //TODO:public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -16,6 +17,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 
 import com.mysema.query.dml.UpdateClause;
+import com.mysema.query.types.Expression;
 import com.mysema.query.types.ExpressionUtils;
 import com.mysema.query.types.Path;
 
@@ -35,12 +37,16 @@ import raven.abstractions.data.HighlightedField;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryOperator;
 import raven.abstractions.data.QueryResult;
+import raven.abstractions.data.SortedField;
 import raven.abstractions.data.SpatialIndexQuery;
 import raven.abstractions.extensions.ExpressionExtensions;
+import raven.abstractions.indexing.NumberUtil;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
 import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.spatial.WktSanitizer;
+import raven.abstractions.util.RavenQuery;
+import raven.client.EscapeQueryOptions;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQuery;
 import raven.client.IDocumentQueryCustomization;
@@ -61,6 +67,9 @@ import raven.client.spatial.SpatialCriteriaFactory;
  *
  */
 public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQuery<T, TSelf>> implements IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T> {
+
+  protected Class<T> clazz; //typeof (T)
+
   protected boolean isSpatialQuery;
   protected String spatialFieldName, queryShape;
   protected SpatialUnits spatialUnits;
@@ -221,6 +230,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected Action1<QueryResult> afterQueryExecutedCallback;
   protected Etag cutoffEtag;
+  private QueryOperator defaultOperator;
 
   /**
    * Get the name of the index being queried
@@ -453,12 +463,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (TSelf) this;
   }
 
-  @Override
-  public IDocumentQueryCustomization waitForNonStaleResults() {
-    waitForNonStaleResults(getDefaultTimeout());
-    return this;
-  }
-
   public void usingDefaultField(String field) {
     defaultField = field;
   }
@@ -505,6 +509,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return getDatabaseCommands().getFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
   }
 
+  @Override
   public FacetResults getFacets(List<Facet> facets, int facetStart, Integer facetPageSize) {
     IndexQuery q = getIndexQuery();
     return getDatabaseCommands().getFacets(indexName, q, facets, facetStart, facetPageSize);
@@ -520,14 +525,20 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return queryOperation.getCurrentQueryResults().createSnapshot();
   }
 
-  protected void InitSync() {
+  protected void initSync() {
     if (queryOperation != null) {
       return;
     }
     theSession.incrementRequestCount();
     clearSortHints(getDatabaseCommands());
     executeBeforeQueryListeners();
-    queryOperation = initializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+    queryOperation = initializeQueryOperation(new Action2<String, String>() {
+
+      @Override
+      public void apply(String first, String second) {
+        getDatabaseCommands().getOperationsHeaders().put(first, second);
+      }
+    });
     executeActualQuery();
   }
 
@@ -577,10 +588,16 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @return
    */
   public Lazy<Collection<T>> lazily(Action1<Collection<T>> onEval) {
-    Map<String, String> headers = new HashMap<>();
+    final Map<String, String> headers = new HashMap<>();
     if (queryOperation == null) {
       executeBeforeQueryListeners();
-      queryOperation = initializeQueryOperation((key, val) => headers[key] =val);
+      queryOperation = initializeQueryOperation(new Action2<String, String>() {
+
+        @Override
+        public void apply(String first, String second) {
+          headers.put(first, second);
+        }
+      });
     }
 
     LazyQueryOperation lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
@@ -908,14 +925,15 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   public void whereBetween(String fieldName, Object start, Object end) {
     appendSpaceIfNeeded(queryText.length() > 0);
 
-    if ((start != null? start : end) != null)
+    if ((start != null? start : end) != null) {
       sortByHints.add(new Tuple<String, Class<?>>(fieldName, (start != null? start : end).getClass()));
+    }
 
     negateIfNeeded();
 
     fieldName = getFieldNameForRangeQueries(fieldName, start, end);
 
-    queryText.append(RavenQuery.escapeField(fieldName)).Append(":{");
+    queryText.append(RavenQuery.escapeField(fieldName)).append(":{");
     WhereParams startParams = new WhereParams();
     startParams.setValue(start);
     startParams.setFieldName(fieldName);
@@ -929,7 +947,658 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     queryText.append("}");
   }
 
+  /**
+   *  Matches fields where the value is between the specified start and end, inclusive
+   * @param fieldName Name of the field.
+   * @param start The start.
+   * @param end The end.
+   */
+  public void whereBetweenOrEqual(String fieldName, Object start, Object end) {
+    appendSpaceIfNeeded(queryText.length() > 0);
+    if ((start != null ? start : end) != null) {
+      sortByHints.add(new Tuple<String, Class<?>>(fieldName, (start != null? start : end).getClass()));
+    }
 
+    negateIfNeeded();
 
+    fieldName = getFieldNameForRangeQueries(fieldName, start, end);
+
+    queryText.append(RavenQuery.escapeField(fieldName)).append(":[");
+    WhereParams startWhere = new WhereParams();
+    startWhere.setValue(start);
+    startWhere.setFieldName(fieldName);
+    queryText.append(start == null ? "*" : transformToRangeValue(startWhere));
+    queryText.append(" TO ");
+    WhereParams endWhere = new WhereParams();
+    endWhere.setFieldName(fieldName);
+    endWhere.setValue(end);
+    queryText.append(end == null ? "NULL" : transformToRangeValue(endWhere));
+    queryText.append("]");
+  }
+
+  private String getFieldNameForRangeQueries(String fieldName, Object start, Object end) {
+    WhereParams whereParams = new WhereParams();
+    whereParams.setFieldName(fieldName);
+    fieldName = ensureValidFieldName(whereParams);
+
+    if (fieldName == Constants.DOCUMENT_ID_FIELD_NAME) {
+      return fieldName;
+    }
+
+    Object val = start != null ? start : end;
+    if (conventions.usesRangeType(val) && !fieldName.endsWith("_Range")) {
+      fieldName = fieldName + "_Range";
+    }
+    return fieldName;
+  }
+
+  /**
+   * Matches fields where the value is greater than the specified value
+   * @param fieldName Name of the field.
+   * @param value The value.
+   */
+  public void whereGreaterThan(String fieldName, Object value) {
+    whereBetween(fieldName, value, null);
+  }
+
+  /**
+   * Matches fields where the value is greater than or equal to the specified value
+   * @param fieldName Name of the field.
+   * @param value The value.
+   */
+  public void whereGreaterThanOrEqual(String fieldName, Object value) {
+    whereBetweenOrEqual(fieldName, value, null);
+  }
+
+  /**
+   * Matches fields where the value is less than the specified value
+   * @param fieldName Name of the field.
+   * @param value The value.
+   */
+  public void whereLessThan(String fieldName, Object value) {
+    whereBetween(fieldName, null, value);
+  }
+
+  /**
+   * Matches fields where the value is less than or equal to the specified value
+   * @param fieldName Name of the field.
+   * @param value the value.
+   */
+  public void whereLessThanOrEqual(String fieldName, Object value) {
+    whereBetweenOrEqual(fieldName, null, value);
+  }
+
+  /**
+   *  Add an AND to the query
+   */
+  public void andAlso() {
+    if (queryText.length() < 1)
+      return;
+
+    queryText.append(" AND");
+  }
+
+  /**
+   * Add an OR to the query
+   */
+  public void orElse() {
+    if (queryText.length() < 1)
+      return;
+
+    queryText.append(" OR");
+  }
+
+  /**
+   * Specifies a boost weight to the last where clause.
+   * The higher the boost factor, the more relevant the term will be.
+   *
+   *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
+   * @param boost boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight
+   */
+  public void boost(double boost) {
+    if (queryText.length() < 1) {
+      throw new IllegalStateException("Missing where clause");
+    }
+
+    if (boost <= 0) {
+      throw new IllegalArgumentException("Boost factor must be a positive number");
+    }
+
+    if (boost != 1.0) {
+      // 1.0 is the default
+      queryText.append("^").append(boost);
+    }
+  }
+
+  /**
+   * Specifies a fuzziness factor to the single word term in the last where clause
+   *
+   * http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
+   * @param fuzzy 0.0 to 1.0 where 1.0 means closer match
+   */
+  public void fuzzy(double fuzzy) {
+    if (queryText.length() < 1) {
+      throw new IllegalStateException("Missing where clause");
+    }
+
+    if (fuzzy < 0 || fuzzy > 1) {
+      throw new IllegalArgumentException("Fuzzy distance must be between 0.0 and 1.0");
+    }
+
+    char ch = queryText.charAt(queryText.length() - 1);
+    if (ch == '"' || ch == ']') {
+      // this check is overly simplistic
+      throw new IllegalStateException("Fuzzy factor can only modify single word terms");
+    }
+
+    queryText.append("~");
+    if (fuzzy != 0.5) {
+      // 0.5 is the default
+      queryText.append(fuzzy);
+    }
+  }
+
+  /**
+   * Specifies a proximity distance for the phrase in the last where clause
+   *
+   *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
+   * @param proximity number of words within
+   */
+  public void proximity(int proximity) {
+    if (queryText.length() < 1) {
+      throw new IllegalStateException("Missing where clause");
+    }
+
+    if (proximity < 1) {
+      throw new IllegalArgumentException("Proximity distance must be a positive number");
+    }
+
+    if (queryText.charAt(queryText.length() - 1) != '"') {
+      // this check is overly simplistic
+      throw new IllegalStateException("Proximity distance can only modify a phrase");
+    }
+
+    queryText.append("~").append(proximity);
+  }
+
+  /**
+   * Order the results by the specified fields
+   * The fields are the names of the fields to sort, defaulting to sorting by ascending.
+   * You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+   * @param fields The fields.
+   */
+  public void orderBy(String... fields) {
+    orderByFields = (String[]) ArrayUtils.addAll(orderByFields, fields);
+  }
+
+  /**
+   * Order the results by the specified fields
+   * The fields are the names of the fields to sort, defaulting to sorting by descending.
+   * You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+   * @param fields The fields.
+   */
+  public void orderByDescending(String... fields) {
+    List<String> fieldsTranformed = new ArrayList<>();
+    for (String field: fields) {
+      fieldsTranformed.add(makeFieldSortDescending(field));
+    }
+    orderBy(fieldsTranformed.toArray(new String[0]));
+  }
+
+  String makeFieldSortDescending(String field) {
+    if (StringUtils.isBlank(field) || field.startsWith("+") || field.startsWith("-")) {
+      return field;
+    }
+    return "-" + field;
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of now.
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOfNow() {
+    theWaitForNonStaleResults = true;
+    cutoff = new Date();
+    timeout = getDefaultTimeout();
+    return this;
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of now for the specified timeout.
+   * @param waitTimeout The wait timeout in milis
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOfNow(long waitTimeout) {
+    theWaitForNonStaleResults = true;
+    cutoff = new Date();
+    timeout = waitTimeout;
+    return this;
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of the cutoff date.
+   * @param cutOff The cut off.
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Date cutOff) {
+    return waitForNonStaleResultsAsOf(cutOff, getDefaultTimeout());
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
+   * @param cutOff The cut off.
+   * @param waitTimeout the wait timeout in milis
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Date cutOff, long waitTimeout) {
+    theWaitForNonStaleResults = true;
+    cutoff = cutOff; //TODO: ToUniversalTime();
+    timeout = waitTimeout;
+    return this;
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of the cutoff etag.
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Etag cutOffEtag) {
+    return waitForNonStaleResultsAsOf(cutOffEtag, getDefaultTimeout());
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of the cutoff etag.
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOf(Etag cutOffEtag, long waitTimeout) {
+    theWaitForNonStaleResults = true;
+    timeout = waitTimeout;
+    cutoffEtag = cutOffEtag;
+    return this;
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of the last write made by any session belonging to the
+   * current document store.
+   * This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+   * However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results.
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOfLastWrite() {
+    return waitForNonStaleResultsAsOfLastWrite(getDefaultTimeout());
+  }
+
+  /**
+   * Instructs the query to wait for non stale results as of the last write made by any session belonging to the
+   * current document store.
+   * This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
+   * However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results.
+   */
+  public IDocumentQueryCustomization waitForNonStaleResultsAsOfLastWrite(long waitTimeout) {
+    theWaitForNonStaleResults = true;
+    timeout = waitTimeout;
+    cutoffEtag = theSession.getDocumentStore().getLastWrittenEtag();
+    return this;
+  }
+
+  /**
+   * EXPERT ONLY: Instructs the query to wait for non stale results.
+   * This shouldn't be used outside of unit tests unless you are well aware of the implications
+   */
+  public IDocumentQueryCustomization waitForNonStaleResults() {
+    waitForNonStaleResults(getDefaultTimeout());
+    return this;
+  }
+
+  /**
+   * Provide statistics about the query, such as total count of matching records
+   * @param stats
+   */
+  public void statistics(Reference<RavenQueryStatistics> stats) {
+    stats.value = queryStats;
+  }
+
+  /**
+   * Callback to get the results of the query
+   * @param afterQueryExecutedCallback
+   */
+  public void afterQueryExecuted(Action1<QueryResult> afterQueryExecutedCallback) {
+    this.afterQueryExecutedCallback = Delegates.combine(this.afterQueryExecutedCallback, afterQueryExecutedCallback);
+  }
+
+  /**
+   * Called externally to raise the after query executed callback
+   * @param result
+   */
+  public void invokeAfterQueryExecuted(QueryResult result) {
+    Action1<QueryResult> queryExecuted = afterQueryExecutedCallback;
+    if (queryExecuted != null) {
+      queryExecuted.apply(result);
+    }
+  }
+
+  /**
+   * Generates the index query.
+   * @param query The query.
+   * @return
+   */
+  protected IndexQuery generateIndexQuery(String query) {
+    if(isSpatialQuery) {
+      if ("dynamic".equals(indexName) || indexName.startsWith("dynamic/")) {
+        throw new IllegalStateException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
+      }
+
+      SpatialIndexQuery spatialIndexQuery = new SpatialIndexQuery();
+      spatialIndexQuery.setGroupBy(groupByFields);
+      spatialIndexQuery.setAggregationOperation(EnumSet.of(aggregationOp));
+      spatialIndexQuery.setQuery(query);
+      spatialIndexQuery.setPageSize(pageSize != null ? pageSize : 128);
+      spatialIndexQuery.setStart(start);
+      spatialIndexQuery.setCutoff(cutoff);
+      spatialIndexQuery.setCutoffEtag(cutoffEtag);
+      List<SortedField> sortedFields =new ArrayList<>();
+      for (String orderByField: orderByFields) {
+        sortedFields.add(new SortedField(orderByField));
+      }
+      spatialIndexQuery.setSortedFields(sortedFields.toArray(new SortedField[0]));
+      spatialIndexQuery.setFieldsToFetch(fieldsToFetch);
+      spatialIndexQuery.setSpatialFieldName(spatialFieldName);
+      spatialIndexQuery.setQueryShape(queryShape);
+      spatialIndexQuery.setRadiusUnitOverride(spatialUnits);
+      spatialIndexQuery.setSpatialRelation(spatialRelation);
+      spatialIndexQuery.setDistanceErrorPercentage(distanceErrorPct);
+      spatialIndexQuery.setDefaultField(defaultField);
+      spatialIndexQuery.setDefaultOperator(defaultOperator);
+      spatialIndexQuery.setHighlightedFields(highlightedFields) //TODO: highlightedFields.Select(x => x.Clone()).ToArray(),
+      spatialIndexQuery.setHighlighterPreTags(highlighterPreTags);
+      spatialIndexQuery.setHighlighterPostTags(highlighterPostTags);
+      spatialIndexQuery.setResultsTransformer(resultsTransformer);
+      spatialIndexQuery.setQueryInputs(queryInputs);
+      spatialIndexQuery.setDisableCaching(disableCaching);
+      spatialIndexQuery.setExplainScores(shouldExplainScores);
+
+      return spatialIndexQuery;
+
+    }
+
+    IndexQuery indexQuery = new IndexQuery();
+    indexQuery.setGroupBy(groupByFields);
+    indexQuery.setAggregationOperation(EnumSet.of(aggregationOp));
+    indexQuery.setQuery(query);
+    indexQuery.setStart(start);
+    indexQuery.setCutoff(cutoff);
+    indexQuery.setCutoffEtag(cutoffEtag);
+    List<SortedField> sortedFields =new ArrayList<>();
+    for (String orderByField: orderByFields) {
+      sortedFields.add(new SortedField(orderByField));
+    }
+    indexQuery.setSortedFields(sortedFields.toArray(new SortedField[0]));
+    indexQuery.setFieldsToFetch(fieldsToFetch);
+    indexQuery.setDefaultField(defaultField);
+    indexQuery.setDefaultOperator(defaultOperator);
+    indexQuery.setHighlightedFields(highlightedFields) //TODO: highlightedFields.Select(x => x.Clone()).ToArray(),
+    indexQuery.setHighlighterPreTags(highlighterPreTags);
+    indexQuery.setHighlighterPostTags(highlighterPostTags);
+    indexQuery.setResultsTransformer(resultsTransformer);
+    indexQuery.setQueryInputs(queryInputs);
+    indexQuery.setDisableCaching(disableCaching);
+    indexQuery.setExplainScores(shouldExplainScores);
+
+    if (pageSize != null) {
+      indexQuery.setPageSize(pageSize);
+    }
+
+    return indexQuery;
+  }
+  //TODO: private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
+
+  public void search(String fieldName, String searchTerms) {
+    search(fieldName, searchTerms, EscapeQueryOptions.RAW_QUERY);
+  }
+
+  /**
+   * Perform a search for documents which fields that match the searchTerms.
+   * If there is more than a single term, each of them will be checked independently.
+   * @param fieldName
+   * @param searchTerms
+   * @param escapeQueryOptions
+   */
+  public void search(String fieldName, String searchTerms, EscapeQueryOptions escapeQueryOptions) {
+    queryText.append(' ');
+
+    negateIfNeeded();
+    switch (escapeQueryOptions) {
+      case ESCAPE_ALL:
+        searchTerms = RavenQuery.escape(searchTerms, false, false);
+        break;
+      case ALLOW_POSTFIX_WILDCARD:
+        searchTerms = RavenQuery.escape(searchTerms, false, false);
+        searchTerms = espacePostfixWildcard.replace(searchTerms, "*");
+        break;
+      case ALLOW_ALL_WILDCARDS:
+        searchTerms = RavenQuery.escape(searchTerms, false, false);
+        searchTerms = searchTerms.replace("\\*", "*");
+        break;
+      case RAW_QUERY:
+        break;
+      default:
+        throw new IllegalArgumentException("Value:" + escapeQueryOptions);
+    }
+    lastEquality = Tuple.create(fieldName, "(" + searchTerms + ")");
+
+    queryText.append(fieldName).append(":").append("(").append(searchTerms).append(")");
+  }
+
+  private String transformToEqualValue(WhereParams whereParams) {
+    if (whereParams.getValue() == null) {
+      return Constants.NULL_VALUE_NOT_ANALYZED;
+    }
+    if (StringUtils.isEmpty(whereParams.getValue().toString())) {
+      return Constants.EMPTY_STRING_NOT_ANALYZED;
+    }
+
+    Class<?> type = whereParams.getValue().getClass();
+    if (Boolean.class.equals(type)) {
+      return (boolean) whereParams.getValue() ? "true" : "false";
+    }
+    /*TODO
+    if (type == typeof(DateTime))
+    {
+      var val = (DateTime)whereParams.Value;
+      var s = val.ToString(Default.DateTimeFormatsToWrite);
+      if (val.Kind == DateTimeKind.Utc)
+        s += "Z";
+      return s;
+    }
+    if (type == typeof(DateTimeOffset))
+    {
+      var val = (DateTimeOffset)whereParams.Value;
+      return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
+    } */
+
+    if (Number.class.isAssignableFrom(type)) {
+      return RavenQuery.escape(whereParams.getValue().toString(), false, false);
+    }
+
+    if (whereParams.getFieldName().equals(Constants.DOCUMENT_ID_FIELD_NAME) && !(whereParams.getValue() instanceof String)) {
+      return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(),
+          whereParams.getFieldTypeForIdentifier() != null ? whereParams.getFieldTypeForIdentifier() : clazz, false);
+    }
+    if (whereParams.getValue() instanceof String) {
+      String strValue = (String) whereParams.getValue();
+      strValue = RavenQuery.escape(strValue, whereParams.isAllowWildcards() && !whereParams.isAnalyzed(), true);
+      return whereParams.isAnalyzed() ? strValue : "[[" + strValue + "]]";
+    }
+
+    if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Equality, out strValue))
+      return strValue;
+
+    if (whereParams.Value is ValueType)
+    {
+      var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+                      whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+
+      return escaped;
+    }
+
+    var result = GetImplicitStringConvertion(whereParams.Value.GetType());
+    if(result != null)
+    {
+      return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+    }
+
+    var jsonSerializer = conventions.CreateSerializer();
+    var ravenJTokenWriter = new RavenJTokenWriter();
+    jsonSerializer.Serialize(ravenJTokenWriter, whereParams.Value);
+    var term = ravenJTokenWriter.Token.ToString(Formatting.None);
+    if(term.Length > 1 && term[0] == '"' && term[term.Length-1] == '"')
+    {
+      term = term.Substring(1, term.Length - 2);
+    }
+    switch (ravenJTokenWriter.Token.Type)
+    {
+      case JTokenType.Object:
+      case JTokenType.Array:
+        return "[[" + RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, false) + "]]";
+
+      default:
+        return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+    }
+  }
+
+  private Function1<Object, String> getImplicitStringConvertion(Class<?> type) {
+    if(type == null)
+      return null;
+
+    Func<object, string> value;
+    var localStringsCache = implicitStringsCache;
+    if(localStringsCache.TryGetValue(type,out value))
+      return value;
+
+    var methodInfo = type.GetMethod("op_Implicit", new[] {type});
+
+    if (methodInfo == null || methodInfo.ReturnType != typeof(string))
+    {
+      implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
+      {
+        {type, null}
+      };
+      return null;
+    }
+
+    var arg = Expression.Parameter(typeof(object), "self");
+
+    var func = (Func<object, string>) Expression.Lambda(Expression.Call(methodInfo, Expression.Convert(arg, type)), arg).Compile();
+
+    implicitStringsCache = new Dictionary<Type, Func<object, string>>(localStringsCache)
+      {
+        {type, func}
+      };
+    return func;
+  }
+
+  private String transformToRangeValue(WhereParams whereParams) {
+    if (whereParams.getValue() == null) {
+      return Constants.NULL_VALUE_NOT_ANALYZED;
+    }
+    if ("".equals(whereParams.getValue())) {
+      return Constants.EMPTY_STRING_NOT_ANALYZED;
+    }
+/*TODO:
+    if (whereParams.Value is DateTime)
+    {
+      var dateTime = (DateTime) whereParams.Value;
+      var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite);
+      if(dateTime.Kind == DateTimeKind.Utc)
+        dateStr += "Z";
+      return dateStr;
+    }
+    if (whereParams.Value is DateTimeOffset)
+      return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
+*/
+    if (Constants.DOCUMENT_ID_FIELD_NAME.equals(whereParams.getFieldName()) && !(whereParams.getValue() instanceof String))  {
+      return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(), clazz, false);
+    }
+    if (whereParams.getValue() instanceof Integer) {
+      return NumberUtil.numberToString((Integer)whereParams.getValue());
+    }
+    if (whereParams.getValue() instanceof Long) {
+      return NumberUtil.numberToString((Long) whereParams.getValue());
+    }
+    if (whereParams.getValue() instanceof Double) {
+      return NumberUtil.numberToString((Double) whereParams.getValue());
+    }
+    /*TODO
+    if (whereParams.Value is TimeSpan)
+      return NumberUtil.NumberToString(((TimeSpan) whereParams.Value).Ticks);
+      */
+    if (whereParams.getValue() instanceof Float) {
+      return NumberUtil.numberToString((Float) whereParams.getValue());
+    }
+    if (whereParams.getValue() instanceof String) {
+      return RavenQuery.escape(whereParams.getValue().toString(), false, true);
+    }
+
+    string strVal;
+    if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Range,
+                                            out strVal))
+      return strVal;
+
+    if(whereParams.Value is ValueType)
+      return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+                   false, true);
+
+    var stringWriter = new StringWriter();
+    conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
+
+    var sb = stringWriter.GetStringBuilder();
+    if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
+    {
+      sb.Remove(sb.Length - 1, 1);
+      sb.Remove(0, 1);
+    }
+
+    return RavenQuery.Escape(sb.ToString(), false, true);
+  }
+
+  /**
+   * Returns a {@link String} that represents the query for this instance.
+   */
+  public String toString() {
+    if (currentClauseDepth != 0) {
+      throw new IllegalStateException("A clause was not closed correctly within this query, current clause depth = " + currentClauseDepth);
+    }
+
+    return queryText.toString().trim();
+  }
+
+  /**
+   * The last term that we asked the query to use equals on
+   */
+  public Tuple<String, String> getLastEqualityTerm() {
+    return lastEquality;
+  }
+
+  public void intersect() {
+    queryText.append(Constants.INTERSECT_SEPARATOR);
+  }
+
+  public void addRootType(Class<T> type) {
+    rootTypes.add(type);
+  }
+
+  public String getMemberQueryPathForOrderBy(Expression<?> expression) {
+    String memberQueryPath = getMemberQueryPath(expression);
+    var memberExpression = linqPathProvider.getMemberExpression(expression);
+    if (DocumentConvention.UsesRangeType(memberExpression.Type))
+      return memberQueryPath + "_Range";
+    return memberQueryPath;
+  }
+
+  public String getMemberQueryPath(Expression<?> expression)
+  {
+    var result = linqPathProvider.getPath(expression);
+    result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+
+    if (expression.NodeType == ExpressionType.ArrayLength)
+      result.Path += ".Length";
+
+    var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+      ? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
+      : conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
+    return propertyName;
+  }
 
 }
