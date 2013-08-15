@@ -440,7 +440,6 @@ namespace Raven.Studio.Models
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
 	        AvailableIndexes = new BindableCollection<string>(x => x);
-
 		    SpatialQuery = new SpatialQueryModel {IndexName = indexName};
 		}
 
@@ -491,6 +490,11 @@ namespace Raven.Studio.Models
 
 		public void ClearQueryError()
 		{
+			if (Database.Value.Statistics.Value.Errors.Any(error => error.Index == IndexName))
+			{
+				QueryErrorMessage.Value = "The index " + IndexName + " has errors";
+				return;
+			}
 			QueryErrorMessage.Value = string.Empty;
 			IsErrorVisible.Value = false;
 		}
@@ -551,7 +555,13 @@ namespace Raven.Studio.Models
 
             IndexName = newIndexName;
 
-            DatabaseCommands.GetIndexAsync(IndexName)
+	        if (Database.Value.Statistics.Value.Errors.Any(error => error.Index == IndexName))
+	        {
+		        QueryErrorMessage.Value = "The index " + IndexName + " has errors";
+		        IsErrorVisible.Value = true;
+	        }
+
+	        DatabaseCommands.GetIndexAsync(IndexName)
                 .ContinueOnUIThread(task =>
                 {
                     if (task.IsFaulted || task.Result == null)

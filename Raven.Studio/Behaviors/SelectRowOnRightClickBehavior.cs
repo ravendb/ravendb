@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interactivity;
 using System.Windows.Media;
+using System.Linq;
 
 namespace Raven.Studio.Behaviors
 {
@@ -29,7 +30,10 @@ namespace Raven.Studio.Behaviors
             var row = elementsUnderMouse
                 .OfType<DataGridRow>()
                 .FirstOrDefault();
-
+	        if (AssociatedObject.SelectedItems.Cast<object>().Any(selectedItem => selectedItem == row.DataContext))
+	        {
+		        return;
+	        }
             AssociatedObject.SelectedItem = row != null ? row.DataContext : null;
         }
     }
