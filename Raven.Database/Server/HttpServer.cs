@@ -977,7 +977,7 @@ namespace Raven.Database.Server
 
 		private static void OutputDatabaseOpenFailure(IHttpContext ctx, string tenantId, Exception e)
 		{
-			var msg = "Could open database named: " + tenantId;
+			var msg = "Could not open database named: " + tenantId;
 			logger.WarnException(msg, e);
 			ctx.SetStatusToNotAvailable();
 			ctx.WriteJson(new
