@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
@@ -18,21 +19,41 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			var deleteItems = parameter as string;
-			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure that you want to delete all " + deleteItems + " indexes?"))
-				.ContinueWhenTrue(() => DeleteIndex(deleteItems));
+			var group = parameter as IndexGroup;
+			if (group != null)
+			{
+				var ravenDocumentsByEntityNameIndexName = new RavenDocumentsByEntityName().IndexName;
+				AskUser.ConfirmationAsync("Confirm Delete",
+					string.Format("Are you sure that you want to delete all indexes in the group {0}?", group.GroupName))
+					.ContinueWhenTrue(() => DeleteIndexes(group.Indexes.Select(item => item.Name).Where(indexName => indexName != ravenDocumentsByEntityNameIndexName)));
+			}
+			else
+			{
+
+				var deleteItems = parameter as string;
+				AskUser.ConfirmationAsync("Confirm Delete",
+					string.Format("Are you sure that you want to delete all " + deleteItems + " indexes?"))
+					.ContinueWhenTrue(() => DeleteIndex(deleteItems));
+			}
 		}
 
 		private void DeleteIndex(string deleteItems)
 		{
 			var ravenDocumentsByEntityNameIndexName = new RavenDocumentsByEntityName().IndexName;
-			var tasks = (from indexListItem in model.IndexesOfPriority(deleteItems)
-			             select indexListItem.Name
-			             into indexName
-			             where indexName != ravenDocumentsByEntityNameIndexName
-			             select new {Task = DatabaseCommands.DeleteIndexAsync(indexName), Name = indexName}).ToArray();
+			var indexes = (from indexListItem in model.IndexesOfPriority(deleteItems)
+				where indexListItem.Name != ravenDocumentsByEntityNameIndexName
+				select indexListItem.Name);
+				
 			
-			Task.Factory.ContinueWhenAll(tasks.Select(x=>x.Task).ToArray(), taskslist =>
+			DeleteIndexes(indexes);
+		}
+
+		private void DeleteIndexes(IEnumerable<string> indexes)
+		{
+			var tasks = (from index in indexes
+						 select new { Task = DatabaseCommands.DeleteIndexAsync(index), Name = index }).ToArray();
+
+			Task.Factory.ContinueWhenAll(tasks.Select(x => x.Task).ToArray(), taskslist =>
 			{
 				foreach (var task in taskslist)
 				{

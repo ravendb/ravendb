@@ -6,6 +6,7 @@ using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Commands;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
@@ -13,11 +14,18 @@ namespace Raven.Studio.Models
 	{
 		public string GroupName { get; set; }
 		public List<IndexItem> Indexes { get; set; }
+		public Observable<bool> Collapse { get; set; }
+
+		public ICommand ChangeCollapse
+		{
+			get { return new ActionCommand(() => Collapse.Value = !Collapse.Value); }
+		}
 
 		public IndexGroup(string groupName)
 		{
 			GroupName = groupName;
 			Indexes = new List<IndexItem>();
+			Collapse = new Observable<bool>();
 		}
 	}
 	public class IndexItem
