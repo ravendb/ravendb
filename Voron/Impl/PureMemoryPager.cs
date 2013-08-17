@@ -16,6 +16,7 @@ namespace Voron.Impl
 			_ptr = Marshal.AllocHGlobal(MinIncreaseSize);
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = _allocatedSize / PageSize;
+            PagerState.Release();
 			PagerState = new PagerState
 				{
 					Ptr = _ptr
