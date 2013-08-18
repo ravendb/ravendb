@@ -21,6 +21,11 @@ namespace Raven.Studio.Models
 			get { return new ActionCommand(() => Collapse.Value = !Collapse.Value); }
 		}
 
+		public string ModifiedGroupName
+		{
+			get { return string.Format("{0} ({1})", GroupName, Indexes.Count); }
+		}
+
 		public IndexGroup(string groupName)
 		{
 			GroupName = groupName;
