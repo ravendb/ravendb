@@ -26,8 +26,6 @@ namespace Raven.Tests.Linq
 
 				store.ExecuteIndex(new Index());
 
-				WaitForUserToContinueTheTest(store);
-
 				using (var session = store.OpenSession())
 				{
 					var item = session.Query<Index.Result, Index>()
