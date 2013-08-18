@@ -73,7 +73,7 @@ namespace Raven.Database.Server.Responders.Admin
             }
 
 
-			var ravenConfiguration = new RavenConfiguration()
+			var ravenConfiguration = new RavenConfiguration
 			{
 				DatabaseName = databaseName,
 				IsTenantDatabase = true
@@ -126,6 +126,7 @@ namespace Raven.Database.Server.Responders.Admin
 					
 				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
 				databaseDocument.Id = databaseName;
+				server.Protect(databaseDocument);
 				SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
 				                   new RavenJObject(), null);
 

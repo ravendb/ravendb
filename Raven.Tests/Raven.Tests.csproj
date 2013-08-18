@@ -536,6 +536,7 @@
     <Compile Include="Bugs\TimeSpanIndexing.cs" />
     <Compile Include="Bugs\WhereInShouldBeBoostedCorrectly.cs" />
     <Compile Include="Bugs\TransformResults\Answers_ByQuestion_NoTransformResults.cs" />
+    <Compile Include="Bundles\Encryption\EncryptionBackupAndRestore.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTests.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />

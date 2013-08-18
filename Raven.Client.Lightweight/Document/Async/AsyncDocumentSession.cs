@@ -353,6 +353,9 @@ namespace Raven.Client.Document.Async
 				return AsyncDatabaseCommands.GetAsync(id)
 											.ContinueWith(task =>
 											{
+												if (task.IsFaulted)
+													task.Wait(); // will throw.
+
 												if (loadOperation.SetResult(task.Result) == false)
 													return Task.Factory.StartNew(() => loadOperation.Complete<T>());
 
