@@ -302,9 +302,10 @@
 									Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToVisibility}}">
 								<Image Source="{StaticResource Image_Expand_Tiny}"/>
 							</Button>
-							<TextBlock Text="{Binding ModifiedGroupName}"
+							<TextBlock Text="{Binding GroupName}"
 								   Style="{StaticResource Style_TextBlock_GroupHeader}"
 								   VerticalAlignment="Center" />
+							<TextBlock Text="{Binding IndexCount}" VerticalAlignment="Center"/>
 							<TextBlock Text="..."
 								   VerticalAlignment="Center"
 									   Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToVisibility}}"/>
