@@ -302,6 +302,23 @@ namespace Raven.Tests.Helpers
 			Assert.True(done);
 		}
 
+		protected void WaitForRestore(IDatabaseCommands databaseCommands)
+		{
+			var done = SpinWait.SpinUntil(() =>
+			{
+				var doc = databaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
+
+				if (doc == null)
+					return false;
+
+				var status = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
+
+				return status.Last().Contains("The new database was created");
+			}, TimeSpan.FromMinutes(5));
+
+			Assert.True(done);
+		}
+
 		public static void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)
 		{
 			if (debug && Debugger.IsAttached == false)
