@@ -449,13 +449,15 @@ more responsive application.
 			var defaultValue = GetDefaultValue(entityType);
 			var entity = defaultValue;
 			EnsureNotReadVetoed(metadata);
+
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
 				var type = Type.GetType(documentType);
-				if (type != null)
+				if (type != null && entityType.IsAssignableFrom(type))
 					entity = documentFound.Deserialize(type, Conventions);
 			}
+
 			if (Equals(entity, defaultValue))
 			{
 				entity = documentFound.Deserialize(entityType, Conventions);

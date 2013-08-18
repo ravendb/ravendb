@@ -221,6 +221,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\Nullable.cs" />
+    <Compile Include="Bugs\ProjectionPersistenceTest.cs" />
     <Compile Include="Bugs\WhenUsingDtcWeMustMakeSureToUpdateTheIndexingAboutNewWorkSoWeWontHaveInfiniteStaleIndexes.cs" />
     <Compile Include="Bugs\CompiledIndexesNhsevidence.cs" />
     <Compile Include="Bugs\ComplexIndexes.cs" />
