@@ -177,10 +177,33 @@ namespace Raven.Database.Commercial
 		{
 			string version;
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+			{
+				if (licenseValidator.LicenseType != LicenseType.Subscription)
+					throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
 
-			if(version != "1.2" && version != "2.0")
-				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+				// Add backward compatibility for the subscription licenses of v1
+				licenseAttributes.Add("version", "2.0");
+				licenseAttributes.Add("implicit20StandardLicenseBy10Subscription", "true");
+				licenseAttributes.Add("allowWindowsClustering", "false");
+				licenseAttributes.Add("OEM", "false");
+				licenseAttributes.Add("numberOfDatabases", "unlimited");
+				licenseAttributes.Add("maxRamUtilization", "12884901888");
+				licenseAttributes.Add("maxParallelism", "6");
+				licenseAttributes.Add("periodicBackup", "true");
+				licenseAttributes.Add("encryption", "false");
+				licenseAttributes.Add("compression", "false");
+				licenseAttributes.Add("quotas", "false");
+				licenseAttributes.Add("authorization", "true");
+				licenseAttributes.Add("documentExpiration", "true");
+				licenseAttributes.Add("replication", "true");
+				licenseAttributes.Add("versioning", "true");
+				licenseAttributes.Add("maxSizeInMb", "unlimited");
+			}
+			else
+			{
+				if (version != "1.2" && version != "2.0")
+					throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+			}
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))
