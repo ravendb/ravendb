@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Xunit;
 
@@ -8,51 +9,24 @@ namespace Voron.Tests.Trees
 	{
 
 		[Fact]
-		public void CanAddVeryLargeValue()
-		{
-			var random = new Random();
-			var buffer = new byte[8192];
-			random.NextBytes(buffer);
+        public void CanAddVeryLargeValue()
+        {
+            var random = new Random();
+            var buffer = new byte[8192];
+            random.NextBytes(buffer);
 
+            List<long> allPages = null;
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.Root.Add(tx, "a", new MemoryStream(buffer));
+            {
+                Env.Root.Add(tx, "a", new MemoryStream(buffer));
+                allPages = Env.Root.AllPages(tx);
+                tx.Commit();
+            }
 
-				tx.Commit();
-			}
-
+            Assert.Equal(Env.Root.State.PageCount, allPages.Count);
             Assert.Equal(4, Env.Root.State.PageCount);
             Assert.Equal(3, Env.Root.State.OverflowPages);
-		}
-
-
-		[Fact]
-		public void CanReadLargeValue()
-		{
-			var random = new Random();
-			var buffer = new byte[8192];
-			random.NextBytes(buffer);
-
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.Root.Add(tx, "a", new MemoryStream(buffer));
-
-				tx.Commit();
-			}
-
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				using (var stream = Env.Root.Read(tx, "a"))
-				{
-					var memoryStream = new MemoryStream();
-					stream.CopyTo(memoryStream);
-					memoryStream.Position = 0;
-					Assert.Equal(memoryStream.ToArray(), buffer);
-				}
-			}
-
-
-		}
+        }
 
 		[Fact]
 		public void CanAdd()
