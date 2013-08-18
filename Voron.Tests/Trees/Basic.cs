@@ -20,6 +20,7 @@ namespace Voron.Tests.Trees
             {
                 Env.Root.Add(tx, "a", new MemoryStream(buffer));
                 allPages = Env.Root.AllPages(tx);
+                RenderAndShow(tx, 1);
                 tx.Commit();
             }
 

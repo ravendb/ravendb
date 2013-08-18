@@ -39,7 +39,7 @@
             {
                 _state.LeafPages++;
             }
-            else if (flags == (PageFlags.Overlfow))
+            else if (flags == (PageFlags.Overflow))
             {
                 _state.OverflowPages += num;
             }

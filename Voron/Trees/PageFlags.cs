@@ -4,7 +4,7 @@
 	{
 		Branch = 1,
 		Leaf = 2,
-		Overlfow = 3,
+		Overflow = 3,
 		Meta = 4,
 	}
 }

@@ -125,9 +125,9 @@ namespace Voron.Trees
             get { return _header->Flags==(PageFlags.Branch); }
         }
 
-		public bool IsOverlfow
+		public bool IsOverflow
 		{
-			get { return _header->Flags==(PageFlags.Overlfow); }
+			get { return _header->Flags==(PageFlags.Overflow); }
 		}
 
         public ushort NumberOfEntries

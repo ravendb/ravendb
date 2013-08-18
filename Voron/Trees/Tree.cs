@@ -132,7 +132,7 @@ namespace Voron.Trees
 			var numberOfPages = GetNumberOfOverflowPages(tx, overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
 			overflowPageStart.OverflowSize = numberOfPages;
-			overflowPageStart.Flags = PageFlags.Overlfow;
+			overflowPageStart.Flags = PageFlags.Overflow;
 			overflowPageStart.OverflowSize = overflowSize;
 			dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
 			txInfo.State.OverflowPages += numberOfPages;
@@ -354,12 +354,21 @@ namespace Voron.Trees
 			{
 				var p = stack.Pop();
 				results.Add(p.PageNumber);
-				if (p.IsBranch == false)
-					continue;
 				for (int i = 0; i < p.NumberOfEntries; i++)
 				{
-					var page = p.GetNode(i)->PageNumber;
-					stack.Push(tx.GetReadOnlyPage(page));
+				    var pageNumber = p.GetNode(i)->PageNumber;
+				    if (p.IsBranch)
+				    {
+				        stack.Push(tx.GetReadOnlyPage(pageNumber));
+				    }
+				    else
+				    {
+				        // This is an overflow page
+                        var overflowPage = tx.GetReadOnlyPage(pageNumber);
+                        var numberOfPages = GetNumberOfOverflowPages(tx, overflowPage.OverflowSize);
+				        for (long j = 0; j < numberOfPages; ++j)
+				            results.Add(overflowPage.PageNumber + j);
+				    }
 				}
 			}
 			return results;
