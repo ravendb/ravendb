@@ -1491,7 +1491,7 @@ namespace Raven.Client.Indexes
 					case "ElementAt":
 						Out("ElementAtOrDefault");
 						break;
-					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).FullName)
+					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
 					case "OfType":
 						Out("Where");
 						break;
@@ -1526,10 +1526,11 @@ namespace Raven.Client.Indexes
 					}
 					Visit(node.Arguments[num2]);
 
-					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).FullName)
+					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
 					if (node.Method.Name == "OfType")
 					{
-						var typeFullName = node.Method.GetGenericArguments()[0].FullName;
+						var type = node.Method.GetGenericArguments()[0];
+						var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
 						Out(", (Func<dynamic, bool>)(_itemRaven => string.Equals(_itemRaven[\"$type\"], \"");
 						Out(typeFullName);
 						Out("\", StringComparison.Ordinal))");
