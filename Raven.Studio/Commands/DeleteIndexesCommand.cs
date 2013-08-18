@@ -19,7 +19,7 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			var group = parameter as IndexGroup;
+			var group = model.SelectedGroup;
 			if (group != null)
 			{
 				var ravenDocumentsByEntityNameIndexName = new RavenDocumentsByEntityName().IndexName;

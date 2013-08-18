@@ -3,15 +3,12 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
 			 xmlns:Models="clr-namespace:Raven.Studio.Models"
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
 			 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
              xmlns:Delay="clr-namespace:Delay" 
-			 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
-			 xmlns:generic="clr-namespace:System.Collections.Generic;assembly=mscorlib"
 			 mc:Ignorable="d"
 			 x:Name="this"
 			 x:Class="Raven.Studio.Features.Indexes.IndexesListView"
@@ -25,7 +22,10 @@
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*" />
 					</Grid.ColumnDefinitions>
-					<Border BorderThickness="1"
+				<Rectangle Fill="Transparent"/>
+				<!--this is for the Item selection-->
+
+				<Border BorderThickness="1"
 							Margin="0"
 							CornerRadius="4">
 						<Border.Effect>
@@ -223,7 +223,39 @@
 							</HyperlinkButton.Content>
 						</HyperlinkButton>
 
-                        <Controls1:RecentQueriesButton VerticalAlignment="Center"/>
+						<Controls1:RecentQueriesButton VerticalAlignment="Center"/>
+						
+						<HyperlinkButton Command="{Binding CollapseAll}"
+										 CommandParameter="/query?mode=dynamic"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_Expand_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Collapse All Groups"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+
+						<HyperlinkButton Command="{Binding ExpandAll}"
+										 CommandParameter="/query?mode=dynamic"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Expand All Groups"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
 
 						<Delay:SplitButton Command="{Binding DeleteIndexes}"
 										   CommandParameter="Idle"
@@ -260,7 +292,8 @@
 							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
-						<StackPanel Orientation="Horizontal">
+						<Rectangle Fill="Transparent"/> <!--this is for the Item selection--> 
+						<StackPanel Grid.Row="0" Orientation="Horizontal">
 							<Button Command="{Binding ChangeCollapse}" Style="{StaticResource Style_Button_MouseOverChrome}" 
 									Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}">
 								<Image Source="{StaticResource Image_ToggleExpansion_Tiny}"/>
@@ -280,18 +313,19 @@
 						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_Indexes}"
 								 Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
 								 ItemsSource="{Binding Indexes}"
+								 SelectedItem="{Binding DataContext.ItemSelection, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}, Mode=TwoWay}"
 								 ItemTemplate="{StaticResource IndexItemTemplate}">
 							<i:Interaction.Behaviors>
 								<Behaviors:SelectItemOnRightClick/>
-								<Behaviors:BindSelectedItemsBehavior Target="{Binding DataContext.ItemSelection, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}}"/>
+								<!--<Behaviors:BindSelectedItemsBehavior Target="{Binding DataContext.ItemSelection, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}}"/>-->
 							</i:Interaction.Behaviors>
 
 							<ContextMenu:ContextMenuService.ContextMenu>
 								<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
 									<ContextMenu:MenuItem Header="Delete index"
-                                          Command="{Binding DataContext.DeleteIndex, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}}"/>
+                                          Command="{Binding DataContext.DeleteIndex, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
 									<ContextMenu:MenuItem Header="Reset index"
-                                          Command="{Binding DataContext.ResetIndex, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}}"/>
+                                          Command="{Binding DataContext.ResetIndex, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
 								</ContextMenu:ContextMenu>
 							</ContextMenu:ContextMenuService.ContextMenu>
 						</ListBox>

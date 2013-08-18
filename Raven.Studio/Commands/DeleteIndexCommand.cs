@@ -6,28 +6,19 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class DeleteIndexCommand : ItemSelectionCommand<IndexItem>
+	public class DeleteIndexCommand : Command
 	{
 	    private readonly IndexesModel model;
 
-	    public DeleteIndexCommand(IndexesModel model) : base(model.ItemSelection)
+	    public DeleteIndexCommand(IndexesModel model)
 	    {
 	        this.model = model;
 	    }
 
-        protected override bool CanExecuteOverride(IEnumerable<IndexItem> items)
-        {
-            return items.Any();
-        }
-
-	    protected override void ExecuteOverride(IEnumerable<IndexItem> items)
-        {
-            var index = items
-				.Select(x => x.Name)
-				.FirstOrDefault();
-
-			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure that you want to delete this index? ({0})", index))
-				.ContinueWhenTrue(() => DeleteIndex(index));
+		public override void Execute(object parameter)
+		{
+			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure that you want to delete this index? ({0})", model.ItemSelection.Name))
+				.ContinueWhenTrue(() => DeleteIndex(model.ItemSelection.Name));
 		}
 
 		private void DeleteIndex(string indexName)

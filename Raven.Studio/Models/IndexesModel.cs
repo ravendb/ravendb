@@ -16,7 +16,7 @@ namespace Raven.Studio.Models
 	{
 		private ICommand deleteIndex;
 		private ICommand resetIndex;
-		private ItemSelection<IndexItem> itemSelection;
+		private IndexItem itemSelection;
 		private IndexGroup selectedGroup;
 		public ObservableCollection<IndexItem> Indexes { get; private set; }
 		public ObservableCollection<IndexGroup> GroupedIndexes { get; private set; }
@@ -29,7 +29,6 @@ namespace Raven.Studio.Models
 																	   "/indexes";
 			Indexes = new ObservableCollection<IndexItem>();
 			GroupedIndexes = new ObservableCollection<IndexGroup>();
-			ItemSelection = new ItemSelection<IndexItem>();
 		}
 
 		public override Task TimerTickedAsync()
@@ -39,10 +38,15 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccessInTheUIThread(UpdateGroupedIndexList);
 		}
 
-		public ItemSelection<IndexItem> ItemSelection
+		public IndexItem ItemSelection
 		{
 			get { return itemSelection; }
-			private set { itemSelection = value; }
+			set
+			{
+				if(value == null)
+					return;
+				itemSelection = value;
+			}
 		}
 
 		public ICommand DeleteIndex { get { return deleteIndex ?? (deleteIndex = new DeleteIndexCommand(this)); } }
@@ -56,16 +60,45 @@ namespace Raven.Studio.Models
 
 		public IndexGroup SelectedGroup
 		{
-			get { return selectedGroup ?? GroupedIndexes.First(); }
-			set { selectedGroup = value; }
+			get { return selectedGroup; }
+			set
+			{
+				if (value == null)
+					return;
+				selectedGroup = value;
+			}
 		}
 
+		public ICommand CollapseAll
+		{
+			get { return new ActionCommand(() =>
+			{
+				foreach (var groupedIndex in GroupedIndexes)
+				{
+					groupedIndex.Collapse.Value = true;
+				}
+			});}
+		}
+
+		public ICommand ExpandAll
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					foreach (var groupedIndex in GroupedIndexes)
+					{
+						groupedIndex.Collapse.Value = false;
+					}
+				});
+			}
+		}
 
 		private void UpdateGroupedIndexList(DatabaseStatistics statistics)
 		{
 			Indexes.Clear();
 			Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem{Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats}));
-			var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
+			//var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
 
 			CleanGroupIndexes();
 			foreach (var indexItem in Indexes)
@@ -80,11 +113,11 @@ namespace Raven.Studio.Models
 				groupItem.Indexes.Add(indexItem);
 			}
 
-			//GroupedIndexes.AddRange(groups.OrderBy(@group => group.GroupName));
+			GroupedIndexes = new ObservableCollection<IndexGroup>(GroupedIndexes.OrderBy(@group => group.GroupName));
 
-			var selection = GroupedIndexes.OfType<IndexItem>().Where(i => currentSelection.Contains(i.Name));
+		//	var selection = GroupedIndexes.OfType<IndexItem>().Where(i => currentSelection.Contains(i.Name));
 
-			ItemSelection.SetDesiredSelection(selection);
+			//ItemSelection.SetDesiredSelection(selection);
 			OnPropertyChanged(() => GroupedIndexes);
 		}
 
