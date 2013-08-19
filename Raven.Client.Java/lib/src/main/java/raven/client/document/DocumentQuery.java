@@ -336,9 +336,45 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     return spatial(getMemberQueryPath(path), clause);
   }
 
+  @Override
+  public IDocumentQuery<T> whereIn(String fieldName, Collection<Object> values) {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-  //TODO: toString
-  //TODO: getEnumarator
+  @Override
+  public T first() {
+    pageSize = 1;
+    List<T> list = toList();
+    if (list.isEmpty()) {
+      return null;
+    } else {
+      return list.get(0);
+    }
+  }
 
+  @Override
+  public List<T> toList() {
+
+    initSync();
+    while (true) {
+      try {
+        return queryOperation.complete(clazz);
+      } catch (Exception e) {
+        if (!queryOperation.shouldQueryAgain(e)) {
+          throw e;
+        }
+        executeActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
+      }
+    }
+  }
+
+  public String toString() {
+    String query = super.toString();
+    if (isSpatialQuery) {
+      return String.format("%s SpatialField: %s QueryShape: %s Relation: %s", query, spatialFieldName, queryShape, spatialRelation);
+    }
+    return query;
+  }
 
 }

@@ -194,7 +194,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * What aggregated operation to execute
    */
-  protected AggregationOperation aggregationOp;
+  protected AggregationOperation aggregationOp = AggregationOperation.NONE;
 
   /**
    * Fields to group on
@@ -466,19 +466,17 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if (beforeQueryExecutionAction != null) {
       beforeQueryExecutionAction.apply(indexQuery);
     }
-    /*TODO
     return new QueryOperation(theSession,
-                  indexName,
-                  indexQuery,
-                  projectionFields,
-                  sortByHints,
-                  theWaitForNonStaleResults,
-                  setOperationHeaders,
-                  timeout,
-                  transformResultsFunc,
-                  includes,
-                  disableEntitiesTracking); */
-    return null; //TODO: delete me
+        indexName,
+        indexQuery,
+        projectionFields,
+        sortByHints,
+        theWaitForNonStaleResults,
+        setOperationHeaders,
+        timeout,
+        transformResultsFunc,
+        includes,
+        disableEntitiesTracking);
   }
 
   public IndexQuery getIndexQuery() {
@@ -538,21 +536,20 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   protected void executeActualQuery() {
-    /*TODO
     while (true) {
-      using (queryOperation.EnterQueryContext())
-      {
-        queryOperation.LogQuery();
-        var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
-        if (queryOperation.IsAcceptable(result) == false)
-        {
-          ThreadSleep.Sleep(100);
+      try (AutoCloseable context = queryOperation.enterQueryContext()) {
+        queryOperation.logQuery();
+        QueryResult result = getDatabaseCommands().query(indexName, queryOperation.getIndexQuery(), includes.toArray(new String[0]));
+        if (!queryOperation.isAcceptable(result)) {
+          Thread.sleep(100);
           continue;
         }
         break;
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
     }
-    invokeAfterQueryExecuted(queryOperation.CurrentQueryResults); */
+    invokeAfterQueryExecuted(queryOperation.getCurrentQueryResults());
   }
 
   /**
@@ -1523,7 +1520,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if ("".equals(whereParams.getValue())) {
       return Constants.EMPTY_STRING_NOT_ANALYZED;
     }
-/*TODO:
+    /*TODO:
     if (whereParams.Value is DateTime)
     {
       var dateTime = (DateTime) whereParams.Value;
@@ -1534,7 +1531,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     }
     if (whereParams.Value is DateTimeOffset)
       return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
-*/
+     */
     if (Constants.DOCUMENT_ID_FIELD_NAME.equals(whereParams.getFieldName()) && !(whereParams.getValue() instanceof String))  {
       return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(), clazz, false);
     }
@@ -1550,7 +1547,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     /*TODO
     if (whereParams.Value is TimeSpan)
       return NumberUtil.NumberToString(((TimeSpan) whereParams.Value).Ticks);
-      */
+     */
     if (whereParams.getValue() instanceof Float) {
       return NumberUtil.numberToString((Float) whereParams.getValue());
     }
@@ -1634,7 +1631,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   public String getMemberQueryPath(Expression< ? > expression) {
-/*TODO:
+    /*TODO:
     var result = linqPathProvider.getPath(expression);
     result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
 

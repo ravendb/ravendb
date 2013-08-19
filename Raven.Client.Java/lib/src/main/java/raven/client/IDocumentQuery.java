@@ -104,4 +104,16 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    */
   public FacetResults getFacets(List<Facet> facets, int facetStart, Integer facetPageSize);
 
+  /**
+   * Returns first result
+   * @return
+   */
+  public T first();
+
+  /**
+   * Materialize query, executes request and returns with results
+   * @return
+   */
+  public List<T> toList();
+
 }

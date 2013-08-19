@@ -4,7 +4,7 @@ public class User {
   private String id;
   private String name;
   private String partnerId;
-  private String emial;
+  private String email;
   private String[] tags;
   private int age;
 
@@ -16,6 +16,16 @@ public class User {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+
+
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
   }
 
   public String getName() {
@@ -32,14 +42,6 @@ public class User {
 
   public void setPartnerId(String partnerId) {
     this.partnerId = partnerId;
-  }
-
-  public String getEmial() {
-    return emial;
-  }
-
-  public void setEmial(String emial) {
-    this.emial = emial;
   }
 
   public String[] getTags() {
