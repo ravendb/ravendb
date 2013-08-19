@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Text.RegularExpressions;
 #if !SILVERLIGHT && !NETFX_CORE
 using System.Transactions;
 #endif
@@ -355,25 +354,16 @@ more responsive application.
 		/// <returns></returns>
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
+			var entity = TrackEntity(typeof (T), key, document, metadata, noTracking);
 			try
 			{
-				return (T)TrackEntity(typeof(T), key, document, metadata, noTracking);
+				return (T) entity;
 			}
 			catch (InvalidCastException e)
 			{
-				var regex = new Regex(@"Unable to cast object of type '(?<Expected>[^']+)' to type '(?<Actual>[^']+)'");
-				var match = regex.Match(e.Message);
-				string message;
-				var actual = typeof(T).Name;
-				if (match.Success)
-				{
-					var expected = match.Groups["Expected"].Value;
-					message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. If you want to return a projection, you should use .AsProjection<{1}>() before calling to .ToList().", expected, actual);
-				}
-				else
-				{
-					message = string.Format("{0}. If you want a projection, you should use .AsProjection<{1}>() before calling to .ToList().", e.Message, actual);
-				}
+				var actual = typeof (T).Name;
+				var expected = entity.GetType().Name;
+				var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. If you want to return a projection, you should use .AsProjection<{1}>() before calling to .ToList().", expected, actual);
 				throw new InvalidOperationException(message, e);
 			}
 		}
