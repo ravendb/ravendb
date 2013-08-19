@@ -178,7 +178,9 @@ namespace Raven.Database.Server.Responders
 		{
 			public MultiGetHttpRequest(GetRequest req, IHttpRequest realRequest)
 			{
-			    QueryString = HttpUtility.ParseQueryString(req.Query ?? string.Empty);
+                QueryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(
+                                                    req.Headers[Constants.RavenClientVersion], 
+                                                    req.Query ?? string.Empty);
 				Url = new UriBuilder(realRequest.Url)
 				{
 					Query = req.Query,
