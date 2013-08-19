@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -98,12 +99,11 @@ namespace Raven.Studio.Models
 		{
 			Indexes.Clear();
 			Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem{Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats}));
-			//var currentSelection = ItemSelection.GetSelectedItems().Select(i => i.Name).ToHashSet();
-
+			
 			CleanGroupIndexes();
 			foreach (var indexItem in Indexes)
 			{
-				var groupItem = GroupedIndexes.FirstOrDefault(@group => group.GroupName == indexItem.GroupName);
+				var groupItem = GroupedIndexes.FirstOrDefault(@group => string.Equals(@group.GroupName, indexItem.GroupName, StringComparison.OrdinalIgnoreCase));
 				if (groupItem == null)
 				{
 					groupItem = new IndexGroup(indexItem.GroupName);
@@ -115,9 +115,6 @@ namespace Raven.Studio.Models
 
 			GroupedIndexes = new ObservableCollection<IndexGroup>(GroupedIndexes.OrderBy(@group => group.GroupName));
 
-		//	var selection = GroupedIndexes.OfType<IndexItem>().Where(i => currentSelection.Contains(i.Name));
-
-			//ItemSelection.SetDesiredSelection(selection);
 			OnPropertyChanged(() => GroupedIndexes);
 		}
 

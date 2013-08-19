@@ -42,16 +42,17 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
+				var name = Name + " (" + IndexStats.DocsCount + ")";
 				if (IndexStats.Priority.HasFlag(IndexingPriority.Abandoned))
-					return Name + " (abandoned)";
+					return name + " (abandoned)";
 
 				if (IndexStats.Priority.HasFlag(IndexingPriority.Idle))
-					return Name + " (idle)";
+					return name + " (idle)";
 
 				if (IndexStats.Priority.HasFlag(IndexingPriority.Disabled))
-					return Name + " (disabled)";
+					return name + " (disabled)";
 
-				return Name;
+				return name;
 			}
 		}
 

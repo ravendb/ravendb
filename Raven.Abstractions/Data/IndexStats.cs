@@ -32,6 +32,7 @@ namespace Raven.Abstractions.Data
 		public List<string> ForEntityName { get; set; } 
 
 		public IndexingPerformanceStats[] Performance { get; set; }
+		public int DocsCount { get; set; }
 
 		public override string ToString()
 		{

@@ -306,9 +306,6 @@
 								   Style="{StaticResource Style_TextBlock_GroupHeader}"
 								   VerticalAlignment="Center" />
 							<TextBlock Text="{Binding IndexCount}" VerticalAlignment="Center"/>
-							<TextBlock Text="..."
-								   VerticalAlignment="Center"
-									   Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToVisibility}}"/>
 						</StackPanel>
 						
 						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_Indexes}"
