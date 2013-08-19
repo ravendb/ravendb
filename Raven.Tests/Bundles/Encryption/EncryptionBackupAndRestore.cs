@@ -47,6 +47,7 @@ namespace Raven.Tests.Bundles.Encryption
 
 				await store.AsyncDatabaseCommands.StartRestoreAsync(backupFolderDb1, @"~\Databases\Db2", "Db2");
 				WaitForRestore(store.DatabaseCommands);
+				WaitForDocument(store.DatabaseCommands, "Raven/Databases/Db2");
 
 				using (var session = store.OpenAsyncSession())
 				{

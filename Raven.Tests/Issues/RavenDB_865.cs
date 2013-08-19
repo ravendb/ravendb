@@ -33,6 +33,7 @@ namespace Raven.Tests.Issues
 
 				// get restore status and wait for finish
 				WaitForRestore(store.DatabaseCommands);
+				WaitForDocument(store.DatabaseCommands, "Raven/Databases/" + RestoredDatabaseName);
 
 				Assert.Equal(1, store.DatabaseCommands.ForDatabase(RestoredDatabaseName).Get("keys/1").DataAsJson.Value<int>("Key"));
 			}

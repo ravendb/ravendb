@@ -327,6 +327,18 @@ namespace Raven.Tests.Helpers
 			Assert.True(done);
 		}
 
+		protected void WaitForDocument(IDatabaseCommands databaseCommands, string id)
+		{
+			var done = SpinWait.SpinUntil(() =>
+			{
+				// We expect to get the doc from the <system> database
+				var doc = databaseCommands.Get(id);
+				return doc != null;
+			}, TimeSpan.FromMinutes(5));
+
+			Assert.True(done);
+		}
+
 		public static void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)
 		{
 			if (debug && Debugger.IsAttached == false)
