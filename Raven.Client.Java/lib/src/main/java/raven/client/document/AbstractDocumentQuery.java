@@ -194,7 +194,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * What aggregated operation to execute
    */
-  protected AggregationOperation aggregationOp = AggregationOperation.NONE;
+  protected EnumSet<AggregationOperation> aggregationOp = EnumSet.of(AggregationOperation.NONE);
 
   /**
    * Fields to group on
@@ -772,7 +772,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param string
    */
   @SuppressWarnings("unchecked")
-  public IDocumentQuery<T> groupBy(AggregationOperation aggregationOperation, String... fieldsToGroupBy) {
+  public IDocumentQuery<T> groupBy(EnumSet<AggregationOperation> aggregationOperation, String... fieldsToGroupBy) {
     groupByFields = fieldsToGroupBy;
     aggregationOp = aggregationOperation;
     return (IDocumentQuery<T>) this;
@@ -1322,7 +1322,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
       SpatialIndexQuery spatialIndexQuery = new SpatialIndexQuery();
       spatialIndexQuery.setGroupBy(groupByFields);
-      spatialIndexQuery.setAggregationOperation(EnumSet.of(aggregationOp));
+      spatialIndexQuery.setAggregationOperation(aggregationOp);
       spatialIndexQuery.setQuery(query);
       spatialIndexQuery.setPageSize(pageSize != null ? pageSize : 128);
       spatialIndexQuery.setStart(start);
@@ -1359,7 +1359,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     IndexQuery indexQuery = new IndexQuery();
     indexQuery.setGroupBy(groupByFields);
-    indexQuery.setAggregationOperation(EnumSet.of(aggregationOp));
+    indexQuery.setAggregationOperation(aggregationOp);
     indexQuery.setQuery(query);
     indexQuery.setStart(start);
     indexQuery.setCutoff(cutoff);

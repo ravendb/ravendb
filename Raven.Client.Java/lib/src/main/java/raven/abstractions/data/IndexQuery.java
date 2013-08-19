@@ -9,6 +9,7 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.basic.Reference;
+import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.utils.UrlUtils;
 
@@ -345,7 +346,7 @@ public class IndexQuery {
     }
 
     if (aggregationOperation != null && !aggregationOperation.isEmpty() && !aggregationOperation.contains(AggregationOperation.NONE)) {
-      path.append("&aggregation=").append(aggregationOperation);
+      path.append("&aggregation=").append(SharpEnum.value(aggregationOperation));
     }
 
     if (fieldsToFetch != null) {

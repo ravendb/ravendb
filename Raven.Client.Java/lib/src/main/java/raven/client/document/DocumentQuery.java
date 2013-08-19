@@ -3,6 +3,7 @@ package raven.client.document;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -326,7 +327,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> groupBy(AggregationOperation aggregationOperation, Path< ? >... groupPropertySelectors) {
+  public <TValue> IDocumentQuery<T> groupBy(EnumSet<AggregationOperation> aggregationOperation, Path< ? >... groupPropertySelectors) {
     groupBy(aggregationOperation, getMemberQueryPaths(groupPropertySelectors));
     return this;
   }

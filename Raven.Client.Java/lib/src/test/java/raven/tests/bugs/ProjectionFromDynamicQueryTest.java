@@ -101,6 +101,7 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
 
         session.store(p);
         session.saveChanges();
+
       }
 
       try (IDocumentSession s = store.openSession()) {

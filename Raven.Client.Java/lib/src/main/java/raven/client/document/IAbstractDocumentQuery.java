@@ -2,6 +2,7 @@ package raven.client.document;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 
 import com.mysema.query.types.Path;
 
@@ -141,7 +142,7 @@ public interface IAbstractDocumentQuery<T> {
    * @param fieldsToGroupBy
    * @return
    */
-  public IDocumentQuery<T> groupBy(AggregationOperation aggregationOperation, String... fieldsToGroupBy);
+  public IDocumentQuery<T> groupBy(EnumSet<AggregationOperation> aggregationOperation, String... fieldsToGroupBy);
 
   /**
    * Simplified method for closing a clause within the query

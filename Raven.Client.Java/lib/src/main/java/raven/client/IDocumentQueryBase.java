@@ -2,6 +2,7 @@ package raven.client;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 
 import com.mysema.query.types.Path;
 import com.mysema.query.types.path.ListPath;
@@ -644,7 +645,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param fieldsToGroupBy
    * @return
    */
-  public TSelf groupBy(AggregationOperation aggregationOperation, String... fieldsToGroupBy);
+  public TSelf groupBy(EnumSet<AggregationOperation> aggregationOperation, String... fieldsToGroupBy);
 
   /**
    * Instruct the index to group by the specified fields using the specified aggregation operation
@@ -654,7 +655,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param groupPropertySelectors
    * @return
    */
-  public <TValue> TSelf groupBy(AggregationOperation aggregationOperation, Path<?>... groupPropertySelectors);
+  public <TValue> TSelf groupBy(EnumSet<AggregationOperation> aggregationOperation, Path<?>... groupPropertySelectors);
 
   /**
    * Partition the query so we can intersect different parts of the query
