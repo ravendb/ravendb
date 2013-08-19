@@ -18,6 +18,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.map.DeserializationProblemHandler;
 
+import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
@@ -29,12 +30,12 @@ import raven.abstractions.data.Constants;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJObject;
-import raven.client.Converters.ITypeConverter;
-import raven.client.Converters.Int32Converter;
-import raven.client.Converters.Int64Converter;
-import raven.client.Converters.UUIDConverter;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ReplicationInformer;
+import raven.client.converters.ITypeConverter;
+import raven.client.converters.Int32Converter;
+import raven.client.converters.Int64Converter;
+import raven.client.converters.UUIDConverter;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.util.Inflector;
 
@@ -120,6 +121,8 @@ public class DocumentConvention implements Serializable {
   private final Map<String, SortOptions> customDefaultSortOptions = new HashMap<>();
 
   private final List<Class<?>> customRangeTypes = new ArrayList<>();
+
+  private final List<Tuple<Class<?>, TryConvertValueForQueryDelegate<?>>> listOfQueryValueConverters = new ArrayList<>();
 
 
   public DocumentConvention() {
@@ -943,16 +946,59 @@ public class DocumentConvention implements Serializable {
     return replicationInformerFactory;
   }
 
+  public interface TryConvertValueForQueryDelegate<T> {
+    public boolean tryConvertValue(String fieldName, T value, QueryValueConvertionType convertionType, Reference<String> strValue);
+  }
 
-  //TODO  public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
+  public <T> void registerQueryValueConverter(TryConvertValueForQueryDelegate<T> converter) {
+    registerQueryValueConverter(converter, SortOptions.STRING, false);
+  }
 
-  //TODO: private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
+  public <T> void registerQueryValueConverter(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption) {
+    registerQueryValueConverter(converter, defaultSortOption, false);
+  }
 
+  public <T> void registerQueryValueConverter(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption, boolean usesRangeField) {
+    /*TODO
+    TryConvertValueForQueryDelegate<object> actual = (string name, object value, QueryValueConvertionType convertionType, out string strValue) =>
+    {
+      if (value is T)
+        return converter(name, (T)value, convertionType, out strValue);
+      strValue = null;
+      return false;
+    };
 
+    int index;
+    for (index = 0; index < listOfQueryValueConverters.Count; index++)
+    {
+      var entry = listOfQueryValueConverters[index];
+      if (entry.Item1.IsAssignableFrom(typeof(T)))
+      {
+        break;
+      }
+    }
 
-  //TODO: public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
+    listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
 
-  //TODO: public bool TryConvertValueForQuery(string fieldName, object value, QueryValueConvertionType convertionType, out string strValue)
+    if (defaultSortOption != SortOptions.String)
+      customDefaultSortOptions.Add(typeof(T).Name, defaultSortOption);
+
+    if (usesRangeField)
+      customRangeTypes.Add(typeof(T));
+      */
+  }
+
+  @SuppressWarnings("unchecked")
+  public boolean tryConvertValueForQuery(String fieldName, Object value, QueryValueConvertionType convertionType, Reference<String> strValue) {
+    for (Tuple<Class<?>, TryConvertValueForQueryDelegate<?>> queryValueConverterTuple : listOfQueryValueConverters) {
+      if (queryValueConverterTuple.getItem1().isInstance(value)) {
+        TryConvertValueForQueryDelegate< Object > valueForQueryDelegate = (TryConvertValueForQueryDelegate<Object>) queryValueConverterTuple.getItem2();
+        return valueForQueryDelegate.tryConvertValue(fieldName, value, convertionType, strValue);
+      }
+    }
+    strValue.value = null;
+    return false;
+  }
 
   public SortOptions getDefaultSortOption(String typeName) {
 

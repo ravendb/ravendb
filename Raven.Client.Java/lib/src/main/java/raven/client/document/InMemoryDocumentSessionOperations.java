@@ -99,7 +99,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   private boolean allowNonAuthoritativeInformation;
 
   private final List<ICommandData> deferedCommands = new ArrayList<ICommandData>();
-  public GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
+  private GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
   public EntityToJson entityToJson;
 
   /**
@@ -423,7 +423,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    * @param noTracking
    * @return
    */
-  Object trackEntity(Class<?> entityType, String key, RavenJObject document, RavenJObject metadata, boolean noTracking) {
+  public Object trackEntity(Class<?> entityType, String key, RavenJObject document, RavenJObject metadata, boolean noTracking) {
     document.remove("@metadata");
     Object entity;
     if (entitiesByKey.containsKey(key)) {

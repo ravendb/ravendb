@@ -1,4 +1,4 @@
-package raven.client.Converters;
+package raven.client.converters;
 
 public class Int32Converter implements ITypeConverter {
 

@@ -7,7 +7,7 @@ import org.apache.commons.lang.reflect.FieldUtils;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Function1;
 import raven.client.IDocumentStore;
-import raven.client.Converters.ITypeConverter;
+import raven.client.converters.ITypeConverter;
 
 public class GenerateEntityIdOnTheClient {
   private final IDocumentStore documentStore;
@@ -78,7 +78,7 @@ public class GenerateEntityIdOnTheClient {
   /**
    * Tries to set the identity property
    */
-  protected void trySetIdentity(Object entity, String id) {
+  public void trySetIdentity(Object entity, String id) {
     Class<?> entityType = entity.getClass();
     Field identityProperty = documentStore.getConventions().getIdentityProperty(entityType);
 

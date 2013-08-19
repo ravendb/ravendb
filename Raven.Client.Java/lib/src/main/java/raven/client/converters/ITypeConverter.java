@@ -1,4 +1,4 @@
-package raven.client.Converters;
+package raven.client.converters;
 
 /**
  * Interface for performing type conversions.

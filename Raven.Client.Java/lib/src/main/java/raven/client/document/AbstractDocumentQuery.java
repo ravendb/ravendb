@@ -1,5 +1,6 @@
 package raven.client.document;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -57,6 +58,7 @@ import raven.client.RavenQueryStatistics;
 import raven.client.WhereParams;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.IRavenQueryInspector;
+import raven.client.document.batches.LazyQueryOperation;
 import raven.client.document.sessionoperations.QueryOperation;
 import raven.client.linq.LinqPathProvider;
 import raven.client.listeners.IDocumentQueryListener;
@@ -233,7 +235,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   protected Etag cutoffEtag;
   private QueryOperator defaultOperator;
 
-  private static final Pattern espacePostfixWildcard =  new Regex("\\\*(\s|$)"); //TODO: convert me
+  private static final Pattern espacePostfixWildcard = Pattern.compile("\\\\*(\\s|$)"); //TODO: convert me
 
   /**
    * Get the name of the index being queried
@@ -337,12 +339,14 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     });
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> include(String path) {
     includes.add(path);
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> waitForNonStaleResults(long waitTimeout) {
     theWaitForNonStaleResults = true;
@@ -354,11 +358,13 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
 
 
+  @SuppressWarnings("unchecked")
   protected TSelf generateQueryWithinRadiusOf(String fieldName, double radius, double latitude, double longitude) {
     generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, 0.025, (SpatialUnits) null);
     return (TSelf) this;
   }
 
+  @SuppressWarnings("unchecked")
   protected TSelf generateQueryWithinRadiusOf(String fieldName, double radius, double latitude, double longitude, double distanceErrorPct) {
     generateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distanceErrorPct, (SpatialUnits) null);
     return (TSelf) this;
@@ -383,11 +389,13 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (TSelf) this;
   }
 
+  @SuppressWarnings("unchecked")
   protected TSelf generateSpatialQueryData(String fieldName, String shapeWKT, SpatialRelation relation, double distanceErrorPct) {
     generateSpatialQueryData(fieldName, shapeWKT, relation, distanceErrorPct, null);
     return (TSelf) this;
   }
 
+  @SuppressWarnings("unchecked")
   protected TSelf generateSpatialQueryData(String fieldName, String shapeWKT, SpatialRelation relation, double distanceErrorPct, SpatialUnits radiusUnits) {
     isSpatialQuery = true;
     spatialFieldName = fieldName;
@@ -398,11 +406,13 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (TSelf) this;
   }
 
+  @SuppressWarnings("unchecked")
   protected TSelf generateSpatialQueryData(String fieldName, SpatialCriteria criteria) {
     generateSpatialQueryData(fieldName, criteria, 0.025);
     return (TSelf) this;
   }
 
+  @SuppressWarnings("unchecked")
   protected TSelf generateSpatialQueryData(String fieldName, SpatialCriteria criteria, double distanceErrorPct) {
     /*TODO:
     var wkt = criteria.Shape as string;
@@ -436,12 +446,14 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> usingDefaultOperator(QueryOperator operator) {
     defaultOperator = operator;
     return (IDocumentQuery<T>) this;
   }
 
   //TODO: we omit  public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> include(Path< ? > path) {
     include(ExpressionExtensions.toPropertyPath(path));
@@ -571,8 +583,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       });
     }
 
-    LazyQueryOperation lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
-    lazyQueryOperation.SetHeaders(headers);
+    LazyQueryOperation<T> lazyQueryOperation = new LazyQueryOperation<T>(clazz, queryOperation, afterQueryExecutedCallback, includes);
+    lazyQueryOperation.setHeaders(headers);
 
     return ((DocumentSession) theSession).addLazyOperation(lazyQueryOperation, onEval);
   }
@@ -594,6 +606,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Order the search results randomly
    */
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> randomOrdering() {
     addOrder(Constants.RANDOM_FIELD_NAME + ";" + UUID.randomUUID(), false);
@@ -604,47 +617,55 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Order the search results randomly using the specified seed
    * this is useful if you want to have repeatable random queries
    */
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> randomOrdering(String seed) {
     addOrder(Constants.RANDOM_FIELD_NAME + ";" + seed, false);
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> beforeQueryExecution(Action1<IndexQuery> action) {
     beforeQueryExecutionAction = Delegates.combine(beforeQueryExecutionAction, action);
     return (IDocumentQuery<T>) this;
   }
 
 
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> highlight(String fieldName, int fragmentLength, int fragmentCount, String fragmentsField) {
     highlightedFields.add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> highlight(String fieldName, int fragmentLength, int fragmentCount, Reference<FieldHighlightings> fieldHighlightings) {
     highlightedFields.add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
     fieldHighlightings.value = highlightings.addField(fieldName);
-    return (IDocumentQuery<T>) this;
+    return ((IDocumentQuery<T>) this);
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> setHighlighterTags(String preTag, String postTag) {
     this.setHighlighterTags(new String[] { preTag }, new String[] { postTag });
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> setHighlighterTags(String[] preTags, String[] postTags) {
     highlighterPreTags = preTags;
     highlighterPostTags = postTags;
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> noTracking() {
     disableEntitiesTracking = true;
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> noCaching() {
     disableCaching = true;
     return (IDocumentQuery<T>) this;
@@ -655,6 +676,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param descending If set to true [descending]
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> addOrder(String fieldName, boolean descending) {
     addOrder(fieldName, descending, null);
     return (IDocumentQuery<T>) this;
@@ -712,6 +734,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param value
    * @return
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEquals(String fieldName, Object value) {
     WhereParams whereParams = new WhereParams();
     ;
@@ -792,17 +815,14 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return whereParams.getFieldName();
     }
 
-    /*TODO
-    foreach (var rootType in rootTypes)
-    {
-      var identityProperty = theSession.Conventions.GetIdentityProperty(rootType);
-      if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
-      {
-        whereParams.FieldTypeForIdentifier = rootType;
-        return whereParams.FieldName = Constants.DocumentIdFieldName;
+    for (Class<?> rootType : rootTypes) {
+      Field identityProperty = theSession.getConventions().getIdentityProperty(rootType);
+      if (identityProperty != null && identityProperty.getName().equals(whereParams.getFieldName())) {
+        whereParams.setFieldTypeForIdentifier(rootType);
+        whereParams.setFieldName(Constants.DOCUMENT_ID_FIELD_NAME);
+        return Constants.DOCUMENT_ID_FIELD_NAME;
       }
-    }*/
-
+    }
     return whereParams.getFieldName();
   }
 
@@ -846,6 +866,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
+  @SuppressWarnings("unchecked")
   private void addItemToInClause(String fieldName, Collection<Object> list, boolean first) {
     for (Object value : list) {
       if (value instanceof Collection) {
@@ -1042,6 +1063,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Add an OR to the query
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> orElse() {
     if (queryText.length() < 1) {
       return (IDocumentQuery<T>) this;
@@ -1058,6 +1080,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
    * @param boost boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> boost(Double boost) {
     if (queryText.length() < 1) {
       throw new IllegalStateException("Missing where clause");
@@ -1080,6 +1103,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
    * @param fuzzy 0.0 to 1.0 where 1.0 means closer match
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> fuzzy(Double fuzzy) {
     if (queryText.length() < 1) {
       throw new IllegalStateException("Missing where clause");
@@ -1109,6 +1133,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
    * @param proximity number of words within
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> proximity(int proximity) {
     if (queryText.length() < 1) {
       throw new IllegalStateException("Missing where clause");
@@ -1133,6 +1158,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
    * @param fields The fields.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> orderBy(String... fields) {
     orderByFields = (String[]) ArrayUtils.addAll(orderByFields, fields);
     return (IDocumentQuery<T>) this;
@@ -1144,6 +1170,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
    * @param fields The fields.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> orderByDescending(String... fields) {
     List<String> fieldsTranformed = new ArrayList<>();
     for (String field : fields) {
@@ -1163,6 +1190,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Instructs the query to wait for non stale results as of now.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOfNow() {
     theWaitForNonStaleResults = true;
     cutoff = new Date();
@@ -1174,6 +1202,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Instructs the query to wait for non stale results as of now for the specified timeout.
    * @param waitTimeout The wait timeout in milis
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOfNow(long waitTimeout) {
     theWaitForNonStaleResults = true;
     cutoff = new Date();
@@ -1194,6 +1223,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param cutOff The cut off.
    * @param waitTimeout the wait timeout in milis
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOf(Date cutOff, long waitTimeout) {
     theWaitForNonStaleResults = true;
     cutoff = cutOff; //TODO: ToUniversalTime();
@@ -1211,6 +1241,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Instructs the query to wait for non stale results as of the cutoff etag.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOf(Etag cutOffEtag, long waitTimeout) {
     theWaitForNonStaleResults = true;
     timeout = waitTimeout;
@@ -1234,6 +1265,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
    * However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results.
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOfLastWrite(long waitTimeout) {
     theWaitForNonStaleResults = true;
     timeout = waitTimeout;
@@ -1245,6 +1277,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * EXPERT ONLY: Instructs the query to wait for non stale results.
    * This shouldn't be used outside of unit tests unless you are well aware of the implications
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResults() {
     waitForNonStaleResults(getDefaultTimeout());
     return (IDocumentQuery<T>) this;
@@ -1254,6 +1287,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Provide statistics about the query, such as total count of matching records
    * @param stats
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> statistics(Reference<RavenQueryStatistics> stats) {
     stats.value = queryStats;
     return (IDocumentQuery<T>) this;
@@ -1360,6 +1394,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return indexQuery;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> search(String fieldName, String searchTerms) {
     search(fieldName, searchTerms, EscapeQueryOptions.RAW_QUERY);
     return (IDocumentQuery<T>) this;
@@ -1372,6 +1407,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param searchTerms
    * @param escapeQueryOptions
    */
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> search(String fieldName, String searchTerms, EscapeQueryOptions escapeQueryOptions) {
     queryText.append(' ');
 
@@ -1382,7 +1418,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       break;
     case ALLOW_POSTFIX_WILDCARD:
       searchTerms = RavenQuery.escape(searchTerms, false, false);
-      searchTerms = espacePostfixWildcard.replace(searchTerms, "*");
+      //TODO: searchTerms = espacePostfixWildcard.replace(searchTerms, "*");
       break;
     case ALLOW_ALL_WILDCARDS:
       searchTerms = RavenQuery.escape(searchTerms, false, false);
@@ -1396,6 +1432,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     lastEquality = Tuple.create(fieldName, "(" + searchTerms + ")");
 
     queryText.append(fieldName).append(":").append("(").append(searchTerms).append(")");
+    return (IDocumentQuery<T>) this;
   }
 
   private String transformToEqualValue(WhereParams whereParams) {
@@ -1433,14 +1470,20 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(),
           whereParams.getFieldTypeForIdentifier() != null ? whereParams.getFieldTypeForIdentifier() : clazz, false);
     }
+
     if (whereParams.getValue() instanceof String) {
       String strValue = (String) whereParams.getValue();
       strValue = RavenQuery.escape(strValue, whereParams.isAllowWildcards() && !whereParams.isAnalyzed(), true);
       return whereParams.isAnalyzed() ? strValue : "[[" + strValue + "]]";
     }
 
-    if (conventions.tryConvertValueForQuery(whereParams.getFieldName(), whereParams.getValue(), QueryValueConvertionType.EQUALITY, out strValue))
-      return strValue;
+    Reference<String> strValue = new Reference<>();
+
+    if (conventions.tryConvertValueForQuery(whereParams.getFieldName(), whereParams.getValue(), QueryValueConvertionType.EQUALITY, strValue)) {
+      return strValue.value;
+    }
+
+    /*TODO
 
     if (whereParams.Value is ValueType)
     {
@@ -1468,7 +1511,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
       default:
         return RavenQuery.Escape(term, whereParams.isAllowWildcards() && whereParams.isAnalyzed(), true);
-    }
+    }*/
+    return null; //TODO: delete me
   }
 
 
@@ -1513,12 +1557,12 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if (whereParams.getValue() instanceof String) {
       return RavenQuery.escape(whereParams.getValue().toString(), false, true);
     }
+    Reference<String> strVal = new Reference<>();
+    if (conventions.tryConvertValueForQuery(whereParams.getFieldName(), whereParams.getValue(), QueryValueConvertionType.RANGE, strVal)) {
+      return strVal.value;
+    }
 
-    string strVal;
-    if (conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Range,
-                                            out strVal))
-      return strVal;
-
+    /*
     if(whereParams.Value is ValueType)
       return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
                    false, true);
@@ -1533,7 +1577,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       sb.Remove(0, 1);
     }
 
-    return RavenQuery.escape(sb.ToString(), false, true);
+    return RavenQuery.escape(sb.ToString(), false, true);*/
+    return null; //TODO: delete me
   }
 
   /**
@@ -1554,6 +1599,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return lastEquality;
   }
 
+  @SuppressWarnings("unchecked")
   public IDocumentQuery<T> intersect() {
     queryText.append(Constants.INTERSECT_SEPARATOR);
     return (IDocumentQuery<T>) this;
@@ -1588,6 +1634,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   public String getMemberQueryPath(Expression< ? > expression) {
+/*TODO:
     var result = linqPathProvider.getPath(expression);
     result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
 
@@ -1597,7 +1644,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     String propertyName = indexName == null || indexName.toLowerCase().startsWith("dynamic/")
         ? conventions.findPropertyNameForDynamicIndex(clazz, indexName, "", result.Path)
         : conventions.findPropertyNameForIndex(clazz, indexName, "", result.Path);
-    return propertyName;
+    return propertyName; */
+    return null; //TODO: delete me
   }
 
 }

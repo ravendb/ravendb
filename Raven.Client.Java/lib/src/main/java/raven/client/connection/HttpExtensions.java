@@ -5,6 +5,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.GetResponse;
 import raven.client.connection.implementation.HttpJsonRequest;
 
 public class HttpExtensions {
@@ -24,5 +25,9 @@ public class HttpExtensions {
 
   public static Etag getEtagHeader(HttpResponse httpResponse) {
     return etagHeaderToEtag(httpResponse.getFirstHeader("Etag").getValue());
+  }
+
+  public static Etag getEtagHeader(GetResponse response) {
+    return etagHeaderToEtag(response.getHeaders().get("Etag"));
   }
 }
