@@ -131,7 +131,6 @@ namespace Voron.Trees
 		{
 			var numberOfPages = GetNumberOfOverflowPages(tx, overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
-			overflowPageStart.OverflowSize = numberOfPages;
 			overflowPageStart.Flags = PageFlags.Overflow;
 			overflowPageStart.OverflowSize = overflowSize;
 			dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
