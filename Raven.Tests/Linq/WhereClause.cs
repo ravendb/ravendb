@@ -240,16 +240,6 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanForceUsingCase()
-		{
-			var indexedUsers = GetRavenQueryInspector();
-			var q = from user in indexedUsers
-					where user.Name.Equals("ayende", StringComparison.InvariantCulture)
-					select user;
-			Assert.Equal("Name:[[ayende]]", q.ToString());
-		}
-
-		[Fact]
 		public void CanCompareValueThenPropertyGT()
 		{
 			var indexedUsers = GetRavenQueryInspector();
