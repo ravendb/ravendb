@@ -487,8 +487,6 @@ namespace Raven.Client.Linq
 			Expression constant = null;
 			object comparisonType = null;
 
-			bool isAnalyzed = true;
-
 			if (expression.Object == null)
 			{
 				var a = expression.Arguments[0];
@@ -543,15 +541,14 @@ namespace Raven.Client.Linq
 					case StringComparison.InvariantCulture:
 #endif
 					case StringComparison.Ordinal:
-						isAnalyzed = false;
-						break;
+				        throw new NotSupportedException(
+				            "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
 					case StringComparison.CurrentCultureIgnoreCase:
 #if !NETFX_CORE
 					case StringComparison.InvariantCultureIgnoreCase:
 #endif
 					case StringComparison.OrdinalIgnoreCase:
-						isAnalyzed = true;
-						break;
+				        break;
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
@@ -561,7 +558,7 @@ namespace Raven.Client.Linq
 			{
 				FieldName = fieldInfo.Path,
 				Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
-				IsAnalyzed = isAnalyzed,
+				IsAnalyzed = true,
 				AllowWildcards = false
 			});
 		}

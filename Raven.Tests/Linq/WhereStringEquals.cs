@@ -26,11 +26,10 @@ namespace Raven.Tests.Linq
 		{
 			using (var session = store.OpenSession())
 			{
-				var count = session.Query<MyEntity>()
-					.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-					.Count(o => string.Equals(o.StringData, "Some data", StringComparison.InvariantCulture));
-
-				Assert.Equal(1, count);
+                Assert.Throws<NotSupportedException>(() =>
+                    session.Query<MyEntity>()
+                    .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                    .Count(o => string.Equals(o.StringData, "Some data", StringComparison.InvariantCulture)));
 			}
 		}
 
@@ -130,11 +129,11 @@ namespace Raven.Tests.Linq
 		{
 			using (var session = store.OpenSession())
 			{
-				var count = session.Query<MyEntity>()
-					.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-					.Count(o => "Some data".Equals(o.StringData, StringComparison.Ordinal));
+			    Assert.Throws<NotSupportedException>(() =>
+                    session.Query<MyEntity>()
+			        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                    .Count(o => "Some data".Equals(o.StringData, StringComparison.Ordinal)));
 
-				Assert.Equal(1, count);
 			}
 		}
 
@@ -143,11 +142,10 @@ namespace Raven.Tests.Linq
 		{
 			using (var session = store.OpenSession())
 			{
-				var count = session.Query<MyEntity>()
-					.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-					.Count(o => o.StringData.Equals("Some data", StringComparison.Ordinal));
-
-				Assert.Equal(1, count);
+			    Assert.Throws<NotSupportedException>(() =>
+                    session.Query<MyEntity>()
+                    .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                    .Count(o => o.StringData.Equals("Some data", StringComparison.Ordinal)));
 			}
 		}
 
