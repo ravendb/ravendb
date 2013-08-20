@@ -13,7 +13,6 @@ import com.mysema.query.types.FactoryExpression;
 import com.mysema.query.types.Ops;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.Visitor;
-
 public class AnonymousExpression<T> extends ExpressionBase<T> implements FactoryExpression<T> {
 
   public static <D> AnonymousExpression<D> create(Class<D> type) {
@@ -54,12 +53,25 @@ public class AnonymousExpression<T> extends ExpressionBase<T> implements Factory
     throw new IllegalStateException("this method is not implemented");
   }
 
+  public AnonymousExpression<T> withTemplate(String propertyName, String templateExpression) {
+    return with(propertyName, Expressions.template(Object.class, templateExpression));
+  }
+
+  public <S> AnonymousExpression<T> withTemplate(Path<? extends S> path, String templateExpression) {
+    return with(extractPropName(path), Expressions.template(Object.class, templateExpression));
+  }
+
   public <S> AnonymousExpression<T> with(Path<? extends S> path, Expression<? extends S> selector) {
     return with(extractPropName(path), selector);
   }
 
   public <S> AnonymousExpression<T> with(Path<S> path, S constant) {
     return with(path, Expressions.constant(constant));
+  }
+
+  public AnonymousExpression<T> with(Path<?> path) {
+    expressions.add(Expressions.operation(List.class, Ops.LIST, path));
+    return this;
   }
 
   public AnonymousExpression<T> with(String propertyName, Expression<?> selector) {

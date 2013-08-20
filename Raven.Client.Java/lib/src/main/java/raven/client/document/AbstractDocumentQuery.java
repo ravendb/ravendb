@@ -1631,18 +1631,19 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   public String getMemberQueryPath(Expression< ? > expression) {
-    /*TODO:
-    var result = linqPathProvider.getPath(expression);
-    result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
 
+    LinqPathProvider.Result result = linqPathProvider.getPath(expression);
+    result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
+
+    /*TODO:
     if (expression.NodeType == ExpressionType.ArrayLength)
       result.Path += ".Length";
+      */
 
     String propertyName = indexName == null || indexName.toLowerCase().startsWith("dynamic/")
-        ? conventions.findPropertyNameForDynamicIndex(clazz, indexName, "", result.Path)
-        : conventions.findPropertyNameForIndex(clazz, indexName, "", result.Path);
-    return propertyName; */
-    return null; //TODO: delete me
+        ? conventions.getFindPropertyNameForDynamicIndex().apply(clazz, indexName, "", result.getPath())
+        : conventions.getFindPropertyNameForIndex().apply(clazz, indexName, "", result.getPath());
+    return propertyName;
   }
 
 }

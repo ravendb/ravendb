@@ -46,12 +46,20 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
       append("new {");
       for (int i = 0; i < anonymous.getParamsCount(); i++) {
         Operation< ? > operation = (Operation< ? >) anonymous.getArgs().get(i);
-        Constant<String> propName = (Constant<String>) operation.getArg(0);
-        Expression<?> selector = operation.getArg(1);
 
-        append(propName.getConstant());
-        append(" = ");
-        handle(selector);
+        if (operation.getArgs().size() == 2) {
+          Constant<String> propName = (Constant<String>) operation.getArg(0);
+          Expression<?> selector = operation.getArg(1);
+
+          append(propName.getConstant());
+          append(" = ");
+          handle(selector);
+
+        } else if (operation.getArgs().size() == 1) {
+          handle(operation.getArg(0));
+        } else {
+          throw new RuntimeException("Unhandled args size in List operation");
+        }
         if (i < anonymous.getParamsCount() - 1) {
           append(", ");
         }

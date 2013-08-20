@@ -13,9 +13,6 @@ import raven.abstractions.json.linq.RavenJToken;
 
 public abstract class RemoteClientTest extends RavenDBAwareTests {
 
-  @Rule
-  public TestName testName = new TestName();
-
   protected String getDefaultUrl() {
     return RavenDBAwareTests.DEFAULT_SERVER_URL_1;
   }

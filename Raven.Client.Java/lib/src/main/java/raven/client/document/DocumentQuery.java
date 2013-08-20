@@ -1,5 +1,9 @@
 package raven.client.document;
 
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -7,6 +11,9 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.reflect.FieldUtils;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
@@ -25,6 +32,7 @@ import raven.client.listeners.IDocumentQueryListener;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
+import com.google.common.reflect.Reflection;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.path.ListPath;
 
@@ -62,14 +70,29 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
    */
   @Override
   public <TProjection> IDocumentQuery<TProjection> selectFields(Class<TProjection> projectionClass) {
-    /*TODO:
-     * var propertyInfos = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-      var projections = propertyInfos.Select(x => x.Name).ToArray();
-      var identityProperty = DocumentConvention.GetIdentityProperty(typeof (TProjection));
-      var fields = propertyInfos.Select(p =>(p == identityProperty) ? Constants.DocumentIdFieldName : p.Name).ToArray();
-      return SelectFields<TProjection>(fields, projections);
-     */
-    return null; //TODO delete me
+    try {
+      List<String> projections = new ArrayList<>();
+      List<String> fields = new ArrayList<>();
+
+      Field identityProperty = getDocumentConvention().getIdentityProperty(projectionClass);
+
+      for (PropertyDescriptor propertyDescriptor : Introspector.getBeanInfo(projectionClass).getPropertyDescriptors()) {
+        if (propertyDescriptor.getWriteMethod() != null && propertyDescriptor.getReadMethod() != null) {
+          projections.add(StringUtils.capitalize(propertyDescriptor.getName()));
+          String field = null;
+          if (identityProperty != null && propertyDescriptor.getName().equals(identityProperty.getName())) {
+            field = Constants.DOCUMENT_ID_FIELD_NAME;
+          } else {
+            field = propertyDescriptor.getName();
+          }
+          fields.add(StringUtils.capitalize(field));
+        }
+      }
+      return selectFields(projectionClass, fields.toArray(new String[0]), projections.toArray(new String[0]));
+
+    } catch (IntrospectionException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public IDocumentQuery<T> setResultTransformer(String resultsTransformer) {
@@ -153,11 +176,11 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     documentQuery.spatialUnits = spatialUnits;
     documentQuery.distanceErrorPct = distanceErrorPct;
     documentQuery.rootTypes.add(clazz);
-        documentQuery.defaultField = defaultField;
+    documentQuery.defaultField = defaultField;
     documentQuery.beforeQueryExecutionAction = beforeQueryExecutionAction;
     documentQuery.afterQueryExecutedCallback = afterQueryExecutedCallback;
     documentQuery.highlightedFields = new ArrayList<>(highlightedFields);
-        documentQuery.highlighterPreTags = highlighterPreTags;
+    documentQuery.highlighterPreTags = highlighterPreTags;
     documentQuery.highlighterPostTags = highlighterPostTags;
     documentQuery.resultsTransformer = resultsTransformer;
     documentQuery.queryInputs = queryInputs;
