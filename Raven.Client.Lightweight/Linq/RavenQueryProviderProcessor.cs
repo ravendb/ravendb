@@ -483,14 +483,60 @@ namespace Raven.Client.Linq
 
 		private void VisitEquals(MethodCallExpression expression)
 		{
-			var memberInfo = GetMember(expression.Object);
+			ExpressionInfo fieldInfo = null;
+			Expression constant = null;
+			object comparisonType = null;
+
 			bool isAnalyzed = true;
 
-			if (expression.Arguments.Count == 2 &&
-			    expression.Arguments[1].NodeType == ExpressionType.Constant &&
-			    expression.Arguments[1].Type == typeof (StringComparison))
+			if (expression.Object == null)
 			{
-				switch ((StringComparison) ((ConstantExpression) expression.Arguments[1]).Value)
+				var a = expression.Arguments[0];
+				var b = expression.Arguments[1];
+
+				if (a is MemberExpression && b is ConstantExpression)
+				{
+					fieldInfo = GetMember(a);
+					constant = b;
+				}
+				else if (a is ConstantExpression && b is MemberExpression)
+				{
+					fieldInfo = GetMember(b);
+					constant = a;
+				}
+
+				if (expression.Arguments.Count == 3 &&
+					expression.Arguments[2].NodeType == ExpressionType.Constant &&
+					expression.Arguments[2].Type == typeof(StringComparison))
+				{
+					comparisonType = ((ConstantExpression)expression.Arguments[2]).Value;
+					
+				}
+			}
+			else
+			{
+				if (expression.Object is MemberExpression)
+				{
+					fieldInfo = GetMember(expression.Object);
+					constant = expression.Arguments[0];
+				}
+				else if (expression.Object is ConstantExpression)
+				{
+					fieldInfo = GetMember(expression.Arguments[0]);
+					constant = expression.Object;
+				}
+
+				if (expression.Arguments.Count == 2 &&
+				    expression.Arguments[1].NodeType == ExpressionType.Constant &&
+				    expression.Arguments[1].Type == typeof (StringComparison))
+				{
+					comparisonType = ((ConstantExpression)expression.Arguments[1]).Value;
+				}
+			}
+
+			if (comparisonType != null)
+			{
+				switch ((StringComparison) comparisonType)
 				{
 					case StringComparison.CurrentCulture:
 #if !NETFX_CORE
@@ -510,10 +556,11 @@ namespace Raven.Client.Linq
 						throw new ArgumentOutOfRangeException();
 				}
 			}
+
 			luceneQuery.WhereEquals(new WhereParams
 			{
-				FieldName = memberInfo.Path,
-				Value = GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
+				FieldName = fieldInfo.Path,
+				Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
 				IsAnalyzed = isAnalyzed,
 				AllowWildcards = false
 			});
