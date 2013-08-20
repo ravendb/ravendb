@@ -76,5 +76,11 @@ namespace Voron.Trees
         public void Dispose()
         {
         }
+
+        public void Clear()
+        {
+            _pagesByNum.Clear();
+            Pages.Clear();
+        }
     }
 }

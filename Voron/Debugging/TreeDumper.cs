@@ -47,7 +47,7 @@ digraph structs {
 							}
 							var node = p.GetNode(i);
 							key.Set(node);
-							writer.WriteLine("{0} - {2} {1:#,#}",key, 
+                            writer.WriteLine("{0} - {2} {1:#,#}", MaxString(key.ToString(), 25), 
                                 node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
 						}
 						writer.WriteLine("\"];");
@@ -91,7 +91,14 @@ digraph structs {
 			}
 		}
 
-		private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
+	    private static string MaxString(string key, int size)
+	    {
+	        if (key.Length <= size)
+	            return key;
+	        return key.Substring(0, size - 3) + "...";
+	    }
+
+	    private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
 		{
 			string keyStr;
 			if (i == 0 && key.Size == 0)
@@ -104,7 +111,7 @@ digraph structs {
 				key.Set(node);
 				keyStr = key.ToString();
 			}
-			return keyStr;
+	        return MaxString(keyStr, 25);
 		}
 	}
 }

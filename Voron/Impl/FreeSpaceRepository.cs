@@ -143,23 +143,20 @@ namespace Voron.Impl
             using (var tx = _env.NewTransaction(TransactionFlags.Read))
             using (var it = _env.FreeSpaceRoot.Iterate(tx))
             {
-                var key = new Slice(SliceOptions.Key);
                 if (it.Seek(Slice.BeforeAllKeys) == false)
                 {
                     return 0;
                 }
                 do
                 {
-                    key.Set(it.Current);
-
-                    if (key.StartsWith(_sectionsPrefix, _env.SliceComparer) || key.StartsWith(_txPrefix, _env.SliceComparer))
+                    if (it.CurrentKey.StartsWith(_sectionsPrefix, _env.SliceComparer) || it.CurrentKey.StartsWith(_txPrefix, _env.SliceComparer))
                     {
-                        var dataSize = NodeHeader.GetDataSize(tx, it.Current);
+                        var dataSize = it.GetCurrentDataSize();
                         freePages += dataSize / sizeof(long) - 1;
                     }
                     else
                     {
-                        Debug.Assert(false, "invalid key in free space tree: " + key);
+                        Debug.Assert(false, "invalid key in free space tree: " + it.CurrentKey);
                     }
 
                 } while (it.MoveNext());
@@ -228,8 +225,7 @@ namespace Voron.Impl
                 int triesAfterFindingSuitable = 256;
                 do
                 {
-                    var key = new Slice(it.Current);
-                    if (_recordsToSkip.Exists(x => x.Compare(key, _env.SliceComparer) == 0))
+                    if (_recordsToSkip.Exists(x => x.Compare(it.CurrentKey, _env.SliceComparer) == 0))
                         continue; // if it is marked in memory for either update / delete, we don't want it
 
                     if (current != null)
@@ -237,11 +233,11 @@ namespace Voron.Impl
 
                     if (currentKey != null)
                     {
-                        if (_currentKey.Compare(key, _env.SliceComparer) == 0)
+                        if (_currentKey.Compare(it.CurrentKey, _env.SliceComparer) == 0)
                             continue; // skip current one
                     }
 
-                    using (var stream = NodeHeader.Stream(tx, it.Current))
+                    using (var stream = it.CreateStreamForCurrent())
                     using (var reader = new BinaryReader(stream))
                     {
                         stream.Position = sizeof(long);
@@ -390,16 +386,16 @@ namespace Voron.Impl
                 {
                     var freedTransaction = new FreedTransaction
                         {
-                            Key = new Slice(it.Current).Clone(),
+                            Key = it.CurrentKey.Clone(),
                             Pages = new List<long>()
                         };
 
-                    var size = NodeHeader.GetDataSize(tx, it.Current) / sizeof(long);
+                    var size = it.GetCurrentDataSize() / sizeof(long);
 
                     Debug.Assert(size > 1);
 
 
-                    using (var stream = NodeHeader.Stream(tx, it.Current))
+                    using (var stream = it.CreateStreamForCurrent())
                     using (var reader = new BinaryReader(stream))
                     {
                         freedTransaction.Id = reader.ReadInt64();
@@ -471,7 +467,6 @@ namespace Voron.Impl
                 }
             }
 
-
             // the act of flushing the current section
             // may cause us to move to another section
             // need to handle this scenario
@@ -528,9 +523,9 @@ namespace Voron.Impl
 
                 do
                 {
-                    if (_currentKey != null && _currentKey.Compare(new Slice(it.Current), _env.SliceComparer) == 0)
+                    if (_currentKey != null && _currentKey.Compare(it.CurrentKey, _env.SliceComparer) == 0)
                         continue;
-                    using (var stream = NodeHeader.Stream(tx, it.Current))
+                    using (var stream = it.CreateStreamForCurrent())
                     {
                         var section = new Section();
                         ReadSectionPages(stream, section);

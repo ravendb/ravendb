@@ -60,7 +60,10 @@
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
     <Compile Include="Impl\NativeMethods.cs" />
-    <Compile Include="Trees\Iterator.cs" />
+    <Compile Include="Trees\EmptyIterator.cs" />
+    <Compile Include="Trees\IIterator.cs" />
+    <Compile Include="Trees\SingleEntryIterator.cs" />
+    <Compile Include="Trees\TreeIterator.cs" />
     <Compile Include="Trees\NodeFlags.cs" />
     <Compile Include="Trees\NodeHeader.cs" />
     <Compile Include="Trees\Page.cs" />

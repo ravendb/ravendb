@@ -15,7 +15,7 @@ namespace Voron
 
 		private ushort _pointerSize;
 		public SliceOptions Options;
-		private byte[] _array;
+		private readonly byte[] _array;
 		private byte* _pointer;
 
 		public ushort Size
@@ -75,10 +75,50 @@ namespace Voron
 
 		public override int GetHashCode()
 		{
-			throw new NotImplementedException();
+		    if (_array != null)
+		        return ComputeHashArray();
+		    return ComputeHashPointer();
 		}
 
-		public override string ToString()
+        private int ComputeHashPointer()
+        {
+            unchecked
+            {
+                const int p = 16777619;
+                int hash = (int)2166136261;
+
+                for (int i = 0; i < _pointerSize; i++)
+                    hash = (hash ^ _pointer[i]) * p;
+
+                hash += hash << 13;
+                hash ^= hash >> 7;
+                hash += hash << 3;
+                hash ^= hash >> 17;
+                hash += hash << 5;
+                return hash;
+            }
+        }
+
+	    private int ComputeHashArray()
+	    {
+	        unchecked
+	        {
+	            const int p = 16777619;
+	            int hash = (int) 2166136261;
+
+	            for (int i = 0; i < _array.Length; i++)
+                    hash = (hash ^ _array[i]) * p;
+
+	            hash += hash << 13;
+	            hash ^= hash >> 7;
+	            hash += hash << 3;
+	            hash ^= hash >> 17;
+	            hash += hash << 5;
+	            return hash;
+	        }
+	    }
+
+	    public override string ToString()
 		{
 			// this is used for debug purposes only
 			if (Options != SliceOptions.Key)
@@ -171,5 +211,6 @@ namespace Voron
             }
             return new Slice(buffer);
 	    }
+
 	}
 }
