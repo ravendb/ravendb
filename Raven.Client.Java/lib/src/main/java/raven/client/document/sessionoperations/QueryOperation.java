@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
@@ -47,7 +48,7 @@ public class QueryOperation {
   private final String[] projectionFields;
   private boolean firstRequest = true;
 
-  private static final Pattern idOnly =  Pattern.compile("^__document_id\\s*:\\s*([\\w_\\-/\\\\\\.]+)\\s*$"); //TODO covert me
+  private static final Pattern ID_ONLY =  Pattern.compile("^__document_id\\s*:\\s*([\\w_\\-/\\\\\\.]+)\\s*$");
 
   public QueryResult getCurrentQueryResults() {
     return currentQueryResults;
@@ -91,20 +92,18 @@ public class QueryOperation {
       return ;
     }
 
-    /*TODO:
-    var match = idOnly.Match(IndexQuery.Query);
-    if (match.Success == false)
-      return;
+    Matcher matcher = ID_ONLY.matcher(indexQuery.getQuery());
+    if (!matcher.matches()) {
+      return ;
+    }
 
     if (sessionOperations.getConventions().isAllowQueriesOnId()) {
       return ;
     }
 
-    var value = match.Groups[1].Value;
-    throw new InvalidOperationException(
-      "Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" +
-    Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
-     */
+    String value = matcher.group(1);
+    throw new IllegalStateException( "Attempt to query by id only is blocked, you should use call session.load(\"" + value + "\"); instead of session.query().where(x=>x.Id == \"" + value + "\");\n" +
+        "You can turn this error off by specifying documentStore.getConventions().setAllowQueriesOnId(true);, but that is not recommend and provided for backward compatibility reasons only.");
   }
 
   private void startTiming() {

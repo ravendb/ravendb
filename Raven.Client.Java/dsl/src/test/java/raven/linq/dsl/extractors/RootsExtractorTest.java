@@ -20,7 +20,6 @@ import raven.samples.PersonResult;
 import raven.samples.QPerson;
 import raven.samples.QPersonResult;
 
-//TODO: test for inner lambdas
 public class RootsExtractorTest {
 
   @Test

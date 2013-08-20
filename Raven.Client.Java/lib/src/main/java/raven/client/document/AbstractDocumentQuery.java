@@ -1,5 +1,6 @@
 package raven.client.document;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,11 +18,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-
-import com.mysema.query.dml.UpdateClause;
-import com.mysema.query.types.Expression;
-import com.mysema.query.types.ExpressionUtils;
-import com.mysema.query.types.Path;
 
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
@@ -43,16 +39,18 @@ import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.SortedField;
 import raven.abstractions.data.SpatialIndexQuery;
 import raven.abstractions.extensions.ExpressionExtensions;
+import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.NumberUtil;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
 import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJTokenWriter;
 import raven.abstractions.spatial.WktSanitizer;
 import raven.abstractions.util.RavenQuery;
+import raven.abstractions.util.ValueTypeUtils;
 import raven.client.EscapeQueryOptions;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQuery;
-import raven.client.IDocumentSession;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.WhereParams;
@@ -63,7 +61,9 @@ import raven.client.document.sessionoperations.QueryOperation;
 import raven.client.linq.LinqPathProvider;
 import raven.client.listeners.IDocumentQueryListener;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
+
+import com.mysema.query.types.Expression;
+import com.mysema.query.types.Path;
 
 /**
  * A query against a Raven index
@@ -71,7 +71,7 @@ import raven.client.spatial.SpatialCriteriaFactory;
  */
 public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQuery<T, TSelf>> implements IRavenQueryInspector, IAbstractDocumentQuery<T> {
 
-  protected Class<T> clazz; //typeof (T) //TODO: assign this value!
+  protected Class<T> clazz;
 
   protected boolean isSpatialQuery;
   protected String spatialFieldName, queryShape;
@@ -81,7 +81,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   private final LinqPathProvider linqPathProvider;
   protected Action1<IndexQuery> beforeQueryExecutionAction;
 
-  protected final Set<Class<?>> rootTypes = new HashSet<>(); //TODO: add typeof(T)
+  protected final Set<Class<?>> rootTypes;
 
   static Map<Class< ? >, Function1<Object, String>> implicitStringsCache = new HashMap<Class< ? >, Function1<Object, String>>();
 
@@ -235,7 +235,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   protected Etag cutoffEtag;
   private QueryOperator defaultOperator;
 
-  private static final Pattern espacePostfixWildcard = Pattern.compile("\\\\*(\\s|$)"); //TODO: convert me
+  private static final Pattern ESPACE_POSTFIX_WILDCARD = Pattern.compile("\\\\\\*($|\\s)");
 
   /**
    * Get the name of the index being queried
@@ -273,6 +273,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   public AbstractDocumentQuery(Class<T> clazz, InMemoryDocumentSessionOperations theSession, IDatabaseCommands databaseCommands, String indexName, String[] fieldsToFetch, String[] projectionFields,
       List<IDocumentQueryListener> queryListeners, boolean isMapReduce) {
     this.clazz = clazz;
+    rootTypes = new HashSet<>();
+    rootTypes.add(clazz);
     this.theDatabaseCommands = databaseCommands;
     this.projectionFields = projectionFields;
     this.fieldsToFetch = fieldsToFetch;
@@ -302,6 +304,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected AbstractDocumentQuery(AbstractDocumentQuery<T, TSelf> other) {
     clazz = other.clazz;
+    rootTypes = new HashSet<>(other.rootTypes);
     theDatabaseCommands = other.theDatabaseCommands;
     indexName = other.indexName;
     linqPathProvider = other.linqPathProvider;
@@ -1223,7 +1226,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOf(Date cutOff, long waitTimeout) {
     theWaitForNonStaleResults = true;
-    cutoff = cutOff; //TODO: ToUniversalTime();
+    cutoff = cutOff;
     timeout = waitTimeout;
     return (IDocumentQuery<T>) this;
   }
@@ -1397,6 +1400,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
+
   /**
    * Perform a search for documents which fields that match the searchTerms.
    * If there is more than a single term, each of them will be checked independently.
@@ -1415,7 +1419,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       break;
     case ALLOW_POSTFIX_WILDCARD:
       searchTerms = RavenQuery.escape(searchTerms, false, false);
-      //TODO: searchTerms = espacePostfixWildcard.replace(searchTerms, "*");
+      searchTerms = ESPACE_POSTFIX_WILDCARD.matcher(searchTerms).replaceFirst("*");
       break;
     case ALLOW_ALL_WILDCARDS:
       searchTerms = RavenQuery.escape(searchTerms, false, false);
@@ -1453,12 +1457,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
         s += "Z";
       return s;
     }
-    if (type == typeof(DateTimeOffset))
-    {
-      var val = (DateTimeOffset)whereParams.Value;
-      return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
-    } */
-
+     */
     if (Number.class.isAssignableFrom(type)) {
       return RavenQuery.escape(whereParams.getValue().toString(), false, false);
     }
@@ -1480,36 +1479,32 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return strValue.value;
     }
 
-    /*TODO
-
-    if (whereParams.Value is ValueType)
-    {
-      var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-                      whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
-
+    if (ValueTypeUtils.isValueType(type)) {
+      String escaped = RavenQuery.escape(whereParams.getValue().toString(), whereParams.isAllowWildcards() && whereParams.isAnalyzed(), true);
       return escaped;
     }
 
-    // NOTE: implicit conversion is not supported in java
+    try {
+      RavenJTokenWriter ravenJTokenWriter = new RavenJTokenWriter();
+      JsonExtensions.getDefaultObjectMapper().writeValue(ravenJTokenWriter, whereParams.getValue());
+      String term = ravenJTokenWriter.getToken().toString();
 
-    var jsonSerializer = conventions.CreateSerializer();
-    var ravenJTokenWriter = new RavenJTokenWriter();
-    jsonSerializer.Serialize(ravenJTokenWriter, whereParams.getValue());
-    var term = ravenJTokenWriter.Token.ToString(Formatting.None);
-    if(term.Length > 1 && term[0] == '"' && term[term.Length-1] == '"')
-    {
-      term = term.Substring(1, term.Length - 2);
-    }
-    switch (ravenJTokenWriter.Token.Type)
-    {
-      case JTokenType.Object:
-      case JTokenType.Array:
-        return "[[" + RavenQuery.Escape(term, whereParams.isAllowWildcards && whereParams.isAnalyzed, false) + "]]";
+      if(term.length() > 1 && term.charAt(0) == '"' && term.charAt(term.length() - 1) == '"') {
+        term = term.substring(1, term.length() - 2);
+      }
+      switch (ravenJTokenWriter.getToken().getType())
+      {
+      case OBJECT:
+      case ARRAY:
+        return "[[" + RavenQuery.escape(term, whereParams.isAllowWildcards() && whereParams.isAnalyzed(), false) + "]]";
 
       default:
-        return RavenQuery.Escape(term, whereParams.isAllowWildcards() && whereParams.isAnalyzed(), true);
-    }*/
-    return null; //TODO: delete me
+        return RavenQuery.escape(term, whereParams.isAllowWildcards() && whereParams.isAnalyzed(), true);
+      }
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to serialize token", e);
+    }
+
   }
 
 
@@ -1529,8 +1524,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
         dateStr += "Z";
       return dateStr;
     }
-    if (whereParams.Value is DateTimeOffset)
-      return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
      */
     if (Constants.DOCUMENT_ID_FIELD_NAME.equals(whereParams.getFieldName()) && !(whereParams.getValue() instanceof String))  {
       return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(), clazz, false);
@@ -1544,10 +1537,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if (whereParams.getValue() instanceof Double) {
       return NumberUtil.numberToString((Double) whereParams.getValue());
     }
-    /*TODO
-    if (whereParams.Value is TimeSpan)
-      return NumberUtil.NumberToString(((TimeSpan) whereParams.Value).Ticks);
-     */
     if (whereParams.getValue() instanceof Float) {
       return NumberUtil.numberToString((Float) whereParams.getValue());
     }
@@ -1559,23 +1548,19 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return strVal.value;
     }
 
-    /*
-    if(whereParams.Value is ValueType)
-      return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-                   false, true);
-
-    var stringWriter = new StringWriter();
-    conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
-
-    var sb = stringWriter.GetStringBuilder();
-    if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
-    {
-      sb.Remove(sb.Length - 1, 1);
-      sb.Remove(0, 1);
+    if (ValueTypeUtils.isValueType(whereParams.getValue().getClass())) {
+      return RavenQuery.escape(whereParams.getValue().toString(), false, true);
+    }
+    try {
+      String term = JsonExtensions.getDefaultObjectMapper().writeValueAsString(whereParams.getValue());
+      if(term.length() > 1 && term.charAt(0) == '"' && term.charAt(term.length() - 1) == '"') {
+        term = term.substring(1, term.length() - 2);
+      }
+      return RavenQuery.escape(term, false, true);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to serialize token", e);
     }
 
-    return RavenQuery.escape(sb.ToString(), false, true);*/
-    return null; //TODO: delete me
   }
 
   /**
@@ -1638,12 +1623,12 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     /*TODO:
     if (expression.NodeType == ExpressionType.ArrayLength)
       result.Path += ".Length";
-      */
+     */
 
     String propertyName = indexName == null || indexName.toLowerCase().startsWith("dynamic/")
         ? conventions.getFindPropertyNameForDynamicIndex().apply(clazz, indexName, "", result.getPath())
-        : conventions.getFindPropertyNameForIndex().apply(clazz, indexName, "", result.getPath());
-    return propertyName;
+            : conventions.getFindPropertyNameForIndex().apply(clazz, indexName, "", result.getPath());
+        return propertyName;
   }
 
 }
