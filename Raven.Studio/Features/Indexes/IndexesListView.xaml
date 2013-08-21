@@ -311,7 +311,7 @@
 						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_Indexes}"
 								 Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
 								 ItemsSource="{Binding Indexes}"
-								 SelectedItem="{Binding DataContext.ItemSelection, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}, Mode=TwoWay}"
+								 SelectedItem="{Binding DataContext.ItemSelection, ElementName=IndexesList, Mode=TwoWay}"
 								 ItemTemplate="{StaticResource IndexItemTemplate}">
 							<i:Interaction.Behaviors>
 								<Behaviors:SelectItemOnRightClick/>
@@ -321,9 +321,9 @@
 							<ContextMenu:ContextMenuService.ContextMenu>
 								<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
 									<ContextMenu:MenuItem Header="Delete index"
-                                          Command="{Binding DataContext.DeleteIndex, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                          Command="{Binding DataContext.DeleteIndex, ElementName=IndexesList}"/>
 									<ContextMenu:MenuItem Header="Reset index"
-                                          Command="{Binding DataContext.ResetIndex, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                          Command="{Binding DataContext.ResetIndex, ElementName=IndexesList}"/>
 								</ContextMenu:ContextMenu>
 							</ContextMenu:ContextMenuService.ContextMenu>
 						</ListBox>
