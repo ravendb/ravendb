@@ -18,8 +18,9 @@ namespace Voron.Impl
 
 		private TreeDataInTransaction _rootTreeData;
 		private TreeDataInTransaction _fresSpaceTreeData;
-		private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
-		private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
+	    private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
+        private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
+        private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
 		private readonly List<long> _freedPages = new List<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly FreeSpaceRepository _freeSpaceRepository;
@@ -162,10 +163,12 @@ namespace Voron.Impl
 		{
 			if (Flags!=(TransactionFlags.ReadWrite))
 				return; // nothing to do
-			
+
+		    FlushAllMultiValues();
+
 			_freeSpaceRepository.FlushFreeState(this);
 
-			foreach (var kvp in _treesInfo)
+		    foreach (var kvp in _treesInfo)
 			{
 				var txInfo = kvp.Value;
 				var tree = kvp.Key;
@@ -218,7 +221,30 @@ namespace Voron.Impl
 			_pager.Sync();
 		}
 
-		private unsafe void WriteHeader(Page pg)
+	    private unsafe void FlushAllMultiValues()
+	    {
+	        if (_multiValueTrees == null)
+	            return;
+
+	        foreach (var multiValueTree in _multiValueTrees)
+	        {
+	            var parentTree = multiValueTree.Key.Item1;
+	            var key = multiValueTree.Key.Item2;
+	            var childTree = multiValueTree.Value;
+
+	            TreeDataInTransaction value;
+	            if (_treesInfo.TryGetValue(childTree, out value) == false)
+	                continue;
+                
+	            _treesInfo.Remove(childTree);
+	            var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
+	            value.State.CopyTo(trh);
+
+                parentTree.SetAsMultiValueTreeRef(this, key);
+	        }
+	    }
+
+	    private unsafe void WriteHeader(Page pg)
 		{
 			var fileHeader = (FileHeader*)pg.Base;
 			fileHeader->TransactionId = _id;
@@ -265,6 +291,7 @@ namespace Voron.Impl
 
 		public TreeDataInTransaction GetTreeInformation(Tree tree)
 		{
+// ReSharper disable once PossibleUnintendedReferenceComparison
 			if (tree == _env.Root)
 			{
 				return _rootTreeData ?? (_rootTreeData = new TreeDataInTransaction(_env.Root)
@@ -272,6 +299,8 @@ namespace Voron.Impl
 						RootPageNumber = _env.Root.State.RootPageNumber
 					});
 			}
+
+// ReSharper disable once PossibleUnintendedReferenceComparison
 			if (tree == _env.FreeSpaceRoot)
 			{
 				return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpaceRoot)
@@ -291,7 +320,7 @@ namespace Voron.Impl
 				};
 			_treesInfo.Add(tree, c);
 			return c;
-		}
+		}	  
 
 		public void FreePage(long pageNumber)
 		{
@@ -301,9 +330,7 @@ namespace Voron.Impl
 			Debug.Assert(_freedPages.Contains(pageNumber) == false);
 #endif
 			_freedPages.Add(pageNumber);
-
 		}
-
 
 		internal void UpdateRoots(Tree root, Tree freeSpace)
 		{
@@ -334,5 +361,59 @@ namespace Voron.Impl
 	    {
 	        return new Cursor();
 	    }
+
+	    public unsafe void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
+	    {
+	        if(_multiValueTrees == null)
+                _multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
+	        mvTree.IsMultiValueTree = true;
+	        _multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
+	    }
+
+	    public bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
+	    {
+	        mvTree = null;
+	        if (_multiValueTrees == null)
+	            return false;
+	        return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
+	    }
+
+	    public bool TryRemoveMultiValueTree(Tree parentTree,Slice key)
+	    {
+	        var keyToRemove = Tuple.Create(parentTree, key);
+	        if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
+                return false;
+
+            return _multiValueTrees.Remove(keyToRemove);
+	    }
+
 	}
+
+    internal unsafe class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
+    {
+        private readonly SliceComparer _comparer;
+
+        public TreeAndSliceComparer(SliceComparer comparer)
+        {
+            _comparer = comparer;
+        }
+
+        public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
+        {
+            if (x == null && y == null)
+                return true;
+            if (x == null || y == null)
+                return false;
+
+            if (x.Item1 != y.Item1)
+                return false;
+
+            return x.Item2.Compare(y.Item2, _comparer) == 0;
+        }
+
+        public int GetHashCode(Tuple<Tree, Slice> obj)
+        {
+            return obj.Item1.GetHashCode() ^ 397*obj.Item2.GetHashCode();
+        }
+    }
 }
