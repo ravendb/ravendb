@@ -184,7 +184,7 @@ namespace Voron.Trees
 
                 if (page.LastMatch == 0) // this is an update operation
                 {
-                    RemoveLeafNode(tx, page);
+                    RemoveLeafNode(tx, cursor, page);
                 }
                 else // new item should be recorded
                 {
@@ -210,6 +210,7 @@ namespace Voron.Trees
                 else
                 {
                     dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber);
+                    cursor.IncrementItemCount();
                     page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
                 }
                 if (overFlowPos != null)
@@ -260,7 +261,7 @@ namespace Voron.Trees
             return len + Constants.PageHeaderSize > tx.Pager.MaxNodeSize;
         }
 
-        private void RemoveLeafNode(Transaction tx, Page page)
+        private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
         {
             var node = page.GetNode(page.LastSearchPosition);
             if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
@@ -277,6 +278,7 @@ namespace Voron.Trees
                 txInfo.State.PageCount -= numberOfPages;
             }
             page.RemoveNode(page.LastSearchPosition);
+            cursor.DecrementItemCount();
         }
 
         [Conditional("VALIDATE")]
@@ -384,7 +386,7 @@ namespace Voron.Trees
                 page = tx.ModifyCursor(this, cursor);
 
                 txInfo.State.EntriesCount--;
-                RemoveLeafNode(tx, page);
+                RemoveLeafNode(tx, cursor, page);
                 var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
                 var changedPage = page;
                 while (changedPage != null)

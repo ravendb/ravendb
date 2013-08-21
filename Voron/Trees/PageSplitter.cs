@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Voron.Impl;
 
 namespace Voron.Trees
@@ -44,6 +45,7 @@ namespace Voron.Trees
                 newRootPage.AddNode(0, Slice.BeforeAllKeys, -1, _page.PageNumber);
                 _parentPage = newRootPage;
                 _parentPage.LastSearchPosition++;
+                _parentPage.ItemCount = _page.ItemCount;
             }
             else
             {
@@ -63,10 +65,15 @@ namespace Voron.Trees
                     // here we steal the last entry from the current page so we maintain the implicit null left entry
                     var node = _page.GetNode(_page.NumberOfEntries - 1);
                     Debug.Assert(node->Flags == NodeFlags.PageRef);
+                    var itemsMoved = _tx.Pager.Get(_tx, node->PageNumber).ItemCount;
                     rightPage.AddNode(0, Slice.Empty, -1, node->PageNumber);
                     pos = rightPage.AddNode(1, _newKey, _len, _pageNumber);
+                    rightPage.ItemCount = itemsMoved;
+    
                     AddSeperatorToParentPage(rightPage, new Slice(node));
+
                     _page.RemoveNode(_page.NumberOfEntries - 1);
+                    _page.ItemCount -= itemsMoved;
                 }
                 else
                 {
@@ -74,6 +81,7 @@ namespace Voron.Trees
                     pos = rightPage.AddNode(0, _newKey, _len, _pageNumber);
                 }
                 _cursor.Push(rightPage);
+                IncrementItemCountIfNecessary();
                 return pos;
             }
 
@@ -113,29 +121,41 @@ namespace Voron.Trees
             for (int i = splitIndex; i < nKeys; i++)
             {
                 var node = _page.GetNode(i);
+                var itemsMoved = 1;
                 if (_page.IsBranch && rightPage.NumberOfEntries == 0)
+                {
                     rightPage.CopyNodeDataToEndOfPage(node, Slice.Empty);
+                    itemsMoved = _tx.Pager.Get(_tx, node->PageNumber).ItemCount;
+                }
                 else
+                {
                     rightPage.CopyNodeDataToEndOfPage(node);
+                }
+                rightPage.ItemCount += itemsMoved;
+                _page.ItemCount -= itemsMoved;
             }
             _page.Truncate(_tx, splitIndex);
 
             byte* dataPos;
             // actually insert the new key
-            if (currentIndex > splitIndex ||
-                newPosition && currentIndex == splitIndex)
-            {
-                var pos = rightPage.NodePositionFor(_newKey, _cmp);
-                dataPos = rightPage.AddNode(pos, _newKey, _len, _pageNumber);
-                _cursor.Push(rightPage);
-            }
-            else
-            {
-                var pos = _page.NodePositionFor(_newKey, _cmp);
-                dataPos = _page.AddNode(pos, _newKey, _len, _pageNumber);
-                _cursor.Push(_page);
-            }
+            return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
+                ? InsertNewKey(rightPage) : InsertNewKey(_page);
+        }
+
+        private byte* InsertNewKey(Page p)
+        {
+            var pos = p.NodePositionFor(_newKey, _cmp);
+            var dataPos = p.AddNode(pos, _newKey, _len, _pageNumber);
+            _cursor.Push(p);
+            IncrementItemCountIfNecessary();
             return dataPos;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void IncrementItemCountIfNecessary()
+        {
+            if (_len > -1)
+                _cursor.IncrementItemCount();
         }
 
         private void AddSeperatorToParentPage(Page rightPage, Slice seperatorKey)

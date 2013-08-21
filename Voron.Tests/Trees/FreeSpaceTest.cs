@@ -30,6 +30,10 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
+                    if (i >= 4)
+                    {
+                        RenderAndShow(tx,1);
+                    }
 					Env.Root.Delete(tx, i.ToString("0000"));
 				}
 

@@ -85,6 +85,7 @@ namespace Voron.Trees
                 var node = right.GetNode(i);
                 left.CopyNodeDataToEndOfPage(node, key);
             }
+            left.ItemCount += right.ItemCount;
             parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
             _tx.FreePage(right.PageNumber);
         }
@@ -124,16 +125,21 @@ namespace Voron.Trees
             var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            if (fromNode->Flags == (NodeFlags.Data))
+            if (from.IsBranch == false)
             {
                 byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
                 var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1);
                 NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
+                --@from.ItemCount;
+                ++to.ItemCount;
             }
-            else
+            else 
             {
                 long pageNum = fromNode->PageNumber;
+                var itemsMoved = _tx.Pager.Get(_tx, pageNum).ItemCount;
                 to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum);
+                from.ItemCount -= itemsMoved;
+                to.ItemCount += itemsMoved;
             }
 
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
@@ -186,6 +192,7 @@ namespace Voron.Trees
             txInfo.State.PageCount = 1;
 
             var rootPage = _tx.ModifyPage(_txInfo.Tree, null, node->PageNumber, cursor);
+            rootPage.ItemCount = 1;
             txInfo.RootPageNumber = rootPage.PageNumber;
 
             Debug.Assert(rootPage.Dirty);
