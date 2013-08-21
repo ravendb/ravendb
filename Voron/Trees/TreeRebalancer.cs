@@ -28,11 +28,11 @@ namespace Voron.Trees
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
                 // need to delete the implicit left page, shift right 
-                if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2) 
+                if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
                 {
                     var newImplicit = parentPage.GetNode(1)->PageNumber;
                     parentPage.AddNode(0, Slice.Empty, -1, newImplicit);
-                    parentPage.RemoveNode(1); 
+                    parentPage.RemoveNode(1);
                     parentPage.RemoveNode(1);
                 }
                 else // will be set to rights by the next rebalance call
@@ -50,7 +50,7 @@ namespace Voron.Trees
 
             Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
-           var sibling = SetupMoveOrMerge(cursor, page, parentPage);
+            var sibling = SetupMoveOrMerge(cursor, page, parentPage);
 
             Debug.Assert(sibling.PageNumber != page.PageNumber);
 
@@ -59,7 +59,10 @@ namespace Voron.Trees
                 sibling.NumberOfEntries > minKeys)
             {
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
-                MoveNode(parentPage, sibling, page);
+                if(page.IsBranch)
+                    MoveBranchNode(parentPage, sibling, page);
+                else
+                    MoveLeafNode(parentPage, sibling, page);
                 cursor.Pop();
                 return parentPage;
             }
@@ -120,33 +123,76 @@ namespace Voron.Trees
             return sibling;
         }
 
-        private void MoveNode(Page parentPage, Page from, Page to)
+        private void MoveLeafNode(Page parentPage, Page from, Page to)
         {
+            Debug.Assert(from.IsBranch == false);
             var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
-            if (from.IsBranch == false)
-            {
-                byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
-                var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1);
-                NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
-                --@from.ItemCount;
-                ++to.ItemCount;
-            }
-            else 
-            {
-                long pageNum = fromNode->PageNumber;
-                var itemsMoved = _tx.Pager.Get(_tx, pageNum).ItemCount;
-                to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum);
-                from.ItemCount -= itemsMoved;
-                to.ItemCount += itemsMoved;
-            }
+            byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
+            var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1);
+            NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
+            --@from.ItemCount;
+            ++to.ItemCount;
 
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
             var pos = parentPage.LastSearchPositionOrLastEntry;
             parentPage.RemoveNode(pos);
-          
+
+            var newKey = GetActualKey(to, 0); // get the next smallest key it has now
+            var pageNumber = to.PageNumber;
+            if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
+            {
+                pageNumber = from.PageNumber;
+                newKey = GetActualKey(from, 0);
+            }
+
+            parentPage.AddNode(pos, newKey, -1, pageNumber);
+        }
+
+        private void MoveBranchNode(Page parentPage, Page from, Page to)
+        {
+            Debug.Assert(from.IsBranch);
+            var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
+
+            var fromNode = from.GetNode(from.LastSearchPosition);
+            long pageNum = fromNode->PageNumber;
+            var itemsMoved = _tx.Pager.Get(_tx, pageNum).ItemCount;
+            from.ItemCount -= itemsMoved;
+            to.ItemCount += itemsMoved;
+
+            if (to.LastSearchPosition == 0)
+            {
+                // cannot add to left implicit side, adjust by moving the left node
+                // to the right by one, then adding the new one as the left
+
+                var implicitLeftKey = GetActualKey(to, 0);
+                var leftPageNumber = to.GetNode(0)->PageNumber;
+                to.AddNode(1, implicitLeftKey, -1, leftPageNumber);
+                to.AddNode(0, Slice.BeforeAllKeys, -1, pageNum);
+            }
+            else
+            {
+                to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum);
+            }
+
+            if (from.LastSearchPositionOrLastEntry == 0)
+            {
+                // cannot just remove the left node, need to adjust those
+                var rightPageNumber = from.GetNode(1)->PageNumber;
+                from.RemoveNode(0); // remove the original node
+                from.RemoveNode(0); // remove the next node
+                from.AddNode(0, Slice.BeforeAllKeys, -1, rightPageNumber);
+                Debug.Assert(from.NumberOfEntries >= 2);
+            }
+            else
+            {
+                from.RemoveNode(from.LastSearchPositionOrLastEntry);
+            }
+
+            var pos = parentPage.LastSearchPositionOrLastEntry;
+            parentPage.RemoveNode(pos);
             var newKey = GetActualKey(to, 0); // get the next smallest key it has now
             var pageNumber = to.PageNumber;
             if (parentPage.GetNode(0)->PageNumber == to.PageNumber)

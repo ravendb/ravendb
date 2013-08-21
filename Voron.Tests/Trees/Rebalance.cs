@@ -76,6 +76,10 @@ namespace Voron.Tests.Trees
                 {
                     Env.Root.Delete(tx, string.Format("{0}1", i));
                     Env.Root.Delete(tx, string.Format("{0}2", i));
+                    if (i == 63)
+                    {
+                        
+                    }
                     Env.Root.Delete(tx, string.Format("{0}3", i));
                     Env.Root.Delete(tx, string.Format("{0}4", i));
                     Env.Root.Delete(tx, string.Format("{0}5", i));
