@@ -92,8 +92,7 @@ namespace Voron.Trees
 
                 if (item->Flags == NodeFlags.MultiValuePageRef) //multi-value tree exists
                 {
-                    var tree = OpenOrCreateMultiValueTree(tx, key,
-                        (TreeRootHeader*) ((byte*) item + item->KeySize + Constants.NodeHeaderSize));
+                    var tree = OpenOrCreateMultiValueTree(tx, key, item);
 
                     tree.Delete(tx, value);
                     var treeInfo = tx.GetTreeInformation(tree);
@@ -145,8 +144,7 @@ namespace Voron.Trees
 
                 if (item->Flags == NodeFlags.MultiValuePageRef)
                 {
-                    var tree = OpenOrCreateMultiValueTree(tx, key,
-                        (TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize));
+                    var tree = OpenOrCreateMultiValueTree(tx, key, item);
                     tree.DirectAdd(tx, value, 0);
                 }
                 else // need to turn to tree
@@ -442,8 +440,7 @@ namespace Voron.Trees
 
                 if (item->Flags == NodeFlags.MultiValuePageRef)
                 {
-                    var tree = OpenOrCreateMultiValueTree(tx, key,
-                                         (TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize));
+                    var tree = OpenOrCreateMultiValueTree(tx, key, item);
 
                     return tree.Iterate(tx);
                 }
@@ -495,18 +492,25 @@ namespace Voron.Trees
                 results.Add(p.PageNumber);
                 for (int i = 0; i < p.NumberOfEntries; i++)
                 {
-                    var pageNumber = p.GetNode(i)->PageNumber;
+                    var node = p.GetNode(i);
+                    var pageNumber = node->PageNumber;
                     if (p.IsBranch)
                     {
                         stack.Push(tx.GetReadOnlyPage(pageNumber));
                     }
-                    else
+                    else if(node->Flags == NodeFlags.PageRef)
                     {
                         // This is an overflow page
                         var overflowPage = tx.GetReadOnlyPage(pageNumber);
                         var numberOfPages = GetNumberOfOverflowPages(tx, overflowPage.OverflowSize);
                         for (long j = 0; j < numberOfPages; ++j)
                             results.Add(overflowPage.PageNumber + j);
+                    }
+                    else  if (node->Flags == NodeFlags.MultiValuePageRef)
+                    {
+                        // this is a multi value
+                        var tree = OpenOrCreateMultiValueTree(tx, new Slice(node), node);
+                        results.AddRange(tree.AllPages(tx));
                     }
                 }
             }
@@ -518,8 +522,10 @@ namespace Voron.Trees
             return Name + " " + State.EntriesCount;
         }      
 
-        private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, TreeRootHeader* childTreeHeader)
+        private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
         {
+            var childTreeHeader =
+                (TreeRootHeader*) ((byte*) item + item->KeySize + Constants.NodeHeaderSize);
             Tree tree;
             if (tx.TryGetMultiValueTree(this, key, out tree))
                 return tree;
