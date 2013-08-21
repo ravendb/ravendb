@@ -19,6 +19,7 @@ import raven.client.IDocumentQueryCustomization;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
+import raven.client.document.InMemoryDocumentSessionOperations;
 
 public class RavenQueryProvider<T> implements IRavenQueryProvider {
 
@@ -149,14 +150,6 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
     this.resultTranformer = transformerName;
   }
 
-  /**
-   *  Register the query as a lazy query in the session and return a lazy
-   *  instance that will evaluate the query only when needed
-   */
-  public <S> Lazy<List<S>> lazily(Class<S> clazz, Expression<?> expression, Action1<List<S>> onEval) {
-    //TODO:
-    return null;
-  }
 
   protected <S> RavenQueryProviderProcessor<S> getQueryProviderProcessor(Class<S> clazz) {
     return new RavenQueryProviderProcessor<S>(clazz, queryGenerator, customizeQuery, afterQueryExecuted, indexName,
@@ -175,9 +168,44 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   }
 
   @Override
-  public <T> Lazy<List<T>> lazily(Expression< ? > expression, Action1<List<T>> onEval) {
-    // TODO Auto-generated method stub
-    return null;
+  public <S> Lazy<List<S>> lazily(Class<S> clazz, Expression< ? > expression, Action1<List<S>> onEval) {
+    final RavenQueryProviderProcessor<S> processor = getQueryProviderProcessor(clazz); //TODO: not sure which class to use
+    IDocumentQuery<S> query = processor.getLuceneQueryFor(expression);
+    if (afterQueryExecuted != null) {
+      query.afterQueryExecuted(afterQueryExecuted);
+    }
+
+    List<String> renamedFields = new ArrayList<>();
+    for (String field :fieldsToFetch) {
+      for (RenamedField renamedField : fieldsToRename) {
+        if (renamedField.getOriginalField().equals(field)) {
+          renamedFields.add(renamedField.getNewField());
+          break;
+        }
+      }
+      renamedFields.add(field);
+    }
+
+    if (!renamedFields.isEmpty()) {
+      query.afterQueryExecuted(new Action1<QueryResult>() {
+        @Override
+        public void apply(QueryResult queryResult) {
+          processor.renameResults(queryResult);
+        }
+      });
+    }
+    if (!fieldsToFetch.isEmpty()) {
+      query = query.selectFields(clazz, fieldsToFetch.toArray(new String[0]), renamedFields.toArray(new String[0]));
+    }
+    return query.lazily(onEval);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> IRavenQueryable<T> createQuery(Expression< ? > expression) {
+    return new RavenQueryInspector(expression.getType(), this,
+        ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator, databaseCommands, isMapReduce);
+
   }
 
 }

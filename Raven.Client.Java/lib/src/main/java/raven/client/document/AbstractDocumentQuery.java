@@ -560,7 +560,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    *  instance that will evaluate the query only when needed
    * @return
    */
-  public Lazy<Collection<T>> lazily() {
+  public Lazy<List<T>> lazily() {
     return lazily(null);
   }
 
@@ -570,7 +570,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param onEval
    * @return
    */
-  public Lazy<Collection<T>> lazily(Action1<Collection<T>> onEval) {
+  public Lazy<List<T>> lazily(Action1<List<T>> onEval) {
     final Map<String, String> headers = new HashMap<>();
     if (queryOperation == null) {
       executeBeforeQueryListeners();
@@ -698,6 +698,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     sortByHints.add(new Tuple<String, Class< ? >>(fieldName, fieldType));
     return (IDocumentQuery<T>) this;
   }
+
+
 
   //TODO public virtual IEnumerator<T> GetEnumerator() {
 

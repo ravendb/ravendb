@@ -16,7 +16,7 @@ import raven.client.IDocumentQueryCustomization;
 /**
  * Extension for the built-in IQueryProvider allowing for Raven specific operations
  */
-public interface IRavenQueryProvider {
+public interface IRavenQueryProvider extends IQueryProvider {
   /**
    * Callback to get the results of the query
    * @param afterQueryExecuted
@@ -74,7 +74,7 @@ public interface IRavenQueryProvider {
    * @param onEval
    * @return
    */
-  public <T> Lazy<List<T>> lazily(Expression<?> expression, Action1<List<T>> onEval);
+  public <T> Lazy<List<T>> lazily(Class<T> clazz, Expression<?> expression, Action1<List<T>> onEval);
 
   /**
    * Set the fields to fetch

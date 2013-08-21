@@ -65,7 +65,7 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    * instance that will evaluate the query only when needed
    * @return
    */
-  public Lazy<Collection<T>> lazily();
+  public Lazy<List<T>> lazily();
 
   /**
    * Register the query as a lazy query in the session and return a lazy
@@ -74,7 +74,7 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    * @param onEval
    * @return
    */
-  public Lazy<Collection<T>> lazily(Action1<Collection<T>> onEval);
+  public Lazy<List<T>> lazily(Action1<List<T>> onEval);
 
   /**
    * Create the index query object for this query

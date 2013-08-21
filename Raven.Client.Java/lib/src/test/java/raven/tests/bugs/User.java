@@ -1,5 +1,8 @@
 package raven.tests.bugs;
 
+import com.mysema.query.annotations.QueryEntity;
+
+@QueryEntity
 public class User {
   private String id;
   private String name;
@@ -17,8 +20,6 @@ public class User {
   public void setId(String id) {
     this.id = id;
   }
-
-
 
   public String getEmail() {
     return email;

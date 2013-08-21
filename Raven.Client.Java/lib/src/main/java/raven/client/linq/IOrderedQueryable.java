@@ -4,6 +4,7 @@ import java.util.List;
 
 import raven.abstractions.basic.Lazy;
 
+import com.mysema.query.types.Expression;
 import com.mysema.query.types.Predicate;
 
 //TODO: insert linq expressions  + RavenQueryableExtensions + LinqExntesions
@@ -21,4 +22,18 @@ public interface IOrderedQueryable<T> {
 
 
   public Lazy<List<T>> lazily();
+
+
+  //IQueryable
+
+  public Class<?> getElementType();
+
+  public Expression<?> getExpression();
+
+  public IQueryProvider getProvider();
+
+
+
+
+
 }

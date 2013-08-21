@@ -14,8 +14,10 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 
+import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
+import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.data.AggregationOperation;
@@ -31,7 +33,6 @@ import raven.client.listeners.IDocumentQueryListener;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
-import com.google.common.reflect.Reflection;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.path.ListPath;
 

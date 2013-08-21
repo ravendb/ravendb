@@ -14,7 +14,6 @@ import raven.client.document.DocumentStore;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.expressions.AnonymousExpression;
-import raven.tests.resultsTransformer.QStronglyTypedResultsTransformerTest_Order;
 
 import com.mysema.query.annotations.QueryEntity;
 

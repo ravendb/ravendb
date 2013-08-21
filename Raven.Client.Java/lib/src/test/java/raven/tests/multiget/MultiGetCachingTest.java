@@ -17,6 +17,7 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentConvention;
 import raven.client.document.DocumentStore;
+import raven.tests.bugs.QUser;
 import raven.tests.bugs.User;
 
 public class MultiGetCachingTest extends RemoteClientTest {
@@ -184,8 +185,7 @@ public class MultiGetCachingTest extends RemoteClientTest {
         session.saveChanges();
       }
 
-      User u = alias(User.class, "u");
-
+      QUser u = new QUser("u");
 
       try (IDocumentSession session = store.openSession()) {
         session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
@@ -193,13 +193,13 @@ public class MultiGetCachingTest extends RemoteClientTest {
           public void apply(IDocumentQueryCustomization input) {
             input.waitForNonStaleResults();
           }
-        }).where($(u.getName()).eq("test")).toList();
+        }).where(u.name.eq("test")).toList();
       }
 
       try (IDocumentSession session = store.openSession()) {
         int requests = session.advanced().getNumberOfRequests();
-        Lazy<List<User>> result1 = session.query(User.class).where($(u.getName()).eq("oren")).lazily();
-        Lazy<List<User>> result2 = session.query(User.class).where($(u.getName()).eq("ayende")).lazily();
+        Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
         assertNotNull(result2.getValue());
 
         assertNumberOfRequests(1, requests);
@@ -211,8 +211,8 @@ public class MultiGetCachingTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         int requests = session.advanced().getNumberOfRequests();
-        Lazy<List<User>> result1 = session.query(User.class).where($(u.getName()).eq("oren")).lazily();
-        Lazy<List<User>> result2 = session.query(User.class).where($(u.getName()).eq("ayende")).lazily();
+        Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
         assertNotNull(result2.getValue());
 
         assertNumberOfRequests(1, requests);
