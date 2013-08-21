@@ -21,7 +21,10 @@ import org.codehaus.jackson.map.module.SimpleModule;
 
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
+import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.util.ValueTypeUtils;
 
 public class JsonExtensions {
   private static ObjectMapper objectMapper;
@@ -119,6 +122,16 @@ public class JsonExtensions {
     }
 
 
+  }
+
+
+  public static RavenJObject toJObject(Object result) {
+    if (result instanceof String || ValueTypeUtils.isValueType(result.getClass())) {
+      RavenJObject jObject = new RavenJObject();
+      jObject.add("Value", new RavenJValue(result));
+      return jObject;
+    }
+    return RavenJObject.fromObject(result);
   }
 
 }

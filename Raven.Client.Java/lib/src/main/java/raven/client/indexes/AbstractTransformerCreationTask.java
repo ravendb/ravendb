@@ -1,13 +1,12 @@
 package raven.client.indexes;
 
-import com.mysema.query.types.Expression;
-
 import raven.abstractions.closure.Action2;
 import raven.abstractions.indexing.TransformerDefinition;
 import raven.client.IDocumentStore;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ServerClient;
 import raven.client.document.DocumentConvention;
+import raven.linq.dsl.TransformerExpression;
 
 /**
  * Base class for creating transformers
@@ -18,14 +17,15 @@ import raven.client.document.DocumentConvention;
 public abstract class AbstractTransformerCreationTask extends AbstractCommonApiForIndexesAndTransformers {
 
   private DocumentConvention conventions;
-  protected Expression<?> transformResults;
+  protected String transformResults;
+  protected TransformerExpression transformResultsExpression;
 
   /**
    * Gets the name of the index.
    * @return
    */
   public String getTransformerName() {
-    return getClass().getName().replace('_', '/');
+    return getClass().getSimpleName().replace('_', '/');
   }
 
   public DocumentConvention getConventions() {
@@ -45,7 +45,18 @@ public abstract class AbstractTransformerCreationTask extends AbstractCommonApiF
   public TransformerDefinition createTransformerDefinition() {
     TransformerDefinition transformerDefinition = new TransformerDefinition();
     transformerDefinition.setName(getTransformerName());
-    //TODO:transformerDefinition.setTransformResults(transformResults)
+    if (transformResults != null && transformResultsExpression != null) {
+      throw new IllegalStateException("You can't define both transformerDefinition and transformResultsExpression");
+    }
+    if (transformResults == null && transformResultsExpression == null) {
+      throw new IllegalStateException("You must define either transformerDefinition or transformResultsExpression");
+    }
+    if (transformResults != null) {
+      transformerDefinition.setTransformResults(transformResults);
+    } else {
+      transformerDefinition.setTransformResults(transformResultsExpression.toLinq());
+    }
+
     return transformerDefinition;
   }
 

@@ -27,7 +27,7 @@ public class WhereEntityIsTest extends RavenDBAwareTests {
 
       Animal a = Alias.alias(Animal.class, "i");
 
-      definitionBuilder.setMap(IndexExpression.whereEntityIs("Cats", "Dogs").select(AnonymousExpression.create(Object.class).with("Color", $(a.getColor()))));
+      definitionBuilder.setMap(IndexExpression.whereEntityIs("Cats", "Dogs").select(new AnonymousExpression().with("Color", $(a.getColor()))));
       dbCommands.putIndex("test", definitionBuilder.toIndexDefinition(convention));
 
       Cat cat = new Cat();

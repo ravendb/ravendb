@@ -13,20 +13,20 @@ import com.mysema.query.types.FactoryExpression;
 import com.mysema.query.types.Ops;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.Visitor;
-public class AnonymousExpression<T> extends ExpressionBase<T> implements FactoryExpression<T> {
+public class AnonymousExpression extends ExpressionBase<Object> implements FactoryExpression<Object> {
 
-  public static <D> AnonymousExpression<D> create(Class<D> type) {
-    return new AnonymousExpression<D>(type);
+  public static AnonymousExpression create() {
+    return new AnonymousExpression();
   }
 
   private List<Expression<?>> expressions = new ArrayList<>();
 
-  public AnonymousExpression(Class<T> type) {
-    super(type);
+  public AnonymousExpression() {
+    super(Object.class);
   }
 
-  public AnonymousExpression(Class<T> type, Expression<?>...args) {
-    super(type);
+  public AnonymousExpression(Expression<?>...args) {
+    super(Object.class);
     this.expressions = ImmutableList.copyOf(args);
   }
 
@@ -49,32 +49,32 @@ public class AnonymousExpression<T> extends ExpressionBase<T> implements Factory
   }
 
   @Override
-  public T newInstance(Object... args) {
+  public Object newInstance(Object... args) {
     throw new IllegalStateException("this method is not implemented");
   }
 
-  public AnonymousExpression<T> withTemplate(String propertyName, String templateExpression) {
+  public AnonymousExpression withTemplate(String propertyName, String templateExpression) {
     return with(propertyName, Expressions.template(Object.class, templateExpression));
   }
 
-  public <S> AnonymousExpression<T> withTemplate(Path<? extends S> path, String templateExpression) {
+  public <S> AnonymousExpression withTemplate(Path<? extends S> path, String templateExpression) {
     return with(extractPropName(path), Expressions.template(Object.class, templateExpression));
   }
 
-  public <S> AnonymousExpression<T> with(Path<? extends S> path, Expression<? extends S> selector) {
+  public <S> AnonymousExpression with(Path<? extends S> path, Expression<? extends S> selector) {
     return with(extractPropName(path), selector);
   }
 
-  public <S> AnonymousExpression<T> with(Path<S> path, S constant) {
+  public <S> AnonymousExpression with(Path<S> path, S constant) {
     return with(path, Expressions.constant(constant));
   }
 
-  public AnonymousExpression<T> with(Path<?> path) {
+  public AnonymousExpression with(Path<?> path) {
     expressions.add(Expressions.operation(List.class, Ops.LIST, path));
     return this;
   }
 
-  public AnonymousExpression<T> with(String propertyName, Expression<?> selector) {
+  public AnonymousExpression with(String propertyName, Expression<?> selector) {
     if (propertyName.contains(".")) {
       throw new RuntimeException("propertyName can not contain nested paths!");
     }
@@ -83,7 +83,7 @@ public class AnonymousExpression<T> extends ExpressionBase<T> implements Factory
     return this;
   }
 
-  public <S> AnonymousExpression<T> with(String propertyName, Object constant) {
+  public <S> AnonymousExpression with(String propertyName, Object constant) {
     return with(propertyName, Expressions.constant(constant));
   }
 

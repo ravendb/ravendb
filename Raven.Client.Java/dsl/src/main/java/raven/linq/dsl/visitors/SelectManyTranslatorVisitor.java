@@ -45,8 +45,8 @@ public class SelectManyTranslatorVisitor implements Visitor<Expression<?>, Locat
     for (int i = 0; i < args.length; i++) {
       args[i] = expr.getArgs().get(i).accept(this, context);
     }
-    if (context.replace && expr instanceof AnonymousExpression<?>) {
-      return new AnonymousExpression<>(expr.getType(), args);
+    if (context.replace && expr instanceof AnonymousExpression) {
+      return new AnonymousExpression(args);
     } else {
       return expr;
     }
@@ -115,7 +115,7 @@ public class SelectManyTranslatorVisitor implements Visitor<Expression<?>, Locat
       throw new IllegalStateException("Expected LAMBDA operation. Got: " + leftLambda.getOperator().getId());
     }
 
-    AnonymousExpression<?> selectManySelector = null;
+    AnonymousExpression selectManySelector = null;
     Expression<?> wrappedParamsList = null;
 
     Path< ? > variableName = (Path< ? >) leftLambda.getArg(0);
@@ -123,12 +123,11 @@ public class SelectManyTranslatorVisitor implements Visitor<Expression<?>, Locat
     if (rightOp.getArg(1) instanceof Operation<?>) {
       Operation<?> lambdaOp =  (Operation< ? >) rightOp.getArg(1);
       aliasForNested = (Path< ? >) lambdaOp.getArg(0);
-      selectManySelector = (AnonymousExpression< ? >) lambdaOp.getArg(1);
+      selectManySelector = (AnonymousExpression) lambdaOp.getArg(1);
     } else {
       aliasForNested = (Path< ? >) rightOp.getArg(1);
       // Create expression body for second argument for SelectMany called selector function
-      selectManySelector = AnonymousExpression
-          .create(Object.class)
+      selectManySelector = new AnonymousExpression()
           .with(StringUtils.capitalize(variableName.getMetadata().getName()), variableName)
           .with(StringUtils.capitalize(aliasForNested.getMetadata().getName()), aliasForNested);
 

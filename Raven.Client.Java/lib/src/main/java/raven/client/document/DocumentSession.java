@@ -1,5 +1,6 @@
 package raven.client.document;
 
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,10 +21,13 @@ import raven.abstractions.data.GetRequest;
 import raven.abstractions.data.GetResponse;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.MultiLoadResult;
+import raven.abstractions.extensions.JsonExtensions;
+import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
 import raven.client.IDocumentSessionImpl;
+import raven.client.ILoadConfiguration;
 import raven.client.ISyncAdvancedSessionOperation;
 import raven.client.ITransactionalDocumentSession;
 import raven.client.RavenQueryHighlightings;
@@ -38,6 +42,7 @@ import raven.client.document.batches.LazyStartsWithOperation;
 import raven.client.document.sessionoperations.LoadOperation;
 import raven.client.document.sessionoperations.MultiLoadOperation;
 import raven.client.indexes.AbstractIndexCreationTask;
+import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.linq.IDocumentQueryGenerator;
 import raven.client.linq.IRavenQueryable;
 import raven.client.linq.RavenQueryInspector;
@@ -227,8 +232,22 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       return arrayOfArrays;*/
       return null; //TODO: delete me
     } else {
-      /*TODO:
+      List<RavenJObject> results = databaseCommands.get(ids, new String[] { } , transformer, queryInputs).getResults();
 
+      List<T> items = new ArrayList<>();
+
+      try {
+        for (RavenJObject object : results) {
+          for (RavenJToken token : object.value(RavenJArray.class, "$values")) {
+            items.add(JsonExtensions.getDefaultObjectMapper().readValue(token.toString(), clazz));
+          }
+        }
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
+      /*
+TODO:
       var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
           .Results
           .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
@@ -236,15 +255,13 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
           .Select(x => x.Deserialize(typeof (T), Conventions))
           .Cast<T>()
           .ToArray();
-
-      if (items.Length > ids.Length)
-      {
-        throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-            transformer,
-            typeof(T).Name));
+       */
+      if (items.size() > ids.length) {
+        throw new IllegalStateException(String.format("A load was attempted with transformer %s, and more " +
+            "than one item was returned per entity - please use %s[] as the projection type instead of %s",
+            transformer, clazz.getSimpleName(), clazz.getSimpleName()));
       }
-      return items;*/
-      return null; //TODO: delete me
+      return (T[]) items.toArray();
     }
   }
 
@@ -417,37 +434,58 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   public ILoaderWithInclude include(Path<?> path) {
     return new MultiLoaderWithInclude(this).include(path);
   }
-  /*TODO:
 
-
-    public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
-    {
-      var transformer = new TTransformer().TransformerName;
-      return this.LoadInternal<TResult>(new string[] {id}, transformer).FirstOrDefault();
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, String id) {
+    try {
+      String transformer = tranformerClass.newInstance().getTransformerName();
+      TResult[] loadResult = loadInternal(clazz, new String[] { id} , transformer);
+      if (loadResult != null && loadResult.length > 0 ) {
+        return loadResult[0];
+      }
+      return null;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
+  }
 
-    public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-    {
-      var transformer = new TTransformer().TransformerName;
-      var configuration = new RavenLoadConfiguration();
-      configure(configuration);
-      return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, String id, Action1<ILoadConfiguration> configure) {
+    try {
+      String transformer = tranformerClass.newInstance().getTransformerName();
+      RavenLoadConfiguration configuration = new RavenLoadConfiguration();
+      configure.apply(configuration);
+      TResult[] loadResult = loadInternal(clazz, new String[] { id} , transformer, configuration.getQueryInputs());
+      if (loadResult != null && loadResult.length > 0 ) {
+        return loadResult[0];
+      }
+      return null;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
+  }
 
-    public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
-    {
-      var transformer = new TTransformer().TransformerName;
-      return this.LoadInternal<TResult>(ids, transformer);
-
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, String... ids) {
+    try {
+      String transformer = tranformerClass.newInstance().getTransformerName();
+      return loadInternal(clazz, ids , transformer);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
+  }
 
-    public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-    {
-      var transformer = new TTransformer().TransformerName;
-      var configuration = new RavenLoadConfiguration();
-      configure(configuration);
-      return this.LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
-    }*/
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, List<String> ids, Action1<ILoadConfiguration> configure) {
+    try {
+      String transformer = tranformerClass.newInstance().getTransformerName();
+      RavenLoadConfiguration configuration = new RavenLoadConfiguration();
+      configure.apply(configuration);
+      return loadInternal(clazz, ids.toArray(new String[0]) , transformer, configuration.getQueryInputs());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   /**
    * Gets the document URL for the specified entity.

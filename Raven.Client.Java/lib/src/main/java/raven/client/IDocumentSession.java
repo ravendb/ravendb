@@ -1,13 +1,16 @@
 package raven.client;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 import com.mysema.query.types.Path;
 
+import raven.abstractions.closure.Action1;
 import raven.abstractions.data.Etag;
 import raven.client.document.ILoaderWithInclude;
 import raven.client.indexes.AbstractIndexCreationTask;
+import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.linq.IRavenQueryable;
 
 /**
@@ -135,14 +138,14 @@ public interface IDocumentSession extends AutoCloseable {
    * @param Whatever we are querying a map/reduce index (modify how we treat identifier properties)
    * @return
    */
-   public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce);
+  public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce);
 
   /**
    * Dynamically queries RavenDB.
    * @param clazz
    * @return
    */
-   public <T> IRavenQueryable<T> query(Class<T> clazz);
+  public <T> IRavenQueryable<T> query(Class<T> clazz);
 
   /**
    * Queries the index specified by indexCreator.
@@ -150,7 +153,7 @@ public interface IDocumentSession extends AutoCloseable {
    * @param indexCreator
    * @return
    */
-   public <T> IRavenQueryable<T> query(Class<T> clazz, Class<? extends AbstractIndexCreationTask> indexCreator);
+  public <T> IRavenQueryable<T> query(Class<T> clazz, Class<? extends AbstractIndexCreationTask> indexCreator);
 
   /**
    * Begin a load while including the specified path
@@ -164,40 +167,50 @@ public interface IDocumentSession extends AutoCloseable {
    * @param path
    * @return
    */
-   public ILoaderWithInclude include(Path<?> path);
+  public ILoaderWithInclude include(Path<?> path);
 
-  /* TODO:
-    /// <summary>
-    /// Performs a load that will use the specified results transformer against the specified id
-    /// </summary>
-    /// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
-    /// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
-    /// <returns></returns>
-    TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new();
-
-      /// <summary>
-      /// Performs a load that will use the specified results transformer against the specified id
-      /// </summary>
-      /// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
-      /// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
-      /// <param name="id"></param>
-      /// <param name="configure"></param>
-      /// <returns></returns>
-      TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
-
-  /// <summary>
-  /// Performs a load that will use the specified results transformer against the specified id
-  /// </summary>
-  /// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
-  /// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
-  /// <returns></returns>
-  TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
-
-  /// <summary>
-  /// Performs a load that will use the specified results transformer against the specified id
-  /// </summary>
-  TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+  /**
+   * Performs a load that will use the specified results transformer against the specified id
+   * @param tranformerClass The transformer to use in this load operation
+   * @param clazz The results shape to return after the load operation
+   * @param id
+   * @return
    */
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, String id);
+
+  /**
+   * Performs a load that will use the specified results transformer against the specified id
+   * @param tranformerClass The transformer to use in this load operation
+   * @param clazz The results shape to return after the load operation
+   * @param id
+   * @param configure
+   * @return
+   */
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, String id, Action1<ILoadConfiguration> configure);
+
+  /**
+   * Performs a load that will use the specified results transformer against the specified id
+   * @param tranformerClass The transformer to use in this load operation
+   * @param clazz The results shape to return after the load operation
+   * @param ids
+   * @return
+   */
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, String... ids);
+
+  /**
+   * Performs a load that will use the specified results transformer against the specified id
+   * @param tranformerClass The transformer to use in this load operation
+   * @param clazz The results shape to return after the load operation
+   * @param ids
+   * @param configure
+   * @return
+   */
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
+      Class<TResult> clazz, List<String> ids, Action1<ILoadConfiguration> configure);
+
   /**
    * Saves all the changes to the Raven server.
    */

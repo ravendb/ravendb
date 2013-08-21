@@ -81,7 +81,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       IndexDefinition indexDefinition = new IndexDefinition();
       indexDefinition.setMap(
           IndexExpression.from(Company.class)
-          .select(AnonymousExpression.create(Company.class).with(c.name, c.name)).toLinq()
+          .select(new AnonymousExpression().with(c.name, c.name)).toLinq()
           );
       dbCommands.putIndex("companiesIndex", indexDefinition);
       waitForNonStaleIndexes(dbCommands);
@@ -123,7 +123,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       indexDefinition.setMap(
           IndexExpression.from(Company.class)
           .where(c.name.startsWith("T").or(c.name.startsWith("C")))
-          .select(AnonymousExpression.create(Company.class).with(c.name, c.name)).toLinq()
+          .select(new AnonymousExpression().with(c.name, c.name)).toLinq()
           );
 
       String indexName = "companies/startsWithTorC";
@@ -228,11 +228,11 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       map = IndexExpression
           .from(Company.class)
           .selectMany(c.employees, e)
-          .select(new AnonymousExpression<>(Person.class).with(pr.name, e.name).with(pr.count, 1));
+          .select(new AnonymousExpression().with(pr.name, e.name).with(pr.count, 1));
       reduce = IndexExpression
           .from("results")
           .groupBy(pr.name)
-          .select(new AnonymousExpression<>(GroupResult.class).with(pr.name, group.key).with(pr.count, group.sum(pr.count)));
+          .select(new AnonymousExpression().with(pr.name, group.key).with(pr.count, group.sum(pr.count)));
 
     }
   }
@@ -541,7 +541,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       IndexExpression indexExpression = IndexExpression
           .from(Developer.class)
           .where(d.nick.startsWith("m"))
-          .select(AnonymousExpression.create(Developer.class).with(d.nick, d.nick));
+          .select(new AnonymousExpression().with(d.nick, d.nick));
       builder.setMap(indexExpression);
 
       dbCommands.putIndex("devStartWithM", builder.toIndexDefinition(convention));

@@ -14,6 +14,7 @@ import raven.client.document.DocumentStore;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.expressions.AnonymousExpression;
+import raven.tests.resultsTransformer.QStronglyTypedResultsTransformerTest_Order;
 
 import com.mysema.query.annotations.QueryEntity;
 
@@ -134,10 +135,9 @@ public class Troy2 extends RemoteClientTest {
       QTroy2_TesterSearch_SearchResult s = QTroy2_TesterSearch_SearchResult.searchResult;
       QTroy2_Tester t = new QTroy2_Tester("testClass");
 
-
       map = IndexExpression.from(Tester.class)
           .select(
-              new AnonymousExpression<>(SearchResult.class)
+              new AnonymousExpression()
               .withTemplate(s.query, "new object[] { testClass.FirstName, testClass.LastName, testClass.Email }")
               .with(t.firstName)
               .with(t.lastName)

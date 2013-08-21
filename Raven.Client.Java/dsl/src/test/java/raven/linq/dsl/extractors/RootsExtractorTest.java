@@ -37,7 +37,7 @@ public class RootsExtractorTest {
     QPersonResult pr = QPersonResult.personResult;
 
 
-    AnonymousExpression<PersonResult> anonymousExpression = AnonymousExpression.create(PersonResult.class)
+    AnonymousExpression anonymousExpression = new AnonymousExpression()
     .with(pr.name, p.firstname)
     .with(pr.count, Expressions.constant(1));
 

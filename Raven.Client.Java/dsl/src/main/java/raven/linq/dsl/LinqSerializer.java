@@ -42,7 +42,7 @@ public class LinqSerializer extends SerializerBase<LinqSerializer>{
   @Override
   public Void visit(FactoryExpression< ? > expr, Void context) {
     if (expr instanceof AnonymousExpression) {
-      AnonymousExpression<?> anonymous = (AnonymousExpression<?>) expr;
+      AnonymousExpression anonymous = (AnonymousExpression) expr;
       append("new {");
       for (int i = 0; i < anonymous.getParamsCount(); i++) {
         Operation< ? > operation = (Operation< ? >) anonymous.getArgs().get(i);

@@ -13,8 +13,6 @@ import raven.linq.dsl.LinqSerializer;
 import raven.linq.dsl.expressions.AnonymousExpression;
 import raven.samples.Company;
 import raven.samples.Person;
-import raven.samples.PersonResult;
-import raven.samples.Pet;
 import raven.samples.QCompany;
 import raven.samples.QPerson;
 import raven.samples.QPersonResult;
@@ -34,7 +32,7 @@ public class IndexBuildTest {
     QPersonResult pr = QPersonResult.personResult;
     IndexExpression select = from(Person.class)
         .select(
-            AnonymousExpression.create(PersonResult.class)
+            new AnonymousExpression()
             .with(pr.name, p.firstname)
             .with(pr.count, 1));
 
@@ -45,7 +43,7 @@ public class IndexBuildTest {
     IndexExpression reduce = from("results")
         .groupBy(pr.name)
         .select(
-            AnonymousExpression.create(PersonResult.class)
+            new AnonymousExpression()
             .with(pr.name, grouping.key)
             .with(pr.count, grouping.sum(pr.count).divide(grouping.sum(pr.count))));
 
@@ -109,8 +107,7 @@ public class IndexBuildTest {
         .selectMany(p.pets, pet)
         .where(pet.name.startsWith("G"))
         .select(
-            AnonymousExpression.create(Pet.class).
-            with(pet.name, pet.name)
+            new AnonymousExpression().with(pet.name, pet.name)
             );
 
 
@@ -129,8 +126,8 @@ public class IndexBuildTest {
   public void testAnonymousExpression() {
     QPersonResult pr = QPersonResult.personResult;
     QPerson p = QPerson.person;
-    AnonymousExpression<PersonResult> anonymousExpression =
-        AnonymousExpression.create(PersonResult.class)
+    AnonymousExpression anonymousExpression =
+        new AnonymousExpression()
         .with(pr.name, p.firstname)
         .with(pr.count, 1);
 
@@ -158,7 +155,7 @@ public class IndexBuildTest {
 
     assertEquals("docs.People.GroupBy(person => new {Name = person.Firstname, Count = 1})",
         from(Person.class)
-        .groupBy(AnonymousExpression.create(PersonResult.class)
+        .groupBy(new AnonymousExpression()
             .with(pr.name, p.firstname)
             .with(pr.count, Expressions.constant(1)))
             .toLinq());
@@ -167,10 +164,10 @@ public class IndexBuildTest {
 
     assertEquals("docs.People.GroupBy(person => new {Name = person.Firstname, Count = 1}).Select(group => new {Name = group.Key.Name, Count = group.Sum(personResult => personResult.Count)})",
         from(Person.class)
-        .groupBy(AnonymousExpression.create(PersonResult.class)
+        .groupBy(new AnonymousExpression()
             .with(pr.name, p.firstname)
             .with(pr.count, 1))
-            .select(AnonymousExpression.create(PersonResult.class)
+            .select(new AnonymousExpression()
                 .with(pr.name, grouping.key.name)
                 .with(pr.count, grouping.sum(pr.count)))
                 .toLinq());

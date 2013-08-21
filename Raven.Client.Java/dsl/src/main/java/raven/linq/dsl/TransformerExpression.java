@@ -19,45 +19,45 @@ import raven.linq.dsl.expressions.AnonymousExpression;
  * Represents Index definition
  */
 //TODO: this is also used in transformers - consider different name!
-public class IndexExpression {
-  public static IndexExpression from(Class<?> objectClass) {
-    return new IndexExpression(LinqExpressionMixin.DOCS_ROOT_NAME + "." + Inflector.pluralize(objectClass.getSimpleName()));
+public class TransformerExpression {
+  public static TransformerExpression from(Class<?> objectClass) {
+    return new TransformerExpression(LinqExpressionMixin.DOCS_ROOT_NAME + "." + Inflector.pluralize(objectClass.getSimpleName()));
   }
 
-  public static IndexExpression whereEntityIs(String... subClasses) {
+  public static TransformerExpression whereEntityIs(String... subClasses) {
     List<String> plurar = new ArrayList<>();
     for (String subClass: subClasses) {
       plurar.add("\"" + Inflector.pluralize(subClass) + "\"");
     }
     String subClassesJoined = StringUtils.join(plurar, ", ");
 
-    return new IndexExpression(LinqExpressionMixin.DOCS_ROOT_NAME + ".WhereEntityIs(new string[] { " + subClassesJoined + " })");
+    return new TransformerExpression(LinqExpressionMixin.DOCS_ROOT_NAME + ".WhereEntityIs(new string[] { " + subClassesJoined + " })");
   }
 
-  public static IndexExpression from(String customRoot) {
-    return new IndexExpression(customRoot);
+  public static TransformerExpression from(String customRoot) {
+    return new TransformerExpression(customRoot);
   }
 
-  private LinqExpressionMixin<IndexExpression> expressionMixin;
-  protected IndexExpression(String rootName) {
-    expressionMixin = new LinqExpressionMixin<IndexExpression>(this, rootName);
+  private LinqExpressionMixin<TransformerExpression> expressionMixin;
+  protected TransformerExpression(String rootName) {
+    expressionMixin = new LinqExpressionMixin<TransformerExpression>(this, rootName);
   }
 
-  public IndexExpression groupBy(Expression< ? > keySelector) {
+  public TransformerExpression groupBy(Expression< ? > keySelector) {
     return expressionMixin.groupBy(keySelector);
   }
 
 
 
-  public IndexExpression orderBy(OrderSpecifier< ? >... orderSpecifiers) {
+  public TransformerExpression orderBy(OrderSpecifier< ? >... orderSpecifiers) {
     return expressionMixin.orderBy(orderSpecifiers);
   }
 
-  public IndexExpression select(Expression< ? > projection) {
+  public TransformerExpression select(Expression< ? > projection) {
     return expressionMixin.select(projection);
   }
 
-  public <S> IndexExpression selectMany(ListPath<S, ? extends EntityPathBase<S>> selector, Path<?> nestedRoot) {
+  public <S> TransformerExpression selectMany(ListPath<S, ? extends EntityPathBase<S>> selector, Path<?> nestedRoot) {
     return expressionMixin.selectMany(selector, nestedRoot);
   }
 
@@ -69,11 +69,11 @@ public class IndexExpression {
     return expressionMixin.toString();
   }
 
-  public IndexExpression where(Predicate e) {
+  public TransformerExpression where(Predicate e) {
     return expressionMixin.where(e);
   }
 
-  public IndexExpression selectMany(Expression<?> selector, AnonymousExpression anonymousClass) {
+  public TransformerExpression selectMany(Expression<?> selector, AnonymousExpression anonymousClass) {
     return expressionMixin.selectMany(selector, anonymousClass);
   }
 

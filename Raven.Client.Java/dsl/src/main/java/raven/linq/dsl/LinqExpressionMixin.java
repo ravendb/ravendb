@@ -73,7 +73,7 @@ public final class LinqExpressionMixin<T> implements Cloneable {
   }
 
   @SuppressWarnings("rawtypes")
-  public T selectMany(Expression<?> selector, AnonymousExpression<?> anonymousClass) {
+  public T selectMany(Expression<?> selector, AnonymousExpression anonymousClass) {
 
     Expression< ? > expressionWithInferedLambda = lambdaInferer.inferLambdas(selector);
     Expression< ? > anonymousWithLambda = lambdaInferer.inferLambdas(anonymousClass);

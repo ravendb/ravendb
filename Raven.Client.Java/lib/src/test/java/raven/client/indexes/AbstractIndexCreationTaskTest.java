@@ -22,7 +22,7 @@ public class AbstractIndexCreationTaskTest {
     public MyIndex() {
 
       map = IndexExpression.from(Foo.class).select(
-          AnonymousExpression.create(Result.class)
+          new AnonymousExpression()
           .with(r.something, f.something)
           .with("_", createField("DynamicKey", f.longItem, false, false))
           .with("s", spatialGenerate("spatial", f.longItem, f.longItem))
@@ -127,7 +127,7 @@ public class AbstractIndexCreationTaskTest {
     public RecurseIndex() {
       QPost p = QPost.post;
       QComment c = QComment.comment;
-      map = IndexExpression.from(Post.class).selectMany(recurse(p.comments), AnonymousExpression.create(Object.class).with("test", c.test));
+      map = IndexExpression.from(Post.class).selectMany(recurse(p.comments), new AnonymousExpression().with("test", c.test));
     }
   }
 
