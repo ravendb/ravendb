@@ -185,10 +185,7 @@ namespace Raven.Database.Commercial
 				licenseAttributes.Add("version", "2.0");
 				licenseAttributes.Add("implicit20StandardLicenseBy10Subscription", "true");
 				licenseAttributes.Add("allowWindowsClustering", "false");
-				licenseAttributes.Add("OEM", "false");
 				licenseAttributes.Add("numberOfDatabases", "unlimited");
-				licenseAttributes.Add("maxRamUtilization", "12884901888");
-				licenseAttributes.Add("maxParallelism", "6");
 				licenseAttributes.Add("periodicBackup", "true");
 				licenseAttributes.Add("encryption", "false");
 				licenseAttributes.Add("compression", "false");
@@ -198,6 +195,22 @@ namespace Raven.Database.Commercial
 				licenseAttributes.Add("replication", "true");
 				licenseAttributes.Add("versioning", "true");
 				licenseAttributes.Add("maxSizeInMb", "unlimited");
+
+				string oem;
+				if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out oem) &&
+				    "true".Equals(oem, StringComparison.OrdinalIgnoreCase))
+				{
+					licenseAttributes.Add("OEM", "true");
+					licenseAttributes.Add("maxRamUtilization", "6442450944");
+					licenseAttributes.Add("maxParallelism", "3");
+
+				}
+				else
+				{
+					licenseAttributes.Add("OEM", "false");
+					licenseAttributes.Add("maxRamUtilization", "12884901888");
+					licenseAttributes.Add("maxParallelism", "6");
+				}
 			}
 			else
 			{
