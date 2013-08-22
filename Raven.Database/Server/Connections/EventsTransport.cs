@@ -153,10 +153,18 @@ namespace Raven.Database.Server.Connections
 
         public void Dispose()
         {
-            Connected = false;
-            Disconnected();
-            SendAsync(new { Type = "Disconnect" })
-               .ContinueWith(_ => context.FinalizeResponse());
+	        try
+	        {
+		        context.Response.WriteAsync("data: " +
+											JsonConvert.SerializeObject(new {Type = "Disconnect"}, Formatting.None, new EtagJsonConverter()) +
+											"\r\n\r\n").Wait();
+	        }
+	        catch (AggregateException agEx)
+	        {
+		        log.DebugException("Error sending disconnect for events transport", agEx.Flatten());
+	        }
+
+	        Disconnect();
         }
 	}
 }
