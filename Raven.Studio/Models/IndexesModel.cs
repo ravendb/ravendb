@@ -18,9 +18,9 @@ namespace Raven.Studio.Models
 		private ICommand deleteIndex;
 		private ICommand resetIndex;
 		private IndexItem itemSelection;
-		private IndexGroup selectedGroup;
+		private Group selectedGroup;
 		public ObservableCollection<IndexItem> Indexes { get; private set; }
-		public ObservableCollection<IndexGroup> GroupedIndexes { get; private set; }
+		public ObservableCollection<Group> GroupedIndexes { get; private set; }
 
 		public IndexesModel()
 		{
@@ -29,7 +29,7 @@ namespace Raven.Studio.Models
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 																	   "/indexes";
 			Indexes = new ObservableCollection<IndexItem>();
-			GroupedIndexes = new ObservableCollection<IndexGroup>();
+			GroupedIndexes = new ObservableCollection<Group>();
 		}
 
 		public override Task TimerTickedAsync()
@@ -59,7 +59,7 @@ namespace Raven.Studio.Models
 			get { return new DeleteIndexesCommand(this);}
 		}
 
-		public IndexGroup SelectedGroup
+		public Group SelectedGroup
 		{
 			get { return selectedGroup; }
 			set
@@ -106,14 +106,14 @@ namespace Raven.Studio.Models
 				var groupItem = GroupedIndexes.FirstOrDefault(@group => string.Equals(@group.GroupName, indexItem.GroupName, StringComparison.OrdinalIgnoreCase));
 				if (groupItem == null)
 				{
-					groupItem = new IndexGroup(indexItem.GroupName);
+					groupItem = new Group(indexItem.GroupName);
 					GroupedIndexes.Add(groupItem);
 				}
 
-				groupItem.Indexes.Add(indexItem);
+				groupItem.Items.Add(indexItem);
 			}
 
-			GroupedIndexes = new ObservableCollection<IndexGroup>(GroupedIndexes.OrderBy(@group => group.GroupName));
+			GroupedIndexes = new ObservableCollection<Group>(GroupedIndexes.OrderBy(@group => group.GroupName));
 
 			OnPropertyChanged(() => GroupedIndexes);
 		}
@@ -122,7 +122,7 @@ namespace Raven.Studio.Models
 		{
 			foreach (var groupedIndex in GroupedIndexes)
 			{
-				groupedIndex.Indexes.Clear();
+				groupedIndex.Items.Clear();
 			}
 		}
 

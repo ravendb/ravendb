@@ -10,10 +10,10 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class IndexGroup
+	public class Group
 	{
 		public string GroupName { get; set; }
-		public List<IndexItem> Indexes { get; set; }
+		public List<GroupItem> Items { get; set; }
 		public Observable<bool> Collapse { get; set; }
 
 		public ICommand ChangeCollapse
@@ -23,20 +23,30 @@ namespace Raven.Studio.Models
 
 		public string IndexCount
 		{
-			get { return string.Format(" ({0})",Indexes.Count); }
+			get { return string.Format(" ({0})",Items.Count); }
 		}
 
-		public IndexGroup(string groupName)
+		public Group(string groupName)
 		{
 			GroupName = groupName;
-			Indexes = new List<IndexItem>();
+			Items = new List<GroupItem>();
 			Collapse = new Observable<bool>();
 		}
 	}
-	public class IndexItem
+
+	public abstract class GroupItem
 	{
 		public string Name { get; set; }
 		public string GroupName { get; set; }
+	}
+
+	public class TransformerItem : GroupItem
+	{
+		public TransformerDefinition Transformer { get; set; }
+	}
+
+	public class IndexItem : GroupItem
+	{
 		public IndexStats IndexStats { get; set; }
 		public string ModifiedName
 		{

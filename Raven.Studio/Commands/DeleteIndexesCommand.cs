@@ -25,7 +25,7 @@ namespace Raven.Studio.Commands
 				var ravenDocumentsByEntityNameIndexName = new RavenDocumentsByEntityName().IndexName;
 				AskUser.ConfirmationAsync("Confirm Delete",
 					string.Format("Are you sure that you want to delete all indexes in the group {0}?", group.GroupName))
-					.ContinueWhenTrue(() => DeleteIndexes(group.Indexes.Select(item => item.Name).Where(indexName => indexName != ravenDocumentsByEntityNameIndexName)));
+					.ContinueWhenTrue(() => DeleteIndexes(group.Items.Select(item => item.Name).Where(indexName => indexName != ravenDocumentsByEntityNameIndexName)));
 			}
 			else
 			{

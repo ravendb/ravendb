@@ -226,7 +226,6 @@
 						<Controls1:RecentQueriesButton VerticalAlignment="Center"/>
 						
 						<HyperlinkButton Command="{Binding CollapseAll}"
-										 CommandParameter="/query?mode=dynamic"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
 							<HyperlinkButton.Content>
@@ -242,7 +241,6 @@
 						</HyperlinkButton>
 
 						<HyperlinkButton Command="{Binding ExpandAll}"
-										 CommandParameter="/query?mode=dynamic"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
 							<HyperlinkButton.Content>
@@ -287,7 +285,7 @@
                  Margin="10,5">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid Width="410" Visibility="{Binding Indexes, Converter={StaticResource HiddenWhenEmpty}}">
+					<Grid Width="410" Visibility="{Binding Items, Converter={StaticResource HiddenWhenEmpty}}">
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto"/>
@@ -310,7 +308,7 @@
 						
 						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_Indexes}"
 								 Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
-								 ItemsSource="{Binding Indexes}"
+								 ItemsSource="{Binding Items}"
 								 SelectedItem="{Binding DataContext.ItemSelection, ElementName=IndexesList, Mode=TwoWay}"
 								 ItemTemplate="{StaticResource IndexItemTemplate}">
 							<i:Interaction.Behaviors>
