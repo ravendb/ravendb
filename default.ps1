@@ -689,7 +689,11 @@ task CreateNugetPackages -depends Compile {
 		}
 		
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet }
+			try {
+				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet
+			} catch {
+				Write-Host $error[0]
+			}
 		}
 	}
 	else {
