@@ -38,7 +38,7 @@ properties {
 	
 	$web_files = @("..\DefaultConfigs\web.config", "..\DefaultConfigs\NLog.Ignored.config" )
 	
-	$server_files = ( @( "Raven.Server.???", "..\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls ) |
+	$server_files = ( @( "Raven.Server.???", "sl5\Raven.Studio.xap", "..\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
