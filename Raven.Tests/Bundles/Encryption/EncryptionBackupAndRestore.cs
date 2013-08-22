@@ -16,7 +16,7 @@ namespace Raven.Tests.Bundles.Encryption
 		[Fact]
 		public async Task CanRestoreAnEncryptedDatabase()
 		{
-			using (var store = NewRemoteDocumentStore(requestedStorage: "esent", fiddler: true))
+			using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
 			{
 				var db1 = new DatabaseDocument
 				{
