@@ -641,6 +641,35 @@ task CreateNugetPackages -depends Compile {
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
 	
+	# Package the symbols package
+	$packages | ForEach-Object { 
+		$dirName = [io.path]::GetFileNameWithoutExtension($_)
+		New-Item $nuget_dir\$dirName\src -Type directory | Out-Null
+		
+		$srcDirName = $dirName
+		$srcDirName = $srcDirName.Replace("RavenDB.", "Raven.")
+		$srcDirName = $srcDirName.Replace(".AspNetHost", ".Web")
+		$srcDirName = $srcDirName -replace "Raven.Client$", "Raven.Client.Lightweight"
+		$srcDirName = $srcDirName.Replace("Raven.Bundles.", "Bundles\Raven.Bundles.")
+		$srcDirName = $srcDirName.Replace("Raven.Client.Authorization", "Bundles\Raven.Client.Authorization")
+		$srcDirName = $srcDirName.Replace("Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints")
+		$srcDirName = $srcDirName.Replace("Raven.Embedded", "Raven.Client.Embedded")
+		Write-Host $srcDirName
+		
+		Get-ChildItem $srcDirName\* *.cs -Recurse |	ForEach-Object {
+			$indexOf = $_.FullName.IndexOf($srcDirName)
+			$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
+			$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+			New-Item -ItemType File -Path $copyTo -Force | Out-Null
+			Copy-Item $_.FullName $copyTo -Recurse -Force
+		}
+		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
+
+		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
+	}
+		
+	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	$sourceFeed = "https://nuget.org/"
