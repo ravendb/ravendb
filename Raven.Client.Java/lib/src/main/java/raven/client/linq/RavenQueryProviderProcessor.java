@@ -5,7 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
+
+import com.mysema.query.types.ConstantImpl;
 import com.mysema.query.types.Expression;
+import com.mysema.query.types.PathImpl;
+import com.mysema.query.types.expr.BooleanExpression;
+import com.mysema.query.types.expr.BooleanOperation;
+import com.mysema.query.types.expr.SimpleOperation;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.data.QueryResult;
@@ -99,7 +106,18 @@ public class RavenQueryProviderProcessor<T> {
    * Visits the expression and generate the lucene query
    */
   protected void visitExpression(Expression<?> expression) {
+    //TODO: delete me!
+    SimpleOperation op = (SimpleOperation) expression;
+    BooleanOperation boolExpr = (BooleanOperation) op.getArg(1);
+    PathImpl< ? > prop = (PathImpl< ? >) boolExpr.getArg(0);
+    ConstantImpl< ? > value = (ConstantImpl< ? >) boolExpr.getArg(1);
+
+    luceneQuery.whereEquals(StringUtils.capitalize(prop.getMetadata().getName()), value.getConstant());
+
     //TODO:
+
+
+
   }
 
   @SuppressWarnings("unchecked")
@@ -207,51 +225,41 @@ public class RavenQueryProviderProcessor<T> {
   }
 
   private <TProjection> Object getQueryResult(IDocumentQuery<TProjection> finalQuery) {
-    /*TODO:
+    List<TProjection> list = null;
     switch (queryType)
     {
-      case FIRST:
-        return finalQuery.first();
+    case FIRST:
+      return finalQuery.first();
+    case FIRST_OR_DEFAULT:
+      return finalQuery.first();
+    case SINGLE:
+      list = finalQuery.toList();
+      if (list.size() != 1) {
+        throw new IllegalStateException("Expected one result. Got: " + list.size());
       }
-      case SpecialQueryType.FirstOrDefault:
-      {
-        return finalQuery.FirstOrDefault();
+      return list.get(0);
+    case SINGLE_OR_DEFAULT:
+      list = finalQuery.toList();
+      if (list.size() > 1) {
+        throw new IllegalStateException("Expected one result. Got: " + list.size());
       }
-      case SpecialQueryType.Single:
-      {
-        return finalQuery.Single();
-      }
-      case SpecialQueryType.SingleOrDefault:
-      {
-        return finalQuery.SingleOrDefault();
-      }
-      case SpecialQueryType.All:
-      {
-        var pred = predicate.Compile();
-        return finalQuery.AsQueryable().All(projection => pred((T) (object) projection));
-      }
-      case SpecialQueryType.Any:
-      {
-        return finalQuery.Any();
-      }
-      case SpecialQueryType.Count:
-      {
-        var queryResultAsync = finalQuery.QueryResult;
-        return queryResultAsync.TotalResults;
-      }
-      case SpecialQueryType.LongCount:
-      {
-        var queryResultAsync = finalQuery.QueryResult;
-        return (long) queryResultAsync.TotalResults;
-      }
-      default:
-      {
-        return finalQuery;
-      }
-    }*/
-    return finalQuery;
+      return list.isEmpty() ? null : list.get(0);
+    case ALL:
+      //TODO:
+      //        var pred = predicate.Compile();
+      //        return finalQuery.AsQueryable().All(projection => pred((T) (object) projection));
+      return null;
+    case ANY:
+      //TODO: return finalQuery.Any();
+      return null;
+    case COUNT:
+      return finalQuery.getQueryResult().getTotalResults();
+    case LONG_COUNT:
+      return (long)finalQuery.getQueryResult().getTotalResults();
+    default:
+      return finalQuery;
+    }
   }
 
-  //TODO finish me
 
 }

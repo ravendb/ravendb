@@ -10,7 +10,6 @@ import java.util.List;
 import org.junit.Test;
 
 import com.mysema.query.annotations.QueryEntity;
-import com.mysema.query.types.expr.BooleanExpression;
 
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
@@ -18,7 +17,6 @@ import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.linq.dsl.TransformerExpression;
-import raven.linq.dsl.expressions.AnonymousExpression;
 import raven.tests.resultsTransformer.StronglyTypedResultsTransformerTest.OrderWithProductInformation.Result;
 import raven.tests.resultsTransformer.StronglyTypedResultsTransformerTest.OrderWithProductInformation.ResultProduct;
 

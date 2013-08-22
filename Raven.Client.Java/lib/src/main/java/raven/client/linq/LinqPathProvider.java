@@ -10,7 +10,6 @@ import com.mysema.query.types.Expression;
 import com.mysema.query.types.Path;
 
 import raven.client.document.DocumentConvention;
-import raven.client.linq.LinqPathProvider.Result;
 
 public class LinqPathProvider {
   public static class Result {

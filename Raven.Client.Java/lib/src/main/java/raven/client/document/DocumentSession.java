@@ -246,16 +246,6 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
         throw new RuntimeException(e);
       }
 
-      /*
-TODO:
-      var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
-          .Results
-          .SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-          .Select(JsonExtensions.ToJObject)
-          .Select(x => x.Deserialize(typeof (T), Conventions))
-          .Cast<T>()
-          .ToArray();
-       */
       if (items.size() > ids.length) {
         throw new IllegalStateException(String.format("A load was attempted with transformer %s, and more " +
             "than one item was returned per entity - please use %s[] as the projection type instead of %s",

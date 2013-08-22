@@ -24,10 +24,10 @@ public class HttpExtensions {
   }
 
   public static Etag getEtagHeader(HttpResponse httpResponse) {
-    return etagHeaderToEtag(httpResponse.getFirstHeader("Etag").getValue());
+    return etagHeaderToEtag(httpResponse.getFirstHeader("ETag").getValue());
   }
 
   public static Etag getEtagHeader(GetResponse response) {
-    return etagHeaderToEtag(response.getHeaders().get("Etag"));
+    return etagHeaderToEtag(response.getHeaders().get("ETag"));
   }
 }

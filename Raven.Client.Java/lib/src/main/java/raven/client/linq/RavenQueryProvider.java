@@ -120,15 +120,6 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
     return getQueryProviderProcessor(clazz).execute(expression);
   }
 
-
-  //TODO: IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
-
-  //TODO:IQueryable IQueryProvider.CreateQuery(Expression expression)
-
-  //TODO: S IQueryProvider.Execute<S>(Expression expression)
-
-  //TODO: object IQueryProvider.Execute(Expression expression)
-
   /**
    *  Callback to get the results of the query
    */
@@ -202,8 +193,8 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
 
   @SuppressWarnings("unchecked")
   @Override
-  public <T> IRavenQueryable<T> createQuery(Expression< ? > expression) {
-    return new RavenQueryInspector(expression.getType(), this,
+  public <S> IRavenQueryable<S> createQuery(Expression< ? > expression) {
+    return new RavenQueryInspector<S>((Class<S>) clazz, this,
         ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator, databaseCommands, isMapReduce);
 
   }

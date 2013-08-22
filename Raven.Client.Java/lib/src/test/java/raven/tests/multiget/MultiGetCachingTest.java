@@ -2,7 +2,6 @@ package raven.tests.multiget;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static com.mysema.query.alias.Alias.*;
 
 import java.util.List;
 
@@ -197,36 +196,177 @@ public class MultiGetCachingTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        int requests = session.advanced().getNumberOfRequests();
         Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
         Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
         assertNotNull(result2.getValue());
 
-        assertNumberOfRequests(1, requests);
+        assertEquals(1, session.advanced().getNumberOfRequests());
         assertNotNull(result1.getValue());
-        assertNumberOfRequests(1, requests);
+        assertEquals(1, session.advanced().getNumberOfRequests());
         assertEquals(0, store.getJsonRequestFactory().getNumOfCachedRequests());
-
       }
 
       try (IDocumentSession session = store.openSession()) {
-        int requests = session.advanced().getNumberOfRequests();
         Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
         Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
         assertNotNull(result2.getValue());
 
-        assertNumberOfRequests(1, requests);
+        assertEquals(1, session.advanced().getNumberOfRequests());
         assertNotNull(result1.getValue());
-        assertNumberOfRequests(1, requests);
+        assertEquals(1, session.advanced().getNumberOfRequests());
         assertEquals(2, store.getJsonRequestFactory().getNumOfCachedRequests());
       }
+    }
+  }
 
+  @Test
+  public void canCacheLazyQueryAndMultiLoadResults() throws Exception {
+    DocumentConvention conventions = new DocumentConvention();
+    conventions.setShouldAggressiveCacheTrackChanges(false);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        User u = new User();
+        u.setName("oren");
+        session.store(u);
+        session.store(new User());
+        u = new User();
+        u.setName("ayende");
+        session.store(u);
+        session.store(new User());
+        session.saveChanges();
+      }
+
+      QUser u = new QUser("u");
+
+      try (IDocumentSession session = store.openSession()) {
+        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
+          @Override
+          public void apply(IDocumentQueryCustomization input) {
+            input.waitForNonStaleResults();
+          }
+        }).where(u.name.eq("test")).toList();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        Lazy<User[]> items = session.advanced().lazily().load(User.class, "users/2", "users/4");
+        Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
+        assertNotNull(result2.getValue());
+        assertNotNull(items.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+        assertNotNull(result1.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+        assertEquals(0, store.getJsonRequestFactory().getNumOfCachedRequests());
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        Lazy<User[]> items = session.advanced().lazily().load(User.class, "users/2", "users/4");
+        Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
+        assertNotNull(result2.getValue());
+        assertNotNull(items.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+        assertNotNull(result1.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+        assertEquals(3, store.getJsonRequestFactory().getNumOfCachedRequests());
+      }
+    }
+  }
+
+  @Test
+  public void canMixCachingForBatchAndNonBatched_BatchedFirst() throws Exception {
+    DocumentConvention conventions = new DocumentConvention();
+    conventions.setShouldAggressiveCacheTrackChanges(false);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        User u = new User();
+        u.setName("oren");
+        session.store(u);
+        session.store(new User());
+        u = new User();
+        u.setName("ayende");
+        session.store(u);
+        session.store(new User());
+        session.saveChanges();
+      }
+
+      QUser u = new QUser("u");
+
+      try (IDocumentSession session = store.openSession()) {
+        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
+          @Override
+          public void apply(IDocumentQueryCustomization input) {
+            input.waitForNonStaleResults();
+          }
+        }).where(u.name.eq("test")).toList();
+      }
+
+
+      try (IDocumentSession session = store.openSession()) {
+        Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
+        assertNotNull(result2.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+        assertNotNull(result1.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        session.query(User.class).where(u.name.eq("oren")).toList();
+        session.query(User.class).where(u.name.eq("ayende")).toList();
+
+        assertEquals(2, store.getJsonRequestFactory().getNumOfCachedRequests());
+      }
+    }
+  }
+
+  @Test
+  public void canMixCachingForBatchAndNonBatched_IndividualFirst() throws Exception {
+    DocumentConvention conventions = new DocumentConvention();
+    conventions.setShouldAggressiveCacheTrackChanges(false);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        User u = new User();
+        u.setName("oren");
+        session.store(u);
+        session.store(new User());
+        u = new User();
+        u.setName("ayende");
+        session.store(u);
+        session.store(new User());
+        session.saveChanges();
+      }
+
+      QUser u = new QUser("u");
+
+      try (IDocumentSession session = store.openSession()) {
+        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
+          @Override
+          public void apply(IDocumentQueryCustomization input) {
+            input.waitForNonStaleResults();
+          }
+        }).where(u.name.eq("test")).toList();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        session.query(User.class).where(u.name.eq("oren")).toList();
+        session.query(User.class).where(u.name.eq("ayende")).toList();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        Lazy<List<User>> result1 = session.query(User.class).where(u.name.eq("oren")).lazily();
+        Lazy<List<User>> result2 = session.query(User.class).where(u.name.eq("ayende")).lazily();
+        assertNotNull(result2.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+        assertNotNull(result1.getValue());
+        assertEquals(1, session.advanced().getNumberOfRequests());
+        assertEquals(2, store.getJsonRequestFactory().getNumOfCachedRequests());
+      }
     }
   }
 
 
-
-
-
-  //TODO: other tests
 }

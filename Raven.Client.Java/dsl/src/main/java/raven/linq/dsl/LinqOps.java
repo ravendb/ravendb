@@ -38,5 +38,9 @@ public class LinqOps {
 
   }
 
+  public static class Query {
+    public static final Operator<Object> WHERE = new OperatorImpl<>("QUERY_WHERE");
+  }
+
 
 }

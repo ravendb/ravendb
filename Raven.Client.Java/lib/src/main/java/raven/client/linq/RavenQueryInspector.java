@@ -32,6 +32,7 @@ import raven.client.document.InMemoryDocumentSessionOperations;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
+import raven.linq.dsl.LinqOps;
 
 public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
 
@@ -89,7 +90,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
 
   @Override
   public IRavenQueryable<T> where(Predicate predicate) {
-    return getProvider().createQuery(predicate);
+    return getProvider().createQuery(Expressions.operation(expression.getType(), LinqOps.Query.WHERE, expression, predicate));
   }
 
   @SuppressWarnings("unchecked")
