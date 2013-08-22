@@ -6,19 +6,18 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-
 import org.junit.Test;
-
-import com.mysema.query.annotations.QueryEntity;
 
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
+import raven.client.exceptions.NonUniqueObjectException;
 import raven.client.indexes.AbstractTransformerCreationTask;
-import raven.linq.dsl.TransformerExpression;
 import raven.tests.resultsTransformer.StronglyTypedResultsTransformerTest.OrderWithProductInformation.Result;
 import raven.tests.resultsTransformer.StronglyTypedResultsTransformerTest.OrderWithProductInformation.ResultProduct;
+
+import com.mysema.query.annotations.QueryEntity;
 
 public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
   public static class Product {
@@ -49,6 +48,17 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
 
   @QueryEntity
   public static class Order {
+
+
+    public Order() {
+      super();
+    }
+    public Order(String id, String customerId, List<String> productIds) {
+      super();
+      this.id = id;
+      this.customerId = customerId;
+      this.productIds = productIds;
+    }
     private String id;
     private String customerId;
     private List<String> productIds;
@@ -125,8 +135,21 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
     }
 
     public OrderWithProductInformationMultipleReturns() {
-      transformResultsExpression = TransformerExpression.from("results");
-      //TODO: finish
+
+      transformResults = " from doc in results " +
+                              " from productid in (IEnumerable<object>)doc.ProductIds " +
+                              " let product = LoadDocument(productid) " +
+                              " select new " +
+                              " { " +
+                              "     OrderId = doc.Id, " +
+                              "     ProductId = product.Id, " +
+                              "     ProductName = product.Name " +
+                              " };";
+    }
+
+    @Override
+    public String getTransformerName() {
+      return "orderWithProdInfo";
     }
   }
 
@@ -175,19 +198,15 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
     }
 
     public OrderWithProductInformation() {
-      //TODO:
-      transformResults = "from doc in results " +
-                                          " select new                                                        " +
-                                          " {                                                                 " +
-                                          "   OrderId = doc.Id,                                               " +
-                                          "       Products = from productid in (IEnumerable<string>)doc.ProductIds    " +
-                                          "                  let product = LoadDocument(productid)   " +
-                                          "                  select new                                       " +
-                                          "                  {                                                " +
-                                          "                       ProductId = product.Id,                     " +
-                                          "                       ProductName = product.Name                  " +
-                                          "                  }                                                " +
-                                          " }";
+      transformResults = "from doc in results" +
+      		" select new {" +
+      		"     OrderId = doc.Id," +
+      		"     Products = from productid in (IEnumerable<object>)doc.ProductIds" +
+      		"                let product = LoadDocument(productid)" +
+      		"                select new                {" +
+      		"                     ProductId = product.Id," +
+      		"                     ProductName = product.Name" +
+      		"                } };";
 
     }
   }
@@ -206,7 +225,7 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
         Order order = new Order();
         order.setId("orders/1");
         order.setCustomerId("customers/ayende");
-        order.setProductIds(Arrays.asList("products/milk"));
+        order.setProductIds(Arrays.asList("products/milk", "products/bear"));
 
         session.store(order);
         session.saveChanges();
@@ -217,7 +236,7 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
         Arrays.sort(order.getProducts(), new Comparator<ResultProduct>() {
           @Override
           public int compare(ResultProduct o1, ResultProduct o2) {
-            return o1.getProductName().compareTo(o2.getProductName());
+            return o2.getProductName().compareTo(o1.getProductName());
           }
         });
         assertEquals("Milk", order.getProducts()[0].getProductName());
@@ -225,7 +244,109 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
       }
     }
   }
-  //TODO: other tests
+
+  @Test
+  public void canUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabase() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      new OrderWithProductInformationMultipleReturns().execute(store);
+
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new Product("products/milk", "Milk"));
+        session.store(new Product("products/bear", "Bear"));
+
+        Order order = new Order();
+        order.setId("orders/1");
+        order.setCustomerId("customers/ayende");
+        order.setProductIds(Arrays.asList("products/milk", "products/bear"));
+
+        session.store(order);
+        session.saveChanges();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        OrderWithProductInformationMultipleReturns.Result[] products = session.load(OrderWithProductInformationMultipleReturns.class, OrderWithProductInformationMultipleReturns.Result[].class, "orders/1");
+        Arrays.sort(products, new Comparator<OrderWithProductInformationMultipleReturns.Result>() {
+          @Override
+          public int compare(OrderWithProductInformationMultipleReturns.Result o1, OrderWithProductInformationMultipleReturns.Result o2) {
+            return o1.getProductId().compareTo(o2.getProductId());
+          }
+        });
+        assertEquals("products/bear", products[0].getProductId());
+        assertEquals("products/milk", products[1].getProductId());
+      }
+    }
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void cannotUseResultsTransformerOnLoadWithMultipleReturnsSingleExpectation() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      new OrderWithProductInformationMultipleReturns().execute(store);
+
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new Product("products/milk", "Milk"));
+        session.store(new Product("products/bear", "Bear"));
+
+        Order order = new Order();
+        order.setId("orders/1");
+        order.setCustomerId("customers/ayende");
+        order.setProductIds(Arrays.asList("products/milk", "products/bear"));
+
+        session.store(order);
+        session.saveChanges();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+       session.load(OrderWithProductInformationMultipleReturns.class, OrderWithProductInformationMultipleReturns.Result.class, "orders/1");
+      }
+
+    }
+  }
+
+  @Test
+  public void canUseResultsTransformerOnDynamicQueryWithRemoteDatabase() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      new OrderWithProductInformation().execute(store);
+
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new Product("products/milk", "Milk"));
+        session.store(new Product("products/bear", "Bear"));
+
+        session.store(new Order(null, "customers/ayende", Arrays.asList("products/milk")));
+        session.store(new Order(null, "customers/ayende", Arrays.asList("products/milk")));
+        session.store(new Order(null, "customers/ayende", Arrays.asList("products/bear", "products/milk")));
+
+        session.store(new Order(null, "customers/rahien", Arrays.asList("products/bear")));
+        session.store(new Order(null, "customers/bob", Arrays.asList("products/bear", "products/milk")));
+
+        session.saveChanges();
+      }
+
+      QStronglyTypedResultsTransformerTest_Order o = new QStronglyTypedResultsTransformerTest_Order("o");
+      try (IDocumentSession session  = store.openSession()) {
+
+        OrderWithProductInformation.Result customer = session.query(Order.class).where(o.customerId.eq("customers/bob"))
+        .transformWith(OrderWithProductInformation.class, OrderWithProductInformation.Result.class)
+        .single();
+
+        Arrays.sort(customer.getProducts(), new Comparator<ResultProduct>() {
+          @Override
+          public int compare(ResultProduct o1, ResultProduct o2) {
+            return o1.getProductName().compareTo(o2.getProductName());
+          }
+        });
+
+        assertEquals("Milk", customer.getProducts()[1].getProductName());
+        assertEquals("products/milk", customer.getProducts()[1].getProductId());
+
+        assertEquals("Bear", customer.getProducts()[0].getProductName());
+        assertEquals("products/bear", customer.getProducts()[0].getProductId());
+
+      }
+    }
+
+
+
+  }
 
 
 

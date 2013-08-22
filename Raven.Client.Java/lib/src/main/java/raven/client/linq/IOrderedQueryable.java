@@ -20,6 +20,7 @@ public interface IOrderedQueryable<T> {
 
   public List<T> toList();
 
+  public T single();
 
   public Lazy<List<T>> lazily();
 

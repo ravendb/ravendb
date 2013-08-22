@@ -214,23 +214,30 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       // Returns array of arrays, public APIs don't surface that yet though as we only support Transform
       // With a single Id
       List<RavenJObject> results = getDatabaseCommands().get(ids, new String[] {}, transformer, queryInputs).getResults();
-      //TODO: finish me
-      /*
-      var arrayOfArrays = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs)
-          .Results
-          .Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-          .Select(values =>
-          {
-            var array = values.Select(y => y.Deserialize(typeof(T).GetElementType(), Conventions)).ToArray();
-            var newArray = Array.CreateInstance(typeof (T).GetElementType(), array.Length);
-            Array.Copy(array, newArray, array.Length);
-            return newArray;
-          })
-          .Cast<T>()
-          .ToArray();
+      List<T> items = new ArrayList<>();
 
-      return arrayOfArrays;*/
-      return null; //TODO: delete me
+      Class<?> innerType = clazz.getComponentType();
+
+      try {
+
+        for (RavenJObject result : results) {
+          List<RavenJObject> values = result.value(RavenJArray.class, "$values").values(RavenJObject.class);
+          List<Object> innerTypes = new ArrayList<>();
+          for (RavenJObject value: values) {
+            innerTypes.add(JsonExtensions.getDefaultObjectMapper().readValue(value.toString(), innerType));
+          }
+          Object[] innerArray = (Object[]) Array.newInstance(innerType, innerTypes.size());
+          for (int i = 0; i < innerTypes.size(); i++) {
+            innerArray[i] = innerTypes.get(i);
+          }
+          items.add((T) innerArray);
+        }
+
+        return (T[]) items.toArray();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
     } else {
       List<RavenJObject> results = databaseCommands.get(ids, new String[] { } , transformer, queryInputs).getResults();
 
@@ -434,7 +441,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
         return loadResult[0];
       }
       return null;
-    } catch (Exception e) {
+    } catch (IllegalAccessException | InstantiationException e) {
       throw new RuntimeException(e);
     }
   }

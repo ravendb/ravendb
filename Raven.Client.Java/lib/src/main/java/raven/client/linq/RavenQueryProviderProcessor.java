@@ -9,6 +9,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.mysema.query.types.ConstantImpl;
 import com.mysema.query.types.Expression;
+import com.mysema.query.types.Operation;
 import com.mysema.query.types.PathImpl;
 import com.mysema.query.types.expr.BooleanExpression;
 import com.mysema.query.types.expr.BooleanOperation;
@@ -106,6 +107,18 @@ public class RavenQueryProviderProcessor<T> {
    * Visits the expression and generate the lucene query
    */
   protected void visitExpression(Expression<?> expression) {
+    /*
+    if (expression instanceof Operation) {
+      if (expression instanceof BooleanOperation) {
+        visitBooleanOperation((BooleanOperation) expression);
+      } else {
+        throw new IllegalArgumentException("Operation is not supported:" + expression);
+      }
+    } else {
+      throw new IllegalArgumentException("Expression is not supported:" + expression);
+    }
+*/
+
     //TODO: delete me!
     SimpleOperation op = (SimpleOperation) expression;
     BooleanOperation boolExpr = (BooleanOperation) op.getArg(1);
@@ -117,6 +130,11 @@ public class RavenQueryProviderProcessor<T> {
     //TODO:
 
 
+
+  }
+
+  private void visitBooleanOperation(BooleanOperation expression) {
+    // TODO Auto-generated method stub
 
   }
 

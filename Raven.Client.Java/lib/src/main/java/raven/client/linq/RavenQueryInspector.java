@@ -36,9 +36,9 @@ import raven.linq.dsl.LinqOps;
 
 public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
 
-  private final Class<T> clazz;
+  private Class<T> clazz;
   private final Expression<?> expression;
-  private final IRavenQueryProvider provider;
+  private IRavenQueryProvider provider;
   private final RavenQueryStatistics queryStats;
   private final RavenQueryHighlightings highlightings;
   private final String indexName;
@@ -98,6 +98,17 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   public List<T> toList() {
     Object execute = getProvider().execute(expression);
     return ((IDocumentQuery<T>)execute).toList();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public T single() {
+    Object execute = getProvider().execute(expression);
+    List<T> list = ((IDocumentQuery<T>)execute).toList();
+    if (list.size() != 1) {
+      throw new IllegalStateException("Expected single result!");
+    }
+    return list.get(0);
   }
 
   /**
@@ -220,9 +231,11 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return provider.lazily(clazz, expression, null);
   }
 
+  @SuppressWarnings("unchecked")
   public <S> IRavenQueryable<S> as(Class<S> resultClass) {
-    //TODO:
-    return null;
+    this.clazz = (Class<T>) resultClass;
+    this.provider = provider.forClass(resultClass);
+    return (IRavenQueryable<S>) this;
   }
 
 
