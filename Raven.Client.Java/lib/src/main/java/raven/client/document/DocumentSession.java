@@ -1,7 +1,11 @@
 package raven.client.document;
 
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,8 +41,6 @@ import raven.client.document.batches.IEagerSessionOperations;
 import raven.client.document.batches.ILazyOperation;
 import raven.client.document.batches.ILazySessionOperations;
 import raven.client.document.batches.LazyMultiLoadOperation;
-import raven.client.document.batches.LazyMultiLoaderWithInclude;
-import raven.client.document.batches.LazyStartsWithOperation;
 import raven.client.document.sessionoperations.LoadOperation;
 import raven.client.document.sessionoperations.MultiLoadOperation;
 import raven.client.indexes.AbstractIndexCreationTask;
@@ -390,13 +392,18 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     value.setEtag(jsonDocument.getEtag());
     value.setOriginalValue(jsonDocument.getDataAsJson());
     Object newEntity = convertToEntity(entity.getClass(), value.getKey(), jsonDocument.getDataAsJson(), jsonDocument.getMetadata());
-    /*TODO
-    foreach (var property in entity.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-    {
-      if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
-        continue;
-      property.SetValue(entity, property.GetValue(newEntity, null), null);
-    }*/
+
+    try {
+      for (PropertyDescriptor propertyDescriptor : Introspector.getBeanInfo(entity.getClass()).getPropertyDescriptors()) {
+        if (propertyDescriptor.getWriteMethod() == null || propertyDescriptor.getReadMethod() == null) {
+          continue;
+        }
+        Object propValue = propertyDescriptor.getReadMethod().invoke(newEntity, new Object[0]);
+        propertyDescriptor.getWriteMethod().invoke(entity, new Object[] { propValue });
+      }
+    } catch (IntrospectionException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      throw new RuntimeException(e);
+    }
   }
 
 

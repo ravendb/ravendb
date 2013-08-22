@@ -12,7 +12,6 @@ import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
-import raven.client.exceptions.NonUniqueObjectException;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.tests.resultsTransformer.StronglyTypedResultsTransformerTest.OrderWithProductInformation.Result;
 import raven.tests.resultsTransformer.StronglyTypedResultsTransformerTest.OrderWithProductInformation.ResultProduct;
