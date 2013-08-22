@@ -1061,6 +1061,7 @@ more responsive application.
 			entitiesAndMetadata.Clear();
 			deletedEntities.Clear();
 			entitiesByKey.Clear();
+			knownMissingIds.Clear();
 		}
 
 		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
