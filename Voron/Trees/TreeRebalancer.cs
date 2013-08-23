@@ -169,9 +169,11 @@ namespace Voron.Trees
 
                 var implicitLeftKey = GetActualKey(to, 0);
                 var leftPageNumber = to.GetNode(0)->PageNumber;
-                to.AddNode(1, implicitLeftKey, -1, leftPageNumber);
-                to.AddNode(0, Slice.BeforeAllKeys, -1, pageNum);
-            }
+
+				to.AddNode(1, implicitLeftKey, -1, leftPageNumber);
+				to.AddNode(0, Slice.BeforeAllKeys, -1, pageNum);
+				to.RemoveNode(1);
+			}
             else
             {
                 to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum);
