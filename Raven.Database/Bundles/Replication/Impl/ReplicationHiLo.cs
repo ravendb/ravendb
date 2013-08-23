@@ -58,6 +58,7 @@ namespace Raven.Bundles.Replication.Impl
 				capacity *= 2;
 			}
 			lastRequestedUtc = SystemTime.UtcNow;
+            using(Database.TransactionalStorage.DisableBatchNesting())
 			while (true)
 			{
 				try

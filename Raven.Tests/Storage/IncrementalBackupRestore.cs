@@ -11,11 +11,16 @@ namespace Raven.Tests.Storage
 {
 	public class IncrementalBackupRestore : RavenTest
 	{
-		private const string BackupDir = @".\BackupDatabase\";
+		private readonly string DataDir;
+		private readonly string BackupDir;
+
 		private DocumentDatabase db;
 
 		public IncrementalBackupRestore()
 		{
+			BackupDir = NewDataPath("BackupDatabase");
+			DataDir = NewDataPath("DataDirectory");
+
 			db = new DocumentDatabase(new RavenConfiguration
 			{
 				DataDirectory = DataDir,

@@ -13,7 +13,6 @@ namespace Raven.Studio.Models
 {
 	public class IndexesModel : PageViewModel
 	{
-		private ICommand promoteIndex;
 		private ICommand deleteIndex;
 		private ICommand resetIndex;
 		public ObservableCollection<IndexListItem> GroupedIndexes { get; private set; }
@@ -38,7 +37,6 @@ namespace Raven.Studio.Models
 
 		public ItemSelection<IndexItem> ItemSelection { get; private set; }
 
-		public ICommand PromoteIndex { get { return promoteIndex ?? (promoteIndex = new PromoteToAutoIndexCommand(this)); } }
 		public ICommand DeleteIndex { get { return deleteIndex ?? (deleteIndex = new DeleteIndexCommand(this)); } }
 		public ICommand ResetIndex { get { return resetIndex ?? (resetIndex = new ResetIndexCommand(this)); } }
 		public ICommand DeleteIndexes { get { return new DeleteIndexesCommand(this); } }

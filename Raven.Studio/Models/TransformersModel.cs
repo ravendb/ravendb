@@ -1,6 +1,9 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -15,6 +18,30 @@ namespace Raven.Studio.Models
 			get { return new DeleteTransformerCommand(this); }
 		}
 		public TransformerDefinition ItemSelection { get; set; }
+
+		public ICommand DeleteAllTransformers
+		{
+			get { return new ActionCommand(() => AskUser.ConfirmationAsync("Confirm Delete", "Really delete all transformers?")
+				.ContinueWhenTrue(DeleteTransformers)); }
+		}
+
+		private void DeleteTransformers()
+		{
+			var tasks = Transformers.Select(transformerDefinition => DatabaseCommands.DeleteTransformerAsync(transformerDefinition.Name)).ToList();
+			TaskEx.WhenAll(tasks)
+					.ContinueOnUIThread(t =>
+					{
+						if (t.IsFaulted)
+						{
+							ApplicationModel.Current.AddErrorNotification(t.Exception, "not all transformers could be deleted");
+						}
+						else
+						{
+							ApplicationModel.Current.AddInfoNotification("all transformers were successfully deleted");
+							UrlUtil.Navigate("/transformers");
+						}
+					});
+		}
 
 		public TransformersModel()
 		{

@@ -38,7 +38,7 @@ properties {
 	
 	$web_files = @("..\DefaultConfigs\web.config", "..\DefaultConfigs\NLog.Ignored.config" )
 	
-	$server_files = ( @( "Raven.Server.???", "..\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls ) |
+	$server_files = ( @( "Raven.Server.???", "sl5\Raven.Studio.xap", "..\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -409,7 +409,7 @@ task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
 	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
 	cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1
-	cp $base_dir\readme.txt $build_dir\Output\readme.txt
+	cp $base_dir\readme.md $build_dir\Output\readme.txt
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
 	cp $base_dir\CommonAssemblyInfo.cs $build_dir\Output\CommonAssemblyInfo.cs
@@ -641,6 +641,35 @@ task CreateNugetPackages -depends Compile {
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
 	
+	# Package the symbols package
+	$packages | ForEach-Object { 
+		$dirName = [io.path]::GetFileNameWithoutExtension($_)
+		New-Item $nuget_dir\$dirName\src -Type directory | Out-Null
+		
+		$srcDirName = $dirName
+		$srcDirName = $srcDirName.Replace("RavenDB.", "Raven.")
+		$srcDirName = $srcDirName.Replace(".AspNetHost", ".Web")
+		$srcDirName = $srcDirName -replace "Raven.Client$", "Raven.Client.Lightweight"
+		$srcDirName = $srcDirName.Replace("Raven.Bundles.", "Bundles\Raven.Bundles.")
+		$srcDirName = $srcDirName.Replace("Raven.Client.Authorization", "Bundles\Raven.Client.Authorization")
+		$srcDirName = $srcDirName.Replace("Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints")
+		$srcDirName = $srcDirName.Replace("Raven.Embedded", "Raven.Client.Embedded")
+		Write-Host $srcDirName
+		
+		Get-ChildItem $srcDirName\* *.cs -Recurse |	ForEach-Object {
+			$indexOf = $_.FullName.IndexOf($srcDirName)
+			$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
+			$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+			New-Item -ItemType File -Path $copyTo -Force | Out-Null
+			Copy-Item $_.FullName $copyTo -Recurse -Force
+		}
+		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
+
+		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
+	}
+		
+	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	$sourceFeed = "https://nuget.org/"
@@ -657,6 +686,14 @@ task CreateNugetPackages -depends Compile {
 		# Push to nuget repository
 		$packages | ForEach-Object {
 			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey -Source $sourceFeed }
+		}
+		
+		$packages | ForEach-Object {
+			try {
+				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet
+			} catch {
+				Write-Host $error[0]
+			}
 		}
 	}
 	else {

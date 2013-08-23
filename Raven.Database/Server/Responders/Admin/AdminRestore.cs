@@ -29,6 +29,8 @@ namespace Raven.Database.Server.Responders.Admin
 				return;
 
 			var restoreRequest = context.ReadJsonObject<RestoreRequest>();
+			var restoreStatus = new List<string>();
+			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 
 			DatabaseDocument databaseDocument = null;
 
@@ -48,6 +50,11 @@ namespace Raven.Database.Server.Responders.Admin
 				{
 					Error = "A database name must be supplied if the restore location does not contain a valid Database.Document file"
 				});
+
+				restoreStatus.Add("A database name must be supplied if the restore location does not contain a valid Database.Document file");
+				SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+							   RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+
 				return;
 			}
 
@@ -58,11 +65,15 @@ namespace Raven.Database.Server.Responders.Admin
                 {
                     Error = "Cannot do an online restore for the <system> database"
                 });
+
+				restoreStatus.Add("Cannot do an online restore for the <system> database");
+				SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+							   RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
                 return;
             }
 
 
-			var ravenConfiguration = new RavenConfiguration()
+			var ravenConfiguration = new RavenConfiguration
 			{
 				DatabaseName = databaseName,
 				IsTenantDatabase = true
@@ -92,8 +103,7 @@ namespace Raven.Database.Server.Responders.Admin
 			string documentDataDir;
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 
-			var restoreStatus = new List<string>();
-			SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
+			
 			var defrag = "true".Equals(context.Request.QueryString["defrag"], StringComparison.InvariantCultureIgnoreCase);
 
 			Task.Factory.StartNew(() =>
@@ -107,10 +117,16 @@ namespace Raven.Database.Server.Responders.Admin
 				                         }, defrag);
 
 				if (databaseDocument == null)
+				{
+					restoreStatus.Add("Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name");
+					SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+								   RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 					return;
-
+				}
+					
 				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
 				databaseDocument.Id = databaseName;
+				server.Protect(databaseDocument);
 				SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
 				                   new RavenJObject(), null);
 

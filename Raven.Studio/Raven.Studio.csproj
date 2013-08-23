@@ -754,7 +754,6 @@
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
-    <Compile Include="Commands\PromoteToAutoIndexCommand.cs" />
     <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
     <Compile Include="Controls\SearchControl.xaml.cs">

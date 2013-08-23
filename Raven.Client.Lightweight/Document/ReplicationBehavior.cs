@@ -53,16 +53,18 @@ namespace Raven.Client.Document
 				return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations
-			                                             .Where(
-				                                             x => x.Disabled == false && x.IgnoredClient == false)
-			                                             .Select(x => x.ClientVisibleUrl ?? x.Url)
-			                                             .ToList();
+														 .Where(
+															 x => x.Disabled == false && x.IgnoredClient == false)
+														 .Select(x => x.ClientVisibleUrl ?? x.Url)
+														 .ToList();
 
 
 			if (destinationsToCheck.Count == 0)
 				return 0;
 
-			var countDown = new AsyncCountdownEvent(Math.Min(replicas, destinationsToCheck.Count));
+			int toCheck = Math.Min(replicas, destinationsToCheck.Count);
+
+			var countDown = new AsyncCountdownEvent(toCheck);
 			var errors = new BlockingCollection<Exception>();
 
 			foreach (var url in destinationsToCheck)
@@ -70,7 +72,14 @@ namespace Raven.Client.Document
 				WaitForReplicationFromServerAsync(url, countDown, etag, errors);
 			}
 
-			await countDown.WaitAsync().WaitWithTimeout(timeout);
+			if (await countDown.WaitAsync().WaitWithTimeout(timeout) == false)
+			{
+				throw new TimeoutException(
+					string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers, during {3}", etag,
+								  (toCheck - countDown.Count),
+								  toCheck,
+								  timeout));
+			}
 
 			if (errors.Count > 0 && countDown.Count > 0)
 				throw new AggregateException(errors);
@@ -107,7 +116,7 @@ namespace Raven.Client.Document
 			catch (Exception ex)
 			{
 				errors.Add(ex);
-				countDown.Signal();
+				countDown.Error();
 			}
 		}
 

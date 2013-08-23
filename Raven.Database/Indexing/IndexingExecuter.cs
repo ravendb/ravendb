@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -522,5 +523,25 @@ namespace Raven.Database.Indexing
 			indexingCompletedEvent = new ManualResetEventSlim(false);
 			base.Init();
 		}
-	}
+
+        protected override ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
+        {
+            get
+            {
+                return context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
+            }
+            set
+            {
+                context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex = value;
+            }
+        }
+
+        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
+        {
+            get
+            {
+                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex;
+            }
+        }
+    }
 }

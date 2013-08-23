@@ -1,9 +1,8 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Queries
@@ -11,16 +10,10 @@ namespace Raven.Tests.Queries
 	public class Includes : RemoteClientTest
 	{
 		private readonly IDocumentStore store;
-		private readonly RavenDbServer server;
 
 		public Includes()
 		{
-			server = GetNewServer(8079, GetPath(DataDir));
-
-			store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize();
+			store = NewRemoteDocumentStore();
 		}
 
 		[Fact]
@@ -93,6 +86,30 @@ namespace Raven.Tests.Queries
 			using (var session = store.OpenSession())
 			{
 				var order = session.Include<Order2, Customer2>(x => x.Customer2Id)
+					.Load("orders/1234");
+
+				// this will not require querying the server!
+				var cust = session.Load<Customer2>(order.Customer2Id);
+
+				Assert.NotNull(cust);
+				Assert.Equal(1, session.Advanced.NumberOfRequests);
+			}
+		}
+
+		[Fact]
+		public void can_include_by_primary_valuetype_string_property()
+		{
+			using (var session = store.OpenSession())
+			{
+				session.Store(new Customer2 { Id = 1 });
+				session.Store(new Order2 { Customer2Id = 1 }, "orders/1234");
+
+				session.SaveChanges();
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var order = session.Include<Order2, Customer2>(x => x.Customer2IdString)
 					.Load("orders/1234");
 
 				// this will not require querying the server!
@@ -384,6 +401,7 @@ namespace Raven.Tests.Queries
 		public class Order2
 		{
 			public int Customer2Id { get; set; }
+			public string Customer2IdString { get { return Customer2Id.ToString(CultureInfo.InvariantCulture); } }
 			public Guid[] Supplier2Ids { get; set; }
 			public Referral2 Refferal2 { get; set; }
 			public LineItem2[] LineItem2s { get; set; }
@@ -479,13 +497,5 @@ namespace Raven.Tests.Queries
 			public string[] Images { get; set; }
 			public double Price { get; set; }
 		}
-
-		public override void Dispose()
-		{
-			store.Dispose();
-			server.Dispose();
-			base.Dispose();
-		}
-
 	}
 }

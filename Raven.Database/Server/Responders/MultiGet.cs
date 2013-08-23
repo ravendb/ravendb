@@ -178,18 +178,11 @@ namespace Raven.Database.Server.Responders
 		{
 			public MultiGetHttpRequest(GetRequest req, IHttpRequest realRequest)
 			{
-				var tempQueryString = HttpUtility.ParseQueryString(req.Query ?? "");
-				QueryString = new NameValueCollection();
-				foreach (string key in tempQueryString)
-				{
-					var values = tempQueryString.GetValues(key);
-					if (values == null)
-						continue;
-					foreach (var value in values)
-					{
-						QueryString.Add(key, HttpUtility.UrlDecode(value));
-					}
-				}
+			    string ravenClientVersion;
+			    req.Headers.TryGetValue(Constants.RavenClientVersion, out ravenClientVersion);
+			    QueryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(
+                                                    ravenClientVersion, 
+                                                    req.Query ?? string.Empty);
 				Url = new UriBuilder(realRequest.Url)
 				{
 					Query = req.Query,

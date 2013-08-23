@@ -30,6 +30,8 @@ namespace Raven.Database.Indexing
 
 		private int currentNumberOfWrites;
 
+	    private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
+
 		public Directory Directory
 		{
 			get
@@ -52,13 +54,13 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public RavenIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, IndexWriter.MaxFieldLength mfl, int maximumNumberOfWritesBeforeRecreate)
+		public RavenIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, IndexWriter.MaxFieldLength mfl, int maximumNumberOfWritesBeforeRecreate, IndexWriter.IndexReaderWarmer indexReaderWarmer)
 		{
 			directory = d;
 			analyzer = a;
 			indexDeletionPolicy = deletionPolicy;
 			maxFieldLength = mfl;
-
+		    _indexReaderWarmer = indexReaderWarmer;
 			this.maximumNumberOfWritesBeforeRecreate = maximumNumberOfWritesBeforeRecreate;
 
 			RecreateIfNecessary();
@@ -118,6 +120,10 @@ namespace Raven.Database.Indexing
 		private void CreateIndexWriter()
 		{
 			indexWriter = new IndexWriter(directory, analyzer, indexDeletionPolicy, maxFieldLength);
+            if(_indexReaderWarmer!=null)
+            {
+                indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
+            }
 			using (indexWriter.MergeScheduler) { }
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 
@@ -168,7 +174,11 @@ namespace Raven.Database.Indexing
 		public RavenIndexWriter CreateRamWriter()
 		{
 			var ramDirectory = new RAMDirectory();
-			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue);
+            if (_indexReaderWarmer != null)
+            {
+                indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
+            }
+			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue, _indexReaderWarmer);
 		}
 
 		public void AddIndexesNoOptimize(Directory[] directories, int count)

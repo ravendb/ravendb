@@ -483,38 +483,82 @@ namespace Raven.Client.Linq
 
 		private void VisitEquals(MethodCallExpression expression)
 		{
-			var memberInfo = GetMember(expression.Object);
-			bool isAnalyzed = true;
+			ExpressionInfo fieldInfo = null;
+			Expression constant = null;
+			object comparisonType = null;
 
-			if (expression.Arguments.Count == 2 &&
-			    expression.Arguments[1].NodeType == ExpressionType.Constant &&
-			    expression.Arguments[1].Type == typeof (StringComparison))
+			if (expression.Object == null)
 			{
-				switch ((StringComparison) ((ConstantExpression) expression.Arguments[1]).Value)
+				var a = expression.Arguments[0];
+				var b = expression.Arguments[1];
+
+				if (a is MemberExpression && b is ConstantExpression)
+				{
+					fieldInfo = GetMember(a);
+					constant = b;
+				}
+				else if (a is ConstantExpression && b is MemberExpression)
+				{
+					fieldInfo = GetMember(b);
+					constant = a;
+				}
+
+				if (expression.Arguments.Count == 3 &&
+					expression.Arguments[2].NodeType == ExpressionType.Constant &&
+					expression.Arguments[2].Type == typeof(StringComparison))
+				{
+					comparisonType = ((ConstantExpression)expression.Arguments[2]).Value;
+					
+				}
+			}
+			else
+			{
+				if (expression.Object is MemberExpression)
+				{
+					fieldInfo = GetMember(expression.Object);
+					constant = expression.Arguments[0];
+				}
+				else if (expression.Object is ConstantExpression)
+				{
+					fieldInfo = GetMember(expression.Arguments[0]);
+					constant = expression.Object;
+				}
+
+				if (expression.Arguments.Count == 2 &&
+				    expression.Arguments[1].NodeType == ExpressionType.Constant &&
+				    expression.Arguments[1].Type == typeof (StringComparison))
+				{
+					comparisonType = ((ConstantExpression)expression.Arguments[1]).Value;
+				}
+			}
+
+			if (comparisonType != null)
+			{
+				switch ((StringComparison) comparisonType)
 				{
 					case StringComparison.CurrentCulture:
 #if !NETFX_CORE
 					case StringComparison.InvariantCulture:
 #endif
 					case StringComparison.Ordinal:
-						isAnalyzed = false;
-						break;
+				        throw new NotSupportedException(
+				            "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
 					case StringComparison.CurrentCultureIgnoreCase:
 #if !NETFX_CORE
 					case StringComparison.InvariantCultureIgnoreCase:
 #endif
 					case StringComparison.OrdinalIgnoreCase:
-						isAnalyzed = true;
-						break;
+				        break;
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
 			}
+
 			luceneQuery.WhereEquals(new WhereParams
 			{
-				FieldName = memberInfo.Path,
-				Value = GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
-				IsAnalyzed = isAnalyzed,
+				FieldName = fieldInfo.Path,
+				Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
+				IsAnalyzed = true,
 				AllowWildcards = false
 			});
 		}
@@ -1156,15 +1200,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 		}
 
-	    static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
-        {
-            typeof(int),
-            typeof(long),
-            typeof(float),
-            typeof(decimal),
-            typeof(double),
-            typeof(TimeSpan)
-        };
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
 			var result = GetMemberDirect(expression.Body);
@@ -1178,9 +1213,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof (string);
             }
 
-
-		    if (requireOrderByToUseRange.Contains(fieldType))
-                fieldName = fieldName + "_Range";
+			if (this.queryGenerator.Conventions.UsesRangeType(fieldType))
+				fieldName = fieldName + "_Range";
 			luceneQuery.AddOrder(fieldName, descending, fieldType);
 		}
 
@@ -1386,7 +1420,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var q = queryGenerator.Query<T>(indexName, isMapReduce);
 
 			luceneQuery = (IAbstractDocumentQuery<T>) q;
-
+		    luceneQuery.SetResultTransformer(resultsTransformer);
 			VisitExpression(expression);
 
 			if (customizeQuery != null)

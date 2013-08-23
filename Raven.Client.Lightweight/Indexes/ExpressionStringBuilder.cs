@@ -626,7 +626,7 @@ namespace Raven.Client.Indexes
 
 			SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
 			{
-				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
 				{
 					Out("((");
 					Out(ConvertTypeToCSharpKeyword(rightOp.Type));
@@ -637,7 +637,7 @@ namespace Raven.Client.Indexes
 				Out(str);
 				Out(' ');
 				Visit(rightOp, innerPrecedence);
-				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing)
+                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
 				{
 					Out("))");
 				}
@@ -865,13 +865,14 @@ namespace Raven.Client.Indexes
 			type = nonNullableType ?? type;
 			var isNullableType = nonNullableType != null;
 
+
 			// we only cast enums and types is mscorlib. We don't support anything else
 			// because the VB compiler like to put converts all over the place, and include
 			// types that we can't really support (only exists on the client)
 			if (ShouldConvert(type) == false)
 				return;
-
-			Out("(");
+            
+            Out("(");
 			Out(ConvertTypeToCSharpKeyword(type));
 
 			if (isNullableType && nonNullableType != typeof(Guid))
@@ -1490,7 +1491,7 @@ namespace Raven.Client.Indexes
 					case "ElementAt":
 						Out("ElementAtOrDefault");
 						break;
-					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).FullName)
+					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
 					case "OfType":
 						Out("Where");
 						break;
@@ -1525,10 +1526,11 @@ namespace Raven.Client.Indexes
 					}
 					Visit(node.Arguments[num2]);
 
-					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).FullName)
+					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
 					if (node.Method.Name == "OfType")
 					{
-						var typeFullName = node.Method.GetGenericArguments()[0].FullName;
+						var type = node.Method.GetGenericArguments()[0];
+						var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
 						Out(", (Func<dynamic, bool>)(_itemRaven => string.Equals(_itemRaven[\"$type\"], \"");
 						Out(typeFullName);
 						Out("\", StringComparison.Ordinal))");
@@ -1616,6 +1618,10 @@ namespace Raven.Client.Indexes
 				}
 				return false;
 			}
+
+			if (node.Method.GetCustomAttributes(typeof (RavenMethodAttribute), false).Length != 0)
+				return false;
+
 			return true;
 		}
 

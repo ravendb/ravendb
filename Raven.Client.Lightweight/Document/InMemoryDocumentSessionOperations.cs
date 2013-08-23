@@ -354,7 +354,18 @@ more responsive application.
 		/// <returns></returns>
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
-			return (T)TrackEntity(typeof(T), key, document, metadata, noTracking);
+			var entity = TrackEntity(typeof (T), key, document, metadata, noTracking);
+			try
+			{
+				return (T) entity;
+			}
+			catch (InvalidCastException e)
+			{
+				var actual = typeof (T).Name;
+				var expected = entity.GetType().Name;
+				var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. If you want to return a projection, you should use .AsProjection<{1}>() before calling to .ToList().", expected, actual);
+				throw new InvalidOperationException(message, e);
+			}
 		}
 
 		/// <summary>
@@ -449,6 +460,7 @@ more responsive application.
 			var defaultValue = GetDefaultValue(entityType);
 			var entity = defaultValue;
 			EnsureNotReadVetoed(metadata);
+
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
@@ -456,6 +468,7 @@ more responsive application.
 				if (type != null)
 					entity = documentFound.Deserialize(type, Conventions);
 			}
+
 			if (Equals(entity, defaultValue))
 			{
 				entity = documentFound.Deserialize(entityType, Conventions);
@@ -826,7 +839,7 @@ more responsive application.
 		protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
 		{
 #if !SILVERLIGHT && !NETFX_CORE
-			if (documentStore.HasJsonRequestFactory && Conventions.ShouldAggressiveCacheTrackChanges &&  batchResults.Count != 0)
+			if (documentStore.HasJsonRequestFactory && Conventions.ShouldSaveChangesForceAggressiveCacheCheck &&  batchResults.Count != 0)
 			{
 				documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName ?? Constants.SystemDatabase);
 			}
@@ -1185,10 +1198,14 @@ more responsive application.
 				{
 					IncludesUtil.Include(result, include, id =>
 					{
-						if (id == null)
-							return;
+					    if (id == null)
+					        return false;
 						if (IsLoaded(id) == false)
-							RegisterMissing(id);
+						{
+						    RegisterMissing(id);
+						    return false;
+						}
+					    return true;
 					});
 				}
 			}

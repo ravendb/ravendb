@@ -55,7 +55,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanUpdateSuggestions_AfterRestart()
 		{
-			using (var store = NewDocumentStore(runInMemory: false, deleteDirectoryOnDispose: false))
+			var dataDir = NewDataPath();
+			using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -78,7 +79,7 @@ namespace Raven.Tests.Issues
 				Assert.NotEmpty(suggestionQueryResult.Suggestions);
 			}
 
-			using (var store = NewDocumentStore(runInMemory: false, deleteDirectoryOnDispose: true, deleteDirectory: false))
+			using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -86,7 +87,6 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 				WaitForIndexing(store);
-
 
 				var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
 				{

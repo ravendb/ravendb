@@ -294,7 +294,7 @@ namespace Raven.Database.Data
 
             this.Items = this.Items.Union(
                 abstractViewGenerator.Fields
-                   .Where(field => this.Items.All(item => item.From != field) && !field.StartsWith("__"))
+                   .Where(field => this.Items.All(item => item.To != field) && !field.StartsWith("__"))
                    .Select(field => new DynamicQueryMappingItem()
                    {
                        From = field,

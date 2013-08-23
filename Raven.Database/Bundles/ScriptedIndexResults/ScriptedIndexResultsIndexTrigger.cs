@@ -29,6 +29,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
             if (jsonSetupDoc == null)
                 return null;
             var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();
+            scriptedIndexResults.Id = indexName;
             var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
             if (abstractViewGenerator == null)
                 throw new InvalidOperationException("Could not find view generator for: " + indexName);
@@ -78,6 +79,14 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 								{"key", removeKey}
 							}
                         });
+
+                        if (log.IsDebugEnabled && patcher.Debug.Count > 0)
+                        {
+                            log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", removeKey, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
+
+                            patcher.Debug.Clear();
+                        }
+
                     }
                 }
 
@@ -98,7 +107,18 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                         }
                         catch (Exception e)
                         {
-                            log.Warn("Could not apply index script " + scriptedIndexResults.Id + " to index result with key: " + kvp.Key, e);
+                            log.Warn(
+                                "Could not apply index script " + scriptedIndexResults.Id +
+                                " to index result with key: " + kvp.Key, e);
+                        }
+                        finally
+                        {
+                            if (log.IsDebugEnabled && patcher.Debug.Count > 0)
+                            {
+                                log.Debug("Debug output for doc: {0} for index {1} (index):\r\n.{2}", kvp.Key, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
+
+                                patcher.Debug.Clear();
+                            }
                         }
                     }
                 }
@@ -135,7 +155,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                 protected override void CustomizeEngine(Jint.JintEngine jintEngine)
                 {
-                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(document => DocumentsToDelete.Remove(document))));
+                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(document => DocumentsToDelete.Add(document))));
                 }
 
                 protected override void RemoveEngineCustomizations(Jint.JintEngine jintEngine)
