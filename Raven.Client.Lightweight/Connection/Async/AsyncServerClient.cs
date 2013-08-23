@@ -239,9 +239,10 @@ namespace Raven.Client.Connection.Async
 				.ReadResponseJsonAsync()
 					.ContinueWith(task =>
 					{
-						var json = (RavenJObject)task.Result;
+						var transformerDef = (RavenJObject)task.Result;
 						//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-						return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(json));
+						var value = transformerDef.Value<RavenJObject>("Transformer");
+						return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(value));
 					});
 			});
 		}
