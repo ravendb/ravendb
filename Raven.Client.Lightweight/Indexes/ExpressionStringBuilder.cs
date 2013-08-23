@@ -230,13 +230,13 @@ namespace Raven.Client.Indexes
 			OutputTypeIfNeeded(member);
 			var name = GetPropertyName(member.Name, exprType);
 			if (translateIdentityProperty &&
-			    convention.GetIdentityProperty(member.DeclaringType) == member &&
-			    // only translate from the root type or derivatives
-			    (queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
-			    // only translate from the root alias
-			    (queryRootName == null || (
-				                              instance.NodeType == ExpressionType.Parameter &&
-				                              ((ParameterExpression) instance).Name == queryRootName)))
+				convention.GetIdentityProperty(member.DeclaringType) == member &&
+				// only translate from the root type or derivatives
+				(queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
+				// only translate from the root alias
+				(queryRootName == null || (
+											  instance.NodeType == ExpressionType.Parameter &&
+											  ((ParameterExpression)instance).Name == queryRootName)))
 			{
 				name = Constants.DocumentIdFieldName;
 			}
@@ -637,7 +637,7 @@ namespace Raven.Client.Indexes
 				Out(str);
 				Out(' ');
 				Visit(rightOp, innerPrecedence);
-                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+				if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
 				{
 					Out("))");
 				}
@@ -871,8 +871,8 @@ namespace Raven.Client.Indexes
 			// types that we can't really support (only exists on the client)
 			if (ShouldConvert(type) == false)
 				return;
-            
-            Out("(");
+
+			Out("(");
 			Out(ConvertTypeToCSharpKeyword(type));
 
 			if (isNullableType && nonNullableType != typeof(Guid))
@@ -884,28 +884,28 @@ namespace Raven.Client.Indexes
 
 		private string ConvertTypeToCSharpKeyword(Type type)
 		{
-            if (type.IsGenericType)
-            {
-                var typeDefinition = type.GetGenericTypeDefinition();
-                var sb = new StringBuilder(typeDefinition.FullName,0);
-                sb.Length = typeDefinition.FullName.IndexOf('`');
-                sb.Replace('+', '.');
-                sb.Append("<");
+			if (type.IsGenericType)
+			{
+				var typeDefinition = type.GetGenericTypeDefinition();
+				var sb = new StringBuilder(typeDefinition.FullName, 0);
+				sb.Length = typeDefinition.FullName.IndexOf('`');
+				sb.Replace('+', '.');
+				sb.Append("<");
 
-                var arguments = type.GetGenericArguments();
-                for (int i = 0; i < arguments.Length; i++)
-                {
-                    if (i != 0)
-                        sb.Append(", ");
-                    sb.Append(ConvertTypeToCSharpKeyword(arguments[i]));
-                }
+				var arguments = type.GetGenericArguments();
+				for (int i = 0; i < arguments.Length; i++)
+				{
+					if (i != 0)
+						sb.Append(", ");
+					sb.Append(ConvertTypeToCSharpKeyword(arguments[i]));
+				}
 
-                sb.Append(">");
+				sb.Append(">");
 
-                return sb.ToString();
-            }
+				return sb.ToString();
+			}
 
-		    if (type == typeof(string))
+			if (type == typeof(string))
 			{
 				return "string";
 			}
@@ -996,7 +996,10 @@ namespace Raven.Client.Indexes
 
 		private bool TypeExistsOnServer(Type type)
 		{
-			if (type.Assembly() == typeof(object).Assembly())
+			if (type.Assembly() == typeof(object).Assembly()) // mscorlib
+				return true;
+
+			if (type.Assembly() == typeof (HashSet<>).Assembly()) // System.Core
 				return true;
 
 			if (type.Assembly() == typeof(RavenJObject).Assembly())
@@ -1035,10 +1038,10 @@ namespace Raven.Client.Indexes
 		{
 			Out("default(");
 
-		    var nonNullable = Nullable.GetUnderlyingType(node.Type);
-		    Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type));
-            if(nonNullable != null && nonNullable != typeof(Guid))
-                Out("?");
+			var nonNullable = Nullable.GetUnderlyingType(node.Type);
+			Out(ConvertTypeToCSharpKeyword(nonNullable ?? node.Type));
+			if (nonNullable != null && nonNullable != typeof(Guid))
+				Out("?");
 
 			Out(")");
 			return node;
@@ -1422,6 +1425,23 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitMethodCall(MethodCallExpression node)
 		{
+			var constantExpression = node.Object as ConstantExpression;
+			if (constantExpression != null && node.Type == typeof(Delegate)) 
+			{
+				var methodInfo = constantExpression.Value as MethodInfo;
+				if (methodInfo != null && methodInfo.DeclaringType == typeof(AbstractCommonApiForIndexesAndTransformers))// a delegate call
+				{
+					Out("((Func<");
+					for (int i = 0; i < methodInfo.GetParameters().Length; i++)
+					{
+						Out("dynamic, ");
+					}
+					Out("dynamic>)(");
+					Out(methodInfo.Name);
+					Out("))");
+					return node;
+				}
+			}
 			var num = 0;
 			var expression = node.Object;
 			if (IsExtensionMethod(node))
@@ -1468,6 +1488,13 @@ namespace Raven.Client.Indexes
 			}
 			else if (node.Method.IsStatic && IsExtensionMethod(node) == false)
 			{
+				if (node.Method.DeclaringType == typeof (Enumerable) && node.Method.Name == "Cast")
+				{
+					Out("new Raven.Abstractions.Linq.DynamicList(");
+					Visit(node.Arguments[0]);
+					Out(")");
+					return node; // we don't do casting on the server
+				}
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
 			}
@@ -1556,8 +1583,8 @@ namespace Raven.Client.Indexes
 					case "SingleOrDefault":
 					case "ElementAt":
 					case "ElementAtOrDefault":
-                        Out(" ?? ");
-				        VisitDefault(Expression.Default(node.Type));
+						Out(" ?? ");
+						VisitDefault(Expression.Default(node.Type));
 						break;
 				}
 			}
@@ -1619,7 +1646,7 @@ namespace Raven.Client.Indexes
 				return false;
 			}
 
-			if (node.Method.GetCustomAttributes(typeof (RavenMethodAttribute), false).Length != 0)
+			if (node.Method.GetCustomAttributes(typeof(RavenMethodAttribute), false).Length != 0)
 				return false;
 
 			return true;
