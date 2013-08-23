@@ -38,7 +38,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void SuperLongTransformerName()
 		{
-			using (var store = NewRemoteDocumentStore(runInMemory: false, fiddler: true))
+			using (var store = NewRemoteDocumentStore(runInMemory: false))
 			{
 				var name = new string('a', 200);
 
@@ -82,7 +82,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task SuperLongTransformerNameAsync()
 		{
-			using (var store = NewRemoteDocumentStore(runInMemory: false, fiddler: true))
+			using (var store = NewRemoteDocumentStore(runInMemory: false))
 			{
 				var name = new string('a', 200);
 

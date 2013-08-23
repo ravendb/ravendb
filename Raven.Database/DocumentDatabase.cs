@@ -1245,7 +1245,7 @@ namespace Raven.Database
 
         private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
         {
-            definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
+	        definition.Name = name;
             definition.RemoveDefaultValues();
             IndexDefinitionStorage.ResolveAnalyzers(definition);
             var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
@@ -2125,7 +2125,6 @@ namespace Raven.Database
 
         public IndexDefinition GetIndexDefinition(string index)
         {
-            index = IndexDefinitionStorage.FixupIndexName(index);
             return IndexDefinitionStorage.GetIndexDefinition(index);
         }
 
