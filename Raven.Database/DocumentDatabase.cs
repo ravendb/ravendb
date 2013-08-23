@@ -1262,7 +1262,6 @@ namespace Raven.Database
 
         public QueryResultWithIncludes Query(string index, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
         {
-            index = IndexDefinitionStorage.FixupIndexName(index);
             var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
             Func<IndexQueryResult, object> tryRecordHighlighting = queryResult =>
             {
@@ -1416,7 +1415,6 @@ namespace Raven.Database
 
         public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
         {
-            index = IndexDefinitionStorage.FixupIndexName(index);
             bool isStale = false;
             HashSet<string> loadedIds = null;
             TransactionalStorage.Batch(
@@ -1446,7 +1444,6 @@ namespace Raven.Database
 
         public void DeleteTransfom(string name)
         {
-            name = IndexDefinitionStorage.FixupIndexName(name);
             IndexDefinitionStorage.RemoveTransformer(name);
         }
 
@@ -1454,7 +1451,6 @@ namespace Raven.Database
         {
             using (IndexDefinitionStorage.TryRemoveIndexContext())
             {
-                name = IndexDefinitionStorage.FixupIndexName(name);
                 IndexDefinitionStorage.RemoveIndex(name);
                 IndexStorage.DeleteIndex(name);
                 //we may run into a conflict when trying to delete if the index is currently
@@ -2115,7 +2111,6 @@ namespace Raven.Database
 
         public void ResetIndex(string index)
         {
-            index = IndexDefinitionStorage.FixupIndexName(index);
             var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
             if (indexDefinition == null)
                 throw new InvalidOperationException("There is no index named: " + index);
