@@ -220,6 +220,11 @@ namespace Voron.Trees
 
             key = key ?? new Slice(other);
 
+			if (other->KeySize == 0) // when copy first item from branch which is implicit ref
+			{
+				nodeSize += key.Size;
+			}
+
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
 
 
