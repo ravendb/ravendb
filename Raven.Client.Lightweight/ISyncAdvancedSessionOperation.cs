@@ -27,7 +27,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
+		T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null);
 
 		/// <summary>
 		/// Access the lazy operations
