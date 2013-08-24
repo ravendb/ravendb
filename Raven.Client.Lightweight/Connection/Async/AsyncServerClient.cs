@@ -1057,6 +1057,30 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+		{
+			return ExecuteWithReplication("GET", operationUrl =>
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&exclude={4}&start={2}&pageSize={3}", operationUrl,
+										  Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(), exclude);
+			if (metadataOnly)
+				actualUrl += "&metadata-only=true";
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+
+			request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			return request.ReadResponseJsonAsync()
+					.ContinueWith(
+						task =>
+						SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
+
+		});
+		}
+
 		/// <summary>
 		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>

@@ -1132,6 +1132,7 @@ namespace Raven.Client.Connection
 			    if (exclude != null)
 			    {
 			        sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
+			    }
 			}
 			}
 			if (start != 0)
