@@ -145,7 +145,7 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 			var dynamicNullObject = value as DynamicNullObject;
-			if (dynamicNullObject != null)
+			if (ReferenceEquals(dynamicNullObject, null) == false)
 			{
 				if (dynamicNullObject.IsExplicitNull)
 				{
