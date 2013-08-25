@@ -656,7 +656,7 @@ task CreateNugetPackages -depends Compile {
 		$srcDirName = $srcDirName.Replace("Raven.Embedded", "Raven.Client.Embedded")
 		Write-Host $srcDirName
 		
-		Get-ChildItem $srcDirName\* *.cs -Recurse |	ForEach-Object {
+		Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
 			$indexOf = $_.FullName.IndexOf($srcDirName)
 			$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
 			$copyTo = "$nuget_dir\$dirName\src\$copyTo"
