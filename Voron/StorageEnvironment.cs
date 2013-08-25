@@ -32,7 +32,7 @@ namespace Voron
 			{
 				_pager = pager;
 				_ownsPager = ownsPager;
-				_freeSpaceRepository = new NoFreeSpaceRepository();
+				_freeSpaceRepository = new FreeSpaceRepository(this);
 				_sliceComparer = NativeMethods.memcmp;
 
 				Setup(pager);
