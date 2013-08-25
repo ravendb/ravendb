@@ -13,7 +13,7 @@ namespace Voron.Benchmark
         private static HashSet<long> _randomNumbers;
         public const int ItemsPerTransaction = 100;
         private const int Transactions = 500;
-        private const string Path = @"bench.data";
+        private const string Path = @"e:\data\bench.data";
 
         public static void Main()
         {
@@ -29,44 +29,44 @@ namespace Voron.Benchmark
 #endif
             _randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
-            Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-            Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-            Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+            //Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            //Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
+            //Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
-            Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
+            //Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
+            //Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
             Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
-            Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-            Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-            Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+            //Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+            //Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+            //Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-            Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
-            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
+            //Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
+            //Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+            //Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
-            Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            //Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-            Time("read seq", ReadOneTransaction, delete: false);
-            Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
-            Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
-            Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
-            Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
-            Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+            //Time("read seq", ReadOneTransaction, delete: false);
+            //Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
+            //Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
+            //Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
+            //Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
+            //Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-            Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
+            //Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
 
         }
 
         private static void FlushOsBuffer()
         {
-            const FileOptions fileFlagNoBuffering = (FileOptions)0x20000000;
+            //const FileOptions fileFlagNoBuffering = (FileOptions)0x20000000;
 
-            using (new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
-                                       fileFlagNoBuffering))
-            {
+            //using (new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
+            //                           fileFlagNoBuffering))
+            //{
 
-            }
+            //}
         }
 
         private static HashSet<long> InitRandomNumbers(int count)

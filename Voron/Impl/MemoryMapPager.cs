@@ -95,7 +95,7 @@ namespace Voron.Impl
 			}
             //numberOfFlushes++;
             //if (
-            //    new[] {1, 2, 3, 27, 28, 29, 1153, 1154, 1155, 4441, 4442, 4443, 7707, 7708, 7709, 9069, 9070, 9071}.Contains(
+            //    new[] { 1, 2, 3, 27, 28, 29, 1153, 1154, 1155, 4441, 4442, 4443, 7707, 7708, 7709, 9069, 9070, 9071 }.Contains(
             //        numberOfFlushes) == false)
             //    return;
 
@@ -108,7 +108,7 @@ namespace Voron.Impl
             //                  numberOfFlushes,
             //                  pages.Count(x => x.IsLeaf),
             //                  pages.Count(x => x.IsBranch),
-            //                  pages.Count(x => x.IsOverlfow)
+            //                  pages.Count(x => x.IsOverflow)
             //                  );
 		}
 
