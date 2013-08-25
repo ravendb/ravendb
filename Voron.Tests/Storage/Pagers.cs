@@ -6,6 +6,7 @@ namespace Voron.Tests.Storage
 {
     public class Pagers
     {
+#if DEBUG
         [Fact]
         public void PureMemoryPagerReleasesPagerState()
         {
@@ -26,5 +27,6 @@ namespace Voron.Tests.Storage
 
             Assert.Equal(instanceCount, PagerState.Instances.Count);
         }
+#endif
     }
 }
