@@ -24,7 +24,7 @@ namespace Voron
 		private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 
 		private long _transactionsCounter;
-		private readonly FreeSpaceRepository _freeSpaceRepository;
+		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
 	    public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
@@ -92,7 +92,7 @@ namespace Voron
 
 		public long NextPageNumber { get; set; }
 
-		public FreeSpaceRepository FreeSpaceRepository
+		public IFreeSpaceRepository FreeSpaceRepository
 		{
 			get { return _freeSpaceRepository; }
 		}
