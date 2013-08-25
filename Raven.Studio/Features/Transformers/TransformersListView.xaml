@@ -213,7 +213,7 @@
 
 							<ContextMenu:ContextMenuService.ContextMenu>
 								<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
-									<ContextMenu:MenuItem Header="Delete index"
+									<ContextMenu:MenuItem Header="Delete Transformer"
                                           Command="{Binding DataContext.DeleteTransformer, ElementName=TransformersList}"/>
 								</ContextMenu:ContextMenu>
 							</ContextMenu:ContextMenuService.ContextMenu>
