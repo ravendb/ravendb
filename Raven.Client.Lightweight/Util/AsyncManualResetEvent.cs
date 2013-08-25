@@ -8,27 +8,34 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
-	public class AsyncManualResetEvent
-	{
-		private volatile TaskCompletionSource<bool> completionSource = new TaskCompletionSource<bool>();
+    public class AsyncManualResetEvent
+    {
+        private volatile TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
 
-		public Task WaitAsync() { return completionSource.Task; }
+        public Task WaitAsync() { return tcs.Task; }
 
-		public void Set() { completionSource.TrySetResult(true); }
+        public async Task<bool> WaitAsync(int timeout)
+        {
+            var task = tcs.Task;
+#if !NET45
+            return await TaskEx.WhenAny(task, TaskEx.Delay(timeout)) == task;
 
-		public void Reset()
-		{
-			while (true)
-			{
-				var tcs = completionSource;
-				if (tcs.Task.IsCompleted == false)
-					return;
+#else
+            return await Task.WhenAny(task, Task.Delay(timeout)) == task;
+#endif
+        }
 
-#pragma warning disable 420
-				if (Interlocked.CompareExchange(ref completionSource, new TaskCompletionSource<bool>(), tcs) == tcs)
-					return;
-#pragma warning restore 420
-			}
-		}
-	}
+        public void Set() { tcs.TrySetResult(true); }
+
+        public void Reset()
+        {
+            while (true)
+            {
+                var current = tcs;
+                if (!current.Task.IsCompleted ||
+                    Interlocked.CompareExchange(ref tcs, new TaskCompletionSource<bool>(), current) == current)
+                    return;
+            }
+        }
+    }
 }
