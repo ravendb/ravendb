@@ -6,7 +6,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.Client.Util
+namespace Raven.Abstractions.Util
 {
     public class AsyncManualResetEvent
     {
