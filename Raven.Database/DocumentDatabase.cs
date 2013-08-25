@@ -1696,14 +1696,14 @@ namespace Raven.Database
 
         }
 
-        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize)
+        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize)
         {
             var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, start, pageSize, list.Add);
+            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, list.Add);
             return list;
         }
 
-        public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize, Action<RavenJObject> addDoc)
+        public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, Action<RavenJObject> addDoc)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -1719,7 +1719,8 @@ namespace Raven.Database
                     foreach (var doc in documents)
                     {
                         docCount++;
-                        if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
+                        string keyTest = doc.Key.Substring(idPrefix.Length);
+                        if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                             continue;
                         DocumentRetriever.EnsureIdInMetadata(doc);
                         var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);

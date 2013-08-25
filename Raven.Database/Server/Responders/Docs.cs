@@ -55,6 +55,7 @@ namespace Raven.Database.Server.Responders
 							context.WriteJson(Database.GetDocumentsWithIdStartingWith(
 								startsWith,
 								context.Request.QueryString["matches"],
+                                context.Request.QueryString["exclude"],
 								context.GetStart(),
 								context.GetPageSize(Database.Configuration.MaxPageSize)));
 					}

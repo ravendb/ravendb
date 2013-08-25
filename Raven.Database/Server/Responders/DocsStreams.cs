@@ -53,6 +53,7 @@ namespace Raven.Database.Server.Responders
 								Database.GetDocumentsWithIdStartingWith(
 									startsWith,
 									context.Request.QueryString["matches"],
+                                    context.Request.QueryString["exclude"],
 									context.GetStart(),
 									pageSize,
 									doc => doc.WriteTo(writer));

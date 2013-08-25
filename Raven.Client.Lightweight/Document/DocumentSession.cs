@@ -881,16 +881,16 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
 		{
-			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize)
+			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude)
 								   .Select(TrackEntity<T>)
 								   .ToArray();
 		}
 
-		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize)
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
 		{
-			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, start, pageSize, this);
+			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this);
 
 			return AddLazyOperation<T[]>(operation, null);
 		}
