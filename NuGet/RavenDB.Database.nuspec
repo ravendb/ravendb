@@ -36,9 +36,7 @@
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
 		<references>
 			<reference file="Raven.Abstractions.dll" />
-			<reference file="Raven.Abstractions-4.5.dll" />
 			<reference file="Raven.Database.dll" />
-			<reference file="Raven.Database-4.5.dll" />
 		</references>
 	</metadata>
 </package>
