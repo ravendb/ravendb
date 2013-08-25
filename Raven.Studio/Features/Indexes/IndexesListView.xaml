@@ -285,10 +285,10 @@
                  Margin="10,5">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid Width="410" Visibility="{Binding Items, Converter={StaticResource HiddenWhenEmpty}}">
+					<Grid Width="428" Visibility="{Binding Indexes, Converter={StaticResource HiddenWhenEmpty}}">
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="*"/>
 						</Grid.RowDefinitions>
 						<Rectangle Fill="Transparent"/> <!--this is for the Item selection--> 
 						<StackPanel Grid.Row="0" Orientation="Horizontal">
@@ -305,8 +305,8 @@
 								   VerticalAlignment="Center" />
 							<TextBlock Text="{Binding IndexCount}" VerticalAlignment="Center"/>
 						</StackPanel>
-						
-						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_Indexes}"
+
+                        <ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_IndexGroup}"
 								 Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
 								 ItemsSource="{Binding Items}"
 								 SelectedItem="{Binding DataContext.ItemSelection, ElementName=IndexesList, Mode=TwoWay}"
