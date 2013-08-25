@@ -843,6 +843,9 @@ namespace Raven.Database
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
         {
+            TouchedDocumentInfo touch;
+            recentTouches.TryRemove(key, out touch);
+
             foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
             {
                 Etag preTouchEtag;
@@ -853,7 +856,7 @@ namespace Raven.Database
 
                 actions.General.MaybePulseTransaction();
 
-                recentTouches.Set(key, new TouchedDocumentInfo
+                recentTouches.Set(referencing, new TouchedDocumentInfo
                 {
                     PreTouchEtag = preTouchEtag,
                     TouchedEtag = afterTouchEtag
