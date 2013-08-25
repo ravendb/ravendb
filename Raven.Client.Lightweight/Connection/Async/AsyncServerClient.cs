@@ -1847,27 +1847,24 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		private Task<bool> AssertNonConflictedDocumentAndCheckIfNeedToReload(string opUrl, RavenJObject docResult)
+		private async Task<bool> AssertNonConflictedDocumentAndCheckIfNeedToReload(string opUrl, RavenJObject docResult)
 		{
 			if (docResult == null)
-				return new CompletedTask<bool>(false);
+				return (false);
 			var metadata = docResult[Constants.Metadata];
 			if (metadata == null)
-				return new CompletedTask<bool>(false);
+				return (false);
 
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
 			{
-				return TryResolveConflictOrCreateConcurrencyException(opUrl, metadata.Value<string>("@id"), docResult,
-															   HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag")))
-					.ContinueWith(task =>
-					{
-						if (task.Result == null)
-							return true;
-						throw task.Result;
-					});
+				var etag = HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag"));
+				var e = await TryResolveConflictOrCreateConcurrencyException(opUrl, metadata.Value<string>("@id"), docResult,etag);
+				if (e != null)
+					throw e;
+				return true;
 
 			}
-			return new CompletedTask<bool>(false);
+			return (false);
 		}
 
 		private Task<ConflictException> TryResolveConflictOrCreateConcurrencyException(string opUrl, string key, RavenJObject conflictsDoc, Etag etag)
@@ -1938,29 +1935,15 @@ namespace Raven.Client.Connection.Async
 			return new CompletedTask<bool>(false);
 		}
 
-		private Task<T> RetryOperationBecauseOfConflict<T>(string opUrl, IEnumerable<RavenJObject> docResults, T currentResult, Func<Task<T>> nextTry)
+		private async Task<T> RetryOperationBecauseOfConflict<T>(string opUrl, IEnumerable<RavenJObject> docResults, T currentResult, Func<Task<T>> nextTry)
 		{
-			return RetryOperationBecauseOfConflictLoop(opUrl, docResults.GetEnumerator(), false, currentResult, nextTry);
-		}
-
-		private Task<T> RetryOperationBecauseOfConflictLoop<T>(string opUrl, IEnumerator<RavenJObject> enumerator, bool requiresRetry, T currentResult, Func<Task<T>> nextTry)
-		{
-			if (enumerator.MoveNext() == false)
-				return RetryOperationBecauseOfConflictContinuation<T>(requiresRetry, currentResult, nextTry);
-
-			return AssertNonConflictedDocumentAndCheckIfNeedToReload(opUrl, enumerator.Current)
-				.ContinueWith(task =>
-				{
-					requiresRetry |= task.Result;
-
-					return RetryOperationBecauseOfConflictLoop<T>(opUrl, enumerator, requiresRetry, currentResult, nextTry);
-				}).Unwrap();
-		}
-
-		private Task<T> RetryOperationBecauseOfConflictContinuation<T>(bool requiresRetry, T currentResult, Func<Task<T>> nextTry)
-		{
+			bool requiresRetry = false;
+			foreach (var docResult in docResults)
+			{
+				requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(opUrl, docResult);
+			}
 			if (!requiresRetry)
-				return new CompletedTask<T>(currentResult);
+				return currentResult;
 
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
@@ -1968,7 +1951,7 @@ namespace Raven.Client.Connection.Async
 			resolvingConflictRetries = true;
 			try
 			{
-				return nextTry();
+				return await nextTry();
 			}
 			finally
 			{
