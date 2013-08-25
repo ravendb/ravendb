@@ -1,19 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Studio.Annotations;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class Group
+	public class Group : INotifyPropertyChanged
 	{
 		public string GroupName { get; set; }
-		public List<GroupItem> Items { get; set; }
+		public ObservableCollection<GroupItem> Items { get; set; }
 		public Observable<bool> Collapse { get; set; }
 
 		public ICommand ChangeCollapse
@@ -21,7 +23,7 @@ namespace Raven.Studio.Models
 			get { return new ActionCommand(() => Collapse.Value = !Collapse.Value); }
 		}
 
-		public string IndexCount
+		public string ItemCount
 		{
 			get { return string.Format(" ({0})",Items.Count); }
 		}
@@ -29,8 +31,19 @@ namespace Raven.Studio.Models
 		public Group(string groupName)
 		{
 			GroupName = groupName;
-			Items = new List<GroupItem>();
+			Items = new ObservableCollection<GroupItem>();
 			Collapse = new Observable<bool>();
+
+			Items.CollectionChanged += (sender, args) => OnPropertyChanged("ItemCount");
+		}
+
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		[NotifyPropertyChangedInvocator]
+		protected virtual void OnPropertyChanged(string propertyName)
+		{
+			var handler = PropertyChanged;
+			if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
 		}
 	}
 

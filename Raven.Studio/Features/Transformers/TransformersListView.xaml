@@ -179,10 +179,10 @@
                  Margin="10,5">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid Width="410" Visibility="{Binding Items, Converter={StaticResource HiddenWhenEmpty}}">
+					<Grid Width="428" Visibility="{Binding Items, Converter={StaticResource HiddenWhenEmpty}}">
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="*"/>
 						</Grid.RowDefinitions>
 						<Rectangle Fill="Transparent"/>
 						<!--this is for the Item selection-->
@@ -198,10 +198,10 @@
 							<TextBlock Text="{Binding GroupName}"
 								   Style="{StaticResource Style_TextBlock_GroupHeader}"
 								   VerticalAlignment="Center" />
-							<TextBlock Text="{Binding IndexCount}" VerticalAlignment="Center"/>
+							<TextBlock Text="{Binding ItemCount}" VerticalAlignment="Center"/>
 						</StackPanel>
 
-						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_Indexes}"
+						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_IndexGroup}"
 								 Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
 								 ItemsSource="{Binding Items}"
 								 SelectedItem="{Binding DataContext.ItemSelection, ElementName=TransformersList, Mode=TwoWay}"

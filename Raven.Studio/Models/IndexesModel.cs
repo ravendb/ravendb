@@ -113,8 +113,6 @@ namespace Raven.Studio.Models
 				groupItem.Items.Add(indexItem);
 			}
 
-			GroupedIndexes = new ObservableCollection<Group>(GroupedIndexes.OrderBy(@group => group.GroupName));
-
 			OnPropertyChanged(() => GroupedIndexes);
 		}
 

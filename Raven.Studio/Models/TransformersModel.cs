@@ -79,7 +79,7 @@ namespace Raven.Studio.Models
 				Transformers = new ObservableCollection<TransformerDefinition>(transformers);
 
 				CleanGroup();
-				foreach (var transformer in transformers)
+				foreach (var transformer in transformers.OrderBy(definition => definition.Name))
 				{
 					var groupName = DetermineName(transformer);
 					var groupItem =
@@ -93,8 +93,6 @@ namespace Raven.Studio.Models
 
 					groupItem.Items.Add(new TransformerItem { GroupName = groupName, Name = transformer.Name, Transformer = transformer });
 				}
-
-				GroupedTransformers = new ObservableCollection<Group>(GroupedTransformers.OrderBy(@group => group.GroupName));
 
 				OnPropertyChanged(() => GroupedTransformers);
 				OnPropertyChanged(() => Transformers);
