@@ -111,7 +111,7 @@ namespace Voron.Impl
             {
                 _increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
             }
-            _lastIncrease = DateTime.UtcNow;
+            _lastIncrease = now;
             // At any rate, we won't do an increase by over 25% of current size, to prevent huge empty spaces
             // and the first size we allocate is 256 pages (1MB)
             // 

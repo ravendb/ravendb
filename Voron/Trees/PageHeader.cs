@@ -11,16 +11,16 @@ namespace Voron.Trees
 		[FieldOffset(8)]
 		public PageFlags Flags;
 
-		[FieldOffset(10)]
+		[FieldOffset(9)]
 		public ushort Lower;
 
-		[FieldOffset(12)]
+		[FieldOffset(11)]
 		public ushort Upper;
 
-		[FieldOffset(14)]
+		[FieldOffset(9)]
 		public int OverflowSize;
 
-        [FieldOffset(18)]
+        [FieldOffset(13)]
         public int ItemCount;
 	}
 }
