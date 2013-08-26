@@ -72,12 +72,15 @@ namespace Raven.Studio.Behaviors
         {
             // we need to ensure that the column set doesn't get changed whilst the user is interacting with one
             // of the columns
-            Columns.Source = ColumnsSource.User;
+			if (Columns.Source == ColumnsSource.Automatic)
+				Columns.Source = ColumnsSource.Resize;
+            //Columns.Source = ColumnsSource.User;
         }
 
         private void HandleColumnHeadersMouseLeftButtonUp(object sender, RoutedEventArgs e)
         {
             internalColumnUpdate = true;
+			
 
             Columns.LoadFromColumnDefinitions(GetColumnDefinitionsFromColumns());
 

@@ -33,5 +33,26 @@ namespace Raven.Database.Bundles.SqlReplication
 	{
 		public string TableName { get; set; }
 		public string DocumentKeyColumn { get; set; }
+
+		protected bool Equals(SqlReplicationTable other)
+		{
+			return string.Equals(TableName, other.TableName) && string.Equals(DocumentKeyColumn, other.DocumentKeyColumn);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((SqlReplicationTable) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return ((TableName != null ? TableName.GetHashCode() : 0)*397) ^ (DocumentKeyColumn != null ? DocumentKeyColumn.GetHashCode() : 0);
+			}
+		}
 	}
 }

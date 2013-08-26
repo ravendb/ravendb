@@ -16,10 +16,32 @@ namespace Raven.Studio.Features.Settings
         public ReplicationSettingsSectionModel()
         {
             ReplicationDestinations = new ObservableCollection<ReplicationDestination>();
+			OriginalReplicationDestinations = new ObservableCollection<ReplicationDestination>();
             SectionName = "Replication";
         }
 
-        public ICommand DeleteReplication
+	    public override void CheckForChanges()
+	    {
+		    if(HasUnsavedChanges)
+				return;
+
+		    if (ReplicationDestinations.Count != OriginalReplicationDestinations.Count)
+		    {
+			    HasUnsavedChanges = true;
+				return;
+		    }
+
+		    for (int i = 0; i < ReplicationDestinations.Count; i++)
+		    {
+			    if (ReplicationDestinations[i].Equals(OriginalReplicationDestinations[i]) == false)
+			    {
+				    HasUnsavedChanges = true;
+					return;
+			    }
+		    }
+	    }
+
+	    public ICommand DeleteReplication
         {
             get { return deleteReplicationCommand ?? (deleteReplicationCommand = new ActionCommand(HandleDeleteReplication)); }
         }
@@ -35,8 +57,9 @@ namespace Raven.Studio.Features.Settings
         }
 
         public ReplicationDestination SelectedReplication { get; set; }
-       
-        public ObservableCollection<ReplicationDestination> ReplicationDestinations { get; set; }
+
+		public ObservableCollection<ReplicationDestination> ReplicationDestinations { get; set; }
+		public ObservableCollection<ReplicationDestination> OriginalReplicationDestinations { get; set; }
         
         public ReplicationDocument ReplicationData { get; set; }
 
@@ -59,9 +82,11 @@ namespace Raven.Studio.Features.Settings
                         return;
                     ReplicationData = document;
                     ReplicationDestinations.Clear();
+					OriginalReplicationDestinations = new ObservableCollection<ReplicationDestination>();
                     foreach (var replicationDestination in ReplicationData.Destinations)
                     {
                         ReplicationDestinations.Add(replicationDestination);
+						OriginalReplicationDestinations.Add(replicationDestination);
                     }
                 });
         }

@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Search;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
@@ -415,6 +416,13 @@ namespace Raven.Database
 		                    var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Name);
 		                    if (indexDefinition != null)
 			                    index.LockMode = indexDefinition.LockMode;
+		                    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Name).ForEntityNames.ToList();
+		                    IndexSearcher searcher;
+		                    using (IndexStorage.GetCurrentIndexSearcher(index.Name, out searcher))
+		                    {
+			                    index.DocsCount = searcher.IndexReader.NumDocs();
+		                    }
+		                   
 	                    }
 	                    catch (Exception)
 	                    {

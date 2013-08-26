@@ -7,6 +7,7 @@ namespace Raven.Studio.Features.Documents
     public enum ColumnsSource
     {
         Automatic,
+		Resize,
         User
     }
 
