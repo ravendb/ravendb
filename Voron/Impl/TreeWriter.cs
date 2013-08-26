@@ -3,7 +3,6 @@
 	using System.Collections.Concurrent;
 	using System.Collections.Generic;
 	using System.Diagnostics;
-	using System.IO;
 	using System.Linq;
 	using System.Threading;
 	using System.Threading.Tasks;
@@ -15,26 +14,15 @@
 	{
 		private readonly StorageEnvironment _env;
 
-		private readonly Tree _tree;
-
 		private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
 
 		private readonly SemaphoreSlim _semaphore;
 
-		internal TreeWriter(StorageEnvironment env, Tree tree)
+		internal TreeWriter(StorageEnvironment env)
 		{
 			_env = env;
-			_tree = tree;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
 			_semaphore = new SemaphoreSlim(1, 1);
-		}
-
-		public Task WriteAsync(Slice key, Stream value)
-		{
-			var batch = new WriteBatch();
-			batch.Add(key, value);
-
-			return WriteAsync(batch);
 		}
 
 		public async Task WriteAsync(WriteBatch batch)
@@ -57,13 +45,15 @@
 				{
 					foreach (var operation in writes.SelectMany(x => x.Batch.Operations))
 					{
+						var tree = GetTree(operation.TreeName);
+
 						switch (operation.Type)
 						{
 							case WriteBatch.BatchOperationType.Add:
-								_tree.Add(tx, operation.Key, operation.Value);
+								tree.Add(tx, operation.Key, operation.Value);
 								break;
 							case WriteBatch.BatchOperationType.Delete:
-								_tree.Delete(tx, operation.Key);
+								tree.Delete(tx, operation.Key);
 								break;
 						}
 					}
@@ -114,6 +104,14 @@
 			}
 
 			return list;
+		}
+
+		private Tree GetTree(string treeName)
+		{
+			if (treeName == _env.Root.Name) 
+				return _env.Root;
+
+			return _env.GetTree(treeName);
 		}
 
 		private class OutstandingWrite

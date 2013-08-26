@@ -16,9 +16,9 @@
 		public async Task SingleItemBatchTest()
 		{
 			var batch = new WriteBatch();
-			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")));
+			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), Env.Root.Name);
 
-			await Env.GetWriter(Env.Root).WriteAsync(batch);
+			await Env.Writer.WriteAsync(batch);
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
@@ -39,10 +39,10 @@
 			var batch = new WriteBatch();
 			for (int i = 0; i < numberOfItems; i++)
 			{
-				batch.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))));
+				batch.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Env.Root.Name);
 			}
 
-			await Env.GetWriter(Env.Root).WriteAsync(batch);
+			await Env.Writer.WriteAsync(batch);
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
@@ -67,11 +67,11 @@
 			var batch2 = new WriteBatch();
 			for (int i = 0; i < numberOfItems; i++)
 			{
-				batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))));
-				batch1.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))));
+				batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Env.Root.Name);
+				batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Env.Root.Name);
 			}
 
-			await Task.WhenAll(Env.GetWriter(Env.Root).WriteAsync(batch1), Env.GetWriter(Env.Root).WriteAsync(batch2));
+			await Task.WhenAll(Env.Writer.WriteAsync(batch1), Env.Writer.WriteAsync(batch2));
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
@@ -103,24 +103,20 @@
 			var batch2 = new WriteBatch();
 			for (int i = 0; i < numberOfItems; i++)
 			{
-				batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))));
-				batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))));
+				batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), "tree1");
+				batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), "tree2");
 			}
 
 			Tree t1;
 			Tree t2;
-			TreeWriter tw1;
-			TreeWriter tw2;
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				t1 = Env.CreateTree(tx, "tree1");
 				t2 = Env.CreateTree(tx, "tree2");
-				tw1 = Env.GetWriter(t1);
-				tw2 = Env.GetWriter(t2);
 			}
 
-			await Task.WhenAll(tw1.WriteAsync(batch1), tw2.WriteAsync(batch2));
+			await Task.WhenAll(Env.Writer.WriteAsync(batch1), Env.Writer.WriteAsync(batch2));
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
@@ -139,6 +135,42 @@
 						var result = reader.ReadToEnd();
 						Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 					}
+				}
+			}
+		}
+
+		[Fact]
+		public async Task MultipleTreesInSingleBatch()
+		{
+			var batch = new WriteBatch();
+			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree1")), "tree1");
+			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree2")), "tree2");
+
+			Tree t1;
+			Tree t2;
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				t1 = Env.CreateTree(tx, "tree1");
+				t2 = Env.CreateTree(tx, "tree2");
+			}
+
+			await Env.Writer.WriteAsync(batch);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				using (var stream = t1.Read(tx, "key/1"))
+				using (var reader = new StreamReader(stream))
+				{
+					var result = reader.ReadToEnd();
+					Assert.Equal("tree1", result);
+				}
+
+				using (var stream = t2.Read(tx, "key/1"))
+				using (var reader = new StreamReader(stream))
+				{
+					var result = reader.ReadToEnd();
+					Assert.Equal("tree2", result);
 				}
 			}
 		}

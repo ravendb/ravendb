@@ -30,34 +30,40 @@
 			_operations = new List<BatchOperation>();
 		}
 
-		public void Add(Slice key, Stream value)
+		public void Add(Slice key, Stream value, string treeName)
 		{
+			if (string.IsNullOrEmpty(treeName)) throw new ArgumentNullException("treeName");
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length == 0)
 				throw new ArgumentException("Cannot add empty value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-			_operations.Add(new BatchOperation(key, value, BatchOperationType.Add));
+			_operations.Add(new BatchOperation(key, value, treeName, BatchOperationType.Add));
 		}
 
-		public void Delete(Slice key)
+		public void Delete(Slice key, string treeName)
 		{
-			_operations.Add(new BatchOperation(key, null, BatchOperationType.Delete));
+			if (string.IsNullOrEmpty(treeName)) throw new ArgumentNullException("treeName");
+
+			_operations.Add(new BatchOperation(key, null, treeName, BatchOperationType.Delete));
 		}
 
 		public class BatchOperation
 		{
-			public BatchOperation(Slice key, Stream value, BatchOperationType type)
+			public BatchOperation(Slice key, Stream value, string treeName, BatchOperationType type)
 			{
 				Key = key;
 				Value = value;
+				TreeName = treeName;
 				Type = type;
 			}
 
 			public Slice Key { get; private set; }
 
 			public Stream Value { get; private set; }
+
+			public string TreeName { get; private set; }
 
 			public BatchOperationType Type { get; private set; }
 		}
