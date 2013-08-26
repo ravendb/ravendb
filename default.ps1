@@ -667,6 +667,10 @@ task CreateNugetPackages -depends Compile {
 	        if ($compile.Link.Length -gt 0) {
                 $fileToCopy = $compile.Include;
                 $copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
+                
+				Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
+				Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+				New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
                 Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
             }
 		}
