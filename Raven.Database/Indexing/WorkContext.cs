@@ -16,6 +16,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
+using Raven.Database.Server.Responders.Debugging;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Util;
@@ -42,6 +43,7 @@ namespace Raven.Database.Indexing
 	    {
             ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
             ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
+            CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>();
 	    }
 
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
@@ -65,6 +67,9 @@ namespace Raven.Database.Indexing
 		{
 			LastWorkTime = SystemTime.UtcNow;
 		}
+
+        //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
+        public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
 
         public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex { get; private set; }
         public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex { get; private set; }

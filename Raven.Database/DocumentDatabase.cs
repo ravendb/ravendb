@@ -25,6 +25,7 @@ using Raven.Database.Prefetching;
 using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.Responders.Debugging;
 using Raven.Database.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -1262,6 +1263,8 @@ namespace Raven.Database
 
         public QueryResultWithIncludes Query(string index, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
         {
+            var queryStartTime = AddToCurrentlyRunningQueryList(index, query);
+
             index = IndexDefinitionStorage.FixupIndexName(index);
             var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
             Func<IndexQueryResult, object> tryRecordHighlighting = queryResult =>
@@ -1352,6 +1355,9 @@ namespace Raven.Database
 
 
                 });
+
+            RemoveFromCurrentlyRunningQueryList(index, query, queryStartTime);
+
             return new QueryResultWithIncludes
             {
                 IndexName = index,
@@ -1367,6 +1373,26 @@ namespace Raven.Database
                 Highlightings = highlightings,
 				DurationMilliseconds = duration.ElapsedMilliseconds
             };
+        }
+
+        private void RemoveFromCurrentlyRunningQueryList(string index, IndexQuery query, DateTime queryStartTime)
+        {
+            var indexQuery = query;
+            
+            workContext.CurrentlyRunningQueries[index].RemoveWhere(queryInfo => queryInfo.QueryInfo == indexQuery && 
+                                                                                queryInfo.StartTime == queryStartTime);
+        }
+
+        private DateTime AddToCurrentlyRunningQueryList(string index, IndexQuery query)
+        {
+            if (!workContext.CurrentlyRunningQueries.ContainsKey(index))
+            {
+                workContext.CurrentlyRunningQueries.GetOrAdd(index, new ConcurrentSet<ExecutingQueryInfo>());
+            }
+
+            var queryStartTime = DateTime.UtcNow;
+            workContext.CurrentlyRunningQueries[index].Add(new ExecutingQueryInfo(queryStartTime,query));
+            return queryStartTime;
         }
 
         private IEnumerable<RavenJObject> GetQueryResults(IndexQuery query,
@@ -1417,6 +1443,7 @@ namespace Raven.Database
         public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
         {
             index = IndexDefinitionStorage.FixupIndexName(index);
+            var queryStartTime = AddToCurrentlyRunningQueryList(index,query);
             bool isStale = false;
             HashSet<string> loadedIds = null;
             TransactionalStorage.Batch(
@@ -1440,6 +1467,7 @@ namespace Raven.Database
                                                     select queryResult.Key);
                 });
             stale = isStale;
+            RemoveFromCurrentlyRunningQueryList(index, query, queryStartTime);
             return loadedIds;
         }
 
