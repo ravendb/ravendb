@@ -29,8 +29,7 @@ namespace Voron.Tests.Trees
 
                 RenderAndShow(tx, 1);
 
-                //for (int i = 79; i >= 0; --i)
-                for (int i = 79; i > 64; --i)
+                for (int i = 79; i >= 0; --i)
                 {
                     Env.Root.Delete(tx, string.Format("{0}1", i));
                     Env.Root.Delete(tx, string.Format("{0}2", i));

@@ -240,7 +240,6 @@ namespace Voron.Trees
             txInfo.State.PageCount = 1;
 
             var rootPage = _tx.ModifyPage(_txInfo.Tree, null, node->PageNumber, cursor);
-            rootPage.ItemCount = 1;
             txInfo.RootPageNumber = rootPage.PageNumber;
 
             Debug.Assert(rootPage.Dirty);
