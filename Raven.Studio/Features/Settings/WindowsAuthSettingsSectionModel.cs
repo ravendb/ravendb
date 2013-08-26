@@ -23,6 +23,8 @@ namespace Raven.Studio.Features.Settings
 			Document = new Observable<WindowsAuthDocument>();
 			RequiredUsers = new ObservableCollection<WindowsAuthData>();
 			RequiredGroups = new ObservableCollection<WindowsAuthData>();
+			OriginalRequiredUsers = new ObservableCollection<WindowsAuthData>();
+			OriginalRequiredGroups = new ObservableCollection<WindowsAuthData>();
 			SelectedList = new ObservableCollection<WindowsAuthData>();
 			DatabaseSuggestionProvider = new DatabaseSuggestionProvider();
 			WindowsAuthName = new WindowsAuthName();
@@ -39,6 +41,8 @@ namespace Raven.Studio.Features.Settings
 					Document.Value = doc.DataAsJson.JsonDeserialization<WindowsAuthDocument>();
 					RequiredUsers = new ObservableCollection<WindowsAuthData>(Document.Value.RequiredUsers);
 					RequiredGroups = new ObservableCollection<WindowsAuthData>(Document.Value.RequiredGroups);
+					OriginalRequiredUsers = new ObservableCollection<WindowsAuthData>(Document.Value.RequiredUsers);
+					OriginalRequiredGroups = new ObservableCollection<WindowsAuthData>(Document.Value.RequiredGroups);
 					SelectedList = RequiredUsers;
 					
 					OnPropertyChanged(() => Document);
@@ -47,11 +51,43 @@ namespace Raven.Studio.Features.Settings
 				});
 		}
 
+		public override void CheckForChanges()
+		{
+			if(HasUnsavedChanges)
+				return;
+
+			if (OriginalRequiredGroups.Count != RequiredGroups.Count || OriginalRequiredUsers.Count != RequiredUsers.Count)
+			{
+				HasUnsavedChanges = true;
+				return;
+			}
+
+			foreach (var windowsAuthData in RequiredUsers)
+			{
+				if (windowsAuthData.Equals(OriginalRequiredUsers.FirstOrDefault(data => data.Name == windowsAuthData.Name)) == false)
+				{
+					HasUnsavedChanges = true;
+					return;
+				}
+			}
+
+			foreach (var windowsAuthData in RequiredGroups)
+			{
+				if (windowsAuthData.Equals(OriginalRequiredGroups.FirstOrDefault(data => data.Name == windowsAuthData.Name)) == false)
+				{
+					HasUnsavedChanges = true;
+					return;
+				}
+			}
+		}
+
 		public WindowsAuthName WindowsAuthName { get; set; }
 		public DatabaseSuggestionProvider DatabaseSuggestionProvider { get; set; }
 		public Observable<WindowsAuthDocument> Document { get; set; }
 		public ObservableCollection<WindowsAuthData> RequiredUsers { get; set; }
 		public ObservableCollection<WindowsAuthData> RequiredGroups { get; set; }
+		public ObservableCollection<WindowsAuthData> OriginalRequiredUsers { get; set; }
+		public ObservableCollection<WindowsAuthData> OriginalRequiredGroups { get; set; }
 		public WindowsAuthData SelectedItem { get; set; }
 		public int SelectedTab
 		{

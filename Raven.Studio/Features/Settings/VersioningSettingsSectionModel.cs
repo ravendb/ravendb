@@ -28,8 +28,29 @@ namespace Raven.Studio.Features.Settings
 			IsCreation = isCreation;
 		}
 
+		public override void CheckForChanges()
+		{
+			if(HasUnsavedChanges)
+				return;
 
-        public VersioningConfiguration SelectedVersioning { get; set; }
+			if (VersioningConfigurations.Count != OriginalVersioningConfigurations.Count)
+			{
+				HasUnsavedChanges = true;
+				return;
+			}
+
+			foreach (var versioningConfiguration in VersioningConfigurations)
+			{
+				if (versioningConfiguration.Equals(
+						OriginalVersioningConfigurations.FirstOrDefault(configuration => configuration.Id == versioningConfiguration.Id)) == false)
+				{
+					HasUnsavedChanges = true;
+					return;
+				}
+			}
+		}
+
+		public VersioningConfiguration SelectedVersioning { get; set; }
 		public bool IsCreation { get; set; }
 
         public ObservableCollection<VersioningConfiguration> OriginalVersioningConfigurations { get; set; }
@@ -145,13 +166,12 @@ namespace Raven.Studio.Features.Settings
 		        ContinueOnSuccessInTheUIThread(data =>
 		        {
 			        VersioningConfigurations.Clear();
-			        foreach (var versioningConfiguration in data)
+					OriginalVersioningConfigurations.Clear();
+			        var versioningConfigurations = data as VersioningConfiguration[] ?? data.ToArray();
+			        foreach (var versioningConfiguration in versioningConfigurations)
 			        {
 				        VersioningConfigurations.Add(versioningConfiguration);
-			        }
-			        foreach (var versioningConfiguration in data)
-			        {
-				        OriginalVersioningConfigurations.Add(versioningConfiguration);
+						OriginalVersioningConfigurations.Add(versioningConfiguration);
 			        }
 		        });                
         }

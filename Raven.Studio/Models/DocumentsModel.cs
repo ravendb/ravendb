@@ -135,7 +135,7 @@ namespace Raven.Studio.Models
 
         private void UpdateColumns()
         {
-            if (Columns.Source == ColumnsSource.Automatic)
+            if (Columns.Source != ColumnsSource.User)
             {
                 var newColumns = GetCurrentColumnsSuggestion();
 

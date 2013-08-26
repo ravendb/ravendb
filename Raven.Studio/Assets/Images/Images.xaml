@@ -65,8 +65,9 @@
     <BitmapImage x:Key="Image_CopyToClipboard_Tiny" UriSource="copy_to_clipboard_tiny.png"/>
     <BitmapImage x:Key="Image_Logs_Small" UriSource="logs_small.png"/>
     <BitmapImage x:Key="Image_Tasks_Small" UriSource="tasks_small.png"/>
-    <BitmapImage x:Key="Image_ToggleExpansion_Tiny" UriSource="Collapse_tiny.png"/>
-    <BitmapImage x:Key="Image_IndexFields_Tiny" UriSource="index_showfields.png"/>
+	<BitmapImage x:Key="Image_ToggleExpansion_Tiny" UriSource="Collapse_tiny.png"/>
+	<BitmapImage x:Key="Image_Expand_Tiny" UriSource="Expand_tiny.png"/>
+	<BitmapImage x:Key="Image_IndexFields_Tiny" UriSource="index_showfields.png"/>
     <BitmapImage x:Key="Image_SkipTransform_Tiny" UriSource="index_skiptransform.png"/>
     <BitmapImage x:Key="Image_VisitLink_Tiny" UriSource="VisitLink_Tiny.png"/>
     <BitmapImage x:Key="Image_RecentQueries_Tiny" UriSource="recent_queries_tiny.png"/>

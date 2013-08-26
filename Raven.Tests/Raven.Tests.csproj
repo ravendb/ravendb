@@ -577,7 +577,10 @@
     <Compile Include="Issues\BulkInsertAuth.cs" />
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\BulkInsertDatabaseUrl.cs" />
+    <Compile Include="Issues\RavenDB_1226.cs" />
     <Compile Include="Issues\RavenDB1316.cs" />
+    <Compile Include="Issues\LongIndexAndTransformerNames.cs" />
+    <Compile Include="Issues\RavenDB_1077.cs" />
     <Compile Include="Issues\RavenDB_1251_2.cs" />
     <Compile Include="Issues\RavenDB1019.cs" />
     <Compile Include="Issues\RavenDB1025.cs" />

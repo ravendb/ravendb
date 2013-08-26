@@ -15,9 +15,9 @@ namespace Raven.Abstractions.Data
 	/// <summary>
 	/// All the information required to query a Raven index
 	/// </summary>
-	public class IndexQuery
+	public class IndexQuery : IEquatable<IndexQuery>
 	{
-		private int pageSize;
+	    private int pageSize;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
@@ -311,6 +311,80 @@ namespace Raven.Abstractions.Data
 		{
 			return Query;
 		}
+
+        public bool Equals(IndexQuery other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return PageSizeSet.Equals(other.PageSizeSet) && 
+                   String.Equals(Query, other.Query) && 
+                   Equals(TotalSize, other.TotalSize) && 
+                   Equals(QueryInputs, other.QueryInputs) && 
+                   Start == other.Start && 
+                   AggregationOperation == other.AggregationOperation && 
+                   Equals(GroupBy, other.GroupBy) && 
+                   Equals(FieldsToFetch, other.FieldsToFetch) && 
+                   Equals(SortedFields, other.SortedFields) && 
+                   Cutoff.Equals(other.Cutoff) && 
+                   Equals(CutoffEtag, other.CutoffEtag) && 
+                   String.Equals(DefaultField, other.DefaultField) && 
+                   DefaultOperator == other.DefaultOperator && 
+                   SkipTransformResults.Equals(other.SkipTransformResults) && 
+                   Equals(SkippedResults, other.SkippedResults) && 
+                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
+                   Equals(HighlightedFields, other.HighlightedFields) && 
+                   Equals(HighlighterPreTags, other.HighlighterPreTags) && 
+                   Equals(HighlighterPostTags, other.HighlighterPostTags) && 
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
+                   DisableCaching.Equals(other.DisableCaching);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj.GetType() == GetType() && Equals((IndexQuery)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = PageSizeSet.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (QueryInputs != null ? QueryInputs.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Start;
+                hashCode = (hashCode * 397) ^ (int)AggregationOperation;
+                hashCode = (hashCode * 397) ^ (GroupBy != null ? GroupBy.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
+                hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (int)DefaultOperator;
+                hashCode = (hashCode * 397) ^ SkipTransformResults.GetHashCode();
+                hashCode = (hashCode * 397) ^ (SkippedResults != null ? SkippedResults.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
+                hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        public static bool operator ==(IndexQuery left, IndexQuery right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(IndexQuery left, IndexQuery right)
+        {
+            return !Equals(left, right);
+        }
+
 	}
 
     public enum QueryOperator

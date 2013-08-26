@@ -147,10 +147,11 @@
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/documents"
 								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
-                                <HyperlinkButton Content="Conflicts"
-								 Command="{StaticResource NavigateToCommand}"
-								 CommandParameter="/conflicts"
-								 Style="{StaticResource Style_Hyperlink_InDropdown}" />
+								<HyperlinkButton Content="Conflicts"
+												 Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"
+												 Command="{StaticResource NavigateToCommand}"
+												 CommandParameter="/conflicts"
+												 Style="{StaticResource Style_Hyperlink_InDropdown}" />
                                 <HyperlinkButton Content="Patch"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/patch"

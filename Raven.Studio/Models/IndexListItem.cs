@@ -1,43 +1,81 @@
 ﻿using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Studio.Annotations;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class IndexListItem
+	public class Group : INotifyPropertyChanged
 	{
-	    public string Name { get; set; }
+		public string GroupName { get; set; }
+		public ObservableCollection<GroupItem> Items { get; set; }
+		public Observable<bool> Collapse { get; set; }
+
+		public ICommand ChangeCollapse
+		{
+			get { return new ActionCommand(() => Collapse.Value = !Collapse.Value); }
+		}
+
+		public string ItemCount
+		{
+			get { return string.Format(" ({0})",Items.Count); }
+		}
+
+		public Group(string groupName)
+		{
+			GroupName = groupName;
+			Items = new ObservableCollection<GroupItem>();
+			Collapse = new Observable<bool>();
+
+			Items.CollectionChanged += (sender, args) => OnPropertyChanged("ItemCount");
+		}
+
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		[NotifyPropertyChangedInvocator]
+		protected virtual void OnPropertyChanged(string propertyName)
+		{
+			var handler = PropertyChanged;
+			if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
+		}
 	}
 
-	public class IndexGroupHeader : IndexListItem
+	public abstract class GroupItem
 	{
+		public string Name { get; set; }
+		public string GroupName { get; set; }
 	}
 
-	public class IndexItem : IndexListItem
+	public class TransformerItem : GroupItem
+	{
+		public TransformerDefinition Transformer { get; set; }
+	}
+
+	public class IndexItem : GroupItem
 	{
 		public IndexStats IndexStats { get; set; }
 		public string ModifiedName
 		{
 			get
 			{
+				var name = Name + " (" + IndexStats.DocsCount + ")";
 				if (IndexStats.Priority.HasFlag(IndexingPriority.Abandoned))
-					return Name + " (abandoned)";
+					return name + " (abandoned)";
 
 				if (IndexStats.Priority.HasFlag(IndexingPriority.Idle))
-					return Name + " (idle)";
+					return name + " (idle)";
 
 				if (IndexStats.Priority.HasFlag(IndexingPriority.Disabled))
-					return Name + " (disabled)";
+					return name + " (disabled)";
 
-				return Name;
+				return name;
 			}
 		}
 

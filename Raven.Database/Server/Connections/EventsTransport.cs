@@ -43,45 +43,50 @@ namespace Raven.Database.Server.Connections
 		{
 			context.Response.ContentType = "text/event-stream";
             while (Connected)
-		    {
-		        try
-		        {
+		{
+			try
+			{
 		            var result = await manualResetEvent.WaitAsync(5000);
 		            if (Connected == false)
 		                return;
 
 		            if (result == false)
-		            {
+		{
 		                await context.Response.WriteAsync("data: { 'Type': 'Heartbeat' }\r\n\r\n");
 		                continue;
-		            }
+			}
                     manualResetEvent.Reset();
 		            object msg;
 		            while (msgs.TryDequeue(out msg))
-		            {
+			{
 		                var obj = JsonConvert.SerializeObject(msg, Formatting.None, new EtagJsonConverter());
 		                await context.Response.WriteAsync("data: " + obj + "\r\n\r\n");
-		            }
-		        }
-		        catch (Exception e)
-		        {
+			}
+		}
+			catch (Exception e)
+			{
 		            Connected = false;
                     log.DebugException("Error when using events transport", e);
                     Disconnected();
-		        }
-		    }
+			}
+		}
 		}
 
 	    public void Dispose()
-	    {
-	        Connected = false;
+		{
+			Connected = false;
             manualResetEvent.Set();
-	    }
+		}
 
 	    public void SendAsync(object msg)
-	    {
+        {
 	        msgs.Enqueue(msg);
             manualResetEvent.Set();
 	    }
+		        log.DebugException("Error sending disconnect for events transport", agEx.Flatten());
+	        }
+
+	        Disconnect();
+        }
 	}
 }
