@@ -21,20 +21,21 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
-using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing
 {
 	public class AnonymousObjectToLuceneDocumentConverter
 	{
 		private readonly AbstractViewGenerator viewGenerator;
+		private readonly DocumentDatabase database;
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
 		private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
 		private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
 
-		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
+		public AnonymousObjectToLuceneDocumentConverter(DocumentDatabase database, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
+			this.database = database;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
 		}
@@ -118,15 +119,35 @@ namespace Raven.Database.Indexing
 								 Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield break;
 			}
+			var attachmentFoIndexing = value as AttachmentForIndexing;
+			if (attachmentFoIndexing != null)
+			{
+				if (database == null)
+					throw new InvalidOperationException(
+						"Cannot use attachment for indexing if the database parameter is null. This is probably a RavenDB bug");
+
+				var attachment = database.GetStatic(attachmentFoIndexing.Key);
+				if (attachment == null)
+				{
+					yield break;
+				}
+
+				var fieldWithCaching = CreateFieldWithCaching(name, string.Empty, Field.Store.NO, fieldIndexingOptions, termVector);
+				var streamReader = new StreamReader(attachment.Data());
+				fieldWithCaching.SetValue(streamReader);
+				yield return fieldWithCaching;
+				yield break;
+			}
 			if (Equals(value, string.Empty))
 			{
 				yield return CreateFieldWithCaching(name, Constants.EmptyString, storage,
 							 Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 				yield break;
 			}
-			if (value is DynamicNullObject)
+			var dynamicNullObject = value as DynamicNullObject;
+			if (ReferenceEquals(dynamicNullObject, null) == false)
 			{
-				if (((DynamicNullObject)value).IsExplicitNull)
+				if (dynamicNullObject.IsExplicitNull)
 				{
 					var sortOptions = indexDefinition.GetSortOption(name);
 					if (sortOptions != null && 

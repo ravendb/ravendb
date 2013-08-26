@@ -578,6 +578,9 @@
     <Compile Include="Issues\BulkInsertClient.cs" />
     <Compile Include="Issues\BulkInsertDatabaseUrl.cs" />
     <Compile Include="Issues\RavenDB_1226.cs" />
+    <Compile Include="Issues\RavenDB1316.cs" />
+    <Compile Include="Issues\LongIndexAndTransformerNames.cs" />
+    <Compile Include="Issues\RavenDB_1077.cs" />
     <Compile Include="Issues\RavenDB_1251_2.cs" />
     <Compile Include="Issues\RavenDB1019.cs" />
     <Compile Include="Issues\RavenDB1025.cs" />
@@ -693,6 +696,7 @@
     <Compile Include="Linq\WhereStringEquals.cs" />
     <Compile Include="MailingList\Accounts.cs" />
     <Compile Include="MailingList\Afif.cs" />
+    <Compile Include="MailingList\AlexanderLapa.cs" />
     <Compile Include="MailingList\AlexanderZeitler.cs" />
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\Apo\Lazy.cs" />

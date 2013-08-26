@@ -30,6 +30,7 @@ namespace Raven.Tests.Bugs
 				using (var s = store.OpenSession())
 				{
 					int actual = s.Query<Company>().Where(x => x.Name == null).Count();
+					WaitForUserToContinueTheTest(store);
 					Assert.Equal(1, actual);
 				}
 			}

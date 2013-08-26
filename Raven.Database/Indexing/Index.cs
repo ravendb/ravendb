@@ -693,6 +693,14 @@ namespace Raven.Database.Indexing
 					currentlyIndexDocuments.Add(CloneDocument(luceneDoc));
 
 				currentIndexWriter.AddDocument(luceneDoc, newAnalyzer);
+
+				foreach (var fieldable in luceneDoc.GetFields())
+				{
+					using (fieldable.ReaderValue) // dispose all the readers
+					{
+						
+					}
+				}
 			}
 			finally
 			{

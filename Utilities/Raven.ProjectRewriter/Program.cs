@@ -144,10 +144,6 @@ namespace Raven.ProjectRewriter
 			{
 				element.Value = ""; // Not "Client"
 			}
-			foreach (var element in database.Root.Descendants(xmlns + "AssemblyName"))
-			{
-				element.Value += "-4.5";
-			}
 			foreach (var element in database.Root.Descendants(xmlns + "PropertyGroup"))
 			{
 				var outputPath = element.Descendants(xmlns + "OutputPath").FirstOrDefault();

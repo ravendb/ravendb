@@ -120,7 +120,7 @@ namespace Raven.Client.Document.Batches
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
+		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null);
 	}
 
 	/// <summary>

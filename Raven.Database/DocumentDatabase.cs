@@ -844,6 +844,9 @@ namespace Raven.Database
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
         {
+            TouchedDocumentInfo touch;
+            recentTouches.TryRemove(key, out touch);
+
             foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
             {
                 Etag preTouchEtag;
@@ -854,7 +857,7 @@ namespace Raven.Database
 
                 actions.General.MaybePulseTransaction();
 
-                recentTouches.Set(key, new TouchedDocumentInfo
+                recentTouches.Set(referencing, new TouchedDocumentInfo
                 {
                     PreTouchEtag = preTouchEtag,
                     TouchedEtag = afterTouchEtag
@@ -1246,7 +1249,7 @@ namespace Raven.Database
 
         private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
         {
-            definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
+	        definition.Name = name;
             definition.RemoveDefaultValues();
             IndexDefinitionStorage.ResolveAnalyzers(definition);
             var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
@@ -1442,7 +1445,6 @@ namespace Raven.Database
 
         public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
         {
-            index = IndexDefinitionStorage.FixupIndexName(index);
             var queryStartTime = AddToCurrentlyRunningQueryList(index,query);
             bool isStale = false;
             HashSet<string> loadedIds = null;
@@ -1474,7 +1476,6 @@ namespace Raven.Database
 
         public void DeleteTransfom(string name)
         {
-            name = IndexDefinitionStorage.FixupIndexName(name);
             IndexDefinitionStorage.RemoveTransformer(name);
         }
 
@@ -1482,7 +1483,6 @@ namespace Raven.Database
         {
             using (IndexDefinitionStorage.TryRemoveIndexContext())
             {
-                name = IndexDefinitionStorage.FixupIndexName(name);
                 IndexDefinitionStorage.RemoveIndex(name);
                 IndexStorage.DeleteIndex(name);
                 //we may run into a conflict when trying to delete if the index is currently
@@ -1724,14 +1724,14 @@ namespace Raven.Database
 
         }
 
-        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize)
+        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize)
         {
             var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, start, pageSize, list.Add);
+            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, list.Add);
             return list;
         }
 
-        public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize, Action<RavenJObject> addDoc)
+        public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, Action<RavenJObject> addDoc)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -1747,7 +1747,8 @@ namespace Raven.Database
                     foreach (var doc in documents)
                     {
                         docCount++;
-                        if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
+                        string keyTest = doc.Key.Substring(idPrefix.Length);
+                        if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                             continue;
                         DocumentRetriever.EnsureIdInMetadata(doc);
                         var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
@@ -2143,7 +2144,6 @@ namespace Raven.Database
 
         public void ResetIndex(string index)
         {
-            index = IndexDefinitionStorage.FixupIndexName(index);
             var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
             if (indexDefinition == null)
                 throw new InvalidOperationException("There is no index named: " + index);
@@ -2153,7 +2153,6 @@ namespace Raven.Database
 
         public IndexDefinition GetIndexDefinition(string index)
         {
-            index = IndexDefinitionStorage.FixupIndexName(index);
             return IndexDefinitionStorage.GetIndexDefinition(index);
         }
 
