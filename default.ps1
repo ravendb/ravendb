@@ -655,6 +655,25 @@ task CreateNugetPackages -depends Compile {
 		$srcDirName = $srcDirName.Replace("Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints")
 		$srcDirName = $srcDirName.Replace("Raven.Embedded", "Raven.Client.Embedded")
 		Write-Host $srcDirName
+		$csprojFile = $srcDirName -replace ".*\\", ""
+		$csprojFile += ".csproj"
+		
+		Write-Host .csprojFile $csprojFile -Fore Yellow
+		Write-Host Copy Linked Files of $srcDirName -Fore Yellow
+		
+		[xml]$csProj = Get-Content $srcDirName\$csprojFile
+		Write-Host $srcDirName\$csprojFile -Fore Green
+		foreach ($compile in $csProj.Project.ItemGroup.Compile){
+	        if ($compile.Link.Length -gt 0) {
+                $fileToCopy = $compile.Include;
+                $copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
+                
+				Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
+				Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+				New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
+                Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+            }
+		}
 		
 		Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
 			$indexOf = $_.FullName.IndexOf($srcDirName)
