@@ -26,6 +26,8 @@ namespace Voron
 		private long _transactionsCounter;
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
+		public TreeWriter Writer { get; private set; }
+
 	    public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
 			try
@@ -37,9 +39,10 @@ namespace Voron
 
 				Setup(pager);
 
-
 			    FreeSpaceRoot.Name = "Free Space";
 				Root.Name = "Root";
+
+				Writer = new TreeWriter(this);
 			}
 			catch (Exception)
 			{
