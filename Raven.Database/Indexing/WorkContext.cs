@@ -43,7 +43,7 @@ namespace Raven.Database.Indexing
 	    {
             ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
             ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
-            CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>();
+            CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
 	    }
 
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
