@@ -7,8 +7,8 @@
 	using System.Threading;
 	using System.Threading.Tasks;
 
-	using Voron.Impl.Extensions;
-	using Voron.Trees;
+	using Extensions;
+	using Trees;
 
 	public class TreeWriter
 	{
@@ -43,19 +43,22 @@
 
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					foreach (var operation in writes.SelectMany(x => x.Batch.Operations))
+					foreach (var g in writes.SelectMany(x => x.Batch.Operations).GroupBy(x=>x.TreeName))
 					{
-						var tree = GetTree(operation.TreeName);
+						var tree = GetTree(g.Key);
+					    foreach (var operation in g)
+					    {
 
-						switch (operation.Type)
-						{
-							case WriteBatch.BatchOperationType.Add:
-								tree.Add(tx, operation.Key, operation.Value);
-								break;
-							case WriteBatch.BatchOperationType.Delete:
-								tree.Delete(tx, operation.Key);
-								break;
-						}
+                            switch (operation.Type)
+                            {
+                                case WriteBatch.BatchOperationType.Add:
+                                    tree.Add(tx, operation.Key, operation.Value);
+                                    break;
+                                case WriteBatch.BatchOperationType.Delete:
+                                    tree.Delete(tx, operation.Key);
+                                    break;
+                            }
+					    }
 					}
 
 					tx.Commit();

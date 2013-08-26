@@ -52,7 +52,7 @@
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\FlushMode.cs" />
-    <Compile Include="Impl\FreeSpaceRecord.cs" />
+    <Compile Include="Impl\FreeSpaceRepository.cs" />
     <Compile Include="Impl\IFreeSpaceRepository.cs" />
     <Compile Include="Impl\IVirtualPager.cs" />
     <Compile Include="Impl\MemoryMapPager.cs" />
