@@ -34,7 +34,11 @@ namespace Raven.Database.Server.Responders
                             context.SetStatusToNotFound();
                             return;
                         }
-					    context.WriteJson(RavenJObject.FromObject(transformerDefinition));
+
+						context.WriteJson(new
+						{
+							Transformer = transformerDefinition,
+						});
 						break;
 					}
 

@@ -339,7 +339,7 @@ namespace Raven.Database.Storage
 			return indexDefinitions.ContainsKey(fixedName);
         }
 
-        public string FixupIndexName(string index)
+        private string FixupIndexName(string index)
         {
             return FixupIndexName(index, path);
         }
