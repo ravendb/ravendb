@@ -665,7 +665,7 @@ task CreateNugetPackages -depends Compile {
 		Write-Host $srcDirName\$csprojFile -Fore Green
 		foreach ($compile in $csProj.Project.ItemGroup.Compile){
 	        if ($compile.Link.Length -gt 0) {
-                $fileToCopy = $compile.Include;
+                $fileToCopy = $compile.Include
                 $copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
                 
 				Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
@@ -673,6 +673,40 @@ task CreateNugetPackages -depends Compile {
 				New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
                 Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
             }
+		}
+		
+		foreach ($projectReference in $csProj.Project.ItemGroup.ProjectReference){
+	        if ($projectReference.Name.Length -gt 0) {
+			
+				$projectPath = $projectReference.Include
+				Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
+				
+				[xml]$csProj2;
+				try {
+					$csProj2 = Get-Content "$srcDirName\$projectPath"
+				} catch {
+					$projectPath = $projectPath.Replace("..\..\", "..\")
+					Write-Host "Try to include also linked files of $($projectReference.Include)" -Fore Green
+					$csProj2 = Get-Content "$srcDirName\$projectPath"
+				}
+				
+				foreach ($compile in $csProj2.Project.ItemGroup.Compile){
+					if ($compile.Link.Length -gt 0) {
+						$fileToCopy = ""
+						if ($srcDirName.Contains("Bundles\") -and !$srcDirName.EndsWith("\..")) {
+							$srcDirName += "\.."
+						}
+						$fileToCopy = $compile.Include;
+						$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
+						
+						Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
+						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
+						Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+					}
+				}  
+				
+			}
 		}
 		
 		Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
