@@ -51,7 +51,7 @@
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\FlushMode.cs" />
-    <Compile Include="Impl\FreeSpaceRepository.cs" />
+    <Compile Include="Impl\FreeSpaceRecord.cs" />
     <Compile Include="Impl\IFreeSpaceRepository.cs" />
     <Compile Include="Impl\IVirtualPager.cs" />
     <Compile Include="Impl\MemoryMapPager.cs" />
@@ -83,6 +83,7 @@
     <Compile Include="Trees\TreeDataInTransaction.cs" />
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
+    <Compile Include="Util\UnmanagedBits.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
