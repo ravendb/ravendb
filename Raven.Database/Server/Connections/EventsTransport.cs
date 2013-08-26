@@ -83,10 +83,5 @@ namespace Raven.Database.Server.Connections
 	        msgs.Enqueue(msg);
             manualResetEvent.Set();
 	    }
-		        log.DebugException("Error sending disconnect for events transport", agEx.Flatten());
-	        }
-
-	        Disconnect();
-        }
 	}
 }
