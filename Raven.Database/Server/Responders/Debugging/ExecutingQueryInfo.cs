@@ -7,7 +7,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.Responders.Debugging
 {
-    public class ExecutingQueryInfo : IEquatable<ExecutingQueryInfo>
+    public class ExecutingQueryInfo
     {
         public DateTime StartTime { get; private set; }
 
@@ -28,40 +28,6 @@ namespace Raven.Database.Server.Responders.Debugging
             StartTime = startTime;
             QueryInfo = queryInfo;
             stopwatch = Stopwatch.StartNew();
-        }
-
-
-        public bool Equals(ExecutingQueryInfo other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return StartTime.Equals(other.StartTime) && Equals(QueryInfo, other.QueryInfo);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((ExecutingQueryInfo) obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (StartTime.GetHashCode()*397) ^ (QueryInfo != null ? QueryInfo.GetHashCode() : 0);
-            }
-        }
-
-        public static bool operator ==(ExecutingQueryInfo left, ExecutingQueryInfo right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(ExecutingQueryInfo left, ExecutingQueryInfo right)
-        {
-            return !Equals(left, right);
         }
     }
 }
