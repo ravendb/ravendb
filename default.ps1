@@ -676,21 +676,22 @@ task CreateNugetPackages -depends Compile {
 		}
 		
 		foreach ($projectReference in $csProj.Project.ItemGroup.ProjectReference){
-	        if ($projectReference.Name.Length -gt 0) {
+			Write-Host "Visiting project $($projectReference.Include) of $dirName" -Fore Green
+	        if ($projectReference.Include.Length -gt 0) {
 			
 				$projectPath = $projectReference.Include
 				Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
 				
-				[xml]$csProj2;
+				[xml]$global:csProj2;
 				try {
-					$csProj2 = Get-Content "$srcDirName\$projectPath"
+					[xml]$global:csProj2 = Get-Content "$srcDirName\$projectPath"
 				} catch {
 					$projectPath = $projectPath.Replace("..\..\", "..\")
 					Write-Host "Try to include also linked files of $($projectReference.Include)" -Fore Green
-					$csProj2 = Get-Content "$srcDirName\$projectPath"
+					[xml]$global:csProj2 = Get-Content "$srcDirName\$projectPath"
 				}
 				
-				foreach ($compile in $csProj2.Project.ItemGroup.Compile){
+				foreach ($compile in $global:csProj2.Project.ItemGroup.Compile){
 					if ($compile.Link.Length -gt 0) {
 						$fileToCopy = ""
 						if ($srcDirName.Contains("Bundles\") -and !$srcDirName.EndsWith("\..")) {
