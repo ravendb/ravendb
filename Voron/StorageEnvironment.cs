@@ -26,6 +26,8 @@ namespace Voron
 		private long _transactionsCounter;
 		private readonly FreeSpaceRepository _freeSpaceRepository;
 
+		private readonly ConcurrentDictionary<string, TreeWriter> writerCache = new ConcurrentDictionary<string, TreeWriter>(); 
+
 	    public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
 			try
@@ -37,7 +39,6 @@ namespace Voron
 
 				Setup(pager);
 
-
 			    FreeSpaceRoot.Name = "Free Space";
 				Root.Name = "Root";
 			}
@@ -45,6 +46,11 @@ namespace Voron
 			{
 				Dispose();
 			}
+		}
+
+		public TreeWriter GetWriter(Tree tree)
+		{
+			return writerCache.GetOrAdd(tree.Name, s => new TreeWriter(this, tree));
 		}
 
 		private void Setup(IVirtualPager pager)

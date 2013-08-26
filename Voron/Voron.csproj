@@ -47,6 +47,7 @@
     <Compile Include="Impl\AbstractPager.cs" />
     <Compile Include="Impl\ConsecutiveSequences.cs" />
     <Compile Include="Impl\Constants.cs" />
+    <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
@@ -56,6 +57,8 @@
     <Compile Include="Impl\MemoryMapPager.cs" />
     <Compile Include="Impl\PagerState.cs" />
     <Compile Include="Impl\PureMemoryPager.cs" />
+    <Compile Include="Impl\TreeWriter.cs" />
+    <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="TransactionFlags.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
