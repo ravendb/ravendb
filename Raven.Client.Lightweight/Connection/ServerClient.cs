@@ -1143,7 +1143,7 @@ namespace Raven.Client.Connection
 			if (start != 0)
 				sb.Append("start=").Append(start).Append("&");
 			if(pageSize!=int.MaxValue)
-				sb.Append("start=").Append(pageSize).Append("&");
+				sb.Append("pagesize=").Append(pageSize).Append("&");
 
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
