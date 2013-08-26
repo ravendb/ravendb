@@ -14,10 +14,8 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 
-import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
-import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.data.AggregationOperation;
@@ -240,67 +238,67 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereEquals(Path< ? > propertySelector, TValue value) {
+  public <TValue> IDocumentQuery<T> whereEquals(Path< ? super TValue > propertySelector, TValue value) {
     whereEquals(getMemberQueryPath(propertySelector), value);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereEquals(Path< ? > propertySelector, TValue value, boolean isAnalyzed) {
+  public <TValue> IDocumentQuery<T> whereEquals(Path< ? super TValue > propertySelector, TValue value, boolean isAnalyzed) {
     whereEquals(getMemberQueryPath(propertySelector), value, isAnalyzed);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereIn(Path< ? > propertySelector, Collection<TValue> values) {
+  public <TValue> IDocumentQuery<T> whereIn(Path< ?  super TValue> propertySelector, Collection<TValue> values) {
     whereIn(getMemberQueryPath(propertySelector), new ArrayList<Object>(values));
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereStartsWith(Path< ? > propertySelector, TValue value) {
+  public <TValue> IDocumentQuery<T> whereStartsWith(Path< ? super TValue > propertySelector, TValue value) {
     whereStartsWith(getMemberQueryPath(propertySelector), value);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereEndsWith(Path< ? > propertySelector, TValue value) {
+  public <TValue> IDocumentQuery<T> whereEndsWith(Path< ? super TValue > propertySelector, TValue value) {
     whereEndsWith(getMemberQueryPath(propertySelector), value);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereBetween(Path< ? > propertySelector, TValue start, TValue end) {
+  public <TValue> IDocumentQuery<T> whereBetween(Path< ?  super TValue> propertySelector, TValue start, TValue end) {
     whereBetween(getMemberQueryPath(propertySelector), start, end);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereBetweenOrEqual(Path< ? > propertySelector, TValue start, TValue end) {
+  public <TValue> IDocumentQuery<T> whereBetweenOrEqual(Path< ? super TValue > propertySelector, TValue start, TValue end) {
     whereBetweenOrEqual(getMemberQueryPath(propertySelector), start, end);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereGreaterThan(Path< ? > propertySelector, TValue value) {
+  public <TValue> IDocumentQuery<T> whereGreaterThan(Path< ? super TValue > propertySelector, TValue value) {
     whereGreaterThan(getMemberQueryPath(propertySelector), value);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereGreaterThanOrEqual(Path< ? > propertySelector, TValue value) {
+  public <TValue> IDocumentQuery<T> whereGreaterThanOrEqual(Path< ? super TValue > propertySelector, TValue value) {
     whereGreaterThanOrEqual(getMemberQueryPath(propertySelector), value);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereLessThan(Path< ? > propertySelector, TValue value) {
+  public <TValue> IDocumentQuery<T> whereLessThan(Path< ?  super TValue> propertySelector, TValue value) {
     whereLessThan(getMemberQueryPath(propertySelector), value);
     return this;
   }
 
   @Override
-  public <TValue> IDocumentQuery<T> whereLessThanOrEqual(Path< ? > propertySelector, TValue value) {
+  public <TValue> IDocumentQuery<T> whereLessThanOrEqual(Path< ? super TValue > propertySelector, TValue value) {
     whereLessThanOrEqual(getMemberQueryPath(propertySelector), value);
     return this;
   }

@@ -136,7 +136,7 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
     public OrderWithProductInformationMultipleReturns() {
 
       transformResults = " from doc in results " +
-                              " from productid in (IEnumerable<object>)doc.ProductIds " +
+                              " from productid in doc.ProductIds.AsEnumerable() " +
                               " let product = LoadDocument(productid) " +
                               " select new " +
                               " { " +

@@ -21,7 +21,6 @@ import raven.client.document.DocumentConvention;
 /**
  * A query against a Raven index
  */
-//TODO: consider using ? super TValue in paths
 public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf>> {
 
   /**
@@ -91,7 +90,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param value
    * @return
    */
-  public <TValue> TSelf whereEquals(Path<?> propertySelector, TValue value);
+  public <TValue> TSelf whereEquals(Path<? super TValue> propertySelector, TValue value);
 
   /**
    * Matches exact value
@@ -113,7 +112,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param isAnalyzed
    * @return
    */
-  public <TValue> TSelf whereEquals(Path<?> propertySelector, TValue value, boolean isAnalyzed);
+  public <TValue> TSelf whereEquals(Path<? super TValue> propertySelector, TValue value, boolean isAnalyzed);
 
   /**
    * Matches exact value
@@ -136,7 +135,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param values
    * @return
    */
-  public <TValue> TSelf whereIn(Path<?> propertySelector, Collection<TValue> values);
+  public <TValue> TSelf whereIn(Path<? super TValue> propertySelector, Collection<TValue> values);
 
   /**
    * Matches fields which starts with the specified value.
@@ -152,7 +151,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param value The value.
    * @return
    */
-  public <TValue> TSelf whereStartsWith(Path<?> propertySelector, TValue value);
+  public <TValue> TSelf whereStartsWith(Path<? super TValue> propertySelector, TValue value);
 
   /**
    * Matches fields which ends with the specified value.
@@ -168,7 +167,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param value The value.
    * @return
    */
-  public <TValue> TSelf whereEndsWith(Path<?> propertySelector, TValue value);
+  public <TValue> TSelf whereEndsWith(Path<? super TValue> propertySelector, TValue value);
 
   /**
    * Matches fields where the value is between the specified start and end, exclusive
@@ -186,7 +185,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param end The end.
    * @return
    */
-  public <TValue> TSelf whereBetween(Path<?> propertySelector, TValue start, TValue end);
+  public <TValue> TSelf whereBetween(Path<? super TValue> propertySelector, TValue start, TValue end);
 
   /**
    * Matches fields where the value is between the specified start and end, inclusive
@@ -204,7 +203,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param end The end.
    * @return
    */
-  public <TValue> TSelf whereBetweenOrEqual(Path<?> propertySelector, TValue start, TValue end);
+  public <TValue> TSelf whereBetweenOrEqual(Path<? super TValue> propertySelector, TValue start, TValue end);
 
   /**
    * Matches fields where the value is greater than the specified value
@@ -220,7 +219,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param value The value.
    * @return
    */
-  public <TValue> TSelf whereGreaterThan(Path<?> propertySelector, TValue value);
+  public <TValue> TSelf whereGreaterThan(Path<? super TValue> propertySelector, TValue value);
 
   /**
    * Matches fields where the value is greater than or equal to the specified value
@@ -236,7 +235,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param value The value.
    * @return
    */
-  public <TValue> TSelf whereGreaterThanOrEqual(Path<?> propertySelector, TValue value);
+  public <TValue> TSelf whereGreaterThanOrEqual(Path<? super TValue> propertySelector, TValue value);
 
   /**
    * Matches fields where the value is less than the specified value
@@ -252,7 +251,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param value The value.
    * @return
    */
-  public <TValue> TSelf whereLessThan(Path<?> propertySelector, TValue value);
+  public <TValue> TSelf whereLessThan(Path<? super TValue> propertySelector, TValue value);
 
   /**
    * Matches fields where the value is less than or equal to the specified value
@@ -268,7 +267,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param value The value.
    * @return
    */
-  public <TValue> TSelf whereLessThanOrEqual(Path<?> propertySelector, TValue value);
+  public <TValue> TSelf whereLessThanOrEqual(Path<? super TValue> propertySelector, TValue value);
 
   /**
    * Add an AND to the query
