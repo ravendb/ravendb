@@ -36,7 +36,7 @@ namespace Voron.Impl
     /// value - int64 id, int32 largestSeq, int32 pageCount,  int64* - freed pages
     /// 
     /// </summary>
-    public unsafe class FreeSpaceRepository
+    public unsafe class FreeSpaceRepository : IFreeSpaceRepository
     {
         private readonly StorageEnvironment _env;
         private int _lastTransactionPageUsage;

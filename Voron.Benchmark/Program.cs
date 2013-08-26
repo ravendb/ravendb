@@ -12,8 +12,8 @@ namespace Voron.Benchmark
     {
         private static HashSet<long> _randomNumbers;
         public const int ItemsPerTransaction = 100;
-        private const int Transactions = 10*1000;
-        private const string Path = @"bench.data";
+        private const int Transactions = 500;
+        private const string Path = @"e:\data\bench.data";
 
         public static void Main()
         {
@@ -35,14 +35,14 @@ namespace Voron.Benchmark
 
             //Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
             //Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
-            //Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
+            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
             //Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
             //Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
             //Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
             //Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+            //Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
             //Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
             //Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
@@ -60,13 +60,13 @@ namespace Voron.Benchmark
 
         private static void FlushOsBuffer()
         {
-            const FileOptions fileFlagNoBuffering = (FileOptions)0x20000000;
+            //const FileOptions fileFlagNoBuffering = (FileOptions)0x20000000;
 
-            using (new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
-                                       fileFlagNoBuffering))
-            {
+            //using (new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
+            //                           fileFlagNoBuffering))
+            //{
 
-            }
+            //}
         }
 
         private static HashSet<long> InitRandomNumbers(int count)
@@ -87,7 +87,7 @@ namespace Voron.Benchmark
             else
                 FlushOsBuffer();
             var sp = new Stopwatch();
-            Console.WriteLine("{0,-35}: running...", name);
+            Console.Write("{0,-35}: running...", name);
             action(sp);
 
             Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions * ItemsPerTransaction / sp.Elapsed.TotalSeconds);

@@ -23,7 +23,7 @@ namespace Voron.Impl
         private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
 		private readonly List<long> _freedPages = new List<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
-		private readonly FreeSpaceRepository _freeSpaceRepository;
+		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
 		public TransactionFlags Flags { get; private set; }
 
@@ -47,7 +47,7 @@ namespace Voron.Impl
             get { return _pager.TempPage; }
 	    }
 
-	    public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, FreeSpaceRepository freeSpaceRepository)
+	    public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
 		{
 			_pager = pager;
 			_env = env;
