@@ -14,6 +14,7 @@ import raven.abstractions.data.SuggestionQuery;
 import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.indexing.FieldIndexing;
 import raven.abstractions.indexing.IndexDefinition;
+import raven.abstractions.indexing.SuggestionOptions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
@@ -40,6 +41,10 @@ public class SuggestionTest extends RavenDBAwareTests {
       IndexDefinition index = new IndexDefinition();
       index.setMap("from user in docs.users select new { user.FullName }");
       index.getIndexes().put("FullName", FieldIndexing.ANALYZED);
+      SuggestionOptions suggestionOptions = new SuggestionOptions();
+      suggestionOptions.setAccuracy(0.5f);
+      suggestionOptions.setDistance(StringDistanceTypes.DEFAULT);
+      index.getSuggestions().put("FullName", suggestionOptions);
       dbCommands.putIndex("suggestIndex", index);
 
       SuggestionQuery suggestionQuery = new SuggestionQuery();

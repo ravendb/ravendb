@@ -166,7 +166,7 @@ public class MetadataExtensions {
         continue;
       }
       Set<String> values = new HashSet<>();
-      values.addAll(Arrays.asList(StringUtils.split(header.getValue(),",")));
+      values.add(header.getValue());
       String headerName = captureHeaderName(header.getKey());
       if (values.size() == 1) {
         metadata.add(headerName, getValue(values.iterator().next()));

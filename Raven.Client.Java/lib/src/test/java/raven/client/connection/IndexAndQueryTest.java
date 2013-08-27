@@ -46,7 +46,6 @@ import raven.samples.Developer;
 import raven.samples.QDeveloper;
 import raven.samples.entities.Company;
 import raven.samples.entities.Employee;
-import raven.samples.entities.GroupResult;
 import raven.samples.entities.QCompany;
 import raven.samples.entities.QEmployee;
 import raven.samples.entities.QGroupResult;
@@ -81,7 +80,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       IndexDefinition indexDefinition = new IndexDefinition();
       indexDefinition.setMap(
           IndexExpression.from(Company.class)
-          .select(new AnonymousExpression().with(c.name, c.name)).toLinq()
+          .select(new AnonymousExpression().with(c.name)).toLinq()
           );
       dbCommands.putIndex("companiesIndex", indexDefinition);
       waitForNonStaleIndexes(dbCommands);
