@@ -11,9 +11,11 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using DrWPF.Windows.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Json.Linq;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
@@ -39,6 +41,8 @@ namespace Raven.Studio.Models
 		public IndexingPriority Priority { get; set; }
 		public List<string> Priorities { get; set; }
 
+		public static string MapQuery { get; private set; }
+
         public ObservableCollection<IndexDefinitionError> Errors { get; private set; }
 		public IndexDefinitionModel()
 		{
@@ -54,7 +58,10 @@ namespace Raven.Studio.Models
 				new MapItem()
 			};
 
+
+
 			Maps.CollectionChanged += HandleChildCollectionChanged;
+			Maps[0].PropertyChanged += (sender, args) => { MapQuery = Maps[0].Text; };
 
 			Fields = new BindableCollection<FieldProperties>(field => field.Name);
 			Fields.CollectionChanged += HandleChildCollectionChanged;
@@ -124,7 +131,7 @@ namespace Raven.Studio.Models
 		{
 			MarkAsDirty();
 
-			if (e.Action == NotifyCollectionChangedAction.Add)
+		    if (e.Action == NotifyCollectionChangedAction.Add)
 			{
 				var newItem = e.NewItems[0] as INotifyPropertyChanged;
 				if (newItem != null)
@@ -146,7 +153,8 @@ namespace Raven.Studio.Models
 				index.Maps.Add("");
 
 			Maps.Set(index.Maps.Select(x => new MapItem { Text = x }));
-
+			Maps[0].PropertyChanged += (sender, args) => { MapQuery = Maps[0].Text; };
+			MapQuery = Maps[0].Text;
 			ShowReduce = Reduce != null;
 			ShowTransformResults = TransformResults != null;
 
@@ -921,8 +929,6 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		
-
 		public class SpatialFieldProperties : NotifyPropertyChangedBase
 		{
 			private string name;
@@ -1323,8 +1329,15 @@ namespace Raven.Studio.Models
         public string DocumentId { get; set; }
     }
 
-	public class FieldProperties : NotifyPropertyChangedBase
+	public class FieldProperties : NotifyPropertyChangedBase, IAutoCompleteSuggestionProvider
 	{
+		static private List<string> AvailableFields { get; set; }
+
+		public FieldProperties()
+		{
+			AvailableFields = new List<string>();
+		}
+		static private string LastMap { get; set; }
 		private string name;
 		public string Name
 		{
@@ -1453,6 +1466,25 @@ namespace Raven.Studio.Models
 					OnPropertyChanged(() => suggestionDistance);
 				}
 			}
+		}
+
+		public async Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			if (LastMap != IndexDefinitionModel.MapQuery)
+			{
+				LastMap = IndexDefinitionModel.MapQuery;
+				var request = ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+							.AsyncDatabaseCommands
+							.CreateRequest(string.Format("/debug/index-fields").NoCache(), "POST");
+				await request.WriteAsync(LastMap);
+			var item = await request.ReadResponseJsonAsync();
+				if (item != null)
+				{
+					AvailableFields = item.SelectToken("FieldNames").Values().Select(token => token.ToString()).ToList();
+				}
+			}
+
+			return AvailableFields.Cast<object>().ToList();
 		}
 	}
 }
