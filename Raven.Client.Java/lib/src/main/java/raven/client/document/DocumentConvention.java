@@ -94,7 +94,7 @@ public class DocumentConvention implements Serializable {
 
   private Function1<String, String> findIdentityPropertyNameFromEntityName;
 
-  private Function3<String, IDatabaseCommands, Object, String> documentKeyGenerator;
+  private DocumentKeyGenerator documentKeyGenerator;
 
   private boolean useParallelMultiGet;
 
@@ -455,7 +455,7 @@ public class DocumentConvention implements Serializable {
       }
     }
 
-    return documentKeyGenerator.apply(dbName, databaseCommands, entity);
+    return documentKeyGenerator.generate(dbName, databaseCommands, entity);
   }
 
   /**
@@ -655,7 +655,7 @@ public class DocumentConvention implements Serializable {
    * Gets the document key generator.
    * @return
    */
-  public Function3<String, IDatabaseCommands, Object, String> getDocumentKeyGenerator() {
+  public DocumentKeyGenerator getDocumentKeyGenerator() {
     return documentKeyGenerator;
   }
 
@@ -663,7 +663,7 @@ public class DocumentConvention implements Serializable {
    * Sets the document key generator.
    * @param documentKeyGenerator
    */
-  public void setDocumentKeyGenerator(Function3<String, IDatabaseCommands, Object, String> documentKeyGenerator) {
+  public void setDocumentKeyGenerator(DocumentKeyGenerator documentKeyGenerator) {
     this.documentKeyGenerator = documentKeyGenerator;
   }
 

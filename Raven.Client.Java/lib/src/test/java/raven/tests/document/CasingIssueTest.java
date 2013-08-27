@@ -30,6 +30,7 @@ public class CasingIssueTest extends RemoteClientTest {
         assertEquals("test", single.getTitle());
       }
     }
+
   }
 
   @Test

@@ -19,7 +19,6 @@ import raven.abstractions.basic.VoidArgs;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
-import raven.abstractions.closure.Function3;
 import raven.abstractions.data.ConnectionStringParser;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.RavenConnectionStringOptions;
@@ -312,10 +311,9 @@ public class DocumentStore extends DocumentStoreBase {
 
       if (conventions.getDocumentKeyGenerator() == null) { // don't overwrite what the user is doing
         final MultiDatabaseHiLoGenerator generator = new MultiDatabaseHiLoGenerator(32);
-        conventions.setDocumentKeyGenerator(new Function3<String, IDatabaseCommands, Object, String>() {
-
+        conventions.setDocumentKeyGenerator(new DocumentKeyGenerator() {
           @Override
-          public String apply(String dbName, IDatabaseCommands databaseCommands, Object entity) {
+          public String generate(String dbName, IDatabaseCommands databaseCommands, Object entity) {
             return generator.generateDocumentKey(dbName, databaseCommands, conventions, entity);
           }
         });
