@@ -658,6 +658,14 @@ task CreateNugetPackages -depends Compile {
 		$csprojFile = $srcDirName -replace ".*\\", ""
 		$csprojFile += ".csproj"
 		
+        Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
+			$indexOf = $_.FullName.IndexOf($srcDirName)
+			$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
+			$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+			New-Item -ItemType File -Path $copyTo -Force | Out-Null
+			Copy-Item $_.FullName $copyTo -Recurse -Force
+		}
+
 		Write-Host .csprojFile $csprojFile -Fore Yellow
 		Write-Host Copy Linked Files of $srcDirName -Fore Yellow
 		
@@ -675,54 +683,58 @@ task CreateNugetPackages -depends Compile {
             }
 		}
 		
+		
 		foreach ($projectReference in $csProj.Project.ItemGroup.ProjectReference){
 			Write-Host "Visiting project $($projectReference.Include) of $dirName" -Fore Green
 	        if ($projectReference.Include.Length -gt 0) {
 			
 				$projectPath = $projectReference.Include
 				Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
+
+                $srcDirName2 = [io.path]::GetFileNameWithoutExtension($projectPath)
+
+				Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
+					$indexOf = $_.FullName.IndexOf($srcDirName2)
+					$copyTo = $_.FullName.Substring($indexOf + $srcDirName2.Length + 1)
+					$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+					New-Item -ItemType File -Path $copyTo -Force | Out-Null
+					Copy-Item $_.FullName $copyTo -Recurse -Force
+				}
 				
 				[xml]$global:csProj2;
 				try {
-					[xml]$global:csProj2 = Get-Content "$srcDirName\$projectPath"
+					[xml]$global:csProj2 = Get-Content "$srcDirName2\$projectPath"
 				} catch {
 					$projectPath = $projectPath.Replace("..\..\", "..\")
 					Write-Host "Try to include also linked files of $($projectReference.Include)" -Fore Green
-					[xml]$global:csProj2 = Get-Content "$srcDirName\$projectPath"
+					[xml]$global:csProj2 = Get-Content "$srcDirName2\$projectPath"
 				}
 				
 				foreach ($compile in $global:csProj2.Project.ItemGroup.Compile){
 					if ($compile.Link.Length -gt 0) {
 						$fileToCopy = ""
-						if ($srcDirName.Contains("Bundles\") -and !$srcDirName.EndsWith("\..")) {
-							$srcDirName += "\.."
+						if ($srcDirName2.Contains("Bundles\") -and !$srcDirName2.EndsWith("\..")) {
+							$srcDirName2 += "\.."
 						}
 						$fileToCopy = $compile.Include;
 						$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
 						
-						Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
+						Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
 						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
 						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
-						Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+						Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
 					}
 				}  
 				
 			}
 		}
-		
-		Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
-			$indexOf = $_.FullName.IndexOf($srcDirName)
-			$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
-			$copyTo = "$nuget_dir\$dirName\src\$copyTo"
-			New-Item -ItemType File -Path $copyTo -Force | Out-Null
-			Copy-Item $_.FullName $copyTo -Recurse -Force
-		}
-		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
 
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
 	}
-		
+	
+	
+	Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
+	Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
