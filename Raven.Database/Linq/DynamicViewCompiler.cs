@@ -44,8 +44,6 @@ namespace Raven.Database.Linq
 			RequiresSelectNewAnonymousType = true;
 		}
 
-		private static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
-
 		private void TransformQueryToClass()
 		{
 
