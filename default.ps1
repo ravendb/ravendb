@@ -681,7 +681,9 @@ task CreateNugetPackages -depends Compile {
 			
 				$projectPath = $projectReference.Include
 				Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
-				
+
+                $srcDirName = [io.path]::GetFileNameWithoutExtension($projectPath)
+
 				[xml]$global:csProj2;
 				try {
 					[xml]$global:csProj2 = Get-Content "$srcDirName\$projectPath"
@@ -703,7 +705,7 @@ task CreateNugetPackages -depends Compile {
 						Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
 						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
 						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
-						Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+						Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse
 					}
 				}  
 				
