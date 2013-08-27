@@ -276,8 +276,13 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
     }
   }
 
+
+  /**
+   * cannotUseResultsTransformerOnLoadWithMultipleReturnsSingleExpectation
+   * @throws Exception
+   */
   @Test(expected = IllegalStateException.class)
-  public void cannotUseResultsTransformerOnLoadWithMultipleReturnsSingleExpectation() throws Exception {
+  public void cannotUseResults1() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       new OrderWithProductInformationMultipleReturns().execute(store);
 

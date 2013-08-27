@@ -60,7 +60,7 @@ public class ReplicationTest extends AbstractReplicationTest {
       JsonDocument jsonDocument = source.get("testVal1");
       assertEquals("val1", jsonDocument.getDataAsJson().get("key").value(String.class));
 
-      //Thread.sleep(1000);
+      Thread.sleep(1000);
 
       jsonDocument = target.get("testVal1");
       assertEquals("val1", jsonDocument.getDataAsJson().get("key").value(String.class));
