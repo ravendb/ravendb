@@ -34,6 +34,8 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.Helpers
 {
+	using Raven.Database.Storage.Voron;
+
 	public class RavenTestBase : IDisposable
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
@@ -221,7 +223,7 @@ namespace Raven.Tests.Helpers
 			if (storageType == "munin")
 				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration {DataDirectory = dataDir ?? NewDataPath(),}, () => { });
             else if (storageType == "voron")
-                newTransactionalStorage = new Storage.Voron.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir, }, () => { });
+                newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir, }, () => { });
             else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration {DataDirectory = dataDir ?? NewDataPath(),}, () => { });
 
