@@ -115,4 +115,10 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    */
   public List<T> toList();
 
+  /**
+   * Returns single result
+   * @return
+   */
+  public T single();
+
 }

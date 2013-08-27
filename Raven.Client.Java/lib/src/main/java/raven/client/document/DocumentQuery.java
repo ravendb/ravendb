@@ -399,4 +399,14 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     return query;
   }
 
+  @Override
+  public T single() {
+    pageSize = 1;
+    List<T> list = toList();
+    if (list.size() != 1) {
+      throw new IllegalStateException("Expected one result. Got: " + list.size());
+    }
+    return list.get(0);
+  }
+
 }

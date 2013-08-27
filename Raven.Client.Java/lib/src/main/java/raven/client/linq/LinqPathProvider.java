@@ -7,8 +7,14 @@ import java.util.List;
 import org.apache.commons.lang.StringUtils;
 
 import com.mysema.query.types.Expression;
+import com.mysema.query.types.Ops;
 import com.mysema.query.types.Path;
+import com.mysema.query.types.PathType;
+import com.mysema.query.types.expr.NumberExpression;
+import com.mysema.query.types.expr.NumberOperation;
+import com.mysema.query.types.path.MapPath;
 
+import raven.abstractions.basic.Reference;
 import raven.client.document.DocumentConvention;
 
 public class LinqPathProvider {
@@ -51,24 +57,112 @@ public class LinqPathProvider {
   }
 
   public Result getPath(Expression< ? > expression) {
-    //TODO: implement me
-    if (expression instanceof Path) {
-        Path<?> path = (Path<?>) expression;
-        List<String> tokens = new ArrayList<>();
-        while (path != null) {
-          String name = path.getMetadata().getName();
-          path = path.getMetadata().getParent();
-          if (path != null) {
-            name = StringUtils.capitalize(name);
-          }
-          tokens.add(0, name);
+    expression = simplifyExpression(expression);
+
+    if (expression instanceof NumberOperation<?>) {
+      Result customMethodResult = conventions.translateCustomQueryExpression(this, expression);
+      if (customMethodResult != null) {
+        return customMethodResult;
+      }
+
+      NumberOperation<?> numberOperation = (NumberOperation<?>) expression;
+      if (numberOperation.getOperator().equals(Ops.MAP_SIZE) || numberOperation.getOperator().equals(Ops.ARRAY_SIZE)) {
+        if (numberOperation.getArgs().size() != 1) {
+          throw new IllegalArgumentException("Invalid computation: " + numberOperation
+              + ". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
         }
-        Result result = new Result();
-        result.setPath(StringUtils.join(tokens, "."));
-        return result;
-    } else {
-      throw new RuntimeException("Expected Path expression. Got" + expression.getClass());
+        Result target = getPath(numberOperation.getArg(0));
+
+        Result newResult = new Result();
+        newResult.setMemberType(numberOperation.getType());
+        newResult.setNestedPath(false);
+        newResult.setPath(target.getPath() + ".Count\\(\\)");
+        return newResult;
+      }
+
     }
+
+    if (expression instanceof Path) {
+      Path<?> path = (Path<?>) expression;
+
+      PathType pathType = path.getMetadata().getPathType();
+      if (PathType.MAPVALUE_CONSTANT.equals(pathType)) {
+        MapPath< ? , ?, ?> mapPath = (MapPath< ? , ? , ? >) path.getMetadata().getParent();
+        Result parent = getPath(mapPath);
+        Result newResult = new Result();
+        newResult.setMemberType(expression.getType());
+        newResult.setNestedPath(false);
+        newResult.setPath(parent.getPath() + "." + getValueFromExpression(path.getMetadata().getElement(), mapPath.getKeyType()));
+
+        return newResult;
+      }
+      if (PathType.PROPERTY.equals(pathType) || PathType.VARIABLE.equals(pathType)) {
+
+
+        Path< ? > memberExpression = getMemberExpression(expression);
+        Result customMemberResult = conventions.translateCustomQueryExpression(this, memberExpression);
+        if (customMemberResult != null) {
+          return customMemberResult;
+        }
+
+        assertNoComputation(memberExpression);
+
+        Result newResult = new Result();
+        newResult.setPath(memberExpression.toString());
+        newResult.setNestedPath(memberExpression.getMetadata().getParent().getMetadata().getPathType().equals(PathType.PROPERTY));
+        newResult.setMemberType(memberExpression.getType());
+        //TODO:newResult.setMaybeProperty(memberExpression.get) do we need it?
+
+        newResult.setPath(handlePropertyRenames(memberExpression, newResult.getPath()));
+        return newResult;
+      }
+
+    }
+    throw new IllegalArgumentException("Don't know how to translate: " + expression);
+  }
+
+  public static String handlePropertyRenames(Path<?> member, String name) {
+    // TODO Auto-generated method stub
+    return name;
+  }
+
+  private static Expression<?> simplifyExpression(Expression<?> expression) {
+    // do nothing
+    return expression;
+  }
+
+  public Object getValueFromExpression(Object object, Class< ? > type) {
+    if (object == null) {
+      return new IllegalArgumentException("Value is missing");
+    }
+    // TODO Auto-generated method stub
+
+    return object;
+  }
+
+  public Path<?> getMemberExpression(Expression<?> expression) {
+
+    //TODO: finish me
+    return (Path< ? >) expression;
+  }
+
+  public static boolean getValueFromExpressionWithoutConversion(Expression<?> expression, Reference<Object> valueRef) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  private static Object getNewExpressionValue(Expression<?> expression) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  private static Object getMemberValue(Path<?> memberExpression) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  private void assertNoComputation(Path<?> expression) {
+
   }
 
 }

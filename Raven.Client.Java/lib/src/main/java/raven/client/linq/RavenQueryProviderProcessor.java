@@ -7,9 +7,13 @@ import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.mysema.query.support.Expressions;
+import com.mysema.query.types.Constant;
 import com.mysema.query.types.ConstantImpl;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.Operation;
+import com.mysema.query.types.Ops;
+import com.mysema.query.types.Path;
 import com.mysema.query.types.PathImpl;
 import com.mysema.query.types.expr.BooleanExpression;
 import com.mysema.query.types.expr.BooleanOperation;
@@ -20,9 +24,12 @@ import raven.abstractions.data.QueryResult;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
 import raven.client.IDocumentQueryCustomization;
+import raven.client.WhereParams;
 import raven.client.document.DocumentQuery;
 import raven.client.document.DocumentQueryCustomiation;
 import raven.client.document.IAbstractDocumentQuery;
+import raven.client.linq.LinqPathProvider.Result;
+import raven.linq.dsl.LinqOps;
 
 /**
  * Process a Linq expression to a Lucene query
@@ -107,35 +114,149 @@ public class RavenQueryProviderProcessor<T> {
    * Visits the expression and generate the lucene query
    */
   protected void visitExpression(Expression<?> expression) {
-    /*
+    //TODO: finish me
     if (expression instanceof Operation) {
       if (expression instanceof BooleanOperation) {
         visitBooleanOperation((BooleanOperation) expression);
       } else {
-        throw new IllegalArgumentException("Operation is not supported:" + expression);
+        visitOperation((Operation<?>)expression);
+      }
+    } else if (expression instanceof Constant) {
+      if ("root".equals(((Constant<?>) expression).getConstant())) {
+        // we have root node - just skip it
+        return;
+      } else {
+        throw new IllegalArgumentException("Expression is not supported:" + expression);
       }
     } else {
       throw new IllegalArgumentException("Expression is not supported:" + expression);
     }
-*/
 
-    //TODO: delete me!
-    SimpleOperation op = (SimpleOperation) expression;
-    BooleanOperation boolExpr = (BooleanOperation) op.getArg(1);
-    PathImpl< ? > prop = (PathImpl< ? >) boolExpr.getArg(0);
-    ConstantImpl< ? > value = (ConstantImpl< ? >) boolExpr.getArg(1);
+  }
 
-    luceneQuery.whereEquals(StringUtils.capitalize(prop.getMetadata().getName()), value.getConstant());
+  private void visitOperation(Operation<?> expression) {
+    if (expression.getOperator().getId().startsWith(LinqOps.Query.QUERY_OPERATORS_PREFIX)) {
+      visitQueryableMethodCall(expression);
+      //TODO: finish me
+    } else {
+      throw new IllegalArgumentException("Expression is not supported");
+    }
+  }
 
-    //TODO:
-
-
+  private void visitQueryableMethodCall(Operation< ? > expression) {
+    //TODO finish me
+    String operatorId = expression.getOperator().getId();
+    if (operatorId.equals(LinqOps.Query.WHERE.getId())) {
+      insideWhere++;
+      visitExpression(expression.getArg(0));
+      if (chanedWhere) {
+        luceneQuery.andAlso();
+        luceneQuery.openSubclause();
+      }
+      if (chanedWhere == false && insideWhere > 1) {
+        luceneQuery.openSubclause();
+      }
+      visitExpression(expression.getArg(1));
+      if (chanedWhere == false && insideWhere > 1) {
+        luceneQuery.closeSubclause();
+      }
+      if (chanedWhere) {
+        luceneQuery.closeSubclause();
+      }
+      chanedWhere = true;
+      insideWhere--;
+    }
+    // TODO Auto-generated method stub
 
   }
 
   private void visitBooleanOperation(BooleanOperation expression) {
-    // TODO Auto-generated method stub
+    if (expression.getOperator().equals(Ops.EQ)) {
+      visitEquals(expression);
+      //TODO: finish me
+    } else {
+      throw new IllegalArgumentException("Expression is not supported");
+    }
+  }
 
+  private void visitEquals(BooleanOperation expression) {
+    Constant<?> constantExpression = null;
+    if (expression.getArg(1) instanceof Constant<?>) {
+      constantExpression = (Constant< ? >) expression.getArg(1);
+    }
+    if (constantExpression != null && Boolean.TRUE.equals(constantExpression.getConstant())) {
+      visitExpression(expression.getArg(0));
+      return ;
+    }
+
+    if (constantExpression != null && Boolean.FALSE.equals(constantExpression.getConstant())) { //TODO: and expression.Left.NodeType != ExpressionType.MemberAccess
+      luceneQuery.openSubclause();
+      luceneQuery.where("*:*");
+      luceneQuery.andAlso();
+      luceneQuery.negateNext();
+      visitExpression(expression.getArg(0));
+      luceneQuery.closeSubclause();
+      return;
+    }
+
+    if (!isMemberAccessForQuerySource(expression.getArg(0)) && isMemberAccessForQuerySource(expression.getArg(1))) {
+      visitEquals((BooleanOperation) Expressions.booleanOperation(Ops.EQ, expression.getArg(1), expression.getArg(0)));
+      return ;
+    }
+
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+
+    WhereParams whereParams = new WhereParams();
+    whereParams.setFieldName(memberInfo.getPath());
+    whereParams.setValue(getValueFromExpression(expression.getArg(1), getMemberType(memberInfo)));
+    whereParams.setAnalyzed(true);
+    whereParams.setAllowWildcards(true);
+    whereParams.setNestedPath(memberInfo.isNestedPath());
+    luceneQuery.whereEquals(whereParams);
+
+  }
+
+  private Object getValueFromExpression(Expression< ? > expression, Class< ? > type) {
+    return linqPathProvider.getValueFromExpression(expression, type);
+  }
+
+  private Class<?> getMemberType(ExpressionInfo memberInfo) {
+    return memberInfo.getClazz();
+  }
+
+  private boolean isMemberAccessForQuerySource(Expression< ? > arg) {
+    //TODO: parameter
+    if (!(arg instanceof Path<?>)) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Gets member info for the specified expression and the path to that expression
+   * @param expression
+   * @return
+   */
+  protected ExpressionInfo getMember(Expression<?> expression) {
+    //TODO: get parameter expression
+    return getMemberDirect(expression);
+  }
+
+  private ExpressionInfo getMemberDirect(Expression< ? > expression) {
+    Result result = linqPathProvider.getPath(expression);
+
+    //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
+    result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
+    //TODO: result.Path = castingRemover.Replace(result.Path, ""); // removing cast remains
+
+    //TODO:array length
+    String propertyName = indexName == null  || indexName.toLowerCase().startsWith("dynamic/")
+        ? queryGenerator.getConventions().getFindPropertyNameForDynamicIndex().apply(clazz, indexName, currentPath, result.getPath())
+            : queryGenerator.getConventions().getFindPropertyNameForIndex().apply(clazz, indexName, currentPath, result.getPath());
+
+        ExpressionInfo expressionInfo = new ExpressionInfo(propertyName, result.getMemberType(), result.isNestedPath());
+        expressionInfo.setMaybeProperty(result.getMaybeProperty());
+        return expressionInfo;
   }
 
   @SuppressWarnings("unchecked")
@@ -150,6 +271,7 @@ public class RavenQueryProviderProcessor<T> {
     return q.selectFields(clazz, fieldsToFetch.toArray(new String[0]));
   }
 
+  @SuppressWarnings("unchecked")
   public Object execute(Expression<?> expression) {
     chanedWhere = false;
 

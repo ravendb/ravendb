@@ -739,7 +739,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     }
     for (int i = saveChangesData.getDeferredCommandsCount(); i < batchResults.size(); i++) {
       BatchResult batchResult = batchResults.get(i);
-      if (!HttpMethods.PUT.equals(batchResult.getMethod())) {
+      if (!batchResult.getMethod().equalsIgnoreCase(HttpMethods.PUT.name())) {
         continue;
       }
 
@@ -748,7 +748,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
         continue;
       }
       DocumentMetadata documentMetadata = entitiesAndMetadata.get(entity);
-      batchResult.getMetadata().add("@etag", new RavenJValue(batchResult.getEtag()));
+      batchResult.getMetadata().add("@etag", new RavenJValue(batchResult.getEtag().toString()));
       entitiesByKey.put(batchResult.getKey(), entity);
 
       documentMetadata.setEtag(batchResult.getEtag());

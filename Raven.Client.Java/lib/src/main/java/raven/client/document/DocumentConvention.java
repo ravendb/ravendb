@@ -18,6 +18,8 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.map.DeserializationProblemHandler;
 
+import com.mysema.query.types.Expression;
+
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
@@ -37,6 +39,7 @@ import raven.client.converters.Int32Converter;
 import raven.client.converters.Int64Converter;
 import raven.client.converters.UUIDConverter;
 import raven.client.indexes.AbstractIndexCreationTask;
+import raven.client.linq.LinqPathProvider;
 import raven.client.util.Inflector;
 
 // TODO: finish me (copy java docs)
@@ -1037,15 +1040,21 @@ public class DocumentConvention implements Serializable {
     return customRangeTypes.contains(type);
   }
 
-  //TODO:public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 
-  //TODO private readonly Dictionary<MemberInfo, CustomQueryTranslator> customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
+  private List<CustomQueryExpressionTranslator> customQueryTranslators = new ArrayList<>();
 
-  //TODO: public void RegisterCustomQueryTranslator<T>(Expression<Func<T, object>> member, CustomQueryTranslator translator)
+  public void registerCustomQueryTranslator(CustomQueryExpressionTranslator translator) {
+    customQueryTranslators.add(translator);
+  }
 
-  //TODO: internal LinqPathProvider.Result TranslateCustomQueryExpression(LinqPathProvider provider, Expression expression)
-
-  //TODO: private static MemberInfo GetMemberInfoFromExpression(Expression expression)
+  public LinqPathProvider.Result translateCustomQueryExpression(LinqPathProvider provider, Expression<?> expression) {
+    for (CustomQueryExpressionTranslator translator: customQueryTranslators) {
+      if (translator.canTransform(expression)) {
+        return translator.translate(expression);
+      }
+    }
+    return null;
+  }
 
 
 }

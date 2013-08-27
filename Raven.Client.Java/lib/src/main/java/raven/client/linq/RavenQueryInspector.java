@@ -65,7 +65,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
         afterQueryExecuted(queryResult);
       }
     });
-    this.expression = expression != null ? expression : Expressions.constant(this);
+    this.expression = expression != null ? expression : Expressions.constant("root");
   }
 
   private void afterQueryExecuted(QueryResult queryResult) {

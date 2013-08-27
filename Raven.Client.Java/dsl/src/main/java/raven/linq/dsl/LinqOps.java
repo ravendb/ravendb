@@ -40,6 +40,7 @@ public class LinqOps {
 
   public static class Query {
     public static final Operator<Object> WHERE = new OperatorImpl<>("QUERY_WHERE");
+    public static final String QUERY_OPERATORS_PREFIX = "QUERY_";
   }
 
 
