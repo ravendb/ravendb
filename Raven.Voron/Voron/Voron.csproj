@@ -1,0 +1,99 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Voron</RootNamespace>
+    <AssemblyName>Voron</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Debugging\EnvironmentStats.cs" />
+    <Compile Include="Impl\AbstractPager.cs" />
+    <Compile Include="Impl\ConsecutiveSequences.cs" />
+    <Compile Include="Impl\Constants.cs" />
+    <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
+    <Compile Include="Impl\FileHeaders\FileHeader.cs" />
+    <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
+    <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
+    <Compile Include="Impl\FlushMode.cs" />
+    <Compile Include="Impl\FreeSpaceRepository.cs" />
+    <Compile Include="Impl\IFreeSpaceRepository.cs" />
+    <Compile Include="Impl\IVirtualPager.cs" />
+    <Compile Include="Impl\MemoryMapPager.cs" />
+    <Compile Include="Impl\PagerState.cs" />
+    <Compile Include="Impl\PureMemoryPager.cs" />
+    <Compile Include="Impl\TreeWriter.cs" />
+    <Compile Include="Impl\WriteBatch.cs" />
+    <Compile Include="TransactionFlags.cs" />
+    <Compile Include="Trees\Cursor.cs" />
+    <Compile Include="Debugging\DebugStuff.cs" />
+    <Compile Include="Impl\NativeMethods.cs" />
+    <Compile Include="Trees\EmptyIterator.cs" />
+    <Compile Include="Trees\IIterator.cs" />
+    <Compile Include="Trees\SingleEntryIterator.cs" />
+    <Compile Include="Trees\TreeIterator.cs" />
+    <Compile Include="Trees\NodeFlags.cs" />
+    <Compile Include="Trees\NodeHeader.cs" />
+    <Compile Include="Trees\Page.cs" />
+    <Compile Include="Trees\PageFlags.cs" />
+    <Compile Include="Trees\PageHeader.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Slice.cs" />
+    <Compile Include="Impl\SliceComparer.cs" />
+    <Compile Include="SliceOptions.cs" />
+    <Compile Include="StorageEnvironment.cs" />
+    <Compile Include="Impl\Transaction.cs" />
+    <Compile Include="Trees\PageSplitter.cs" />
+    <Compile Include="Trees\Tree.cs" />
+    <Compile Include="Debugging\TreeDumper.cs" />
+    <Compile Include="Impl\SizeOf.cs" />
+    <Compile Include="Trees\TreeDataInTransaction.cs" />
+    <Compile Include="Trees\TreeMutableState.cs" />
+    <Compile Include="Trees\TreeRebalancer.cs" />
+    <Compile Include="Util\UnmanagedBits.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
