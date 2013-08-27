@@ -1,4 +1,5 @@
-﻿using System.Transactions;
+﻿using System.Threading;
+using System.Transactions;
 using Raven.Tests.Bugs;
 using Xunit;
 
@@ -28,6 +29,8 @@ namespace Raven.Tests.Track
 					scope.Complete();
 				}
 
+				Thread.Sleep(1000); // wait a bit here because a commit operation is done in async manner
+
 				// Session #2
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
@@ -47,6 +50,8 @@ namespace Raven.Tests.Track
 					session.SaveChanges();
 					scope.Complete();
 				}
+
+				Thread.Sleep(1000); // wait a bit here because a commit operation is done in async manner
 
 				// Session #3
 				using (var scope = new TransactionScope())
