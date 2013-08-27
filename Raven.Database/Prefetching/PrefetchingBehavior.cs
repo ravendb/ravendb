@@ -179,7 +179,7 @@ namespace Raven.Database.Prefetching
 		{
 			List<JsonDocument> jsonDocs = null;
 
-			context.TransactionalStorage.Batch(actions =>
+			context.TransactionalStorage.BatchRead(actions =>
 			{
 				jsonDocs = actions.Documents
 					.GetDocumentsAfter(
@@ -288,7 +288,7 @@ namespace Raven.Database.Prefetching
 		private Etag GetNextDocumentEtagFromDisk(Etag etag)
 		{
 			Etag nextDocEtag = null;
-			context.TransactionalStorage.Batch(
+			context.TransactionalStorage.BatchRead(
 				accessor => { nextDocEtag = accessor.Documents.GetBestNextDocumentEtag(etag); });
 
 			return nextDocEtag;

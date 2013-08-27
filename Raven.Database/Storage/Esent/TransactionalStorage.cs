@@ -335,7 +335,7 @@ namespace Raven.Storage.Esent
 
         public void DumpAllStorageTables()
         {
-            Batch(accessor =>
+            BatchReadWrite(accessor =>
             {
                 var session = current.Value.Inner.Session;
                 var jetDbid = current.Value.Inner.Dbid;
@@ -583,7 +583,7 @@ namespace Raven.Storage.Esent
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
-		public IDisposable SetTransactionContext(EsentTransactionContext context)
+	    public IDisposable SetTransactionContext(EsentTransactionContext context)
 		{
 			dtcTransactionContext.Value = context;
 
@@ -595,7 +595,7 @@ namespace Raven.Storage.Esent
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         [CLSCompliant(false)]
-        public void Batch(Action<IStorageActionsAccessor> action)
+        public void BatchReadWrite(Action<IStorageActionsAccessor> action)
         {
             if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
             {
@@ -648,6 +648,11 @@ namespace Raven.Storage.Esent
                 afterStorageCommit();
             onCommit(); // call user code after we exit the lock
         }
+
+		public void BatchRead(Action<IStorageActionsAccessor> action)
+		{
+			BatchReadWrite(action);
+		}
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         private Action ExecuteBatch(Action<IStorageActionsAccessor> action, EsentTransactionContext transactionContext)

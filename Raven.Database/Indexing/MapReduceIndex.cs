@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 				{
 					// we are writing to the transactional store from multiple threads here, and in a streaming fashion
 					// should result in less memory and better perf
-					context.TransactionalStorage.Batch(accessor =>
+					context.TransactionalStorage.BatchRead(accessor =>
 					{
 						var mapResults = RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, localStats);
 						var currentDocumentResults = new List<object>();
@@ -159,7 +159,7 @@ namespace Raven.Database.Indexing
 										 .Select(g => new { g.Key, Count = g.Sum(x => x.Value) })
 										 .ToList();
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
+			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, reduceKeyStats, enumerator => context.TransactionalStorage.BatchRead(accessor =>
 			{
 				while (enumerator.MoveNext())
 				{
@@ -168,7 +168,7 @@ namespace Raven.Database.Indexing
 				}
 			}));
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, changed, enumerator => context.TransactionalStorage.Batch(accessor =>
+			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, changed, enumerator => context.TransactionalStorage.BatchRead(accessor =>
 			{
 				while (enumerator.MoveNext())
 				{
@@ -311,7 +311,7 @@ namespace Raven.Database.Indexing
 
 		public override void Remove(string[] keys, WorkContext context)
 		{
-			context.TransactionalStorage.Batch(actions =>
+			context.TransactionalStorage.BatchRead(actions =>
 			{
 				var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
 				foreach (var key in keys)

@@ -662,7 +662,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
 
-				docDb.TransactionalStorage.Batch(actions =>
+				docDb.TransactionalStorage.BatchRead(actions =>
 				{
 					var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
 
@@ -783,7 +783,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
 
-				docDb.TransactionalStorage.Batch(actions =>
+				docDb.TransactionalStorage.BatchRead(actions =>
 				{
 					int attachmentSinceLastEtag = 0;
 					List<AttachmentInformation> attachmentsToReplicate;
@@ -881,7 +881,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				Etag currentEtag = Etag.Empty;
-				docDb.TransactionalStorage.Batch(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+				docDb.TransactionalStorage.BatchRead(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
 						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);

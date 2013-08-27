@@ -240,7 +240,7 @@ namespace Raven.Client.Embedded
 			attachment.Data = () =>
 			{
 				var memoryStream = new MemoryStream();
-				database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+				database.TransactionalStorage.BatchRead(accessor => data().CopyTo(memoryStream));
 				memoryStream.Position = 0;
 				return memoryStream;
 			};
@@ -1106,7 +1106,7 @@ namespace Raven.Client.Embedded
 		public long NextIdentityFor(string name)
 		{
 			long nextIdentityValue = -1;
-			database.TransactionalStorage.Batch(accessor =>
+			database.TransactionalStorage.BatchRead(accessor =>
 			{
 				nextIdentityValue = accessor.General.GetNextIdentityValue(name);
 			});
@@ -1118,7 +1118,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public long SeedIdentityFor(string name, long value)
 		{
-			database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(name, value));
+			database.TransactionalStorage.BatchRead(accessor => accessor.General.SetIdentityValue(name, value));
 			return value;
 		}
 

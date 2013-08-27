@@ -21,8 +21,6 @@
 
 	public class TransactionalStorage : ITransactionalStorage
 	{
-		private const string DATABASE_FILENAME_EXTENSION = ".voron";
-
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
@@ -81,7 +79,17 @@
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
-		public void Batch(Action<IStorageActionsAccessor> action)
+		public void BatchRead(Action<IStorageActionsAccessor> action)
+		{
+			BatchInternal(action, false);
+		}
+
+		public void BatchReadWrite(Action<IStorageActionsAccessor> action)
+		{
+			BatchInternal(action, true);
+		}
+
+		private void BatchInternal(Action<IStorageActionsAccessor> action, bool isReadWrite)
 		{
 			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
 			{
@@ -105,7 +113,7 @@
 				}
 
 				//result = ExecuteBatch(action);
-				ExecuteBatch(action);
+				ExecuteBatch(action, isReadWrite);
 			}
 			finally
 			{
@@ -118,9 +126,9 @@
 			onCommit(); // call user code after we exit the lock
 		}
 
-		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
+		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action, bool isReadWrite)
 		{
-			using (var tx = tableStorage.NewTransaction(TransactionFlags.ReadWrite)) // TODO [ppekrol] need to determine somehow read / readwrite
+			using (var tx = tableStorage.NewTransaction(isReadWrite ? TransactionFlags.ReadWrite : TransactionFlags.Read))
 			{
 				//var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
 				//if (disableBatchNesting.Value == null)

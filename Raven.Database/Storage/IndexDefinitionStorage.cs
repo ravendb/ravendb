@@ -94,7 +94,7 @@ namespace Raven.Database.Storage
 
 	            name = FixupIndexName(name, path);
 
-                transactionalStorage.Batch(actions =>
+                transactionalStorage.BatchRead(actions =>
                 {
                     if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
                         return;

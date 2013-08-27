@@ -299,7 +299,7 @@ namespace Raven.Database.Queries
 		    if (results.TryGetValue(DynamicQueryMatchType.Complete, out optimizerResults) && optimizerResults.Length > 0)
 		    {
 		        DynamicQueryOptimizerResult[] prioritizedResults = null;
-		        database.TransactionalStorage.Batch(accessor =>
+		        database.TransactionalStorage.BatchRead(accessor =>
 		        {
 			        prioritizedResults = optimizerResults.OrderByDescending(result =>
 			        {

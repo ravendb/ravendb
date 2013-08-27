@@ -159,7 +159,7 @@ namespace Raven.Database.Indexing
         private bool ExecuteTasks()
         {
             bool foundWork = false;
-            transactionalStorage.Batch(actions =>
+            transactionalStorage.BatchRead(actions =>
             {
                 Task task = GetApplicableTask(actions);
                 if (task == null)
@@ -211,7 +211,7 @@ namespace Raven.Database.Indexing
 
                 var indexesToWorkOn = new List<IndexToWorkOn>();
                 var localFoundOnlyIdleWork = new Reference<bool> { Value = true };
-                transactionalStorage.Batch(actions =>
+                transactionalStorage.BatchRead(actions =>
                 {
                     foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
                     {
@@ -282,7 +282,7 @@ namespace Raven.Database.Indexing
                 if (documentKeysAddedWhileIndexingInProgress == null || documentKeysAddedWhileIndexingInProgress.Count == 0)
                     return;
 
-                transactionalStorage.Batch(actions =>
+                transactionalStorage.BatchRead(actions =>
                 {
                     bool touched = false;
                     string result;

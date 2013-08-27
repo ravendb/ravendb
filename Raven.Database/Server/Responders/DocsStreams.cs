@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Responders
 					writer.WritePropertyName("Results");
 					writer.WriteStartArray();
 
-					Database.TransactionalStorage.Batch(accessor =>
+					Database.TransactionalStorage.BatchRead(accessor =>
 					{
 						var startsWith = context.Request.QueryString["startsWith"];
 						int pageSize = context.GetPageSize(int.MaxValue);

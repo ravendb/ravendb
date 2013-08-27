@@ -320,7 +320,7 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
-				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex.IndexName, batchForIndex.Batch));
+				transactionalStorage.BatchRead(actions => IndexDocuments(actions, batchForIndex.IndexName, batchForIndex.Batch));
 			}
 			catch (Exception e)
 			{
@@ -336,7 +336,7 @@ namespace Raven.Database.Indexing
 							  batchForIndex.IndexName);
 				}
 
-				transactionalStorage.Batch(actions =>
+				transactionalStorage.BatchRead(actions =>
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
 										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexName, lastEtag, lastModified));
@@ -445,7 +445,7 @@ namespace Raven.Database.Indexing
 
 			});
 
-			transactionalStorage.Batch(actionsAccessor =>
+			transactionalStorage.BatchRead(actionsAccessor =>
 			{
 				foreach (var action in actions)
 				{

@@ -29,7 +29,7 @@ namespace Raven.Tests.Views
 		[Fact]
 		public void CanStoreValues()
 		{
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "324", "2", RavenJObject.Parse("{'a': 'def'}"));
@@ -40,15 +40,15 @@ namespace Raven.Tests.Views
 		[Fact]
 		public void CanUpdateValue()
 		{
-			transactionalStorage.Batch(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}")));
+			transactionalStorage.BatchRead(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}")));
 
-			transactionalStorage.Batch(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}")));
+			transactionalStorage.BatchRead(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}")));
 		}
 
 		[Fact]
 		public void CanStoreAndGetValues()
 		{
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "324", "2", RavenJObject.Parse("{'a': 'def'}"));
@@ -56,7 +56,7 @@ namespace Raven.Tests.Views
 			});
 
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				var vals = actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 0, 100).ToArray();
 				Assert.Equal(2, vals.Length);
@@ -69,18 +69,18 @@ namespace Raven.Tests.Views
 		[Fact]
 		public void CanAddmultipleValuesForTheSameKey()
 		{
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
 			});
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				var strings = actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 0, 100).Select(x => x.ToString()).ToArray();
 				Assert.Equal(2, strings.Length);
@@ -92,19 +92,19 @@ namespace Raven.Tests.Views
 		[Fact]
 		public void CanUpdateValueAndGetUpdatedValues()
 		{
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog", new Dictionary<ReduceKeyAndBucket, int>());
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
 			});
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				var strings = actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 0, 1000).Select(x => x.ToString()).ToArray();
 				Assert.Contains("def", strings[0]);
@@ -115,19 +115,19 @@ namespace Raven.Tests.Views
 		[Fact]
 		public void CanDeleteValueByDocumentId()
 		{
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog1", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog2", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2", new Dictionary<ReduceKeyAndBucket, int>());
 				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1", new Dictionary<ReduceKeyAndBucket, int>());
 			});
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				Assert.Empty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1",0,100));
 				Assert.Empty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1", 0, 100));
@@ -137,19 +137,19 @@ namespace Raven.Tests.Views
 		[Fact]
 		public void CanDeleteValueByView()
 		{
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog1", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog2", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				actions.MapReduce.DeleteMappedResultsForView("CommentCountsByBlog2");
 			});
 
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				Assert.NotEmpty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1", 0, 100));
 				Assert.Empty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1", 0, 100));

@@ -70,7 +70,7 @@ namespace Raven.Bundles.Replication.Triggers
 				return doc.Metadata;
 
 			RavenJObject result = null;
-			Database.TransactionalStorage.Batch(accessor =>
+			Database.TransactionalStorage.BatchRead(accessor =>
 			{
 				var tombstone = accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, key);
 				if (tombstone == null)

@@ -123,7 +123,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                     }
                 }
 
-                database.TransactionalStorage.Batch(accessor =>
+                database.TransactionalStorage.BatchRead(accessor =>
                 {
                     if (patcher.CreatedDocs != null)
                     {

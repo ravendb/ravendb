@@ -51,14 +51,14 @@ namespace Raven.Database.Server.Security
 		{
 			ListItem lastSeenValidCommercialLicense = null;
 
-			database.TransactionalStorage.Batch(
+			database.TransactionalStorage.BatchRead(
 				accessor => { lastSeenValidCommercialLicense = accessor.Lists.Read(LicensingListName, ValidationMarkerName); });
 			return lastSeenValidCommercialLicense;
 		}
 
 		private void SetValidCommercialLicenseMarker(DocumentDatabase database)
 		{
-			database.TransactionalStorage.Batch(
+			database.TransactionalStorage.BatchRead(
 				accessor => accessor.Lists.Set(LicensingListName, ValidationMarkerName, new RavenJObject()
 				{
 					{"ValidationTime", SystemTime.UtcNow}

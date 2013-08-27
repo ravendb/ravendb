@@ -113,7 +113,7 @@ namespace Raven.Storage.Managed
 		}
 
 		[DebuggerNonUserCode]
-		public void Batch(Action<IStorageActionsAccessor> action)
+		public void BatchReadWrite(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
 			{
@@ -152,6 +152,11 @@ namespace Raven.Storage.Managed
 			}
 			result.InvokeOnCommit();
 			onCommit(); // call user code after we exit the lock
+		}
+
+		public void BatchRead(Action<IStorageActionsAccessor> action)
+		{
+			BatchReadWrite(action);
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
@@ -200,7 +205,7 @@ namespace Raven.Storage.Managed
 			if (persistenceSource.CreatedNew)
 			{
 				Id = Guid.NewGuid();
-				Batch(accessor => tableStorage.Details.Put("id", Id.ToByteArray()));
+				BatchReadWrite(accessor => tableStorage.Details.Put("id", Id.ToByteArray()));
 			}
 			else
 			{
@@ -266,7 +271,7 @@ namespace Raven.Storage.Managed
 		public Guid ChangeId()
 		{
 			Guid newId = Guid.NewGuid();
-			Batch(accessor =>
+			BatchReadWrite(accessor =>
 			{
 				tableStorage.Details.Remove("id");
 				tableStorage.Details.Put("id", newId.ToByteArray());

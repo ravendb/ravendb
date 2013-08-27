@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
 				Assert.False(status.ValidCommercialLicenseSeen);
 
 				ListItem validCommercialLicense = null;
-				database.TransactionalStorage.Batch(
+				database.TransactionalStorage.BatchRead(
 					accessor => validCommercialLicense = accessor.Lists.Read("Raven/License/Commercial", "ValidLicense"));
 
 				Assert.Null(validCommercialLicense);
@@ -54,7 +54,7 @@ namespace Raven.Tests.Issues
 				task.Execute(database);
 
 				ListItem validCommercialLicense = null;
-				database.TransactionalStorage.Batch(
+				database.TransactionalStorage.BatchRead(
 					accessor => validCommercialLicense = accessor.Lists.Read("Raven/License/Commercial", "ValidLicense"));
 
 				Assert.NotNull(validCommercialLicense);

@@ -50,7 +50,7 @@ namespace Raven.Bundles.Replication.Responders
 			var array = context.ReadBsonArray();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				Database.TransactionalStorage.Batch(actions =>
+				Database.TransactionalStorage.BatchRead(actions =>
 				{
 					Etag lastEtag = Etag.Empty;
 					foreach (RavenJObject attachment in array)

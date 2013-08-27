@@ -68,7 +68,7 @@ namespace Raven.Bundles.Replication.Triggers
 				{Constants.RavenReplicationVersion, HiLo.NextId()}
 			};
 			deletedHistory.Value = null;
-			Database.TransactionalStorage.Batch(accessor =>
+			Database.TransactionalStorage.BatchRead(accessor =>
 				accessor.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, key, metadata, UuidType.Attachments));
 		
 		}

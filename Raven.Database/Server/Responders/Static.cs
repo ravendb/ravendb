@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					Database.TransactionalStorage.Batch(_=> // have to keep the session open for reading of the attachment stream
+					Database.TransactionalStorage.BatchRead(_=> // have to keep the session open for reading of the attachment stream
 					{
 						var attachmentAndHeaders = Database.GetStatic(filename);
 						if (attachmentAndHeaders == null)
@@ -52,7 +52,7 @@ namespace Raven.Database.Server.Responders
 					});
 					break;
 				case "HEAD":
-					Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
+					Database.TransactionalStorage.BatchRead(_ => // have to keep the session open for reading of the attachment stream
 					{
 						var attachmentAndHeaders = Database.GetStatic(filename);
 						if (attachmentAndHeaders == null)

@@ -32,7 +32,7 @@ namespace Raven.Database.Indexing
 			var itemsToDelete = new List<object>();
 
 			IList<ReduceTypePerKey> mappedResultsInfo = null;
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexName,
 					context.CurrentNumberOfItemsToReduceInSingleBatch,
@@ -64,7 +64,7 @@ namespace Raven.Database.Indexing
 				{
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed mapped results
-					transactionalStorage.Batch(actions =>
+					transactionalStorage.BatchRead(actions =>
 					{
 						var latest = actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
 
@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing
 		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, List<object> itemsToDelete)
 		{
 			var needToMoveToMultiStep = new HashSet<string>();
-			transactionalStorage.Batch(actions =>
+			transactionalStorage.BatchRead(actions =>
 			{
 				foreach (var localReduceKey in keysToReduce)
 				{
@@ -114,7 +114,7 @@ namespace Raven.Database.Indexing
 				bool retry = true;
 				while (retry && reduceParams.ReduceKeys.Count > 0)
 				{
-					transactionalStorage.Batch(actions =>
+					transactionalStorage.BatchRead(actions =>
 					{
 						context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -191,7 +191,7 @@ namespace Raven.Database.Indexing
 			foreach (var reduceKey in needToMoveToMultiStep)
 			{
 				string localReduceKey = reduceKey;
-				transactionalStorage.Batch(actions =>
+				transactionalStorage.BatchRead(actions =>
 										   actions.MapReduce.UpdatePerformedReduceType(index.IndexName, localReduceKey,
 																					   ReduceType.MultiStep));
 			}
@@ -216,7 +216,7 @@ namespace Raven.Database.Indexing
 				{
 					localKeys.Add(enumerator.Current);
 				}
-				transactionalStorage.Batch(actions =>
+				transactionalStorage.BatchRead(actions =>
 				{
 					var getItemsToReduceParams = new GetItemsToReduceParams(index: index.IndexName, reduceKeys: localKeys, level: 0,
 																			loadData: false,
@@ -294,7 +294,7 @@ namespace Raven.Database.Indexing
 						.ToArray();
 			context.ReducedPerSecIncreaseBy(results.Length);
 
-			context.TransactionalStorage.Batch(actions =>
+			context.TransactionalStorage.BatchRead(actions =>
 				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))
 				);
 
@@ -310,7 +310,7 @@ namespace Raven.Database.Indexing
 			foreach (var reduceKey in needToMoveToSingleStep)
 			{
 				string localReduceKey = reduceKey;
-				transactionalStorage.Batch(actions =>
+				transactionalStorage.BatchRead(actions =>
 					actions.MapReduce.UpdatePerformedReduceType(index.IndexName, localReduceKey, ReduceType.SingleStep));
 			}
 		}

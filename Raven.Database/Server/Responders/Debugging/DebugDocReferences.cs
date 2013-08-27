@@ -30,7 +30,7 @@ namespace Raven.Database.Server.Responders.Debugging
 
 			int totalCount = -1;
 			List<string> results = null;
-			Database.TransactionalStorage.Batch(accessor =>
+			Database.TransactionalStorage.BatchRead(accessor =>
 			{
 				totalCount = accessor.Indexing.GetCountOfDocumentsReferencing(docId);
 				results =

@@ -15,7 +15,7 @@ namespace Raven.Database.Plugins.Builtins
 
 		public void Execute(DocumentDatabase database)
 		{
-			database.TransactionalStorage.Batch(actions =>
+			database.TransactionalStorage.BatchRead(actions =>
 			{
 				List<string> indexNames = actions.Indexing.GetIndexesStats().Select(x => x.Name).ToList();
 				foreach (string indexName in indexNames)

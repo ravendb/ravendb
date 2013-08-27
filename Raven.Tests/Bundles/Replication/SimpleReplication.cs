@@ -277,7 +277,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			foreach (var ravenDbServer in servers)
 			{
-				ravenDbServer.Database.TransactionalStorage.Batch(
+				ravenDbServer.Database.TransactionalStorage.BatchRead(
 					accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
 			}
 		}

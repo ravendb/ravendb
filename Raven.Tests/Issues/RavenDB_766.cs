@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.Batch(accessor =>
+				storage.BatchRead(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 					accessor.Indexing.AddIndex("b", true);
@@ -33,9 +33,9 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.PutMappedResult("b", "a/1", "b", new RavenJObject());
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.BatchRead(accessor => accessor.Indexing.DeleteIndex("a"));
 
-				storage.Batch(accessor =>
+				storage.BatchRead(accessor =>
 				{
 					var results = accessor.MapReduce.GetMappedResultsForDebug("a", "a",0 , 10);
 					Assert.Equal(0, results.Count());
@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.Batch(accessor =>
+				storage.BatchRead(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 					accessor.Indexing.AddIndex("b", true);
@@ -64,9 +64,9 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.PutReducedResult("b", "b", 1, 2, 2, new RavenJObject());
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.BatchRead(accessor => accessor.Indexing.DeleteIndex("a"));
 
-				storage.Batch(accessor =>
+				storage.BatchRead(accessor =>
 				{
 					var results = accessor.MapReduce.GetReducedResultsForDebug("a", "a", 1,0 , 10);
 					Assert.Equal(0, results.Count());
@@ -84,7 +84,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.Batch(accessor =>
+				storage.BatchRead(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 					accessor.Indexing.AddIndex("b", true);
@@ -95,9 +95,9 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.ScheduleReductions("b", 1, new ReduceKeyAndBucket(2, "b"));
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.BatchRead(accessor => accessor.Indexing.DeleteIndex("a"));
 
-				storage.Batch(accessor =>
+				storage.BatchRead(accessor =>
 				{
 					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("a", new[] { "a" }, 1, true, new List<object>()){Take = 10});
 					Assert.Equal(0, results.Count());

@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Responders
             
             var transactionInformation = GetRequestTransaction(context);
 		    var includedEtags = new List<byte>();
-			Database.TransactionalStorage.Batch(actions =>
+			Database.TransactionalStorage.BatchRead(actions =>
 			{
 				foreach (RavenJToken item in itemsToLoad)
 				{

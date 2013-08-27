@@ -455,10 +455,10 @@ namespace Raven.Database.Indexing
 			switch (stats.Operation)
 			{
 				case IndexingWorkStats.Status.Map:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(name, stats));
+					workContext.TransactionalStorage.BatchRead(accessor => accessor.Indexing.UpdateIndexingStats(name, stats));
 					break;
 				case IndexingWorkStats.Status.Reduce:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateReduceStats(name, stats));
+					workContext.TransactionalStorage.BatchRead(accessor => accessor.Indexing.UpdateReduceStats(name, stats));
 					break;
 				case IndexingWorkStats.Status.Ignore:
 					break;

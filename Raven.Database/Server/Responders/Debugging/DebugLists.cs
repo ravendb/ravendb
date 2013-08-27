@@ -28,7 +28,7 @@ namespace Raven.Database.Server.Responders.Debugging
 			var key = context.Request.QueryString["key"];
 			if (key == null)
 				throw new ArgumentException("Key query string variable is mandatory");
-			Database.TransactionalStorage.Batch(accessor =>
+			Database.TransactionalStorage.BatchRead(accessor =>
 			{
 				var listItem = accessor.Lists.Read(listName, key);
 				if (listItem == null)

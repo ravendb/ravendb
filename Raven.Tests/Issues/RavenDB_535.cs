@@ -17,7 +17,7 @@ namespace Raven.Tests.Issues
 					}
 					session.SaveChanges();
 				}
-				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				store.DocumentDatabase.TransactionalStorage.BatchRead(accessor =>
 				{
 					int tries;
 					var val = store.DocumentDatabase.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", accessor, null,
@@ -26,7 +26,7 @@ namespace Raven.Tests.Issues
 					Assert.Equal(1338, val);
 				});
 
-				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+				store.DocumentDatabase.TransactionalStorage.BatchRead(accessor =>
 				{
 					int tries;
 					var val = store.DocumentDatabase.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", accessor, null,

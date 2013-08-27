@@ -37,12 +37,12 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanAddAndReadByKey()
 		{
-			db.TransactionalStorage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
+			db.TransactionalStorage.BatchRead(actions => actions.Lists.Set("items", "1", new RavenJObject
 			{
 				{"test", "data"}
 			}, UuidType.Indexing));
 
-			db.TransactionalStorage.Batch(actions =>
+			db.TransactionalStorage.BatchRead(actions =>
 			{
 				var ravenJObject = actions.Lists.Read("items", "1");
 				Assert.Equal("data", ravenJObject.Data.Value<string>("test"));
@@ -53,20 +53,20 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanAddAndRemove()
 		{
-			db.TransactionalStorage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
+			db.TransactionalStorage.BatchRead(actions => actions.Lists.Set("items", "1", new RavenJObject
 			{
 				{"test", "data"}
 			}, UuidType.Indexing));
 
-			db.TransactionalStorage.Batch(actions =>
+			db.TransactionalStorage.BatchRead(actions =>
 			{
 				var ravenJObject = actions.Lists.Read("items", "1");
 				Assert.Equal("data", ravenJObject.Data.Value<string>("test"));
 			});
 
-			db.TransactionalStorage.Batch(actions => actions.Lists.Remove("items", "1"));
+			db.TransactionalStorage.BatchRead(actions => actions.Lists.Remove("items", "1"));
 
-			db.TransactionalStorage.Batch(actions => Assert.Null(actions.Lists.Read("items", "1")));
+			db.TransactionalStorage.BatchRead(actions => Assert.Null(actions.Lists.Read("items", "1")));
 		}
 
 
@@ -75,7 +75,7 @@ namespace Raven.Tests.Storage
 		{
 			for (int i = 0; i < 10; i++)
 			{
-				db.TransactionalStorage.Batch(
+				db.TransactionalStorage.BatchRead(
 					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
@@ -83,7 +83,7 @@ namespace Raven.Tests.Storage
 			}
 
 
-			db.TransactionalStorage.Batch(actions =>
+			db.TransactionalStorage.BatchRead(actions =>
 			{
 				var list = actions.Lists.Read("items", Etag.Empty, null, 100).ToList();
 				Assert.Equal(10, list.Count);
@@ -99,7 +99,7 @@ namespace Raven.Tests.Storage
 		{
 			for (int i = 0; i < 10; i++)
 			{
-				db.TransactionalStorage.Batch(
+				db.TransactionalStorage.BatchRead(
 					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
@@ -107,7 +107,7 @@ namespace Raven.Tests.Storage
 			}
 
 
-			db.TransactionalStorage.Batch(actions =>
+			db.TransactionalStorage.BatchRead(actions =>
 			{
 				var list = actions.Lists.Read("items", Etag.Empty, null, 5).ToList();
 				Assert.Equal(5, list.Count);
@@ -130,7 +130,7 @@ namespace Raven.Tests.Storage
 		{
 			for (int i = 0; i < 10; i++)
 			{
-				db.TransactionalStorage.Batch(
+				db.TransactionalStorage.BatchRead(
 					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
@@ -138,7 +138,7 @@ namespace Raven.Tests.Storage
 			}
 
 
-			db.TransactionalStorage.Batch(actions =>
+			db.TransactionalStorage.BatchRead(actions =>
 			{
 				var list = actions.Lists.Read("items", Etag.Empty, null, 5).ToList();
 
@@ -154,20 +154,20 @@ namespace Raven.Tests.Storage
 		{
 			for (int i = 0; i < 10; i++)
 			{
-				db.TransactionalStorage.Batch(
+				db.TransactionalStorage.BatchRead(
 					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
 					}, UuidType.Indexing));
 
-				db.TransactionalStorage.Batch(
+				db.TransactionalStorage.BatchRead(
 					actions => actions.Lists.Set("another", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i*2}
 					}, UuidType.Indexing));
 			}
 
-			db.TransactionalStorage.Batch(actions =>
+			db.TransactionalStorage.BatchRead(actions =>
 			{
 				var list = actions.Lists.Read("items", Etag.Empty, null, 100).ToList();
 				Assert.Equal(10, list.Count);

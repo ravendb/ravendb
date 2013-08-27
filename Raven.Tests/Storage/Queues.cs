@@ -15,9 +15,9 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
+				tx.BatchRead(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
 
-				tx.Batch(mutator => Assert.Equal(new byte[] {1, 2}, mutator.Queue.PeekFromQueue("ayende").First().Item1));
+				tx.BatchRead(mutator => Assert.Equal(new byte[] {1, 2}, mutator.Queue.PeekFromQueue("ayende").First().Item1));
 			}
 		}
 
@@ -26,9 +26,9 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
+				tx.BatchRead(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] {1, 2}));
 
-				tx.Batch(mutator =>
+				tx.BatchRead(mutator =>
 				{
 					for (int i = 0; i < 6; i++)
 					{
@@ -44,9 +44,9 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
+				tx.BatchRead(mutator => mutator.Queue.EnqueueToQueue("ayende", new byte[] { 1, 2 }));
 
-				tx.Batch(mutator => 
+				tx.BatchRead(mutator => 
 				{
 					mutator.Queue.DeleteFromQueue("ayende", mutator.Queue.PeekFromQueue("ayende").First().Item2);
 					Assert.Equal(null, mutator.Queue.PeekFromQueue("ayende").FirstOrDefault());

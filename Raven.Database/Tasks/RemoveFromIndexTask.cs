@@ -37,7 +37,7 @@ namespace Raven.Database.Tasks
 			var keysToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			try
 			{
-				context.TransactionalStorage.Batch(accessor =>
+				context.TransactionalStorage.BatchRead(accessor =>
 				{
 					keysToRemove = new HashSet<string>(Keys.Where(key=>FilterDocuments(context, accessor, key)));
 					accessor.Indexing.TouchIndexEtag(Index);

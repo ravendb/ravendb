@@ -24,7 +24,7 @@ namespace Raven.Bundles.Replication.Triggers
 			if (metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
 				return VetoResult.Deny("You cannot PUT a document with metadata " + Constants.RavenReplicationConflictDocument);
 			JsonDocument documentByKey = null;
-			Database.TransactionalStorage.Batch(accessor =>
+			Database.TransactionalStorage.BatchRead(accessor =>
 			{
 				documentByKey = accessor.Documents.DocumentByKey(key, transactionInformation);		
 			});

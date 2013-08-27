@@ -173,7 +173,7 @@ namespace Raven.Database.Smuggler
 				attachment.Data = () =>
 				{
 					var memoryStream = new MemoryStream();
-					_database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+					_database.TransactionalStorage.BatchRead(accessor => data().CopyTo(memoryStream));
 					memoryStream.Position = 0;
 					return memoryStream;
 				};

@@ -97,7 +97,7 @@ namespace Raven.Database.Impl.DTC
 			{
 				using (storage.SetTransactionContext(context))
 				{
-					storage.Batch(accessor => RunOperationsInTransaction(id));
+					storage.BatchRead(accessor => RunOperationsInTransaction(id));
 				}
 			}
 			catch (Exception)
