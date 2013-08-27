@@ -513,18 +513,25 @@ namespace Raven.Client.Linq
 			}
 			else
 			{
-				if (expression.Object is MemberExpression)
-				{
-					fieldInfo = GetMember(expression.Object);
-					constant = expression.Arguments[0];
-				}
-				else if (expression.Object is ConstantExpression)
-				{
-					fieldInfo = GetMember(expression.Arguments[0]);
-					constant = expression.Object;
-				}
-
-				if (expression.Arguments.Count == 2 &&
+			    switch (expression.Object.NodeType)
+			    {
+			        case ExpressionType.MemberAccess:
+			            fieldInfo = GetMember(expression.Object);
+			            constant = expression.Arguments[0];
+			            break;
+			        case ExpressionType.Constant:
+			            fieldInfo = GetMember(expression.Arguments[0]);
+			            constant = expression.Object;
+			            break;
+			        case ExpressionType.Parameter:
+			            fieldInfo = new ExpressionInfo(currentPath.Substring(0, currentPath.Length - 1), expression.Object.Type,
+			                                           false);
+			            constant = expression.Arguments[0];
+			            break;
+                    default:
+                        throw new NotSupportedException("Nodes of type + " + expression.Object.NodeType + " are not understood in this context");
+			    }
+			    if (expression.Arguments.Count == 2 &&
 				    expression.Arguments[1].NodeType == ExpressionType.Constant &&
 				    expression.Arguments[1].Type == typeof (StringComparison))
 				{
@@ -532,7 +539,7 @@ namespace Raven.Client.Linq
 				}
 			}
 
-			if (comparisonType != null)
+		    if (comparisonType != null)
 			{
 				switch ((StringComparison) comparisonType)
 				{
@@ -553,6 +560,8 @@ namespace Raven.Client.Linq
 						throw new ArgumentOutOfRangeException();
 				}
 			}
+
+            
 
 			luceneQuery.WhereEquals(new WhereParams
 			{
