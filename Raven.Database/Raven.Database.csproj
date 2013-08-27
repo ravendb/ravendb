@@ -824,6 +824,11 @@
     <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
+    <Compile Include="Storage\Voron\IPersistanceSource.cs" />
+    <Compile Include="Storage\Voron\MemoryMapPersistanceSource.cs" />
+    <Compile Include="Storage\Voron\MemoryPersistanceSource.cs" />
+    <Compile Include="Storage\Voron\Table.cs" />
+    <Compile Include="Storage\Voron\TableStorage.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />

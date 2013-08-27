@@ -2,6 +2,7 @@
 {
 	using System;
 	using System.Collections.Generic;
+	using System.Collections.ObjectModel;
 	using System.IO;
 	using System.Linq;
 
@@ -9,11 +10,11 @@
 	{
 		private readonly List<BatchOperation> _operations;
 
-		public IReadOnlyCollection<BatchOperation> Operations
+		public ReadOnlyCollection<BatchOperation> Operations
 		{
 			get
 			{
-				return _operations;
+				return _operations.AsReadOnly();
 			}
 		}
 

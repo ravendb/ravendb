@@ -32,7 +32,7 @@
 
 			List<OutstandingWrite> writes = null;
 
-			await _semaphore.WaitAsync();
+			_semaphore.Wait();
 
 			try
 			{
