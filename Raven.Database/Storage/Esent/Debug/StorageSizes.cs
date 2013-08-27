@@ -39,7 +39,7 @@ namespace Raven.Database.Storage.Esent.Debug
 	    public static List<string> ReportOn(TransactionalStorage transactionalStorage)
 		{
 			var list = new List<string>();
-			transactionalStorage.BatchRead(accessor =>
+			transactionalStorage.Batch(accessor =>
 			{
 				var session = ((StorageActionsAccessor)accessor).Inner.Session;
 				var jetDbid = ((StorageActionsAccessor)accessor).Inner.Dbid;

@@ -36,7 +36,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			Etag mostRecentDocumentEtag = Etag.Empty;
 			Etag mostRecentAttachmentEtag = Etag.Empty;
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				mostRecentDocumentEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 				mostRecentAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag();

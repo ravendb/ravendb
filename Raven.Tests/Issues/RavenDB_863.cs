@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("test", true);
 
@@ -36,7 +36,7 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("test", new[] { "a", "b" }, 0, true, new List<object>()){Take = 2}).ToList();
 					Assert.Equal(2, results.Count);
@@ -52,7 +52,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("test", true);
 
@@ -65,7 +65,7 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("test", new[] { "a", "b" }, 0, true, new List<object>()){Take = 3}).ToList();
 					Assert.Equal(4, results.Count);

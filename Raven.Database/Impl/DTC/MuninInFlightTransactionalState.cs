@@ -23,7 +23,7 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Commit(string id)
 		{
-			storage.BatchRead(accessor => RunOperationsInTransaction(id));
+			storage.Batch(accessor => RunOperationsInTransaction(id));
 		}
 		public override void Prepare(string id)
 		{

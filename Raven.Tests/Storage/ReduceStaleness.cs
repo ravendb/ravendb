@@ -18,7 +18,7 @@ namespace Raven.Tests.Storage
 		{
 			using(var transactionalStorage = NewTransactionalStorage())
 			{
-				transactionalStorage.BatchRead(accessor =>
+				transactionalStorage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 					accessor.Indexing.AddIndex("b", true);
@@ -29,7 +29,7 @@ namespace Raven.Tests.Storage
 					accessor.MapReduce.ScheduleReductions("c", 0, new ReduceKeyAndBucket(0, "a"));
 				});
 
-				transactionalStorage.BatchRead(actionsAccessor =>
+				transactionalStorage.Batch(actionsAccessor =>
 				{
 					Assert.True(actionsAccessor.Staleness.IsReduceStale("a"));
 					Assert.True(actionsAccessor.Staleness.IsReduceStale("b"));

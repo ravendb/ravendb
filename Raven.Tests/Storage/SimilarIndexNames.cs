@@ -54,9 +54,9 @@ namespace Raven.Tests.Storage
 			var time = DateTime.Today;
 
 
-			db.TransactionalStorage.BatchRead(accessor => accessor.Indexing.UpdateLastIndexed("Leases/SearchIndex", one, time));
+			db.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateLastIndexed("Leases/SearchIndex", one, time));
 
-			db.TransactionalStorage.BatchRead(accessor =>
+			db.TransactionalStorage.Batch(accessor =>
 			{
 				var stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex").First();
 
@@ -99,9 +99,9 @@ namespace Raven.Tests.Storage
 			var time = DateTime.Today;
 
 
-			db.TransactionalStorage.BatchRead(accessor => accessor.Indexing.UpdateLastIndexed("Leases/SearchIndex2", one, time));
+			db.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateLastIndexed("Leases/SearchIndex2", one, time));
 
-			db.TransactionalStorage.BatchRead(accessor =>
+			db.TransactionalStorage.Batch(accessor =>
 			{
 				var stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex2").First();
 

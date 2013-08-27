@@ -93,7 +93,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					session.SaveChanges();
 				}
 
-				documentStore.DocumentDatabase.TransactionalStorage.BatchRead(accessor =>
+				documentStore.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(),
 					                                              documentStore.DocumentDatabase.TransactionalStorage

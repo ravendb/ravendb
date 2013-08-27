@@ -84,7 +84,7 @@ namespace Raven.Database.Impl
 				while (true)
 				{
 					var batchCount = 0;
-					database.TransactionalStorage.BatchRead(actions =>
+					database.TransactionalStorage.Batch(actions =>
 					{
 						while (batchCount < batchSize && enumerator.MoveNext())
 						{

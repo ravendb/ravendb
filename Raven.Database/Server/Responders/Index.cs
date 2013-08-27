@@ -208,7 +208,7 @@ namespace Raven.Database.Server.Responders
         private void GetIndexScheduledReduces(IHttpContext context, string index)
         {
             List<ScheduledReductionDebugInfo> mappedResult = null;
-            Database.TransactionalStorage.BatchRead(accessor =>
+            Database.TransactionalStorage.Batch(accessor =>
             {
                 mappedResult = accessor.MapReduce.GetScheduledReductionForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
                     .ToList();
@@ -229,7 +229,7 @@ namespace Raven.Database.Server.Responders
             }
 
             List<ReduceKeyAndCount> keys = null;
-            Database.TransactionalStorage.BatchRead(accessor =>
+            Database.TransactionalStorage.Batch(accessor =>
             {
                 keys = accessor.MapReduce.GetKeysStats(index,
                          context.GetStart(),
@@ -246,7 +246,7 @@ namespace Raven.Database.Server.Responders
         private void GetIndexStats(IHttpContext context, string index)
         {
             IndexStats stats = null;
-            Database.TransactionalStorage.BatchRead(accessor =>
+            Database.TransactionalStorage.Batch(accessor =>
             {
                 stats = accessor.Indexing.GetIndexStats(index);
             });
@@ -304,7 +304,7 @@ namespace Raven.Database.Server.Responders
             Tuple<DateTime, Etag> indexTimestamp = null;
             bool isIndexStale = false;
 	        
-	        Database.TransactionalStorage.BatchRead(
+	        Database.TransactionalStorage.Batch(
                 accessor =>
                 {
 	                isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
@@ -372,7 +372,7 @@ namespace Raven.Database.Server.Responders
             if (string.IsNullOrEmpty(key))
             {
                 List<string> keys = null;
-                Database.TransactionalStorage.BatchRead(accessor =>
+                Database.TransactionalStorage.Batch(accessor =>
                 {
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
                         .ToList();
@@ -388,7 +388,7 @@ namespace Raven.Database.Server.Responders
             }
 
             List<MappedResultInfo> mappedResult = null;
-            Database.TransactionalStorage.BatchRead(accessor =>
+            Database.TransactionalStorage.Batch(accessor =>
             {
                 mappedResult = accessor.MapReduce.GetMappedResultsForDebug(index, key, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
                     .ToList();
@@ -430,7 +430,7 @@ namespace Raven.Database.Server.Responders
             }
 
             List<MappedResultInfo> mappedResult = null;
-            Database.TransactionalStorage.BatchRead(accessor =>
+            Database.TransactionalStorage.Batch(accessor =>
             {
                 mappedResult = accessor.MapReduce.GetReducedResultsForDebug(index, key, level, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
                     .ToList();

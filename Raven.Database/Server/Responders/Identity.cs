@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Responders
 			}
 
 			long nextIdentityValue = -1;
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				nextIdentityValue = accessor.General.GetNextIdentityValue(name);
 			});

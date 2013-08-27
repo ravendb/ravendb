@@ -34,24 +34,24 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanTellThatIndexIsStale()
 		{
-			db.TransactionalStorage.BatchRead(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
 			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
-			db.TransactionalStorage.BatchRead(accessor => Assert.True(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+			db.TransactionalStorage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 		}
 
 		[Fact]
 		public void CanIndexDocuments()
 		{
-			db.TransactionalStorage.BatchRead(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 
 			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
 			bool indexed = false;
 			for (int i = 0; i < 500; i++)
 			{
-				db.TransactionalStorage.BatchRead(accessor => indexed = (accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+				db.TransactionalStorage.Batch(accessor => indexed = (accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 				if (indexed == false)
 					break;
 				Thread.Sleep(50);

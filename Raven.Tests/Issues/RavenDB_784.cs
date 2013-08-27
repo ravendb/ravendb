@@ -16,7 +16,7 @@
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 					accessor.Indexing.AddIndex("b", true);
@@ -30,7 +30,7 @@
 					accessor.MapReduce.IncrementReduceKeyCounter("b", "b", 2);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetKeysStats("a", 0, 10).ToList();
 					Assert.Equal(1, results.Count);
@@ -41,9 +41,9 @@
 					Assert.Equal(2, results[0].Count);
 				});
 
-				storage.BatchRead(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetKeysStats("a", 0, 10).ToList();
 					Assert.Equal(0, results.Count());
@@ -63,7 +63,7 @@
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 
@@ -77,7 +77,7 @@
 
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetKeysStats("a", 0, 10).ToList();
 					Assert.Equal(2, results.Count);
@@ -85,7 +85,7 @@
 					Assert.Equal(2, results.First(x => x.Key == "b").Count);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var removed = new Dictionary<ReduceKeyAndBucket, int>();
 					accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", "a", removed);
@@ -94,7 +94,7 @@
 					accessor.MapReduce.UpdateRemovedMapReduceStats("a", removed);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetKeysStats("a", 0, 10).ToList();
 					Assert.Equal(1, results.Count);
@@ -111,7 +111,7 @@
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 
@@ -124,7 +124,7 @@
 					accessor.MapReduce.IncrementReduceKeyCounter("a", "b", 2);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetKeysStats("a", 0, 10).ToList();
 					Assert.Equal(2, results.Count);
@@ -132,9 +132,9 @@
 					Assert.Equal(2, results.First(x => x.Key == "b").Count);
 				});
 
-				storage.BatchRead(accessor => accessor.MapReduce.DeleteMappedResultsForView("a"));
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView("a"));
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var results = accessor.MapReduce.GetKeysStats("a", 0, 10).ToList();
 					Assert.Equal(0, results.Count);
@@ -149,7 +149,7 @@
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 					accessor.Indexing.AddIndex("b", true);
@@ -163,15 +163,15 @@
 					accessor.MapReduce.IncrementReduceKeyCounter("a", "b", 2);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.MapReduce.UpdatePerformedReduceType("a", "a", ReduceType.SingleStep);
 					accessor.MapReduce.UpdatePerformedReduceType("b", "b", ReduceType.SingleStep);
 				});
 
-				storage.BatchRead(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var result = accessor.MapReduce.GetLastPerformedReduceType("a", "a");
 
@@ -190,7 +190,7 @@
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("a", true);
 
@@ -203,13 +203,13 @@
 					accessor.MapReduce.IncrementReduceKeyCounter("a", "b", 2);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					accessor.MapReduce.UpdatePerformedReduceType("a", "a", ReduceType.SingleStep);
 					accessor.MapReduce.UpdatePerformedReduceType("a", "b", ReduceType.SingleStep);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var removed = new Dictionary<ReduceKeyAndBucket, int>();
 					accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", "a", removed);
@@ -217,7 +217,7 @@
 					accessor.MapReduce.UpdateRemovedMapReduceStats("a", removed);
 				});
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var result = accessor.MapReduce.GetLastPerformedReduceType("a", "a");
 					Assert.Equal(ReduceType.SingleStep, result);

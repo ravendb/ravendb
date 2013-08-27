@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			Database.TransactionalStorage.BatchRead(
+			Database.TransactionalStorage.Batch(
 				_ => // we are running this here to ensure transactional safety for the two operations
 				{
 					var transactionInformation = GetRequestTransaction(context);

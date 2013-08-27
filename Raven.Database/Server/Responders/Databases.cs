@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Responders
 			}
 
 			Etag lastDocEtag = Etag.Empty;
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 			});

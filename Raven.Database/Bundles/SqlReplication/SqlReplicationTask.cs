@@ -99,7 +99,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private void RecordDelete(string id, RavenJObject metadata)
 		{
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				bool hasChanges = false;
 				foreach (var config in replicationConfigs)
@@ -180,7 +180,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				foreach (var relevantConfig in relevantConfigs)
 				{
 					var cfg = relevantConfig;
-					Database.TransactionalStorage.BatchRead(accessor =>
+					Database.TransactionalStorage.Batch(accessor =>
 					{
 						deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
 														  GetLastEtagFor(localReplicationStatus, cfg),
@@ -233,7 +233,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							{
 								if (deletedDocs.Count > 0)
 								{
-									Database.TransactionalStorage.BatchRead(accessor =>
+									Database.TransactionalStorage.Batch(accessor =>
 										accessor.Lists.RemoveAllBefore(GetSqlReplicationDeletionName(replicationConfig), deletedDocs[deletedDocs.Count - 1].Etag));
 								}
 								successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
@@ -499,7 +499,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				return sqlReplicationConfigs;
 
 			sqlReplicationConfigs = new List<SqlReplicationConfig>();
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
 				foreach (var document in accessor.Documents.GetDocumentsWithIdStartingWith(

@@ -85,7 +85,7 @@ namespace Raven.Bundles.Versioning.Triggers
 		{
 			var revision = 0;
 
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				revision = (int)accessor.General.GetNextIdentityValue(key + "/revisions/");
 

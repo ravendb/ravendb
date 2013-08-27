@@ -59,7 +59,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (versioningConfig == null || !versioningConfig.PurgeOnDelete)
 				return;
 
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				while (true)
 				{

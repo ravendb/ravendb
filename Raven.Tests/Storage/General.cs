@@ -15,7 +15,7 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(mutator =>
+				tx.Batch(mutator =>
 				{
 					Assert.Equal(1, mutator.General.GetNextIdentityValue("ayende"));
 					Assert.Equal(1, mutator.General.GetNextIdentityValue("rahien"));
@@ -25,7 +25,7 @@ namespace Raven.Tests.Storage
 				});
 
 
-				tx.BatchRead(mutator =>
+				tx.Batch(mutator =>
 				{
 					Assert.Equal(3, mutator.General.GetNextIdentityValue("ayende"));
 					Assert.Equal(3, mutator.General.GetNextIdentityValue("rahien"));
@@ -61,7 +61,7 @@ namespace Raven.Tests.Storage
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.BatchRead(mutator =>
+				tx.Batch(mutator =>
 				{
 					Assert.Equal(1, mutator.General.GetNextIdentityValue("ayende"));
 					Assert.Equal(1, mutator.General.GetNextIdentityValue("rahien"));
@@ -74,7 +74,7 @@ namespace Raven.Tests.Storage
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 
-				tx.BatchRead(mutator =>
+				tx.Batch(mutator =>
 				{
 					Assert.Equal(3, mutator.General.GetNextIdentityValue("ayende"));
 					Assert.Equal(3, mutator.General.GetNextIdentityValue("rahien"));

@@ -59,7 +59,7 @@ namespace Raven.Bundles.Replication.Responders
 				ReplicationTask.HandleHeartbeat(src);
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				Database.TransactionalStorage.BatchRead(actions =>
+				Database.TransactionalStorage.Batch(actions =>
 				{
 					string lastEtag = Etag.Empty.ToString();
 					foreach (RavenJObject document in array)

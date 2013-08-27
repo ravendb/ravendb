@@ -32,7 +32,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			Database.TransactionalStorage.BatchRead(accessor => accessor.Indexing.SetIndexPriority(index, indexingPriority));
+			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index, indexingPriority));
 		}
 	}
 }

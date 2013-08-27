@@ -221,7 +221,7 @@ namespace Raven.Database
 
 	                inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(Put, Delete);
 
-                    TransactionalStorage.BatchRead(actions =>
+                    TransactionalStorage.Batch(actions =>
                         sequentialUuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
                     // Index codecs must be initialized before we try to read an index
@@ -388,7 +388,7 @@ namespace Raven.Database
                         typeof(IAlterConfiguration)
                         ),
                 };
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
                 {
                     result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
                     result.LastAttachmentEtag = actions.Staleness.GetMostRecentAttachmentEtag();
@@ -711,7 +711,7 @@ namespace Raven.Database
                 // first we check the dtc state, then the storage, to avoid race conditions
                 var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
 
-                TransactionalStorage.BatchRead(actions => { document = actions.Documents.DocumentByKey(key, transactionInformation); });
+                TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key, transactionInformation); });
 
                 if (nonAuthoritativeInformationBehavior != null)
                     document = nonAuthoritativeInformationBehavior(document);
@@ -733,7 +733,7 @@ namespace Raven.Database
                 inFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
             {
                 var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
                 {
                     document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
                 });
@@ -752,7 +752,7 @@ namespace Raven.Database
             if (key == null)
                 throw new ArgumentNullException("key");
             key = key.Trim();
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 actions.Documents.PutDocumentMetadata(key, metadata);
                 workContext.ShouldNotifyAboutWork(() => "PUT (metadata) " + key);
@@ -769,7 +769,7 @@ namespace Raven.Database
 
             using (TransactionalStorage.WriteLock())
             {
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
                 {
                     if (key.EndsWith("/"))
                     {
@@ -1004,7 +1004,7 @@ namespace Raven.Database
             RavenJObject metadataVar = null;
             using (TransactionalStorage.WriteLock())
             {
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
                 {
                     AssertDeleteOperationNotVetoed(key, transactionInformation);
                     if (transactionInformation == null)
@@ -1207,7 +1207,7 @@ namespace Raven.Database
             IndexDefinitionStorage.CreateAndPersistIndex(definition);
             IndexStorage.CreateIndexImplementation(definition);
 
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 actions.Indexing.AddIndex(name, definition.IsMapReduce);
                 workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
@@ -1298,7 +1298,7 @@ namespace Raven.Database
 
                 var duration = Stopwatch.StartNew();
                 var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                TransactionalStorage.BatchRead(
+                TransactionalStorage.Batch(
                     actions =>
                     {
                         var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
@@ -1460,7 +1460,7 @@ namespace Raven.Database
             {
                 bool isStale = false;
                 HashSet<string> loadedIds = null;
-                TransactionalStorage.BatchRead(
+                TransactionalStorage.Batch(
                     actions =>
                     {
                         isStale = actions.Staleness.IsIndexStale(index, query.Cutoff, null);
@@ -1508,7 +1508,7 @@ namespace Raven.Database
                 {
                     try
                     {
-                        TransactionalStorage.BatchRead(action =>
+                        TransactionalStorage.Batch(action =>
                         {
                             action.Indexing.DeleteIndex(name);
 
@@ -1538,7 +1538,7 @@ namespace Raven.Database
                 throw new ArgumentNullException("name");
             name = name.Trim();
             Attachment attachment = null;
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 attachment = actions.Attachments.GetAttachment(name);
 
@@ -1553,7 +1553,7 @@ namespace Raven.Database
         {
             if (idPrefix == null) throw new ArgumentNullException("idPrefix");
             IEnumerable<AttachmentInformation> attachments = null;
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 attachments = actions.Attachments.GetAttachmentsStartingWith(idPrefix, start, pageSize)
                     .Select(information =>
@@ -1692,7 +1692,7 @@ namespace Raven.Database
             try
             {
                 Etag newEtag = Etag.Empty;
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
                 {
                     AssertAttachmentPutOperationNotVetoed(name, metadata, data);
 
@@ -1721,7 +1721,7 @@ namespace Raven.Database
             if (name == null)
                 throw new ArgumentNullException("name");
             name = name.Trim();
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 AssertAttachmentDeleteOperationNotVetoed(name);
 
@@ -1752,7 +1752,7 @@ namespace Raven.Database
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
             idPrefix = idPrefix.Trim();
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 bool returnedDocs = false;
                 while (true)
@@ -1793,7 +1793,7 @@ namespace Raven.Database
 
         public void GetDocuments(int start, int pageSize, Etag etag, Action<RavenJObject> addDocument)
         {
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 bool returnedDocs = false;
                 while (true)
@@ -1830,7 +1830,7 @@ namespace Raven.Database
         {
             AttachmentInformation[] attachments = null;
 
-            TransactionalStorage.BatchRead(actions =>
+            TransactionalStorage.Batch(actions =>
             {
                 if (string.IsNullOrEmpty(startsWith) == false)
                     attachments = actions.Attachments.GetAttachmentsStartingWith(startsWith, start, pageSize).ToArray();
@@ -1962,7 +1962,7 @@ namespace Raven.Database
 			Random rand = null;
             do
             {
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
 				{
 					var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
 					if (etag != null && doc != null && doc.Etag != etag)
@@ -2043,7 +2043,7 @@ namespace Raven.Database
                }
 
                BatchResult[] results = null;
-               TransactionalStorage.BatchRead(actions =>
+               TransactionalStorage.Batch(actions =>
                {
                    results = ProcessBatch(commands);
                });
@@ -2061,7 +2061,7 @@ namespace Raven.Database
                 try
                 {
                     BatchResult[] results = null;
-                    TransactionalStorage.BatchRead(_ => results = ProcessBatch(commands));
+                    TransactionalStorage.Batch(_ => results = ProcessBatch(commands));
                     return results;
                 }
                 catch (ConcurrencyException)
@@ -2094,7 +2094,7 @@ namespace Raven.Database
             get
             {
                 bool hasTasks = false;
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
                 {
                     hasTasks = actions.Tasks.HasTasks;
                 });
@@ -2107,7 +2107,7 @@ namespace Raven.Database
             get
             {
                 long approximateTaskCount = 0;
-                TransactionalStorage.BatchRead(actions =>
+                TransactionalStorage.Batch(actions =>
                 {
                     approximateTaskCount = actions.Tasks.ApproximateTaskCount;
                 });
@@ -2330,7 +2330,7 @@ namespace Raven.Database
             Etag lastReducedEtag = null;
             bool isStale = false;
             int touchCount = 0;
-            TransactionalStorage.BatchRead(accessor =>
+            TransactionalStorage.Batch(accessor =>
             {
 				var indexInstance = IndexStorage.GetIndexInstance(indexName);
 	            isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
@@ -2386,7 +2386,7 @@ namespace Raven.Database
         public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
         {
             var documents = 0;
-            TransactionalStorage.BatchRead(accessor =>
+            TransactionalStorage.Batch(accessor =>
             {
 	            RaiseNotifications(new BulkInsertChangeNotification
 	            {
@@ -2534,7 +2534,7 @@ namespace Raven.Database
         public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> queryInputs)
         {
             JsonDocument result = null;
-            TransactionalStorage.BatchRead(
+            TransactionalStorage.Batch(
             actions =>
             {
                 var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, queryInputs);

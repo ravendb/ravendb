@@ -46,7 +46,7 @@ namespace Raven.Database.Server.Responders
 				});
 			}
 
-			Database.TransactionalStorage.BatchRead(accessor => accessor.General.SetIdentityValue(name, value)); 
+			Database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(name, value)); 
 			context.WriteJson(new
 			{
 				Value = value

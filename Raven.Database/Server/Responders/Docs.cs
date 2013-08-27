@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Responders
 				case "GET":
 					long documentsCount = 0;
 					Etag lastDocEtag = Etag.Empty;
-					Database.TransactionalStorage.BatchRead(accessor =>
+					Database.TransactionalStorage.Batch(accessor =>
 					{
 						lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 						documentsCount = accessor.Documents.GetDocumentsCount();

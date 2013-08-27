@@ -196,7 +196,7 @@ namespace Raven.Database.Indexing
         protected override bool IsUpToDateEnoughToWriteToDisk(Etag highestETag)
         {
             bool upToDate = false;
-            context.Database.TransactionalStorage.BatchRead(accessor =>
+            context.Database.TransactionalStorage.Batch(accessor =>
             {
                 upToDate = accessor.Staleness.GetMostRecentDocumentEtag() == highestETag;
             });
@@ -351,7 +351,7 @@ namespace Raven.Database.Indexing
                     batcher => batcher.Dispose());
 
                 IndexStats currentIndexStats = null;
-                context.TransactionalStorage.BatchRead(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(name));
+                context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(name));
 
                 return new IndexedItemsInfo
                 {

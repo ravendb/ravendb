@@ -78,7 +78,7 @@ namespace Raven.Tests.Bugs
 					session.Query<UsersByName.Result, UsersByName>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var stats = accessor.MapReduce.GetKeysStats(index.IndexName, 0, 10).ToList();
 					Assert.Equal(2, stats.Count);
@@ -93,7 +93,7 @@ namespace Raven.Tests.Bugs
 					session.Query<UsersByName.Result, UsersByName>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-				storage.BatchRead(accessor =>
+				storage.Batch(accessor =>
 				{
 					var stats = accessor.MapReduce.GetKeysStats(index.IndexName, 0, 10).ToList();
 					Assert.Equal(2, stats.Count);

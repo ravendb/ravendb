@@ -20,15 +20,15 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
+				tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
 
 				Attachment attachment = null;
-				tx.BatchRead(viewer =>
+				tx.Batch(viewer =>
 				{
 					attachment = viewer.Attachments.GetAttachment("Ayende");
 				});
 
-				tx.BatchRead(_ => Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData()));
+				tx.Batch(_ => Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData()));
 			}
 		}
 
@@ -49,14 +49,14 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(accessor =>
+				tx.Batch(accessor =>
 				{
 					accessor.Attachments.AddAttachment("1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 					accessor.Attachments.AddAttachment("2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 					accessor.Attachments.AddAttachment("3", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 				});
 
-				tx.BatchRead(viewer =>
+				tx.Batch(viewer =>
 				{
 					Assert.Equal(new[] { "3", "2", "1" }, viewer.Attachments.GetAttachmentsByReverseUpdateOrder(0).Select(x => x.Key).ToArray());
 					Assert.Equal(new[] { "2", "1" }, viewer.Attachments.GetAttachmentsByReverseUpdateOrder(1).Select(x => x.Key).ToArray());
@@ -73,14 +73,14 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(accessor =>
+				tx.Batch(accessor =>
 				{
 					accessor.Attachments.AddAttachment("1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 					accessor.Attachments.AddAttachment("2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 					accessor.Attachments.AddAttachment("3", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 				});
 
-				tx.BatchRead(viewer =>
+				tx.Batch(viewer =>
 				{
 					var attachments = viewer.Attachments.GetAttachmentsAfter(Etag.Empty, 100, long.MaxValue).ToArray();
 					var strings = viewer.Attachments.GetAttachmentsAfter(Etag.Empty, 100, long.MaxValue).Select(x => x.Key).ToArray();
@@ -100,18 +100,18 @@ namespace Raven.Tests.Storage
 			string dataDir = NewDataPath();
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.BatchRead(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
+				tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
 			}
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				Attachment attachment = null;
-				tx.BatchRead(viewer =>
+				tx.Batch(viewer =>
 				{
 					attachment = viewer.Attachments.GetAttachment("Ayende");
 				});
 
-				tx.BatchRead(_ =>
+				tx.Batch(_ =>
 				{
 					Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());					
 				});
@@ -124,13 +124,13 @@ namespace Raven.Tests.Storage
 			string dataDir = NewDataPath();
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.BatchRead(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
-				tx.BatchRead(accessor => accessor.Attachments.DeleteAttachment("Ayende", null));
+				tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
+				tx.Batch(accessor => accessor.Attachments.DeleteAttachment("Ayende", null));
 			}
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.BatchRead(viewer => Assert.Null(viewer.Attachments.GetAttachment("Ayende")));
+				tx.Batch(viewer => Assert.Null(viewer.Attachments.GetAttachment("Ayende")));
 			}
 		}
 	}

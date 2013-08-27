@@ -25,7 +25,7 @@ namespace Raven.Tests.Synchronization
 		public EtagSynchronizerTests()
 		{
 			storage = MockRepository.GenerateStub<ITransactionalStorage>();
-			storage.Stub(x => x.BatchRead(Arg<Action<IStorageActionsAccessor>>.Is.Anything)).WhenCalled(x => numberOfCalls++);
+			storage.Stub(x => x.Batch(Arg<Action<IStorageActionsAccessor>>.Is.Anything)).WhenCalled(x => numberOfCalls++);
 		}
 
 		[Fact]

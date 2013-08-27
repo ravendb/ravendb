@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
 					}
 
 					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
-					documentDatabase.TransactionalStorage.BatchRead(accessor =>
+					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
 						IndexStats indexStats = accessor.Indexing.GetIndexStats(indexName);
 						if (indexStats != null)
@@ -179,7 +179,7 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
-				documentDatabase.TransactionalStorage.BatchRead(accessor =>
+				documentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					accessor.Indexing.DeleteIndex(indexName);
 					accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
@@ -317,7 +317,7 @@ namespace Raven.Database.Indexing
 			var start = 0;
 			const int take = 100;
 
-			documentDatabase.TransactionalStorage.BatchRead(actions =>
+			documentDatabase.TransactionalStorage.Batch(actions =>
 			{
 				IList<ReduceTypePerKey> reduceKeysAndTypes;
 
@@ -362,7 +362,7 @@ namespace Raven.Database.Indexing
 		private void ResetLastIndexedEtagAccordingToRestoredCommitPoint(IndexDefinition indexDefinition,
 																		IndexCommitPoint lastCommitPoint)
 		{
-			documentDatabase.TransactionalStorage.BatchRead(
+			documentDatabase.TransactionalStorage.Batch(
 				accessor =>
 				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastCommitPoint.HighestCommitedETag,
 													lastCommitPoint.TimeStamp));
@@ -658,7 +658,7 @@ namespace Raven.Database.Indexing
 			Index ignored;
 			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
 
-			documentDatabase.TransactionalStorage.BatchRead(accessor =>
+			documentDatabase.TransactionalStorage.Batch(accessor =>
 				accessor.Lists.Remove("Raven/Indexes/QueryTime", name));
 
 			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk))
@@ -722,7 +722,7 @@ namespace Raven.Database.Indexing
 			if ((value.Priority.HasFlag(IndexingPriority.Idle) || value.Priority.HasFlag(IndexingPriority.Abandoned)) &&
 				value.Priority.HasFlag(IndexingPriority.Forced) == false)
 			{
-				documentDatabase.TransactionalStorage.BatchRead(accessor =>
+				documentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					value.Priority = IndexingPriority.Normal;
 					try
@@ -903,7 +903,7 @@ namespace Raven.Database.Indexing
 
 		private void UpdateLatestPersistedQueryTime()
 		{
-			documentDatabase.TransactionalStorage.BatchRead(accessor =>
+			documentDatabase.TransactionalStorage.Batch(accessor =>
 			{
 				var maxDate = latestPersistedQueryTime;
 				foreach (var index in indexes)
@@ -935,7 +935,7 @@ namespace Raven.Database.Indexing
 
 		private void SetUnusedIndexesToIdle()
 		{
-			documentDatabase.TransactionalStorage.BatchRead(accessor =>
+			documentDatabase.TransactionalStorage.Batch(accessor =>
 			{
 				var autoIndexesSortedByLastQueryTime =
 					(from index in indexes

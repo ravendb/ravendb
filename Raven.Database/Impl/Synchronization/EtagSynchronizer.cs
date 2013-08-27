@@ -94,7 +94,7 @@ namespace Raven.Database.Impl.Synchronization
 		{
 			using (transactionalStorage.DisableBatchNesting())
 			{
-				transactionalStorage.BatchRead(
+				transactionalStorage.Batch(
 					actions => actions.Lists.Set("Raven/Etag/Synchronization", type.ToString(), RavenJObject.FromObject(new
 					{
 						etag = GetEtagForPersistance()
@@ -104,7 +104,7 @@ namespace Raven.Database.Impl.Synchronization
 
 		private void LoadSynchronizationState()
 		{
-			transactionalStorage.BatchRead(actions =>
+			transactionalStorage.Batch(actions =>
 			{
 				var state = actions.Lists.Read("Raven/Etag/Synchronization", type.ToString());
 				if (state == null)

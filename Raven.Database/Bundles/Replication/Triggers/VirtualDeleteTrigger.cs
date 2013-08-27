@@ -69,7 +69,7 @@ namespace Raven.Bundles.Replication.Triggers
 			};
 			deletedHistory.Value = null;
 
-			Database.TransactionalStorage.BatchRead(accessor => 
+			Database.TransactionalStorage.Batch(accessor => 
 				accessor.Lists.Set(Constants.RavenReplicationDocsTombstones, key, metadata, UuidType.Documents));
 		}
 

@@ -44,7 +44,7 @@ namespace Raven.Bundles.Replication.Responders
 				}
 			}
 
-			Database.TransactionalStorage.BatchRead(accessor =>
+			Database.TransactionalStorage.Batch(accessor =>
 			{
 				if (docEtag != null)
 				{

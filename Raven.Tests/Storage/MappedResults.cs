@@ -18,9 +18,9 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.BatchRead(viewer => Assert.NotEmpty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100)));
+				tx.Batch(viewer => Assert.NotEmpty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100)));
 			}
 		}
 
@@ -29,13 +29,13 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
-				tx.BatchRead(mutator => mutator.MapReduce.DeleteMappedResultsForDocumentId("users/ayende","test", reduceKeyAndBuckets));
+				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForDocumentId("users/ayende","test", reduceKeyAndBuckets));
 
 				Assert.NotEmpty(reduceKeyAndBuckets);
 
-				tx.BatchRead(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100)));
+				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100)));
 			}
 		}
 
@@ -44,10 +44,10 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
-				tx.BatchRead(mutator => mutator.MapReduce.DeleteMappedResultsForView("test"));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForView("test"));
 
-				tx.BatchRead(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 0, 100)));
+				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 0, 100)));
 			}
 		}
 
@@ -56,10 +56,10 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
-				tx.BatchRead(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.BatchRead(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100).Count()));
 			}
 		}
 
@@ -68,13 +68,13 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.BatchRead(mutator =>
+				tx.Batch(mutator =>
 				{
 					mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new {Name = "Rahien"}));
 					mutator.MapReduce.PutMappedResult("test", "users/rahien", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }));
 				});
 
-				tx.BatchRead(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende",0, 100).Count()));
 			}
 		}
 	}
