@@ -127,8 +127,8 @@ namespace Raven.Database.Impl.DTC
 			timer.Dispose();
 			foreach (var context in transactionContexts)
 			{
-				using (context.Value.EnterSessionContext())
 				using (context.Value.Session)
+				using (context.Value.EnterSessionContext())
 				{
 					context.Value.Transaction.Dispose();
 				}
