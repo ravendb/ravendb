@@ -921,138 +921,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public class FieldProperties : NotifyPropertyChangedBase
-		{
-			private string name;
-			public string Name
-			{
-				get { return name; }
-				set
-				{
-					if (name != value)
-					{
-						name = value;
-						OnPropertyChanged(() => Name);
-					}
-				}
-			}
-
-			private FieldStorage storage;
-			public FieldStorage Storage
-			{
-				get { return storage; }
-				set
-				{
-					if (storage != value)
-					{
-						storage = value;
-						OnPropertyChanged(() => Storage);
-					}
-				}
-			}
-
-			private FieldIndexing indexing;
-			public FieldIndexing Indexing
-			{
-				get { return indexing; }
-				set
-				{
-					if (indexing != value)
-					{
-						indexing = value;
-						OnPropertyChanged(() => Indexing);
-					}
-				}
-			}
-
-			private FieldTermVector termVector;
-			public FieldTermVector TermVector
-			{
-				get { return termVector; }
-				set
-				{
-					if (termVector != value)
-					{
-						termVector = value;
-						OnPropertyChanged(() => TermVector);
-					}
-				}
-			}
-
-
-			private SortOptions sort;
-			public SortOptions Sort
-			{
-				get { return sort; }
-				set
-				{
-					if (sort != value)
-					{
-						sort = value;
-						OnPropertyChanged(() => Sort);
-					}
-				}
-			}
-
-			private string analyzer;
-			public string Analyzer
-			{
-				get { return analyzer; }
-				set
-				{
-					if (analyzer != value)
-					{
-						analyzer = value;
-						OnPropertyChanged(() => Analyzer);
-					}
-				}
-			}
-
-			public static FieldProperties Default
-			{
-				get
-				{
-					return new FieldProperties
-					{
-						Storage = FieldStorage.No,
-						Indexing = FieldIndexing.Default,
-						TermVector = FieldTermVector.No,
-						Sort = SortOptions.None,
-						Analyzer = string.Empty,
-						SuggestionAccuracy = 0.5f,
-						SuggestionDistance = StringDistanceTypes.None,
-					};
-				}
-			}
-
-			private float suggestionAccuracy;
-			public float SuggestionAccuracy
-			{
-				get { return suggestionAccuracy; }
-				set
-				{
-					if (suggestionAccuracy != value)
-					{
-						suggestionAccuracy = value;
-						OnPropertyChanged(() => suggestionAccuracy);
-					}
-				}
-			}
-
-			private StringDistanceTypes suggestionDistance;
-			public StringDistanceTypes SuggestionDistance
-			{
-				get { return suggestionDistance; }
-				set
-				{
-					if (suggestionDistance != value)
-					{
-						suggestionDistance = value;
-						OnPropertyChanged(() => suggestionDistance);
-					}
-				}
-			}
-		}
+		
 
 		public class SpatialFieldProperties : NotifyPropertyChangedBase
 		{
@@ -1453,4 +1322,137 @@ namespace Raven.Studio.Models
 
         public string DocumentId { get; set; }
     }
+
+	public class FieldProperties : NotifyPropertyChangedBase
+	{
+		private string name;
+		public string Name
+		{
+			get { return name; }
+			set
+			{
+				if (name != value)
+				{
+					name = value;
+					OnPropertyChanged(() => Name);
+				}
+			}
+		}
+
+		private FieldStorage storage;
+		public FieldStorage Storage
+		{
+			get { return storage; }
+			set
+			{
+				if (storage != value)
+				{
+					storage = value;
+					OnPropertyChanged(() => Storage);
+				}
+			}
+		}
+
+		private FieldIndexing indexing;
+		public FieldIndexing Indexing
+		{
+			get { return indexing; }
+			set
+			{
+				if (indexing != value)
+				{
+					indexing = value;
+					OnPropertyChanged(() => Indexing);
+				}
+			}
+		}
+
+		private FieldTermVector termVector;
+		public FieldTermVector TermVector
+		{
+			get { return termVector; }
+			set
+			{
+				if (termVector != value)
+				{
+					termVector = value;
+					OnPropertyChanged(() => TermVector);
+				}
+			}
+		}
+
+
+		private SortOptions sort;
+		public SortOptions Sort
+		{
+			get { return sort; }
+			set
+			{
+				if (sort != value)
+				{
+					sort = value;
+					OnPropertyChanged(() => Sort);
+				}
+			}
+		}
+
+		private string analyzer;
+		public string Analyzer
+		{
+			get { return analyzer; }
+			set
+			{
+				if (analyzer != value)
+				{
+					analyzer = value;
+					OnPropertyChanged(() => Analyzer);
+				}
+			}
+		}
+
+		public static FieldProperties Default
+		{
+			get
+			{
+				return new FieldProperties
+				{
+					Storage = FieldStorage.No,
+					Indexing = FieldIndexing.Default,
+					TermVector = FieldTermVector.No,
+					Sort = SortOptions.None,
+					Analyzer = string.Empty,
+					SuggestionAccuracy = 0.5f,
+					SuggestionDistance = StringDistanceTypes.None,
+				};
+			}
+		}
+
+		private float suggestionAccuracy;
+		public float SuggestionAccuracy
+		{
+			get { return suggestionAccuracy; }
+			set
+			{
+				if (suggestionAccuracy != value)
+				{
+					suggestionAccuracy = value;
+					OnPropertyChanged(() => suggestionAccuracy);
+				}
+			}
+		}
+
+		private StringDistanceTypes suggestionDistance;
+		public StringDistanceTypes SuggestionDistance
+		{
+			get { return suggestionDistance; }
+			set
+			{
+				if (suggestionDistance != value)
+				{
+					suggestionDistance = value;
+					OnPropertyChanged(() => suggestionDistance);
+				}
+			}
+		}
+	}
 }
