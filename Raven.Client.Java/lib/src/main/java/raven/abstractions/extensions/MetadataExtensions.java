@@ -1,15 +1,12 @@
 package raven.abstractions.extensions;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeSet;
-
-import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.data.Constants;
 import raven.abstractions.json.linq.RavenJArray;
