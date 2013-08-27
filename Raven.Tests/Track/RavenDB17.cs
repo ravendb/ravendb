@@ -29,8 +29,6 @@ namespace Raven.Tests.Track
 					scope.Complete();
 				}
 
-				Thread.Sleep(1000); // wait a bit here because a commit operation is done in async manner
-
 				// Session #2
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
