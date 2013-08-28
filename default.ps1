@@ -253,35 +253,7 @@ task RunAllTests -depends FullStorageTest,RunTests,StressTest
 
 task Release -depends RunTests,DoRelease
 
-task CopySamples {
-	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
 
-	Copy-Item "$base_dir\.nuget\" "$build_dir\Output\Samples\.nuget" -recurse -force
-	Copy-Item "$base_dir\CommonAssemblyInfo.cs" "$build_dir\Output\Samples\CommonAssemblyInfo.cs" -force
-	Copy-Item "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
-	Copy-Item $base_dir\Raven.VisualHost "$build_dir\Output\Samples\Raven.VisualHost" -recurse -force
-	
-	$samples =  Get-ChildItem $base_dir\Samples | Where-Object { $_.PsIsContainer }
-	$samples = $samples
-	foreach ($sample in $samples) {
-		Write-Output $sample
-		Copy-Item "$base_dir\Samples\$sample" "$build_dir\Output\Samples\$sample" -recurse -force
-		
-		Remove-Item "$sample_dir\bin" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\obj" -force -recurse -ErrorAction SilentlyContinue
-
-		Remove-Item "$sample_dir\Servers\Shard1\Data" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard2\Data" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard1\Plugins" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard2\Plugins" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard1\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue 
-	}
-	
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj" /p:OutDir="$buildartifacts_dir\" }
-	exec { &"$build_dir\Raven.Samples.PrepareForRelease.exe" "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
-}
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null
@@ -292,7 +264,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
-	New-Item $build_dir\Output\Samples -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 }
@@ -433,7 +404,6 @@ task ZipOutput {
 			$file `
 			EmbeddedClient\*.* `
 			Client\*.* `
-			Samples\*.* `
 			Smuggler\*.* `
 			Backup\*.* `
 			Web\*.* `
@@ -462,7 +432,6 @@ task DoRelease -depends Compile, `
 	CopyBundles, `
 	CopyServer, `
 	CopyRootFiles, `
-	CopySamples, `
 	ZipOutput, `
 	CopyInstaller, `
 	SignInstaller, `
