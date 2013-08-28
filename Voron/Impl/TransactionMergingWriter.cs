@@ -27,6 +27,8 @@
 
 		public async Task WriteAsync(WriteBatch batch)
 		{
+			if (batch.Operations.Count == 0)
+				return;
 			var mine = new OutstandingWrite(batch);
 			_pendingWrites.Enqueue(mine);
 
@@ -37,6 +39,9 @@
 
 		public void Write(WriteBatch batch)
 		{
+			if (batch.Operations.Count == 0)
+				return;
+
 			var mine = new OutstandingWrite(batch);
 			_pendingWrites.Enqueue(mine);
 
