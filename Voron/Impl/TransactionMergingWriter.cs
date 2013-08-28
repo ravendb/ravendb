@@ -10,7 +10,7 @@
 	using Extensions;
 	using Trees;
 
-	public class TreeWriter
+	public class TransactionMergingWriter
 	{
 		private readonly StorageEnvironment _env;
 
@@ -18,7 +18,7 @@
 
 		private readonly SemaphoreSlim _semaphore;
 
-		internal TreeWriter(StorageEnvironment env)
+		internal TransactionMergingWriter(StorageEnvironment env)
 		{
 			_env = env;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
@@ -30,10 +30,24 @@
 			var mine = new OutstandingWrite(batch);
 			_pendingWrites.Enqueue(mine);
 
-			List<OutstandingWrite> writes = null;
-
 			await _semaphore.WaitAsync();
 
+			HandleActualWrites(mine);
+		}
+
+		public void Write(WriteBatch batch)
+		{
+			var mine = new OutstandingWrite(batch);
+			_pendingWrites.Enqueue(mine);
+
+			_semaphore.Wait();
+
+			HandleActualWrites(mine);
+		}
+
+		private void HandleActualWrites(OutstandingWrite mine)
+		{
+			List<OutstandingWrite> writes = null;
 			try
 			{
 				if (mine.Done)
@@ -43,22 +57,21 @@
 
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					foreach (var g in writes.SelectMany(x => x.Batch.Operations).GroupBy(x=>x.TreeName))
+					foreach (var g in writes.SelectMany(x => x.Batch.Operations).GroupBy(x => x.TreeName))
 					{
 						var tree = GetTree(g.Key);
-					    foreach (var operation in g)
-					    {
-
-                            switch (operation.Type)
-                            {
-                                case WriteBatch.BatchOperationType.Add:
-                                    tree.Add(tx, operation.Key, operation.Value);
-                                    break;
-                                case WriteBatch.BatchOperationType.Delete:
-                                    tree.Delete(tx, operation.Key);
-                                    break;
-                            }
-					    }
+						foreach (var operation in g)
+						{
+							switch (operation.Type)
+							{
+								case WriteBatch.BatchOperationType.Add:
+									tree.Add(tx, operation.Key, operation.Value);
+									break;
+								case WriteBatch.BatchOperationType.Delete:
+									tree.Delete(tx, operation.Key);
+									break;
+							}
+						}
 					}
 
 					tx.Commit();
