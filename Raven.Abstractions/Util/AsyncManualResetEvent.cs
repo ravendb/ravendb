@@ -17,12 +17,7 @@ namespace Raven.Abstractions.Util
         public async Task<bool> WaitAsync(int timeout)
         {
             var task = tcs.Task;
-#if !NET45
-            return await TaskEx.WhenAny(task, TaskEx.Delay(timeout)) == task;
-
-#else
             return await Task.WhenAny(task, Task.Delay(timeout)) == task;
-#endif
         }
 
         public void Set() { tcs.TrySetResult(true); }
