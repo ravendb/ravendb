@@ -1,6 +1,7 @@
 package raven.client.linq;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,6 +14,8 @@ import com.mysema.query.types.ConstantImpl;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.Operation;
 import com.mysema.query.types.Ops;
+import com.mysema.query.types.Order;
+import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.PathImpl;
 import com.mysema.query.types.expr.BooleanExpression;
@@ -20,6 +23,7 @@ import com.mysema.query.types.expr.BooleanOperation;
 import com.mysema.query.types.expr.SimpleOperation;
 
 import raven.abstractions.closure.Action1;
+import raven.abstractions.data.Constants;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
@@ -61,6 +65,15 @@ public class RavenQueryProviderProcessor<T> {
 
   private boolean insideSelect;
   private final boolean isMapReduce;
+
+
+  static final Set<Class<?>> requireOrderByToUseRange = new HashSet<Class<?>>();
+  static {
+    requireOrderByToUseRange.add(int.class);
+    requireOrderByToUseRange.add(long.class);
+    requireOrderByToUseRange.add(float.class);
+    requireOrderByToUseRange.add(double.class);
+  }
 
   /**
    * Gets the current path in the case of expressions within collections
@@ -165,9 +178,39 @@ public class RavenQueryProviderProcessor<T> {
       }
       chanedWhere = true;
       insideWhere--;
+    } else if (operatorId.equals(LinqOps.Query.ORDER_BY.getId())) {
+      visitExpression(expression.getArg(0));
+      Expression< ? > orderSpecExpression = expression.getArg(1);
+      if (orderSpecExpression instanceof Constant) {
+        Object constant = ((Constant) orderSpecExpression).getConstant();
+        visitOrderBy((OrderSpecifier<?>[])constant);
+      } else {
+        throw new IllegalStateException("Constant expected in: " + expression);
+      }
+    } else {
+      throw new IllegalStateException("Unhandled expression: " + expression);
     }
     // TODO Auto-generated method stub
 
+  }
+
+  private void visitOrderBy(OrderSpecifier< ? >[] orderSpecs) {
+    for (OrderSpecifier<?> orderSpec : orderSpecs) {
+      ExpressionInfo result = getMemberDirect(orderSpec.getTarget());
+      Class<?> fieldType = result.getClazz();
+      String fieldName = result.getPath();
+
+      if (result.getMaybeProperty() != null && queryGenerator.getConventions().getFindIdentityProperty().apply(result.getMaybeProperty())) {
+        fieldName = Constants.DOCUMENT_ID_FIELD_NAME;
+        fieldType = String.class;
+      }
+
+      if (requireOrderByToUseRange.contains(fieldType)) {
+        fieldName += "_Range";
+      }
+      luceneQuery.addOrder(fieldName, orderSpec.getOrder() == Order.DESC, fieldType);
+
+    }
   }
 
   private void visitBooleanOperation(BooleanOperation expression) {

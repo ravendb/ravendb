@@ -19,7 +19,6 @@ import raven.client.IDocumentStore;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ServerClient;
 import raven.client.document.DocumentConvention;
-import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.LinqExpressionMixin;
 import raven.linq.dsl.LinqOps;
 
@@ -33,9 +32,9 @@ import com.mysema.query.types.Path;
 public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTransformers {
 
   protected DocumentConvention conventions;
-  protected IndexExpression map;
-  protected IndexExpression reduce;
-  protected IndexExpression transformResults;
+  protected String map;
+  protected String reduce;
+  protected String transformResults;
 
   protected Map<Path<?>, FieldStorage> stores;
   protected Map<String, FieldStorage> storesStrings;

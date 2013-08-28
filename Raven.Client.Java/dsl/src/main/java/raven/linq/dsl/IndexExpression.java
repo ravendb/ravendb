@@ -19,6 +19,7 @@ import raven.linq.dsl.expressions.AnonymousExpression;
  * Represents Index definition
  */
 //TODO: this is also used in transformers - consider different name!
+@Deprecated
 public class IndexExpression {
   public static IndexExpression from(Class<?> objectClass) {
     return new IndexExpression(LinqExpressionMixin.DOCS_ROOT_NAME + "." + Inflector.pluralize(objectClass.getSimpleName()));

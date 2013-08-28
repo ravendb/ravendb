@@ -8,6 +8,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Expression;
+import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
 
@@ -106,7 +107,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     Object execute = getProvider().execute(expression);
     List<T> list = ((IDocumentQuery<T>)execute).toList();
     if (list.size() != 1) {
-      throw new IllegalStateException("Expected single result!");
+      throw new IllegalStateException("Expected single result! Got: " + list.size());
     }
     return list.get(0);
   }
@@ -236,6 +237,11 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     this.clazz = (Class<T>) resultClass;
     this.provider = provider.forClass(resultClass);
     return (IRavenQueryable<S>) this;
+  }
+
+  @Override
+  public IRavenQueryable<T> orderBy(OrderSpecifier< ? >... asc) {
+    return getProvider().createQuery(Expressions.operation(expression.getType(), LinqOps.Query.ORDER_BY, expression, Expressions.constant(asc)));
   }
 
 

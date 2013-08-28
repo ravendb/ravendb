@@ -2,8 +2,6 @@ package raven.client.connection;
 
 import org.junit.Test;
 
-import com.mysema.query.alias.Alias;
-
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryResult;
@@ -11,9 +9,6 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
 import raven.client.indexes.IndexDefinitionBuilder;
-import raven.linq.dsl.IndexExpression;
-import raven.linq.dsl.expressions.AnonymousExpression;
-import static com.mysema.query.alias.Alias.*;
 import static org.junit.Assert.assertEquals;
 public class WhereEntityIsTest extends RavenDBAwareTests {
 
@@ -25,9 +20,7 @@ public class WhereEntityIsTest extends RavenDBAwareTests {
 
       IndexDefinitionBuilder definitionBuilder = new IndexDefinitionBuilder();
 
-      Animal a = Alias.alias(Animal.class, "i");
-
-      definitionBuilder.setMap(IndexExpression.whereEntityIs("Cats", "Dogs").select(new AnonymousExpression().with("Color", $(a.getColor()))));
+      definitionBuilder.setMap("docs.WhereEntityIs(new string[] { \"Cats\", \"Dogs\" }).Select(a => new { Color = a.Color})");
       dbCommands.putIndex("test", definitionBuilder.toIndexDefinition(convention));
 
       Cat cat = new Cat();

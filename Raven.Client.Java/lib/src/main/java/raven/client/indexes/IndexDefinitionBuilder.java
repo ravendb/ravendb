@@ -16,14 +16,13 @@ import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.indexing.SpatialOptions;
 import raven.abstractions.indexing.SuggestionOptions;
 import raven.client.document.DocumentConvention;
-import raven.linq.dsl.IndexExpression;
 
 
 public class IndexDefinitionBuilder {
 
-  private IndexExpression map;
-  private IndexExpression reduce;
-  private IndexExpression transformResults;
+  private String map;
+  private String reduce;
+  private String transformResults;
   private Map<Path<?>, FieldStorage> stores;
   private Map<String, FieldStorage> storesStrings;
 
@@ -75,10 +74,10 @@ public class IndexDefinitionBuilder {
   public Map<String, FieldIndexing> getIndexesStrings() {
     return indexesStrings;
   }
-  public IndexExpression getMap() {
+  public String getMap() {
     return map;
   }
-  public IndexExpression getReduce() {
+  public String getReduce() {
     return reduce;
   }
   public Map<Path< ? >, SortOptions> getSortOptions() {
@@ -106,7 +105,7 @@ public class IndexDefinitionBuilder {
     return termVectorsStrings;
   }
 
-  public IndexExpression getTransformResults() {
+  public String getTransformResults() {
     return transformResults;
   }
 
@@ -122,10 +121,10 @@ public class IndexDefinitionBuilder {
   public void setIndexesStrings(Map<String, FieldIndexing> indexesStrings) {
     this.indexesStrings = indexesStrings;
   }
-  public void setMap(IndexExpression map) {
+  public void setMap(String map) {
     this.map = map;
   }
-  public void setReduce(IndexExpression reduce) {
+  public void setReduce(String reduce) {
     this.reduce = reduce;
   }
   public void setSortOptions(Map<Path< ? >, SortOptions> sortOptions) {
@@ -155,7 +154,7 @@ public class IndexDefinitionBuilder {
     this.termVectorsStrings = termVectorsStrings;
   }
 
-  public void setTransformResults(IndexExpression transformResults) {
+  public void setTransformResults(String transformResults) {
     this.transformResults = transformResults;
   }
 
@@ -175,10 +174,10 @@ public class IndexDefinitionBuilder {
 
     IndexDefinition indexDefinition = new IndexDefinition();
     if (reduce != null) {
-      indexDefinition.setReduce(reduce.toLinq());
+      indexDefinition.setReduce(reduce);
     }
     if (transformResults != null) {
-      indexDefinition.setTransformResults(transformResults.toLinq());
+      indexDefinition.setTransformResults(transformResults);
     }
     indexDefinition.setIndexes(convertToStringDictionary(indexes));
     indexDefinition.setStores(convertToStringDictionary(stores));
@@ -220,7 +219,7 @@ public class IndexDefinitionBuilder {
     }
 
     if (map != null) {
-      indexDefinition.setMap(map.toLinq());
+      indexDefinition.setMap(map);
     }
 
     return indexDefinition;

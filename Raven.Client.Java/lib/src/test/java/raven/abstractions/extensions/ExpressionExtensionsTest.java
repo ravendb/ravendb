@@ -11,9 +11,9 @@ public class ExpressionExtensionsTest {
   @Test
   public void testToPropertyPath() {
     QDeveloper developer = QDeveloper.developer;
-    assertEquals("nick", ExpressionExtensions.toPropertyPath(developer.nick, '_'));
-    assertEquals("mainSkill_name", ExpressionExtensions.toPropertyPath(developer.mainSkill().name, '_'));
-    assertEquals("skills_,name", ExpressionExtensions.toPropertyPath(developer.skills.get(0).name, '_'));
+    assertEquals("Nick", ExpressionExtensions.toPropertyPath(developer.nick, '_'));
+    assertEquals("MainSkill_Name", ExpressionExtensions.toPropertyPath(developer.mainSkill().name, '_'));
+    assertEquals("Skills_,Name", ExpressionExtensions.toPropertyPath(developer.skills.get(0).name, '_'));
   }
 
 }

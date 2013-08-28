@@ -1,6 +1,7 @@
 package raven.client.linq;
 
 import java.beans.PropertyDescriptor;
+import java.lang.reflect.Field;
 
 /**
  * This class represents a node in an expression, usually a member - but in the case of dynamic queries the path to a member
@@ -9,7 +10,7 @@ public class ExpressionInfo {
   private String path;
   private Class<?> clazz;
   private boolean nestedPath;
-  private PropertyDescriptor maybeProperty;
+  private Field maybeProperty;
   public String getPath() {
     return path;
   }
@@ -28,10 +29,10 @@ public class ExpressionInfo {
   public void setNestedPath(boolean nestedPath) {
     this.nestedPath = nestedPath;
   }
-  public PropertyDescriptor getMaybeProperty() {
+  public Field getMaybeProperty() {
     return maybeProperty;
   }
-  public void setMaybeProperty(PropertyDescriptor maybeProperty) {
+  public void setMaybeProperty(Field maybeProperty) {
     this.maybeProperty = maybeProperty;
   }
 

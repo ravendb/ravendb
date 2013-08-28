@@ -1,29 +1,30 @@
 package raven.client.linq;
 
-import java.beans.PropertyDescriptor;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 
+import raven.abstractions.basic.Reference;
+import raven.client.document.DocumentConvention;
+
+import com.mysema.query.types.Constant;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.Ops;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.PathType;
-import com.mysema.query.types.expr.NumberExpression;
 import com.mysema.query.types.expr.NumberOperation;
 import com.mysema.query.types.path.MapPath;
-
-import raven.abstractions.basic.Reference;
-import raven.client.document.DocumentConvention;
 
 public class LinqPathProvider {
   public static class Result {
     private Class<?> memberType;
     private String path;
     private boolean isNestedPath;
-    private PropertyDescriptor maybeProperty;
-    public PropertyDescriptor getMaybeProperty() {
+    private Field maybeProperty;
+
+    public Field getMaybeProperty() {
       return maybeProperty;
     }
     public Class< ? > getMemberType() {
@@ -35,7 +36,7 @@ public class LinqPathProvider {
     public boolean isNestedPath() {
       return isNestedPath;
     }
-    public void setMaybeProperty(PropertyDescriptor maybeProperty) {
+    public void setMaybeProperty(Field maybeProperty) {
       this.maybeProperty = maybeProperty;
     }
     public void setMemberType(Class< ? > memberType) {
@@ -108,7 +109,8 @@ public class LinqPathProvider {
         assertNoComputation(memberExpression);
 
         Result newResult = new Result();
-        newResult.setPath(memberExpression.toString());
+
+        newResult.setPath(extractPath(memberExpression));
         newResult.setNestedPath(memberExpression.getMetadata().getParent().getMetadata().getPathType().equals(PathType.PROPERTY));
         newResult.setMemberType(memberExpression.getType());
         //TODO:newResult.setMaybeProperty(memberExpression.get) do we need it?
@@ -119,6 +121,16 @@ public class LinqPathProvider {
 
     }
     throw new IllegalArgumentException("Don't know how to translate: " + expression);
+  }
+
+  private String extractPath(Path<?> expression) {
+    List<String> items = new ArrayList<>();
+
+    while (expression != null) {
+      items.add(0, StringUtils.capitalize(expression.getMetadata().getName()));
+      expression = expression.getMetadata().getParent();
+    }
+    return StringUtils.join(items, ".");
   }
 
   public static String handlePropertyRenames(Path<?> member, String name) {
@@ -136,6 +148,9 @@ public class LinqPathProvider {
       return new IllegalArgumentException("Value is missing");
     }
     // TODO Auto-generated method stub
+    if (object instanceof Constant<?>) {
+      return ((Constant<?>)object).getConstant();
+    }
 
     return object;
   }

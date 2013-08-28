@@ -2,6 +2,9 @@ package raven.tests.document;
 
 import java.util.List;
 
+import com.mysema.query.annotations.QueryEntity;
+
+@QueryEntity
 public class Company {
   private double accountsReceivable;
   private String id;

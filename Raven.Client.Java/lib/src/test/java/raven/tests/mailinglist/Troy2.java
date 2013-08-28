@@ -132,17 +132,8 @@ public class Troy2 extends RemoteClientTest {
     public TesterSearch() {
 
       QTroy2_TesterSearch_SearchResult s = QTroy2_TesterSearch_SearchResult.searchResult;
-      QTroy2_Tester t = new QTroy2_Tester("testClass");
 
-      map = IndexExpression.from(Tester.class)
-          .select(
-              new AnonymousExpression()
-              .withTemplate(s.query, "new object[] { testClass.FirstName, testClass.LastName, testClass.Email }")
-              .with(t.firstName)
-              .with(t.lastName)
-              .with(t.email)
-              .with(t.password)
-              );
+      map = "docs.Testers.Select(x => new { Query = new object[] { x.FirstName, x.LastName, x.Email }, x.FirstName, x.LastName, x.Email, x.Password })";
 
       index(s.query, FieldIndexing.ANALYZED);
       index(s.fistName, FieldIndexing.DEFAULT);

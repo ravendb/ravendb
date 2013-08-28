@@ -3,8 +3,10 @@ package raven.client.linq;
 import java.util.List;
 
 import raven.abstractions.basic.Lazy;
+import raven.client.IDocumentQuery;
 
 import com.mysema.query.types.Expression;
+import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Predicate;
 
 //TODO: insert linq expressions  + RavenQueryableExtensions + LinqExntesions
@@ -15,6 +17,13 @@ public interface IOrderedQueryable<T> {
    * @return
    */
   public IRavenQueryable<T> where(Predicate predicate);
+
+  /**
+   * Changes order of result elements
+   * @param asc
+   * @return
+   */
+  public IRavenQueryable<T> orderBy(OrderSpecifier<?>... asc);
 
   //TODO: finish me
 

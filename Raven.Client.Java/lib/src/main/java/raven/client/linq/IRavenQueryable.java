@@ -49,4 +49,5 @@ public interface IRavenQueryable<T> extends IOrderedQueryable<T> {
   IRavenQueryable<T> addQueryInput(String name, RavenJToken value);
 
   IRavenQueryable<T> spatial(Path<?> path, Function1<SpatialCriteriaFactory, SpatialCriteria> clause);
+
 }

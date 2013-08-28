@@ -39,18 +39,9 @@ import raven.abstractions.json.linq.RavenJValue;
 import raven.client.RavenDBAwareTests;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.indexes.IndexDefinitionBuilder;
-import raven.linq.dsl.Grouping;
-import raven.linq.dsl.IndexExpression;
-import raven.linq.dsl.expressions.AnonymousExpression;
 import raven.samples.Developer;
-import raven.samples.QDeveloper;
 import raven.samples.entities.Company;
 import raven.samples.entities.Employee;
-import raven.samples.entities.QCompany;
-import raven.samples.entities.QEmployee;
-import raven.samples.entities.QGroupResult;
-
-import com.mysema.query.types.path.StringPath;
 
 public class IndexAndQueryTest extends RavenDBAwareTests {
 
@@ -75,13 +66,8 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
       insertSampleCompaniesEmployees(dbCommands);
 
-      QCompany c = new QCompany("c");
-
       IndexDefinition indexDefinition = new IndexDefinition();
-      indexDefinition.setMap(
-          IndexExpression.from(Company.class)
-          .select(new AnonymousExpression().with(c.name)).toLinq()
-          );
+      indexDefinition.setMap("from c in docs.Companies select new { Name = c.Name}");
       dbCommands.putIndex("companiesIndex", indexDefinition);
       waitForNonStaleIndexes(dbCommands);
 
@@ -116,14 +102,9 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
         // ok
       }
 
-      QCompany c = new QCompany("c");
 
       IndexDefinition indexDefinition = new IndexDefinition();
-      indexDefinition.setMap(
-          IndexExpression.from(Company.class)
-          .where(c.name.startsWith("T").or(c.name.startsWith("C")))
-          .select(new AnonymousExpression().with(c.name, c.name)).toLinq()
-          );
+      indexDefinition.setMap("from c in docs.Companies where c.Name.StartsWith(\"T\") || c.Name.StartsWith(\"C\") select new {Name = c.Name}");
 
       String indexName = "companies/startsWithTorC";
 
@@ -219,20 +200,12 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
   private static class CompaniesMapReduce extends AbstractIndexCreationTask {
     public CompaniesMapReduce() {
-      QCompany c = QCompany.company;
-      QEmployee e = QEmployee.employee;
-      QGroupResult pr = new QGroupResult("gr");
-      Grouping<StringPath> group = Grouping.create(StringPath.class);
-
-      map = IndexExpression
-          .from(Company.class)
-          .selectMany(c.employees, e)
-          .select(new AnonymousExpression().with(pr.name, e.name).with(pr.count, 1));
-      reduce = IndexExpression
-          .from("results")
-          .groupBy(pr.name)
-          .select(new AnonymousExpression().with(pr.name, group.key).with(pr.count, group.sum(pr.count)));
-
+      map = "from c in docs.Companies " +
+      		"from e in c.Employees " +
+      		"select new { Name = e.Name, Count = 1}";
+      reduce = "from result in results " +
+      		"group result by result.Name into g " +
+      		"select new { Name = g.Key, Count = g.Sum(x => x.Count) }";
     }
   }
 
@@ -534,14 +507,8 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       dbCommands.put("developers/1", null, RavenJObject.fromObject(d1), meta1);
       dbCommands.put("developers/2", null, RavenJObject.fromObject(d2), meta2);
 
-      QDeveloper d = QDeveloper.developer;
-
       IndexDefinitionBuilder builder = new IndexDefinitionBuilder();
-      IndexExpression indexExpression = IndexExpression
-          .from(Developer.class)
-          .where(d.nick.startsWith("m"))
-          .select(new AnonymousExpression().with(d.nick, d.nick));
-      builder.setMap(indexExpression);
+      builder.setMap("from d in docs.Developers where d.Nick.StartsWith(\"m\") select new { Nick = d.Nick}");
 
       dbCommands.putIndex("devStartWithM", builder.toIndexDefinition(convention));
 
