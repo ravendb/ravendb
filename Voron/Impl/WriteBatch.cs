@@ -5,7 +5,7 @@
 	using System.IO;
 	using System.Linq;
 
-	public class WriteBatch
+	public class WriteBatch : IDisposable
 	{
 		private readonly List<BatchOperation> _operations;
 
@@ -72,6 +72,17 @@
 		{
 			Add,
 			Delete
+		}
+
+		public void Dispose()
+		{
+			foreach (var operation in _operations)
+			{
+				using (operation.Value)
+				{
+					
+				}
+			}
 		}
 	}
 }

@@ -6,7 +6,7 @@ using Voron.Impl;
 namespace Voron.Trees
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct NodeHeader
+	public struct  NodeHeader
 	{
 		[FieldOffset(0)]
 		public int DataSize;

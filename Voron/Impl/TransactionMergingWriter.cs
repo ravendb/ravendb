@@ -1,4 +1,6 @@
-﻿namespace Voron.Impl
+﻿using System;
+
+namespace Voron.Impl
 {
 	using System.Collections.Concurrent;
 	using System.Collections.Generic;
@@ -29,12 +31,16 @@
 		{
 			if (batch.Operations.Count == 0)
 				return;
-			var mine = new OutstandingWrite(batch);
-			_pendingWrites.Enqueue(mine);
 
-			await _semaphore.WaitAsync();
+			using (batch)
+			{
+				var mine = new OutstandingWrite(batch);
+				_pendingWrites.Enqueue(mine);
 
-			HandleActualWrites(mine);
+				await _semaphore.WaitAsync();
+
+				HandleActualWrites(mine);
+			}
 		}
 
 		public void Write(WriteBatch batch)
@@ -42,12 +48,15 @@
 			if (batch.Operations.Count == 0)
 				return;
 
-			var mine = new OutstandingWrite(batch);
-			_pendingWrites.Enqueue(mine);
+			using (batch)
+			{
+				var mine = new OutstandingWrite(batch);
+				_pendingWrites.Enqueue(mine);
 
-			_semaphore.Wait();
-
-			HandleActualWrites(mine);
+				_semaphore.Wait();
+			
+				HandleActualWrites(mine);
+			}
 		}
 
 		private void HandleActualWrites(OutstandingWrite mine)
