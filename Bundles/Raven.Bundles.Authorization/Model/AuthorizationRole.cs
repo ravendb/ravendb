@@ -16,5 +16,24 @@ namespace Raven.Bundles.Authorization.Model
 		{
 			Permissions = new List<OperationPermission>();
 		}
+
+		public bool DeepEquals(AuthorizationRole other)
+		{
+			if(other == null)
+				return false;
+
+			if (Permissions.Count != other.Permissions.Count)
+				return false;
+
+			for (int i = 0; i < Permissions.Count; i++)
+			{
+				if (Permissions[i].DeepEquals(other.Permissions[i]) == false)
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
 	}
 }

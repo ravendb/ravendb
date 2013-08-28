@@ -167,7 +167,7 @@ namespace Raven.Database.Indexing
 					else
 					{
 						resetTried = true;
-						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, orcibly resetting index", e);
+						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, forcibly resetting index", e);
 						TryResettingIndex(indexName, indexDefinition);
 					}
 				}
@@ -368,16 +368,21 @@ namespace Raven.Database.Indexing
 													lastCommitPoint.TimeStamp));
 		}
 
+		public static string IndexVersionFileName(IndexDefinition indexDefinition)
+		{
+			if (indexDefinition.IsMapReduce)
+				return "mapReduce.version";
+			return "index.version";
+		}
+
 		public static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			var indexVersion = "index.version";
 			var version = IndexVersion;
 			if(indexDefinition.IsMapReduce)
 			{
-				indexVersion = "mapReduce.version";
 				version = MapReduceIndexVersion;
 			}
-			using (var indexOutput = directory.CreateOutput(indexVersion))
+			using (var indexOutput = directory.CreateOutput(IndexVersionFileName(indexDefinition)))
 			{
 				indexOutput.WriteString(version);
 				indexOutput.Flush();
@@ -386,13 +391,12 @@ namespace Raven.Database.Indexing
 
 		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			var indexVersion = "index.version";
 			var versionToCheck = IndexVersion;
 			if(indexDefinition.IsMapReduce)
 			{
-				indexVersion = "mapReduce.version";
 				versionToCheck = MapReduceIndexVersion;
 			}
+			var indexVersion = IndexVersionFileName(indexDefinition);
 			if (directory.FileExists(indexVersion) == false)
 			{
 				throw new InvalidOperationException("Could not find " + indexVersion + " " + indexName + ", resetting index");
@@ -936,6 +940,7 @@ namespace Raven.Database.Indexing
 				var autoIndexesSortedByLastQueryTime =
 					(from index in indexes
 					 let stats = accessor.Indexing.GetIndexStats(index.Key)
+					 where stats != null
 					 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
 					 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
 					 orderby lastQueryTime

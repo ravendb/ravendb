@@ -252,7 +252,10 @@ namespace Raven.Database.Queries
                                         FacetValue existing;
                                         if (facetValues.TryGetValue(term.Text, out existing) == false)
                                         {
-                                            existing = new FacetValue { Range = term.Text };
+                                            existing = new FacetValue
+                                            {
+                                                Range = GetRangeName(term)
+                                            };
                                             facetValues[term.Text] = existing;
                                         }
                                         ApplyFacetValueHit(existing, facet, doc, null);
@@ -282,6 +285,31 @@ namespace Raven.Database.Queries
 
                     CompleteFacetCalculationsStage1(currentState);
                     CompleteFacetCalculationsStage2();
+                }
+            }
+
+            private string GetRangeName(Term term)
+            {
+                var sortOptions = GetSortOptionsForFacet(term.Field);
+                switch (sortOptions)
+                {
+                    case SortOptions.String:
+                    case SortOptions.None:
+                    case SortOptions.Custom:
+                    case SortOptions.StringVal:
+                        return term.Text;
+                    case SortOptions.Int:
+                        return NumericUtils.PrefixCodedToInt(term.Text).ToString(CultureInfo.InvariantCulture);
+                    case SortOptions.Long:
+                        return NumericUtils.PrefixCodedToLong(term.Text).ToString(CultureInfo.InvariantCulture);
+                    case SortOptions.Double:
+                        return NumericUtils.PrefixCodedToDouble(term.Text).ToString(CultureInfo.InvariantCulture);
+                    case SortOptions.Float:
+                        return NumericUtils.PrefixCodedToFloat(term.Text).ToString(CultureInfo.InvariantCulture);
+                    case SortOptions.Byte:
+                    case SortOptions.Short:
+                    default:
+                        throw new ArgumentException("Can't get range name from sort option" + sortOptions);
                 }
             }
 
@@ -333,8 +361,8 @@ namespace Raven.Database.Queries
                         if (match.Value.Docs.Contains(docId) == false)
                             continue;
                         var facet = match.Value.Facet;
-						if(term.Field != facet.AggregationField)
-							continue;
+                        if (term.Field != facet.AggregationField)
+                            continue;
                         switch (facet.Mode)
                         {
                             case FacetMode.Default:
@@ -428,7 +456,7 @@ namespace Raven.Database.Queries
             private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange)
             {
                 facetValue.Hits++;
-                if (value.Aggregation == FacetAggregation.Count  || value.Aggregation == FacetAggregation.None)
+                if (value.Aggregation == FacetAggregation.Count || value.Aggregation == FacetAggregation.None)
                 {
                     return;
                 }

@@ -253,6 +253,15 @@ namespace Raven.Abstractions.Data
 			}
 #endif
 		}
+
+		public static Etag Max(Etag first, Etag second)
+		{
+			if (first == null)
+				return second;
+			return first.CompareTo(second) > 0
+				? first
+				: second;
+		}
 	}
 
 	public class EtagJsonConverter : JsonConverter

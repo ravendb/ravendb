@@ -120,14 +120,14 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
 			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
 			// this
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, start, pageSize);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, start, pageSize);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
 
@@ -566,7 +566,7 @@ namespace Raven.Client.Embedded
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
 		{
 			if(fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -579,19 +579,26 @@ namespace Raven.Client.Embedded
 				// the cache for that, to avoid filling it up very quickly
 				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
-					if (string.IsNullOrEmpty(startsWith))
+					try
 					{
-						database.GetDocuments(start, pageSize, fromEtag,
-											  items.Add);
+						if (string.IsNullOrEmpty(startsWith))
+						{
+							database.GetDocuments(start, pageSize, fromEtag,
+							                      items.Add);
+						}
+						else
+						{
+							database.GetDocumentsWithIdStartingWith(
+								startsWith,
+								matches,
+                                exclude,
+								start,
+								pageSize,
+								items.Add);
+						}
 					}
-					else
+					catch (ObjectDisposedException)
 					{
-						database.GetDocumentsWithIdStartingWith(
-							startsWith,
-							matches,
-							start,
-							pageSize,
-							items.Add);
 					}
 				}
 			});
@@ -1112,6 +1119,15 @@ namespace Raven.Client.Embedded
 				nextIdentityValue = accessor.General.GetNextIdentityValue(name);
 			});
 			return nextIdentityValue;
+		}
+
+		/// <summary>
+		/// Seeds the next identity value on the server
+		/// </summary>
+		public long SeedIdentityFor(string name, long value)
+		{
+			database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(name, value));
+			return value;
 		}
 
 		/// <summary>

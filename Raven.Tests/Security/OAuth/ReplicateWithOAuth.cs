@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
@@ -15,8 +14,6 @@ namespace Raven.Tests.Security.OAuth
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 
-		
-
 		protected override void ConfigureStore(DocumentStore store)
 		{
 			store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
@@ -24,7 +21,7 @@ namespace Raven.Tests.Security.OAuth
 			store.ApiKey = apiKey;
 		}
 
-		protected override void ConfigureDatbase(Database.DocumentDatabase database)
+		protected override void ConfigureDatabase(Database.DocumentDatabase database)
 		{
 			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{

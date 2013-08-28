@@ -354,7 +354,18 @@ more responsive application.
 		/// <returns></returns>
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
-			return (T)TrackEntity(typeof(T), key, document, metadata, noTracking);
+			var entity = TrackEntity(typeof (T), key, document, metadata, noTracking);
+			try
+			{
+				return (T) entity;
+			}
+			catch (InvalidCastException e)
+			{
+				var actual = typeof (T).Name;
+				var expected = entity.GetType().Name;
+				var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. If you want to return a projection, you should use .AsProjection<{1}>() before calling to .ToList().", expected, actual);
+				throw new InvalidOperationException(message, e);
+			}
 		}
 
 		/// <summary>
@@ -450,6 +461,7 @@ more responsive application.
 			var defaultValue = GetDefaultValue(entityType);
 			var entity = defaultValue;
 			EnsureNotReadVetoed(metadata);
+
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
@@ -457,6 +469,7 @@ more responsive application.
 				if (type != null)
 					entity = documentFound.Deserialize(type, Conventions);
 			}
+
 			if (Equals(entity, defaultValue))
 			{
 				entity = documentFound.Deserialize(entityType, Conventions);
@@ -712,11 +725,11 @@ more responsive application.
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
-				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
-					return id;
-
+				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
+					return CompletedTask.With(id);
+				
 				var key = await GenerateKeyAsync(entity);
-				// If we generated a new id, store it back into the Id field so the client has access to to it                    
+							// If we generated a new id, store it back into the Id field so the client has access to to it                    
 				if (key != null)
 					GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
 				return key;
@@ -766,7 +779,7 @@ more responsive application.
 
 			var result = await generator;
 			if (result != null && result.StartsWith("/"))
-				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
+					throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 
 			return result;
 		}
@@ -811,7 +824,7 @@ more responsive application.
 		protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
 		{
 #if !SILVERLIGHT && !NETFX_CORE
-			if (documentStore.HasJsonRequestFactory && Conventions.ShouldAggressiveCacheTrackChanges &&  batchResults.Count != 0)
+			if (documentStore.HasJsonRequestFactory && Conventions.ShouldSaveChangesForceAggressiveCacheCheck &&  batchResults.Count != 0)
 			{
 				documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName ?? Constants.SystemDatabase);
 			}
@@ -970,6 +983,8 @@ more responsive application.
 		/// Mark the entity as read only, change tracking won't apply 
 		/// to such an entity. This can be done as an optimization step, so 
 		/// we don't need to check the entity for changes.
+		/// This flag is persisted in the document metadata and subsequent modifications of the document will not be possible.
+		/// If you want the session to ignore this entity, consider using the Evict() method.
 		/// </summary>
 		public void MarkReadOnly(object entity)
 		{
@@ -1031,6 +1046,7 @@ more responsive application.
 			entitiesAndMetadata.Clear();
 			deletedEntities.Clear();
 			entitiesByKey.Clear();
+			knownMissingIds.Clear();
 		}
 
 		private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
@@ -1169,9 +1185,13 @@ more responsive application.
 					IncludesUtil.Include(result, include, id =>
 					{
 						if (id == null)
-							return;
+					        return false;
 						if (IsLoaded(id) == false)
+						{
 							RegisterMissing(id);
+						    return false;
+						}
+					    return true;
 					});
 				}
 			}
@@ -1186,5 +1206,37 @@ more responsive application.
 		{
 			return ReferenceEquals(obj, this);
 		}
+
+	    internal void HandleInternalMetadata(RavenJObject result)
+	    {
+	        // Implant a property with "id" value ... if not exists
+	        var metadata = result.Value<RavenJObject>("@metadata");
+	        if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
+	        {
+	            // if the item has metadata, then nested items will not have it, so we can skip recursing down
+	            foreach (var nested in result.Select(property => property.Value))
+	            {
+	                var jObject = nested as RavenJObject;
+	                if (jObject != null)
+	                    HandleInternalMetadata(jObject);
+	                var jArray = nested as RavenJArray;
+	                if (jArray == null)
+	                    continue;
+	                foreach (var item in jArray.OfType<RavenJObject>())
+	                {
+	                    HandleInternalMetadata(item);
+	                }
+	            }
+	            return;
+	        }
+
+	        var entityName = metadata.Value<string>(Constants.RavenEntityName);
+
+	        var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
+	        if (result.ContainsKey(idPropName))
+	            return;
+
+	        result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
+	    }
 	}
 }

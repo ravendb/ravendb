@@ -15,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Smuggler;
 using Raven.Studio.Infrastructure;
@@ -197,6 +198,11 @@ namespace Raven.Studio.Features.Tasks
 				{
 					throw new NotSupportedException();
 				} }
+		}
+
+		public override void OnError()
+		{
+
 		}
     }
 }

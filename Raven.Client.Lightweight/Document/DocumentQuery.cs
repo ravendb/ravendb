@@ -64,9 +64,9 @@ namespace Raven.Client.Document
 			return SelectFields<TProjection>(fields, projections);
 		}
 
-	    public IDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 	    {
-	        this.resultsTransformer = resultsTransformer;
+	        base.SetResultTransformer(resultsTransformer);
 	        return this;
 	    }
 
@@ -757,7 +757,7 @@ namespace Raven.Client.Document
 			for (int index = 0; index < orderByfields.Length; index++)
 			{
 				var fld = orderByfields[index];
-				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].Type));
+				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
 			}
 			return this;
 		}
@@ -782,8 +782,14 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
-			return this;
+            var orderByfields = propertySelectors.Select(expression => MakeFieldSortDescending(GetMemberQueryPathForOrderBy(expression))).ToArray();
+            OrderBy(orderByfields);
+            for (int index = 0; index < orderByfields.Length; index++)
+            {
+                var fld = orderByfields[index];
+                sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+            }
+            return this;
 		}
 
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(

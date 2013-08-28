@@ -77,9 +77,11 @@ namespace Raven.Client.Document
 			operation.Dispose();
 		}
 
-		public void Store(object entity)
+		public string Store(object entity)
 		{
-			Store(entity, GetId(entity));
+			var id = GetId(entity);
+			Store(entity, id);
+			return id;
 		}
 
 		public void Store(object entity, string id)

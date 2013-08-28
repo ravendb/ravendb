@@ -174,6 +174,11 @@ namespace Raven.Client.Document
 		/// What aggregated operation to execute
 		/// </summary>
 		protected AggregationOperation aggregationOp;
+
+		public AggregationOperation AggregationOperation
+		{
+			get { return aggregationOp; }
+		}
 		/// <summary>
 		/// Fields to group on
 		/// </summary>
@@ -319,7 +324,7 @@ namespace Raven.Client.Document
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
 
-			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}
@@ -1463,7 +1468,7 @@ If you really want to do in memory filtering on the data returned from the query
 			OrderBy(fields);
 		}
 
-		string MakeFieldSortDescending(string field)
+		protected string MakeFieldSortDescending(string field)
 		{
 			if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
 			{
@@ -1694,15 +1699,15 @@ If you really want to do in memory filtering on the data returned from the query
 				var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
 
 				if (queryOperation.IsAcceptable(result) == false)
-				{
+					{
 #if SILVERLIGHT
 					await TaskEx.Delay(100);
 #else
 					await Task.Delay(100);
 #endif
 					return await ExecuteActualQueryAsync();
-				}
-				InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+						}
+						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
 				return queryOperation;
 			}
 		}
@@ -2087,5 +2092,10 @@ If you really want to do in memory filtering on the data returned from the query
 				: conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
 			return propertyName;
 		}
+
+        public void SetResultTransformer(string resultsTransformer)
+	    {
+            this.resultsTransformer = resultsTransformer;
+	    }
 	}
 }

@@ -200,7 +200,7 @@ namespace Raven.Database.Indexing
 		private void SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
 												List<object> itemsToDelete)
 		{
-			var needToMoveToSingleStep = new HashSet<string>();
+			var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
 
 			Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
 			var batchTimeWatcher = Stopwatch.StartNew();
@@ -209,6 +209,8 @@ namespace Raven.Database.Indexing
 			var state = new ConcurrentQueue<Tuple<HashSet<string>, List<MappedResultInfo>>>();
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 			{
+				var localNeedToMoveToSingleStep = new HashSet<string>();
+				needToMoveToSingleStepQueue.Enqueue(localNeedToMoveToSingleStep);
 				var localKeys = new HashSet<string>();
 				while (enumerator.MoveNext())
 				{
@@ -248,7 +250,7 @@ namespace Raven.Database.Indexing
 						var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, reduceKey);
 
 						if (lastPerformedReduceType != ReduceType.SingleStep)
-							needToMoveToSingleStep.Add(reduceKey);
+							localNeedToMoveToSingleStep.Add(reduceKey);
 
 						if (lastPerformedReduceType != ReduceType.MultiStep)
 							continue;
@@ -297,6 +299,13 @@ namespace Raven.Database.Indexing
 				);
 
 			autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
+
+			var needToMoveToSingleStep = new HashSet<string>();
+			HashSet<string> set;
+			while (needToMoveToSingleStepQueue.TryDequeue(out set))
+			{
+				needToMoveToSingleStep.UnionWith(set);
+			}
 
 			foreach (var reduceKey in needToMoveToSingleStep)
 			{
@@ -352,5 +361,25 @@ namespace Raven.Database.Indexing
 			var indexDefinition = context.IndexDefinitionStorage.GetIndexDefinition(indexesStat.Name);
 			return indexDefinition != null && indexDefinition.IsMapReduce;
 		}
+
+        protected override System.Collections.Concurrent.ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
+        {
+            get
+            {
+                return context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
+            }
+            set
+            {
+                context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex = value;
+            }
+        }
+
+        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
+        {
+            get
+            {
+                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
+            }
+        }
 	}
 }

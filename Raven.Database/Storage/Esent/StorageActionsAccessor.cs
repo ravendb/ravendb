@@ -95,6 +95,7 @@ namespace Raven.Storage.Esent
 				case JET_err.WriteConflict:
 				case JET_err.SessionWriteConflict:
 				case JET_err.WriteConflictPrimaryIndex:
+				case JET_err.KeyDuplicate:
 					return true;
 				default:
 					return false;

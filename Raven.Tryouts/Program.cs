@@ -1,13 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Orders;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Client;
+using Raven.Tests.Track;
 
 namespace Raven.Tryouts
 {
@@ -15,32 +8,15 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			using (var store = new DocumentStore
+			for (int i = 0; i < 100; i++)
 			{
-				DefaultDatabase = "nw",
-				Url = "http://localhost:8080"
-			}.Initialize())
-			{
-				var company = "companies/1";
-				using (var session = store.OpenSession())
+				Console.WriteLine(i);
+				using (var x = new RavenDB17())
 				{
-					var result = session.Query<OrderTotalResult>("Orders/Totals")
-					       .Where(x => x.Company == company)
-					       .AggregateBy(x => x.Employee,"Sales By Employee")
-					       .SumOn(x => x.Total)
-					       .ToList();
-
-					foreach (var facetResult in result.Results)
-					{
-						Console.WriteLine(facetResult.Key);
-						foreach (var singleResult in facetResult.Value.Values)
-						{
-							Console.WriteLine("\t{0}: {1}", singleResult.Range, singleResult.Sum);
-						}
-					}
-
+					x.CacheRespectInFlightTransaction();
 				}
 			}
+			
 		}
 	}
 

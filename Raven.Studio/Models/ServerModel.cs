@@ -72,6 +72,7 @@ namespace Raven.Studio.Models
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
 			IsConnected = new Observable<bool> { Value = true };
+			UserInfo = new UserInfo();
 			Initialize();
 		}
 

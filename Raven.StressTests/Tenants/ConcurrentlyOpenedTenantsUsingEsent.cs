@@ -3,8 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
 using Raven.Json.Linq;
@@ -25,13 +23,12 @@ namespace Raven.StressTests.Tenants
 		public void CanConcurrentlyPutDocsToDifferentTenants()
 		{
 			const int count = 50;
-			using (GetNewServer())
-			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				for (int i = 1; i <= count; i++)
 				{
 					var tenantName = "Tenant-" + i;
-					documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName);
+					store.DatabaseCommands.EnsureDatabaseExists(tenantName);
 				}
 
 				for (int j = 0; j < 50; j++)
@@ -39,7 +36,7 @@ namespace Raven.StressTests.Tenants
 					for (int i = 1; i <= count; i++)
 					{
 						var tenantName = "Tenant-" + i;
-						var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
+						var databaseCommands = store.DatabaseCommands.ForDatabase(tenantName);
 						databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject());
 					}
 				}

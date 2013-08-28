@@ -119,8 +119,9 @@ namespace Raven.Studio.Features.Tasks
             }
             catch (Exception ex)
             {
+				Outcome = DatabaseTaskOutcome.Error;
+	            OnError();
                 ReportError(ex);
-                Outcome = DatabaseTaskOutcome.Error;
             }
             finally
             {
@@ -157,6 +158,8 @@ namespace Raven.Studio.Features.Tasks
             });
         }
 
+	    public abstract void OnError();
+
         private void ReportError(Exception exception)
         {
             var aggregate = exception as AggregateException;
@@ -173,7 +176,14 @@ namespace Raven.Studio.Features.Tasks
                     var stream = httpWebResponse.GetResponseStream();
                     if (stream != null)
                     {
-                        objects = ApplicationModel.ExtractError(stream, httpWebResponse);
+	                    try
+	                    {
+							objects = ApplicationModel.ExtractError(stream, httpWebResponse);
+	                    }
+	                    catch (Exception)
+	                    {
+
+	                    }
                     }
                 }
             }

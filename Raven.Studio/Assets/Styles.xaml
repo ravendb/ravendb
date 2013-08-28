@@ -12,7 +12,9 @@
 					xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
 					xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
                     xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
-                    xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d">
+                    xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                    xmlns:wrapPanel="clr-namespace:Raven.Studio.Infrastructure.WrapPanel"
+                    mc:Ignorable="d">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -897,8 +899,10 @@
   <!-- LayoutRoot Grid Style -->
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
-		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
-		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+	  
+	  <!--This is in comment because it couses the text editor in the patch page to put the marker int the wrong page, this could cause some text to appear as bold-->
+		<!--<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>-->
 	</Style>
 
   <!-- Content Border Style -->
@@ -1460,7 +1464,27 @@
 		<Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_Index}"/>
 	</Style>
 
-	<Style x:Key="Style_ListBoxItem_HeaderOptions" TargetType="ListBoxItem">
+    <Style x:Name="Style_ListBox_IndexGroup"
+		   TargetType="ListBox">
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Auto" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="BorderThickness"
+				Value="0" />
+        <Setter Property="Background"
+				Value="Transparent" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_Index}"/>
+    </Style>
+    
+    <Style x:Key="Style_ListBoxItem_HeaderOptions" TargetType="ListBoxItem">
 		<Setter Property="HorizontalContentAlignment" Value="Left" />
 		<Setter Property="VerticalContentAlignment" Value="Top" />
 		<Setter Property="Background">

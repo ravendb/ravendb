@@ -44,12 +44,12 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				case TransitiveReplicationOptions.None:
 					var value = metadata.Value<string>(Constants.RavenReplicationSource);
-					var replicateDoc = value == null || (value == CurrentDatabaseId);
-					if (replicateDoc)
+			        if (value != null &&  (value != CurrentDatabaseId))
 					{
 						log.Debug("Will not replicate document '{0}' to '{1}' because it was not created on the current server, and TransitiveReplicationOptions = none", key, destinationId);
+					    return false;
 					}
-					return replicateDoc;
+			        break;
 			}
 			log.Debug("Will replicate '{0}' to '{1}'", key, destinationId);
 			return true;

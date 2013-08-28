@@ -7,8 +7,14 @@ namespace Raven.Studio.Models
     {
         public string SectionName { get; protected set; }
 
+		public bool HasUnsavedChanges { get; set; }
+
         public virtual void LoadFor(DatabaseDocument document)
         {
         }
+
+	    public virtual void CheckForChanges()
+	    {		    
+	    }
     }
 }

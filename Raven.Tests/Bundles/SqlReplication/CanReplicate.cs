@@ -132,6 +132,61 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
+		[FactIfSqlServerIsAvailable]
+		public void ReplicateMultipleBatches()
+		{
+			CreateRdbmsSchema();
+			using (var store = NewDocumentStore())
+			{
+				var eventSlim = new ManualResetEventSlim(false);
+
+				int testCount = 5000;
+				int numberOfLoops = 0;
+				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+					.First().AfterReplicationCompleted += successCount =>
+					{
+						numberOfLoops++;
+
+						if (numberOfLoops == 4)
+							eventSlim.Set();
+					};
+
+				using (var session = store.BulkInsert())
+				{
+					for (int i = 0; i < testCount; i++)
+					{
+						session.Store(new Order
+						              {
+							              OrderLines = new List<OrderLine>
+							                           {
+								                           new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
+								                           new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+							                           }
+
+						              });
+					}
+				}
+
+				SetupSqlReplication(store, defaultScript);
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				var providerFactory =
+					DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+				using (var con = providerFactory.CreateConnection())
+				{
+					con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+					con.Open();
+
+					using (var dbCommand = con.CreateCommand())
+					{
+						dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+						Assert.Equal(testCount, dbCommand.ExecuteScalar());
+					}
+				}
+			}
+		}
+
 		protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
 		{
 

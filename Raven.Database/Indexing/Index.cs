@@ -470,7 +470,10 @@ namespace Raven.Database.Indexing
 		private void CreateIndexWriter()
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate);
+		    IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
+		                                                          ? new IndexReaderWarmersWrapper(name, context.IndexReaderWarmers)
+		                                                          : null;
+			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
 		}
 
 		private void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
@@ -690,6 +693,14 @@ namespace Raven.Database.Indexing
 					currentlyIndexDocuments.Add(CloneDocument(luceneDoc));
 
 				currentIndexWriter.AddDocument(luceneDoc, newAnalyzer);
+
+				foreach (var fieldable in luceneDoc.GetFields())
+				{
+					using (fieldable.ReaderValue) // dispose all the readers
+					{
+						
+					}
+				}
 			}
 			finally
 			{
@@ -1392,7 +1403,7 @@ namespace Raven.Database.Indexing
 						{
 							// however, we copy the current segments.gen & index.version to make 
 							// sure that we get the _at the time_ of the write. 
-							foreach (var fileName in new[] { "segments.gen", "index.version" })
+							foreach (var fileName in new[] { "segments.gen", IndexStorage.IndexVersionFileName(indexDefinition)})
 							{
 								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
 								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));

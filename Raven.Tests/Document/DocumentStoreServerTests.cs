@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Transactions;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -13,44 +15,22 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Database.Server;
 using Raven.Json.Linq;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using Raven.Server;
 using Raven.Tests.Indexes;
-using Xunit;
-using System.Linq;
 using Raven.Tests.Spatial;
+using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Document
 {
-	using System.Collections.Generic;
-
-	public class DocumentStoreServerTests : RemoteClientTest, IDisposable
+	public class DocumentStoreServerTests : RemoteClientTest
 	{
-		private readonly string path;
-		private readonly int port;
-		private readonly RavenDbServer server;
 		private readonly IDocumentStore documentStore;
 
 		public DocumentStoreServerTests()
 		{
-			port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-
-			server = GetNewServer(port, path);
-			documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
-		}
-
-		public override void Dispose()
-		{
-			documentStore.Dispose();
-			server.Dispose();
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
+			documentStore = NewRemoteDocumentStore();
 		}
 
 		[Fact]
@@ -112,12 +92,12 @@ namespace Raven.Tests.Document
 				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray(); // wait for the index to settle down
 			}
 
-			documentStore
-				.DatabaseCommands
-				.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
-				                                              {
-					                                              Query = "Tag:[[Companies]]"
-				                                              }, allowStale: false).WaitForCompletion();
+			var operation = documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+			{
+				Query = "Tag:[[Companies]]"
+			}, allowStale: false);
+
+			operation.WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -958,9 +938,11 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		[Fact]
-		public void Can_query_from_spatial_index()
+		[Theory]
+		[CriticalCultures]
+		public void Can_query_from_spatial_index(CultureInfo cultureInfo)
 		{
+			using(new TemporaryCulture(cultureInfo))
 			using (var session = documentStore.OpenSession())
 			{
 				foreach (Event @event in SpatialIndexTestHelper.GetEvents())
@@ -1351,7 +1333,10 @@ namespace Raven.Tests.Document
 						Value = "New",
 					}
 				},
-				new RavenJObject());
+				new RavenJObject
+				{
+					{ "DefaultMetadataPresent", "true" }
+				});
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -1359,6 +1344,11 @@ namespace Raven.Tests.Document
 
 				Assert.NotNull(company);
 				Assert.Equal(company.Name, "New");
+
+				var metadata = session.Advanced.GetMetadataFor(company);
+
+				Assert.NotNull(metadata);
+				Assert.Equal(metadata["DefaultMetadataPresent"], "true");
 			}
 		}
 

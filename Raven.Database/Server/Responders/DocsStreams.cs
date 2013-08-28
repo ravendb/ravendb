@@ -46,13 +46,14 @@ namespace Raven.Database.Server.Responders
 							if (string.IsNullOrEmpty(startsWith))
 							{
 								Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(),
-													  doc => doc.WriteTo(writer));
+								                      doc => doc.WriteTo(writer));
 							}
 							else
 							{
 								Database.GetDocumentsWithIdStartingWith(
 									startsWith,
 									context.Request.QueryString["matches"],
+                                    context.Request.QueryString["exclude"],
 									context.GetStart(),
 									pageSize,
 									doc => doc.WriteTo(writer));

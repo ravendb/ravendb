@@ -293,6 +293,7 @@ namespace Jint {
 		public JintEngine SetMaxSteps(int maxSteps)
 		{
 			MaxSteps = maxSteps;
+            Visitor.MaxSteps = this.MaxSteps;
 			return this;
 		}
 

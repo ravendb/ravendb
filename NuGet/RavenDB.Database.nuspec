@@ -13,12 +13,22 @@
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database</tags>
 		<dependencies>
-			<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version=""/>
-			<dependency id="System.Spatial" version="5.2"/>
-			<dependency id="WindowsAzure.Storage" version="2.0"/>
-			<dependency id="Microsoft.Data.Edm" version="5.2" />
-		  	<dependency id="Microsoft.Data.OData" version="5.2" />
-		  	<dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="1.8" />
+			<group>
+				<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version=""/>
+				<dependency id="System.Spatial" version="5.2"/>
+				<dependency id="WindowsAzure.Storage" version="2.0"/>
+				<dependency id="Microsoft.Data.Edm" version="5.2" />
+				<dependency id="Microsoft.Data.OData" version="5.2" />
+				<dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="1.8" />
+			</group>
+			
+			<group targetFramework="net45">
+				<dependency id="System.Spatial" version="5.2"/>
+				<dependency id="WindowsAzure.Storage" version="2.0"/>
+				<dependency id="Microsoft.Data.Edm" version="5.2" />
+				<dependency id="Microsoft.Data.OData" version="5.2" />
+				<dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="1.8" />
+			</group>
 		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
@@ -26,9 +36,7 @@
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
 		<references>
 			<reference file="Raven.Abstractions.dll" />
-			<reference file="Raven.Abstractions-4.5.dll" />
 			<reference file="Raven.Database.dll" />
-			<reference file="Raven.Database-4.5.dll" />
 		</references>
 	</metadata>
 </package>

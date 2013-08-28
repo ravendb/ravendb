@@ -36,7 +36,8 @@ namespace Raven.Database.Linq
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
 		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )",
-			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+		                                                           RegexOptions.Compiled |
+		                                                           RegexOptions.IgnorePatternWhitespace);
 		private IndexDefinition indexDefinition;
 
 		public string SourceCode { get; set; }
@@ -53,7 +54,10 @@ namespace Raven.Database.Linq
 			}
 		}
 
-		public int CountOfFields { get { return fields.Count; } }
+		public int CountOfFields
+		{
+			get { return fields.Count; }
+		}
 
 		public List<IndexingFunc> MapDefinitions { get; private set; }
 
@@ -69,7 +73,7 @@ namespace Raven.Database.Linq
 
 		public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
-		public IDictionary<string, FieldTermVector> TermVectors { get; set; } 
+		public IDictionary<string, FieldTermVector> TermVectors { get; set; }
 
 		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
 
@@ -108,16 +112,41 @@ namespace Raven.Database.Linq
 			indexDefinition = definition;
 		}
 
-		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool analyzed = true)
+		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
 		{
-			return new AnonymousObjectToLuceneDocumentConverter(indexDefinition, this)
-				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
+			Field.Index? index;
+			switch (analyzed)
+			{
+				default: // null
+					index = null;
+					break;
+				case true:
+					index = Field.Index.ANALYZED_NO_NORMS;
+					break;
+				case false:
+					index = Field.Index.NOT_ANALYZED_NO_NORMS;
+					break;
+			}
+			return new AnonymousObjectToLuceneDocumentConverter(null,indexDefinition, this)
+				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO, false, Field.TermVector.NO, index);
+		}
+
+		protected dynamic LoadAttachmentForIndexing(object item)
+		{
+			if (item == null || item is DynamicNullObject)
+				return new DynamicNullObject();
+
+			var key = item as string;
+			if (key == null)
+				throw new InvalidOperationException("Attachment id should be string, but was " + item + ": " + item.GetType().Name);
+			return new AttachmentForIndexing(key);
 		}
 
 		protected dynamic LoadDocument(object item)
 		{
 			if (CurrentIndexingScope.Current == null)
-				throw new InvalidOperationException("LoadDocument may only be called from the map portion of the index. Was called with: " + item);
+				throw new InvalidOperationException(
+					"LoadDocument may only be called from the map portion of the index. Was called with: " + item);
 
 			if (item == null || item is DynamicNullObject)
 				return new DynamicNullObject();
@@ -193,9 +222,9 @@ namespace Raven.Database.Linq
 
 		private ConcurrentDictionary<string, SpatialField> SpatialFields { get; set; }
 
-		public IEnumerable<IFieldable> SpatialClustering(string fieldName, double? lat, double? lng, 
-			int minPrecision = 3,
-			int maxPrecision = 8)
+		public IEnumerable<IFieldable> SpatialClustering(string fieldName, double? lat, double? lng,
+		                                                 int minPrecision = 3,
+		                                                 int maxPrecision = 8)
 		{
 			if (string.IsNullOrEmpty(fieldName))
 				throw new ArgumentNullException("fieldName");
@@ -222,7 +251,7 @@ namespace Raven.Database.Linq
 
 			if (lng == null || double.IsNaN(lng.Value))
 				return Enumerable.Empty<IFieldable>();
-			if(lat == null || double.IsNaN(lat.Value))
+			if (lat == null || double.IsNaN(lat.Value))
 				return Enumerable.Empty<IFieldable>();
 
 			Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
@@ -230,21 +259,24 @@ namespace Raven.Database.Linq
 		}
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, string shapeWKT,
-			SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree,
-			int maxTreeLevel = 0, double distanceErrorPct = 0.025)
+		                                               SpatialSearchStrategy spatialSearchStrategy =
+			                                               SpatialSearchStrategy.GeohashPrefixTree,
+		                                               int maxTreeLevel = 0, double distanceErrorPct = 0.025)
 		{
 			var spatialField = GetSpatialField(fieldName, spatialSearchStrategy, maxTreeLevel);
 			return spatialField.CreateIndexableFields(shapeWKT);
 		}
 
 		[CLSCompliant(false)]
-		public SpatialField GetSpatialField(string fieldName, SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree, int maxTreeLevel = 0)
+		public SpatialField GetSpatialField(string fieldName,
+		                                    SpatialSearchStrategy spatialSearchStrategy =
+			                                    SpatialSearchStrategy.GeohashPrefixTree, int maxTreeLevel = 0)
 		{
 			return SpatialFields.GetOrAdd(fieldName, s =>
 			{
 				if (SpatialFields.Count > 1024)
 					throw new InvalidOperationException("The number of spatial fields in an index is limited to 1,024");
-				
+
 				SpatialOptions opt;
 				indexDefinition.SpatialIndexes.TryGetValue(fieldName, out opt);
 

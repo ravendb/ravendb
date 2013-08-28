@@ -159,8 +159,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
 		{
+			if (itemsToDelete == null)
+				return null;
+			
 			var hasResult = false;
 			var result = new ScheduledReductionInfo();
+			
 			var currentEtagBinary = Guid.Empty.ToByteArray();
 			foreach (OptimizedDeleter reader in itemsToDelete)
 			{
@@ -168,13 +172,13 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
 					var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
-														tableColumnsCache.ScheduledReductionColumns["etag"]);
+					                                    tableColumnsCache.ScheduledReductionColumns["etag"]);
 					if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
 					{
 						hasResult = true;
 						var timestamp =
 							Api.RetrieveColumnAsInt64(session, ScheduledReductions,
-														 tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
+							                          tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
 						result.Etag = Etag.Parse(etagBinary);
 						result.Timestamp = DateTime.FromBinary(timestamp);
 					}

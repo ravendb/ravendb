@@ -14,7 +14,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Util;
 using Raven.Json.Linq;
@@ -53,9 +52,9 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25, string exclude = null)
 		{
-			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize)
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize, exclude: exclude)
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
 		}
 
@@ -88,8 +87,19 @@ namespace Raven.Client.Document.Async
 			return new QueryYieldStream<T>(this, enumerator, queryOperation);
 		}
 
-		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-								   int pageSize = Int32.MaxValue)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
+																	 int pageSize = Int32.MaxValue)
+		{
+			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize);
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
+																	 int pageSize = Int32.MaxValue)
+		{
+			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
+		}
+
+		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
 		{
 			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize);
 			return new DocsYieldStream<T>(this, enumerator);
@@ -179,6 +189,20 @@ namespace Raven.Client.Document.Async
 				};
 			}
 		}
+
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var index = new TIndexCreator();
+
+			return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
+		}
+
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
@@ -329,6 +353,9 @@ namespace Raven.Client.Document.Async
 				return AsyncDatabaseCommands.GetAsync(id)
 											.ContinueWith(task =>
 											{
+												if (task.IsFaulted)
+													task.Wait(); // will throw.
+
 												if (loadOperation.SetResult(task.Result) == false)
 													return Task.Factory.StartNew(() => loadOperation.Complete<T>());
 
@@ -345,7 +372,7 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task<T[]> LoadAsync<T>(params string[] ids)
 		{
-			return LoadAsyncInternal<T>(ids, new KeyValuePair<string, Type>[0]);
+			return LoadAsync<T>(ids.AsEnumerable());
 		}
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
@@ -356,38 +383,90 @@ namespace Raven.Client.Document.Async
 		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
-			var result = await LoadAsyncInternal<T>(new[] { id }, new KeyValuePair<string, Type>[0], transformer.TransformerName);
+			var result = await LoadAsyncInternal<T>(new[] { id }, null, transformer.TransformerName);
 			return result.FirstOrDefault();
 		}
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			var transformer = new TTransformer();
-			var ravenLoadConfiguration = new RavenLoadConfiguration();
-			configure(ravenLoadConfiguration);
-			var result = await LoadAsyncInternal<T>(new[] { id }, new KeyValuePair<string, Type>[0], transformer.TransformerName, ravenLoadConfiguration.QueryInputs);
+			var result = await LoadAsync<TTransformer, T>(new[] { id }.AsEnumerable(), configure);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);
-			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), new KeyValuePair<string, Type>[0], transformer.TransformerName, ravenLoadConfiguration.QueryInputs);
+			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer.TransformerName, ravenLoadConfiguration.QueryInputs);
 			return result;
 		}
 
 		public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
-			return LoadAsyncInternal<T>(ids, new KeyValuePair<string, Type>[0], transformer.TransformerName);
+			return LoadAsyncInternal<T>(ids, null, transformer.TransformerName);
+		}
+
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			IncrementRequestCount();
+
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+
+			if (typeof(T).IsArray)
+			{
+				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
+				// With a single Id
+				var arrayOfArrays = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs))
+											.Results
+											.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+											.Select(values =>
+											{
+												var array = values.Select(y =>
+												{
+													HandleInternalMetadata(y);
+													return ConvertToEntity<T>(null, y, new RavenJObject());
+												}).ToArray();
+												var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
+												Array.Copy(array, newArray, array.Length);
+												return newArray;
+											})
+											.Cast<T>()
+											.ToArray();
+
+				return arrayOfArrays;
+			}
+
+			var items = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs))
+				.Results
+				.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+				.Select(JsonExtensions.ToJObject)
+				.Select(x =>
+				{
+					this.HandleInternalMetadata(x);
+					return this.ConvertToEntity<T>(null, x, new RavenJObject());
+				})
+				.Cast<T>()
+				.ToArray();
+
+			if (items.Length > ids.Length)
+			{
+				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
+					transformer,
+					typeof(T).Name));
+			}
+
+			return items;
 		}
 
 		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transfomer = null, Dictionary<string, RavenJToken> queryInputs = null)
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			IncrementRequestCount();
 			var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
@@ -400,7 +479,7 @@ namespace Raven.Client.Document.Async
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-					result = await AsyncDatabaseCommands.GetAsync(ids, includePaths, transfomer, queryInputs);
+					result = await AsyncDatabaseCommands.GetAsync(ids, includePaths);
 				}
 			} while (multiLoadOperation.SetResult(result));
 			return multiLoadOperation.Complete<T>();

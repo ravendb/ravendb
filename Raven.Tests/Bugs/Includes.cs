@@ -6,8 +6,6 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Server;
 using Raven.Tests.Bugs.TransformResults;
 using Xunit;
 
@@ -16,16 +14,10 @@ namespace Raven.Tests.Bugs
 	public class Includes : RemoteClientTest
 	{
 		private readonly IDocumentStore store;
-		private readonly RavenDbServer server;
 
 		public Includes()
 		{
-			server = GetNewServer(8079, GetPath(DataDir));
-
-			store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize();
+			store = NewRemoteDocumentStore();
 
 			store.DatabaseCommands.PutIndex("Orders/ByName",
 											new IndexDefinition
@@ -247,14 +239,6 @@ namespace Raven.Tests.Bugs
 
 				Assert.Equal(1, session.Advanced.NumberOfRequests);
 			}
-		}
-
-		public override void Dispose()
-		{
-			store.Dispose();
-			server.Dispose();
-			ClearDatabaseDirectory();
-			base.Dispose();
 		}
 
 		public class Order

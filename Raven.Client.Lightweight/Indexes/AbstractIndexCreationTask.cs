@@ -265,7 +265,9 @@ namespace Raven.Client.Indexes
 				AnalyzersStrings = AnalyzersStrings,
 				Map = Map,
 				Reduce = Reduce,
+#pragma warning disable 612,618
 				TransformResults = TransformResults,
+#pragma warning restore 612,618
 				Stores = Stores,
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
@@ -341,6 +343,14 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 #endif
+
+		/// <summary>
+		/// Loads the specifed document during the indexing process
+		/// </summary>
+		public object LoadAttachmentForIndexing(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
 
 		/// <summary>
 		/// Loads the specifed document during the indexing process

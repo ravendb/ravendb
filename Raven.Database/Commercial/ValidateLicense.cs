@@ -177,10 +177,46 @@ namespace Raven.Database.Commercial
 		{
 			string version;
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+			{
+				if (licenseValidator.LicenseType != LicenseType.Subscription)
+					throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
 
-			if(version != "1.2" && version != "2.0")
-				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+				// Add backward compatibility for the subscription licenses of v1
+				licenseAttributes["version"]= "2.5";
+				licenseAttributes["implicit20StandardLicenseBy10Subscription"]= "true";
+				licenseAttributes["allowWindowsClustering"]= "false";
+				licenseAttributes["numberOfDatabases"]= "unlimited";
+				licenseAttributes["periodicBackup"]= "true";
+				licenseAttributes["encryption"]= "false";
+				licenseAttributes["compression"]= "false";
+				licenseAttributes["quotas"]= "false";
+				licenseAttributes["authorization"]= "true";
+				licenseAttributes["documentExpiration"]= "true";
+				licenseAttributes["replication"]= "true";
+				licenseAttributes["versioning"]= "true";
+				licenseAttributes["maxSizeInMb"]= "unlimited";
+
+				string oem;
+				if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out oem) &&
+				    "true".Equals(oem ,StringComparison.OrdinalIgnoreCase))
+				{
+					licenseAttributes["OEM"]= "true";
+					licenseAttributes["maxRamUtilization"]= "6442450944";
+					licenseAttributes["maxParallelism"]= "3";
+
+				}
+				else
+				{
+					licenseAttributes["OEM"]= "false";
+					licenseAttributes["maxRamUtilization"]= "12884901888";
+					licenseAttributes["maxParallelism"]= "6";
+				}                     
+			}
+			else
+			{
+				if (version != "1.2" && version != "2.0" && version != "2.5")
+					throw new LicenseExpiredException("This is not a license for RavenDB 2.x");
+			}
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))

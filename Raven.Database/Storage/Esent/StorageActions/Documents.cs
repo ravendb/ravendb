@@ -350,41 +350,50 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 
-
 				DateTime savedAt;
-				using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+				try
 				{
-					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-					using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+					using (var update = new Update(session, Documents, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 					{
-						if (isUpdate)
-							columnStream.SetLength(0); // empty the existing value, since we are going to overwrite the entire thing
-						using (Stream stream = new BufferedStream(columnStream))
-						using (
-							var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current))
-							)
+						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+						using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
 						{
-							data.WriteTo(finalStream);
-							finalStream.Flush();
+							if (isUpdate)
+								columnStream.SetLength(0); // empty the existing value, since we are going to overwrite the entire thing
+							using (Stream stream = new BufferedStream(columnStream))
+							using (
+								var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current))
+								)
+							{
+								data.WriteTo(finalStream);
+								finalStream.Flush();
+							}
 						}
-					}
-					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
-								  newEtag.TransformToValueForEsentSorting());
-					savedAt = SystemTime.UtcNow;
-					Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
+									  newEtag.TransformToValueForEsentSorting());
+						savedAt = SystemTime.UtcNow;
+						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-					using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
-					{
-						if (isUpdate)
-							columnStream.SetLength(0);
-						using (Stream stream = new BufferedStream(columnStream))
+						using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
 						{
-							metadata.WriteTo(stream);
-							stream.Flush();
+							if (isUpdate)
+								columnStream.SetLength(0);
+							using (Stream stream = new BufferedStream(columnStream))
+							{
+								metadata.WriteTo(stream);
+								stream.Flush();
+							}
 						}
-					}
 
-					update.Save();
+
+						update.Save();
+					}
+				}
+				catch (EsentErrorException e)
+				{
+					if (e.Error == JET_err.KeyDuplicate || e.Error == JET_err.WriteConflict)
+						throw new ConcurrencyException("PUT attempted on document '" + key + "' concurrently", e);
+					throw;
 				}
 
 				logger.Debug("Inserted a new document with key '{0}', update: {1}, ",

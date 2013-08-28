@@ -29,7 +29,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AutoThrottleBatchSize(int amountOfItemsToIndex, int size, TimeSpan indexingDuration)
+		public void AutoThrottleBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
 			try
 			{
@@ -46,7 +46,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, int size, TimeSpan indexingDuration)
+		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
 			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
 			{

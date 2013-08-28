@@ -557,6 +557,11 @@ namespace Raven.Client.Changes
 					}
 
 					break;
+                case "Disconnect":
+                    if (connection != null)
+                        connection.Dispose();
+                    RenewConnection();
+                    break;
 				case "Initialized":
 				case "Heartbeat":
 					break;
@@ -569,7 +574,14 @@ namespace Raven.Client.Changes
 		{
 			logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
 
-			EstablishConnection()
+            RenewConnection();
+        }
+
+        private void RenewConnection()
+        {
+            Time.Delay(TimeSpan.FromSeconds(15))
+               .ContinueWith(_ => EstablishConnection())
+               .Unwrap()
 				.ObserveException()
 				.ContinueWith(task =>
 								{

@@ -40,8 +40,10 @@ namespace Raven.Tests.Issues
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new User() { Name = "Test" });
-					session.Store(new User() { Name = "Test" });
+					for (int i = 0; i < 1000; i++)
+					{
+						session.Store(new User() { Name = "Test" });
+					}
 					session.SaveChanges();
 				}
 

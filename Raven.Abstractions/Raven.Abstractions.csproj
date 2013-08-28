@@ -215,7 +215,6 @@
     <Compile Include="Json\Linq\RavenJValue.cs" />
     <Compile Include="Json\RavenJsonConverter.cs" />
     <Compile Include="Json\RavenJsonTextReader.cs" />
-    <Compile Include="Json\Utilities\MathUtils.cs" />
     <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Json\Utilities\StringUtils.cs" />
     <Compile Include="Linq\DynamicList.cs" />
@@ -269,6 +268,7 @@
     <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
+    <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />

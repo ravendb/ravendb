@@ -38,8 +38,14 @@ namespace Raven.Client.Document
 				var genericTypeDefinition = entityType.GetGenericTypeDefinition();
 				var sb = new StringBuilder(genericTypeDefinition.FullName);
 				sb.Append("[");
+				bool first = true;
 				foreach (var genericArgument in entityType.GetGenericArguments())
 				{
+					if (first == false)
+					{
+						sb.Append(", ");
+					}
+					first = false;
 					sb.Append("[")
 						.Append(GetFullNameWithoutVersionInformation(genericArgument))
 						.Append("]");

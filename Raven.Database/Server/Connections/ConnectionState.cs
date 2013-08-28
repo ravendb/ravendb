@@ -21,8 +21,6 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingBulkInserts =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-        private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
-
         private EventsTransport eventsTransport;
 
         private int watchAllDocuments;
@@ -47,7 +45,6 @@ namespace Raven.Database.Server.Connections
                     WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
                     WatchIndexes = matchingIndexes.ToArray(),
                     WatchDocuments = matchingDocuments.ToArray(),
-                    PendingMessages = pendingMessages.Count
                 };
             }
         }
@@ -149,17 +146,10 @@ namespace Raven.Database.Server.Connections
         {
             if (eventsTransport == null || eventsTransport.Connected == false)
             {
-                pendingMessages.Enqueue(msg);
                 return;
             }
 
-            eventsTransport.SendAsync(msg)
-                .ContinueWith(task =>
-                {
-                    if (task.IsFaulted == false)
-                        return;
-                    pendingMessages.Enqueue(msg);
-                });
+            eventsTransport.SendAsync(msg);
         }
 
         public void WatchAllDocuments()
@@ -205,29 +195,12 @@ namespace Raven.Database.Server.Connections
         public void Reconnect(EventsTransport transport)
         {
             eventsTransport = transport;
-            var items = new List<object>();
-            object result;
-            while (pendingMessages.TryDequeue(out result))
-            {
-                items.Add(result);
-            }
-
-            eventsTransport.SendManyAsync(items)
-                .ContinueWith(task =>
-                {
-                    if (task.IsFaulted == false)
-                        return;
-                    foreach (var item in items)
-                    {
-                        pendingMessages.Enqueue(item);
-                    }
-                });
         }
 
-        public void Disconnect()
+        public void Dispose()
         {
             if (eventsTransport != null)
-                eventsTransport.Disconnect();
+                eventsTransport.Dispose();
         }
     }
 }

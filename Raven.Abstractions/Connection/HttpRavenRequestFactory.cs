@@ -52,16 +52,19 @@ namespace Raven.Abstractions.Connection
 			return new HttpRavenRequest(url, method, ConfigureRequest, HandleUnauthorizedResponse, connectionStringOptions);
 		}
 
-		private bool HandleUnauthorizedResponse(RavenConnectionStringOptions options, WebResponse webResponse)
+		private Action<HttpWebRequest> HandleUnauthorizedResponse(RavenConnectionStringOptions options, WebResponse webResponse)
 		{
 			if (options.ApiKey == null)
-				return false;
+				return null;
 
 			var oauthSource = webResponse.Headers["OAuth-Source"];
 
 			var useBasicAuthenticator =
 				string.IsNullOrEmpty(oauthSource) == false &&
 				oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false;
+
+			if (string.IsNullOrEmpty(oauthSource))
+				oauthSource = options.Url + "/OAuth/API-Key";
 
 			var authenticator = authenticators.GetOrAdd(
 				GetCacheKey(options),
@@ -75,8 +78,7 @@ namespace Raven.Abstractions.Connection
 					return new SecuredAuthenticator(options.ApiKey);
 				});
 
-			var result = authenticator.DoOAuthRequest(oauthSource);
-			return result != null;
+			return authenticator.DoOAuthRequest(oauthSource);
 		}
 	}
 }

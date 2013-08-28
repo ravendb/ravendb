@@ -23,6 +23,33 @@ namespace Raven.Studio.Features.Settings
 			AuthorizationUsers = new ObservableCollection<AuthorizationUser>();
 		}
 
+		public override void CheckForChanges()
+		{
+			if (HasUnsavedChanges)
+				return;
+
+			if (AuthorizationRoles.Count != OriginalAuthorizationRoles.Count)
+			{
+				HasUnsavedChanges = true;
+				return;
+			}
+
+			if (AuthorizationUsers.Count != OriginalAuthorizationUsers.Count)
+			{
+				HasUnsavedChanges = true;
+				return;
+			}
+
+			foreach (var authorizationRole in AuthorizationRoles)
+			{
+				if (authorizationRole.DeepEquals(OriginalAuthorizationRoles.FirstOrDefault(role => role.Id == authorizationRole.Id)) == false)
+				{
+					HasUnsavedChanges = true;
+					return;
+				}
+			}
+		}
+
 		public AuthorizationRole SelectedRole { get; set; }
 		public AuthorizationUser SelectedUser { get; set; }
 		public string NewRoleForUser { get; set; }
@@ -230,6 +257,8 @@ namespace Raven.Studio.Features.Settings
 					{
 						OriginalAuthorizationUsers.Add(authorizationUser);
 					}
+
+					AuthorizationUsers.CollectionChanged += (sender, args) => HasUnsavedChanges = true;
 				});
 
 			session.Advanced.LoadStartingWithAsync<AuthorizationRole>("Authorization/Roles").
@@ -244,6 +273,8 @@ namespace Raven.Studio.Features.Settings
 					{
 						OriginalAuthorizationRoles.Add(authorizationRole);
 					}
+
+					AuthorizationRoles.CollectionChanged += (sender, args) => HasUnsavedChanges = true;
 				});
 		}
 

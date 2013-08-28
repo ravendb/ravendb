@@ -4,11 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Threading;
 using System.Transactions;
 using Raven.Abstractions;
-using Raven.Abstractions.Exceptions;
-using Raven.Client.Connection;
 using Raven.Tests.Bugs;
 using Xunit;
 
@@ -30,12 +27,12 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanRunWithDTCTxAndRestart()
 		{
-			var store = NewRemoteDocumentStore(runInMemory: false, deleteDirectoryAfter: false, deleteDirectoryBefore: true);
-			using (store)
-			{
-				// Define ids for 5 testdocuments
-				var documentIds = new string[] { "1", "2", "3", "4", "5" };
+			// Define ids for 5 testdocuments
+			var documentIds = new[] { "1", "2", "3", "4", "5" };
 
+			string dataDir = NewDataPath();
+			using (var store = NewRemoteDocumentStore(runInMemory: false, dataDirectory: dataDir))
+			{
 				// First we add the documents to the store
 				foreach (var id in documentIds)
 				{
@@ -43,9 +40,8 @@ namespace Raven.Tests.MailingList
 					{
 						session.Advanced.AllowNonAuthoritativeInformation = false;
 						session.Advanced.UseOptimisticConcurrency = true;
-						session.Store(new TestDocument() { Id = id, Description = "Test" });
+						session.Store(new TestDocument {Id = id, Description = "Test"});
 						session.SaveChanges();
-
 					}
 				}
 
@@ -55,7 +51,7 @@ namespace Raven.Tests.MailingList
 				using (var tx = new TransactionScope())
 				{
 					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-													  new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
+						new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
 
 					using (var session = store.OpenSession())
 					{
@@ -70,53 +66,38 @@ namespace Raven.Tests.MailingList
 						session.SaveChanges();
 					}
 
-
 					store.Dispose();
 					tx.Complete();
 					Assert.Throws<TransactionAbortedException>(() => tx.Dispose());
 				}
+			}
 
+			// We simulate that the server is restarting. The delay is important as this will make
+			// the transaction timeout before we start the service again
+			SystemTime.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
 
-				// We simulate that the server is restarting. The delay is important as this will make
-				// the transaction timeout before we start the service again
-				SystemTime.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
-
-				using (var store2 = NewRemoteDocumentStore(runInMemory: false, deleteDirectoryBefore: false, deleteDirectoryAfter: true)) //restart
+			using (var store2 = NewRemoteDocumentStore(runInMemory: false, dataDirectory: dataDir)) //restart
+			{
+				foreach (var id in documentIds)
 				{
-					foreach (var id in documentIds)
+					using (var session = store2.OpenSession())
 					{
-						using (var session = store2.OpenSession())
-						{
-							session.Advanced.AllowNonAuthoritativeInformation = false;
-							session.Advanced.UseOptimisticConcurrency = true;
+						session.Advanced.AllowNonAuthoritativeInformation = false;
+						session.Advanced.UseOptimisticConcurrency = true;
 
-							var testMessage = session.Load<TestDocument>(id);
-							testMessage.Description = "Updated again";
+						var testMessage = session.Load<TestDocument>(id);
+						testMessage.Description = "Updated again";
 
-							session.SaveChanges();
-						}
+						session.SaveChanges();
 					}
 				}
 			}
 		}
 
-		/// <summary>
-		/// Test document
-		/// </summary>
 		public class TestDocument
 		{
-			/// <summary>
-			/// Id
-			/// </summary>
 			public string Id { get; set; }
-
-			/// <summary>
-			/// Desription
-			/// </summary>
 			public string Description { get; set; }
 		}
-
-
-
 	}
 }

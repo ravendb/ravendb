@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using Lucene.Net.Support;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -107,7 +108,7 @@ namespace Raven.Tests.Bugs
 			                       				{
 			                       					Path = "Something",
 													ShouldMatch = true,
-													Value = "Something1"
+													Values = new EquatableList<string>{"Something1"}
 			                       				}
 			                       			}
 									}, false).Wait(TimeSpan.FromSeconds(15));

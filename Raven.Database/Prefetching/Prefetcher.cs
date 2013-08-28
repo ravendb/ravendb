@@ -52,7 +52,7 @@ namespace Raven.Database.Prefetching
 		{
 			foreach (var behavior in prefetchingBehaviors)
 			{
-				behavior.Value.AfterDelete(key, etagBeforeUpdate);
+				behavior.Value.AfterUpdate(key, etagBeforeUpdate);
 			}
 		}
 	}

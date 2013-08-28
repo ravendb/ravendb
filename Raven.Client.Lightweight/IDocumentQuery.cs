@@ -53,6 +53,8 @@ namespace Raven.Client
 		QueryResult QueryResult { get; }
 #endif
 
+		AggregationOperation AggregationOperation { get; }
+
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed

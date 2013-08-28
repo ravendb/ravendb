@@ -37,7 +37,7 @@ namespace Raven.Client
 		/// Gets the query result
 		/// </summary>
 		/// <value>The query result.</value>
-		Task<Tuple<QueryResult, IList<T>>> ToListAsync();
+		Task<IList<T>> ToListAsync();
 
 
 		/// <summary>

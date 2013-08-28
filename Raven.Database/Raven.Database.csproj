@@ -207,10 +207,17 @@
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
     <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
+    <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
+    <Compile Include="Linq\AttachmentForIndexing.cs" />
+    <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
+    <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
+    <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
@@ -454,6 +461,7 @@
     <Compile Include="Server\Responders\Plugins.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
+    <Compile Include="Server\Responders\IdentitySeed.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Responders\QueryStreams.cs" />
     <Compile Include="Server\Responders\Transformers.cs" />

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace Raven.Database.Config
 {
@@ -31,8 +32,27 @@ namespace Raven.Database.Config
 
 		public void LoadFrom(string path)
 		{
-			var configuration = ConfigurationManager.OpenExeConfiguration(path);
-			LoadConfigurationAndInitialize(configuration.AppSettings.Settings.AllKeys.Select(k => Tuple.Create(k, ConfigurationManager.AppSettings[k])));
+			var configuration = XDocument.Load(path);
+			if (configuration.Root == null)
+				return;
+			var ns = configuration.Root.Name.Namespace;
+			if (configuration.Root.Name.LocalName != "configuration")
+				return;
+
+			var appSettings = configuration.Root.Element(ns + "appSettings");
+			if (appSettings == null)
+				return;
+
+			var list = (from element in appSettings.Elements()
+			            where element.Name.LocalName == "add"
+						let keyAtt = element.Attribute(ns + "key")
+						let valAtt = element.Attribute(ns + "value")
+						where keyAtt != null && valAtt != null
+						select Tuple.Create(keyAtt.Value, valAtt.Value)
+						).ToList();
+
+
+			LoadConfigurationAndInitialize(list);
 		}
 	}
 }

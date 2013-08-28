@@ -69,7 +69,6 @@ namespace Raven.Database.Server.Responders
 							if (isHeadRequest)
 								return;
 							writer.WriteHeader();
-
 						}, writer.Write);
 					}
 				}

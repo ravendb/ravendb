@@ -1,46 +1,26 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
-using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Triggers.Bugs
 {
 	public class ModifyingMetadataFromTrigger : RemoteClientTest
 	{
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
 		private readonly IDocumentStore store;
 
 		public ModifyingMetadataFromTrigger()
 		{
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-
-			ravenDbServer = new RavenDbServer(new RavenConfiguration
-			                                  	{
-			                                  		Port = 8079,
-			                                  		DataDirectory = path,
-                                                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-			                                  		Catalog =
-			                                  			{
-			                                  				Catalogs = {new TypeCatalog(typeof (AuditTrigger))}
-			                                  			}
-			                                  	});
-			store = new DocumentStore {Url = "http://localhost:8079"}.Initialize();
+			store = NewRemoteDocumentStore();
 		}
 
-		public override void Dispose()
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			store.Dispose();
-			ravenDbServer.Dispose();
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
+			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+			configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (AuditTrigger)));
 		}
 
 		[Fact]
@@ -51,13 +31,13 @@ namespace Raven.Tests.Triggers.Bugs
 				store.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1085");
 
 				var person = new Person
-				             	{
-				             		Id = "person/1",
-				             		FirstName = "Nabil",
-				             		LastName = "Shuhaiber",
-				             		Age = 31,
-				             		Title = "Vice President"
-				             	};
+				{
+					Id = "person/1",
+					FirstName = "Nabil",
+					LastName = "Shuhaiber",
+					Age = 31,
+					Title = "Vice President"
+				};
 
 				session.Store(person);
 				session.SaveChanges();

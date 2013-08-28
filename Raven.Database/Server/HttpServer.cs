@@ -70,6 +70,8 @@ namespace Raven.Database.Server
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
+        private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
+
 #if DEBUG
 		private readonly ConcurrentQueue<string> recentRequests = new ConcurrentQueue<string>();
 
@@ -280,6 +282,13 @@ namespace Raven.Database.Server
 			{
 				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+                exceptionAggregator.Execute(() =>
+                {
+                    foreach (var databaseTransportState in databaseTransportStates)
+                    {
+                        databaseTransportState.Value.Dispose();
+                    }
+                });
 				exceptionAggregator.Execute(() =>
 				{
 					if (serverTimer != null)
@@ -288,7 +297,7 @@ namespace Raven.Database.Server
 				exceptionAggregator.Execute(() =>
 				{
 					if (listener != null && listener.IsListening)
-						listener.Stop();
+						listener.Close();
 				});
 				disposed = true;
 
@@ -347,7 +356,8 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+		    var prefix = Configuration.UseSsl ? "https://" : "http://";
+            var uri = prefix + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
@@ -967,7 +977,7 @@ namespace Raven.Database.Server
 
 		private static void OutputDatabaseOpenFailure(IHttpContext ctx, string tenantId, Exception e)
 		{
-			var msg = "Could open database named: " + tenantId;
+			var msg = "Could not open database named: " + tenantId;
 			logger.WarnException(msg, e);
 			ctx.SetStatusToNotAvailable();
 			ctx.WriteJson(new
@@ -1030,8 +1040,10 @@ namespace Raven.Database.Server
 
 			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var documentDatabase = new DocumentDatabase(config);
-				AssertLicenseParameters(config);
+			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+			    var documentDatabase = new DocumentDatabase(config, transportState);
+
+			    AssertLicenseParameters(config);
 				documentDatabase.SpinBackgroundWorkers();
 				InitializeRequestResponders(documentDatabase);
 
@@ -1058,7 +1070,7 @@ namespace Raven.Database.Server
 				{
 					var numberOfAllowedDbs = int.Parse(maxDatabases);
 
-					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, 0, numberOfAllowedDbs).ToList();
+					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs).ToList();
 					if (databases.Count >= numberOfAllowedDbs)
 						throw new InvalidOperationException(
 							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +
@@ -1155,7 +1167,17 @@ namespace Raven.Database.Server
 		{
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlAllowOrigin))
 				return;
-			ctx.Response.AddHeader("Access-Control-Allow-Origin", SystemConfiguration.AccessControlAllowOrigin);
+
+			ctx.Response.AddHeader("Access-Control-Allow-Credentials", "true");
+
+			bool originAllowed = SystemConfiguration.AccessControlAllowOrigin == "*" ||
+					SystemConfiguration.AccessControlAllowOrigin.Split(' ')
+						.Any(o => o == ctx.Request.Headers["Origin"]);
+			if(originAllowed)
+			{
+				ctx.Response.AddHeader("Access-Control-Allow-Origin", ctx.Request.Headers["Origin"]);
+			}
+			
 			ctx.Response.AddHeader("Access-Control-Max-Age", SystemConfiguration.AccessControlMaxAge);
 			ctx.Response.AddHeader("Access-Control-Allow-Methods", SystemConfiguration.AccessControlAllowMethods);
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlRequestHeaders))

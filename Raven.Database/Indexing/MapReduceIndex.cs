@@ -133,6 +133,7 @@ namespace Raven.Database.Indexing
 				}
 			});
 
+            var dic = context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
 
 			IDictionary<string, HashSet<string>> result;
 			while (allReferencedDocs.TryDequeue(out result))
@@ -141,6 +142,10 @@ namespace Raven.Database.Indexing
 				{
 					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
 					actions.General.MaybePulseTransaction();
+                    foreach (var childDocumentKey in referencedDocument.Value)
+                    {
+                        dic.GetOrAdd(childDocumentKey, (s =>new ConcurrentBag<string>())).Add(referencedDocument.Key);
+                    }
 				}
 			}
 
@@ -254,8 +259,17 @@ namespace Raven.Database.Indexing
 
 		internal static string ReduceKeyToString(object reduceValue)
 		{
-			if (reduceValue is string || reduceValue is ValueType)
+			if (reduceValue is string)
+			{
 				return reduceValue.ToString();
+			}
+			if (reduceValue is DateTime)
+				return ((DateTime) reduceValue).ToString(Default.DateTimeFormatsToWrite);
+			if (reduceValue is DateTimeOffset)
+				return ((DateTimeOffset)reduceValue).ToString(Default.DateTimeFormatsToWrite);
+			if (reduceValue is ValueType)
+				return reduceValue.ToString();
+
 			var dynamicJsonObject = reduceValue as IDynamicJsonObject;
 			if (dynamicJsonObject != null)
 				return dynamicJsonObject.Inner.ToString(Formatting.None);
@@ -350,7 +364,7 @@ namespace Raven.Database.Indexing
 				Actions = actions;
 				ReduceKeys = reduceKeys;
 
-				anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.indexDefinition, ViewGenerator);
+				anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.context.Database,this.parent.indexDefinition, ViewGenerator);
 
 				if (Level == 2)
 				{

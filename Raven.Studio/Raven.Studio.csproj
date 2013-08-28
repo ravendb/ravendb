@@ -794,7 +794,6 @@
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
-    <Compile Include="Commands\PromoteToAutoIndexCommand.cs" />
     <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
     <Compile Include="Controls\SearchControl.xaml.cs">
@@ -1590,6 +1589,7 @@
     <Resource Include="Assets\Images\lock_preferences.png" />
     <Resource Include="Assets\Images\execute_tiny.png" />
     <Resource Include="Assets\Images\to_documentpad_tiny.png" />
+    <Resource Include="Assets\Images\Expand_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

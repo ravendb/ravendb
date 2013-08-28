@@ -165,6 +165,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							}
 
 							UploadToServer(filePath, localBackupConfigs);
+							IOExtensions.DeleteDirectory(filePath);
 
 							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
 							localBackupStatus.LastDocsEtag = options.LastDocsEtag;
@@ -238,6 +239,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 				request.WithInputStream(fileStream);
 				request.WithBucketName(localBackupConfigs.S3BucketName);
 				request.WithKey(key);
+				request.WithTimeout(60*60*1000); // 1 hour
+				request.WithReadWriteTimeout(60*60*1000); // 1 hour
 
 				using (client.PutObject(request))
 				{

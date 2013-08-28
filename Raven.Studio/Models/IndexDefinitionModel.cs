@@ -207,13 +207,10 @@ namespace Raven.Studio.Models
 
 		private void RestoreDefaults(IndexDefinition indexDefinition)
 		{
-			if (indexDefinition.IsMapReduce == false)
-				return;
-
 			foreach (var field in Fields)
 			{
 				if(indexDefinition.Stores.ContainsKey(field.Name) == false)
-					field.Storage = FieldStorage.Yes;
+					field.Storage = FieldStorage.No;
 			}
 		}
 

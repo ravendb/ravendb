@@ -174,7 +174,7 @@ namespace Raven.Tests.Issues
 
 			Assert.NotNull(result);
 			Assert.Equal(1, result.Length);
-			Assert.Equal("Unable to connect to the remote server", result[0].Value<string>("Status"));
+			Assert.NotNull(result[0].Value<string>("Status"));
 			Assert.Equal(-2, result[0].Value<int>("Code"));
 		}
 
@@ -222,7 +222,7 @@ namespace Raven.Tests.Issues
 
 			Assert.NotNull(result);
 			Assert.Equal(1, result.Length);
-			Assert.Equal("The remote name could not be resolved: 'unknown.url'", result[0].Value<string>("Status"));
+			Assert.NotNull(result[0].Value<string>("Status"));
 			Assert.Equal(-1, result[0].Value<int>("Code"));
 		}
 

@@ -303,6 +303,7 @@ namespace Raven.Client.Embedded
 			// Should the data paramater be changed to a Stream type so it matches IDatabaseCommands.PutAttachment?
 			var stream = new MemoryStream();
 			stream.Write(data, 0, data.Length);
+			stream.Position = 0;
 			databaseCommands.PutAttachment(key, etag, stream, metadata);
 			return new CompletedTask();
 		}
@@ -408,10 +409,10 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 		{
 			// Should add a 'matches' parameter? Setting to null for now.
-			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, null, start, pageSize, metadataOnly));
+			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, null, start, pageSize, metadataOnly, exclude));
 		}
 
 		public void ForceReadFromMaster()

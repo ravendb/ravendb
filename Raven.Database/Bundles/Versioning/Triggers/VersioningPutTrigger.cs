@@ -24,7 +24,9 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
 
-			if (jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" && Database.IsVersioningActive(metadata))
+            if (Database.ChangesToRevisionsAllowed() == false && 
+                jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
+                Database.IsVersioningActive(metadata))
 			{
 				return VetoResult.Deny("Modifying a historical revision is not allowed");
 			}
@@ -130,7 +132,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			while (true)
 			{
-				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, start, pageSize);
+				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize);
 				if (!docs.Any())
 					break;
 

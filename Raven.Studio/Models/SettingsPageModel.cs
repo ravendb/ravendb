@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Extensions;
+using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -52,7 +53,7 @@ namespace Raven.Studio.Models
 		    var bundles = ApplicationModel.CreateSerializer()
 		                                  .Deserialize<List<string>>(
 			                                  new RavenJTokenReader(debug.SelectToken("ActiveBundles")));
-
+		    var addedVersioning = false;
 		    if (ApplicationModel.Current.Server.Value.UserInfo.IsAdminGlobal)
 		    {
 			    var doc = await ApplicationModel.Current.Server.Value.DocumentStore
@@ -72,8 +73,15 @@ namespace Raven.Studio.Models
 				    Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
 				    Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
 
+					//Bundles that need the database document
 				    if (bundles.Contains("Quotas"))
 					    Settings.Sections.Add(new QuotaSettingsSectionModel());
+
+				    if (bundles.Contains("Versioning"))
+				    {
+					    AddModel(new VersioningSettingsSectionModel());
+					    addedVersioning = true;
+				    }
 
 				    foreach (var settingsSectionModel in Settings.Sections)
 				    {
@@ -82,14 +90,15 @@ namespace Raven.Studio.Models
 			    }
 		    }
 
+			//Bundles that don't need the database document
 		    if (bundles.Contains("Replication"))
 			    AddModel(new ReplicationSettingsSectionModel());
 
+			 if (bundles.Contains("Versioning") && addedVersioning == false)
+				 AddModel(new VersioningSettingsSectionModel());
+
 		    if (bundles.Contains("SqlReplication"))
 			    AddModel(new SqlReplicationSettingsSectionModel());
-
-		    if (bundles.Contains("Versioning"))
-			    AddModel(new VersioningSettingsSectionModel());
 
 		    if (bundles.Contains("ScriptedIndexResults"))
 			    AddModel(new ScriptedIndexSettingsSectionModel());
@@ -123,6 +132,24 @@ namespace Raven.Studio.Models
 			}
 			else
 				Settings.SelectedSection.Value = Settings.Sections[0];
+	    }
+
+	    public override bool CanLeavePage()
+	    {
+		    var unsavedSections = new List<string>();
+		    foreach (var settingsSectionModel in Settings.Sections)
+		    {
+			    settingsSectionModel.CheckForChanges();
+			    if(settingsSectionModel.HasUnsavedChanges)
+					unsavedSections.Add(settingsSectionModel.SectionName);
+		    }
+
+		    if (unsavedSections.Count != 0)
+			    return AskUser.Confirmation("Settings",
+				    string.Format("There are unsaved changes in these sections: {0}. Are you sure you want to continue?"
+					    , string.Join(", ", unsavedSections)));
+
+		    return base.CanLeavePage();
 	    }
 
 	    private void RegisterToDatabaseChange()

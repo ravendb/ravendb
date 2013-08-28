@@ -107,5 +107,7 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public const double EarthMeanRadiusKm = 6371.0087714;
 		public const double MilesToKm = 1.60934;
+
+		public const string RavenClientVersion = "Raven-Client-Version";
 	}
 }

@@ -119,7 +119,7 @@ namespace Raven.Database.Server.Abstractions
 		public IDisposable Streaming()
 		{
 			bufferOutput = false;
-			return new DisposableAction(() => { bufferOutput = true; });
+			return new DisposableAction(() => bufferOutput = true);
 		}
 
 		public Task WriteAsync(string data)

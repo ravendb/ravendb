@@ -6,7 +6,6 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -19,52 +18,47 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_1007_incremental_backup : RavenTest
 	{
-		private const string BackupDir = @".\BackupDatabase\";
-		private DocumentDatabase db;
+		private readonly string DataDir;
+		private readonly string BackupDir;
 
 		public RavenDB_1007_incremental_backup()
 		{
-			IOExtensions.DeleteDirectory(BackupDir);
-
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-				Settings =
-					{
-						{"Raven/Esent/CircularLog", "false"}
-					}
-			});
-			db.SpinBackgroundWorkers();
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-		}
-
-		public override void Dispose()
-		{
-			db.Dispose();
-			base.Dispose();
-			IOExtensions.DeleteDirectory(BackupDir);
+			DataDir = NewDataPath("IncrementalBackup");
+			BackupDir = NewDataPath("BackupDatabase");
 		}
 
 		[Fact]
 		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
 		{
-			db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-			db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			using (var db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = DataDir,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+				Settings =
+				{
+					{"Raven/Esent/CircularLog", "false"}
+				}
+			}))
+			{
+				db.SpinBackgroundWorkers();
+				db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 
-			WaitForIndexing(db);
+				db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-			db.StartBackup(BackupDir, false, new DatabaseDocument());
-			WaitForBackup(db, true);
+				WaitForIndexing(db);
 
-			db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				WaitForBackup(db, true);
 
-			WaitForIndexing(db);
+				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-			db.StartBackup(BackupDir, true, new DatabaseDocument());
-			WaitForBackup(db, true);
+				WaitForIndexing(db);
 
-			db.Dispose();
+				db.StartBackup(BackupDir, true, new DatabaseDocument());
+				WaitForBackup(db, true);
+
+			}
 			IOExtensions.DeleteDirectory(DataDir);
 
 			var incrementalDirectories = Directory.GetDirectories(BackupDir, "Inc*");
@@ -82,64 +76,59 @@ namespace Raven.Tests.Issues
 				" Index will be recreated after launching Raven instance",
 				sb.ToString());
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
-			db.SpinBackgroundWorkers();
-			QueryResult queryResult;
-			do
+			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}))
 			{
-				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				db.SpinBackgroundWorkers();
+				QueryResult queryResult;
+				do
 				{
-					Query = "Tag:[[Users]]",
-					PageSize = 10
-				});
-			} while (queryResult.IsStale);
-			Assert.Equal(3, queryResult.Results.Count);
+					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+					{
+						Query = "Tag:[[Users]]",
+						PageSize = 10
+					});
+				} while (queryResult.IsStale);
+				Assert.Equal(3, queryResult.Results.Count);
+			}
 		}
 	}
 
 	public class RavenDB_1007_standard_backup : RavenTest
 	{
-		private const string BackupDir = @".\BackupDatabase\";
-		private DocumentDatabase db;
+		private readonly string DataDir;
+		private readonly string BackupDir;
 
 		public RavenDB_1007_standard_backup()
 		{
-			IOExtensions.DeleteDirectory(BackupDir);
-
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-			});
-			db.SpinBackgroundWorkers();
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
-		}
-
-		public override void Dispose()
-		{
-			db.Dispose();
-			base.Dispose();
-			IOExtensions.DeleteDirectory(BackupDir);
+			DataDir = NewDataPath("IncrementalBackup");
+			BackupDir = NewDataPath("BackupDatabase");
 		}
 
 		[Fact]
 		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
 		{
-			db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-			db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-			db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			using (var db = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = DataDir,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+			}))
+			{
+				db.SpinBackgroundWorkers();
+				db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 
-			WaitForIndexing(db);
+				db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-			db.StartBackup(BackupDir, false, new DatabaseDocument());
-			WaitForBackup(db, true);
+				WaitForIndexing(db);
 
-			db.Dispose();
+				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				WaitForBackup(db, true);
+			}
 			IOExtensions.DeleteDirectory(DataDir);
 
 			// lock file to simulate IOException when restore operation will try to copy this file
-			using (
-				var file = File.Open(Path.Combine(BackupDir, "Indexes\\Raven%2fDocumentsByEntityName\\segments.gen"),
+			using (var file = File.Open(Path.Combine(BackupDir, "Indexes\\Raven%2fDocumentsByEntityName\\segments.gen"),
 				                     FileMode.Open, FileAccess.ReadWrite, FileShare.None))
 			{
 				var sb = new StringBuilder();
@@ -152,18 +141,20 @@ namespace Raven.Tests.Issues
 					sb.ToString());
 			}
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
-			db.SpinBackgroundWorkers();
-			QueryResult queryResult;
-			do
+			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}))
 			{
-				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				db.SpinBackgroundWorkers();
+				QueryResult queryResult;
+				do
 				{
-					Query = "Tag:[[Users]]",
-					PageSize = 10
-				});
-			} while (queryResult.IsStale);
-			Assert.Equal(3, queryResult.Results.Count);
+					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+					{
+						Query = "Tag:[[Users]]",
+						PageSize = 10
+					});
+				} while (queryResult.IsStale);
+				Assert.Equal(3, queryResult.Results.Count);
+			}
 		}
 	}
 }

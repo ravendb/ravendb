@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Server;
-using System.Linq;
 using Xunit;
 
 namespace Raven.Tests.Shard.BlogModel
 {
-	public abstract class ShardingScenario : RavenTest, IDisposable
+	public abstract class ShardingScenario : RavenTest
 	{
 		protected readonly ShardedDocumentStore ShardedDocumentStore;
 		protected readonly Dictionary<string, RavenDbServer> Servers;
@@ -27,11 +27,11 @@ namespace Raven.Tests.Shard.BlogModel
 			RavenDbServer posts3 = null;
 			try
 			{
-				users = GetNewServer(8079, "shard1");
-				blogs = GetNewServer(8078, "shard2");
-				posts1 = GetNewServer(8077, "shard3");
-				posts2 = GetNewServer(8076, "shard4");
-				posts3 = GetNewServer(8075, "shard5");
+				users = GetNewServer(8079);
+				blogs = GetNewServer(8078);
+				posts1 = GetNewServer(8077);
+				posts2 = GetNewServer(8076);
+				posts3 = GetNewServer(8075);
 			}
 			catch (Exception)
 			{

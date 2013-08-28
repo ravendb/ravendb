@@ -74,6 +74,7 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Gets or sets the translator function
 		/// </summary>
+		[Obsolete("Use Result Transformers instead.")]
 		public string TransformResults { get; set; }
 
 		/// <summary>

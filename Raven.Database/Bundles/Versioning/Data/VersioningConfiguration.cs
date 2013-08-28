@@ -7,6 +7,30 @@ namespace Raven.Bundles.Versioning.Data
 {
 	public class VersioningConfiguration
 	{
+		protected bool Equals(VersioningConfiguration other)
+		{
+			return string.Equals(Id, other.Id) && MaxRevisions == other.MaxRevisions && Exclude.Equals(other.Exclude);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((VersioningConfiguration) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = (Id != null ? Id.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ MaxRevisions;
+				hashCode = (hashCode*397) ^ Exclude.GetHashCode();
+				return hashCode;
+			}
+		}
+
 		/// <summary>
 		/// Id can be in the following format:
 		/// 1. Raven/Versioning/{Raven-Entity-Name} - When using this format, the impacted documents are just documents with the corresponding Raven-Entity-Name metadata.

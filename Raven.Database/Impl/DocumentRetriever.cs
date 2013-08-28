@@ -38,6 +38,8 @@ namespace Raven.Database.Impl
 	    private readonly HashSet<string> itemsToInclude;
 		private bool disableCache;
 
+	    public Etag Etag = Etag.Empty;
+
 		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
 			InFlightTransactionalState inFlightTransactionalState,
             Dictionary<string, RavenJToken> queryInputs = null,
@@ -322,14 +324,21 @@ namespace Raven.Database.Impl
 		{
 			var document = GetDocumentWithCaching(id);
 			if (document == null)
-				return new DynamicNullObject();
+			{
+			    Etag = Etag.HashWith(Etag.Empty);
+			    return new DynamicNullObject();
+			}
+		    Etag = Etag.HashWith(document.Etag);
 			return new DynamicJsonObject(document.ToJson());
 		}
 
 		public dynamic Load(object maybeId)
 		{
 			if (maybeId == null || maybeId is DynamicNullObject)
-				return new DynamicNullObject();
+			{
+			    Etag = Etag.HashWith(Etag.Empty);
+			    return new DynamicNullObject();
+			}
 			var id = maybeId as string;
 			if (id != null)
 				return Load(id);

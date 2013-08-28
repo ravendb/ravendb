@@ -72,7 +72,7 @@ namespace Raven.Client.Document
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
-			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
+			DefaultQueryingConsistency = ConsistencyOptions.None;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
@@ -820,10 +820,20 @@ namespace Raven.Client.Document
 		/// of the index at a time prior to T.
 		/// This is ensured by the server, and require no action from the client
 		/// </summary>
-		MonotonicRead,
+		None,
 		/// <summary>
 		///  After updating a documents, will only accept queries which already indexed the updated value.
 		/// </summary>
-		QueryYourWrites,
+		AlwaysWaitForNonStaleResultsAsOfLastWrite,
+		/// <summary>
+		/// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead
+		/// </summary>
+		[Obsolete("Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead")]
+		QueryYourWrites = AlwaysWaitForNonStaleResultsAsOfLastWrite,
+		/// <summary>
+		/// Use None, instead
+		/// </summary>
+		[Obsolete("Use None, instead")]
+		MonotonicRead = None
 	}
 }

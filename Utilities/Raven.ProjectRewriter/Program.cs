@@ -13,24 +13,7 @@ namespace Raven.ProjectRewriter
 	class Program
 	{
 		static XNamespace xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
-
-		private static readonly Dictionary<string, string> net45Guids = new Dictionary<string, string>
-		{
-			{"Raven.Abstractions", "{B903FE56-0230-46FE-9458-AEFFEE294179}"},
-			{"Raven.Client.Lightweight", "{E43AA81B-E924-4D7E-8C02-7EF691EBE9EC}"},
-			{"Raven.Database", "{FAEBA971-1A36-4D42-8E98-043E617F1FE5}"},
-			{"Raven.Client.Embedded", "{ACA1B0BD-3455-4EC4-9388-539EF7CFC945}"},
-			{"Raven.Server", "{516EAEEA-D566-4410-BB9F-8354E5611B58}"},
-			{"Raven.Tests.Helpers", "{41D3D8AD-9095-47C3-93BE-3023857574AF}"},
-			{"Raven.Client.UniqueConstraints", "{1E6AA09C-B1FC-45BC-86E5-99C3FC1CF0ED}"},
-			{"Raven.Client.Authorization", "{5544CF05-1662-487A-97E8-7F122CF3B50B}"},
-			{"Raven.Client.MvcIntegration", "{C15B86DA-033A-48FE-ACFE-65D5E34A1D18}"},
-			{"Raven.Bundles.Authorization", "{9BB8DA55-DC8F-49F0-9FF8-0496D736C65F}"},
-			{"Raven.Bundles.CascadeDelete", "{9C057FC4-C118-4AF9-8F6F-4F9AD35DED60}"},
-			{"Raven.Bundles.IndexReplication", "{2E969670-3F50-4C78-88D3-709BC71B7D82}"},
-			{"Raven.Bundles.UniqueConstraints", "{2B7E14D7-770F-43DE-A1D1-EC2B01F68A55}"},
-			{"Raven.Web", "{6BB5ECF3-48FE-4FF7-B522-ABBAC1E259D4}"},
-		};
+		private static Dictionary<string, string> net45Guids;
 
 		private static void Main(string[] args)
 		{
@@ -45,9 +28,24 @@ namespace Raven.ProjectRewriter
 			/*GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
 			                     @"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");*/
 
-
-			/* In RavenDB 3.0 we already using .NET 4.5
-			
+			net45Guids = new Dictionary<string, string>
+			{
+				{"Raven.Abstractions", "{B903FE56-0230-46FE-9458-AEFFEE294179}"},
+				{"Raven.Client.Lightweight", "{E43AA81B-E924-4D7E-8C02-7EF691EBE9EC}"},
+				{"Raven.Database", "{FAEBA971-1A36-4D42-8E98-043E617F1FE5}"},
+				{"Raven.Client.Embedded", "{ACA1B0BD-3455-4EC4-9388-539EF7CFC945}"},
+				{"Raven.Server", "{516EAEEA-D566-4410-BB9F-8354E5611B58}"},
+				{"Raven.Tests.Helpers", "{41D3D8AD-9095-47C3-93BE-3023857574AF}"},
+				{"Raven.Client.UniqueConstraints", "{1E6AA09C-B1FC-45BC-86E5-99C3FC1CF0ED}"},
+				{"Raven.Client.Authorization", "{5544CF05-1662-487A-97E8-7F122CF3B50B}"},
+				{"Raven.Client.MvcIntegration", "{C15B86DA-033A-48FE-ACFE-65D5E34A1D18}"},
+				{"Raven.Bundles.Authorization", "{9BB8DA55-DC8F-49F0-9FF8-0496D736C65F}"},
+				{"Raven.Bundles.CascadeDelete", "{9C057FC4-C118-4AF9-8F6F-4F9AD35DED60}"},
+				{"Raven.Bundles.IndexReplication", "{2E969670-3F50-4C78-88D3-709BC71B7D82}"},
+				{"Raven.Bundles.UniqueConstraints", "{2B7E14D7-770F-43DE-A1D1-EC2B01F68A55}"},
+				{"Raven.Web", "{6BB5ECF3-48FE-4FF7-B522-ABBAC1E259D4}"},
+				{"Raven.Smuggler", "{C3B90695-3077-43C8-97DC-F6914981CA59}"},
+			};
 
 			Generate45("Raven.Abstractions");
 
@@ -104,7 +102,10 @@ namespace Raven.ProjectRewriter
 			Generate45("Raven.Web",
 					   "Raven.Abstractions",
 					   "Raven.Database");
-			 */
+
+			Generate45("Raven.Smuggler",
+					   "Raven.Abstractions",
+					   "Raven.Client.Lightweight");
 		}
 
 		private static void Generate45(string assemblyName, params string[] references)
@@ -143,10 +144,6 @@ namespace Raven.ProjectRewriter
 			{
 				element.Value = ""; // Not "Client"
 			}
-			foreach (var element in database.Root.Descendants(xmlns + "AssemblyName"))
-			{
-				element.Value += "-4.5";
-			}
 			foreach (var element in database.Root.Descendants(xmlns + "PropertyGroup"))
 			{
 				var outputPath = element.Descendants(xmlns + "OutputPath").FirstOrDefault();
@@ -166,7 +163,7 @@ namespace Raven.ProjectRewriter
 			{
 				if (element.Attribute("Include").Value == "Microsoft.CompilerServices.AsyncTargetingPack.Net4")
 				{
-					element.Element(xmlns + "HintPath").Value = element.Element(xmlns + "HintPath").Value.Replace(@"net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4", @"net45\Microsoft.CompilerServices.AsyncTargetingPack.Net45");
+					element.Remove();
 				}
 				else if (element.Attribute("Include").Value == "System.Reactive.Core")
 				{

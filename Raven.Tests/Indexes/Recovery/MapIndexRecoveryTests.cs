@@ -36,7 +36,7 @@ namespace Raven.Tests.Indexes.Recovery
 		{
 			var index = new MapRecoveryTestIndex();
 
-			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
+			using (var server = GetNewServer(runInMemory: false))
 			{
 				CommitPointAfterEachCommit(server.Database.Configuration);
 
@@ -92,7 +92,7 @@ namespace Raven.Tests.Indexes.Recovery
 		{
 			var index = new MapRecoveryTestIndex();
 
-			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
+			using (var server = GetNewServer(runInMemory: false))
 			{
 				CommitPointAfterEachCommit(server.Database.Configuration);
 
@@ -130,11 +130,12 @@ namespace Raven.Tests.Indexes.Recovery
 		[Fact]
 		public void ShouldRecoverMapIndexFromLastCommitPoint()
 		{
+			var dataDir = NewDataPath("RecoverMapIndex");
 			string indexFullPath;
 			string commitPointsDirectory;
 			var index = new MapRecoveryTestIndex();
 
-			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
+			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
 				CommitPointAfterFirstCommitOnly(server.Database.Configuration);
 
@@ -176,15 +177,13 @@ namespace Raven.Tests.Indexes.Recovery
 
 			IndexMessing.MessSegmentsFile(indexFullPath);
 
-			using (GetNewServer(runInMemory: false, dataDirectory: DataDir, deleteDirectory: false)) // do not delete previous directory
+			using (GetNewServer(runInMemory: false, dataDirectory: dataDir)) // do not delete previous directory
 			{
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
 					using (var session = store.OpenSession())
 					{
-						var result =
-							session.Query<Recovery, MapRecoveryTestIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
-
+						var result = session.Query<Recovery, MapRecoveryTestIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
 						Assert.Equal(2, result.Count);
 					}
 				}
@@ -197,11 +196,12 @@ namespace Raven.Tests.Indexes.Recovery
 		[Fact]
 		public void ShouldRecoverDeletes()
 		{
+			var dataDir = NewDataPath("ShouldRecoverDeletes");
 			string indexFullPath;
 			string commitPointsDirectory;
 			var index = new MapRecoveryTestIndex();
 
-			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
+			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
 				CommitPointAfterFirstCommitOnly(server.Database.Configuration);
 
@@ -252,15 +252,13 @@ namespace Raven.Tests.Indexes.Recovery
 
 			IndexMessing.MessSegmentsFile(indexFullPath);
 
-			using (GetNewServer(runInMemory: false, dataDirectory: DataDir, deleteDirectory: false)) // do not delete previous directory
+			using (GetNewServer(runInMemory: false, dataDirectory: dataDir)) // do not delete previous directory
 			{
 				using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 				{
 					using (var session = store.OpenSession())
 					{
-						var result =
-							session.Query<Recovery, MapRecoveryTestIndex>().ToArray();
-
+						var result = session.Query<Recovery, MapRecoveryTestIndex>().ToArray();
 						Assert.Equal(2, result.Length);
 					}
 				}
@@ -270,11 +268,12 @@ namespace Raven.Tests.Indexes.Recovery
 		[Fact]
 		public void ShouldDeleteCommitPointIfCouldNotRecoverFromIt()
 		{
+			var dataDir = NewDataPath("ShouldDeleteCommitPointIfCouldNotRecoverFromIt");
 			string indexFullPath;
 			string commitPointsDirectory;
 			var index = new MapRecoveryTestIndex();
 
-			using (var server = GetNewServer(runInMemory: false, dataDirectory: DataDir))
+			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
 				CommitPointAfterEachCommit(server.Database.Configuration);
 
@@ -368,7 +367,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			IndexMessing.MessSegmentsFile(indexFullPath);
 
-			using (GetNewServer(runInMemory: false, dataDirectory: DataDir, deleteDirectory: false)) // do not delete previous directory
+			using (GetNewServer(runInMemory: false, dataDirectory: dataDir)) // do not delete previous directory
 			{
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{

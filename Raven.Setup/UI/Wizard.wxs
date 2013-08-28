@@ -64,10 +64,15 @@
 
       <DialogRef Id="WebSiteSettingsDlg" />
 
-      <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="LicenseFileChooser" Order="3">LicenseAccepted = "1"</Publish>
+      <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="TargetEnvironment" Order="3">LicenseAccepted = "1"</Publish>
+
+      <Publish Dialog="TargetEnvironment" Control="Next" Event="NewDialog" Value="LicenseFileChooser" Order="1"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Publish>
+      <Publish Dialog="TargetEnvironment" Control="Next" Event="NewDialog" Value="InstallationType" Order="2"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Publish>
+      <Publish Dialog="TargetEnvironment" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg">1</Publish>
+      <Publish Dialog="TargetEnvironment" Control="Cancel" Event="SpawnDialog" Value="CancelDlg" Order="1">1</Publish>
 
       <Publish Dialog="LicenseFileChooser" Control="Next" Event="NewDialog" Value="InstallationType"><![CDATA[RAVEN_LICENSE_VALID = "True"]]></Publish>
-      <Publish Dialog="LicenseFileChooser" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg">1</Publish>
+      <Publish Dialog="LicenseFileChooser" Control="Back" Event="NewDialog" Value="TargetEnvironment">1</Publish>
       <Publish Dialog="LicenseFileChooser" Control="Cancel" Event="SpawnDialog" Value="CancelDlg" Order="1">1</Publish>
 
       <Publish Dialog="InstallationType" Control="Next" Event="DoAction" Value="SetInstallationTypeToService" Order="1"><![CDATA[NOT IISMAJORVERSION OR IISMAJORVERSION <= "#5"]]></Publish>
@@ -79,7 +84,8 @@
       <Publish Dialog="InstallationType" Control="Next" Event="NewDialog" Value="MissingIISComponentsDlg" Order="6"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND MISSING_IIS_COMPONENTS]]></Publish>
       <Publish Dialog="InstallationType" Control="Next" Event="NewDialog" Value="WebSiteSettingsDlg" Order="7"><![CDATA[RAVEN_INSTALLATION_TYPE = "IIS" AND NOT MISSING_IIS_COMPONENTS]]></Publish>
       <Publish Dialog="InstallationType" Control="Next" Event="NewDialog" Value="ServiceSettings" Order="7"><![CDATA[RAVEN_INSTALLATION_TYPE = "SERVICE"]]></Publish>
-      <Publish Dialog="InstallationType" Control="Back" Event="NewDialog" Value="LicenseFileChooser">1</Publish>
+      <Publish Dialog="InstallationType" Control="Back" Event="NewDialog" Value="LicenseFileChooser" Order="1"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Publish>
+      <Publish Dialog="InstallationType" Control="Back" Event="NewDialog" Value="TargetEnvironment" Order="2"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Publish>
       <Publish Dialog="InstallationType" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 
       <Publish Dialog="MissingIISComponentsDlg" Control="Back" Event="NewDialog" Value="InstallationType">1</Publish>
@@ -98,8 +104,8 @@
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISPropsWithSelectedWebSite" Order="1">1</Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="UpdateIISAppPoolUser" Order="2"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="DoAction" Value="SetApplicationPoolIdentityType" Order="2"><![CDATA[CUSTOM_APPLICATION_POOL AND NOT APPLICATION_POOL_IDENTITY_TYPE_INITIALIZED]]></Publish>
-      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg" Order="3"><![CDATA[WEBSITE_VD <> "" AND CUSTOM_APPLICATION_POOL]]></Publish>
-      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3"><![CDATA[WEBSITE_VD <> "" AND NOT CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="AppPoolSettingsDlg" Order="3"><![CDATA[CUSTOM_APPLICATION_POOL]]></Publish>
+      <Publish Dialog="WebSiteSettingsDlg" Control="Next" Event="NewDialog" Value="PerformanceCounterDlg" Order="3"><![CDATA[NOT CUSTOM_APPLICATION_POOL]]></Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Back" Event="NewDialog" Value="InstallationType">1</Publish>
       <Publish Dialog="WebSiteSettingsDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg">1</Publish>
 
