@@ -27,6 +27,11 @@ namespace Voron
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
 		public TransactionMergingWriter Writer { get; private set; }
+		
+		public SnapshotReader CreateSnapshot()
+		{
+			return new SnapshotReader(NewTransaction(TransactionFlags.Read));
+		}
 
 	    public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{

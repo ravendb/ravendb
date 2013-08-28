@@ -58,6 +58,7 @@
     <Compile Include="Impl\MemoryMapPager.cs" />
     <Compile Include="Impl\PagerState.cs" />
     <Compile Include="Impl\PureMemoryPager.cs" />
+    <Compile Include="Impl\SnapshotReader.cs" />
     <Compile Include="Impl\TransactionMergingWriter.cs" />
     <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="TransactionFlags.cs" />
