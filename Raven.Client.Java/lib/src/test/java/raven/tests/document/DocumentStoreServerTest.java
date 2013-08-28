@@ -17,7 +17,6 @@ import java.util.List;
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
 
-import raven.abstractions.closure.Action1;
 import raven.abstractions.commands.DeleteCommandData;
 import raven.abstractions.commands.ICommandData;
 import raven.abstractions.commands.PutCommandData;
@@ -38,10 +37,10 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.IDocumentQuery;
-import raven.client.IDocumentQueryCustomization;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
+import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentStore;
 import raven.client.indexes.IndexDefinitionBuilder;
 import raven.client.linq.IRavenQueryable;
@@ -205,13 +204,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         definition.getStores().put("AccountsReceivable", FieldStorage.YES);
         store.getDatabaseCommands().putIndex("company_by_name", definition);
 
-        List<Company> list = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization c) {
-            c.waitForNonStaleResults(3600 * 1000);
-          }
-        }).toList();
+        List<Company> list = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults(3600 * 1000))
+            .toList();
         Company single = list.get(0);
         assertNotNull(single);
         assertEquals("Company 1", single.getName());
@@ -240,13 +235,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
 
         QCompany c = QCompany.company;
-        List<Company> list = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization c) {
-            c.waitForNonStaleResults(3600 * 1000);
-          }
-        }).where(c.accountsReceivable.gt(1)).toList();
+        List<Company> list = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults(3600 * 1000))
+            .where(c.accountsReceivable.gt(1)).toList();
         Company single = list.get(0);
         assertNotNull(single);
         assertEquals("Company 1", single.getName());
@@ -273,13 +264,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         definition.getStores().put("AccountsReceivable", FieldStorage.YES);
         store.getDatabaseCommands().putIndex("company_by_name", definition);
 
-        List<Company> list = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization c) {
-            c.waitForNonStaleResults(3600 * 1000);
-          }
-        }).toList();
+        List<Company> list = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults(3600 * 1000))
+            .toList();
         Company single = list.get(0);
         assertNotNull(single);
         assertEquals("Company 1", single.getName());
@@ -687,13 +674,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         QCompany c = QCompany.company;
 
-        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization first) {
-            first.waitForNonStaleResults();
-          }
-        }).where(c.name.eq(company.getName()));
+        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(c.name.eq(company.getName()));
 
         Company single = q.toList().get(0);
         assertEquals("Company 1", single.getName());
@@ -723,13 +706,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         String name = company.getName();
 
-        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization first) {
-            first.waitForNonStaleResults();
-          }
-        }).where(c.name.eq(name));
+        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(c.name.eq(name));
 
         Company single = q.toList().get(0);
         assertEquals("Company 1", single.getName());
@@ -754,14 +733,8 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         store.getDatabaseCommands().putIndex("company_by_name", indexDefinition);
 
-        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization first) {
-            first.waitForNonStaleResults();
-          }
-        });
-
+        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults());
         Company single = q.toList().get(0);
         assertEquals("Company 1", single.getName());
         assertEquals(5, single.getPhone());
@@ -787,13 +760,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         QCompany c = QCompany.company;
 
-        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization first) {
-            first.waitForNonStaleResults();
-          }
-        }).where(c.phone.eq(5));
+        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(c.phone.eq(5));
 
         Company single = q.toList().get(0);
         assertEquals("Company 1", single.getName());
@@ -821,13 +790,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         QCompany c = QCompany.company;
 
-        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name").customize(new Action1<IDocumentQueryCustomization>() {
-
-          @Override
-          public void apply(IDocumentQueryCustomization first) {
-            first.waitForNonStaleResults(3600 * 1000);
-          }
-        }).where(c.phone.gt(1));
+        IRavenQueryable<Company> q = session.query(Company.class, "company_by_name")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(c.phone.gt(1));
 
         Company single = q.toList().get(0);
         assertEquals("Company 1", single.getName());

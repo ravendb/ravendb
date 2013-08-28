@@ -11,7 +11,7 @@ import raven.abstractions.closure.Action1;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
-import raven.client.IDocumentQueryCustomization;
+import raven.client.document.DocumentQueryCustomizationFactory;
 
 /**
  * Extension for the built-in IQueryProvider allowing for Raven specific operations
@@ -27,7 +27,7 @@ public interface IRavenQueryProvider extends IQueryProvider {
    * Customizes the query using the specified action
    * @param action
    */
-  void customize(Action1<IDocumentQueryCustomization> action);
+  void customize(DocumentQueryCustomizationFactory factory);
 
   /**
    * The name of the transformer to use with this query
@@ -51,7 +51,7 @@ public interface IRavenQueryProvider extends IQueryProvider {
    * The action to execute on the customize query
    * @return
    */
-  public Action1<IDocumentQueryCustomization> getCustomizeQuery();
+  public DocumentQueryCustomizationFactory getCustomizeQuery();
 
   /**
    * Change the result type for the query provider

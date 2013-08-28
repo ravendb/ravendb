@@ -1,16 +1,15 @@
 package raven.client.linq;
 
-import com.mysema.query.types.Path;
-
 import raven.abstractions.basic.Reference;
-import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.json.linq.RavenJToken;
-import raven.client.IDocumentQueryCustomization;
 import raven.client.RavenQueryStatistics;
+import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
+
+import com.mysema.query.types.Path;
 
 /**
  * An implementation of IOrderedQueryable with Raven specific operation
@@ -30,7 +29,7 @@ public interface IRavenQueryable<T> extends IOrderedQueryable<T> {
    * @param action
    * @return
    */
-  IRavenQueryable<T> customize(Action1<IDocumentQueryCustomization> action);
+  IRavenQueryable<T> customize(DocumentQueryCustomizationFactory customizationFactory);
 
   /**
    * Specifies a result transformer to use on the results

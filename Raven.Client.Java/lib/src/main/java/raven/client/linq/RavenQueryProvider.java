@@ -11,20 +11,19 @@ import com.mysema.query.types.Expression;
 
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Delegates;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
-import raven.client.IDocumentQueryCustomization;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
+import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.InMemoryDocumentSessionOperations;
 
 public class RavenQueryProvider<T> implements IRavenQueryProvider {
 
   private Action1<QueryResult> afterQueryExecuted;
-  private Action1<IDocumentQueryCustomization> customizeQuery;
+  private DocumentQueryCustomizationFactory customizeQuery;
   private final String indexName;
   private final IDocumentQueryGenerator queryGenerator;
   private final RavenQueryStatistics ravenQueryStatistics;
@@ -58,7 +57,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
    * Gets the actions for customizing the generated lucene query
    * @return
    */
-  public Action1<IDocumentQueryCustomization> getCustomizedQuery() {
+  public DocumentQueryCustomizationFactory getCustomizedQuery() {
     return customizeQuery;
   }
 
@@ -76,7 +75,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
     return queryGenerator;
   }
 
-  public Action1<IDocumentQueryCustomization> getCustomizeQuery() {
+  public DocumentQueryCustomizationFactory getCustomizeQuery() {
     return customizeQuery;
   }
 
@@ -130,11 +129,15 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   /**
    *  Customizes the query using the specified action
    */
-  public void customize(Action1<IDocumentQueryCustomization> action) {
-    if (action == null) {
+  public void customize(DocumentQueryCustomizationFactory factory) {
+    if (factory == null) {
       return;
     }
-    customizeQuery = Delegates.combine(this.customizeQuery, action);
+    if (customizeQuery == null) {
+      customizeQuery = factory;
+    }
+    // merge 2 factories
+    customizeQuery = DocumentQueryCustomizationFactory.join(customizeQuery, factory);
   }
 
   public void transformWith(String transformerName) {

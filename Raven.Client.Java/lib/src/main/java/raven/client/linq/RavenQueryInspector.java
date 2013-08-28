@@ -24,11 +24,11 @@ import raven.abstractions.data.QueryResult;
 import raven.abstractions.extensions.ExpressionExtensions;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
-import raven.client.IDocumentQueryCustomization;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.IRavenQueryInspector;
+import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.InMemoryDocumentSessionOperations;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
@@ -125,8 +125,8 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
    * Customizes the query using the specified action
    */
   @Override
-  public IRavenQueryable<T> customize(Action1<IDocumentQueryCustomization> action) {
-    provider.customize(action);
+  public IRavenQueryable<T> customize(DocumentQueryCustomizationFactory factory) {
+    provider.customize(factory);
     return this;
   }
 
@@ -150,13 +150,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
 
   @Override
   public IRavenQueryable<T> spatial(final Path< ? > path, final Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
-    return customize(new Action1<IDocumentQueryCustomization>() {
-
-      @Override
-      public void apply(IDocumentQueryCustomization x) {
-        x.spatial(ExpressionExtensions.toPropertyPath(path), clause);
-      }
-    });
+    return customize(new DocumentQueryCustomizationFactory().spatial(ExpressionExtensions.toPropertyPath(path), clause));
   }
 
   @Override

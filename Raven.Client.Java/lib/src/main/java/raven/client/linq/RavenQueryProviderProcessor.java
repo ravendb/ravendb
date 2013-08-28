@@ -7,35 +7,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
+import raven.abstractions.closure.Action1;
+import raven.abstractions.data.Constants;
+import raven.abstractions.data.QueryResult;
+import raven.abstractions.json.linq.RavenJToken;
+import raven.client.IDocumentQuery;
+import raven.client.WhereParams;
+import raven.client.document.DocumentQuery;
+import raven.client.document.DocumentQueryCustomiation;
+import raven.client.document.DocumentQueryCustomizationFactory;
+import raven.client.document.IAbstractDocumentQuery;
+import raven.client.linq.LinqPathProvider.Result;
+import raven.linq.dsl.LinqOps;
 
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Constant;
-import com.mysema.query.types.ConstantImpl;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.Operation;
 import com.mysema.query.types.Ops;
 import com.mysema.query.types.Order;
 import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
-import com.mysema.query.types.PathImpl;
-import com.mysema.query.types.expr.BooleanExpression;
 import com.mysema.query.types.expr.BooleanOperation;
-import com.mysema.query.types.expr.SimpleExpression;
-import com.mysema.query.types.expr.SimpleOperation;
-
-import raven.abstractions.closure.Action1;
-import raven.abstractions.data.Constants;
-import raven.abstractions.data.QueryResult;
-import raven.abstractions.json.linq.RavenJToken;
-import raven.client.IDocumentQuery;
-import raven.client.IDocumentQueryCustomization;
-import raven.client.WhereParams;
-import raven.client.document.DocumentQuery;
-import raven.client.document.DocumentQueryCustomiation;
-import raven.client.document.IAbstractDocumentQuery;
-import raven.client.linq.LinqPathProvider.Result;
-import raven.linq.dsl.LinqOps;
 
 /**
  * Process a Linq expression to a Lucene query
@@ -44,7 +37,7 @@ import raven.linq.dsl.LinqOps;
  */
 public class RavenQueryProviderProcessor<T> {
   private Class<T> clazz;
-  private final Action1<IDocumentQueryCustomization> customizeQuery;
+  private final DocumentQueryCustomizationFactory customizeQuery;
   protected final IDocumentQueryGenerator queryGenerator;
   private final Action1<QueryResult> afterQueryExecuted;
   private boolean chanedWhere;
@@ -85,7 +78,7 @@ public class RavenQueryProviderProcessor<T> {
     return currentPath;
   }
 
-  public RavenQueryProviderProcessor(Class<T> clazz, IDocumentQueryGenerator queryGenerator, Action1<IDocumentQueryCustomization> customizeQuery,
+  public RavenQueryProviderProcessor(Class<T> clazz, IDocumentQueryGenerator queryGenerator, DocumentQueryCustomizationFactory customizeQuery,
       Action1<QueryResult> afterQueryExecuted, String indexName, Set<String> fieldsToFetch, List<RenamedField> fieldsToRename, boolean isMapReduce,
       String resultsTransformer, Map<String, RavenJToken> queryInputs) {
     this.clazz = clazz;
@@ -346,7 +339,7 @@ public class RavenQueryProviderProcessor<T> {
 
     visitExpression(expression);
     if (customizeQuery != null) {
-      customizeQuery.apply(new DocumentQueryCustomiation((DocumentQuery< ? >) luceneQuery));
+      customizeQuery.customize(new DocumentQueryCustomiation((DocumentQuery< ? >) luceneQuery));
     }
     return q.selectFields(clazz, fieldsToFetch.toArray(new String[0]));
   }

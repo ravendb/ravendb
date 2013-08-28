@@ -9,12 +9,11 @@ import java.util.List;
 import org.junit.Test;
 
 import raven.abstractions.basic.Lazy;
-import raven.abstractions.closure.Action1;
-import raven.client.IDocumentQueryCustomization;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentConvention;
+import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentStore;
 import raven.tests.bugs.QUser;
 import raven.tests.bugs.User;
@@ -187,12 +186,9 @@ public class MultiGetCachingTest extends RemoteClientTest {
       QUser u = new QUser("u");
 
       try (IDocumentSession session = store.openSession()) {
-        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
-          @Override
-          public void apply(IDocumentQueryCustomization input) {
-            input.waitForNonStaleResults();
-          }
-        }).where(u.name.eq("test")).toList();
+        session.query(User.class)
+        .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+        .where(u.name.eq("test")).toList();
       }
 
       try (IDocumentSession session = store.openSession()) {
@@ -240,12 +236,9 @@ public class MultiGetCachingTest extends RemoteClientTest {
       QUser u = new QUser("u");
 
       try (IDocumentSession session = store.openSession()) {
-        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
-          @Override
-          public void apply(IDocumentQueryCustomization input) {
-            input.waitForNonStaleResults();
-          }
-        }).where(u.name.eq("test")).toList();
+        session.query(User.class)
+          .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+          .where(u.name.eq("test")).toList();
       }
 
       try (IDocumentSession session = store.openSession()) {
@@ -295,12 +288,9 @@ public class MultiGetCachingTest extends RemoteClientTest {
       QUser u = new QUser("u");
 
       try (IDocumentSession session = store.openSession()) {
-        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
-          @Override
-          public void apply(IDocumentQueryCustomization input) {
-            input.waitForNonStaleResults();
-          }
-        }).where(u.name.eq("test")).toList();
+        session.query(User.class)
+          .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+          .where(u.name.eq("test")).toList();
       }
 
 
@@ -343,12 +333,9 @@ public class MultiGetCachingTest extends RemoteClientTest {
       QUser u = new QUser("u");
 
       try (IDocumentSession session = store.openSession()) {
-        session.query(User.class).customize(new Action1<IDocumentQueryCustomization>() {
-          @Override
-          public void apply(IDocumentQueryCustomization input) {
-            input.waitForNonStaleResults();
-          }
-        }).where(u.name.eq("test")).toList();
+        session.query(User.class)
+         .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+         .where(u.name.eq("test")).toList();
       }
 
       try (IDocumentSession session = store.openSession()) {
