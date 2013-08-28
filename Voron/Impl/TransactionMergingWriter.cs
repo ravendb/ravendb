@@ -1,7 +1,6 @@
-﻿using System;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+	using System;
 	using System.Collections.Concurrent;
 	using System.Collections.Generic;
 	using System.Diagnostics;
@@ -18,7 +17,7 @@ namespace Voron.Impl
 
 		private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
 
-		private readonly SemaphoreSlim _semaphore;
+		internal readonly SemaphoreSlim _semaphore;
 
 		internal TransactionMergingWriter(StorageEnvironment env)
 		{
@@ -54,7 +53,7 @@ namespace Voron.Impl
 				_pendingWrites.Enqueue(mine);
 
 				_semaphore.Wait();
-			
+
 				HandleActualWrites(mine);
 			}
 		}
@@ -64,48 +63,93 @@ namespace Voron.Impl
 			List<OutstandingWrite> writes = null;
 			try
 			{
-				if (mine.Done)
+				if (mine.Done())
 					return;
 
 				writes = BuildBatchGroup(mine);
 
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					foreach (var g in writes.SelectMany(x => x.Batch.Operations).GroupBy(x => x.TreeName))
-					{
-						var tree = GetTree(g.Key);
-						foreach (var operation in g)
-						{
-							switch (operation.Type)
-							{
-								case WriteBatch.BatchOperationType.Add:
-									tree.Add(tx, operation.Key, operation.Value);
-									break;
-								case WriteBatch.BatchOperationType.Delete:
-									tree.Delete(tx, operation.Key);
-									break;
-							}
-						}
-					}
+					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
 					tx.Commit();
 				}
+
+				foreach (var write in writes)
+					write.SetSuccess();
+			}
+			catch (Exception)
+			{
+				if (writes == null)
+					throw;
+
+				SplitWrites(writes);
 			}
 			finally
 			{
-				if (writes != null)
-				{
-					foreach (var write in writes)
-					{
-						Debug.Assert(_pendingWrites.Peek() == write);
-
-						OutstandingWrite pendingWrite;
-						_pendingWrites.TryDequeue(out pendingWrite);
-						pendingWrite.Done = true;
-					}
-				}
+				Finalize(writes);
 
 				_semaphore.Release();
+			}
+
+			Debug.Assert(mine.Status != OutstandingWriteStatus.Pending);
+			mine.Done();
+		}
+
+		private void Finalize(IEnumerable<OutstandingWrite> writes)
+		{
+			if (writes != null)
+			{
+				foreach (var write in writes)
+				{
+					Debug.Assert(_pendingWrites.Peek() == write);
+
+					OutstandingWrite pendingWrite;
+					_pendingWrites.TryDequeue(out pendingWrite);
+				}
+			}
+		}
+
+		private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
+		{
+			foreach (var g in operations.GroupBy(x => x.TreeName))
+			{
+				var tree = GetTree(g.Key);
+				foreach (var operation in g)
+				{
+					operation.Reset();
+
+					switch (operation.Type)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							tree.Add(tx, operation.Key, operation.Value);
+							break;
+						case WriteBatch.BatchOperationType.Delete:
+							tree.Delete(tx, operation.Key);
+							break;
+					}
+				}
+			}
+		}
+
+		private void SplitWrites(IEnumerable<OutstandingWrite> writes)
+		{
+			foreach (var write in writes)
+			{
+				try
+				{
+					using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+					{
+						HandleOperations(tx, write.Batch.Operations);
+						tx.Commit();
+
+						write.SetSuccess();
+					}
+				}
+				catch (Exception e)
+				{
+					write.SetError(e);
+				}
 			}
 		}
 
@@ -138,7 +182,7 @@ namespace Voron.Impl
 
 		private Tree GetTree(string treeName)
 		{
-			if (treeName == null) 
+			if (treeName == null)
 				return _env.Root;
 
 			return _env.GetTree(treeName);
@@ -146,17 +190,50 @@ namespace Voron.Impl
 
 		private class OutstandingWrite
 		{
+			private Exception exception;
+
 			public OutstandingWrite(WriteBatch batch)
 			{
 				Batch = batch;
 				Size = batch.Size;
+				Status = OutstandingWriteStatus.Pending;
 			}
 
 			public WriteBatch Batch { get; private set; }
 
 			public long Size { get; private set; }
 
-			public bool Done;
+			public OutstandingWriteStatus Status { get; private set; }
+
+			public void SetSuccess()
+			{
+				Status = OutstandingWriteStatus.Success;
+				exception = null;
+			}
+
+			public void SetError(Exception e)
+			{
+				Status = OutstandingWriteStatus.Error;
+				exception = e;
+			}
+
+			public bool Done()
+			{
+				if (Status == OutstandingWriteStatus.Success)
+					return true;
+
+				if (Status == OutstandingWriteStatus.Pending)
+					return false;
+
+				throw exception;
+			}
+		}
+
+		private enum OutstandingWriteStatus
+		{
+			Pending,
+			Success,
+			Error
 		}
 	}
 }

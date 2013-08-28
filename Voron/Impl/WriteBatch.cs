@@ -51,12 +51,16 @@
 
 		public class BatchOperation
 		{
+			private readonly long originalStreamPosition;
+
 			public BatchOperation(Slice key, Stream value, string treeName, BatchOperationType type)
 			{
 				Key = key;
 				Value = value;
 				TreeName = treeName;
 				Type = type;
+
+				originalStreamPosition = value.Position;
 			}
 
 			public Slice Key { get; private set; }
@@ -66,6 +70,12 @@
 			public string TreeName { get; private set; }
 
 			public BatchOperationType Type { get; private set; }
+
+			public void Reset()
+			{
+				if (Value != null)
+					Value.Position = originalStreamPosition;
+			}
 		}
 
 		public enum BatchOperationType
@@ -80,7 +90,7 @@
 			{
 				using (operation.Value)
 				{
-					
+
 				}
 			}
 		}
