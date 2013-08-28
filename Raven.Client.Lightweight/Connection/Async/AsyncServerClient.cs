@@ -693,7 +693,7 @@ namespace Raven.Client.Connection.Async
 			{
 				try
 				{
-					var indexDefinitionJson = (RavenJObject)await operationUrl.Indexes(name)
+					var indexDefinitionJson = (RavenJObject)await operationUrl.IndexDefinition(name)
 						.NoCache()
 						.ToJsonRequest(this, credentials, convention)
 						.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
