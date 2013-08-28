@@ -26,7 +26,12 @@ namespace Voron
 		private long _transactionsCounter;
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
-		public TreeWriter Writer { get; private set; }
+		public TransactionMergingWriter Writer { get; private set; }
+		
+		public SnapshotReader CreateSnapshot()
+		{
+			return new SnapshotReader(NewTransaction(TransactionFlags.Read));
+		}
 
 	    public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
@@ -42,7 +47,7 @@ namespace Voron
 			    FreeSpaceRoot.Name = "Free Space";
 				Root.Name = "Root";
 
-				Writer = new TreeWriter(this);
+				Writer = new TransactionMergingWriter(this);
 			}
 			catch (Exception)
 			{
