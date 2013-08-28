@@ -753,12 +753,13 @@ task CreateNugetPackages -depends Compile {
 		$packages | ForEach-Object {
 			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey -Source $sourceFeed }
 		}
-		
-		$packages | ForEach-Object {
-			try {
-				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 2400
-			} catch {
-				Write-Host $error[0]
+		if($false){ // disable for now
+			$packages | ForEach-Object {
+				try {
+					&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 2400
+				} catch {
+					Write-Host $error[0]
+				}
 			}
 		}
 	}
