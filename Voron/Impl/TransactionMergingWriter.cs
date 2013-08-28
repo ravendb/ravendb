@@ -124,7 +124,7 @@
 
 		private Tree GetTree(string treeName)
 		{
-			if (treeName == _env.Root.Name) 
+			if (treeName == null) 
 				return _env.Root;
 
 			return _env.GetTree(treeName);
