@@ -17,6 +17,19 @@ public class PutCommandData implements ICommandData {
   private RavenJObject metadata;
   private RavenJObject additionalData;
 
+
+  public PutCommandData() {
+    super();
+  }
+
+  public PutCommandData(String key, Etag etag, RavenJObject document, RavenJObject metadata) {
+    super();
+    this.key = key;
+    this.etag = etag;
+    this.document = document;
+    this.metadata = metadata;
+  }
+
   public RavenJObject getAdditionalData() {
     return additionalData;
   }

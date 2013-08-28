@@ -15,6 +15,16 @@ public class DeleteCommandData implements ICommandData {
   private TransactionInformation transactionInformation;
   private RavenJObject additionalData;
 
+  public DeleteCommandData(String key, Etag etag) {
+    super();
+    this.key = key;
+    this.etag = etag;
+  }
+
+  public DeleteCommandData() {
+    super();
+  }
+
   public RavenJObject getAdditionalData() {
     return additionalData;
   }

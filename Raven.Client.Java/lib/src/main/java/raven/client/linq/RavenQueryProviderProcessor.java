@@ -1,5 +1,6 @@
 package raven.client.linq;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -20,6 +21,7 @@ import com.mysema.query.types.Path;
 import com.mysema.query.types.PathImpl;
 import com.mysema.query.types.expr.BooleanExpression;
 import com.mysema.query.types.expr.BooleanOperation;
+import com.mysema.query.types.expr.SimpleExpression;
 import com.mysema.query.types.expr.SimpleOperation;
 
 import raven.abstractions.closure.Action1;
@@ -182,7 +184,7 @@ public class RavenQueryProviderProcessor<T> {
       visitExpression(expression.getArg(0));
       Expression< ? > orderSpecExpression = expression.getArg(1);
       if (orderSpecExpression instanceof Constant) {
-        Object constant = ((Constant) orderSpecExpression).getConstant();
+        Object constant = ((Constant<?>) orderSpecExpression).getConstant();
         visitOrderBy((OrderSpecifier<?>[])constant);
       } else {
         throw new IllegalStateException("Constant expected in: " + expression);
@@ -216,10 +218,45 @@ public class RavenQueryProviderProcessor<T> {
   private void visitBooleanOperation(BooleanOperation expression) {
     if (expression.getOperator().equals(Ops.EQ)) {
       visitEquals(expression);
-      //TODO: finish me
+    } else if (expression.getOperator().equals(Ops.GT)) {
+      visitGreatherThan(expression);
     } else {
       throw new IllegalArgumentException("Expression is not supported");
     }
+  }
+
+  private void visitGreatherThan(BooleanOperation expression) {
+    if (!isMemberAccessForQuerySource(expression.getArg(0)) &&  isMemberAccessForQuerySource(expression.getArg(1))) {
+      visitLessThan((BooleanOperation) BooleanOperation.create(Ops.LT, expression.getArg(1), expression.getArg(0)));
+      return;
+    }
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
+
+    luceneQuery.whereGreaterThan(getFieldNameForRangeQuery(memberInfo, value), value);
+  }
+
+  private void visitLessThan(BooleanOperation expression) {
+    if (!isMemberAccessForQuerySource(expression.getArg(0)) && isMemberAccessForQuerySource(expression.getArg(1))) {
+      visitGreatherThan((BooleanOperation) BooleanOperation.create(Ops.GT, expression.getArg(1), expression.getArg(0)));
+      return;
+    }
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
+
+    luceneQuery.whereLessThan(getFieldNameForRangeQuery(memberInfo, value), value);
+
+  }
+
+  private String getFieldNameForRangeQuery(ExpressionInfo expression, Object value) {
+    Field identityProperty = luceneQuery.getDocumentConvention().getIdentityProperty(clazz);
+    if (identityProperty != null && identityProperty.getName().equals(expression.getPath())) {
+      return Constants.DOCUMENT_ID_FIELD_NAME;
+    }
+    if (luceneQuery.getDocumentConvention().usesRangeType(value) && !expression.getPath().endsWith("_Range")) {
+      return expression.getPath() + "_Range";
+    }
+    return expression.getPath();
   }
 
   private void visitEquals(BooleanOperation expression) {

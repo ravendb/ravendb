@@ -401,7 +401,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
 
   @Override
   public T single() {
-    pageSize = 1;
+    pageSize = 2;
     List<T> list = toList();
     if (list.size() != 1) {
       throw new IllegalStateException("Expected one result. Got: " + list.size());

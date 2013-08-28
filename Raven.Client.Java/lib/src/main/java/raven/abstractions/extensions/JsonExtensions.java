@@ -21,6 +21,7 @@ import org.codehaus.jackson.map.module.SimpleModule;
 
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
+import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
@@ -49,22 +50,27 @@ public class JsonExtensions {
   private static SimpleModule createCustomSerializeModule() {
     SimpleModule module = new SimpleModule("customSerializers", new Version(1, 0, 0, null));
     module.addDeserializer(Etag.class, new EtagDeserializer(Etag.class));
-    module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer(RavenJToken.class));
+    module.addDeserializer(RavenJObject.class, new RavenJTokenDeserializer<RavenJObject>(RavenJObject.class));
+    module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer<RavenJToken>(RavenJToken.class));
+    module.addDeserializer(RavenJArray.class, new RavenJTokenDeserializer<RavenJArray>(RavenJArray.class));
+    module.addDeserializer(RavenJValue.class, new RavenJTokenDeserializer<RavenJValue>(RavenJValue.class));
     return module;
   }
 
-  public static class RavenJTokenDeserializer extends StdDeserializer<RavenJToken> {
+  public static class RavenJTokenDeserializer<T extends RavenJToken> extends StdDeserializer<T> {
 
-    protected RavenJTokenDeserializer(Class< ? > vc) {
+    protected RavenJTokenDeserializer(Class< T > vc) {
       super(vc);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public RavenJToken deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
-      return RavenJToken.load(jp);
+    public T deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+      return (T) RavenJToken.load(jp);
     }
 
   }
+
 
   public static class EtagDeserializer extends FromStringDeserializer<Etag> {
 

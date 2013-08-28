@@ -17,6 +17,18 @@ public class Company {
   private CompanyType type;
 
 
+  public Company() {
+    super();
+  }
+
+
+  public Company(String id, String name) {
+    super();
+    this.id = id;
+    this.name = name;
+  }
+
+
   public double getAccountsReceivable() {
     return accountsReceivable;
   }

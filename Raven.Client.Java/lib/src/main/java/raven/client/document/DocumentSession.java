@@ -25,6 +25,7 @@ import raven.abstractions.data.GetRequest;
 import raven.abstractions.data.GetResponse;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.MultiLoadResult;
+import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
@@ -330,7 +331,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     for (String id: ids) {
       result.add(entitiesByKey.get(id));
     }
-    return (T[]) result.toArray();
+    return result.toArray((T[]) Array.newInstance(clazz, 0));
   }
 
   /**
@@ -592,6 +593,8 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
       BatchResult[] batchResults = getDatabaseCommands().batch(data.getCommands());
       updateBatchResults(Arrays.asList(batchResults), data);
+    } catch (ConcurrencyException e) {
+      throw e;
     } catch (Exception e) {
       throw new RuntimeException("Unable to save changes", e);
     }

@@ -1534,6 +1534,8 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
         }
       }
       return JsonExtensions.getDefaultObjectMapper().readValue(response.toString(), BatchResult[].class);
+    } catch (ConcurrencyException e) {
+      throw e;
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
