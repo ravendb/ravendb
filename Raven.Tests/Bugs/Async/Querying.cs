@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs.Async
 						.WhereEquals("Name", "Ayende")
 						.ToListAsync();
 
-					var result = queryResultAsync.Item2;
+					var result = queryResultAsync;
 					Assert.Equal("Ayende", result[0].Name);
 				}
 			}

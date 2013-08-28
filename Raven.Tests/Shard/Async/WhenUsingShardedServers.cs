@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
@@ -169,8 +170,8 @@ namespace Raven.Tests.Shard.Async
 
 				//get all, should automagically retrieve from each shard
 				var allCompanies = (await session.Advanced.AsyncLuceneQuery<Company>()
-					.WaitForNonStaleResults()
-					.ToListAsync().Result;
+				                                 .WaitForNonStaleResults()
+				                                 .ToListAsync());
 
 				Assert.NotNull(allCompanies);
 				Assert.Equal(company1.Name, allCompanies[0].Name);
