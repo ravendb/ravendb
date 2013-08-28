@@ -7,6 +7,7 @@ namespace Raven.Tests.Issues
 {
 	using System.Threading.Tasks;
 
+	using Raven.Abstractions.Data;
 	using Raven.Abstractions.Indexing;
 
 	using Xunit;
@@ -98,6 +99,55 @@ namespace Raven.Tests.Issues
 				t = await store.AsyncDatabaseCommands.GetTransformerAsync(name);
 
 				Assert.Null(t);
+			}
+		}
+
+		[Fact]
+		public void QueryingSuperLongIndexName()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var name = new string('a', 200);
+
+				store.DatabaseCommands.PutIndex(name, new IndexDefinition { Name = name, Map = "from doc in docs select new { Name = doc.Name }" });
+
+				Assert.DoesNotThrow(() => store.DatabaseCommands.Query(name, new IndexQuery(), null)); 
+			}
+
+			using (var store = NewDocumentStore(runInMemory: false))
+			{
+				var name = new string('a', 200);
+
+				store.DatabaseCommands.PutIndex(name, new IndexDefinition { Name = name, Map = "from doc in docs select new { Name = doc.Name }" });
+
+				Assert.DoesNotThrow(() => store.DatabaseCommands.Query(name, new IndexQuery(), null));
+			}
+
+			using (var store = NewRemoteDocumentStore())
+			{
+				var name = new string('a', 200);
+
+				store.DatabaseCommands.PutIndex(name, new IndexDefinition { Name = name, Map = "from doc in docs select new { Name = doc.Name }" });
+
+				Assert.DoesNotThrow(() => store.DatabaseCommands.Query(name, new IndexQuery(), null));
+			}
+
+			using (var store = NewRemoteDocumentStore(runInMemory: false))
+			{
+				var name = new string('a', 200);
+
+				store.DatabaseCommands.PutIndex(name, new IndexDefinition { Name = name, Map = "from doc in docs select new { Name = doc.Name }" });
+
+				Assert.DoesNotThrow(() => store.DatabaseCommands.Query(name, new IndexQuery(), null));
+			}
+
+			using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
+			{
+				var name = new string('a', 200);
+
+				store.DatabaseCommands.PutIndex(name, new IndexDefinition { Name = name, Map = "from doc in docs select new { Name = doc.Name }" });
+
+				Assert.DoesNotThrow(() => store.DatabaseCommands.Query(name, new IndexQuery(), null));
 			}
 		}
 	}

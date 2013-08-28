@@ -1278,7 +1278,7 @@ namespace Raven.Database
             try
             {
 
-                index = IndexDefinitionStorage.FixupIndexName(index);
+	            index = index != null ? index.Trim() : null;
                 var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
                 Func<IndexQueryResult, object> tryRecordHighlighting = queryResult =>
                 {
