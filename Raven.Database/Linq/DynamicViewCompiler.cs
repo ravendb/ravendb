@@ -119,7 +119,7 @@ namespace Raven.Database.Linq
 	            }
 	            catch (InvalidOperationException ex)
 	            {
-	                throw new IndexCompilationException(ex.Message, ex)
+	                throw new IndexCompilationException(ex.Message + Environment.NewLine + map, ex)
 	                {
 	                    IndexDefinitionProperty = "Maps",
 	                    ProblematicText = map

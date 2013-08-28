@@ -24,6 +24,7 @@ namespace Raven.Tests.Bugs.MultiMap
 				new MySearchIndexTask().Execute(store);
 
 				WaitForIndexing(store);
+				WaitForUserToContinueTheTest(store);
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
