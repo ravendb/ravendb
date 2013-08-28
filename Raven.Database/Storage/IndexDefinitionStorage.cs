@@ -250,10 +250,13 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
-		public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)
+		public string RegisterNewIndexInThisSession(string name, IndexDefinition definition)
 		{
 			var fixedName = FixupIndexName(name);
+			definition.Name = fixedName;
 			newDefinitionsThisSession.TryAdd(fixedName, definition);
+
+			return fixedName;
 		}
 
         public void AddIndex(string name, IndexDefinition definition)

@@ -675,7 +675,7 @@ namespace Raven.Database.Indexing
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 			AssertAnalyzersValid(indexDefinition);
 
-			indexes.AddOrUpdate(indexDefinition.Name, n =>
+			indexes.AddOrUpdate(encodedName, n =>
 			{
 				var directory = OpenOrCreateLuceneDirectory(indexDefinition, encodedName);
 				return CreateIndexImplementation(encodedName, indexDefinition, directory);

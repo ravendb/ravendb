@@ -1200,7 +1200,8 @@ namespace Raven.Database
                     break;
             }
 
-			IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
+
+			name = IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
             // this has to happen in this fashion so we will expose the in memory status after the commit, but 
             // before the rest of the world is notified about this.
