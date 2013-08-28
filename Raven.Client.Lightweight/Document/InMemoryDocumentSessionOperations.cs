@@ -726,7 +726,7 @@ more responsive application.
 			{
 				string id;
 				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
-					return CompletedTask.With(id);
+					return id;
 				
 				var key = await GenerateKeyAsync(entity);
 							// If we generated a new id, store it back into the Id field so the client has access to to it                    

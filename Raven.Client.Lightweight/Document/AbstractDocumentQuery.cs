@@ -2054,10 +2054,11 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public async Task<Tuple<QueryResult, IList<T>>> ToListAsync()
+		public async Task<IList<T>> ToListAsync()
 		{
 			var currentQueryOperation = await InitAsync();
-			return await ProcessEnumerator(currentQueryOperation);
+			var tuple = await ProcessEnumerator(currentQueryOperation);
+			return tuple.Item2;
 		}
 
 		/// <summary>
