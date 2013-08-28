@@ -16,7 +16,7 @@
 		public async Task SingleItemBatchTest()
 		{
 			var batch = new WriteBatch();
-			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), Env.Root.Name);
+			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), null);
 
 			await Env.Writer.WriteAsync(batch);
 
@@ -39,7 +39,7 @@
 			var batch = new WriteBatch();
 			for (int i = 0; i < numberOfItems; i++)
 			{
-				batch.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Env.Root.Name);
+				batch.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), null);
 			}
 
 			await Env.Writer.WriteAsync(batch);
@@ -67,8 +67,8 @@
 			var batch2 = new WriteBatch();
 			for (int i = 0; i < numberOfItems; i++)
 			{
-				batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Env.Root.Name);
-				batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Env.Root.Name);
+				batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), null);
+				batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), null);
 			}
 
 			await Task.WhenAll(Env.Writer.WriteAsync(batch1), Env.Writer.WriteAsync(batch2));

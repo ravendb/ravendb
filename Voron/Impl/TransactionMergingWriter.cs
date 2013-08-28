@@ -1,4 +1,6 @@
-﻿namespace Voron.Impl
+﻿using System;
+
+namespace Voron.Impl
 {
 	using System.Collections.Concurrent;
 	using System.Collections.Generic;
@@ -10,7 +12,7 @@
 	using Extensions;
 	using Trees;
 
-	public class TreeWriter
+	public class TransactionMergingWriter
 	{
 		private readonly StorageEnvironment _env;
 
@@ -18,7 +20,7 @@
 
 		private readonly SemaphoreSlim _semaphore;
 
-		internal TreeWriter(StorageEnvironment env)
+		internal TransactionMergingWriter(StorageEnvironment env)
 		{
 			_env = env;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
@@ -27,13 +29,39 @@
 
 		public async Task WriteAsync(WriteBatch batch)
 		{
-			var mine = new OutstandingWrite(batch);
-			_pendingWrites.Enqueue(mine);
+			if (batch.Operations.Count == 0)
+				return;
 
+			using (batch)
+			{
+				var mine = new OutstandingWrite(batch);
+				_pendingWrites.Enqueue(mine);
+
+				await _semaphore.WaitAsync();
+
+				HandleActualWrites(mine);
+			}
+		}
+
+		public void Write(WriteBatch batch)
+		{
+			if (batch.Operations.Count == 0)
+				return;
+
+			using (batch)
+			{
+				var mine = new OutstandingWrite(batch);
+				_pendingWrites.Enqueue(mine);
+
+				_semaphore.Wait();
+			
+				HandleActualWrites(mine);
+			}
+		}
+
+		private void HandleActualWrites(OutstandingWrite mine)
+		{
 			List<OutstandingWrite> writes = null;
-
-			await _semaphore.WaitAsync();
-
 			try
 			{
 				if (mine.Done)
@@ -43,22 +71,21 @@
 
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					foreach (var g in writes.SelectMany(x => x.Batch.Operations).GroupBy(x=>x.TreeName))
+					foreach (var g in writes.SelectMany(x => x.Batch.Operations).GroupBy(x => x.TreeName))
 					{
 						var tree = GetTree(g.Key);
-					    foreach (var operation in g)
-					    {
-
-                            switch (operation.Type)
-                            {
-                                case WriteBatch.BatchOperationType.Add:
-                                    tree.Add(tx, operation.Key, operation.Value);
-                                    break;
-                                case WriteBatch.BatchOperationType.Delete:
-                                    tree.Delete(tx, operation.Key);
-                                    break;
-                            }
-					    }
+						foreach (var operation in g)
+						{
+							switch (operation.Type)
+							{
+								case WriteBatch.BatchOperationType.Add:
+									tree.Add(tx, operation.Key, operation.Value);
+									break;
+								case WriteBatch.BatchOperationType.Delete:
+									tree.Delete(tx, operation.Key);
+									break;
+							}
+						}
 					}
 
 					tx.Commit();
@@ -111,7 +138,7 @@
 
 		private Tree GetTree(string treeName)
 		{
-			if (treeName == _env.Root.Name) 
+			if (treeName == null) 
 				return _env.Root;
 
 			return _env.GetTree(treeName);

@@ -5,7 +5,7 @@
 	using System.IO;
 	using System.Linq;
 
-	public class WriteBatch
+	public class WriteBatch : IDisposable
 	{
 		private readonly List<BatchOperation> _operations;
 
@@ -32,7 +32,7 @@
 
 		public void Add(Slice key, Stream value, string treeName)
 		{
-			if (string.IsNullOrEmpty(treeName)) throw new ArgumentNullException("treeName");
+			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length == 0)
 				throw new ArgumentException("Cannot add empty value");
@@ -72,6 +72,17 @@
 		{
 			Add,
 			Delete
+		}
+
+		public void Dispose()
+		{
+			foreach (var operation in _operations)
+			{
+				using (operation.Value)
+				{
+					
+				}
+			}
 		}
 	}
 }
