@@ -293,7 +293,7 @@ namespace Raven.Client.Indexes
 		{
 			var memberType = GetMemberType(member);
 			var nonNullable = Nullable.GetUnderlyingType(memberType);
-			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum() == false && TypeExistsOnServer(nonNullable))
+			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum == false && TypeExistsOnServer(nonNullable))
 			{
 				Out(")");
 			}
@@ -305,7 +305,7 @@ namespace Raven.Client.Indexes
 			// foo.NullableDatetime.GetValueOrDefault().Date
 			var memberType = GetMemberType(member);
 			var nonNullable = Nullable.GetUnderlyingType(memberType);
-			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum() == false && TypeExistsOnServer(nonNullable))
+			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum == false && TypeExistsOnServer(nonNullable))
 			{
 				Out("((");
 				Out(ConvertTypeToCSharpKeyword(nonNullable));
@@ -653,7 +653,8 @@ namespace Raven.Client.Indexes
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
 					var expression = ((UnaryExpression)left).Operand;
-					if (expression.Type.IsEnum() == false)
+					var enumType = Nullable.GetUnderlyingType(expression.Type) ?? expression.Type;
+					if (enumType.IsEnum() == false)
 						return;
 
 					var constantExpression = SkipConvertExpressions(right) as ConstantExpression;
@@ -667,11 +668,11 @@ namespace Raven.Client.Indexes
 					else
 					{
 						right = convention.SaveEnumsAsIntegers
-							        ? Expression.Constant((int) constantExpression.Value)
-							        : Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+									? Expression.Constant((int)constantExpression.Value)
+									: Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
 					}
-				break;
+					break;
 			}
 
 			while (true)
@@ -694,7 +695,7 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
-					return SkipConvertExpressions(((UnaryExpression) expression).Operand);
+					return SkipConvertExpressions(((UnaryExpression)expression).Operand);
 				default:
 					return expression;
 			}
