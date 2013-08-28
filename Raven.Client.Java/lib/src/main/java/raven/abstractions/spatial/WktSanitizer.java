@@ -5,6 +5,6 @@ public class WktSanitizer {
 
   public String sanitize(String shapeWkt) {
     //TODO:
-    return null; //TODO: delete me
+    return shapeWkt;
   }
 }

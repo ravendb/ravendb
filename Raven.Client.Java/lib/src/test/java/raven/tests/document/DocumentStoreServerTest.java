@@ -14,6 +14,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
+import javax.print.Doc;
+
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
 
@@ -45,6 +47,9 @@ import raven.client.document.DocumentStore;
 import raven.client.indexes.IndexDefinitionBuilder;
 import raven.client.linq.IRavenQueryable;
 import raven.tests.document.Company.CompanyType;
+import raven.tests.spatial.Event;
+import raven.tests.spatial.SpatialIndexTest;
+import raven.tests.spatial.SpatialIndexTestHelper;
 
 public class DocumentStoreServerTest extends RemoteClientTest {
 
@@ -646,7 +651,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex("company_by_name", indexDefinition);
 
         IDocumentQuery<Company> q = session.advanced().luceneQuery(Company.class, "company_by_name").
-          selectFields(Company.class, "Name", "Phone").waitForNonStaleResults();
+            selectFields(Company.class, "Name", "Phone").waitForNonStaleResults();
 
         Company single = q.single();
         assertEquals("Company 1", single.getName());
@@ -823,6 +828,158 @@ public class DocumentStoreServerTest extends RemoteClientTest {
     }
   }
 
+  //TODO: Can_insert_with_transaction
+
+  //TODO: Can_rollback_transaction_on_insert
+
+  @Test
+  public void should_update_stored_entity() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        Company company = new Company(null, "Company 1");
+        session.store(company);
+        session.saveChanges();
+
+        String id = company.getId();
+        company.setName("Company 2");
+        session.saveChanges();
+
+        Company companyFound = session.load(Company.class, company.getId());
+        assertEquals("Company 2", companyFound.getName());
+        assertEquals(id, company.getId());
+      }
+    }
+  }
+
+  @Test
+  public void should_update_retrieved_entity() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        Company company = new Company(null, "Company 1");
+        session.store(company);
+        session.saveChanges();
+
+        String companyId = company.getId();
+        IDocumentSession session2 = store.openSession();
+        Company companyFound = session2.load(Company.class, companyId);
+        companyFound.setName("New Name");
+        session2.saveChanges();
+
+        assertEquals("New Name", session2.load(Company.class, companyId).getName());
+      }
+    }
+  }
+
+  @Test
+  public void should_retrieve_all_entities() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new Company(null, "Company 1"));
+        session.store(new Company(null, "Company 2"));
+
+        session.saveChanges();
+
+        IDocumentSession session2 = store.openSession();
+        List<Company> companyFound = session2.advanced().luceneQuery(Company.class).waitForNonStaleResults().toList();
+
+        assertEquals(2, companyFound.size());
+
+      }
+    }
+  }
+
+  @Test
+  public void can_sort_from_index() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        Company c1 = new Company();
+        c1.setName("Company 1");
+        c1.setPhone(5);
+
+        Company c2 = new Company();
+        c2.setName("Company 2");
+        c2.setPhone(3);
+
+        session.store(c1);
+        session.store(c2);
+        session.saveChanges();
+
+        IndexDefinition indexDefinition = new IndexDefinition();
+        indexDefinition.setMap("from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}");
+        indexDefinition.getIndexes().put("Phone", FieldIndexing.ANALYZED);
+
+        store.getDatabaseCommands().putIndex("company_by_name", indexDefinition);
+
+        // wait unit the index is build
+        session.advanced().luceneQuery(Company.class, "company_by_name").waitForNonStaleResults().toList();
+
+        List<Company> companies = session.advanced().luceneQuery(Company.class, "company_by_name").
+            orderBy("Phone").waitForNonStaleResults().toList();
+
+        assertEquals("Company 2", companies.get(0).getName());
+        assertEquals("Company 1", companies.get(1).getName());
+
+      }
+    }
+  }
+
+  @Test
+  public void can_query_from_spatial_index() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        for (Event event: SpatialIndexTestHelper.getEvents()) {
+          session.store(event);
+        }
+        session.saveChanges();
+
+        IndexDefinition indexDefinition = new IndexDefinition();
+        indexDefinition.setMap("from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }");
+        indexDefinition.getIndexes().put("Tag", FieldIndexing.NOT_ANALYZED);
+
+        store.getDatabaseCommands().putIndex("eventsByLatLng", indexDefinition);
+
+        // Wait until the index is built
+        session.advanced().luceneQuery(Event.class, "eventsByLatLng")
+        .waitForNonStaleResults()
+        .toList();
+
+        final double lat = 38.96939, lng = -77.386398;
+        final double radiusInKm = 6.0 * 1.609344;
+
+        List<Event> events = session.advanced()
+            .luceneQuery(Event.class, "eventsByLatLng")
+            .whereEquals("Tag", "Event")
+            .withinRadiusOf(radiusInKm, lat, lng)
+            .sortByDistance()
+            .waitForNonStaleResults().toList();
+
+        int inRange = 0;
+        for (Event event: SpatialIndexTestHelper.getEvents()) {
+          if (SpatialIndexTest.getGeographicalDistance(lat, lng, event.getLatitude(), event.getLongitude()) <= radiusInKm) {
+            inRange++;
+          }
+        }
+
+        assertEquals(inRange, events.size());
+        assertEquals(7, events.size());
+
+        double previous = 0;
+
+        for (Event e: events) {
+          double distance  = SpatialIndexTest.getGeographicalDistance(lat, lng, e.getLatitude(), e.getLongitude());
+          System.out.println("Venue: " + e.getVenue() + ", Distance " + distance);
+          assertTrue(distance < radiusInKm);
+          assertTrue(distance >= previous);
+          previous = distance;
+        }
+      }
+    }
+  }
 
   //TODO: finish me
 }
