@@ -3,43 +3,48 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using Voron.Trees;
+
 namespace Raven.Database.Storage.Voron
 {
 	using System.IO;
 
-	using global::Voron.Impl;
-	using global::Voron.Trees;
+	using global::Voron.Impl;	
 
 	public class Table
 	{
-		private readonly Tree tree;
+		private readonly string treeName;
 
-		public Table(Tree tree)
+        public Table(string treeName)
 		{
-			this.tree = tree;
+            if (String.IsNullOrWhiteSpace(treeName))
+            {
+                throw new ArgumentNullException(treeName);
+            }
+
+			this.treeName = treeName;
 		}
 
-		public void Add(Transaction tx, string key, byte[] value)
+		public void Add(WriteBatch writeBatch, string key, byte[] value)
 		{
-			using (var stream = new MemoryStream(value))
-			{
-				Add(tx, key, stream);
-			}
+		    var stream = new MemoryStream(value);
+            writeBatch.Add(key, stream, treeName);
+        }
+
+        public void Add(WriteBatch writeBatch, string key, Stream value)
+		{
+            writeBatch.Add(key, value, treeName);
 		}
 
-		public void Add(Transaction tx, string key, Stream value)
-		{
-			tree.Add(tx, key, value);
-		}
+        public Stream Read(SnapshotReader snapshot, string key)
+        {
+            return snapshot.Read(treeName, key);
+        }
 
-		public Stream Read(Transaction tx, string key)
+        public void Delete(WriteBatch writeBatch, string key)
 		{
-			return tree.Read(tx, key);
-		}
-
-		public void Delete(Transaction tx, string key)
-		{
-			tree.Delete(tx, key);
+            writeBatch.Delete(key, treeName);
 		}
 	}
 }

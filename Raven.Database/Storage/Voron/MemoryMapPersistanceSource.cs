@@ -1,14 +1,18 @@
-﻿namespace Raven.Database.Storage.Voron
+﻿using System;
+using System.Threading;
+
+namespace Raven.Database.Storage.Voron
 {
 	using System.IO;
 
-	using Raven.Database.Config;
+	using Config;
 
 	using global::Voron.Impl;
 
 	public class MemoryMapPersistanceSource : IPersistanceSource
 	{
 		private readonly InMemoryRavenConfiguration configuration;
+	    private const string PAGER_FILENAME = "Raven.voron";
 
 		private readonly string directoryPath;
 
@@ -17,9 +21,13 @@
 		public MemoryMapPersistanceSource(InMemoryRavenConfiguration configuration)
 		{
 			this.configuration = configuration;
-
-			directoryPath = configuration.DataDirectory;
+			directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
 			filePath = Path.Combine(directoryPath, "Data");
+		    var filePathFolder = new DirectoryInfo(filePath);
+		    if (filePathFolder.Exists == false)
+		    {
+		        filePathFolder.Create();
+		    }
 
 			Initialize();
 		}
@@ -32,15 +40,15 @@
 		{
 			if (Directory.Exists(directoryPath))
 			{
-				this.CreatedNew = !File.Exists(filePath);
+				CreatedNew = !File.Exists(filePath);
 			}
 			else
 			{
 				Directory.CreateDirectory(directoryPath);
-				this.CreatedNew = true;
+				CreatedNew = true;
 			}
-
-			this.Pager = new MemoryMapPager(filePath);
+		    var storageFilePath = Path.Combine(filePath, PAGER_FILENAME);
+		    Pager = new MemoryMapPager(storageFilePath);
 		}
 
 		public void Dispose()

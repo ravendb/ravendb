@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Database.Tasks;
+
 namespace Raven.Database.Storage.Voron
 {
 	using System;
@@ -12,7 +14,8 @@ namespace Raven.Database.Storage.Voron
 
 	public class TableStorage : IDisposable
 	{
-		private readonly IPersistanceSource persistanceSource;
+	    private const string DetailsTreeName = "details";
+	    private readonly IPersistanceSource persistanceSource;
 
 		private readonly StorageEnvironment env;
 
@@ -24,12 +27,17 @@ namespace Raven.Database.Storage.Voron
 			Initialize();
 		}
 
-		public Transaction NewTransaction(TransactionFlags flags)
-		{
-			return env.NewTransaction(flags);
-		}
+	    public SnapshotReader CreateSnapshot()
+	    {
+	        return env.CreateSnapshot();
+	    }	
 
 		public Table Details { get; private set; }
+
+	    public void Write(WriteBatch writeBatch)
+	    {
+	        env.Writer.Write(writeBatch);
+	    }
 
 		public void Dispose()
 		{
@@ -44,7 +52,9 @@ namespace Raven.Database.Storage.Voron
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Details = new Table(env.CreateTree(tx, "details"));
+			    env.CreateTree(tx, DetailsTreeName);
+                Details = new Table(DetailsTreeName);
+                tx.Commit();
 			}
 		}
 	}

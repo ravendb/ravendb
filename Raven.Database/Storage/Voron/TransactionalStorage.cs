@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Storage.Voron
+﻿using Voron.Impl;
+
+namespace Raven.Database.Storage.Voron
 {
 	using System;
 	using System.Collections.Generic;
@@ -6,23 +8,21 @@
 	using System.IO;
 	using System.Threading;
 
-	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Extensions;
-	using Raven.Abstractions.MEF;
-	using Raven.Database;
-	using Raven.Database.Config;
-	using Raven.Database.Impl;
-	using Raven.Database.Impl.DTC;
-	using Raven.Database.Plugins;
-	using Raven.Database.Storage;
+	using Abstractions.Data;
+	using Abstractions.Extensions;
+	using Abstractions.MEF;
+	using Database;
+	using Config;
+	using Impl;
+	using Impl.DTC;
+	using Plugins;
+	using Storage;
 	using Raven.Json.Linq;
 
 	using global::Voron;
 
 	public class TransactionalStorage : ITransactionalStorage
 	{
-		private const string DATABASE_FILENAME_EXTENSION = ".voron";
-
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
@@ -31,7 +31,7 @@
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
 		private OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
-
+        private readonly IDocumentCacher documentCacher;
 		private IUuidGenerator uuidGenerator;
 
 		private readonly InMemoryRavenConfiguration configuration;
@@ -44,26 +44,26 @@
 		{
 			this.configuration = configuration;
 			this.onCommit = onCommit;
-
-			this.exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
+            documentCacher = new DocumentCacher(configuration);
+			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
 		}
 
 		public void Dispose()
 		{
-			this.disposerLock.EnterWriteLock();
+			disposerLock.EnterWriteLock();
 			try
 			{
-				if (this.disposed)
+				if (disposed)
 					return;
-				this.disposed = true;
-				this.current.Dispose();
+				disposed = true;
+				current.Dispose();
 
-				if (this.tableStorage != null)
-					this.tableStorage.Dispose();
+				if (tableStorage != null)
+					tableStorage.Dispose();
 			}
 			finally
 			{
-				this.disposerLock.ExitWriteLock();
+				disposerLock.ExitWriteLock();
 			}
 		}
 
@@ -81,67 +81,64 @@
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
-		public void Batch(Action<IStorageActionsAccessor> action)
-		{
-			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
-			{
-				if (current.Value != null) // check again, just to be sure
-				{
-					current.Value.IsNested = true;
-					action(current.Value);
-					current.Value.IsNested = false;
-					return;
-				}
-			}
+	    public void Batch(Action<IStorageActionsAccessor> action)
+	    {
+            if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
+            {
+                if (current.Value != null) // check again, just to be sure
+                {
+                    current.Value.IsNested = true;
+                    action(current.Value);
+                    current.Value.IsNested = false;
+                    return;
+                }
+            }
 
-			//StorageActionsAccessor result;
-			disposerLock.EnterReadLock();
-			try
-			{
-				if (disposed)
-				{
-					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
-					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
-				}
+            disposerLock.EnterReadLock();
+            try
+            {
+                if (disposed)
+                {
+                    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+                    return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+                }
 
-				//result = ExecuteBatch(action);
-				ExecuteBatch(action);
-			}
-			finally
-			{
-				disposerLock.ExitReadLock();
-				if (disposed == false && disableBatchNesting.Value == null)
-					current.Value = null;
-			}
+                ExecuteBatch(action);
+            }
+            finally
+            {
+                disposerLock.ExitReadLock();
+                if (disposed == false && disableBatchNesting.Value == null)
+                    current.Value = null;
+            }
 
-			//result.InvokeOnCommit();
-			onCommit(); // call user code after we exit the lock
-		}
+            onCommit(); // call user code after we exit the lock
+        }
 
-		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
-		{
-			using (var tx = tableStorage.NewTransaction(TransactionFlags.ReadWrite)) // TODO [ppekrol] need to determine somehow read / readwrite
-			{
-				//var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
-				//if (disableBatchNesting.Value == null)
-				//	current.Value = storageActionsAccessor;
-				//action(storageActionsAccessor);
-				//storageActionsAccessor.SaveAllTasks();
+	    private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
+	    {
+	        using (var writeBatch = new WriteBatch())
+	        {
+	            var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, documentCodecs,
+	                documentCacher, writeBatch);
+	            if (disableBatchNesting.Value == null)
+	                current.Value = storageActionsAccessor;
+	            action(storageActionsAccessor);
+	            storageActionsAccessor.SaveAllTasks();
 
-				tx.Commit();
-				//return storageActionsAccessor;
-				return null;
-			}
-		}
+	            tableStorage.Write(writeBatch);
+	            return storageActionsAccessor;
+	        }
+	    }
 
-		public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
+	    public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
 		{
 			throw new NotImplementedException();
 		}
 
 		public bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
-			this.uuidGenerator = generator;
+			uuidGenerator = generator;
 			this.documentCodecs = documentCodecs;
 
 			var persistanceSource = configuration.RunInMemory ? (IPersistanceSource)new MemoryPersistanceSource() : new MemoryMapPersistanceSource(configuration);
@@ -152,17 +149,17 @@
 			{
 				Id = Guid.NewGuid();
 
-				using (var tx = tableStorage.NewTransaction(TransactionFlags.ReadWrite))
+				using (var writeIdBatch = new WriteBatch())
 				{
-					tableStorage.Details.Add(tx, "id", Id.ToByteArray());
-					tx.Commit();
+					tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
+					tableStorage.Write(writeIdBatch);
 				}
 			}
 			else
 			{
-				using (var tx = tableStorage.NewTransaction(TransactionFlags.Read))
+				using (var snapshot = tableStorage.CreateSnapshot())
 				{
-					using (var stream = tableStorage.Details.Read(tx, "id"))
+                    using (var stream = tableStorage.Details.Read(snapshot, "id"))
 					using (var reader = new BinaryReader(stream))
 					{
 						Id = new Guid(reader.ReadBytes((int)stream.Length));
@@ -216,13 +213,13 @@
 
 		public Guid ChangeId()
 		{
-			Guid newId = Guid.NewGuid();
-			using (var tx = tableStorage.NewTransaction(TransactionFlags.ReadWrite))
+			var newId = Guid.NewGuid();
+			using (var changeIdWriteBatch = new WriteBatch())
 			{
-				tableStorage.Details.Delete(tx, "id");
-				tableStorage.Details.Add(tx, "id", newId.ToByteArray());
+                tableStorage.Details.Delete(changeIdWriteBatch, "id");
+                tableStorage.Details.Add(changeIdWriteBatch, "id", newId.ToByteArray());
 
-				tx.Commit();
+				tableStorage.Write(changeIdWriteBatch);
 			}
 
 			Id = newId;
