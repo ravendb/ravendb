@@ -115,6 +115,8 @@
 			{
 				t1 = Env.CreateTree(tx, "tree1");
 				t2 = Env.CreateTree(tx, "tree2");
+
+				tx.Commit();
 			}
 
 			await Task.WhenAll(Env.Writer.WriteAsync(batch1), Env.Writer.WriteAsync(batch2));
@@ -154,6 +156,8 @@
 			{
 				t1 = Env.CreateTree(tx, "tree1");
 				t2 = Env.CreateTree(tx, "tree2");
+
+				tx.Commit();
 			}
 
 			await Env.Writer.WriteAsync(batch);
