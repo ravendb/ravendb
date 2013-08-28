@@ -940,6 +940,7 @@ namespace Raven.Database.Indexing
 				var autoIndexesSortedByLastQueryTime =
 					(from index in indexes
 					 let stats = accessor.Indexing.GetIndexStats(index.Key)
+					 where stats != null
 					 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
 					 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
 					 orderby lastQueryTime
