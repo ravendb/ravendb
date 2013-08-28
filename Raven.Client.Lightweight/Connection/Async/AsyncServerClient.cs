@@ -656,25 +656,9 @@ namespace Raven.Client.Connection.Async
 					var value = transformerDefinitionJson.Value<RavenJObject>("Transformer");
 					return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(value));
 				}
-				catch (WebException we)
+				catch (ErrorResponseException we)
 				{
-					var httpWebResponse = we.Response as HttpWebResponse;
-					if (httpWebResponse == null)
-						throw;
-					if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						return null;
-
-					throw;
-				}
-				catch (AggregateException e)
-				{
-					var we = e.ExtractSingleInnerException() as WebException;
-					if (we == null)
-						throw;
-					var httpWebResponse = we.Response as HttpWebResponse;
-					if (httpWebResponse == null)
-						throw;
-					if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					if (we.StatusCode == HttpStatusCode.NotFound)
 						return null;
 
 					throw;
@@ -693,41 +677,28 @@ namespace Raven.Client.Connection.Async
 			{
 				try
 				{
-					var indexDefinitionJson = (RavenJObject)await operationUrl.IndexDefinition(name)
-						.NoCache()
-						.ToJsonRequest(this, credentials, convention)
-						.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-						.ReadResponseJsonAsync();
+					var indexDefinitionJson = (RavenJObject) await operationUrl.IndexDefinition(name)
+					                                                           .NoCache()
+					                                                           .ToJsonRequest(this, credentials, convention)
+					                                                           .AddReplicationStatusHeaders(url, operationUrl,
+					                                                                                        replicationInformer,
+					                                                                                        convention.FailoverBehavior,
+					                                                                                        HandleReplicationStatusChanges)
+					                                                           .ReadResponseJsonAsync();
 
 					var value = indexDefinitionJson.Value<RavenJObject>("Index");
 					return convention.CreateSerializer().Deserialize<IndexDefinition>(new RavenJTokenReader(value));
 				}
-				catch (WebException we)
+				catch (ErrorResponseException we)
 				{
-					var httpWebResponse = we.Response as HttpWebResponse;
-					if (httpWebResponse == null)
-						throw;
-					if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					if (we.StatusCode == HttpStatusCode.NotFound)
 						return null;
 
 					throw;
 				}
-				catch (AggregateException e)
-				{
-					var we = e.ExtractSingleInnerException() as WebException;
-					if (we == null)
-						throw;
-					var httpWebResponse = we.Response as HttpWebResponse;
-					if (httpWebResponse == null)
-						throw;
-					if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						return null;
-
-					throw;
-				}
+				
 			});
 		}
-
 
 		public async Task<JsonDocument> DirectGetAsync(string opUrl, string key)
 		{
