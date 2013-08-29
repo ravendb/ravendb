@@ -17,10 +17,10 @@ namespace Voron.Trees
 		[FieldOffset(11)]
 		public ushort Upper;
 
-		[FieldOffset(9)]
+		[FieldOffset(13)]
 		public int OverflowSize;
 
-        [FieldOffset(13)]
+        [FieldOffset(17)]
         public int ItemCount;
 	}
 }

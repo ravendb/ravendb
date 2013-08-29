@@ -17,6 +17,8 @@ namespace Voron
 
 		private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
 
+		private readonly List<string> _newTrees = new List<string>();
+
 		private readonly bool _ownsPager;
 		private readonly IVirtualPager _pager;
 		private readonly SliceComparer _sliceComparer;
@@ -158,6 +160,7 @@ namespace Voron
 			tree.State.CopyTo((TreeRootHeader*)space);
 
 			_trees.Add(name, tree);
+			_newTrees.Add(name);
 
 			return tree;
 		}
@@ -230,7 +233,11 @@ namespace Voron
 				tx.AddPagerState(state);
 
 				if (flags == TransactionFlags.ReadWrite)
+				{
 					_freeSpaceRepository.UpdateSections(tx, OldestTransaction);
+					tx.AfterCommit = TransactionAfterCommit;
+				}
+
 				return tx;
 			}
 			catch (Exception)
@@ -241,6 +248,18 @@ namespace Voron
 			}
 		}
 
+		private void TransactionAfterCommit(long txId)
+		{
+			Transaction tx;
+			if (_activeTransactions.TryGetValue(txId, out tx) == false)
+				return;
+
+			if (tx.Flags != (TransactionFlags.ReadWrite))
+				return;
+
+			_newTrees.Clear();
+		}
+
 		internal void TransactionCompleted(long txId)
 		{
 			Transaction tx;
@@ -249,6 +268,9 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
+
+			foreach (var tree in _newTrees)
+				_trees.Remove(tree);
 
 			_transactionsCounter = txId;
 			_txWriter.Release();
