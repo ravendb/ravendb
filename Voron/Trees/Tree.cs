@@ -10,7 +10,9 @@ using Voron.Impl.FileHeaders;
 
 namespace Voron.Trees
 {
-    public unsafe class Tree
+	using Voron.Exceptions;
+
+	public unsafe class Tree
     {
         private TreeMutableState _state = new TreeMutableState();
         public string Name { get; set; }
@@ -61,12 +63,12 @@ namespace Voron.Trees
             return tree;
         }
 
-        public void Add(Transaction tx, Slice key, Stream value)
+        public void Add(Transaction tx, Slice key, Stream value, ushort? version = null)
         {
             if (value == null) throw new ArgumentNullException("value");
             if (value.Length > int.MaxValue)
                 throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
-            var pos = DirectAdd(tx, key, (int)value.Length);
+            var pos = DirectAdd(tx, key, (int)value.Length, version);
 
             using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))
             {
@@ -165,14 +167,13 @@ namespace Voron.Trees
             }
 	    }
 
-        internal byte* DirectAdd(Transaction tx, Slice key, int len)
+        internal byte* DirectAdd(Transaction tx, Slice key, int len, ushort? version = null)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
             if (key.Size > tx.Pager.MaxNodeSize)
                 throw new ArgumentException("Key size is too big, must be at most " + tx.Pager.MaxNodeSize + " bytes, but was " + key.Size, "key");
-
 
             using (var cursor = tx.NewCursor(this))
             {
@@ -182,14 +183,17 @@ namespace Voron.Trees
 
                 var page = tx.ModifyCursor(this, cursor);
 
-                if (page.LastMatch == 0) // this is an update operation
+	            ushort nodeVersion = 0;
+	            if (page.LastMatch == 0) // this is an update operation
                 {
-                    RemoveLeafNode(tx, cursor, page);
+                    RemoveLeafNode(tx, cursor, page, out nodeVersion);
                 }
                 else // new item should be recorded
                 {
                     txInfo.State.EntriesCount++;
                 }
+
+				CheckConcurrency(key, version, nodeVersion, TreeActionType.Add);
 
                 var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
                 byte* overFlowPos = null;
@@ -203,13 +207,13 @@ namespace Voron.Trees
                 byte* dataPos;
                 if (page.HasSpaceFor(key, len) == false)
                 {
-                    var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, cursor, txInfo);
+                    var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeVersion, cursor, txInfo);
                     dataPos = pageSplitter.Execute();
                     DebugValidateTree(tx, txInfo.RootPageNumber);
                 }
                 else
                 {
-                    dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber);
+					dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber, nodeVersion);
                     cursor.IncrementItemCount();
                     page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
                 }
@@ -219,7 +223,7 @@ namespace Voron.Trees
             }
         }
 
-        public bool SetAsMultiValueTreeRef(Transaction tx, Slice key)
+		public bool SetAsMultiValueTreeRef(Transaction tx, Slice key)
         {
             using (var cursor = tx.NewCursor(this))
             {
@@ -261,9 +265,10 @@ namespace Voron.Trees
             return len + Constants.PageHeaderSize > tx.Pager.MaxNodeSize;
         }
 
-        private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page)
+        private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page, out ushort nodeVersion)
         {
             var node = page.GetNode(page.LastSearchPosition);
+	        nodeVersion = node->Version;
             if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
             {
                 var overflowPage = tx.GetReadOnlyPage(node->PageNumber);
@@ -370,7 +375,7 @@ namespace Voron.Trees
             return page;
         }
 
-        public void Delete(Transaction tx, Slice key)
+        public void Delete(Transaction tx, Slice key, ushort? version = null)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot delete a value in a read only transaction");
 
@@ -386,7 +391,11 @@ namespace Voron.Trees
                 page = tx.ModifyCursor(this, cursor);
 
                 txInfo.State.EntriesCount--;
-                RemoveLeafNode(tx, cursor, page);
+	            ushort nodeVersion;
+	            RemoveLeafNode(tx, cursor, page, out nodeVersion);
+
+	            CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
+					
                 var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
                 var changedPage = page;
                 while (changedPage != null)
@@ -420,6 +429,20 @@ namespace Voron.Trees
                 return NodeHeader.Stream(tx, node);
             }
         }
+
+		public ushort ReadVersion(Transaction tx, Slice key)
+		{
+			using (var cursor = tx.NewCursor(this))
+			{
+				var p = FindPageFor(tx, key, cursor);
+				var node = p.Search(key, _cmp);
+
+				if (node == null) 
+					return 0;
+
+				return node->Version;
+			}
+		}
 
         public IIterator MultiRead(Transaction tx, Slice key)
         {           
@@ -540,6 +563,18 @@ namespace Voron.Trees
             return tree;
         }
 
+		private static void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
+		{
+			if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
+				throw new ConcurrencyException(string.Format("Cannot {0} {1}. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion));
+		}
+
         public bool IsMultiValueTree { get; set; }
+
+		private enum TreeActionType
+		{
+			Add,
+			Delete
+		}
     }
 }
