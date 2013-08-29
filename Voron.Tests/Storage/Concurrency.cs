@@ -87,6 +87,24 @@
 		}
 
 		[Fact]
+		public void Missing()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.Root.Add(tx, "key/1", StreamFor("123"), 0);
+				Assert.Equal(1, Env.Root.ReadVersion(tx, "key/1"));
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var e = Assert.Throws<ConcurrencyException>(() => Env.Root.Add(tx, "key/1", StreamFor("321"), 0));
+				Assert.Equal("Cannot add 'key/1'. Version mismatch. Expected: 0. Actual: 1.", e.Message);
+			}
+		}
+
+		[Fact]
 		public void ConcurrencyExceptionShouldBeThrownWhenVersionMismatch()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
