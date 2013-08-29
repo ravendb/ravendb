@@ -1,36 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
+using Raven.Database.Util.Streams;
 using Raven.Json.Linq;
 using Voron.Impl;
+using Raven.Abstractions.Extensions;
+using System.Linq;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Storage.Voron
 {
     public class DocumentsStorageActions : IDocumentStorageActions
     {
-        private WriteBatch writeBatch;
+        private const string DocumentKeyByEtagIndexName = "key_by_etag";
+        private const string MetadataSuffix = "metadata";
+        private const string DataSuffix = "data";
 
-        private readonly TableStorage storage;
-        private readonly IUuidGenerator generator;
+        private readonly IndexedTable documentsTable;
+
+        private readonly WriteBatch writeBatch;
+        private readonly SnapshotReader snapshot;
+
+        private readonly IUuidGenerator uuidGenerator;
         private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
         private readonly IDocumentCacher documentCacher;
 
         private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
 
-        public DocumentsStorageActions(TableStorage storage,
-            IUuidGenerator generator,
+        public DocumentsStorageActions(IUuidGenerator uuidGenerator,
             OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
             IDocumentCacher documentCacher,
-            WriteBatch writeBatch)
+            WriteBatch writeBatch,
+            SnapshotReader snapshot,
+            IndexedTable documentsTable)
         {
-            this.storage = storage;
-            this.generator = generator;
+            this.snapshot = snapshot;
+            this.uuidGenerator = uuidGenerator;
             this.documentCodecs = documentCodecs;
             this.documentCacher = documentCacher;
             this.writeBatch = writeBatch;
+            this.documentsTable = documentsTable;
         }
 
 
@@ -56,6 +72,7 @@ namespace Raven.Database.Storage.Voron
 
         public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
         {
+            var documentStream = documentsTable.Read(snapshot, key);
             throw new NotImplementedException();
         }
 
@@ -71,9 +88,41 @@ namespace Raven.Database.Storage.Voron
 
         public AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata)
         {
-            throw new NotImplementedException();
-        }
+            //TODO : do not forget to add document caching
+            var isUpdate = documentsTable.Contains(snapshot, key);
+            var existingEtag = isUpdate ? EnsureDocumentEtagMatch(key, etag) : Etag.Empty;
+            
+            var dataStream = new BufferPoolStream(new MemoryStream(),
+                new BufferPool(BufferPoolStream.MaxBufferSize * 2, BufferPoolStream.MaxBufferSize));
+            var metadataStream = new BufferPoolStream(new MemoryStream(),
+                new BufferPool(BufferPoolStream.MaxBufferSize * 2, BufferPoolStream.MaxBufferSize));
 
+            data.WriteTo(dataStream);
+
+            var finalDataStream = documentCodecs.Aggregate((Stream)dataStream,
+                (current, codec) => codec.Encode(key, data, metadata, current));
+
+            metadata.WriteTo(metadataStream);
+
+            documentsTable.Add(writeBatch, DataKey(key),finalDataStream);
+            documentsTable.Add(writeBatch, MetadataKey(key), metadataStream);
+
+            var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+
+            documentsTable.GetIndex(DocumentKeyByEtagIndexName)
+                          .Add(writeBatch, etag ?? newEtag, Encoding.UTF8.GetBytes(key));
+
+            var savedAt = SystemTime.UtcNow;
+            
+            return new AddDocumentResult
+            {
+                Etag = newEtag,
+                PrevEtag = existingEtag,
+                SavedAt = savedAt,
+                Updated = isUpdate
+            };            
+        }
+        
         public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
         {
             throw new NotImplementedException();
@@ -97,6 +146,36 @@ namespace Raven.Database.Storage.Voron
         public Etag GetBestNextDocumentEtag(Etag etag)
         {
             throw new NotImplementedException();
+        }
+
+        private Etag EnsureDocumentEtagMatch(string key, Etag etag)
+        {
+            using (var documentStream = documentsTable.Read(snapshot, MetadataKey(key)))
+            {
+                if (documentStream == null)
+                    return Etag.InvalidEtag;
+
+                var etagBuffer = new byte[16];
+                documentStream.Read(etagBuffer, 0, 16);
+                var existingEtag = Etag.Parse(etagBuffer);
+                if (existingEtag != etag)
+                {
+                    throw new ConcurrencyException(String.Format("Attempted to change document (key = {0}) with non-current etag (etag = {1})", key, etag));
+                }
+
+
+            return existingEtag;
+            }
+        }
+
+        private static string DataKey(string key)
+        {
+            return key + "/" + DataSuffix;
+        }
+
+        private static string MetadataKey(string key)
+        {
+            return key + "/" + MetadataSuffix;
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Raven.Database.Storage.Voron
 
 	public class Table
 	{
-		private readonly string treeName;
+		protected readonly string treeName;
 
         public Table(string treeName)
 		{
@@ -41,6 +41,14 @@ namespace Raven.Database.Storage.Voron
         {
             return snapshot.Read(treeName, key);
         }
+
+	    public bool Contains(SnapshotReader snapshot, string key)
+	    {
+	        using (var resultStream = Read(snapshot, key))
+	        {
+	            return resultStream != null;
+	        }
+	    }
 
         public void Delete(WriteBatch writeBatch, string key)
 		{

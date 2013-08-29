@@ -15,6 +15,9 @@ namespace Raven.Database.Storage.Voron
 	public class TableStorage : IDisposable
 	{
 	    private const string DetailsTreeName = "details";
+        private const string DocumentsTreeName = "documents";
+        private const string DocumentsKeyByEtagIndexName = "key_by_etag";
+
 	    private readonly IPersistanceSource persistanceSource;
 
 		private readonly StorageEnvironment env;
@@ -24,8 +27,9 @@ namespace Raven.Database.Storage.Voron
 			this.persistanceSource = persistanceSource;
 			env = new StorageEnvironment(persistanceSource.Pager, ownsPager: false);
 
-			Initialize();
-		}
+            Initialize();
+            CreateSchema();
+        }
 
 	    public SnapshotReader CreateSnapshot()
 	    {
@@ -33,6 +37,8 @@ namespace Raven.Database.Storage.Voron
 	    }	
 
 		public Table Details { get; private set; }
+
+        public IndexedTable Documents { get; private set; }
 
 	    public void Write(WriteBatch writeBatch)
 	    {
@@ -48,14 +54,27 @@ namespace Raven.Database.Storage.Voron
 				env.Dispose();
 		}
 
-		private void Initialize()
+        //create all relevant storage trees in one place
+		private void CreateSchema()
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 			    env.CreateTree(tx, DetailsTreeName);
-                Details = new Table(DetailsTreeName);
+
+			    env.CreateTree(tx, DocumentsTreeName);
+                
+			    env.CreateTree(tx, Documents.GetIndexKey(DocumentsKeyByEtagIndexName));
+
+                //TODO : add trees creation code here as needed - when accessors are added to StorageActionAccessor class 
+
                 tx.Commit();
 			}
 		}
+
+	    private void Initialize()
+	    {
+            Documents = new IndexedTable(DocumentsTreeName, DocumentsKeyByEtagIndexName);
+            Details = new Table(DetailsTreeName);
+	    }
 	}
 }

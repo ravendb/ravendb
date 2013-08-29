@@ -117,12 +117,15 @@ namespace Raven.Database.Storage.Voron
 
 	    private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
 	    {
+            using(var snapshot = tableStorage.CreateSnapshot())
 	        using (var writeBatch = new WriteBatch())
 	        {
-	            var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, documentCodecs,
-	                documentCacher, writeBatch);
+	            var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, documentCodecs,
+	                documentCacher, writeBatch, snapshot, tableStorage);
+
 	            if (disableBatchNesting.Value == null)
 	                current.Value = storageActionsAccessor;
+
 	            action(storageActionsAccessor);
 	            storageActionsAccessor.SaveAllTasks();
 

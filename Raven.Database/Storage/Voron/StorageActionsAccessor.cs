@@ -13,15 +13,18 @@ namespace Raven.Database.Storage.Voron
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
         private readonly WriteBatch writeBatch;
+        private readonly SnapshotReader snapshot;
 
-        public StorageActionsAccessor(TableStorage storage, 
-                                      IUuidGenerator generator, 
+        public StorageActionsAccessor( IUuidGenerator generator, 
                                       OrderedPartCollection<AbstractDocumentCodec> documentCodecs, 
                                       IDocumentCacher documentCacher,
-                                      WriteBatch writeBatch)
+                                      WriteBatch writeBatch,
+                                      SnapshotReader snapshot,
+                                      TableStorage storage)
         {
             this.writeBatch = writeBatch;
-            Documents = new DocumentsStorageActions(storage, generator, documentCodecs, documentCacher, writeBatch);
+            this.snapshot = snapshot;
+            Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatch, snapshot, storage.Documents);
         }
 
 
