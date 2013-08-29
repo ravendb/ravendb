@@ -72,14 +72,14 @@ namespace Voron.Trees
 					pos = rightPage.AddNode(1, this._newKey, this._len, this._pageNumber, this._nodeVersion);
                     rightPage.ItemCount = itemsMoved;
     
-                    this.AddSeparatorToParentPage(rightPage, new Slice(node));
+                    AddSeparatorToParentPage(rightPage, new Slice(node));
 
                     _page.RemoveNode(_page.NumberOfEntries - 1);
                     _page.ItemCount -= itemsMoved;
                 }
                 else
                 {
-                    this.AddSeparatorToParentPage(rightPage, _newKey);
+                    AddSeparatorToParentPage(rightPage, _newKey);
                     pos = rightPage.AddNode(0, this._newKey, this._len, this._pageNumber, this._nodeVersion);
                 }
                 _cursor.Push(rightPage);
@@ -116,7 +116,7 @@ namespace Voron.Trees
                 seperatorKey = new Slice(node);
             }
 
-            this.AddSeparatorToParentPage(rightPage, seperatorKey);
+            AddSeparatorToParentPage(rightPage, seperatorKey);
 
             // move the actual entries from page to right page
             var nKeys = _page.NumberOfEntries;

@@ -76,7 +76,7 @@ namespace Voron.Trees
             }
         }
 
-        public void MultiDelete(Transaction tx, Slice key, Slice value)
+        public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
         {
             using (var cursor = tx.NewCursor(this))
             {
@@ -96,7 +96,7 @@ namespace Voron.Trees
                 {
                     var tree = OpenOrCreateMultiValueTree(tx, key, item);
 
-                    tree.Delete(tx, value);
+                    tree.Delete(tx, value, version);
                     var treeInfo = tx.GetTreeInformation(tree);
 
                     if (treeInfo.State.EntriesCount > 1) 
@@ -114,12 +114,12 @@ namespace Voron.Trees
                 }
                 else //the regular key->value pattern
                 {
-                    Delete(tx, key);
+                    Delete(tx, key, version);
                 }
             }
         }
 
-        public void MultiAdd(Transaction tx, Slice key, Slice value)
+        public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
 	    {
             if (value == null) throw new ArgumentNullException("value");
             if (value.Size > tx.Pager.MaxNodeSize)
@@ -133,7 +133,7 @@ namespace Voron.Trees
 
                 if (page == null || page.LastMatch != 0)
                 {
-                    var ptr = DirectAdd(tx, key, value.Size);
+                    var ptr = DirectAdd(tx, key, value.Size, version);
                     value.CopyTo(ptr);
                     return;
                 }
@@ -147,14 +147,14 @@ namespace Voron.Trees
                 if (item->Flags == NodeFlags.MultiValuePageRef)
                 {
                     var tree = OpenOrCreateMultiValueTree(tx, key, item);
-                    tree.DirectAdd(tx, value, 0);
+                    tree.DirectAdd(tx, value, 0, version);
                 }
                 else // need to turn to tree
                 {
                     var tree = Create(tx, _cmp, TreeFlags.MultiValue);
                     var current = NodeHeader.GetData(tx, item);
                     tree.DirectAdd(tx, current, 0);
-                    tree.DirectAdd(tx, value, 0);
+                    tree.DirectAdd(tx, value, 0, version);
                     tx.AddMultiValueTree(this, key, tree);
 
                     DirectAdd(tx, key, sizeof (TreeRootHeader));
@@ -209,6 +209,10 @@ namespace Voron.Trees
                 {
                     var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeVersion, cursor, txInfo);
                     dataPos = pageSplitter.Execute();
+
+					if (overFlowPos != null)
+						cursor.IncrementItemCount();
+
                     DebugValidateTree(tx, txInfo.RootPageNumber);
                 }
                 else
