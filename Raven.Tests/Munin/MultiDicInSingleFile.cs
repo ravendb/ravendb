@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Munin.Tests
 {

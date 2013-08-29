@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 			                  		Url = "http://localhost:8079"
 			                  	}.Initialize())
 			{
-				store.DatabaseCommands.Admin.CreateDatabase(new DatabaseDocument
+				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				{
 					Id = "mydb",
 					Settings =
@@ -44,7 +44,7 @@ namespace Raven.Tests.Issues
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.CreateDatabase(new DatabaseDocument
+				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				                                      	{
 				                                      		Id = "mydb",
 				                                      		Settings =
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.Admin.CreateDatabase(new DatabaseDocument
+				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				{
 					Id = "mydb",
 					Settings =

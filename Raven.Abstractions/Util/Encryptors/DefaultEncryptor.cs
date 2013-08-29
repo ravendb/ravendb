@@ -3,10 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Security.Cryptography;
+#if !SILVERLIGHT
+	using System.Security.Cryptography;
+#else
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
+
 namespace Raven.Abstractions.Util.Encryptors
 {
-	using System.Security.Cryptography;
-
 	public sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
 	{
 		public DefaultEncryptor()
@@ -22,23 +28,39 @@ namespace Raven.Abstractions.Util.Encryptors
 			{
 				get
 				{
+#if !SILVERLIGHT
 					return 32;
+#else
+					throw new NotSupportedException();
+#endif
 				}
 			}
 
 			public byte[] ComputeForStorage(byte[] bytes)
 			{
+#if !SILVERLIGHT
 				return ComputeHash(SHA256.Create(), bytes);
+#else
+				throw new NotSupportedException();
+#endif
 			}
 
 			public byte[] ComputeForOAuth(byte[] bytes)
 			{
+#if !SILVERLIGHT
 				return ComputeHash(SHA1.Create(), bytes);
+#else
+				throw new NotSupportedException();
+#endif
 			}
 
 			public byte[] Compute(byte[] bytes)
 			{
+#if !SILVERLIGHT
 				return ComputeHash(MD5.Create(), bytes);
+#else
+				return MD5Core.GetHash(bytes);
+#endif
 			}
 		}
 	}

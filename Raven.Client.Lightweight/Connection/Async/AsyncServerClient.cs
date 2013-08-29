@@ -58,7 +58,7 @@ namespace Raven.Client.Connection.Async
 		private readonly string url;
 		private readonly string rootUrl;
 		private readonly ICredentials credentials;
-		private readonly DocumentConvention convention;
+		internal readonly DocumentConvention convention;
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
 		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
@@ -1016,6 +1016,34 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+			return request.ExecuteWriteAsync(new RavenJObject
+			                                 {
+				                                 {"BackupLocation", backupLocation},
+				                                 {"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
+			                                 }.ToString(Formatting.None));
+		}
+
+		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore?defrag=" + defrag).NoCache(), "POST", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+			return request.ExecuteWriteAsync(new RavenJObject
+			{
+				{"RestoreLocation", restoreLocation},
+				{"DatabaseLocation", databaseLocation},
+				{"DatabaseName", name}
+			}.ToString(Formatting.None));
+		}
+
+		public Task<string> GetIndexingStatusAsync()
+		{
+			throw new NotImplementedException();
+		}
+
 		public Task StopIndexingAsync()
 		{
 			return ExecuteWithReplication("POST", operationUrl =>
@@ -1030,30 +1058,6 @@ namespace Raven.Client.Connection.Async
 				                                    HandleReplicationStatusChanges);
 
 				return request.ExecuteRequestAsync();
-			});
-		}
-
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false,
-		                                            string exclude = null)
-		{
-			return ExecuteWithReplication("GET", async operationUrl =>
-			{
-				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
-				var actualUrl = string.Format("{0}/docs?startsWith={1}&exclude={4}&start={2}&pageSize={3}", operationUrl,
-				                              Uri.EscapeDataString(keyPrefix), start.ToInvariantString(),
-				                              pageSize.ToInvariantString(), exclude);
-				if (metadataOnly)
-					actualUrl += "&metadata-only=true";
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, credentials, convention)
-						.AddOperationHeaders(OperationsHeaders));
-
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior,
-				                                    HandleReplicationStatusChanges);
-
-				var result = (RavenJArray) await request.ReadResponseJsonAsync();
-				return SerializationHelper.RavenJObjectsToJsonDocuments(result.OfType<RavenJObject>()).ToArray();
 			});
 		}
 
@@ -1720,6 +1724,20 @@ namespace Raven.Client.Connection.Async
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
+		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (currentServerUrl + requestUrl).NoCache(), method, credentials,
+																			  convention).AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
+
+			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
+									 .AddReplicationStatusHeaders(url, currentServerUrl, replicationInformer,
+																  convention.FailoverBehavior, HandleReplicationStatusChanges);
+		}
+
 		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
 		{
 			if (!primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
@@ -1733,7 +1751,7 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
+		internal Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>
 			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
@@ -1931,6 +1949,16 @@ namespace Raven.Client.Connection.Async
 
 			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
 			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
+		}
+
+		public Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task CompactDatabaseAsync(string databaseName)
+		{
+			throw new NotImplementedException();
 		}
 
 		#endregion

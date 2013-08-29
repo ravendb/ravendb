@@ -46,14 +46,14 @@ namespace Raven.Tests.Issues
 
 			store2.Initialize();
 
-			store1.DatabaseCommands.Admin.CreateDatabase(
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
 					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D1\N"}}
 				});
 
-			store2.DatabaseCommands.Admin.CreateDatabase(
+			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
@@ -152,13 +152,13 @@ namespace Raven.Tests.Issues
 			};
 			store2.Initialize();
 
-			store1.DatabaseCommands.Admin.CreateDatabase(new DatabaseDocument
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
 				Id = "Northwind",
 				Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D1\N"}}
 			});
 
-			store2.DatabaseCommands.Admin.CreateDatabase(new DatabaseDocument
+			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
 				Id = "Northwind",
 				Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D2\N"}}

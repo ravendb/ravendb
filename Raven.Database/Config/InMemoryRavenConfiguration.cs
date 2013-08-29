@@ -324,7 +324,7 @@ namespace Raven.Database.Config
 
 		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				return rsa.ExportCspBlob(true);
 			}
@@ -483,6 +483,11 @@ namespace Raven.Database.Config
 		/// Whatever we should use SSL for this connection
 		/// </summary>
 		public bool UseSsl { get; set; }
+
+		/// <summary>
+		/// Whatever we should use FIPS compliant encryption algorithms
+		/// </summary>
+		public bool UseFips { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 

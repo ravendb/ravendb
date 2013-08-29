@@ -212,7 +212,6 @@
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
     <Compile Include="Linq\Ast\TransformFromClauses.cs" />
-    <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />

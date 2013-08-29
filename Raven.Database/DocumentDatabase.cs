@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Commercial;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Impl.Synchronization;

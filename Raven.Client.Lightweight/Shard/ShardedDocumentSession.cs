@@ -673,35 +673,28 @@ namespace Raven.Client.Shard
 				// split by shards
 				var saveChangesPerShard = GetChangesToSavePerShard(data);
 
-        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
-        {
-            IncrementRequestCount();
-            var shards = GetCommandsToOperateOn(new ShardRequestData
-            {
-                EntityType = typeof(T),
-                Keys = { keyPrefix }
-            });
-            var results = shardStrategy.ShardAccessStrategy.Apply(shards, new ShardRequestData
-            {
-                EntityType = typeof(T),
-                Keys = { keyPrefix }
-            }, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude));
+				// execute on all shards
+				foreach (var shardAndObjects in saveChangesPerShard)
+				{
+					var shardId = shardAndObjects.Key;
 
 					IDatabaseCommands databaseCommands;
 					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
 						throw new InvalidOperationException(
 							string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
-        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
-        {
-            IncrementRequestCount();
-            var cmds = GetCommandsToOperateOn(new ShardRequestData
-            {
-                EntityType = typeof(T),
-                Keys = { keyPrefix }
-            });
+					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
+					UpdateBatchResults(results, shardAndObjects.Value);
+				}
+			}
+		}
 
-            var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this);
+		void ISyncAdvancedSessionOperation.Refresh<T>(T entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a transient instance");
+			IncrementRequestCount();
 
 			var shardRequestData = new ShardRequestData
 			{
@@ -737,7 +730,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -755,7 +748,7 @@ namespace Raven.Client.Shard
 						  .ToArray();
 		}
 
-        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
 		{
 			IncrementRequestCount();
 			var cmds = GetCommandsToOperateOn(new ShardRequestData

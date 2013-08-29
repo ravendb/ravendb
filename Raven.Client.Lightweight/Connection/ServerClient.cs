@@ -38,7 +38,7 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
-	public class ServerClient : IDatabaseCommands, IAdminDatabaseCommands
+	public class ServerClient : IDatabaseCommands//, IAdminDatabaseCommands
 	{
 		private readonly string url;
 		private readonly DocumentConvention convention;
@@ -120,6 +120,8 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
+		public IGlobalAdminDatabaseCommands GlobalAdmin { get; private set; }
+
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
@@ -127,7 +129,6 @@ namespace Raven.Client.Connection
 		{
 			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
 			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, exclude, start, pageSize, metadataOnly));
-
 		}
 
 		/// <summary>
@@ -1134,7 +1135,7 @@ namespace Raven.Client.Connection
 			        sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
 			    }
 			}
-			}
+			
 			if (start != 0)
 				sb.Append("start=").Append(start).Append("&");
 			if(pageSize!=int.MaxValue)
@@ -1583,6 +1584,11 @@ namespace Raven.Client.Connection
 					return null;
 					}
 				}
+
+				var opId = ((RavenJObject)jsonResponse)["OperationId"];
+
+				if (opId == null || opId.Type != JTokenType.Integer)
+					return null;
 
 				return new Operation(this, opId.Value<long>());
 			});

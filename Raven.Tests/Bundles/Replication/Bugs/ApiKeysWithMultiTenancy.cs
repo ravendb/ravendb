@@ -55,7 +55,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			}, enableAuthorization: true);
 
 
-			store1.DatabaseCommands.Admin.CreateDatabase(new DatabaseDocument
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
 				Id = "repl",
 				Settings =
@@ -65,7 +65,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 					{"Raven/ActiveBundles", "Replication"}
 				}
 			});
-			store2.DatabaseCommands.Admin.CreateDatabase(new DatabaseDocument
+			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
 				Id = "repl",
 				Settings =

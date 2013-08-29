@@ -11,6 +11,7 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Extensions;
@@ -110,24 +111,26 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			using (var md5 = MD5.Create())
 			{
-			var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + lastEtag);
+				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + lastEtag);
 
-			var hash = Encryptor.Current.Hash.Compute(bytes);
-			Array.Resize(ref hash, 16);
+				var hash = Encryptor.Current.Hash.Compute(bytes);
+				Array.Resize(ref hash, 16);
 
-			return new Guid(hash).ToString();
+				return new Guid(hash).ToString();
+			}
 		}
 
 		private string HashReplicationIdentifier(Guid existingEtag)
 		{
 			using (var md5 = MD5.Create())
 			{
-			var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
+				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
 
-			var hash = Encryptor.Current.Hash.Compute(bytes);
-			Array.Resize(ref hash, 16);
+				var hash = Encryptor.Current.Hash.Compute(bytes);
+				Array.Resize(ref hash, 16);
 
-			return new Guid(hash).ToString();
+				return new Guid(hash).ToString();
+			}
 		}
 
 		private static bool IsDirectChildOfCurrentAttachment(Attachment existingAttachment, RavenJObject metadata)

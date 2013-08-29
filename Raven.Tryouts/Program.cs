@@ -124,7 +124,7 @@
 		{
 			using (var store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = "Applications" }.Initialize())
 			{
-				store.DatabaseCommands.Admin.EnsureDatabaseExists("Applications");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Applications");
 
 				new ApplicationByAuthor().Execute(store);
 				new ApplicationByName().Execute(store);

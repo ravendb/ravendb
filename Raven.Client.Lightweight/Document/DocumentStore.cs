@@ -700,20 +700,8 @@ namespace Raven.Client.Document
 				}
 			}
 #else
-			var informer = replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
+			result = replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
 
-			if (dbName == DefaultDatabase)
-			{
-				if(FailoverServers.IsSetForDefaultDatabase && informer.FailoverUrls == null)
-					informer.FailoverUrls = FailoverServers.ForDefaultDatabase;
-			}
-			else
-			{
-				if (FailoverServers.IsSetForDatabase(dbName) && informer.FailoverUrls == null)
-					informer.FailoverUrls = FailoverServers.GetForDatabase(dbName);
-			}
-
-			return informer;
 #endif
 
 			if (FailoverServers == null)

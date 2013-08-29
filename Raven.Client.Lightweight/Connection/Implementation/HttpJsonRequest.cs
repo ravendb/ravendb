@@ -860,13 +860,8 @@ namespace Raven.Client.Connection
 					await CheckForErrorsAsync();
 
 					var stream = await Response.GetResponseStreamWithHttpDecompression();
-
-					var stream = await Response.GetResponseStreamWithHttpDecompression();
 					var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
 					SetResponseHeaders(Response);
-
-					var stream = await Response.GetResponseStreamWithHttpDecompression();
-					var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
 					observableLineStream.Start();
 					return (IObservable<string>) observableLineStream;
 				}

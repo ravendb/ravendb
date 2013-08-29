@@ -101,9 +101,7 @@ namespace Raven.Tests.Bundles.Replication
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = true,
 					Port = port,
-					DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
 					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
-					DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
 					DefaultStorageTypeName = GetDefaultStorageType()
 				},
 			};
@@ -155,9 +153,7 @@ namespace Raven.Tests.Bundles.Replication
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = previousServer.Database.Configuration.RunInMemory,
 				Port = previousServer.Database.Configuration.Port,
-				DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
 				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
-				DefaultStorageTypeName = RavenTest.GetDefaultStorageType()
 				DefaultStorageTypeName = GetDefaultStorageType()
 			};
 			ConfigureServer(serverConfiguration);

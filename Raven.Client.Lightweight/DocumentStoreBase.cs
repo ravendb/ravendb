@@ -134,6 +134,11 @@ namespace Raven.Client
 		/// </summary>
 		public FailoverServers FailoverServers { get; set; }
 
+		/// <summary>
+		/// Whenever or not we will use FIPS compliant encryption algorithms (must match server settings).
+		/// </summary>
+		public bool UseFipsEncryptionAlgorithms { get; set; }
+
 		///<summary>
 		/// Whatever or not we will automatically enlist in distributed transactions
 		///</summary>
@@ -320,6 +325,11 @@ namespace Raven.Client
 				fips = UseFipsEncryptionAlgorithms;
 
 			Encryptor.Initialize(fips);
+		}
+#else
+		protected void InitializeEncryptor()
+		{
+			Encryptor.Initialize(UseFipsEncryptionAlgorithms);
 		}
 #endif
 	}

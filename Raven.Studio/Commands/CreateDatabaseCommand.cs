@@ -81,7 +81,7 @@ namespace Raven.Studio.Commands
 							if (encryptionSettings != null)
 								encryptionKey = encryptionSettings.EncryptionKey.Text;
 
-							DatabaseCommands.Admin.CreateDatabaseAsync(databaseDocument)
+							DatabaseCommands.GlobalAdmin.CreateDatabaseAsync(databaseDocument)
 							                .ContinueOnSuccess(() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
 							                .ContinueOnSuccessInTheUIThread(async () =>
 							                {
