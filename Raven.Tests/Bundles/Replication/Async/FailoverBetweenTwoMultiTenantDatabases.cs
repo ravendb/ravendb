@@ -1,4 +1,5 @@
-﻿using Raven.Client.Connection;
+﻿using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Xunit;
@@ -8,13 +9,13 @@ namespace Raven.Tests.Bundles.Replication.Async
 	public class FailoverBetweenTwoMultiTenantDatabases : ReplicationBase
 	{
 		[Fact]
-		public void CanReplicateBetweenTwoMultiTenantDatabases()
+		public async Task CanReplicateBetweenTwoMultiTenantDatabases()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
 			                 store2.Url + "/databases/FailoverTest");
@@ -32,8 +33,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
 				var databaseCommands = (ServerClient) store.DatabaseCommands;
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded(databaseCommands)
-					.Wait();
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded(databaseCommands);
 
 				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinationsUrls;
 				
@@ -41,8 +41,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 				using (var session = store.OpenAsyncSession())
 				{
-					session.Store(new Item {});
-					session.SaveChangesAsync().Wait();
+					await session.StoreAsync(new Item {});
+					await session.SaveChangesAsync();
 				}
 
 				var sanityCheck = store.DatabaseCommands.Head("items/1");
@@ -53,13 +53,13 @@ namespace Raven.Tests.Bundles.Replication.Async
 		}
 
 		[Fact]
-		public void CanFailoverReplicationBetweenTwoMultiTenantDatabases()
+		public async Task CanFailoverReplicationBetweenTwoMultiTenantDatabases()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
 			                 store2.Url + "/databases/FailoverTest");
@@ -76,13 +76,12 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
-					.Wait();
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
 
 				using (var session = store.OpenAsyncSession())
 				{
-					session.Store(new Item {});
-					session.SaveChangesAsync().Wait();
+					await session.StoreAsync(new Item {});
+					await session.SaveChangesAsync();
 				}
 
 
@@ -92,20 +91,20 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var load = session.LoadAsync<Item>("items/1").Result;
+					var load = await session.LoadAsync<Item>("items/1");
 					Assert.NotNull(load);
 				}
 			}
 		}
 
 		[Fact]
-		public void CanFailoverReplicationBetweenTwoMultiTenantDatabases_WithExplicitUrl()
+		public async Task CanFailoverReplicationBetweenTwoMultiTenantDatabases_WithExplicitUrl()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			store1.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
 			                 store2.Url + "/databases/FailoverTest");
@@ -122,14 +121,14 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands).Wait();
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 
 				using (var session = store.OpenAsyncSession())
 				{
-					session.Store(new Item {});
-					session.SaveChangesAsync().Wait();
+					await session.StoreAsync(new Item { });
+					await session.SaveChangesAsync();
 				}
 
 				WaitForDocument(store2.DatabaseCommands.ForDatabase("FailoverTest"), "items/1");
@@ -138,7 +137,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var load = session.LoadAsync<Item>("items/1").Result;
+					var load = await session.LoadAsync<Item>("items/1");
 					Assert.NotNull(load);
 				}
 			}

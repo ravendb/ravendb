@@ -653,7 +653,8 @@ namespace Raven.Client.Indexes
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
 					var expression = ((UnaryExpression)left).Operand;
-					if (expression.Type.IsEnum() == false)
+					var enumType = Nullable.GetUnderlyingType(expression.Type) ?? expression.Type;
+					if (enumType.IsEnum() == false)
 						return;
 
 					var constantExpression = SkipConvertExpressions(right) as ConstantExpression;
@@ -667,11 +668,11 @@ namespace Raven.Client.Indexes
 					else
 					{
 						right = convention.SaveEnumsAsIntegers
-							        ? Expression.Constant((int) constantExpression.Value)
-							        : Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+									? Expression.Constant((int)constantExpression.Value)
+									: Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
 					}
-				break;
+					break;
 			}
 
 			while (true)
@@ -694,7 +695,7 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
-					return SkipConvertExpressions(((UnaryExpression) expression).Operand);
+					return SkipConvertExpressions(((UnaryExpression)expression).Operand);
 				default:
 					return expression;
 			}
@@ -1599,7 +1600,7 @@ namespace Raven.Client.Indexes
 			}
 			Out(IsIndexerCall(node) ? "]" : ")");
 
-			if (node.Type.IsValueType && TypeExistsOnServer(node.Type))
+			if (node.Type.IsValueType() && TypeExistsOnServer(node.Type))
 			{
 				switch (node.Method.Name)
 				{

@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Features.Settings;
@@ -81,21 +81,21 @@ namespace Raven.Studio.Commands
 							if (encryptionSettings != null)
 								encryptionKey = encryptionSettings.EncryptionKey.Text;
 
-							DatabaseCommands.CreateDatabaseAsync(databaseDocument).ContinueOnSuccess(
-								() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
-								.ContinueOnSuccessInTheUIThread(() =>
-								{
-									var model = parameter as DatabasesListModel;
-									if (model != null)
-										model.ForceTimerTicked();
-									ApplicationModel.Current.AddNotification(
-										new Notification("Database " + databaseName + " created"));
+							DatabaseCommands.GlobalAdmin.CreateDatabaseAsync(databaseDocument)
+							                .ContinueOnSuccess(() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
+							                .ContinueOnSuccessInTheUIThread(async () =>
+							                {
+								                var model = parameter as DatabasesListModel;
+								                if (model != null)
+									                model.ForceTimerTicked();
+								                ApplicationModel.Current.AddNotification(
+									                new Notification("Database " + databaseName + " created"));
 
-									HandleBundleAfterCreation(bundlesModel, databaseName, encryptionKey);
+								                await HandleBundleAfterCreation(bundlesModel, databaseName, encryptionKey);
 
-									ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
-								})
-								.Catch();
+								                ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
+							                })
+							                .Catch();
 						});
 				})
 				.Catch();
@@ -175,13 +175,13 @@ namespace Raven.Studio.Commands
 			return settings;
 		}
 
-		private void HandleBundleAfterCreation(CreateSettingsModel settingsModel, string databaseName, string encryptionKey)
+		private async Task HandleBundleAfterCreation(CreateSettingsModel settingsModel, string databaseName, string encryptionKey)
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
 
 			var versioningSection = settingsModel.GetSection<VersioningSettingsSectionModel>();
 			if (versioningSection != null)
-				StoreVersioningData(versioningSection.VersioningConfigurations, session);
+				await StoreVersioningData(versioningSection.VersioningConfigurations, session);
 
 			var replicationSection = settingsModel.GetSection<ReplicationSettingsSectionModel>();
 			if (replicationSection != null)
@@ -193,7 +193,7 @@ namespace Raven.Studio.Commands
 					replicationDocument.Destinations.Add(replicationDestination);
 				}
 
-				session.Store(replicationDocument);
+				await session.StoreAsync(replicationDocument);
 			}
 
 			var sqlReplicationSettings = settingsModel.GetSection<SqlReplicationSettingsSectionModel>();
@@ -203,7 +203,7 @@ namespace Raven.Studio.Commands
 
 				foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
 				{
-					session.Store(sqlReplicationConfig);
+					await session.StoreAsync(sqlReplicationConfig);
 				}
 			}
 
@@ -213,13 +213,13 @@ namespace Raven.Studio.Commands
 				new ShowEncryptionMessage(encryptionKey).Show();
 		}
 
-		private void StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)
+		private async Task StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)
 		{
 			foreach (var data in versioningData)
 			{
 				if (data.Id.StartsWith("Raven/Versioning/", StringComparison.InvariantCultureIgnoreCase) == false)
 					data.Id = "Raven/Versioning/" + data.Id;
-				session.Store(data);
+				await session.StoreAsync(data);
 			}
 		}
 
@@ -229,9 +229,9 @@ namespace Raven.Studio.Commands
 			{
 				{
 					Constants.RavenDataDir, newDatabase.ShowAdvanced.IsChecked == true
-					                 	? newDatabase.DbPath.Text
-					                 	: Path.Combine("~", Path.Combine("Databases", newDatabase.DbName.Text))
-					},
+						                        ? newDatabase.DbPath.Text
+						                        : Path.Combine("~", Path.Combine("Databases", newDatabase.DbName.Text))
+				},
 				{Constants.ActiveBundles, string.Join(";", bundles.Bundles)}
 			};
 

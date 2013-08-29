@@ -1,6 +1,6 @@
+using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
@@ -9,7 +9,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 	public class ReadStriping : ReplicationBase
 	{
 		[Fact]
-		public void When_replicating_can_do_read_striping()
+		public async Task When_replicating_can_do_read_striping()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -17,8 +17,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company());
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company());
+				await session.SaveChangesAsync();
 			}
 
 			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
@@ -37,8 +37,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
-					.Wait();
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
 				foreach (var ravenDbServer in servers)
@@ -50,7 +49,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 				{
 					using(var session = store.OpenAsyncSession())
 					{
-						Assert.NotNull(session.LoadAsync<Company>("companies/1").Result);
+						Assert.NotNull(await session.LoadAsync<Company>("companies/1"));
 					}
 				}
 			}
@@ -61,7 +60,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 		}
 
 		[Fact]
-		public void Can_avoid_read_striping()
+		public async Task Can_avoid_read_striping()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -69,8 +68,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company());
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company());
+				await session.SaveChangesAsync();
 			}
 
 			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
@@ -89,8 +88,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands)
-					.Wait();
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands);
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
 
 				foreach (var ravenDbServer in servers)
@@ -105,7 +103,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 						ForceReadFromMaster = true
 					}))
 					{
-						Assert.NotNull(session.LoadAsync<Company>("companies/1").Result);
+						Assert.NotNull(await session.LoadAsync<Company>("companies/1"));
 					}
 				}
 			}

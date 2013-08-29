@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Munin.Tests
 {
@@ -22,6 +23,8 @@ namespace Raven.Munin.Tests
 
 		public void Dispose()
 		{
+			Encryptor.Dispose();
+
 			persistentSource.Dispose();
 			persistentSource.Delete();
 		}

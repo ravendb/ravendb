@@ -105,8 +105,8 @@ task Compile -depends Init {
 	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
-	exec { &"$build_dir\Raven.ProjectRewriter.exe" }
+	# exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
+	# exec { &"$build_dir\Raven.ProjectRewriter.exe" }
 	
 	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
 	$datDest = "$base_dir\Raven.Studio\Settings.dat"
@@ -190,7 +190,7 @@ task TestSilverlight -depends Compile, CopyServer {
 	
 		$statLight = Get-PackagePath StatLight
 		$statLight = "$statLight\tools\StatLight.exe"
-		&$statLight "--XapPath=.\build\sl5\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\Raven.Tests.Silverlight.Results.xml" 
+		&$statLight "--XapPath=.\build\sl5\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\sl5\Raven.Tests.Silverlight.Results.xml" 
 	}
 	finally
 	{
@@ -201,23 +201,24 @@ task TestSilverlight -depends Compile, CopyServer {
 task TestWinRT -depends Compile, CopyServer {
 	try
 	{
+		exec { CheckNetIsolation LoopbackExempt -a -n=68089da0-d0b7-4a09-97f5-30a1e8f9f718_pjnejtz0hgswm }
+		
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
 	
-		$xUnit = Get-PackagePath xunit.runners
-		$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
+		$testRunner = "C:\Program Files (x86)\Microsoft Visual Studio 11.0\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
 	
 		@("Raven.Tests.WinRT.dll") | ForEach-Object { 
-			Write-Host "Testing $build_dir\$_"
+			Write-Host "Testing $build_dir\winrt\$_"
 			
 			if($global:full_storage_test) {
 				$env:raventest_storage_engine = 'esent';
-				Write-Host "Testing $build_dir\$_ (esent)"
-				&"$xUnit" "$build_dir\$_"
+				Write-Host "Testing $build_dir\winrt\$_ (esent)"
+				&"$testRunner" "$build_dir\winrt\$_"
 			}
 			else {
 				$env:raventest_storage_engine = $null;
-				Write-Host "Testing $build_dir\$_ (default)"
-				&"$xUnit" "$build_dir\$_"
+				Write-Host "Testing $build_dir\winrt\$_ (default)"
+				&"$testRunner" "$build_dir\winrt\$_"
 			}
 		}
 	}
@@ -246,41 +247,13 @@ task Stable {
 	$global:uploadMode = "Stable"
 }
 
-task RunTests -depends Test,TestSilverlight
+task RunTests -depends Test,TestSilverlight,TestWinRT
 
-task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
+task RunAllTests -depends FullStorageTest,RunTests,StressTest
 
 task Release -depends RunTests,DoRelease
 
-task CopySamples {
-	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
 
-	Copy-Item "$base_dir\.nuget\" "$build_dir\Output\Samples\.nuget" -recurse -force
-	Copy-Item "$base_dir\CommonAssemblyInfo.cs" "$build_dir\Output\Samples\CommonAssemblyInfo.cs" -force
-	Copy-Item "$base_dir\Raven.Samples.sln" "$build_dir\Output\Samples" -force
-	Copy-Item $base_dir\Raven.VisualHost "$build_dir\Output\Samples\Raven.VisualHost" -recurse -force
-	
-	$samples =  Get-ChildItem $base_dir\Samples | Where-Object { $_.PsIsContainer }
-	$samples = $samples
-	foreach ($sample in $samples) {
-		Write-Output $sample
-		Copy-Item "$base_dir\Samples\$sample" "$build_dir\Output\Samples\$sample" -recurse -force
-		
-		Remove-Item "$sample_dir\bin" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\obj" -force -recurse -ErrorAction SilentlyContinue
-
-		Remove-Item "$sample_dir\Servers\Shard1\Data" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard2\Data" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard1\Plugins" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard2\Plugins" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard1\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue 
-	}
-	
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj" /p:OutDir="$buildartifacts_dir\" }
-	exec { &"$build_dir\Raven.Samples.PrepareForRelease.exe" "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
-}
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null
@@ -291,7 +264,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
-	New-Item $build_dir\Output\Samples -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 }
@@ -432,7 +404,6 @@ task ZipOutput {
 			$file `
 			EmbeddedClient\*.* `
 			Client\*.* `
-			Samples\*.* `
 			Smuggler\*.* `
 			Backup\*.* `
 			Web\*.* `
@@ -461,7 +432,6 @@ task DoRelease -depends Compile, `
 	CopyBundles, `
 	CopyServer, `
 	CopyRootFiles, `
-	CopySamples, `
 	ZipOutput, `
 	CopyInstaller, `
 	SignInstaller, `

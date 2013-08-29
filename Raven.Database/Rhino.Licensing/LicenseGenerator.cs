@@ -9,6 +9,8 @@ using System.Collections.Generic;
 
 namespace Rhino.Licensing
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	/// <summary>
 	/// LicenseGenerator generates and signs license.
 	/// </summary>
@@ -33,7 +35,7 @@ namespace Rhino.Licensing
 		/// <returns>license content</returns>
 		public string GenerateFloatingLicense(string name, string publicKey)
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				rsa.FromXmlString(privateKey);
 				var doc = new XmlDocument();
@@ -48,7 +50,7 @@ namespace Rhino.Licensing
 				license.AppendChild(nameEl);
 				nameEl.InnerText = name;
 
-				var signature = GetXmlDigitalSignature(doc, rsa);
+				var signature = GetXmlDigitalSignature(doc, rsa.Algorithm);
 				doc.FirstChild.AppendChild(doc.ImportNode(signature, true));
 
 				var ms = new MemoryStream();
@@ -87,12 +89,12 @@ namespace Rhino.Licensing
 		/// <returns></returns>
 		public string Generate(string name, Guid id, DateTime expirationDate, IDictionary<string, string> attributes, LicenseType licenseType)
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				rsa.FromXmlString(privateKey);
 				var doc = CreateDocument(id, name, expirationDate, attributes, licenseType);
 
-				var signature = GetXmlDigitalSignature(doc, rsa);
+				var signature = GetXmlDigitalSignature(doc, rsa.Algorithm);
 				doc.FirstChild.AppendChild(doc.ImportNode(signature, true));
 
 				var ms = new MemoryStream();

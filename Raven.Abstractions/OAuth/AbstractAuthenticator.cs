@@ -13,7 +13,7 @@ namespace Raven.Abstractions.OAuth
 			if (string.IsNullOrEmpty(CurrentOauthToken))
 				return;
 
-#if NETFX_CORE
+#if NETFX_CORE || SILVERLIGHT
 			e.Client.DefaultRequestHeaders.Add("Authorization", CurrentOauthToken);
 #else
 			SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);

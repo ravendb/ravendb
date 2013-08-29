@@ -26,6 +26,10 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
+	using System.Runtime;
+
+	using Raven.Abstractions.Util.Encryptors;
+
 	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
@@ -59,6 +63,8 @@ namespace Raven.Database.Config
 			FilterActiveBundles();
 
 			SetupOAuth();
+
+			SetupGC();
 		}
 
 		public void Initialize()
@@ -311,9 +317,14 @@ namespace Raven.Database.Config
 			OAuthTokenKey = GetOAuthKey();
 		}
 
+		private void SetupGC()
+		{
+			//GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+		}
+
 		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				return rsa.ExportCspBlob(true);
 			}
@@ -472,6 +483,11 @@ namespace Raven.Database.Config
 		/// Whatever we should use SSL for this connection
 		/// </summary>
 		public bool UseSsl { get; set; }
+
+		/// <summary>
+		/// Whatever we should use FIPS compliant encryption algorithms
+		/// </summary>
+		public bool UseFips { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 

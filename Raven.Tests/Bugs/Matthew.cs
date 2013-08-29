@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database;
 using Xunit;
 using Raven.Client.Extensions;
 
@@ -19,7 +18,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("TESTS");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("TESTS");
+
 				store.Conventions.FindTypeTagName = type =>
 				{
 					if (typeof(Oil).IsAssignableFrom(type))
@@ -30,18 +30,16 @@ namespace Raven.Tests.Bugs
 						return "feedback";
 					return "unknown_add_to_global.asax.cs";
 				};
+
 				new PopularOilsIndex().Execute(store);
-
-
 
 				using(var session = store.OpenSession())
 				{
 					var popularOilsResults = session.Query<PopularOilsResult, PopularOilsIndex>()
-								  .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-								  .OrderByDescending(x => x.Count).Take(10)
-								  .ToList();
+					                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+					                                .OrderByDescending(x => x.Count).Take(10)
+					                                .ToList();
 				}
-
 			}
 		}
 
@@ -52,6 +50,7 @@ namespace Raven.Tests.Bugs
 				Map = users => from user in users
 							   from oil in user.Favorites
 							   select new { OilId = oil, Count = 1 };
+
 				Reduce = results => from result in results
 									group result by result.OilId into g
 									select new
@@ -76,10 +75,8 @@ namespace Raven.Tests.Bugs
 		{
 		}
 
-
 		public class Feedback
 		{
 		}
 	}
-
 }

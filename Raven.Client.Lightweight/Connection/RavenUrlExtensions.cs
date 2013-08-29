@@ -71,12 +71,18 @@ namespace Raven.Client.Connection
 		{
 			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
 		}
-#if SILVERLIGHT
-		public static string Docs(this string url, string key)
+
+		public static string Doc(this string url, string key)
 		{
-			return url + "/docs/" + HttpUtility.UrlEncode(key);
-		}
+
+			return url + "/docs/" 
+#if SILVERLIGHT 
+				+ HttpUtility.UrlEncode(key)
+#else
+				+ key
 #endif
+				;
+		}
 
 		public static string Docs(this string url, int start, int pageSize)
 		{

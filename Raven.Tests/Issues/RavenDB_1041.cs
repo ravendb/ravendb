@@ -79,7 +79,7 @@ namespace Raven.Tests.Issues
 
 				session.SaveChanges();
 			}
-
+			
 			await ((DocumentStore)store1).Replication.WaitAsync();
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
@@ -125,7 +125,7 @@ namespace Raven.Tests.Issues
 
 			try
 			{
-				await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
+				await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
 			}
 			catch (TimeoutException ex)
 			{
@@ -171,7 +171,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			await ((DocumentStore)store1).Replication.WaitAsync(replicas: 1);
+			await ((DocumentStore) store1).Replication.WaitAsync(replicas: 1);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}

@@ -131,7 +131,8 @@ namespace Raven.Client.Document
 				databaseCommands = databaseCommands,
 				indexQuery = indexQuery,
 				disableEntitiesTracking = disableEntitiesTracking,
-				disableCaching = disableCaching
+				disableCaching = disableCaching,
+				shouldExplainScores = shouldExplainScores
 			};
 			return documentQuery;
 		}

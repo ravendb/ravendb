@@ -141,10 +141,10 @@ namespace Raven.Studio.Features.Smuggler
 						switch (header.Key)
 						{
 							case "Content-Type":
-								request.ContentType = header.Value.Value<string>();
+								// request.httpClient.DefaultHeaders = header.Value.Value<string>();
 								break;
 							default:
-								request.Headers[header.Key] = StripQuotesIfNeeded(header.Value);
+								// request.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
 								break;
 						}
 					}

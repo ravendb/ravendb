@@ -114,8 +114,30 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\raven.tests\document\Company.cs">
+      <Link>FromSilverlight\Entities\Company.cs</Link>
+    </Compile>
+    <Compile Include="..\raven.tests\document\Contact.cs">
+      <Link>FromSilverlight\Entities\Contact.cs</Link>
+    </Compile>
+    <Compile Include="AsyncDatabaseCommandsTests.cs" />
+    <Compile Include="AsyncDocumentStoreServerTests.cs" />
+    <Compile Include="AsyncLinqQueryTests.cs" />
+    <Compile Include="AsyncLuceneQueryTests.cs" />
+    <Compile Include="Attachments.cs" />
+    <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="Collections.cs" />
+    <Compile Include="Entities\Customer.cs" />
+    <Compile Include="Entities\DenormalizedReference.cs" />
+    <Compile Include="Entities\Order.cs" />
+    <Compile Include="Entities\OrderLine.cs" />
+    <Compile Include="Entities\TheCompanyName.cs" />
+    <Compile Include="Indexes.cs" />
+    <Compile Include="Notifications.cs" />
+    <Compile Include="SerializationHelperTests.cs" />
+    <Compile Include="Statistics.cs" />
     <Compile Include="RavenTestBase.cs" />
-    <Compile Include="BasicSessionApiTests.cs" />
+    <Compile Include="HttpClientCouldReachLocalhost.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -144,13 +166,25 @@
     <Reference Include="Microsoft.Threading.Tasks.Extensions">
       <HintPath>..\packages\Microsoft.Bcl.Async.1.0.16\lib\win8\Microsoft.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.1.30214.0\lib\NetCore45\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces">
+      <HintPath>..\packages\Rx-Interfaces.2.1.30214.0\lib\NetCore45\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq">
+      <HintPath>..\packages\Rx-Linq.2.1.30214.0\lib\NetCore45\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.PlatformServices">
+      <HintPath>..\packages\Rx-PlatformServices.2.1.30214.0\lib\NetCore45\System.Reactive.PlatformServices.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '11.0' ">
     <VisualStudioVersion>11.0</VisualStudioVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="..\packages\Microsoft.Bcl.Build.1.0.5\tools\Microsoft.Bcl.Build.targets" />
+  <Import Project="..\packages\Microsoft.Bcl.Build.1.0.7\tools\Microsoft.Bcl.Build.targets" Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.7\tools\Microsoft.Bcl.Build.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

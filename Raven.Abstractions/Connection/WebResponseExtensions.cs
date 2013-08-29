@@ -7,8 +7,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-#if NETFX_CORE
 using System.Net.Http;
+using System.Threading.Tasks;
+
+#if SILVERLIGHT
+using Ionic.Zlib;
+#else
+using System.IO.Compression;
 #endif
 
 namespace Raven.Abstractions.Connection
@@ -18,23 +23,6 @@ namespace Raven.Abstractions.Connection
 	/// </summary>
 	public static class WebResponseExtensions
 	{
-#if SILVERLIGHT
-		/// <summary>
-		/// Gets the response stream with HTTP decompression.
-		/// </summary>
-		/// <param name="response">The response.</param>
-		/// <returns></returns>
-		public static Stream GetResponseStreamWithHttpDecompression(this WebResponse response)
-		{
-			var stream = response.GetResponseStream();
-			var encoding = response.Headers["Content-Encoding"];
-			if (encoding != null && encoding.Contains("gzip"))
-				stream = new Ionic.Zlib.GZipStream(stream, Ionic.Zlib.CompressionMode.Decompress);
-			else if (encoding != null && encoding.Contains("deflate"))
-				stream = new Ionic.Zlib.DeflateStream(stream, Ionic.Zlib.CompressionMode.Decompress);
-			return stream;
-		}
-#else
 		/// <summary>
 		/// Gets the response stream with HTTP decompression.
 		/// </summary>
@@ -46,30 +34,26 @@ namespace Raven.Abstractions.Connection
 			Debug.Assert(stream != null, "stream != null");
 			var encoding = response.Headers["Content-Encoding"];
 			if (encoding != null && encoding.Contains("gzip"))
-				stream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
+				stream = new GZipStream(stream, CompressionMode.Decompress);
 			else if (encoding != null && encoding.Contains("deflate"))
-				stream = new System.IO.Compression.DeflateStream(stream, System.IO.Compression.CompressionMode.Decompress);
+				stream = new DeflateStream(stream, CompressionMode.Decompress);
 			return stream;
 		}
-#endif
 
-#if NETFX_CORE
 		/// <summary>
 		/// Gets the response stream with HTTP decompression.
 		/// </summary>
 		/// <param name="response">The response.</param>
 		/// <returns></returns>
-		public static Stream GetResponseStreamWithHttpDecompression(this HttpResponseMessage response)
+		public static async Task<Stream> GetResponseStreamWithHttpDecompression(this HttpResponseMessage response)
 		{
-			var stream = response.Content.ReadAsStreamAsync().Result;
-			var encoding = response.Headers.GetValues("Content-Encoding");
+			var stream = await response.Content.ReadAsStreamAsync();
+			var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
 			if (encoding != null && encoding.Contains("gzip"))
-				stream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
+				stream = new GZipStream(stream, CompressionMode.Decompress);
 			else if (encoding != null && encoding.Contains("deflate"))
-				stream = new System.IO.Compression.DeflateStream(stream, System.IO.Compression.CompressionMode.Decompress);
+				stream = new DeflateStream(stream, CompressionMode.Decompress);
 			return stream;
 		}
-#endif
-
 	}
 }

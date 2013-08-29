@@ -27,7 +27,7 @@ namespace Raven.Tests.Notifications
 				DefaultDatabase = "test"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("test");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
@@ -59,7 +59,7 @@ namespace Raven.Tests.Notifications
 				Url = url,
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("test");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes("test").Task.Result;
 				taskObservable.Task.Result
@@ -90,8 +90,8 @@ namespace Raven.Tests.Notifications
 				Url = url,
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("test");
-				store.DatabaseCommands.EnsureDatabaseExists("another");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("another");
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				store.Changes("test").Task.Result
 					.ForDocument("items/1").Task.Result

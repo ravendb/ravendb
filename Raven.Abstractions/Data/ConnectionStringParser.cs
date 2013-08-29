@@ -1,6 +1,8 @@
 #if !NETFX_CORE
 using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 
@@ -22,6 +24,7 @@ namespace Raven.Abstractions.Data
 		public string DefaultDatabase { get; set; }
 		public Guid ResourceManagerId { get; set; }
 		private string url;
+
 		public string Url
 		{
 			get { return url; }
@@ -30,6 +33,8 @@ namespace Raven.Abstractions.Data
 				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
 			}
 		}
+
+		public FailoverServers FailoverServers { get; set; }
 
 		public string ApiKey { get; set; }
 
@@ -137,7 +142,23 @@ namespace Raven.Abstractions.Data
 					ConnectionStringOptions.ResourceManagerId = new Guid(value);
 					break;
 				case "url":
-					ConnectionStringOptions.Url = value;
+					if (string.IsNullOrEmpty(ConnectionStringOptions.Url))
+						ConnectionStringOptions.Url = value;
+					break;
+				case "failoverurl":
+					if (ConnectionStringOptions.FailoverServers == null)
+						ConnectionStringOptions.FailoverServers = new FailoverServers();
+
+					var databaseNameAndFailoverUrl = value.Split('|');
+
+					if (databaseNameAndFailoverUrl.Length == 1)
+					{
+						ConnectionStringOptions.FailoverServers.AddForDefaultDatabase(urls: databaseNameAndFailoverUrl[0]);
+					}
+					else
+					{
+						ConnectionStringOptions.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverUrl[0], urls: databaseNameAndFailoverUrl[1]);
+					}
 					break;
 				case "database":
 				case "defaultdatabase":

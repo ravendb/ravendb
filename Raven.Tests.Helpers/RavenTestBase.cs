@@ -69,7 +69,8 @@ namespace Raven.Tests.Helpers
 					DataDirectory = dataDir ?? NewDataPath(),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = 8079
+					Port = 8079,
+					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms
 				}
 			};
 
@@ -116,10 +117,10 @@ namespace Raven.Tests.Helpers
 		}
 
 		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
-			bool runInMemory = true,
+			 bool runInMemory = true,
 			string dataDirectory = null,
 			string requestedStorage = null,
-			bool enableAuthentication = false)
+			 bool enableAuthentication = false)
 		{
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
@@ -157,9 +158,9 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079,
+		protected RavenDbServer GetNewServer(int port = 8079, 
 			string dataDirectory = null,
-			bool runInMemory = true,
+			bool runInMemory = true, 
 			string requestedStorage = null,
 			bool enableAuthentication = false)
 		{

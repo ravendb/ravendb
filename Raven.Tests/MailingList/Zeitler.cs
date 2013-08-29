@@ -8,6 +8,8 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	public class Zeitler : RavenTest
 	{
 		public class PersistentCacheKey
@@ -37,12 +39,7 @@ namespace Raven.Tests.MailingList
 				//	Url = "http://localhost:8082/databases/entitytagstore"
 				//}.Initialize();
 
-				byte[] hash;
-
-				using (var sha1 = new SHA1CryptoServiceProvider())
-				{
-					hash = sha1.ComputeHash(Encoding.UTF8.GetBytes("/api/Cars"));
-				}
+				byte[] hash = Encryptor.Current.Hash.Compute(Encoding.UTF8.GetBytes("/api/Cars"));
 
 				var persistentCacheKey = new PersistentCacheKey()
 				{

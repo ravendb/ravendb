@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
@@ -12,7 +12,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 	public class WritesDuringFailover : ReplicationBase
 	{
 		[Fact]
-		public void Can_failover_reads()
+		public async Task Can_failover_reads()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -24,23 +24,23 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company {Name = "Hibernating Rhinos"});
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company {Name = "Hibernating Rhinos"});
+				await session.SaveChangesAsync();
 			}
 
-			WaitForReplication(store2);
+			await WaitForReplication(store2);
 
 			servers[0].Dispose();
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				var company = session.LoadAsync<Company>("companies/1").Result;
+				var company = await session.LoadAsync<Company>("companies/1");
 				Assert.NotNull(company);
 			}
 		}
 
 		[Fact]
-		public void Can_disallow_failover()
+		public async Task Can_disallow_failover()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -54,22 +54,22 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+				await session.SaveChangesAsync();
 			}
 
-			WaitForReplication(store2);
+			await WaitForReplication(store2);
 
 			servers[0].Dispose();
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				Assert.Throws<AggregateException>(() => session.LoadAsync<Company>("companies/1").Result);
+				await AssertAsync.Throws<AggregateException>(async () => await session.LoadAsync<Company>("companies/1"));
 			}
 		}
 
 		[Fact]
-		public void Cannot_failover_writes_by_default()
+		public async Task Cannot_failover_writes_by_default()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -78,32 +78,31 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
 			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
-
 			
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+				await session.SaveChangesAsync();
 			}
 
-			WaitForReplication(store2);
+			await WaitForReplication(store2);
 
 			servers[0].Dispose();
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				var company = session.LoadAsync<Company>("companies/1").Result;
+				var company = await session.LoadAsync<Company>("companies/1");
 				Assert.NotNull(company);
 				company.Name = "different";
-				AggregateException aggregateException = Assert.Throws<AggregateException>(() => session.SaveChangesAsync().Wait());
-				InvalidOperationException invalidOperationException = Assert.IsType<InvalidOperationException>(aggregateException.Flatten().InnerException);
+				var aggregateException = await AssertAsync.Throws<AggregateException>(async () => await session.SaveChangesAsync());
+				var invalidOperationException = Assert.IsType<InvalidOperationException>(aggregateException.Flatten().InnerException);
 				Assert.Equal("Could not replicate POST operation to secondary node, failover behavior is: AllowReadsFromSecondaries",
 					invalidOperationException.Message);
 			}
 		}
 
 		[Fact]
-		public void Can_explicitly_allow_replication()
+		public async Task Can_explicitly_allow_replication()
 		{
 			var store1 = CreateStore();
 			store1.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries;
@@ -117,30 +116,30 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+				await session.SaveChangesAsync();
 			}
 
-			WaitForReplication(store2);
+			await WaitForReplication(store2);
 
 			servers[0].Dispose();
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				var company = session.LoadAsync<Company>("companies/1").Result;
+				var company = await session.LoadAsync<Company>("companies/1");
 				Assert.NotNull(company);
 				company.Name = "different";
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 			}
 		}
 
-		private void WaitForReplication(IDocumentStore store2)
+		private async Task WaitForReplication(IDocumentStore store2)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
 				using (var session = store2.OpenAsyncSession())
 				{
-					var company = session.LoadAsync<Company>("companies/1").Result;
+					var company = await session.LoadAsync<Company>("companies/1");
 					if (company != null)
 						break;
 					Thread.Sleep(100);

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 #if !SILVERLIGHT && !NETFX_CORE
 using System.Transactions;
 #endif
@@ -402,6 +403,7 @@ more responsive application.
 		/// <summary>
 		/// Tracks the entity.
 		/// </summary>
+		/// <param name="entityType">The entity type.</param>
 		/// <param name="key">The key.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
@@ -461,6 +463,15 @@ more responsive application.
 			var entity = defaultValue;
 			EnsureNotReadVetoed(metadata);
 
+			IDisposable disposable = null;
+			var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
+			if (defaultRavenContractResolver != null)
+			{
+				disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
+			}
+
+			using (disposable)
+			{
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
@@ -475,7 +486,7 @@ more responsive application.
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
-					entity = (object)(new DynamicJsonObject(document));
+						entity = (object) (new DynamicJsonObject(document));
 				}
 			}
 			GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
@@ -486,6 +497,18 @@ more responsive application.
 			}
 
 			return entity;
+		}
+		}
+
+		private void RegisterMissingProperties(object o, string key, JToken value)
+		{
+			Dictionary<string, JToken> dictionary;
+			if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
+			{
+				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
+			}
+
+			dictionary[key] = value;
 		}
 
 		/// <summary>
@@ -553,12 +576,22 @@ more responsive application.
 
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
+
+			IDisposable disposable = null;
+			var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
+			if (defaultRavenContractResolver != null)
+			{
+				disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
+			}
+			using (disposable)
+			{
+
 			var documentType = Conventions.GetClrType(id, documentFound, metadata);
 			if (documentType != null)
 			{
 				var type = Type.GetType(documentType);
 				if (type != null)
-					entity = (T)documentFound.Deserialize(type, Conventions);
+						entity = (T)documentFound.Deserialize(type, Conventions);
 			}
 			if (Equals(entity, default(T)))
 			{
@@ -566,7 +599,7 @@ more responsive application.
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
-					entity = (T)(object)(new DynamicJsonObject(document));
+						entity = (T)(object)(new DynamicJsonObject(document));
 				}
 			}
 			GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
@@ -582,6 +615,7 @@ more responsive application.
 			}
 
 			return entity;
+		}
 		}
 
 		private static void EnsureNotReadVetoed(RavenJObject metadata)
@@ -699,25 +733,17 @@ more responsive application.
 			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
 		}
 
-		private Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
+		private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
 
 			if (id == null)
 			{
-				return GenerateDocumentKeyForStorageAsync(entity).ContinueWith(task =>
-				{
-					id = task.Result;
-					StoreInternal(entity, etag, id, forceConcurrencyCheck);
-
-					return new CompletedTask();
-				});
+				id = await GenerateDocumentKeyForStorageAsync(entity);
 			}
 
 			StoreInternal(entity, etag, id, forceConcurrencyCheck);
-
-			return new CompletedTask();
 		}
 
 		protected abstract string GenerateKey(object entity);
@@ -727,30 +753,24 @@ more responsive application.
 			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
 		}
 
-		protected internal Task<string> GenerateDocumentKeyForStorageAsync(object entity)
+		protected internal async Task<string> GenerateDocumentKeyForStorageAsync(object entity)
 		{
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
 				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
-					return CompletedTask.With(id);
-				
-				return GenerateKeyAsync(entity)
-					.ContinueWith(task =>
-						{
-							// If we generated a new id, store it back into the Id field so the client has access to to it                    
-							if (task.Result != null)
-								GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, task.Result);
-							return task.Result;
-						});
+					return id;
+
+				var key = await GenerateKeyAsync(entity);
+				// If we generated a new id, store it back into the Id field so the client has access to to it                    
+				if (key != null)
+					GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
+				return key;
 			}
 
-			return GetOrGenerateDocumentKeyAsync(entity)
-				.ContinueWith(task =>
-				{
-					GenerateEntityIdOnTheClient.TrySetIdentity(entity, task.Result);
-					return task.Result;
-				});
+			var result = await GetOrGenerateDocumentKeyAsync(entity);
+			GenerateEntityIdOnTheClient.TrySetIdentity(entity, result);
+			return result;
 		}
 
 		protected abstract Task<string> GenerateKeyAsync(object entity);
@@ -780,7 +800,7 @@ more responsive application.
 
 		
 
-		protected Task<string> GetOrGenerateDocumentKeyAsync(object entity)
+		protected async Task<string> GetOrGenerateDocumentKeyAsync(object entity)
 		{
 			string id;
 			GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
@@ -790,13 +810,11 @@ more responsive application.
 				? CompletedTask.With(id)
 				: GenerateKeyAsync(entity);
 
-			return generator.ContinueWith(task =>
-			{
-				if (task.Result != null && task.Result.StartsWith("/"))
-					throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
+			var result = await generator;
+			if (result != null && result.StartsWith("/"))
+				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 
-				return task.Result;
-			});
+			return result;
 		}
 
 		/// <summary>
@@ -1199,11 +1217,11 @@ more responsive application.
 				{
 					IncludesUtil.Include(result, include, id =>
 					{
-					    if (id == null)
+						if (id == null)
 					        return false;
 						if (IsLoaded(id) == false)
 						{
-						    RegisterMissing(id);
+							RegisterMissing(id);
 						    return false;
 						}
 					    return true;

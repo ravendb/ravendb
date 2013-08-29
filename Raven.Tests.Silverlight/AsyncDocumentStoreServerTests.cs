@@ -20,14 +20,14 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity1 = new Company {Name = "Async Company #1"};
 				var entity2 = new Company {Name = "Async Company #2"};
 				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
 				{
-					session_for_storing.Store(entity1);
-					session_for_storing.Store(entity2);
+					yield return session_for_storing.StoreAsync(entity1);
+					yield return session_for_storing.StoreAsync(entity2);
 					yield return session_for_storing.SaveChangesAsync();
 				}
 
@@ -48,12 +48,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1"};
 				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
 				{
-					session_for_storing.Store(entity);
+					yield return session_for_storing.StoreAsync(entity);
 					yield return session_for_storing.SaveChangesAsync();
 				}
 
@@ -73,12 +73,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 				}
 
@@ -114,12 +114,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return (session.SaveChangesAsync());
 				}
 
@@ -141,7 +141,7 @@ namespace Raven.Tests.Silverlight
 					yield return (query);
 					if (query.Result.IsStale)
 					{
-						yield return Delay(100);
+						yield return TaskEx.Delay(100);
 						continue;
 					}
 					Assert.AreNotEqual(0, query.Result.TotalResults);
@@ -156,11 +156,11 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company
+					yield return session.StoreAsync(new Company
 					              	{
 					              		Name = "Project Value Company",
 					              		Contacts = new List<Contact>
@@ -185,7 +185,7 @@ namespace Raven.Tests.Silverlight
 							            new string[0]);
 						yield return query;
 						if (query.Result.IsStale)
-							yield return Delay(100);
+							yield return TaskEx.Delay(100);
 					} while (query.Result.IsStale);
 					var ravenJToken = (RavenJArray) query.Result.Results[0]["Contacts"];
 					Assert.AreEqual(2, ravenJToken.Count());

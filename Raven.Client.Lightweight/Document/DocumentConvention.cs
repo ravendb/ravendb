@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
@@ -48,10 +49,11 @@ namespace Raven.Client.Document
 		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		private readonly IList<Tuple<Type, Func<string, IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
 			new List<Tuple<Type, Func<string, IDatabaseCommands, object, string>>>();
 #endif
+
 		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
 			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
@@ -227,7 +229,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
-			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
+			return conventions.FindTypeTagName(entity.GetType()) + "/";
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
@@ -312,7 +314,7 @@ namespace Raven.Client.Document
 				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
 				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
@@ -461,7 +463,7 @@ namespace Raven.Client.Document
 		public bool ShouldAggressiveCacheTrackChanges { get; set; }
 
 		/// <summary>
-		/// Whatever or not RavenDB should in the aggressive cache mode should force the aggresive cache
+		/// Whatever or not RavenDB should in the aggressive cache mode should force the aggressive cache
 		/// to check with the server after we called SaveChanges() on a non empty data set.
 		/// This will make any outdated data revalidated, and will work nicely as long as you have just a 
 		/// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
@@ -469,7 +471,7 @@ namespace Raven.Client.Document
 		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
@@ -552,9 +554,7 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-#if !SILVERLIGHT
 						new JsonDynamicConverter()
-#endif
 					}
 			};
 
@@ -604,13 +604,13 @@ namespace Raven.Client.Document
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
-		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
+		public Func<HttpResponseMessage, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
 
 		/// <summary>
 		/// Begins handling of forbidden responses
 		/// in async manner
 		/// </summary>
-		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
+		public Func<HttpResponseMessage, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
 
 		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls

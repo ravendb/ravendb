@@ -1,13 +1,13 @@
-﻿using System;
-using Raven.Database.Server.Abstractions;
-
-namespace Raven.Database.Server.Responders.Admin
+﻿namespace Raven.Database.Server.Responders.Admin
 {
+	using Raven.Abstractions.Util;
+	using Raven.Database.Server.Abstractions;
+
 	public class AdminGc : AdminResponder
 	{
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"POST", "GET"}; }
+			get { return new[] { "POST", "GET" }; }
 		}
 
 		public override void RespondToAdmin(IHttpContext context)
@@ -15,14 +15,7 @@ namespace Raven.Database.Server.Responders.Admin
 			if (EnsureSystemDatabase(context) == false)
 				return;
 
-			CollectGarbage(Database);
-		}
-
-		public static void CollectGarbage(DocumentDatabase database)
-		{
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-			database.TransactionalStorage.ClearCaches();
-			GC.WaitForPendingFinalizers();
+			RavenGC.CollectGarbage(false, () => Database.TransactionalStorage.ClearCaches());
 		}
 	}
 }

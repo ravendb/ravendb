@@ -23,13 +23,15 @@ using Raven.Abstractions.Logging;
 
 namespace Raven.Storage.Esent.StorageActions
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	public partial class DocumentStorageActions : IMappedResultsStorageAction
 	{
-		private static readonly ThreadLocal<SHA1> localSha1 = new ThreadLocal<SHA1>(() => new SHA1Managed());
+		private static readonly ThreadLocal<IHashEncryptor> localSha1 = new ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
 
 		public static byte[] HashReduceKey(string reduceKey)
 		{
-			return localSha1.Value.ComputeHash(Encoding.UTF8.GetBytes(reduceKey));
+			return localSha1.Value.Compute(Encoding.UTF8.GetBytes(reduceKey));
 		}
 
 		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)

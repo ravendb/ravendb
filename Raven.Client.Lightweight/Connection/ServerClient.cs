@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Json;
 using Raven.Client.Changes;
 using Raven.Client.Listeners;
@@ -37,7 +38,7 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
-	public class ServerClient : IDatabaseCommands
+	public class ServerClient : IDatabaseCommands//, IAdminDatabaseCommands
 	{
 		private readonly string url;
 		private readonly DocumentConvention convention;
@@ -119,14 +120,15 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
-	    /// <summary>
+		public IGlobalAdminDatabaseCommands GlobalAdmin { get; private set; }
+
+		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 		{
 			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
 			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, exclude, start, pageSize, metadataOnly));
-
 		}
 
 		/// <summary>
@@ -170,7 +172,7 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
+		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
 			int currentRequest = convention.IncrementRequestCount();
 			return replicationInformer.ExecuteWithReplication(method, url, currentRequest, readStripingBase, operation);
@@ -376,7 +378,7 @@ namespace Raven.Client.Connection
 				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
-				throw ThrowConcurrencyException(e);
+				throw FetchConcurrencyException(e);
 			}
 			return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)responseJson).OfType<RavenJObject>()).ToArray();
 		}
@@ -412,7 +414,7 @@ namespace Raven.Client.Connection
 				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
-				throw ThrowConcurrencyException(e);
+				throw FetchConcurrencyException(e);
 			}
 			var jsonSerializer = convention.CreateSerializer();
 			return jsonSerializer.Deserialize<PutResult>(new RavenJTokenReader(responseJson));
@@ -660,18 +662,6 @@ namespace Raven.Client.Connection
 				.ToArray();
 		}
 
-		public IDictionary<string, RavenJToken> GetDatabases(int pageSize, int start = 0)
-		{
-			var result = ExecuteGetRequest("".Databases(pageSize, start).NoCache());
-
-			var json = (RavenJArray)result;
-
-			return json
-				.ToDictionary(
-					x =>
-					x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty));
-		}
-
 		private void DirectDeleteAttachment(string key, Etag etag, string operationUrl)
 		{
 			var metadata = new RavenJObject();
@@ -869,11 +859,11 @@ namespace Raven.Client.Connection
 				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
-				throw ThrowConcurrencyException(e);
+				throw FetchConcurrencyException(e);
 			}
 		}
 
-		private static Exception ThrowConcurrencyException(WebException e)
+		private static Exception FetchConcurrencyException(WebException e)
 		{
 			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
 			{
@@ -981,9 +971,9 @@ namespace Raven.Client.Connection
 	            {
 	                if (newException != null)
 	                    throw newException;
-	                throw;
-	            }
-                
+	                    throw;
+	                }
+
 	        }
 
 	        var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1015,28 +1005,28 @@ namespace Raven.Client.Connection
 	    private static bool ShouldRethrowIndexException(WebException e, out Exception newEx)
 	    {
 	        newEx = null;
-	        var httpWebResponse = e.Response as HttpWebResponse;
+	            var httpWebResponse = e.Response as HttpWebResponse;
 	        if (httpWebResponse == null)
 	            return true;
 
 	        if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-	        {
-	            var error = e.TryReadErrorResponseObject(
-	                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
-
-	            if (error == null)
 	            {
+	                var error = e.TryReadErrorResponseObject(
+	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+
+	                if (error == null)
+	                {
 	                return true;
-	            }
+	                }
 
                 newEx = new IndexCompilationException(error.Message, e)
-	            {
-	                IndexDefinitionProperty = error.IndexDefinitionProperty,
-	                ProblematicText = error.ProblematicText
-	            };
+	                {
+	                    IndexDefinitionProperty = error.IndexDefinitionProperty,
+	                    ProblematicText = error.ProblematicText
+	                };
 
 	            return true;
-	        }
+	            }
 
 	        return (httpWebResponse.StatusCode != HttpStatusCode.NotFound);
 	    }
@@ -1145,6 +1135,7 @@ namespace Raven.Client.Connection
 			        sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
 			    }
 			}
+			
 			if (start != 0)
 				sb.Append("start=").Append(start).Append("&");
 			if(pageSize!=int.MaxValue)
@@ -1411,7 +1402,7 @@ namespace Raven.Client.Connection
 				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
-				throw ThrowConcurrencyException(e);
+				throw FetchConcurrencyException(e);
 			}
 			return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 		}
@@ -1561,7 +1552,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			return ExecuteWithReplication<Operation>("DELETE", operationUrl =>
@@ -1585,14 +1576,20 @@ namespace Raven.Client.Connection
 				}
 
 				// Be compitable with the resopnse from v2.0 server
-				if (jsonResponse == null || jsonResponse.Type != JTokenType.Object)
+				var serverBuild = request.ResponseHeaders.GetAsInt("Raven-Server-Build");
+				if (serverBuild < 2500)
+				{
+					if (serverBuild != 13 || (serverBuild == 13 && jsonResponse.Value<long>("OperationId") == default(long)))
+					{
 					return null;
+					}
+				}
 
 				var opId = ((RavenJObject)jsonResponse)["OperationId"];
 
 				if (opId == null || opId.Type != JTokenType.Integer)
 					return null;
-				
+
 				return new Operation(this, opId.Value<long>());
 			});
 		}
@@ -1627,7 +1624,7 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
@@ -1640,7 +1637,7 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
@@ -1698,14 +1695,18 @@ namespace Raven.Client.Connection
 
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
-				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}&popularity={6}",
+				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&popularity={4}",
 													 Uri.EscapeUriString(index),
 													 Uri.EscapeDataString(suggestionQuery.Term),
 													 Uri.EscapeDataString(suggestionQuery.Field),
 													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
-													 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToInvariantString()),
 													 suggestionQuery.Popularity);
+
+				if (suggestionQuery.Accuracy.HasValue)
+					requestUri += "&accuracy=" + suggestionQuery.Accuracy.Value;
+
+				if (suggestionQuery.Distance.HasValue)
+					requestUri += "&distance=" + suggestionQuery.Distance;
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
@@ -1809,7 +1810,6 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
 
 			try
 			{
@@ -2181,6 +2181,33 @@ namespace Raven.Client.Connection
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
+
+		#region IAsyncAdminDatabaseCommands
+
+		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
+		public IAdminDatabaseCommands Admin
+		{
+			get { return (IAdminDatabaseCommands)ForSystemDatabase(); }
+		}
+
+		public void CreateDatabase(DatabaseDocument databaseDocument)
+		{
+			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
+				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
+
+			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
+			MultiDatabase.AssertValidDatabaseName(dbname);
+			var doc = RavenJObject.FromObject(databaseDocument);
+			doc.Remove("Id");
+
+			var req = CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(dbname));
+			req.Write(doc.ToString(Formatting.Indented));
+			req.ExecuteRequest();
+		}
+
+		#endregion
 	}
 }
 #endif

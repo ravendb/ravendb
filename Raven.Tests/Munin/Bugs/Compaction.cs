@@ -3,14 +3,24 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Text;
-using Raven.Json.Linq;
-using Xunit;
-
 namespace Raven.Munin.Tests.Bugs
 {
-	public class Compaction
+	using System;
+	using System.Text;
+
+	using Raven.Abstractions.Util.Encryptors;
+	using Raven.Json.Linq;
+	using Raven.Tests.Helpers;
+
+	using Xunit;
+
+	public class Compaction : IDisposable
 	{
+		public Compaction()
+		{
+			Encryptor.Initialize(SettingsHelper.UseFipsEncryptionAlgorithms);
+		}
+
 		[Fact]
 		public void CanCompactWhenDataHasNoValue()
 		{
@@ -72,6 +82,11 @@ namespace Raven.Munin.Tests.Bugs
 				Assert.Equal(value, readResult.Data());
 				database.Commit();
 			}
+		}
+
+		public void Dispose()
+		{
+			Encryptor.Dispose();
 		}
 	}
 }

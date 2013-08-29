@@ -5,15 +5,13 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Client.Shard;
 using Raven.Server;
 using Xunit;
 using Raven.Client.Linq;
-using System.Linq;
 
 namespace Raven.Tests.Shard.Async
 {
@@ -21,7 +19,7 @@ namespace Raven.Tests.Shard.Async
 	{
 		private readonly Dictionary<string, RavenDbServer> servers;
 		private readonly ShardedDocumentStore store;
-		private Dictionary<string, IDocumentStore> documentStores;
+		private readonly Dictionary<string, IDocumentStore> documentStores;
 
 		public RoundRobinSharding()
 		{
@@ -64,16 +62,16 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void SavingTwoPostsWillGoToTwoDifferentServers()
+		public async Task SavingTwoPostsWillGoToTwoDifferentServers()
 		{
 			using(var session = store.OpenAsyncSession())
 			{
 				var p1 = new Post();
-				session.Store(p1);
+			 	await session.StoreAsync(p1);
 				var p2 = new Post();
-				session.Store(p2);
+				await session.StoreAsync(p2);
 
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 
 				Assert.Equal("tri/posts/1", p1.Id);
 				Assert.Equal("two/posts/2", p2.Id);
@@ -81,17 +79,17 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void WhenQueryingWillGoToTheRightServer()
+		public async Task WhenQueryingWillGoToTheRightServer()
 		{
 			using (var session = store.OpenAsyncSession())
 			{
 				var p1 = new Post();
-				session.Store(p1);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(p1);
+				await session.SaveChangesAsync();
 
 				var pc1 = new PostComments {PostId = p1.Id};
-				session.Store(pc1);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(pc1);
+				await session.SaveChangesAsync();
 			}
 
 			foreach (var ravenDbServer in servers)
@@ -101,7 +99,9 @@ namespace Raven.Tests.Shard.Async
 
 			using (var session = store.OpenAsyncSession())
 			{
-				var posts = session.Query<PostComments>().Where(x => x.PostId == "tri/posts/1").ToListAsync().Result;
+				var posts = await session.Query<PostComments>()
+				                         .Where(x => x.PostId == "tri/posts/1")
+				                         .ToListAsync();
 				Assert.NotEmpty(posts);
 			}
 			Assert.Equal(0, servers["one"].Server.NumberOfRequests);
@@ -110,19 +110,19 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void WhenQueryingWillGoToTheRightServer_UsingQueryById()
+		public async Task WhenQueryingWillGoToTheRightServer_UsingQueryById()
 		{
 			store.Conventions.AllowQueriesOnId = true;
 			using (var session = store.OpenAsyncSession())
 			{
 				var p1 = new Post();
-				session.Store(p1);
+				await session.StoreAsync(p1);
 
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 
 				var pc1 = new PostComments { PostId = p1.Id };
-				session.Store(pc1);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(pc1);
+				await session.SaveChangesAsync();
 			}
 
 			foreach (var ravenDbServer in servers)
@@ -132,7 +132,9 @@ namespace Raven.Tests.Shard.Async
 
 			using (var session = store.OpenAsyncSession())
 			{
-				var posts = session.Query<Post>().Where(x => x.Id == "tri/posts/1").ToListAsync().Result;
+				var posts = await session.Query<Post>()
+				                         .Where(x => x.Id == "tri/posts/1")
+				                         .ToListAsync();
 				Assert.NotEmpty(posts);
 			}
 			Assert.Equal(0, servers["one"].Server.NumberOfRequests);
@@ -141,18 +143,18 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void WhenQueryingWillGoToTheRightServer_Loading()
+		public async Task WhenQueryingWillGoToTheRightServer_Loading()
 		{
 			using (var session = store.OpenAsyncSession())
 			{
 				var p1 = new Post();
-				session.Store(p1);
+				await session.StoreAsync(p1);
 
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 
 				var pc1 = new PostComments { PostId = p1.Id };
-				session.Store(pc1);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(pc1);
+				await session.SaveChangesAsync();
 			}
 
 			foreach (var ravenDbServer in servers)
@@ -162,8 +164,8 @@ namespace Raven.Tests.Shard.Async
 
 			using (var session = store.OpenAsyncSession())
 			{
-				Assert.NotNull(session.LoadAsync<Post>("tri/posts/1").Result);
-				Assert.NotNull(session.LoadAsync<PostComments>("tri/PostComments/1").Result);
+				Assert.NotNull(await session.LoadAsync<Post>("tri/posts/1"));
+				Assert.NotNull(await session.LoadAsync<PostComments>("tri/PostComments/1"));
 			}
 			Assert.Equal(0, servers["one"].Server.NumberOfRequests);
 			Assert.Equal(0, servers["two"].Server.NumberOfRequests);
@@ -171,30 +173,30 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void WillGetGoodLocalityOfReference()
+		public async Task WillGetGoodLocalityOfReference()
 		{
 			using (var session = store.OpenAsyncSession())
 			{
 				var p1 = new Post();
-				session.Store(p1);
+				await session.StoreAsync(p1);
 				var p2 = new Post();
-				session.Store(p2);
+				await session.StoreAsync(p2);
 
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 
 				var pc1 = new PostComments
 				{
 					PostId = p1.Id
 				};
-				session.Store(pc1);
+				await session.StoreAsync(pc1);
 
 				var pc2 = new PostComments
 				{
 					PostId = p2.Id
 				};
-				session.Store(pc2);
+				await session.StoreAsync(pc2);
 
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 
 				Assert.Equal("tri/posts/1", p1.Id);
 				Assert.Equal("two/posts/2", p2.Id);

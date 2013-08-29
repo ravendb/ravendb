@@ -173,7 +173,12 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public bool DisableCaching { get; set; }
 
-	    /// <summary>
+		/// <summary>
+		/// Whatever a query result should contains an explanation about how docs scored against query
+		/// </summary>
+		public bool ExplainScores { get; set; }
+
+		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
@@ -270,6 +275,9 @@ namespace Raven.Abstractions.Data
 
 			if(DebugOptionGetIndexEntries)
 				path.Append("&debug=entries");
+
+			if (ExplainScores)
+				path.Append("&explainScores=true");
 		}
 
 		private void AppendMinimalQueryString(StringBuilder path)

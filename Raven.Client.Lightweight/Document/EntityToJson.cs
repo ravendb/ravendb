@@ -28,6 +28,8 @@ namespace Raven.Client.Document
 			Listeners = listeners;
 		}
 
+		public Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
+
 		public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
 		{
 			foreach (var extendedDocumentConversionListener in Listeners.ExtendedConversionListeners)
@@ -71,6 +73,22 @@ namespace Raven.Client.Document
 				return (RavenJObject)jObject.CreateSnapshot();
 
 			var jsonSerializer = documentStore.Conventions.CreateSerializer();
+			jsonSerializer.BeforeClosingObject += (o, writer) =>
+			{
+				Dictionary<string, JToken> value;
+				if (MissingDictionary.TryGetValue(o, out value) == false)
+					return;
+
+				foreach (var item in value)
+				{
+					writer.WritePropertyName(item.Key);
+					if (item.Value == null)
+						writer.WriteNull();
+					else
+						item.Value.WriteTo(writer);
+				}
+			};
+
 			jObject = RavenJObject.FromObject(entity, jsonSerializer);
 			if (jsonSerializer.TypeNameHandling == TypeNameHandling.Auto)// remove the default types
 			{
@@ -171,11 +189,11 @@ namespace Raven.Client.Document
 
 		private static Regex arrayEndRegex = new Regex(@"\[\], [\w\.-]+$",
 #if !SILVERLIGHT && !NETFX_CORE
-		                                               RegexOptions.Compiled
+ RegexOptions.Compiled
 #else
 													   RegexOptions.None	
 #endif
-		);
+);
 		private static bool ShouldSimplifyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
 		{
 			if (jsonProperty != null && (jsonProperty.TypeNameHandling == TypeNameHandling.All || jsonProperty.TypeNameHandling == TypeNameHandling.Arrays))

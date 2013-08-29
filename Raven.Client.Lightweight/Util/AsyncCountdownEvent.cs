@@ -13,7 +13,7 @@ namespace Raven.Client.Util
 
 		public AsyncCountdownEvent(int initialCount)
 		{
-			if (initialCount <= 0)
+			if (initialCount <= 0) 
 				throw new ArgumentOutOfRangeException("initialCount");
 			count = initialCount;
 		}

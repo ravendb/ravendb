@@ -115,7 +115,6 @@ namespace Raven.Database.Extensions
 			else
 			{
 				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-
 			}
 
 			if (minimal)
@@ -505,6 +504,13 @@ namespace Raven.Database.Extensions
 					throw new BadRequestException(
 						"Could not parse hightlight query parameter as field highlight options");
 			}
+		}
+
+		public static bool GetExplainScores(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["explainScores"], out result);
+			return result;
 		}
 
 		public static Etag GetEtagFromQueryString(this IHttpContext context)

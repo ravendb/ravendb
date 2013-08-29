@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
                 Url = "http://localhost:8079"
             }.Initialize())
             {
-                store.DatabaseCommands.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { {"Raven/DataDir", @"~\Databases\Mine"} }, });
+                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { {"Raven/DataDir", @"~\Databases\Mine"} }, });
 
                 var tx1 = new TransactionInformation {Id = Guid.NewGuid().ToString()};
                 var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
@@ -56,7 +56,7 @@ namespace Raven.Tests.Issues
                 Url = "http://localhost:8079"
             }.Initialize())
             {
-                store.DatabaseCommands.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
+                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
                 var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
                 var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
@@ -88,7 +88,7 @@ namespace Raven.Tests.Issues
                 Url = "http://localhost:8079"
             }.Initialize())
             {
-                store.DatabaseCommands.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
+                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
                 var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
                 var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };

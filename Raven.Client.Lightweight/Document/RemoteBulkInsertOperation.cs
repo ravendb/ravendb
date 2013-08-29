@@ -70,25 +70,23 @@ namespace Raven.Client.Document
 			{
 				SynchronizationContext.SetSynchronizationContext(null);
 
-			OperationId = Guid.NewGuid();
-			operationClient = client;
-			operationChanges = changes;
-			queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
+				OperationId = Guid.NewGuid();
+				operationClient = client;
+				operationChanges = changes;
+				queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
 
-			operationTask = StartBulkInsertAsync(options);
+				operationTask = StartBulkInsertAsync(options);
 #if !MONO
-			SubscribeToBulkInsertNotifications(changes);
+				SubscribeToBulkInsertNotifications(changes);
 #endif
-		}
-
-#if !MONO
+			}
 			finally
 			{
 				SynchronizationContext.SetSynchronizationContext(synchronizationContext);
 			}
-			
 		}
 
+#if !MONO
 		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
 		{
 			changes
@@ -123,7 +121,7 @@ namespace Raven.Client.Document
 			try
 			{
 				if (expect100Continue != null)
-				expect100Continue.Dispose();
+					expect100Continue.Dispose();
 			}
 			catch
 			{
@@ -158,7 +156,6 @@ namespace Raven.Client.Document
 #else
 			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST",
 														disableRequestCompression: true);
-			request.webRequest.ContentLength = 0;
 
 			return request.ReadResponseJsonAsync();
 #endif
@@ -172,7 +169,6 @@ namespace Raven.Client.Document
 			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", disableRequestCompression: true);
 #endif
             request.DisableAuthentication();
-			request.webRequest.ContentLength = 0;
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 			var result = await request.ReadResponseJsonAsync();
 			return result.Value<string>("Token");

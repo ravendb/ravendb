@@ -30,20 +30,20 @@ namespace Raven.Database.Queries
 			if (string.IsNullOrWhiteSpace(suggestionQuery.Term)) throw new ArgumentNullException("suggestionQuery.Term");
 			if (string.IsNullOrWhiteSpace(indexName)) throw new ArgumentNullException("indexName");
 			if (string.IsNullOrWhiteSpace(suggestionQuery.Field)) throw new ArgumentNullException("suggestionQuery.Field");
-			if (suggestionQuery.MaxSuggestions <= 0) suggestionQuery.MaxSuggestions = 10;
-			if (suggestionQuery.Accuracy <= 0 || suggestionQuery.Accuracy > 1) suggestionQuery.Accuracy = 0.5f;
 
-			suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions,
-													  database.Configuration.MaxPageSize);
+			suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions, database.Configuration.MaxPageSize);
 
-			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
+			if (suggestionQuery.MaxSuggestions <= 0) suggestionQuery.MaxSuggestions = SuggestionQuery.DefaultMaxSuggestions;
+			if (suggestionQuery.Accuracy.HasValue && (suggestionQuery.Accuracy.Value <= 0f || suggestionQuery.Accuracy.Value > 1f))
+				suggestionQuery.Accuracy = SuggestionQuery.DefaultAccuracy;
 
-			var indexExtension = (
-				                     database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) ??
-									 database.IndexStorage.GetIndexExtensionByPrefix(indexName, MonoHttpUtility.UrlEncode(suggestionQuery.Field +"-"+suggestionQuery.Distance)) ??
-									 database.IndexStorage.GetIndexExtensionByPrefix(indexName, MonoHttpUtility.UrlEncode(suggestionQuery.Field)) 
-			                     ) as SuggestionQueryIndexExtension;
+			if (suggestionQuery.Accuracy.HasValue == false)
+				suggestionQuery.Accuracy = SuggestionQuery.DefaultAccuracy;
+			if (suggestionQuery.Distance.HasValue == false)
+				suggestionQuery.Distance = StringDistanceTypes.Default;
 
+			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field);
+			var indexExtension = database.IndexStorage.GetIndexExtensionByPrefix(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
 			IndexSearcher currentSearcher;
 			using (database.IndexStorage.GetCurrentIndexSearcher(indexName, out currentSearcher))
@@ -57,14 +57,11 @@ namespace Raven.Database.Queries
 				if (indexExtension != null)
 					return indexExtension.Query(suggestionQuery, indexReader);
 
-
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					database.WorkContext,
 					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
 					indexReader.Directory() is RAMDirectory,
-					GetStringDistance(suggestionQuery.Distance),
-					suggestionQuery.Field,
-					suggestionQuery.Accuracy);
+					suggestionQuery.Field);
 
 				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 

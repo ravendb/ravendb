@@ -89,6 +89,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
     /// <value>
     /// 	<c>true</c> if binary data reading will be compatible with incorrect Json.NET 3.5 written binary; otherwise, <c>false</c>.
     /// </value>
+    [Obsolete("JsonNet35BinaryCompatibility will be removed in a future version of Json.NET.")]
     public bool JsonNet35BinaryCompatibility
     {
       get { return _jsonNet35BinaryCompatibility; }
@@ -295,7 +296,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
       base.Close();
 
       if (CloseInput && _reader != null)
-#if !(NETFX_CORE || PORTABLE)
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
         _reader.Close();
 #else
         _reader.Dispose();
@@ -507,7 +508,12 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
           SetToken(JsonToken.Float, ReadDecimal());
           break;
         case BsonType.Number:
-          SetToken(JsonToken.Float, ReadDouble());
+          double d = ReadDouble();
+
+          if (_floatParseHandling == FloatParseHandling.Decimal)
+            SetToken(JsonToken.Float, Convert.ToDecimal(d, CultureInfo.InvariantCulture));
+          else
+            SetToken(JsonToken.Float, d);
           break;
 		case BsonType.RavenDBCustomFloat:
 		  SetToken(JsonToken.Float, ReadSingle());
@@ -550,7 +556,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
           break;
         case BsonType.Date:
           long ticks = ReadInt64();
-          DateTime utcDateTime = JsonConvert.ConvertJavaScriptTicksToDateTime(ticks);
+          DateTime utcDateTime = DateTimeUtils.ConvertJavaScriptTicksToDateTime(ticks);
 
           DateTime dateTime;
           switch (DateTimeKindHandling)
@@ -609,7 +615,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
 
 #pragma warning disable 612,618
       // the old binary type has the data length repeated in the data for some reason
-      if (binaryType == BsonBinaryType.Data && !_jsonNet35BinaryCompatibility)
+      if (binaryType == BsonBinaryType.BinaryOld && !_jsonNet35BinaryCompatibility)
       {
         dataLength = ReadInt32();
       }
