@@ -9,15 +9,12 @@ namespace Raven.Abstractions.Util.Encryptors
 
 	public static class Encryptor
 	{
-		private static IEncryptor current;
+		private static IEncryptor current = new DefaultEncryptor();
 
 		public static IEncryptor Current
 		{
 			get
 			{
-				if (current == null)
-					throw new InvalidOperationException("Did you forget to initialize encryptor?");
-
 				return current;
 			}
 		}

@@ -76,6 +76,8 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Connection\AdminRequestCreator.cs" />
+    <Compile Include="Connection\AdminServerClient.cs" />
     <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />

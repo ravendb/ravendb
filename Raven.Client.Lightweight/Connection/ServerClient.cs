@@ -41,7 +41,7 @@ namespace Raven.Client.Connection
 	public class ServerClient : IDatabaseCommands//, IAdminDatabaseCommands
 	{
 		private readonly string url;
-		private readonly DocumentConvention convention;
+		internal readonly DocumentConvention convention;
 		private readonly ICredentials credentials;
 		private readonly Func<string, ReplicationInformer> replicationInformerGetter;
 		private readonly string databaseName;
@@ -120,9 +120,12 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
-		public IGlobalAdminDatabaseCommands GlobalAdmin { get; private set; }
+	    public IGlobalAdminDatabaseCommands GlobalAdmin
+	    {
+	        get { return new AdminServerClient(this); }
+	    }
 
-		/// <summary>
+	    /// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
@@ -163,7 +166,21 @@ namespace Raven.Client.Connection
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
-		private void ExecuteWithReplication(string method, Action<string> operation)
+        public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
+        {
+            var metadata = new RavenJObject();
+            AddTransactionInformation(metadata);
+
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (currentServerUrl + requestUrl).NoCache(), method, credentials,
+                                                                              convention).AddOperationHeaders(OperationsHeaders);
+            createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
+
+            return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
+                                     .AddReplicationStatusHeaders(url, currentServerUrl, replicationInformer,
+                                                                  convention.FailoverBehavior, HandleReplicationStatusChanges);
+        }
+
+        internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
 			ExecuteWithReplication<object>(method, operationUrl =>
 			{
@@ -2184,15 +2201,15 @@ namespace Raven.Client.Connection
 
 		#region IAsyncAdminDatabaseCommands
 
-		/// <summary>
-		/// Admin operations, like create/delete database.
-		/// </summary>
-		public IAdminDatabaseCommands Admin
-		{
-			get { return (IAdminDatabaseCommands)ForSystemDatabase(); }
-		}
+	    /// <summary>
+	    /// Admin operations, like create/delete database.
+	    /// </summary>
+	    public IAdminDatabaseCommands Admin
+	    {
+	        get { return new AdminServerClient(this); }
+	    }
 
-		public void CreateDatabase(DatabaseDocument databaseDocument)
+	    public void CreateDatabase(DatabaseDocument databaseDocument)
 		{
 			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");

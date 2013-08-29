@@ -523,6 +523,8 @@ namespace Raven.Client.Connection
 		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
 		/// </summary>
 		void CompactDatabase(string databaseName);
+
+        IDatabaseCommands Commannds { get; }
 	}
 
 	public interface IAdminDatabaseCommands
