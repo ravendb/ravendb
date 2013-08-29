@@ -40,7 +40,7 @@ namespace Raven.Client.Extensions
 				if (serverClient.Get(doc.Id) != null)
 					return;
 
-				serverClient.Admin.CreateDatabase(doc);
+				serverClient.GlobalAdmin.CreateDatabase(doc);
 			}
 			catch (Exception)
 			{
@@ -67,7 +67,7 @@ namespace Raven.Client.Extensions
 		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.Admin.CreateDatabase instead.")]
 		public static void CreateDatabase(this IDatabaseCommands self, DatabaseDocument databaseDocument)
 		{
-			self.Admin.CreateDatabase(databaseDocument);
+			self.GlobalAdmin.CreateDatabase(databaseDocument);
 		}
 
 #endif
@@ -91,7 +91,7 @@ namespace Raven.Client.Extensions
 
 			try
 			{
-				await serverClient.Admin.CreateDatabaseAsync(doc);
+				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc);
 			}
 			catch (Exception)
 			{
@@ -110,7 +110,7 @@ namespace Raven.Client.Extensions
 		[Obsolete("The method was moved to be under the Admin property. Use the store.AsyncDatabaseCommands.Admin.CreateDatabaseAsync instead.")]
 		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument)
 		{
-			return self.Admin.CreateDatabaseAsync(databaseDocument);
+			return self.GlobalAdmin.CreateDatabaseAsync(databaseDocument);
 		}
 	}
 }

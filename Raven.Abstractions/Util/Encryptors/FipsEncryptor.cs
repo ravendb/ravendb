@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 namespace Raven.Abstractions.Util.Encryptors
 {
-	using System;
 	using System.Security.Cryptography;
 
 	public sealed class FipsEncryptor : EncryptorBase<FipsEncryptor.FipsHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
@@ -23,36 +22,23 @@ namespace Raven.Abstractions.Util.Encryptors
 			{
 				get
 				{
-#if !SILVERLIGHT
 					return 20;
-#else
-					throw new NotSupportedException();
-#endif
 				}
 			}
 
 			public byte[] ComputeForStorage(byte[] bytes)
 			{
-				return Compute(bytes, StorageHashSize);
+				return Compute(bytes);
 			}
 
 			public byte[] ComputeForOAuth(byte[] bytes)
 			{
-				return Compute(bytes, 16);
+				return Compute(bytes);
 			}
 
 			public byte[] Compute(byte[] bytes)
 			{
-				return Compute(bytes, 16);
-			}
-
-			private byte[] Compute(byte[] bytes, int? size)
-			{
-#if !SILVERLIGHT
-				return ComputeHash(SHA1.Create(), bytes, size);
-#else
-				return ComputeHash(new SHA1Managed(), bytes, size);
-#endif
+				return ComputeHash(SHA1.Create(), bytes);
 			}
 		}
 
@@ -62,11 +48,7 @@ namespace Raven.Abstractions.Util.Encryptors
 
 			public FipsSymmetricalEncryptor()
 			{
-#if !SILVERLIGHT
 				algorithm = new AesCryptoServiceProvider();
-#else
-				algorithm = new AesManaged();
-#endif
 			}
 
 			public byte[] Key
@@ -135,17 +117,13 @@ namespace Raven.Abstractions.Util.Encryptors
 
 			public void Dispose()
 			{
-#if !SILVERLIGHT
 				if (algorithm != null)
 					algorithm.Dispose();
-#endif
 			}
 		}
 
-#if !SILVERLIGHT
 		public class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
 		{
-
 			private readonly RSACryptoServiceProvider algorithm;
 
 			public FipsAsymmetricalEncryptor()
@@ -239,56 +217,5 @@ namespace Raven.Abstractions.Util.Encryptors
 					algorithm.Dispose();
 			}
 		}
-#else
-		public class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
-		{
-			public int KeySize { get; set; }
-
-			public void ImportParameters(byte[] exponent, byte[] modulus)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public byte[] Encrypt(byte[] bytes, bool fOAEP)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public void ImportCspBlob(byte[] keyBlob)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public byte[] ExportCspBlob(bool includePrivateParameters)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public byte[] SignHash(byte[] hash, string str)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public bool VerifyHash(byte[] hash, string str, byte[] signature)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public byte[] Decrypt(byte[] bytes, bool fOAEP)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public void FromXmlString(string xml)
-			{
-				throw new System.NotImplementedException();
-			}
-
-			public void Dispose()
-			{
-				throw new System.NotImplementedException();
-			}
-		}
-#endif
 	}
 }

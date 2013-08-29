@@ -1,8 +1,8 @@
+using System;
+using System.Security.Cryptography;
+
 namespace Raven.Abstractions.Util.Encryptors
 {
-	using System;
-	using System.Security.Cryptography;
-
 	public interface IEncryptor
 	{
 		IHashEncryptor Hash { get; }
@@ -52,25 +52,8 @@ namespace Raven.Abstractions.Util.Encryptors
 
 	public interface IAsymmetricalEncryptor : IDisposable
 	{
-		AsymmetricAlgorithm Algorithm { get; }
+		int KeySize { get; set; }
 
-		void ImportParameters(byte[] exponent, byte[] modulus);
-
-		byte[] Encrypt(byte[] bytes, bool fOAEP);
-
-		void ImportCspBlob(byte[] keyBlob);
-
-		byte[] ExportCspBlob(bool includePrivateParameters);
-
-		byte[] SignHash(byte[] hash, string str);
-
-		bool VerifyHash(byte[] hash, string str, byte[] signature);
-
-		void ImportParameters(RSAParameters parameters);
-
-		RSAParameters ExportParameters(bool includePrivateParameters);
-
-		byte[] Decrypt(byte[] bytes, bool fOAEP);
 		void ImportParameters(byte[] exponent, byte[] modulus);
 
 		byte[] Encrypt(byte[] bytes, bool fOAEP);
@@ -92,8 +75,6 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		void ImportParameters(RSAParameters parameters);
 
-		byte[] Decrypt();
-		void FromXmlString(string xml);
 		RSAParameters ExportParameters(bool includePrivateParameters);
 #endif
 	}

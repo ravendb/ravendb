@@ -403,8 +403,8 @@ namespace Raven.Client.Connection
 						}
 					}
 				}
-					}
-				}
+					
+				
 				if (document == null)
 				{
 					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
