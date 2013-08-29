@@ -30,8 +30,8 @@ namespace Voron.Trees
                 // need to delete the implicit left page, shift right 
                 if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
                 {
-                    var newImplicit = parentPage.GetNode(1)->PageNumber;
-                    parentPage.AddNode(0, Slice.Empty, -1, newImplicit);
+					var newImplicit = parentPage.GetNode(1)->PageNumber;
+                    parentPage.AddNode(0, Slice.Empty, -1, newImplicit, 0);
                     parentPage.RemoveNode(1);
                     parentPage.RemoveNode(1);
                 }
@@ -130,7 +130,7 @@ namespace Voron.Trees
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
-            var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1);
+            var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1, fromNode->Version);
             NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
             --@from.ItemCount;
             ++to.ItemCount;
@@ -148,7 +148,7 @@ namespace Voron.Trees
                 newKey = GetActualKey(from, 0);
             }
 
-            parentPage.AddNode(pos, newKey, -1, pageNumber);
+            parentPage.AddNode(pos, newKey, -1, pageNumber, 0);
         }
 
         private void MoveBranchNode(Page parentPage, Page from, Page to)
@@ -170,13 +170,13 @@ namespace Voron.Trees
                 var implicitLeftKey = GetActualKey(to, 0);
                 var leftPageNumber = to.GetNode(0)->PageNumber;
 
-				to.AddNode(1, implicitLeftKey, -1, leftPageNumber);
-				to.AddNode(0, Slice.BeforeAllKeys, -1, pageNum);
+				to.AddNode(1, implicitLeftKey, -1, leftPageNumber, 0);
+				to.AddNode(0, Slice.BeforeAllKeys, -1, pageNum, 0);
 				to.RemoveNode(1);
 			}
             else
             {
-                to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum);
+                to.AddNode(to.LastSearchPosition, originalFromKeyStart, -1, pageNum, 0);
             }
 
             if (from.LastSearchPositionOrLastEntry == 0)
@@ -185,7 +185,7 @@ namespace Voron.Trees
                 var rightPageNumber = from.GetNode(1)->PageNumber;
                 from.RemoveNode(0); // remove the original node
                 from.RemoveNode(0); // remove the next node
-                from.AddNode(0, Slice.BeforeAllKeys, -1, rightPageNumber);
+                from.AddNode(0, Slice.BeforeAllKeys, -1, rightPageNumber, 0);
                 Debug.Assert(from.NumberOfEntries >= 2);
             }
             else
@@ -203,7 +203,7 @@ namespace Voron.Trees
                 newKey = GetActualKey(from, 0);
             }
 
-            parentPage.AddNode(pos, newKey, -1, pageNumber);
+            parentPage.AddNode(pos, newKey, -1, pageNumber, 0);
         }
 
         private Slice GetActualKey(Page page, int pos)

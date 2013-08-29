@@ -2,56 +2,70 @@
 
 namespace Voron.Tests.Trees
 {
-    public class MultipleTrees : StorageTest
-    {
-        [Fact]
-        public void CanCreateNewTree()
-        {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "test");
+	using System;
 
-                Env.CreateTree(tx, "test").Add(tx, "test", StreamFor("abc"));
+	public class MultipleTrees : StorageTest
+	{
+		[Fact]
+		public void CanCreateNewTree()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "test");
 
-                tx.Commit();
-            }
+				Env.CreateTree(tx, "test").Add(tx, "test", StreamFor("abc"));
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
-            {
-                var stream = Env.GetTree("test").Read(tx, "test");
-                Assert.NotNull(stream);
+				tx.Commit();
+			}
 
-                tx.Commit();
-            }
-        }
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var stream = Env.GetTree("test").Read(tx, "test");
+				Assert.NotNull(stream);
 
-        [Fact]
-        public void CanUpdateValuesInSubTree()
-        {
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "test");
+				tx.Commit();
+			}
+		}
 
-                Env.CreateTree(tx, "test").Add(tx, "test", StreamFor("abc"));
+		[Fact]
+		public void CanUpdateValuesInSubTree()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "test");
 
-                tx.Commit();
-            }
+				Env.CreateTree(tx, "test").Add(tx, "test", StreamFor("abc"));
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
+				tx.Commit();
+			}
 
-                Env.GetTree("test").Add(tx, "test2", StreamFor("abc"));
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
 
-                tx.Commit();
-            }
+				Env.GetTree("test").Add(tx, "test2", StreamFor("abc"));
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
-            {
-                var stream = Env.GetTree("test").Read(tx, "test2");
-                Assert.NotNull(stream);
+				tx.Commit();
+			}
 
-                tx.Commit();
-            }
-        }
-    }
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var stream = Env.GetTree("test").Read(tx, "test2");
+				Assert.NotNull(stream);
+
+				tx.Commit();
+			}
+		}
+
+		[Fact]
+		public void CreatingTreeWithoutCommitingTransactionShouldYieldNoResults()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "test");
+			}
+
+			var e = Assert.Throws<InvalidOperationException>(() => Env.GetTree("test"));
+			Assert.Equal("No such tree: test", e.Message);
+		}
+	}
 }

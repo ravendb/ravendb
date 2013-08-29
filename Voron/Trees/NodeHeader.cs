@@ -10,6 +10,7 @@ namespace Voron.Trees
 	{
 		[FieldOffset(0)]
 		public int DataSize;
+
 		[FieldOffset(0)]
 		public long PageNumber;
 
@@ -18,6 +19,9 @@ namespace Voron.Trees
 
 		[FieldOffset(9)]
 		public ushort KeySize;
+
+		[FieldOffset(11)]
+		public ushort Version;
 
 		public int GetNodeSize()
 		{

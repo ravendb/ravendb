@@ -11,18 +11,20 @@ namespace Voron.Trees
         private readonly Slice _newKey;
         private readonly int _len;
         private readonly long _pageNumber;
+		private readonly ushort _nodeVersion;
         private readonly Cursor _cursor;
         private readonly TreeDataInTransaction _txInfo;
         private readonly Page _page;
         private Page _parentPage;
 
-        public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, int len, long pageNumber, Cursor cursor, TreeDataInTransaction txInfo)
+        public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, int len, long pageNumber, ushort nodeVersion, Cursor cursor, TreeDataInTransaction txInfo)
         {
             _tx = tx;
             _cmp = cmp;
             _newKey = newKey;
             _len = len;
             _pageNumber = pageNumber;
+			_nodeVersion = nodeVersion;
             _cursor = cursor;
             _txInfo = txInfo;
             _page = _cursor.Pop();
@@ -42,7 +44,7 @@ namespace Voron.Trees
                 _txInfo.RecordNewPage(newRootPage, 1);
 
                 // now add implicit left page
-                newRootPage.AddNode(0, Slice.BeforeAllKeys, -1, _page.PageNumber);
+                newRootPage.AddNode(0, Slice.BeforeAllKeys, -1, this._page.PageNumber, 0);
                 _parentPage = newRootPage;
                 _parentPage.LastSearchPosition++;
                 _parentPage.ItemCount = _page.ItemCount;
@@ -66,19 +68,19 @@ namespace Voron.Trees
                     var node = _page.GetNode(_page.NumberOfEntries - 1);
                     Debug.Assert(node->Flags == NodeFlags.PageRef);
                     var itemsMoved = _tx.Pager.Get(_tx, node->PageNumber).ItemCount;
-                    rightPage.AddNode(0, Slice.Empty, -1, node->PageNumber);
-                    pos = rightPage.AddNode(1, _newKey, _len, _pageNumber);
+                    rightPage.AddNode(0, Slice.Empty, -1, node->PageNumber, 0);
+					pos = rightPage.AddNode(1, this._newKey, this._len, this._pageNumber, this._nodeVersion);
                     rightPage.ItemCount = itemsMoved;
     
-                    AddSeperatorToParentPage(rightPage, new Slice(node));
+                    AddSeparatorToParentPage(rightPage, new Slice(node));
 
                     _page.RemoveNode(_page.NumberOfEntries - 1);
                     _page.ItemCount -= itemsMoved;
                 }
                 else
                 {
-                    AddSeperatorToParentPage(rightPage, _newKey);
-                    pos = rightPage.AddNode(0, _newKey, _len, _pageNumber);
+                    AddSeparatorToParentPage(rightPage, _newKey);
+                    pos = rightPage.AddNode(0, this._newKey, this._len, this._pageNumber, this._nodeVersion);
                 }
                 _cursor.Push(rightPage);
                 IncrementItemCountIfNecessary();
@@ -114,7 +116,7 @@ namespace Voron.Trees
                 seperatorKey = new Slice(node);
             }
 
-            AddSeperatorToParentPage(rightPage, seperatorKey);
+            AddSeparatorToParentPage(rightPage, seperatorKey);
 
             // move the actual entries from page to right page
             var nKeys = _page.NumberOfEntries;
@@ -145,7 +147,7 @@ namespace Voron.Trees
         private byte* InsertNewKey(Page p)
         {
             var pos = p.NodePositionFor(_newKey, _cmp);
-            var dataPos = p.AddNode(pos, _newKey, _len, _pageNumber);
+            var dataPos = p.AddNode(pos, this._newKey, this._len, this._pageNumber, this._nodeVersion);
             _cursor.Push(p);
             IncrementItemCountIfNecessary();
             return dataPos;
@@ -158,16 +160,16 @@ namespace Voron.Trees
                 _cursor.IncrementItemCount();
         }
 
-        private void AddSeperatorToParentPage(Page rightPage, Slice seperatorKey)
+        private void AddSeparatorToParentPage(Page rightPage, Slice seperatorKey)
         {
             if (_parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
             {
-                new PageSplitter(_tx, _cmp, seperatorKey, -1, rightPage.PageNumber, _cursor, _txInfo).Execute();
+                new PageSplitter(_tx, _cmp, seperatorKey, -1, rightPage.PageNumber, 0, _cursor, _txInfo).Execute();
             }
             else
             {
                 _parentPage.NodePositionFor(seperatorKey, _cmp); // select the appropriate place for this
-                _parentPage.AddNode(_parentPage.LastSearchPosition, seperatorKey, -1, rightPage.PageNumber);
+                _parentPage.AddNode(this._parentPage.LastSearchPosition, seperatorKey, -1, rightPage.PageNumber, 0);
             }
         }
 
