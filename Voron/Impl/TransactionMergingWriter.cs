@@ -122,10 +122,10 @@
 					switch (operation.Type)
 					{
 						case WriteBatch.BatchOperationType.Add:
-							tree.Add(tx, operation.Key, operation.Value);
+							tree.Add(tx, operation.Key, operation.Value, operation.Version);
 							break;
 						case WriteBatch.BatchOperationType.Delete:
-							tree.Delete(tx, operation.Key);
+							tree.Delete(tx, operation.Key, operation.Version);
 							break;
 					}
 				}

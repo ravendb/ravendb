@@ -30,7 +30,7 @@
 			_operations = new List<BatchOperation>();
 		}
 
-		public void Add(Slice key, Stream value, string treeName)
+		public void Add(Slice key, Stream value, string treeName, ushort? version = null)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
@@ -39,28 +39,30 @@
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-			_operations.Add(new BatchOperation(key, value, treeName, BatchOperationType.Add));
+			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.Add));
 		}
 
-		public void Delete(Slice key, string treeName)
+		public void Delete(Slice key, string treeName, ushort? version = null)
 		{
-			if (string.IsNullOrEmpty(treeName)) throw new ArgumentNullException("treeName");
+			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 
-			_operations.Add(new BatchOperation(key, null, treeName, BatchOperationType.Delete));
+			_operations.Add(new BatchOperation(key, null, version, treeName, BatchOperationType.Delete));
 		}
 
 		public class BatchOperation
 		{
 			private readonly long originalStreamPosition;
 
-			public BatchOperation(Slice key, Stream value, string treeName, BatchOperationType type)
+			public BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
 			{
 				Key = key;
 				Value = value;
+				Version = version;
 				TreeName = treeName;
 				Type = type;
 
-				originalStreamPosition = value.Position;
+				if (value != null)
+					originalStreamPosition = value.Position;
 			}
 
 			public Slice Key { get; private set; }
@@ -70,6 +72,8 @@
 			public string TreeName { get; private set; }
 
 			public BatchOperationType Type { get; private set; }
+
+			public ushort? Version { get; private set; }
 
 			public void Reset()
 			{

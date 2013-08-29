@@ -3,6 +3,7 @@
 	using System.IO;
 
 	using Voron.Exceptions;
+	using Voron.Impl;
 
 	using Xunit;
 
@@ -150,6 +151,95 @@
 				var e = Assert.Throws<ConcurrencyException>(() => Env.Root.MultiDelete(tx, "key/1", "123", 2));
 				Assert.Equal("Cannot delete 'key/1'. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 			}
+		}
+
+		[Fact]
+		public void BatchSimpleVersion()
+		{
+			var batch1 = new WriteBatch();
+			batch1.Add("key/1", StreamFor("123"), null);
+
+			Env.Writer.Write(batch1);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(1, Env.Root.ReadVersion(tx, "key/1"));
+			}
+
+			var batch2 = new WriteBatch();
+			batch2.Add("key/1", StreamFor("123"), null);
+
+			Env.Writer.Write(batch2);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(2, Env.Root.ReadVersion(tx, "key/1"));
+			}
+		}
+
+		[Fact]
+		public void BatchDelete()
+		{
+			var batch1 = new WriteBatch();
+			batch1.Add("key/1", StreamFor("123"), null);
+
+			Env.Writer.Write(batch1);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(1, Env.Root.ReadVersion(tx, "key/1"));
+			}
+
+			var batch2 = new WriteBatch();
+			batch2.Delete("key/1", null);
+
+			Env.Writer.Write(batch2);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(0, Env.Root.ReadVersion(tx, "key/1"));
+			}
+		}
+
+		[Fact]
+		public void BatchMissing()
+		{
+			var batch1 = new WriteBatch();
+			batch1.Add("key/1", StreamFor("123"), null, 0);
+
+			Env.Writer.Write(batch1);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(1, Env.Root.ReadVersion(tx, "key/1"));
+			}
+
+			var batch2 = new WriteBatch();
+			batch2.Add("key/1", StreamFor("123"), null, 0);
+
+			var e = Assert.Throws<ConcurrencyException>(() => Env.Writer.Write(batch2));
+			Assert.Equal("Cannot add 'key/1'. Version mismatch. Expected: 0. Actual: 1.", e.Message);
+		}
+
+		[Fact]
+		public void BatchConcurrencyExceptionShouldBeThrownWhenVersionMismatch()
+		{
+			var batch1 = new WriteBatch();
+			batch1.Add("key/1", StreamFor("123"), null, 0);
+
+			Env.Writer.Write(batch1);
+
+			var batch2 = new WriteBatch();
+			batch2.Add("key/1", StreamFor("123"), null, 2);
+
+			var e = Assert.Throws<ConcurrencyException>(() => Env.Writer.Write(batch2));
+			Assert.Equal("Cannot add 'key/1'. Version mismatch. Expected: 2. Actual: 1.", e.Message);
+
+			var batch3 = new WriteBatch();
+			batch3.Delete("key/1", null, 2);
+
+			e = Assert.Throws<ConcurrencyException>(() => Env.Writer.Write(batch3));
+			Assert.Equal("Cannot delete 'key/1'. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 		}
 	}
 }
