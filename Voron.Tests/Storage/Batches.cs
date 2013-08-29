@@ -254,7 +254,7 @@
 				tx.Commit();
 			}
 
-			Env.Writer._semaphore.Wait(1000);
+			Env.Writer._semaphore.Wait(1000); // forcing to build one batch group from all batches that will be added between this line and _semaphore.Release
 
 			var tasks = new[]
 				            {
