@@ -1035,9 +1035,6 @@ namespace Raven.Database.Indexing
 
 		private void HandleActiveIndex(UnusedIndexState thisItem, double age, double lastQuery, IStorageActionsAccessor accessor, double timeToWaitForIdle)
 		{
-			if (age < timeToWaitForIdle)
-				return; // there isn't even a point in checking here further
-
 			if (age < (timeToWaitForIdle * 2.5) && lastQuery < (1.5 * timeToWaitForIdle))
 				return;
 
