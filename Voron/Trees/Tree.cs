@@ -144,17 +144,19 @@ namespace Voron.Trees
 
                 var item = page.GetNode(page.LastSearchPosition);
 
+				CheckConcurrency(key, version, item->Version, TreeActionType.Add);
+
                 if (item->Flags == NodeFlags.MultiValuePageRef)
                 {
                     var tree = OpenOrCreateMultiValueTree(tx, key, item);
-                    tree.DirectAdd(tx, value, 0, version);
+                    tree.DirectAdd(tx, value, 0);
                 }
                 else // need to turn to tree
                 {
                     var tree = Create(tx, _cmp, TreeFlags.MultiValue);
                     var current = NodeHeader.GetData(tx, item);
                     tree.DirectAdd(tx, current, 0);
-                    tree.DirectAdd(tx, value, 0, version);
+                    tree.DirectAdd(tx, value, 0);
                     tx.AddMultiValueTree(this, key, tree);
 
                     DirectAdd(tx, key, sizeof (TreeRootHeader));
@@ -570,7 +572,7 @@ namespace Voron.Trees
 		private static void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
 		{
 			if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-				throw new ConcurrencyException(string.Format("Cannot {0} {1}. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion));
+				throw new ConcurrencyException(string.Format("Cannot {0} '{1}'. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion));
 		}
 
         public bool IsMultiValueTree { get; set; }
