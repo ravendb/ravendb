@@ -18,9 +18,9 @@ namespace Voron.Impl
 
 		private TreeDataInTransaction _rootTreeData;
 		private TreeDataInTransaction _fresSpaceTreeData;
-	    private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
-        private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
-        private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
+		private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
+		private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
+		private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
 		private readonly List<long> _freedPages = new List<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
@@ -42,12 +42,14 @@ namespace Voron.Impl
 			get { return _id; }
 		}
 
-	    public Page TempPage
-	    {
-            get { return _pager.TempPage; }
-	    }
+		internal Action<long> AfterCommit = delegate { };
 
-	    public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
+		public Page TempPage
+		{
+			get { return _pager.TempPage; }
+		}
+
+		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
 		{
 			_pager = pager;
 			_env = env;
@@ -65,17 +67,17 @@ namespace Voron.Impl
 
 		public Page ModifyCursor(TreeDataInTransaction txInfo, Cursor c)
 		{
-		    Debug.Assert(c.Pages.Count > 0); // cannot modify an empty cursor
-			
-            var node = c.Pages.Last;
+			Debug.Assert(c.Pages.Count > 0); // cannot modify an empty cursor
+
+			var node = c.Pages.Last;
 			while (node != null)
 			{
 				var parent = node.Next != null ? node.Next.Value : null;
-                c.Update(node, ModifyPage(txInfo.Tree, parent, node.Value.PageNumber, c));
+				c.Update(node, ModifyPage(txInfo.Tree, parent, node.Value.PageNumber, c));
 				node = node.Previous;
 			}
 
-		    txInfo.RootPageNumber = c.Pages.Last.Value.PageNumber;
+			txInfo.RootPageNumber = c.Pages.Last.Value.PageNumber;
 
 			return c.Pages.First.Value;
 		}
@@ -105,7 +107,7 @@ namespace Voron.Impl
 			return newPage;
 		}
 
-	    private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
+		private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
 		{
 			if (parent == null)
 				return;
@@ -151,7 +153,7 @@ namespace Voron.Impl
 
 		internal unsafe int GetNodeDataSize(NodeHeader* node)
 		{
-			if (node->Flags==(NodeFlags.PageRef)) // lots of data, enough to overflow!
+			if (node->Flags == (NodeFlags.PageRef)) // lots of data, enough to overflow!
 			{
 				var overflowPage = GetReadOnlyPage(node->PageNumber);
 				return overflowPage.OverflowSize;
@@ -161,18 +163,18 @@ namespace Voron.Impl
 
 		public unsafe void Commit()
 		{
-			if (Flags!=(TransactionFlags.ReadWrite))
+			if (Flags != (TransactionFlags.ReadWrite))
 				return; // nothing to do
 
-		    FlushAllMultiValues();
+			FlushAllMultiValues();
 
 			_freeSpaceRepository.FlushFreeState(this);
 
-		    foreach (var kvp in _treesInfo)
+			foreach (var kvp in _treesInfo)
 			{
 				var txInfo = kvp.Value;
 				var tree = kvp.Key;
-				tree.DebugValidateTree(this,txInfo.RootPageNumber);
+				tree.DebugValidateTree(this, txInfo.RootPageNumber);
 				txInfo.Flush();
 				if (string.IsNullOrEmpty(kvp.Key.Name))
 					continue;
@@ -185,7 +187,7 @@ namespace Voron.Impl
 
 			if (_rootTreeData != null)
 			{
-				_env.Root.DebugValidateTree(this,_rootTreeData.RootPageNumber);
+				_env.Root.DebugValidateTree(this, _rootTreeData.RootPageNumber);
 				_rootTreeData.Flush();
 			}
 
@@ -219,32 +221,34 @@ namespace Voron.Impl
 			_pager.Flush(_id & 1); // and now we flush the metadata as well
 
 			_pager.Sync();
+
+			AfterCommit(_id);
 		}
 
-	    private unsafe void FlushAllMultiValues()
-	    {
-	        if (_multiValueTrees == null)
-	            return;
+		private unsafe void FlushAllMultiValues()
+		{
+			if (_multiValueTrees == null)
+				return;
 
-	        foreach (var multiValueTree in _multiValueTrees)
-	        {
-	            var parentTree = multiValueTree.Key.Item1;
-	            var key = multiValueTree.Key.Item2;
-	            var childTree = multiValueTree.Value;
+			foreach (var multiValueTree in _multiValueTrees)
+			{
+				var parentTree = multiValueTree.Key.Item1;
+				var key = multiValueTree.Key.Item2;
+				var childTree = multiValueTree.Value;
 
-	            TreeDataInTransaction value;
-	            if (_treesInfo.TryGetValue(childTree, out value) == false)
-	                continue;
-                
-	            _treesInfo.Remove(childTree);
-	            var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
-	            value.State.CopyTo(trh);
+				TreeDataInTransaction value;
+				if (_treesInfo.TryGetValue(childTree, out value) == false)
+					continue;
 
-                parentTree.SetAsMultiValueTreeRef(this, key);
-	        }
-	    }
+				_treesInfo.Remove(childTree);
+				var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
+				value.State.CopyTo(trh);
 
-	    private unsafe void WriteHeader(Page pg)
+				parentTree.SetAsMultiValueTreeRef(this, key);
+			}
+		}
+
+		private unsafe void WriteHeader(Page pg)
 		{
 			var fileHeader = (FileHeader*)pg.Base;
 			fileHeader->TransactionId = _id;
@@ -259,7 +263,7 @@ namespace Voron.Impl
 			while (_freedPages.Count != 0)
 			{
 				Slice slice = string.Format("tx/{0:0000000000000000000}/{1}", _id, iterationCounter);
-				
+
 				iterationCounter++;
 				using (var ms = new MemoryStream())
 				using (var binaryWriter = new BinaryWriter(ms))
@@ -291,7 +295,7 @@ namespace Voron.Impl
 
 		public TreeDataInTransaction GetTreeInformation(Tree tree)
 		{
-// ReSharper disable once PossibleUnintendedReferenceComparison
+			// ReSharper disable once PossibleUnintendedReferenceComparison
 			if (tree == _env.Root)
 			{
 				return _rootTreeData ?? (_rootTreeData = new TreeDataInTransaction(_env.Root)
@@ -300,7 +304,7 @@ namespace Voron.Impl
 					});
 			}
 
-// ReSharper disable once PossibleUnintendedReferenceComparison
+			// ReSharper disable once PossibleUnintendedReferenceComparison
 			if (tree == _env.FreeSpaceRoot)
 			{
 				return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpaceRoot)
@@ -320,7 +324,7 @@ namespace Voron.Impl
 				};
 			_treesInfo.Add(tree, c);
 			return c;
-		}	  
+		}
 
 		public void FreePage(long pageNumber)
 		{
@@ -357,63 +361,63 @@ namespace Voron.Impl
 			_pagerStates.Add(state);
 		}
 
-	    public Cursor NewCursor(Tree tree)
-	    {
-	        return new Cursor();
-	    }
+		public Cursor NewCursor(Tree tree)
+		{
+			return new Cursor();
+		}
 
-	    public unsafe void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
-	    {
-	        if(_multiValueTrees == null)
-                _multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
-	        mvTree.IsMultiValueTree = true;
-	        _multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
-	    }
+		public unsafe void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
+		{
+			if (_multiValueTrees == null)
+				_multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
+			mvTree.IsMultiValueTree = true;
+			_multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
+		}
 
-	    public bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
-	    {
-	        mvTree = null;
-	        if (_multiValueTrees == null)
-	            return false;
-	        return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
-	    }
+		public bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
+		{
+			mvTree = null;
+			if (_multiValueTrees == null)
+				return false;
+			return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
+		}
 
-	    public bool TryRemoveMultiValueTree(Tree parentTree,Slice key)
-	    {
-	        var keyToRemove = Tuple.Create(parentTree, key);
-	        if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
-                return false;
+		public bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
+		{
+			var keyToRemove = Tuple.Create(parentTree, key);
+			if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
+				return false;
 
-            return _multiValueTrees.Remove(keyToRemove);
-	    }
+			return _multiValueTrees.Remove(keyToRemove);
+		}
 
 	}
 
-    internal unsafe class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
-    {
-        private readonly SliceComparer _comparer;
+	internal unsafe class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
+	{
+		private readonly SliceComparer _comparer;
 
-        public TreeAndSliceComparer(SliceComparer comparer)
-        {
-            _comparer = comparer;
-        }
+		public TreeAndSliceComparer(SliceComparer comparer)
+		{
+			_comparer = comparer;
+		}
 
-        public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
-        {
-            if (x == null && y == null)
-                return true;
-            if (x == null || y == null)
-                return false;
+		public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
+		{
+			if (x == null && y == null)
+				return true;
+			if (x == null || y == null)
+				return false;
 
-            if (x.Item1 != y.Item1)
-                return false;
+			if (x.Item1 != y.Item1)
+				return false;
 
-            return x.Item2.Compare(y.Item2, _comparer) == 0;
-        }
+			return x.Item2.Compare(y.Item2, _comparer) == 0;
+		}
 
-        public int GetHashCode(Tuple<Tree, Slice> obj)
-        {
-            return obj.Item1.GetHashCode() ^ 397*obj.Item2.GetHashCode();
-        }
-    }
+		public int GetHashCode(Tuple<Tree, Slice> obj)
+		{
+			return obj.Item1.GetHashCode() ^ 397 * obj.Item2.GetHashCode();
+		}
+	}
 }

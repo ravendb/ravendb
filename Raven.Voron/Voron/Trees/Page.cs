@@ -173,7 +173,7 @@ namespace Voron.Trees
 
         }
 
-        public byte* AddNode(int index, Slice key, int len, long pageNumber)
+        public byte* AddNode(int index, Slice key, int len, long pageNumber, ushort previousNodeVersion)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
@@ -186,7 +186,7 @@ namespace Voron.Trees
                 KeysOffsets[i] = KeysOffsets[i - 1];
             }
             var nodeSize = SizeOf.NodeEntry(_pageMaxSpace, key, len);
-            var node = AllocateNewNode(index, key, nodeSize);
+            var node = AllocateNewNode(index, key, nodeSize, previousNodeVersion);
 
             if (key.Options == SliceOptions.Key)
                 key.CopyTo((byte*)node + Constants.NodeHeaderSize);
@@ -228,7 +228,7 @@ namespace Voron.Trees
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
 
 
-            var newNode = AllocateNewNode(index, key, nodeSize);
+            var newNode = AllocateNewNode(index, key, nodeSize, other->Version);
             newNode->Flags = other->Flags;
             key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
@@ -245,8 +245,11 @@ namespace Voron.Trees
         }
 
 
-        private NodeHeader* AllocateNewNode(int index, Slice key, int nodeSize)
+        private NodeHeader* AllocateNewNode(int index, Slice key, int nodeSize, ushort previousNodeVersion)
         {
+			if (previousNodeVersion + 1 > ushort.MaxValue)
+				previousNodeVersion = 0;
+
             var newNodeOffset = (ushort)(_header->Upper - nodeSize);
             Debug.Assert(newNodeOffset >= _header->Lower + Constants.NodeOffsetSize);
             KeysOffsets[index] = newNodeOffset;
@@ -256,6 +259,7 @@ namespace Voron.Trees
             var node = (NodeHeader*)(_base + newNodeOffset);
             node->KeySize = key.Size;
             node->Flags = 0;
+			node->Version = ++previousNodeVersion;
             return node;
         }
 
