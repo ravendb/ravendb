@@ -2,6 +2,7 @@
 {
 	using System;
 	using System.Collections.Generic;
+	using System.Collections.ObjectModel;
 	using System.IO;
 	using System.Linq;
 
@@ -9,11 +10,11 @@
 	{
 		private readonly List<BatchOperation> _operations;
 
-		public IReadOnlyCollection<BatchOperation> Operations
+		public ReadOnlyCollection<BatchOperation> Operations
 		{
 			get
 			{
-				return _operations;
+				return _operations.AsReadOnly();
 			}
 		}
 
@@ -21,7 +22,7 @@
 		{
 			get
 			{
-				return _operations.Sum(x => x.Type == BatchOperationType.Add ? x.Value.Length + x.Key.Size : x.Key.Size);
+				return _operations.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size);
 			}
 		}
 
@@ -51,7 +52,7 @@
 		{
 			AssertValidRemove(treeName);
 
-			_operations.Add(new BatchOperation(key, null, version, treeName, BatchOperationType.Delete));
+			_operations.Add(new BatchOperation(key, null as Stream, version, treeName, BatchOperationType.Delete));
 		}
 
 		private static void AssertValidRemove(string treeName)
@@ -59,24 +60,24 @@
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 		}
 
-		public void MultiAdd(Slice key, Stream value, string treeName, ushort? version = null)
+		public void MultiAdd(Slice key, Slice value, string treeName, ushort? version = null)
 		{
 			AssertValidMultiOperation(value, treeName);
 
 			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.MultiAdd));
 		}
 
-		private static void AssertValidMultiOperation(Stream value, string treeName)
+		private static void AssertValidMultiOperation(Slice value, string treeName)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
-			if (value.Length == 0)
+			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value");
-			if (value.Length > int.MaxValue)
+			if (value.Size > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 		}
 
-		public void MultiDelete(Slice key, Stream value, string treeName, ushort? version = null)
+		public void MultiDelete(Slice key, Slice value, string treeName, ushort? version = null)
 		{
 			AssertValidMultiOperation(value, treeName);
 
@@ -87,21 +88,44 @@
 		{
 			private readonly long originalStreamPosition;
 
+			private readonly Action reset = delegate { };
+
 			public BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
+				: this(key, value as object, version, treeName, type)
+			{
+				if (value != null)
+				{
+					originalStreamPosition = value.Position;
+					ValueSize = value.Length;
+
+					reset = () => value.Position = originalStreamPosition;
+				}
+			}
+
+			public BatchOperation(Slice key, Slice value, ushort? version, string treeName, BatchOperationType type)
+				: this(key, value as object, version, treeName, type)
+			{
+				if (value != null)
+				{
+					originalStreamPosition = 0;
+					ValueSize = value.Size;
+				}
+			}
+
+			private BatchOperation(Slice key, object value, ushort? version, string treeName, BatchOperationType type)
 			{
 				Key = key;
 				Value = value;
 				Version = version;
 				TreeName = treeName;
 				Type = type;
-
-				if (value != null)
-					originalStreamPosition = value.Position;
 			}
 
 			public Slice Key { get; private set; }
 
-			public Stream Value { get; private set; }
+			public long ValueSize { get; private set; }
+
+			public object Value { get; private set; }
 
 			public string TreeName { get; private set; }
 
@@ -111,8 +135,7 @@
 
 			public void Reset()
 			{
-				if (Value != null)
-					Value.Position = originalStreamPosition;
+				reset();
 			}
 		}
 
@@ -128,10 +151,9 @@
 		{
 			foreach (var operation in _operations)
 			{
-				using (operation.Value)
-				{
-
-				}
+				var disposable = operation.Value as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
 			}
 		}
 	}
