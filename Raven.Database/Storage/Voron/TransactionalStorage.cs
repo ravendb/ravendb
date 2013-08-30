@@ -1,6 +1,4 @@
-﻿using Voron.Impl;
-
-namespace Raven.Database.Storage.Voron
+﻿namespace Raven.Database.Storage.Voron
 {
 	using System;
 	using System.Collections.Generic;
@@ -8,18 +6,19 @@ namespace Raven.Database.Storage.Voron
 	using System.IO;
 	using System.Threading;
 
-	using Abstractions.Data;
-	using Abstractions.Extensions;
-	using Abstractions.MEF;
-	using Database;
-	using Config;
-	using Impl;
-	using Impl.DTC;
-	using Plugins;
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Extensions;
+	using Raven.Abstractions.MEF;
+	using Raven.Database.Config;
+	using Raven.Database.Impl;
+	using Raven.Database.Impl.DTC;
+	using Raven.Database.Plugins;
+	using Raven.Database.Storage.Voron.Impl;
+
 	using Storage;
 	using Raven.Json.Linq;
 
-	using global::Voron;
+	using global::Voron.Impl;
 
 	public class TransactionalStorage : ITransactionalStorage
 	{

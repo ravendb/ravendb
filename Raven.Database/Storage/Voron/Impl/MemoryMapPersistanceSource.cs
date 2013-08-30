@@ -1,11 +1,9 @@
-﻿using System;
-using System.Threading;
-
-namespace Raven.Database.Storage.Voron
+﻿namespace Raven.Database.Storage.Voron.Impl
 {
+	using System;
 	using System.IO;
 
-	using Config;
+	using Raven.Database.Config;
 
 	using global::Voron.Impl;
 
@@ -25,9 +23,7 @@ namespace Raven.Database.Storage.Voron
 			filePath = Path.Combine(directoryPath, "Data");
 		    var filePathFolder = new DirectoryInfo(filePath);
 		    if (filePathFolder.Exists == false)
-		    {
 		        filePathFolder.Create();
-		    }
 
 			Initialize();
 		}
@@ -40,13 +36,14 @@ namespace Raven.Database.Storage.Voron
 		{
 			if (Directory.Exists(directoryPath))
 			{
-				CreatedNew = !File.Exists(filePath);
+				CreatedNew = !File.Exists(this.filePath);
 			}
 			else
 			{
 				Directory.CreateDirectory(directoryPath);
 				CreatedNew = true;
 			}
+
 		    var storageFilePath = Path.Combine(filePath, PAGER_FILENAME);
 		    Pager = new MemoryMapPager(storageFilePath);
 		}

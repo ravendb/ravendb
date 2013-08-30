@@ -10,6 +10,7 @@
 	using Raven.Abstractions.MEF;
 	using Raven.Database.Impl;
 	using Raven.Database.Plugins;
+	using Raven.Database.Storage.Voron.Impl;
 	using Raven.Database.Util.Streams;
 	using Raven.Json.Linq;
 	using Raven.Abstractions.Extensions;

@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Database.Storage.Voron
+namespace Raven.Database.Storage.Voron.Impl
 {
 	public class Index : TableBase
 	{

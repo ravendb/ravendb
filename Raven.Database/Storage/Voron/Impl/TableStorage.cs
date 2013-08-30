@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Database.Storage.Voron
+namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
 
@@ -70,7 +70,7 @@ namespace Raven.Database.Storage.Voron
 		private void CreateDocumentsSchema(Transaction tx)
 		{
 			env.CreateTree(tx, Tables.Documents.TableName);
-			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
+			env.CreateTree(tx, this.Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
 		}
 
 	    private void Initialize()

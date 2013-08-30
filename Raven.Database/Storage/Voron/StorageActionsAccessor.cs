@@ -10,7 +10,9 @@ using Voron.Impl;
 
 namespace Raven.Database.Storage.Voron
 {
-    public class StorageActionsAccessor : IStorageActionsAccessor
+	using Raven.Database.Storage.Voron.Impl;
+
+	public class StorageActionsAccessor : IStorageActionsAccessor
     {
         private readonly WriteBatch writeBatch;
         private readonly SnapshotReader snapshot;

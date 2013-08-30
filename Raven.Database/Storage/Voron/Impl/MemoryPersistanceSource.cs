@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Storage.Voron
+﻿namespace Raven.Database.Storage.Voron.Impl
 {
 	using global::Voron.Impl;
 

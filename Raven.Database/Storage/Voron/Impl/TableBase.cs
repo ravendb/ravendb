@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Database.Storage.Voron
+namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
 	using System.IO;
@@ -46,7 +46,7 @@ namespace Raven.Database.Storage.Voron
 
 		public virtual void Delete(WriteBatch writeBatch, string key)
 		{
-			writeBatch.Delete(key, TableName);
+			writeBatch.Delete(key, this.TableName);
 		}
 	}
 }
