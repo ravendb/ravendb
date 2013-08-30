@@ -51,7 +51,7 @@ namespace Voron.Tests.Storage
                     }
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        env.GetTree("test").Add(tx, "test", Stream.Null);
+                        env.GetTree(tx,"test").Add(tx, "test", Stream.Null);
                         tx.Commit();
                     }
                 }
@@ -66,7 +66,7 @@ namespace Voron.Tests.Storage
 
                     using (var tx = env.NewTransaction(TransactionFlags.Read))
                     {
-                        Assert.NotNull(env.GetTree("test").Read(tx, "test"));
+                        Assert.NotNull(env.GetTree(tx,"test").Read(tx, "test"));
                         tx.Commit();
                     }
                 }

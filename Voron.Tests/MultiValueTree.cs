@@ -8,349 +8,349 @@ using Xunit;
 
 namespace Voron.Tests
 {
-    public unsafe class MultiValueTree : StorageTest
-    {
-        [Fact]
-        public void Single_MultiAdd_And_Read_DataStored()
-        {
+	public unsafe class MultiValueTree : StorageTest
+	{
+		[Fact]
+		public void Single_MultiAdd_And_Read_DataStored()
+		{
 			var random = new Random();
 			var buffer = new byte[1000];
 			random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "foo");
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "foo");
 
-                tx.Commit();
-            }
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.GetTree("foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
-                tx.Commit();
-            }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
-            {
-                using (var fetchedDataIterator = Env.GetTree("foo").MultiRead(tx, "ChildTreeKey"))
-                {
-                    fetchedDataIterator.Seek(Slice.BeforeAllKeys);
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				using (var fetchedDataIterator = Env.GetTree(tx, "foo").MultiRead(tx, "ChildTreeKey"))
+				{
+					fetchedDataIterator.Seek(Slice.BeforeAllKeys);
 
-                    Assert.True(fetchedDataIterator.CurrentKey.Compare(new Slice(buffer), Env.SliceComparer) == 0);             
-                }
-            }
-        }
+					Assert.True(fetchedDataIterator.CurrentKey.Compare(new Slice(buffer), Env.SliceComparer) == 0);
+				}
+			}
+		}
 
-        [Fact]
-        public void MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead()
-        {
-            const int INPUT_COUNT = 3;
-            const int INPUT_DATA_SIZE = 1000;
-            const string CHILDTREE_KEY = "ChildTree";
+		[Fact]
+		public void MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead()
+		{
+			const int INPUT_COUNT = 3;
+			const int INPUT_DATA_SIZE = 1000;
+			const string CHILDTREE_KEY = "ChildTree";
 
-            var inputData = new List<string>();
-            for (int i = 0; i < INPUT_COUNT; i++)
-            {
-                inputData.Add(RandomString(INPUT_DATA_SIZE));
-            }
+			var inputData = new List<string>();
+			for (int i = 0; i < INPUT_COUNT; i++)
+			{
+				inputData.Add(RandomString(INPUT_DATA_SIZE));
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
-                }
-                tx.Commit();
-            }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+				}
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT - 1; i++)
-                {
-                    Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[i]);
-                    inputData.Remove(inputData[i]);
-                }
-                tx.Commit();
-            }      
-      
-            ValidateInputExistence(inputData,CHILDTREE_KEY,INPUT_DATA_SIZE, Env.Root);
-        }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT - 1; i++)
+				{
+					Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[i]);
+					inputData.Remove(inputData[i]);
+				}
+				tx.Commit();
+			}
 
-        [Fact]
-        public void MultiDelete_Remains_No_Entries_ChildTreeKey_Doesnt_Exist()
-        {
-            const int INPUT_COUNT = 3;
-            const int INPUT_DATA_SIZE = 1000;
-            const string CHILDTREE_KEY = "ChildTree";
+			ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.Root);
+		}
 
-            var inputData = new List<string>();
-            for (int i = 0; i < INPUT_COUNT; i++)
-            {
-                inputData.Add(RandomString(INPUT_DATA_SIZE));
-            }
+		[Fact]
+		public void MultiDelete_Remains_No_Entries_ChildTreeKey_Doesnt_Exist()
+		{
+			const int INPUT_COUNT = 3;
+			const int INPUT_DATA_SIZE = 1000;
+			const string CHILDTREE_KEY = "ChildTree";
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
-                }
-                tx.Commit();
-            }
+			var inputData = new List<string>();
+			for (int i = 0; i < INPUT_COUNT; i++)
+			{
+				inputData.Add(RandomString(INPUT_DATA_SIZE));
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[i]);
-                }
-                tx.Commit();
-            }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+				}
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
-            {
-                var iterator = Env.Root.MultiRead(tx, CHILDTREE_KEY);
-                iterator.Seek(Slice.BeforeAllKeys);
-                Assert.False(iterator.MoveNext());
-            }
-        }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[i]);
+				}
+				tx.Commit();
+			}
 
-        [Fact]
-        public void Single_MultiAdd_And_Single_MultiDelete_DataDeleted()
-        {
-            var random = new Random();
-            var buffer = new byte[1000];
-            random.NextBytes(buffer);
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var iterator = Env.Root.MultiRead(tx, CHILDTREE_KEY);
+				iterator.Seek(Slice.BeforeAllKeys);
+				Assert.False(iterator.MoveNext());
+			}
+		}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "foo");
-                tx.Commit();
-            }
+		[Fact]
+		public void Single_MultiAdd_And_Single_MultiDelete_DataDeleted()
+		{
+			var random = new Random();
+			var buffer = new byte[1000];
+			random.NextBytes(buffer);
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.GetTree("foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
-                tx.Commit();
-            }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "foo");
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.GetTree("foo").MultiDelete(tx, "ChildTreeKey", new Slice(buffer));
-                tx.Commit();
-            }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
-            {
-                Assert.Equal(typeof(EmptyIterator),Env.GetTree("foo").MultiRead(tx, "ChildTreeKey").GetType());
-            }
-        }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.GetTree(tx, "foo").MultiDelete(tx, "ChildTreeKey", new Slice(buffer));
+				tx.Commit();
+			}
 
-        [Fact]
-        public void Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
-        {
-            const int INPUT_COUNT = 25;
-            const int INPUT_DATA_SIZE = 1000;
-            const string CHILDTREE_KEY = "ChildTree";
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(typeof(EmptyIterator), Env.GetTree(tx, "foo").MultiRead(tx, "ChildTreeKey").GetType());
+			}
+		}
 
-            var inputData = new List<string>();
-            for (int i = 0; i < INPUT_COUNT; i++)
-            {
-                inputData.Add(RandomString(INPUT_DATA_SIZE));
-            }
+		[Fact]
+		public void Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
+		{
+			const int INPUT_COUNT = 25;
+			const int INPUT_DATA_SIZE = 1000;
+			const string CHILDTREE_KEY = "ChildTree";
 
-            var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
-                }
+			var inputData = new List<string>();
+			for (int i = 0; i < INPUT_COUNT; i++)
+			{
+				inputData.Add(RandomString(INPUT_DATA_SIZE));
+			}
 
-                Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
-                tx.Commit();
-            }
+			var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+				}
 
-            inputData.Remove(inputData[indexToDelete]);
+				Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
+				tx.Commit();
+			}
 
-            ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.Root);
-        }
+			inputData.Remove(inputData[indexToDelete]);
 
-        [Fact]
-        public void NamedTree_Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
-        {
-            const int INPUT_COUNT = 25;
-            const int INPUT_DATA_SIZE = 1000;
-            const string CHILDTREE_KEY = "ChildTree";
+			ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.Root);
+		}
 
-            var inputData = new List<string>();
-            for (int i = 0; i < INPUT_COUNT; i++)
-            {
-                inputData.Add(RandomString(INPUT_DATA_SIZE));
-            }
+		[Fact]
+		public void NamedTree_Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
+		{
+			const int INPUT_COUNT = 25;
+			const int INPUT_DATA_SIZE = 1000;
+			const string CHILDTREE_KEY = "ChildTree";
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "foo");
-                tx.Commit();
-            }
+			var inputData = new List<string>();
+			for (int i = 0; i < INPUT_COUNT; i++)
+			{
+				inputData.Add(RandomString(INPUT_DATA_SIZE));
+			}
 
-            var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.GetTree("foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
-                }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "foo");
+				tx.Commit();
+			}
 
-                Env.GetTree("foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
-                tx.Commit();
-            }
+			var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.GetTree(tx, "foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+				}
 
-            inputData.Remove(inputData[indexToDelete]);
+				Env.GetTree(tx, "foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
+				tx.Commit();
+			}
 
-            ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.GetTree("foo"));
-        }
+			inputData.Remove(inputData[indexToDelete]);
 
-        [Fact]
-        public void NamedTree_Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
-        {
-            const int INPUT_COUNT = 25;
-            const int INPUT_DATA_SIZE = 1000;
-            const string CHILDTREE_KEY = "ChildTree";
+			ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.GetTree(null, "foo"));
+		}
 
-            var inputData = new List<string>();
-            for (int i = 0; i < INPUT_COUNT; i++)
-            {
-                inputData.Add(RandomString(INPUT_DATA_SIZE));
-            }
+		[Fact]
+		public void NamedTree_Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
+		{
+			const int INPUT_COUNT = 25;
+			const int INPUT_DATA_SIZE = 1000;
+			const string CHILDTREE_KEY = "ChildTree";
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.CreateTree(tx, "foo");
-                tx.Commit();
-            }
+			var inputData = new List<string>();
+			for (int i = 0; i < INPUT_COUNT; i++)
+			{
+				inputData.Add(RandomString(INPUT_DATA_SIZE));
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.GetTree("foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
-                }
-                tx.Commit();
-            }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "foo");
+				tx.Commit();
+			}
 
-            var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.GetTree(tx, "foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+				}
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.GetTree("foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
-                tx.Commit();
-            }
+			var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
 
-            inputData.Remove(inputData[indexToDelete]);
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.GetTree(tx, "foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
+				tx.Commit();
+			}
 
-            ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.GetTree("foo"));
-        }
+			inputData.Remove(inputData[indexToDelete]);
 
-        [Fact]
-        public void Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
-        {
-            const int INPUT_COUNT = 25;
-            const int INPUT_DATA_SIZE = 1000;
-            const string CHILDTREE_KEY = "ChildTree";
+			ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.GetTree(null, "foo"));
+		}
 
-            var inputData = new List<string>();
-            for (int i = 0; i < INPUT_COUNT; i++)
-            {
-                inputData.Add(RandomString(INPUT_DATA_SIZE));
-            }
+		[Fact]
+		public void Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
+		{
+			const int INPUT_COUNT = 25;
+			const int INPUT_DATA_SIZE = 1000;
+			const string CHILDTREE_KEY = "ChildTree";
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
-                }
-                tx.Commit();
-            }
+			var inputData = new List<string>();
+			for (int i = 0; i < INPUT_COUNT; i++)
+			{
+				inputData.Add(RandomString(INPUT_DATA_SIZE));
+			}
 
-            var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+				}
+				tx.Commit();
+			}
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
-                tx.Commit();                
-            }
+			var indexToDelete = new Random(1234).Next(0, INPUT_COUNT - 1);
 
-            inputData.Remove(inputData[indexToDelete]);
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.Root.MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
+				tx.Commit();
+			}
 
-            ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.Root);
-        }
+			inputData.Remove(inputData[indexToDelete]);
 
-        [Fact]
-        public void Multiple_MultiAdd_And_Read_DataStored()
-        {
-            const int INPUT_COUNT = 25;
-            const int INPUT_DATA_SIZE = 1000;
-            const string CHILDTREE_KEY = "ChildTree";
+			ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.Root);
+		}
 
-            var inputData = new List<string>();
-            for (int i = 0; i < INPUT_COUNT; i++)
-            {
-                inputData.Add(RandomString(INPUT_DATA_SIZE));
-            }
+		[Fact]
+		public void Multiple_MultiAdd_And_Read_DataStored()
+		{
+			const int INPUT_COUNT = 25;
+			const int INPUT_DATA_SIZE = 1000;
+			const string CHILDTREE_KEY = "ChildTree";
 
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                for (int i = 0; i < INPUT_COUNT; i++)
-                {
-                    Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
-                }
-                tx.Commit();
-            }
+			var inputData = new List<string>();
+			for (int i = 0; i < INPUT_COUNT; i++)
+			{
+				inputData.Add(RandomString(INPUT_DATA_SIZE));
+			}
 
-            ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.Root);
-        }
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < INPUT_COUNT; i++)
+				{
+					Env.Root.MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+				}
+				tx.Commit();
+			}
 
-        private void ValidateInputExistence(List<string> inputData, string childtreeKey, int inputDataSize, Tree targetTree)
-        {
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
-            {
-                int fetchedEntryCount = 0;
-                var inputEntryCount = inputData.Count;
-                using (var fetchedDataIterator = targetTree.MultiRead(tx, childtreeKey))
-                {
-                    fetchedDataIterator.Seek(Slice.BeforeAllKeys);
-                    do
-                    {
-                        Assert.Equal(inputDataSize, fetchedDataIterator.CurrentKey.Size);
+			ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, Env.Root);
+		}
 
-                        var value = fetchedDataIterator.CurrentKey.ToString();
-                        Assert.True(inputData.Contains(value));
-                        inputData.Remove(value);
-                        fetchedEntryCount++;
-                    } while (fetchedDataIterator.MoveNext());
+		private void ValidateInputExistence(List<string> inputData, string childtreeKey, int inputDataSize, Tree targetTree)
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				int fetchedEntryCount = 0;
+				var inputEntryCount = inputData.Count;
+				using (var fetchedDataIterator = targetTree.MultiRead(tx, childtreeKey))
+				{
+					fetchedDataIterator.Seek(Slice.BeforeAllKeys);
+					do
+					{
+						Assert.Equal(inputDataSize, fetchedDataIterator.CurrentKey.Size);
 
-                    Assert.Equal(inputEntryCount, fetchedEntryCount);
-                    Assert.Empty(inputData);
-                }
-            }
-        }
+						var value = fetchedDataIterator.CurrentKey.ToString();
+						Assert.True(inputData.Contains(value));
+						inputData.Remove(value);
+						fetchedEntryCount++;
+					} while (fetchedDataIterator.MoveNext());
 
-        private readonly Random _rng = new Random(123746);
-        private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+					Assert.Equal(inputEntryCount, fetchedEntryCount);
+					Assert.Empty(inputData);
+				}
+			}
+		}
 
-        private string RandomString(int size)
-        {
-            var buffer = new char[size];
+		private readonly Random _rng = new Random(123746);
+		private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-            for (int i = 0; i < size; i++)
-            {
-                buffer[i] = Chars[_rng.Next(Chars.Length)];
-            }
-            return new string(buffer);
-        }
+		private string RandomString(int size)
+		{
+			var buffer = new char[size];
 
-    }
+			for (int i = 0; i < size; i++)
+			{
+				buffer[i] = Chars[_rng.Next(Chars.Length)];
+			}
+			return new string(buffer);
+		}
+
+	}
 }

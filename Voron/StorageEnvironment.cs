@@ -15,9 +15,7 @@ namespace Voron
 	{
 		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions = new ConcurrentDictionary<long, Transaction>();
 
-		private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
-
-		private readonly List<string> _newTrees = new List<string>();
+		private readonly ConcurrentDictionary<string, Tree> _trees = new ConcurrentDictionary<string, Tree>();
 
 		private readonly bool _ownsPager;
 		private readonly IVirtualPager _pager;
@@ -29,13 +27,13 @@ namespace Voron
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
 		public TransactionMergingWriter Writer { get; private set; }
-		
+
 		public SnapshotReader CreateSnapshot()
 		{
 			return new SnapshotReader(NewTransaction(TransactionFlags.Read));
 		}
 
-	    public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
+		public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
 		{
 			try
 			{
@@ -46,7 +44,7 @@ namespace Voron
 
 				Setup(pager);
 
-			    FreeSpaceRoot.Name = "Free Space";
+				FreeSpaceRoot.Name = "Free Space";
 				Root.Name = "Root";
 
 				Writer = new TransactionMergingWriter(this);
@@ -125,11 +123,15 @@ namespace Voron
 			get { return _pager.PageSize; }
 		}
 
-	    public Tree GetTree(string name)
+		public Tree GetTree(Transaction tx, string name)
 		{
 			Tree tree;
 			if (_trees.TryGetValue(name, out tree))
 				return tree;
+
+			if (tx != null && tx.ModifiedTrees.TryGetValue(name, out tree))
+				return tree;
+
 			throw new InvalidOperationException("No such tree: " + name);
 		}
 
@@ -150,7 +152,7 @@ namespace Voron
 
 			Root.Delete(tx, name);
 
-			_trees.Remove(name);
+			tx.ModifiedTrees.Add(name, null);
 		}
 
 		public Tree CreateTree(Transaction tx, string name)
@@ -159,7 +161,8 @@ namespace Voron
 				throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
 			Tree tree;
-			if (_trees.TryGetValue(name, out tree))
+			if (_trees.TryGetValue(name, out tree) ||
+				tx.ModifiedTrees.TryGetValue(name, out tree))
 				return tree;
 
 			Slice key = name;
@@ -170,7 +173,7 @@ namespace Voron
 			{
 				tree = Tree.Open(tx, _sliceComparer, header);
 				tree.Name = name;
-				_trees.Add(name, tree);
+				tx.ModifiedTrees.Add(name, tree);
 				return tree;
 			}
 
@@ -179,8 +182,7 @@ namespace Voron
 			var space = Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 			tree.State.CopyTo((TreeRootHeader*)space);
 
-			_trees.Add(name, tree);
-			_newTrees.Add(name);
+			tx.ModifiedTrees.Add(name, tree);
 
 			return tree;
 		}
@@ -271,13 +273,7 @@ namespace Voron
 		private void TransactionAfterCommit(long txId)
 		{
 			Transaction tx;
-			if (_activeTransactions.TryGetValue(txId, out tx) == false)
-				return;
-
-			if (tx.Flags != (TransactionFlags.ReadWrite))
-				return;
-
-			_newTrees.Clear();
+			_activeTransactions.TryGetValue(txId, out tx);
 		}
 
 		internal void TransactionCompleted(long txId)
@@ -288,15 +284,30 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
+			try
+			{
+				if (tx.Committed == false)
+					return;
+				_transactionsCounter = txId;
+				if (tx.HasModifiedTrees == false)
+					return;
+				foreach (var tree in tx.ModifiedTrees)
+				{
+					Tree val = tree.Value;
+					if (val == null)
+						_trees.TryRemove(tree.Key, out val);
+					else
+						_trees.AddOrUpdate(tree.Key, val, (s, tree1) => val);
+				}
+			}
+			finally
+			{
+				_txWriter.Release();
 
-			foreach (var tree in _newTrees)
-				_trees.Remove(tree);
-
-			_transactionsCounter = txId;
-			_txWriter.Release();
+			}
 		}
 
-		public Dictionary<string,List<long>> AllPages(Transaction tx)
+		public Dictionary<string, List<long>> AllPages(Transaction tx)
 		{
 			var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
 				{

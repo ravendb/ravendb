@@ -185,7 +185,7 @@
 			if (treeName == null)
 				return _env.Root;
 
-			return _env.GetTree(treeName);
+			return _env.GetTree(null, treeName);
 		}
 
 		private class OutstandingWrite
