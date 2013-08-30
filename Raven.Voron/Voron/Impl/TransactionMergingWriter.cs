@@ -4,6 +4,7 @@
 	using System.Collections.Concurrent;
 	using System.Collections.Generic;
 	using System.Diagnostics;
+	using System.IO;
 	using System.Linq;
 	using System.Threading;
 	using System.Threading.Tasks;
@@ -111,6 +112,12 @@
 						case WriteBatch.BatchOperationType.Delete:
 							tree.Delete(tx, operation.Key, operation.Version);
 							break;
+						case WriteBatch.BatchOperationType.MultiAdd:
+							tree.MultiAdd(tx, operation.Key, new Slice(ConvertStreamToByteArray(operation.Value)), operation.Version);
+							break;
+						case WriteBatch.BatchOperationType.MultiDelete:
+							tree.MultiDelete(tx, operation.Key, new Slice(ConvertStreamToByteArray(operation.Value)), operation.Version);
+							break;
 					}
 				}
 			}
@@ -169,7 +176,20 @@
 			if (treeName == null)
 				return _env.Root;
 
-			return _env.GetTree(treeName);
+			return _env.GetTree(null, treeName);
+		}
+
+		private byte[] ConvertStreamToByteArray(Stream input)
+		{
+			var buffer = new byte[4 * 1024];
+			using (var output = new MemoryStream())
+			{
+				int read;
+				while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+					output.Write(buffer, 0, read);
+
+				return output.ToArray();
+			}
 		}
 
 		private class OutstandingWrite

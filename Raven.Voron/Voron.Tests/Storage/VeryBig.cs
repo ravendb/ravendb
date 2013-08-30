@@ -18,11 +18,11 @@ namespace Voron.Tests.Storage
 			var buffer = new byte[1024 * 512];
 			new Random().NextBytes(buffer);
 
-			var tree = Env.GetTree("test");
 			for (int i = 0; i < 20; i++)
 			{
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
+					var tree = Env.GetTree(tx, "test");
 					for (int j = 0; j < 12; j++)
 					{
 						tree.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
