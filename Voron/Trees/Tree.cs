@@ -399,7 +399,7 @@ namespace Voron.Trees
                 txInfo.State.EntriesCount--;
 	            ushort nodeVersion;
 	            RemoveLeafNode(tx, cursor, page, out nodeVersion);
-
+				
 	            CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 					
                 var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
@@ -418,7 +418,7 @@ namespace Voron.Trees
             return new TreeIterator(this, tx, _cmp);
         }
 
-        public Stream Read(Transaction tx, Slice key)
+        public ReadResult Read(Transaction tx, Slice key)
         {
             using (var cursor = tx.NewCursor(this))
             {
@@ -432,7 +432,8 @@ namespace Voron.Trees
 
                 if (item.Compare(key, _cmp) != 0)
                     return null;
-                return NodeHeader.Stream(tx, node);
+                
+				return new ReadResult(NodeHeader.Stream(tx, node), node->Version);
             }
         }
 
@@ -539,6 +540,10 @@ namespace Voron.Trees
                     }
                     else  if (node->Flags == NodeFlags.MultiValuePageRef)
                     {
+	                    var childTreeHeader =  (TreeRootHeader*) ((byte*) node + node->KeySize + Constants.NodeHeaderSize);
+
+						results.Add(childTreeHeader->RootPageNumber);
+          
                         // this is a multi value
                         var tree = OpenOrCreateMultiValueTree(tx, new Slice(node), node);
                         results.AddRange(tree.AllPages(tx));

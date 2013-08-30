@@ -23,7 +23,7 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var stream = Env.Root.Read(tx, "key/1"))
+				using (var stream = Env.Root.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
@@ -49,7 +49,7 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = Env.Root.Read(tx, "key/" + i))
+					using (var stream = Env.Root.Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -78,14 +78,14 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = Env.Root.Read(tx, "key/" + i))
+					using (var stream = Env.Root.Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
 						Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 					}
 
-					using (var stream = Env.Root.Read(tx, "yek/" + i))
+					using (var stream = Env.Root.Read(tx, "yek/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -125,14 +125,14 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = t1.Read(tx, "key/" + i))
+					using (var stream = t1.Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
 						Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 					}
 
-					using (var stream = t2.Read(tx, "yek/" + i))
+					using (var stream = t2.Read(tx, "yek/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -164,14 +164,14 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var stream = t1.Read(tx, "key/1"))
+				using (var stream = t1.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
 					Assert.Equal("tree1", result);
 				}
 
-				using (var stream = t2.Read(tx, "key/1"))
+				using (var stream = t2.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
@@ -214,14 +214,14 @@
 
 				using (var tx = Env.NewTransaction(TransactionFlags.Read))
 				{
-					using (var stream = t1.Read(tx, "key/1"))
+					using (var stream = t1.Read(tx, "key/1").Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
 						Assert.Equal("tree1", result);
 					}
 
-					using (var stream = t3.Read(tx, "key/1"))
+					using (var stream = t3.Read(tx, "key/1").Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -254,7 +254,7 @@
 				tx.Commit();
 			}
 
-			Env.Writer._semaphore.Wait(1000);
+			Env.Writer._semaphore.Wait(1000); // forcing to build one batch group from all batches that will be added between this line and _semaphore.Release
 
 			var tasks = new[]
 				            {
@@ -277,14 +277,14 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var stream = t1.Read(tx, "key/1"))
+				using (var stream = t1.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
 					Assert.Equal("tree1", result);
 				}
 
-				using (var stream = t3.Read(tx, "key/1"))
+				using (var stream = t3.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
