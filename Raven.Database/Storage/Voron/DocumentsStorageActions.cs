@@ -149,11 +149,13 @@
 
         private Etag EnsureDocumentEtagMatch(string key, Etag etag)
         {
-            using (var documentStream = documentsTable.Read(snapshot, MetadataKey(key)))
-            {
-                if (documentStream == null)
-                    return Etag.InvalidEtag;
+	        var read = documentsTable.Read(snapshot, MetadataKey(key));
 
+			if (read == null)
+				return Etag.InvalidEtag;
+
+            using (var documentStream = read.Stream)
+            {
                 var etagBuffer = new byte[16];
                 documentStream.Read(etagBuffer, 0, 16);
                 var existingEtag = Etag.Parse(etagBuffer);

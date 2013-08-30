@@ -161,7 +161,7 @@
 			{
 				using (var snapshot = tableStorage.CreateSnapshot())
 				{
-                    using (var stream = tableStorage.Details.Read(snapshot, "id"))
+                    using (var stream = tableStorage.Details.Read(snapshot, "id").Stream)
 					using (var reader = new BinaryReader(stream))
 					{
 						Id = new Guid(reader.ReadBytes((int)stream.Length));

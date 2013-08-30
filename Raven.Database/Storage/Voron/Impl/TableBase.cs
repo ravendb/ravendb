@@ -8,6 +8,7 @@ namespace Raven.Database.Storage.Voron.Impl
 	using System;
 	using System.IO;
 
+	using global::Voron;
 	using global::Voron.Impl;
 
 	public abstract class TableBase
@@ -33,20 +34,19 @@ namespace Raven.Database.Storage.Voron.Impl
 			writeBatch.Add(key, value, TableName);
 		}
 
-		public virtual Stream Read(SnapshotReader snapshot, string key)
+		public virtual ReadResult Read(SnapshotReader snapshot, string key)
 		{
 			return snapshot.Read(TableName, key);
 		}
 
 		public bool Contains(SnapshotReader snapshot, string key)
 		{
-			using (var resultStream = Read(snapshot, key))
-				return resultStream != null;
+			return snapshot.ReadVersion(TableName, key) > 0;
 		}
 
 		public virtual void Delete(WriteBatch writeBatch, string key)
 		{
-			writeBatch.Delete(key, this.TableName);
+			writeBatch.Delete(key, TableName);
 		}
 	}
 }
