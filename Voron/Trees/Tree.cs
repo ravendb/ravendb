@@ -418,7 +418,7 @@ namespace Voron.Trees
             return new TreeIterator(this, tx, _cmp);
         }
 
-        public Stream Read(Transaction tx, Slice key)
+        public ReadResult Read(Transaction tx, Slice key)
         {
             using (var cursor = tx.NewCursor(this))
             {
@@ -432,7 +432,8 @@ namespace Voron.Trees
 
                 if (item.Compare(key, _cmp) != 0)
                     return null;
-                return NodeHeader.Stream(tx, node);
+                
+				return new ReadResult(NodeHeader.Stream(tx, node), node->Version);
             }
         }
 
