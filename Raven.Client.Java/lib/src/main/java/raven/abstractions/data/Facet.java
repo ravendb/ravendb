@@ -7,8 +7,9 @@ import java.util.List;
 public class Facet {
   private String displayName;
   private FacetMode mode = FacetMode.DEFAULT;
-  private EnumSet<FacetAggregation> aggregration = EnumSet.of(FacetAggregation.NONE);
+  private EnumSet<FacetAggregation> aggregation = EnumSet.of(FacetAggregation.NONE);
   private String aggregationField;
+  private String aggregationType;
   private String name;
   private List<String> ranges;
   private Integer maxResults;
@@ -20,11 +21,26 @@ public class Facet {
     this.termSortMode = FacetTermSortMode.VALUE_ASC;
   }
 
+  public EnumSet<FacetAggregation> getAggregation() {
+    return aggregation;
+  }
+
+  public void setAggregation(EnumSet<FacetAggregation> aggregation) {
+    this.aggregation = aggregation;
+  }
+
+
+
+  public String getAggregationType() {
+    return aggregationType;
+  }
+
+  public void setAggregationType(String aggregationType) {
+    this.aggregationType = aggregationType;
+  }
+
   public String getAggregationField() {
     return aggregationField;
-  }
-  public EnumSet<FacetAggregation> getAggregration() {
-    return aggregration;
   }
   public String getDisplayName() {
     return displayName;
@@ -49,9 +65,6 @@ public class Facet {
   }
   public void setAggregationField(String aggregationField) {
     this.aggregationField = aggregationField;
-  }
-  public void setAggregration(EnumSet<FacetAggregation> aggregration) {
-    this.aggregration = aggregration;
   }
   public void setDisplayName(String displayName) {
     this.displayName = displayName;

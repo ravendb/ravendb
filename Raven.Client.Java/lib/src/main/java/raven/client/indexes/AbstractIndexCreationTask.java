@@ -74,7 +74,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
   }
 
   public String getIndexName() {
-    return getClass().getName().replace('_', '/');
+    return getClass().getSimpleName().replace('_', '/');
   }
 
   protected Operation<?> createField(String name, Path<?> value, boolean stored, boolean analyzed) {

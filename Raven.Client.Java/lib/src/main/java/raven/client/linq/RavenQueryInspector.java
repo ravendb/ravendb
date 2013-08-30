@@ -239,5 +239,90 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return getProvider().createQuery(Expressions.operation(expression.getType(), LinqOps.Query.ORDER_BY, expression, Expressions.constant(asc)));
   }
 
+  @Override
+  public DynamicAggregationQuery<T> aggregateBy(String path) {
+    return new DynamicAggregationQuery<>(this, path);
+  }
+
+  @Override
+  public DynamicAggregationQuery<T> aggregateBy(String path, String displayName) {
+    return new DynamicAggregationQuery<>(this, path, displayName);
+  }
+
+  @Override
+  public DynamicAggregationQuery<T> aggregateBy(Path< ? > path) {
+    return new DynamicAggregationQuery<>(this, path);
+  }
+
+  @Override
+  public DynamicAggregationQuery<T> aggregateBy(Path< ? > path, String displayName) {
+    return new DynamicAggregationQuery<>(this, path, displayName);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets) {
+    return toFacetsLazy(facets, 0, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets, int start) {
+    return toFacetsLazy(facets, start, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets, int start, Integer pageSize) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc) {
+    return toFacetsLazy(facetSetupDoc, 0, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc, int start) {
+    return toFacetsLazy(facetSetupDoc, start, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc, int start, Integer pageSize) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public FacetResults toFacets(List<Facet> facets) {
+    return toFacets(facets, 0, null);
+  }
+
+  @Override
+  public FacetResults toFacets(List<Facet> facets, int start) {
+    return toFacets(facets, start, null);
+  }
+
+  @Override
+  public FacetResults toFacets(List<Facet> facets, int start, Integer pageSize) {
+    if (facets.isEmpty()) {
+      throw new IllegalArgumentException("Facets must contain at least one entry");
+    }
+    return databaseCommands.getFacets(indexName, getIndexQuery(), facets, start, pageSize);
+  }
+
+  @Override
+  public FacetResults toFacets(String facetSetupDoc) {
+    return toFacets(facetSetupDoc, 0, null);
+  }
+
+  @Override
+  public FacetResults toFacets(String facetSetupDoc, int start) {
+    return toFacets(facetSetupDoc, start, null);
+  }
+
+  @Override
+  public FacetResults toFacets(String facetSetupDoc, int start, Integer pageSize) {
+    return databaseCommands.getFacets(indexName, getIndexQuery(), facetSetupDoc, start, pageSize);
+  }
+
 
 }

@@ -1,9 +1,15 @@
 package raven.abstractions.extensions;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.EnumSet;
+import java.util.Iterator;
 
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.Version;
@@ -12,13 +18,16 @@ import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.MapperConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
+import org.codehaus.jackson.map.SerializerProvider;
 import org.codehaus.jackson.map.deser.std.FromStringDeserializer;
 import org.codehaus.jackson.map.deser.std.StdDeserializer;
 import org.codehaus.jackson.map.introspect.AnnotatedField;
 import org.codehaus.jackson.map.introspect.AnnotatedMethod;
 import org.codehaus.jackson.map.introspect.AnnotatedParameter;
 import org.codehaus.jackson.map.module.SimpleModule;
+import org.codehaus.jackson.map.ser.std.SerializerBase;
 
+import raven.abstractions.basic.SerializeAsFlags;
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
 import raven.abstractions.json.linq.RavenJArray;
@@ -54,7 +63,44 @@ public class JsonExtensions {
     module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer<RavenJToken>(RavenJToken.class));
     module.addDeserializer(RavenJArray.class, new RavenJTokenDeserializer<RavenJArray>(RavenJArray.class));
     module.addDeserializer(RavenJValue.class, new RavenJTokenDeserializer<RavenJValue>(RavenJValue.class));
+    module.addSerializer(EnumSet.class, new EnumSetSerializer());
     return module;
+  }
+
+  @SuppressWarnings("rawtypes")
+  public static class EnumSetSerializer extends SerializerBase<EnumSet> {
+
+    protected EnumSetSerializer() {
+      super(EnumSet.class);
+    }
+
+    @SuppressWarnings({ "unchecked" })
+    @Override
+    public void serialize(EnumSet value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonGenerationException {
+      try {
+        if (value.isEmpty()) {
+          jgen.writeNumber(0);
+        } else {
+          Enum firstEnum= (Enum) value.iterator().next();
+          SerializeAsFlags serializeAsFlags = firstEnum.getClass().getAnnotation(SerializeAsFlags.class);
+          if (serializeAsFlags != null) {
+            Method method = firstEnum.getClass().getMethod("getValue");
+            int result = 0;
+            Iterator<Enum> iterator = (Iterator<Enum>) value.iterator();
+            while (iterator.hasNext()) {
+              Object next = iterator.next();
+              result |= (int)method.invoke(next);
+            }
+            jgen.writeNumber(result);
+          } else {
+            throw new IllegalStateException("not implemented yet");//TODO
+          }
+        }
+      } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+        throw new RuntimeException(e);
+      }
+
+    }
   }
 
   public static class RavenJTokenDeserializer<T extends RavenJToken> extends StdDeserializer<T> {

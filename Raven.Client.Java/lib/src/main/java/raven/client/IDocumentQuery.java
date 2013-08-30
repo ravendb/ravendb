@@ -21,6 +21,7 @@ import raven.client.spatial.SpatialCriteriaFactory;
  *
  * @param <T>
  */
+//TODO: insert extensions from LinqExtensions class
 public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<T>> {
   /**
    * Selects the specified fields directly from the index
