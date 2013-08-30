@@ -86,6 +86,7 @@ public class HttpJsonRequest {
   private String operationUrl;
   private Map<String, String> responseHeaders;
   private boolean skipServerCheck;
+  private int contentLength = -1;
 
   private HttpClient httpClient;
   private int responseStatusCode;
@@ -155,7 +156,15 @@ public class HttpJsonRequest {
       }
 
       String value = prop.getValue().value(Object.class).toString();
-      webRequest.addHeader(headerName, value);
+
+      switch (headerName) {
+      case "Content-Length":
+        contentLength = prop.getValue().value(int.class);
+        break;
+      default:
+        webRequest.addHeader(headerName, value);
+
+      }
     }
   }
 
@@ -560,7 +569,7 @@ public class HttpJsonRequest {
     }
 
     HttpEntityEnclosingRequestBase requestMethod = (HttpEntityEnclosingRequestBase) webRequest;
-    InputStreamEntity innerEntity = new InputStreamEntity(this.postedStream, -1, contentType);
+    InputStreamEntity innerEntity = new InputStreamEntity(this.postedStream, contentLength, contentType);
     HttpEntity entity = new GzipHttpEntity(innerEntity);
     innerEntity.setChunked(true);
     requestMethod.setEntity(entity);

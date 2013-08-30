@@ -89,6 +89,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return provider;
   }
 
+  //TODO: support for runtime types check
   @Override
   public IRavenQueryable<T> where(Predicate predicate) {
     return getProvider().createQuery(Expressions.operation(expression.getType(), LinqOps.Query.WHERE, expression, predicate));

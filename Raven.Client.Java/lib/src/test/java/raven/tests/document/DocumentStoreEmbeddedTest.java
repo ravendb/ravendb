@@ -9,7 +9,7 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 
-public class DocumentStoreEmbeddedTests extends RemoteClientTest {
+public class DocumentStoreEmbeddedTest extends RemoteClientTest {
 
   @Test
   public void canRefreshEntityFromDatabase() throws Exception {

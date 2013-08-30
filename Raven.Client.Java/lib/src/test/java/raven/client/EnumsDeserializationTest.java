@@ -11,7 +11,7 @@ import org.junit.Test;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.IndexLockMode;
 
-public class EnumsDeserialization {
+public class EnumsDeserializationTest {
 
   public static class LockInfo {
     private IndexLockMode lockMode;

@@ -82,7 +82,7 @@ public class DocumentConvention implements Serializable {
 
   private DeserializationProblemHandler jsonContractResolver; //TODO: // find all usages in introduce them
 
-  private Function1<Class<?>, String> findTypeTagName;
+  private TypeTagNameFinder findTypeTagName;
 
   private Function4<Class<?>, String, String, String, String> findPropertyNameForIndex;
 
@@ -179,9 +179,10 @@ public class DocumentConvention implements Serializable {
       }
     });
 
-    setFindTypeTagName(new Function1<Class<?>, String>() {
+    setFindTypeTagName(new TypeTagNameFinder() {
+
       @Override
-      public String apply(Class< ? > clazz) {
+      public String find(Class< ? > clazz) {
         return defaultTypeTagName(clazz);
       }
     });
@@ -406,7 +407,7 @@ public class DocumentConvention implements Serializable {
    * @return
    */
   public static String generateDocumentKeyUsingIdentity(DocumentConvention conventions, Object entity) {
-    return conventions.findTypeTagName.apply(entity.getClass()) + "/";
+    return conventions.findTypeTagName.find(entity.getClass()) + "/";
   }
 
   /**
@@ -433,7 +434,7 @@ public class DocumentConvention implements Serializable {
    * @return
    */
   public String getTypeTagName(Class<?> type) {
-    String value = findTypeTagName.apply(type);
+    String value = findTypeTagName.find(type);
     if (value != null) {
       return value;
     }
@@ -563,7 +564,7 @@ public class DocumentConvention implements Serializable {
    * Gets the function to find the type tag.
    * @return
    */
-  public Function1<Class< ? >, String> getFindTypeTagName() {
+  public TypeTagNameFinder getFindTypeTagName() {
     return findTypeTagName;
   }
 
@@ -571,7 +572,7 @@ public class DocumentConvention implements Serializable {
    * Sets the function to find the type tag.
    * @param findTypeTagName
    */
-  public void setFindTypeTagName(Function1<Class< ? >, String> findTypeTagName) {
+  public void setFindTypeTagName(TypeTagNameFinder findTypeTagName) {
     this.findTypeTagName = findTypeTagName;
   }
 

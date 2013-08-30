@@ -27,8 +27,15 @@ public class PatchRequest {
   private Boolean allPositions;
 
 
-
-
+  public PatchRequest() {
+    super();
+  }
+  public PatchRequest(PatchCommandType type, String name, RavenJToken value) {
+    super();
+    this.type = type;
+    this.name = name;
+    this.value = value;
+  }
   /**
    * Get AllPositions. Set this property to true if you want to modify all items in an collection.
    * @return

@@ -2,19 +2,19 @@ package raven.tests.document;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-
-import javax.print.Doc;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
@@ -22,6 +22,7 @@ import org.junit.Test;
 import raven.abstractions.commands.DeleteCommandData;
 import raven.abstractions.commands.ICommandData;
 import raven.abstractions.commands.PutCommandData;
+import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.DatabaseStatistics;
@@ -31,6 +32,7 @@ import raven.abstractions.data.JsonDocumentMetadata;
 import raven.abstractions.data.PatchCommandType;
 import raven.abstractions.data.PatchRequest;
 import raven.abstractions.exceptions.ConcurrencyException;
+import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.indexing.FieldIndexing;
 import raven.abstractions.indexing.FieldStorage;
 import raven.abstractions.indexing.IndexDefinition;
@@ -47,6 +49,12 @@ import raven.client.document.DocumentStore;
 import raven.client.indexes.IndexDefinitionBuilder;
 import raven.client.linq.IRavenQueryable;
 import raven.tests.document.Company.CompanyType;
+import raven.tests.indexes.LinqIndexesFromClient;
+import raven.tests.indexes.LinqIndexesFromClient.LocationAge;
+import raven.tests.indexes.QLinqIndexesFromClient_LocationAge;
+import raven.tests.indexes.QLinqIndexesFromClient_User;
+import raven.tests.indexes.LinqIndexesFromClient.LocationCount;
+import raven.tests.indexes.LinqIndexesFromClient.User;
 import raven.tests.spatial.Event;
 import raven.tests.spatial.SpatialIndexTest;
 import raven.tests.spatial.SpatialIndexTestHelper;
@@ -981,5 +989,373 @@ public class DocumentStoreServerTest extends RemoteClientTest {
     }
   }
 
-  //TODO: finish me
+  @Test
+  public void can_create_index_using_linq_from_client() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      IndexDefinitionBuilder builder = new IndexDefinitionBuilder();
+      builder.setMap("from user in docs.Users where user.Location == \"Tel Aviv\" select new { user.Name} ");
+
+      store.getDatabaseCommands().putIndex("UsersByLocation", builder.toIndexDefinition(store.getConventions()));
+
+      try (IDocumentSession session = store.openSession()) {
+
+        User user = new LinqIndexesFromClient.User();
+        user.setLocation("Tel Aviv");
+        user.setName("Yael");
+
+        session.store(user);
+        session.saveChanges();
+
+        User single = session.advanced().luceneQuery(LinqIndexesFromClient.User.class, "UsersByLocation").
+            where("Name:Yael").
+            waitForNonStaleResults().
+            single();
+
+        assertEquals("Yael", single.getName());
+      }
+    }
+  }
+
+  @Test
+  public void can_create_index_using_linq_from_client_using_map_reduce() throws Exception {
+    IndexDefinitionBuilder builder = new IndexDefinitionBuilder();
+
+    QLinqIndexesFromClient_User u = QLinqIndexesFromClient_User.user;
+
+    builder.setMap("from user in docs.users where user.Location == \"Tel Aviv\" select new {user.Location, Count = 1 }");
+    builder.setReduce("from loc in results group loc by loc.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }");
+    builder.getIndexes().put(u.location, FieldIndexing.NOT_ANALYZED);
+
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      store.getDatabaseCommands().putIndex("UsersCountByLocation", builder);
+
+      try (IDocumentSession session = store.openSession()) {
+        User user = new LinqIndexesFromClient.User();
+        user.setLocation("Tel Aviv");
+        user.setName("Yael");
+
+        session.store(user);
+        session.saveChanges();
+
+        LocationCount single = session.advanced().luceneQuery(LinqIndexesFromClient.LocationCount.class, "UsersCountByLocation")
+            .where("Location:\"Tel Aviv\"")
+            .waitForNonStaleResults()
+            .single();
+
+        assertEquals("Tel Aviv", single.getLocation());
+        assertEquals(1, single.getCount());
+
+      }
+    }
+  }
+
+  @Test
+  public void can_get_correct_averages_from_map_reduce_index() throws Exception {
+    QLinqIndexesFromClient_User u = QLinqIndexesFromClient_User.user;
+
+    IndexDefinitionBuilder builder = new IndexDefinitionBuilder();
+    builder.setMap("from user in docs.users select new { user.Location, AgeSum = user.Age, AverageAge = user.Age, Count = 1 }");
+    builder.setReduce("from loc in results group loc by loc.Location into g " +
+        " let count = g.Sum( x=> x.Count)" +
+        " let age = g.Sum (x => x.AgeSum)  " +
+        " select new {Location = g.Key, AverageAge = age/count, Count = count, AgeSum = age }");
+    builder.getIndexes().put(u.location, FieldIndexing.NOT_ANALYZED);
+
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      store.getDatabaseCommands().putIndex("AvgAgeByLocation", builder.toIndexDefinition(store.getConventions()));
+
+      try (IDocumentSession session = store.openSession()) {
+        User user1 = new LinqIndexesFromClient.User();
+        user1.setAge(29);
+        user1.setName("Yael");
+        user1.setLocation("Tel Aviv");
+
+        User user2 = new LinqIndexesFromClient.User();
+        user2.setAge(24);
+        user2.setLocation("Tel Aviv");
+        user2.setName("Einat");
+
+        session.store(user1);
+        session.store(user2);
+
+        session.saveChanges();
+
+        LocationAge single = session.advanced().luceneQuery(LinqIndexesFromClient.LocationAge.class, "AvgAgeByLocation")
+            .where("Location:\"Tel Aviv\"")
+            .waitForNonStaleResults()
+            .single();
+
+        assertEquals("Tel Aviv", single.getLocation());
+        assertEquals(26.5, single.getAverageAge(), 0.0001);
+      }
+    }
+  }
+
+  @Test
+  public void can_get_correct_maximum_from_map_reduce_index() throws Exception {
+
+    IndexDefinitionBuilder builder = new IndexDefinitionBuilder();
+    QLinqIndexesFromClient_LocationAge l = QLinqIndexesFromClient_LocationAge.locationAge;
+    builder.setMap("from user in docs.users select new {user.Age}");
+    builder.getIndexes().put(l.averageAge, FieldIndexing.ANALYZED);
+    builder.getStores().put(l.averageAge, FieldStorage.YES);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      store.getDatabaseCommands().putIndex("MaxAge", builder.toIndexDefinition(store.getConventions()));
+
+      try (IDocumentSession session = store.openSession()) {
+
+        User user1 = new LinqIndexesFromClient.User();
+        user1.setAge(27);
+        user1.setName("Foo");
+
+        User user2 = new LinqIndexesFromClient.User();
+        user2.setAge(33);
+        user2.setName("Bar");
+
+        User user3 = new LinqIndexesFromClient.User();
+        user3.setAge(29);
+        user3.setName("Bar");
+
+        session.store(user1);
+        session.store(user2);
+        session.store(user3);
+
+        session.saveChanges();
+
+        User user = session.advanced().luceneQuery(LinqIndexesFromClient.User.class, "MaxAge")
+            .orderBy("-Age")
+            .take(1)
+            .waitForNonStaleResults()
+            .single();
+
+        assertEquals(33, user.getAge());
+      }
+    }
+  }
+
+  @Test
+  public void can_get_correct_maximum_from_map_reduce_index_using_orderbydescending() throws Exception {
+    IndexDefinitionBuilder builder = new IndexDefinitionBuilder();
+    QLinqIndexesFromClient_LocationAge l = QLinqIndexesFromClient_LocationAge.locationAge;
+    builder.setMap("from user in docs.users select new {user.Age}");
+    builder.getIndexes().put(l.averageAge, FieldIndexing.ANALYZED);
+    builder.getStores().put(l.averageAge, FieldStorage.YES);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      store.getDatabaseCommands().putIndex("MaxAge", builder.toIndexDefinition(store.getConventions()));
+      try (IDocumentSession session = store.openSession()) {
+        User user1 = new LinqIndexesFromClient.User();
+        user1.setAge(27);
+        user1.setName("Foo");
+
+        User user2 = new LinqIndexesFromClient.User();
+        user2.setAge(33);
+        user2.setName("Bar");
+
+        User user3 = new LinqIndexesFromClient.User();
+        user3.setAge(29);
+        user3.setName("Bar");
+
+        session.store(user1);
+        session.store(user2);
+        session.store(user3);
+
+        session.saveChanges();
+
+        User user = session.advanced()
+            .luceneQuery(LinqIndexesFromClient.User.class, "MaxAge")
+            .orderByDescending("Age")
+            .take(1)
+            .waitForNonStaleResults()
+            .single();
+
+        assertEquals(33, user.getAge());
+      }
+    }
+  }
+
+  @Test
+  public void using_attachments() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      Attachment attachment = store.getDatabaseCommands().getAttachment("ayende");
+      assertNull(attachment);
+
+      RavenJObject meta = new RavenJObject();
+      meta.add("Hello", new RavenJValue("World"));
+      store.getDatabaseCommands().putAttachment("ayende", null, new ByteArrayInputStream(new byte[] { 1,2,3}), meta);
+
+      attachment = store.getDatabaseCommands().getAttachment("ayende");
+      assertNotNull(attachment);
+
+      assertArrayEquals(new byte[] {1, 2, 3}, attachment.getData());
+      assertEquals("World", attachment.getMetadata().value(String.class, "Hello"));
+
+      store.getDatabaseCommands().deleteAttachment("ayende", null);
+      attachment = store.getDatabaseCommands().getAttachment("ayende");
+      assertNull(attachment);
+    }
+  }
+
+  @Test
+  public void getting_attachment_metadata() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      RavenJObject meta = new RavenJObject();
+      meta.add("Hello", new RavenJValue("World"));
+      store.getDatabaseCommands().putAttachment("sample", null, new ByteArrayInputStream(new byte[] { 1,2,3}), meta);
+
+      Attachment attachmentOnlyWithMetadata = store.getDatabaseCommands().headAttachment("sample");
+      assertEquals("World", attachmentOnlyWithMetadata.getMetadata().value(String.class, "Hello"));
+      try {
+        attachmentOnlyWithMetadata.getData();
+        fail("getData should fail");
+      } catch (IllegalArgumentException e) {
+        assertEquals("Cannot get attachment data because it was NOT loaded using GET method", e.getMessage());
+      }
+    }
+  }
+
+  @Test
+  public void getting_headers_of_attachments_with_prefix() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      RavenJObject meta1 = new RavenJObject();
+      meta1.add("Hello", new RavenJValue("World"));
+      store.getDatabaseCommands().putAttachment("sample/1", null, new ByteArrayInputStream(new byte[] { 1,2,3}), meta1);
+
+      RavenJObject meta2 = new RavenJObject();
+      meta2.add("Hello", new RavenJValue("World"));
+      store.getDatabaseCommands().putAttachment("example/1", null, new ByteArrayInputStream(new byte[] { 1,2,3}), meta2);
+
+      RavenJObject meta3 = new RavenJObject();
+      meta3.add("Hello", new RavenJValue("World"));
+      store.getDatabaseCommands().putAttachment("sample/2", null, new ByteArrayInputStream(new byte[] { 1,2,3}), meta3);
+
+      List<Attachment> attachmentHeaders = store.getDatabaseCommands().getAttachmentHeadersStartingWith("sample", 0, 5);
+      assertEquals(2, attachmentHeaders.size());
+
+      for (Attachment attachment : attachmentHeaders) {
+        assertTrue(attachment.getKey().startsWith("sample"));
+        assertEquals("World", attachment.getMetadata().value(String.class, "Hello"));
+
+        try {
+          attachment.getData();
+          fail("previous should fail");
+        } catch (IllegalArgumentException e) {
+          assertEquals("Cannot get attachment data because it was NOT loaded using GET method", e.getMessage());
+        }
+      }
+    }
+  }
+
+  @Test
+  public void using_attachments_can_properly_set_WebRequest_Headers() throws Exception {
+    String key = String.format("%s-%s", "test", "SystemTime.UtcNow.ToFileTimeUtc()");//TODO get sample invocation
+    RavenJObject metadata = new RavenJObject();
+    metadata.add("owner", 5);
+    metadata.add("Content-Type", "text/plain");
+    metadata.add("filename", "test.txt");
+    metadata.add("Content-Length", 100);
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      store.getDatabaseCommands().putAttachment(key, null, new ByteArrayInputStream(new byte[] {0, 1, 2}), metadata);
+    }
+  }
+
+  @Test
+  public void can_patch_existing_document_when_present() throws Exception {
+    Company company = new Company(null, "Hibernating Rhinos");
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        session.store(company);
+        session.saveChanges();
+      }
+
+      store.getDatabaseCommands().patch(company.getId(), new PatchRequest[] {
+        new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+      }, new PatchRequest[] {
+        new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("New"))
+      }, new RavenJObject());
+
+      try (IDocumentSession session = store.openSession()) {
+        Company company2 = session.load(Company.class, company.getId());
+        assertNotNull(company2);
+        assertEquals("Existing", company2.getName());
+      }
+    }
+  }
+
+  @Test
+  public void can_patch_default_document_when_missing() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
+        new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+      }, new PatchRequest[] {
+        new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("New"))
+      }, new RavenJObject());
+
+      try (IDocumentSession session = store.openSession()) {
+        Company company2 = session.load(Company.class, "Company/1");
+        assertNotNull(company2);
+        assertEquals("New", company2.getName());
+      }
+    }
+  }
+
+  @Test
+  public void should_not_throw_when_ignore_missing_true() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
+         new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+      });
+
+      store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
+          new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+       }, true);
+    }
+  }
+
+  @Test(expected = DocumentDoesNotExistsException.class)
+  public void should_throw_when_ignore_missing_false() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
+         new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+      });
+
+      store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
+          new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+       }, false);
+    }
+  }
+
+  @Test
+  public void should_return_false_on_batch_delete_when_document_missing() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      BatchResult[] batchResult = store.getDatabaseCommands().batch(Arrays.<ICommandData> asList(new DeleteCommandData("Company/1", null)));
+
+      assertNotNull(batchResult);
+      assertEquals(1, batchResult.length);
+      assertNotNull(batchResult[0].getDeleted());
+      assertFalse(batchResult[0].getDeleted());
+    }
+  }
+
+  @Test
+  public void should_return_true_on_batch_delete_when_document_present() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      store.getDatabaseCommands().put("Company/1", null, new RavenJObject(), new RavenJObject());
+      BatchResult[] batchResult = store.getDatabaseCommands().batch(Arrays.<ICommandData> asList(new DeleteCommandData("Company/1", null)));
+      assertNotNull(batchResult);
+      assertEquals(1, batchResult.length);
+      assertNotNull(batchResult[0].getDeleted());
+      assertTrue(batchResult[0].getDeleted());
+    }
+  }
 }

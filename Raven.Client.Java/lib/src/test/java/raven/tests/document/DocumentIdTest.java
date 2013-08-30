@@ -9,7 +9,7 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 
-
+//TODO: write generic test for find if all tests ends with "Test"
 public class DocumentIdTest extends RemoteClientTest {
 
   @Test

@@ -6,7 +6,7 @@ import org.junit.Test;
 
 import raven.abstractions.data.Constants;
 
-public class MultiDatabaseTests {
+public class MultiDatabaseTest {
   @Test
   public void testRootDbUrl() {
     assertEquals("http://localhost:8080", MultiDatabase.getRootDatabaseUrl("http://localhost:8080/"));

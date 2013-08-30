@@ -12,12 +12,11 @@ import raven.client.RavenQueryStatistics;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 import raven.client.indexes.AbstractIndexCreationTask;
-import raven.linq.dsl.IndexExpression;
 import raven.linq.dsl.expressions.AnonymousExpression;
 
 import com.mysema.query.annotations.QueryEntity;
 
-public class Troy2 extends RemoteClientTest {
+public class Troy2Test extends RemoteClientTest {
 
   @Test
   public void usingDefaultFieldWithSelectFieldsFails() throws Exception {
@@ -28,7 +27,7 @@ public class Troy2 extends RemoteClientTest {
         Tester tester1 = new Tester(null, "FirstName 1", "LastName 1", "email1@test.com", "test1");
         Tester tester2 = new Tester(null, "FirstName 2", "LastName 2", "email2@test.com", "test2");
 
-        QTroy2_Tester t = QTroy2_Tester.tester;
+        QTroy2Test_Tester t = QTroy2Test_Tester.tester;
 
         s.store(tester1);
         s.store(tester2);
@@ -131,7 +130,7 @@ public class Troy2 extends RemoteClientTest {
 
     public TesterSearch() {
 
-      QTroy2_TesterSearch_SearchResult s = QTroy2_TesterSearch_SearchResult.searchResult;
+      QTroy2Test_TesterSearch_SearchResult s = QTroy2Test_TesterSearch_SearchResult.searchResult;
 
       map = "docs.Testers.Select(x => new { Query = new object[] { x.FirstName, x.LastName, x.Email }, x.FirstName, x.LastName, x.Email, x.Password })";
 

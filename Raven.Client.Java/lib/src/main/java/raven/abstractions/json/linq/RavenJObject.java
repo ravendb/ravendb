@@ -155,6 +155,10 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
     this.comparer = other.comparer;
   }
 
+  public void add(String propertyName, Object value) {
+    properties.put(propertyName, RavenJToken.fromObject(value));
+  }
+
   public void add(String propertyName, RavenJToken token) {
     properties.put(propertyName, token);
   }

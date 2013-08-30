@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -491,6 +492,10 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
           if (type != null) {
             entity = JsonExtensions.getDefaultObjectMapper().readValue(documentFound.toString(), type);
           }
+        }
+
+        if (Objects.equals(entity, defaultValue)) {
+          entity = JsonExtensions.getDefaultObjectMapper().readValue(documentFound.toString(), entityType);
         }
 
         generateEntityIdOnTheClient.trySetIdentity(entity, id);
