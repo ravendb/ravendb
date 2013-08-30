@@ -50,7 +50,7 @@ namespace Voron.Tests
             if (name == null)
                 RenderAndShow(tx, Env.Root, showEntries);
             else
-                RenderAndShow(tx, Env.GetTree(name), showEntries);
+                RenderAndShow(tx, Env.GetTree(tx, name), showEntries);
         }
 
         private void RenderAndShow(Transaction tx, Tree root, int showEntries = 25)
