@@ -134,6 +134,8 @@
 						case WriteBatch.BatchOperationType.MultiDelete:
 							tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
 							break;
+						default:
+							throw new ArgumentOutOfRangeException();
 					}
 				}
 			}
