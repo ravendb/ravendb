@@ -176,7 +176,7 @@ namespace Voron
 
 			tree = Tree.Create(tx, _sliceComparer);
 			tree.Name = name;
-			var space = tree.DirectAdd(tx, key, sizeof(TreeRootHeader));
+			var space = Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 			tree.State.CopyTo((TreeRootHeader*)space);
 
 			_trees.Add(name, tree);
