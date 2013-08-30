@@ -21,7 +21,18 @@
 		{
 			get
 			{
-				return _operations.Sum(x => x.Type == BatchOperationType.Add ? x.Value.Length + x.Key.Size : x.Key.Size);
+				return _operations.Sum(x =>
+				{
+					switch (x.Type)
+					{
+						case BatchOperationType.Add:
+							return x.Value.Length + x.Key.Size;
+						case BatchOperationType.MultiAdd:
+							return x.MultiValue.Size + x.Key.Size;
+						default:
+							return x.Key.Size;
+					}
+				});
 			}
 		}
 
@@ -32,19 +43,26 @@
 
 		public void Add(Slice key, Stream value, string treeName, ushort? version = null)
 		{
-			AssertValidAdd(value, treeName);
-
-			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.Add));
-		}
-
-		private static void AssertValidAdd(Stream value, string treeName)
-		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length == 0)
 				throw new ArgumentException("Cannot add empty value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
+
+			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.Add));
+		}
+
+
+		public void MultiAdd(Slice key, Slice value, string treeName, ushort? version = null)
+		{
+			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+			if (value == null) throw new ArgumentNullException("value");
+		
+			_operations.Add(new BatchOperation(key, null, version, treeName, BatchOperationType.MultiAdd)
+			{
+				MultiValue = value
+			});
 		}
 
 		public void Delete(Slice key, string treeName, ushort? version = null)
@@ -53,6 +71,17 @@
 
 			_operations.Add(new BatchOperation(key, null, version, treeName, BatchOperationType.Delete));
 		}
+
+		public void MultiDelete(Slice key, Slice value, string treeName, ushort? version = null)
+		{
+			AssertValidRemove(treeName);
+
+			_operations.Add(new BatchOperation(key, null, version, treeName, BatchOperationType.MultiDelete)
+			{
+				MultiValue = value
+			});
+		}
+
 
 		private static void AssertValidRemove(string treeName)
 		{
@@ -85,6 +114,8 @@
 
 			public ushort? Version { get; private set; }
 
+			public Slice MultiValue { get; set; }
+
 			public void Reset()
 			{
 				if (Value != null)
@@ -96,6 +127,8 @@
 		{
 			Add,
 			Delete,
+			MultiAdd,
+			MultiDelete
 		}
 
 		public void Dispose()
