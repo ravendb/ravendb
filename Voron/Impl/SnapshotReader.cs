@@ -23,7 +23,7 @@ namespace Voron.Impl
 
 		public ushort ReadVersion(string treeName, Slice key)
 		{
-			var tree = treeName == null ? _env.Root : _tx.Environment.GetTree(treeName);
+			var tree = treeName == null ? _env.Root : _tx.Environment.GetTree(_tx, treeName);
 			return tree.ReadVersion(_tx, key);
 		}
 
