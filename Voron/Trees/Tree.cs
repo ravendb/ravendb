@@ -399,7 +399,7 @@ namespace Voron.Trees
                 txInfo.State.EntriesCount--;
 	            ushort nodeVersion;
 	            RemoveLeafNode(tx, cursor, page, out nodeVersion);
-
+				
 	            CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 					
                 var treeRebalancer = new TreeRebalancer(tx, txInfo, _cmp);
@@ -539,6 +539,10 @@ namespace Voron.Trees
                     }
                     else  if (node->Flags == NodeFlags.MultiValuePageRef)
                     {
+	                    var childTreeHeader =  (TreeRootHeader*) ((byte*) node + node->KeySize + Constants.NodeHeaderSize);
+
+						results.Add(childTreeHeader->RootPageNumber);
+          
                         // this is a multi value
                         var tree = OpenOrCreateMultiValueTree(tx, new Slice(node), node);
                         results.AddRange(tree.AllPages(tx));
