@@ -133,6 +133,26 @@ namespace Voron
 			throw new InvalidOperationException("No such tree: " + name);
 		}
 
+
+		public void DeleteTree(Transaction tx, string name)
+		{
+			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+				throw new ArgumentException("Cannot create a new tree with a read only transaction");
+
+			Tree tree;
+			if (_trees.TryGetValue(name, out tree) == false)
+				return;
+
+			foreach (var page in tree.AllPages(tx))
+			{
+				tx.FreePage(page);
+			}
+
+			Root.Delete(tx, name);
+
+			_trees.Remove(name);
+		}
+
 		public Tree CreateTree(Transaction tx, string name)
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
