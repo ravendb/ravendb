@@ -43,10 +43,23 @@ namespace Voron.Impl
 		}
 
 		internal Action<long> AfterCommit = delegate { };
+		private Dictionary<string, Tree> modifiedTrees;
 
 		public Page TempPage
 		{
 			get { return _pager.TempPage; }
+		}
+
+		public Dictionary<string, Tree> ModifiedTrees
+		{
+			get { return modifiedTrees ?? (modifiedTrees = new Dictionary<string, Tree>()); }
+		}
+
+		public bool Committed { get; private set; }
+
+		public bool HasModifiedTrees
+		{
+			get { return modifiedTrees != null; }
 		}
 
 		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
@@ -174,14 +187,16 @@ namespace Voron.Impl
 			{
 				var txInfo = kvp.Value;
 				var tree = kvp.Key;
+
+				if (txInfo.RootPageNumber == tree.State.RootPageNumber &&
+				    (modifiedTrees == null || modifiedTrees.ContainsKey(tree.Name) == false))
+					continue; // not modified
+
 				tree.DebugValidateTree(this, txInfo.RootPageNumber);
 				txInfo.Flush();
 				if (string.IsNullOrEmpty(kvp.Key.Name))
 					continue;
-
-				if (txInfo.RootPageNumber == tree.State.RootPageNumber)
-					continue; // not modified
-
+		
 				var treePtr = (TreeRootHeader*)_env.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
 				tree.State.CopyTo(treePtr);
 			}
@@ -224,6 +239,8 @@ namespace Voron.Impl
 			_pager.Flush(_id & 1); // and now we flush the metadata as well
 
 			_pager.Sync();
+
+			Committed = true;
 
 			AfterCommit(_id);
 		}

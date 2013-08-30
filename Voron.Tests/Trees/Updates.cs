@@ -6,7 +6,6 @@ namespace Voron.Tests.Trees
 {
 	public class Updates : StorageTest
 	{
-
 		[Fact]
 		public void CanUpdateVeryLargeValueAndThenDeleteIt()
 		{
