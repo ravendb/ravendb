@@ -39,7 +39,7 @@ namespace Voron.Impl
 			Transaction.Dispose();
 		}
 
-		public IIterator MulitRead(string treeName, Slice key)
+		public IIterator MultiRead(string treeName, Slice key)
 		{
 			var tree = treeName == null ? _env.Root : Transaction.Environment.GetTree(Transaction, treeName);
 			return tree.MultiRead(Transaction, key);
