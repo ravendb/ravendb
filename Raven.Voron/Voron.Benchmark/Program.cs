@@ -243,7 +243,7 @@ namespace Voron.Benchmark
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                using (var stream = env.Root.Read(tx, key))
+                                using (var stream = env.Root.Read(tx, key).Stream)
                                 {
                                     while (stream.Read(ms, 0, ms.Length) != 0)
                                     {
@@ -273,7 +273,7 @@ namespace Voron.Benchmark
                     for (int i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         var key = i.ToString("0000000000000000");
-                        using (var stream = env.Root.Read(tx, key))
+                        using (var stream = env.Root.Read(tx, key).Stream)
                         {
                             while (stream.Read(ms, 0, ms.Length) != 0)
                             {
@@ -328,7 +328,7 @@ namespace Voron.Benchmark
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                using (var stream = env.Root.Read(tx, key))
+                                using (var stream = env.Root.Read(tx, key).Stream)
                                 {
                                     while (stream.Read(ms, 0, ms.Length) != 0)
                                     {

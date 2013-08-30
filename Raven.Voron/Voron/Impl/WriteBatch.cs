@@ -33,21 +33,31 @@
 
 		public void Add(Slice key, Stream value, string treeName, ushort? version = null)
 		{
+			AssertValidAdd(value, treeName);
+
+			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.Add));
+		}
+
+		private static void AssertValidAdd(Stream value, string treeName)
+		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length == 0)
 				throw new ArgumentException("Cannot add empty value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
-
-			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.Add));
 		}
 
 		public void Delete(Slice key, string treeName, ushort? version = null)
 		{
-			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+			AssertValidRemove(treeName);
 
 			_operations.Add(new BatchOperation(key, null, version, treeName, BatchOperationType.Delete));
+		}
+
+		private static void AssertValidRemove(string treeName)
+		{
+			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 		}
 
 		public class BatchOperation
@@ -86,7 +96,7 @@
 		public enum BatchOperationType
 		{
 			Add,
-			Delete
+			Delete,
 		}
 
 		public void Dispose()

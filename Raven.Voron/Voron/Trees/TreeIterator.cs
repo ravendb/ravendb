@@ -60,6 +60,35 @@ namespace Voron.Trees
 			}
 		}
 
+		public bool MovePrev()
+		{
+			while (true)
+			{
+				_currentPage.LastSearchPosition--;
+				if (_currentPage.LastSearchPosition >= 0)
+				{
+					// run out of entries, need to select the next page...
+					while (_currentPage.IsBranch)
+					{
+						_cursor.Push(_currentPage);
+						var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
+						_currentPage = _tx.GetReadOnlyPage(node->PageNumber);
+						_currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
+					}
+					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
+					if (this.ValidateCurrentKey(current, _cmp) == false)
+						return false;
+					_currentKey.Set(current);
+					return true;// there is another entry in this page
+				}
+				if (_cursor.PageCount == 0)
+					break;
+				_currentPage = _cursor.Pop();
+			}
+			_currentPage = null;
+			return false;
+		}
+
 		public bool MoveNext()
 		{
 			while (true)
@@ -102,6 +131,8 @@ namespace Voron.Trees
 		public Slice RequiredPrefix { get; set; }
 
 		public Slice MaxKey { get; set; }
+
+	
 	}
 
     public static class IteratorExtensions

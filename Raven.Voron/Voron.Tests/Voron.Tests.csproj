@@ -49,6 +49,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bugs\EmptyTree.cs" />
+    <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Impl\ConsecutiveSequencesTests.cs" />
     <Compile Include="MultiValueTree.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -60,6 +62,7 @@
     <Compile Include="Storage\Snapshots.cs" />
     <Compile Include="Storage\VeryBig.cs" />
     <Compile Include="Trees\Basic.cs" />
+    <Compile Include="Trees\CanIterateBackward.cs" />
     <Compile Include="Trees\Deletes.cs" />
     <Compile Include="Trees\FreeSpaceTest.cs" />
     <Compile Include="Trees\ItemsCount.cs" />

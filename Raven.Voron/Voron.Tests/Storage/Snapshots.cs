@@ -18,7 +18,7 @@ namespace Voron.Tests.Storage
 
 			using (var snapshot = Env.CreateSnapshot())
 			{
-				using (var stream = snapshot.Read(null, "key/1"))
+				using (var stream = snapshot.Read(null, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
@@ -40,7 +40,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using(var stream = Env.Root.Read(tx, "key/1"))
+				using(var stream = Env.Root.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();

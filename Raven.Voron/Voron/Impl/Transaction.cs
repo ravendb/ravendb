@@ -179,6 +179,9 @@ namespace Voron.Impl
 				if (string.IsNullOrEmpty(kvp.Key.Name))
 					continue;
 
+				if (txInfo.RootPageNumber == tree.State.RootPageNumber)
+					continue; // not modified
+
 				var treePtr = (TreeRootHeader*)_env.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
 				tree.State.CopyTo(treePtr);
 			}

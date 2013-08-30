@@ -343,11 +343,13 @@ namespace Voron.Impl
                 Id = sectionId,
                 Sequences = new ConsecutiveSequences()
             };
-            using (var stream = _env.FreeSpaceRoot.Read(tx, key))
-            {
-                if (stream == null)
-                    return section;
 
+	        var read = _env.FreeSpaceRoot.Read(tx, key);
+			if (read == null)
+				return section;
+
+            using (var stream = read.Stream)
+            {
                 var savedSectionId = ReadSectionPages(stream, section);
                 Debug.Assert(savedSectionId == sectionId);
                 return section;

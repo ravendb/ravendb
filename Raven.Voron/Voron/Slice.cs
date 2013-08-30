@@ -123,10 +123,11 @@ namespace Voron
 			// this is used for debug purposes only
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
+			
+			if(_array != null)
+			return Encoding.UTF8.GetString(_array);
 
-			return _array != null
-		               ? Encoding.UTF8.GetString(_array)
-		               : Marshal.PtrToStringAnsi(new IntPtr(_pointer), _pointerSize);
+		    return new string((sbyte*) _pointer, 0, _pointerSize, Encoding.UTF8);
 		}
 
 		public int Compare(Slice other, SliceComparer cmp)
@@ -212,5 +213,13 @@ namespace Voron
             return new Slice(buffer);
 	    }
 
+		public long ToInt64()
+		{
+			if (Size != sizeof (long))
+				throw new NotSupportedException("Invalid size for int 64 key");
+			if (_array != null)
+				return BitConverter.ToInt64(_array, 0);
+			return *(long*) _pointer;
+		}
 	}
 }

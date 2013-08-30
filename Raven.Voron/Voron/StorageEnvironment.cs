@@ -133,6 +133,26 @@ namespace Voron
 			throw new InvalidOperationException("No such tree: " + name);
 		}
 
+
+		public void DeleteTree(Transaction tx, string name)
+		{
+			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+				throw new ArgumentException("Cannot create a new tree with a read only transaction");
+
+			Tree tree;
+			if (_trees.TryGetValue(name, out tree) == false)
+				return;
+
+			foreach (var page in tree.AllPages(tx))
+			{
+				tx.FreePage(page);
+			}
+
+			Root.Delete(tx, name);
+
+			_trees.Remove(name);
+		}
+
 		public Tree CreateTree(Transaction tx, string name)
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
@@ -156,7 +176,7 @@ namespace Voron
 
 			tree = Tree.Create(tx, _sliceComparer);
 			tree.Name = name;
-			var space = tree.DirectAdd(tx, key, sizeof(TreeRootHeader));
+			var space = Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 			tree.State.CopyTo((TreeRootHeader*)space);
 
 			_trees.Add(name, tree);
