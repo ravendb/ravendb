@@ -3,8 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Database.Tasks;
-
 namespace Raven.Database.Storage.Voron
 {
 	using System;
@@ -14,10 +12,6 @@ namespace Raven.Database.Storage.Voron
 
 	public class TableStorage : IDisposable
 	{
-	    private const string DetailsTreeName = "details";
-        private const string DocumentsTreeName = "documents";
-        private const string DocumentsKeyByEtagIndexName = "key_by_etag";
-
 	    private readonly IPersistanceSource persistanceSource;
 
 		private readonly StorageEnvironment env;
@@ -38,7 +32,7 @@ namespace Raven.Database.Storage.Voron
 
 		public Table Details { get; private set; }
 
-        public IndexedTable Documents { get; private set; }
+        public Table Documents { get; private set; }
 
 	    public void Write(WriteBatch writeBatch)
 	    {
@@ -59,11 +53,8 @@ namespace Raven.Database.Storage.Voron
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-			    env.CreateTree(tx, DetailsTreeName);
-
-			    env.CreateTree(tx, DocumentsTreeName);
-                
-			    env.CreateTree(tx, Documents.GetIndexKey(DocumentsKeyByEtagIndexName));
+				CreateDetailsSchema(tx);
+				CreateDocumentsSchema(tx);
 
                 //TODO : add trees creation code here as needed - when accessors are added to StorageActionAccessor class 
 
@@ -71,10 +62,21 @@ namespace Raven.Database.Storage.Voron
 			}
 		}
 
+		private void CreateDetailsSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.Details.TableName);
+		}
+
+		private void CreateDocumentsSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.Documents.TableName);
+			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
+		}
+
 	    private void Initialize()
 	    {
-            Documents = new IndexedTable(DocumentsTreeName, DocumentsKeyByEtagIndexName);
-            Details = new Table(DetailsTreeName);
+            Documents = new Table(Tables.Documents.TableName, Tables.Documents.Indices.KeyByEtag);
+            Details = new Table(Tables.Details.TableName);
 	    }
 	}
 }

@@ -1,29 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.MEF;
-using Raven.Database.Impl;
-using Raven.Database.Plugins;
-using Raven.Database.Util.Streams;
-using Raven.Json.Linq;
-using Voron.Impl;
-using Raven.Abstractions.Extensions;
-using System.Linq;
-using Constants = Raven.Abstractions.Data.Constants;
-
-namespace Raven.Database.Storage.Voron
+﻿namespace Raven.Database.Storage.Voron
 {
-    public class DocumentsStorageActions : IDocumentStorageActions
+	using System;
+	using System.Collections.Generic;
+	using System.IO;
+	using System.Text;
+	using Raven.Abstractions;
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Exceptions;
+	using Raven.Abstractions.MEF;
+	using Raven.Database.Impl;
+	using Raven.Database.Plugins;
+	using Raven.Database.Util.Streams;
+	using Raven.Json.Linq;
+	using Raven.Abstractions.Extensions;
+
+	using global::Voron.Impl;
+
+	public class DocumentsStorageActions : IDocumentStorageActions
     {
-        private const string DocumentKeyByEtagIndexName = "key_by_etag";
         private const string MetadataSuffix = "metadata";
         private const string DataSuffix = "data";
 
-        private readonly IndexedTable documentsTable;
+        private readonly Table documentsTable;
 
         private readonly WriteBatch writeBatch;
         private readonly SnapshotReader snapshot;
@@ -39,7 +37,7 @@ namespace Raven.Database.Storage.Voron
             IDocumentCacher documentCacher,
             WriteBatch writeBatch,
             SnapshotReader snapshot,
-            IndexedTable documentsTable)
+            Table documentsTable)
         {
             this.snapshot = snapshot;
             this.uuidGenerator = uuidGenerator;
@@ -109,7 +107,7 @@ namespace Raven.Database.Storage.Voron
 
             var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 
-            documentsTable.GetIndex(DocumentKeyByEtagIndexName)
+            documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
                           .Add(writeBatch, etag ?? newEtag, Encoding.UTF8.GetBytes(key));
 
             var savedAt = SystemTime.UtcNow;
