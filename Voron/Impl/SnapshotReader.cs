@@ -38,11 +38,10 @@ namespace Voron.Impl
 			_tx.Dispose();
 		}
 
-		public IIterator MulitRead(string treeName, Slice key)
+		public IIterator MultiRead(string treeName, Slice key)
 		{
 			var tree = treeName == null ? _env.Root : _tx.Environment.GetTree(treeName);
 			return tree.MultiRead(_tx, key);
-		
 		}
 	}
 }
