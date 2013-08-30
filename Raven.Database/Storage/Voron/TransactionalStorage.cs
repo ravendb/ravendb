@@ -153,7 +153,7 @@
 
 				using (var writeIdBatch = new WriteBatch())
 				{
-					tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
+					tableStorage.Details.AddOrUpdate(writeIdBatch, "id", Id.ToByteArray());
 					tableStorage.Write(writeIdBatch);
 				}
 			}
@@ -219,7 +219,7 @@
 			using (var changeIdWriteBatch = new WriteBatch())
 			{
                 tableStorage.Details.Delete(changeIdWriteBatch, "id");
-                tableStorage.Details.Add(changeIdWriteBatch, "id", newId.ToByteArray());
+                tableStorage.Details.AddOrUpdate(changeIdWriteBatch, "id", newId.ToByteArray());
 
 				tableStorage.Write(changeIdWriteBatch);
 			}

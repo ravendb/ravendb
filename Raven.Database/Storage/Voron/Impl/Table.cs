@@ -16,7 +16,7 @@
 				GetIndex(indexName);
 		}
 
-		public TableBase GetIndex(string indexName)
+		public Index GetIndex(string indexName)
 		{
 			if (string.IsNullOrEmpty(indexName))
 				throw new ArgumentNullException(indexName);

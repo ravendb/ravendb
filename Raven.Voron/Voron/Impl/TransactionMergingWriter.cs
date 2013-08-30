@@ -7,10 +7,9 @@
 	using System.IO;
 	using System.Linq;
 	using System.Threading;
-	using System.Threading.Tasks;
 
-	using Extensions;
-	using Trees;
+	using Voron.Impl.Extensions;
+	using Voron.Trees;
 
 	public class TransactionMergingWriter
 	{
@@ -107,16 +106,16 @@
 					switch (operation.Type)
 					{
 						case WriteBatch.BatchOperationType.Add:
-							tree.Add(tx, operation.Key, operation.Value, operation.Version);
+							tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
 							break;
 						case WriteBatch.BatchOperationType.Delete:
 							tree.Delete(tx, operation.Key, operation.Version);
 							break;
 						case WriteBatch.BatchOperationType.MultiAdd:
-							tree.MultiAdd(tx, operation.Key, new Slice(ConvertStreamToByteArray(operation.Value)), operation.Version);
+							tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
 							break;
 						case WriteBatch.BatchOperationType.MultiDelete:
-							tree.MultiDelete(tx, operation.Key, new Slice(ConvertStreamToByteArray(operation.Value)), operation.Version);
+							tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
 							break;
 					}
 				}
@@ -177,19 +176,6 @@
 				return _env.Root;
 
 			return _env.GetTree(null, treeName);
-		}
-
-		private byte[] ConvertStreamToByteArray(Stream input)
-		{
-			var buffer = new byte[4 * 1024];
-			using (var output = new MemoryStream())
-			{
-				int read;
-				while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-					output.Write(buffer, 0, read);
-
-				return output.ToArray();
-			}
 		}
 
 		private class OutstandingWrite

@@ -21,5 +21,31 @@ namespace Raven.Database.Storage.Voron.Impl
 				public const string KeyByEtag = "key_by_etag";
 			}
 		}
+
+		public class IndexingStats
+		{
+			public const string TableName = "indexing_stats";
+		}
+
+		public class LastIndexedEtags
+		{
+			public const string TableName = "last_indexed_etags";
+		}
+
+		public class DocumentReferences
+		{
+			public const string TableName = "document_references";
+
+			public class Indices
+			{
+				public const string ByViewAndKey = "by_view_and_key";
+
+				public const string ByRef = "by_ref";
+
+				public const string ByView = "by_view";
+
+				public const string ByKey = "by_key";
+			}
+		}
 	}
 }

@@ -826,6 +826,7 @@
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Index.cs" />
+    <Compile Include="Storage\Voron\IndexingStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Table.cs" />
     <Compile Include="Storage\Voron\Impl\IPersistanceSource.cs" />
     <Compile Include="Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />

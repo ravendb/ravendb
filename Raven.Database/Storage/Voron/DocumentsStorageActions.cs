@@ -103,13 +103,13 @@
 
             metadata.WriteTo(metadataStream);
 
-            documentsTable.Add(writeBatch, DataKey(key),finalDataStream);
-            documentsTable.Add(writeBatch, MetadataKey(key), metadataStream);
+            documentsTable.AddOrUpdate(writeBatch, DataKey(key),finalDataStream);
+            documentsTable.AddOrUpdate(writeBatch, MetadataKey(key), metadataStream);
 
             var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 
             documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-                          .Add(writeBatch, etag ?? newEtag, Encoding.UTF8.GetBytes(key));
+                          .AddOrUpdate(writeBatch, etag ?? newEtag, Encoding.UTF8.GetBytes(key));
 
             var savedAt = SystemTime.UtcNow;
             
