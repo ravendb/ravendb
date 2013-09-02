@@ -128,7 +128,7 @@ namespace Raven.Tests.Helpers
 			var store = new DocumentStore
 			{
 				Url = GetServerUrl(fiddler),
-				DefaultDatabase = databaseName,                
+				DefaultDatabase = databaseName,
 			};
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
@@ -221,11 +221,11 @@ namespace Raven.Tests.Helpers
 			string storageType = GetDefaultStorageType(requestedStorage);
 
 			if (storageType == "munin")
-				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration {DataDirectory = dataDir ?? NewDataPath(),}, () => { });
-            else if (storageType == "voron")
-                newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir, }, () => { });
-            else
-				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration {DataDirectory = dataDir ?? NewDataPath(),}, () => { });
+				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
+			else if (storageType == "voron")
+				newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
+			else
+				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
 
 			newTransactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;

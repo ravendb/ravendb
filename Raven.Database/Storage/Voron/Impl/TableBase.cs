@@ -56,8 +56,9 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void AddOrUpdate(WriteBatch writeBatch, string key, RavenJToken value, ushort? expectedVersion = null)
 		{
-			var stream = new BufferPoolStream(new MemoryStream(), new BufferPool(BufferPoolStream.MaxBufferSize * 2, BufferPoolStream.MaxBufferSize));
+			var stream = new MemoryStream();
 			value.WriteTo(stream);
+			stream.Position = 0;
 
 			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}

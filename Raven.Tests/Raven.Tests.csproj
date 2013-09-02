@@ -1194,6 +1194,7 @@
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
     <Compile Include="Storage\Lists.cs" />
+    <Compile Include="Storage\Voron\VoronIndexingStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\VoronIntegrationTests.cs" />
     <Compile Include="Storage\Voron\VoronTransactionalStorageTests.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
@@ -1474,6 +1475,10 @@
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Web\Raven.Web.csproj">
       <Project>{f49c2ed0-1844-44b4-a595-5fd152853b9c}</Project>

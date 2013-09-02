@@ -27,6 +27,7 @@ namespace Raven.Database.Storage.Voron
             this.writeBatch = writeBatch;
             this.snapshot = snapshot;
             Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatch, snapshot, storage.Documents);
+			Indexing = new IndexingStorageActions(storage, snapshot, writeBatch);
         }
 
 

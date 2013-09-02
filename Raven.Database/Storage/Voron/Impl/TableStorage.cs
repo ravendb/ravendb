@@ -74,10 +74,10 @@ namespace Raven.Database.Storage.Voron.Impl
 		private void CreateDocumentReferencesSchema(Transaction tx)
 		{
 			env.CreateTree(tx, Tables.DocumentReferences.TableName);
-			env.CreateTree(tx, Documents.GetIndexKey(Tables.DocumentReferences.Indices.ByRef));
-			env.CreateTree(tx, Documents.GetIndexKey(Tables.DocumentReferences.Indices.ByView));
-			env.CreateTree(tx, Documents.GetIndexKey(Tables.DocumentReferences.Indices.ByViewAndKey));
-			env.CreateTree(tx, Documents.GetIndexKey(Tables.DocumentReferences.Indices.ByKey));
+			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByRef));
+			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByView));
+			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByViewAndKey));
+			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByKey));
 		}
 
 		private void CreateLastIndexedEtagsSchema(Transaction tx)

@@ -81,7 +81,7 @@
 		{
 			AssertValidMultiOperation(value, treeName);
 
-			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.MultiAdd));
+			_operations.Add(new BatchOperation(key, value, version, treeName, BatchOperationType.MultiDelete));
 		}
 
 		public class BatchOperation
