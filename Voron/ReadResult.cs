@@ -9,7 +9,7 @@ namespace Voron
 		public ReadResult(Stream stream, ushort version)
 		{
 			Stream = stream;
-			Version = Version;
+			Version = version;
 		}
 
 		public Stream Stream { get; private set; }
