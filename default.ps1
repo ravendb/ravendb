@@ -670,11 +670,14 @@ task CreateNugetPackages -depends Compile {
 
 task PublishSymbolSources -depends CreateNugetPackages {
 	
+	$nuget_dir = "$build_dir\NuGet"
+	
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	
 	# Package the symbols package
 	$packages | ForEach-Object { 
 		$dirName = [io.path]::GetFileNameWithoutExtension($_)
+		Remove-Item $nuget_dir\$dirName\src -Force -Recurse -ErrorAction SilentlyContinue
 		New-Item $nuget_dir\$dirName\src -Type directory | Out-Null
 		
 		$srcDirName = $dirName
@@ -707,8 +710,10 @@ task PublishSymbolSources -depends CreateNugetPackages {
                 $fileToCopy = $compile.Include
                 $copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
                 
-				Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
-				Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+				if ($global:isDebugEnabled) {
+					Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
+					Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+				}
 				New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
                 Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
             }
@@ -750,8 +755,10 @@ task PublishSymbolSources -depends CreateNugetPackages {
 						$fileToCopy = $compile.Include;
 						$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
 						
-						Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
-						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+						if ($global:isDebugEnabled) {
+							Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
+							Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+						}
 						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
 						Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
 					}
@@ -759,9 +766,16 @@ task PublishSymbolSources -depends CreateNugetPackages {
 				
 			}
 		}
-
-		Get-ChildItem "$nuget_dir\$dirName\lib\*.*" -recurse -exclude Raven* | ForEach-Object {
-			Remove-Item -force -recurse -ErrorAction SilentlyContinue
+		
+		if (Test-Path "$nuget_dir\$dirName\lib") {
+			Get-ChildItem "$nuget_dir\$dirName\lib\*.*" -recurse -exclude Raven* | ForEach-Object {
+				Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+			}
+		}
+		if (Test-Path "$nuget_dir\$dirName\tools") {
+			Get-ChildItem "$nuget_dir\$dirName\tools\*.*" -recurse -exclude Raven* | ForEach-Object {
+				Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+			}
 		}
 		
 		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
