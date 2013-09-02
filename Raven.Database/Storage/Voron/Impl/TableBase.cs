@@ -9,7 +9,6 @@ namespace Raven.Database.Storage.Voron.Impl
 	using System.IO;
 
 	using Raven.Abstractions.Extensions;
-	using Raven.Database.Util.Streams;
 	using Raven.Json.Linq;
 
 	using global::Voron;
@@ -28,17 +27,17 @@ namespace Raven.Database.Storage.Voron.Impl
 			TableName = tableName;
 		}
 
-		public virtual void Add(WriteBatch writeBatch, string key, byte[] value)
+		public virtual void Add(WriteBatch writeBatch, Slice key, byte[] value)
 		{
 			AddOrUpdate(writeBatch, key, value, 0);
 		}
 
-		public virtual void Add(WriteBatch writeBatch, string key, Stream value)
+		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value)
 		{
 			AddOrUpdate(writeBatch, key, value, 0);
 		}
 
-		public virtual void Add(WriteBatch writeBatch, string key, RavenJToken value)
+		public virtual void Add(WriteBatch writeBatch, Slice key, RavenJToken value)
 		{
 			AddOrUpdate(writeBatch, key, value, 0);
 		}
@@ -49,12 +48,12 @@ namespace Raven.Database.Storage.Voron.Impl
 			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}
 
-		public virtual void AddOrUpdate(WriteBatch writeBatch, string key, Stream value, ushort? expectedVersion = null)
+		public virtual void AddOrUpdate(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null)
 		{
 			writeBatch.Add(key, value, TableName, expectedVersion);
 		}
 
-		public virtual void AddOrUpdate(WriteBatch writeBatch, string key, RavenJToken value, ushort? expectedVersion = null)
+		public virtual void AddOrUpdate(WriteBatch writeBatch, Slice key, RavenJToken value, ushort? expectedVersion = null)
 		{
 			var stream = new MemoryStream();
 			value.WriteTo(stream);
@@ -83,14 +82,9 @@ namespace Raven.Database.Storage.Voron.Impl
 			return snapshot.Iterate(TableName);
 		}
 
-		public bool Contains(SnapshotReader snapshot, string key)
+		public bool Contains(SnapshotReader snapshot, Slice key)
 		{
 			return snapshot.ReadVersion(TableName, key) > 0;
-		}
-
-		public virtual void Delete(WriteBatch writeBatch, string key, ushort? expectedVersion = null)
-		{
-			writeBatch.Delete(key, TableName, expectedVersion);
 		}
 
 		public virtual void Delete(WriteBatch writeBatch, Slice key, ushort? expectedVersion = null)

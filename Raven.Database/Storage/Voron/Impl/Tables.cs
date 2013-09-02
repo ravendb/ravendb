@@ -47,5 +47,15 @@ namespace Raven.Database.Storage.Voron.Impl
 				public const string ByKey = "by_key";
 			}
 		}
+
+		public class Queues
+		{
+			public const string TableName = "queues";
+
+			public class Indices
+			{
+				public const string ByName = "by_name";
+			}
+		}
 	}
 }
