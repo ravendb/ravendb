@@ -760,12 +760,15 @@ task PublishSymbolSources -depends CreateNugetPackages {
 			}
 		}
 
+		Get-ChildItem "$nuget_dir\$dirName\lib\*.*" -recurse -exclude Raven* | ForEach-Object {
+			Remove-Item -force -recurse -ErrorAction SilentlyContinue
+		}
+		
+		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
+		
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
 	}
-	
-	Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
-	Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
-	
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
