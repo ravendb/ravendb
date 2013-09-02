@@ -97,7 +97,7 @@ public class DynamicAggregationQuery<T> {
   private void setFacet(Path<?> path, FacetAggregation facetAggregation) {
     AggregationQueryDsl last = facets.get(facets.size() - 1);
     last.setAggregrationField(ExpressionExtensions.toPropertyPath(path));
-    last.setAggregationType(path.getType().getName());
+    last.setAggregationType(path.getType().getName()); //TODO: java class to .net class!
     last.getAggregation().add(facetAggregation);
   }
 

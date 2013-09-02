@@ -4,13 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
-import org.mockito.internal.matchers.Or;
-
-import com.mysema.query.annotations.QueryEntity;
 
 import raven.abstractions.data.FacetResult;
 import raven.abstractions.data.FacetResults;
@@ -21,7 +17,8 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 import raven.client.indexes.AbstractIndexCreationTask;
-import raven.client.linq.IRavenQueryable;
+
+import com.mysema.query.annotations.QueryEntity;
 
 public class AggregationTest extends RemoteClientTest {
 
@@ -323,8 +320,8 @@ public class AggregationTest extends RemoteClientTest {
                 o.total.goe(100).and(o.total.lt(500)),
                 o.total.goe(500).and(o.total.lt(1500)),
                 o.total.goe(1500))
-            .sumOn(o.total)
-            .toList();
+                .sumOn(o.total)
+                .toList();
 
         FacetResult facetResult = r.getResults().get("Product");
         assertEquals(2, facetResult.getValues().size());
@@ -343,7 +340,16 @@ public class AggregationTest extends RemoteClientTest {
         for (FacetValue facetValue : facetResult.getValues()) {
           sumLookup.put(facetValue.getRange(), facetValue.getSum());
         }
-        assertEquals(Double.valueOf(12.0), sumLookup.get("[NULL to Dx100]"), 0.001);
+
+        /* TODO:
+         * .net
+         * http://localhost:8079/facets/Orders/All?&facetStart=0&facetPageSize=&facets=%5B%7B"Mode":0,"Aggregation":16,"AggregationField":"Total","AggregationType":"System.Decimal","Name":"Product","DisplayName":"Product","Ranges":null,"MaxResults":null,"TermSortMode":0,"IncludeRemainingTerms":false%7D,%7B"Mode":1,"Aggregation":16,"AggregationField":"Total","AggregationType":"System.Decimal","Name":"Total_Range","DisplayName":"Total_Range","Ranges":%5B"%5BNULL%20TO%20Dx100%5D","%7BDx100%20TO%20Dx500%5D","%7BDx500%20TO%20Dx1500%5D","%7BDx1500%20TO%20NULL%5D"%5D,"MaxResults":null,"TermSortMode":0,"IncludeRemainingTerms":false%7D%5D
+         * java:
+         * http://localhost:8123/databases/canCorrectlyAggregate_Ranges/facets/Orders/All?&
+         * operator=AND&facets=[{"DisplayName":null,"Mode":"Default","Aggregation":16,"AggregationField":"Total","AggregationType":"java.lang.Double","Name":"Product","Ranges":[],"MaxResults":null,"TermSortMode":"ValueAsc","IsIncludeRemainingTerms":false},{"DisplayName":null,"Mode":"Ranges","Aggregation":16,"AggregationField":"Total","AggregationType":"java.lang.Double","Name":"Total","Ranges":["[NULL+TO+Dx100]","{Dx100+TO+Dx500]","{Dx500+TO+Dx1500]","{Dx1500+TO+NULL]"],"MaxResults":null,"TermSortMode":"ValueAsc","IsIncludeRemainingTerms":false}]
+         *
+         */
+        assertEquals(Double.valueOf(12.0), sumLookup.get("[NULL TO Dx100]"), 0.001);
         assertEquals(Double.valueOf(3333), sumLookup.get("{Dx1500 TO NULL]"), 0.001);
 
 

@@ -8,7 +8,6 @@ import java.util.List;
 
 import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetAggregation;
-import raven.abstractions.data.FacetDsl;
 import raven.abstractions.data.FacetMode;
 
 public class AggregationQueryDsl extends AggregationQuery {
@@ -33,7 +32,7 @@ public class AggregationQueryDsl extends AggregationQuery {
       List<String> ranges =  new ArrayList<>();
       if (shouldUseRanges) {
         for (BooleanExpression expr: aggregationQuery.getRanges()) {
-          ranges.add(FacetDsl.parse(expr));
+          ranges.add(Facet.parse(expr));
         }
       }
 

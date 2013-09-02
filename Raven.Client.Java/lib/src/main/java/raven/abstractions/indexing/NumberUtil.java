@@ -1,5 +1,7 @@
 package raven.abstractions.indexing;
 
+import org.apache.commons.lang.StringUtils;
+
 /**
  * Helper function for numeric to indexed string and vice versa
  */
@@ -28,7 +30,7 @@ public class NumberUtil {
    * @return
    */
   public static String numberToString(float number) {
-    return "Fx" + number;
+    return "Fx" + trimZeros(Float.toString(number));
   }
 
   /**
@@ -37,7 +39,21 @@ public class NumberUtil {
    * @return
    */
   public static String numberToString(double number) {
-    return "Dx" + number;
+    return "Dx" + trimZeros(Double.toString(number));
+  }
+
+  /**
+   * Removes zeros from the end of the string but only from fractional part
+   * if string ends with dot after first operation, we remove dot as well.
+   * @param input
+   * @return
+   */
+  private static String trimZeros(String input) {
+    if (!input.contains(".")) {
+      return input;
+    }
+    input = StringUtils.stripEnd(input, "0");
+    return StringUtils.stripEnd(input, ".");
   }
 
   /**

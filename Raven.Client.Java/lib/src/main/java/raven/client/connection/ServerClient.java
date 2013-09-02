@@ -2167,11 +2167,11 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
   }
 
   protected FacetResults directGetFacets(String operationUrl, String index, IndexQuery query, String facetsJson, int start, Integer pageSize, HttpMethods method) {
-    String requestUri = operationUrl + String.format("/facets/%s?%s&facetStart=%d&facetPageSize=%d",
+    String requestUri = operationUrl + String.format("/facets/%s?%s&facetStart=%d&facetPageSize=%s",
         UrlUtils.escapeUriString(index),
         query.getMinimalQueryString(),
         start,
-        pageSize);
+        (pageSize !=null ) ? pageSize.toString() : "");
 
     if(method == HttpMethods.GET) {
       requestUri += "&facets=" + UrlUtils.escapeDataString(facetsJson);
