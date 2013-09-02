@@ -4,3 +4,5 @@ bin/
 packages/
 
 /*.user
+
+/Voron/*.user

@@ -52,7 +52,7 @@ namespace Voron.Impl
 
 		public Dictionary<string, Tree> ModifiedTrees
 		{
-			get { return modifiedTrees ?? (modifiedTrees = new Dictionary<string, Tree>()); }
+			get { return modifiedTrees ?? (modifiedTrees = new Dictionary<string, Tree>(StringComparer.OrdinalIgnoreCase)); }
 		}
 
 		public bool Committed { get; private set; }
