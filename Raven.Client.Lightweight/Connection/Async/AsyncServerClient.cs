@@ -1794,6 +1794,7 @@ namespace Raven.Client.Connection.Async
 			{
 				try
 				{
+                    task.AssertNotFailed();
 					var deserializeJsonDocumentMetadata = SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
 					return (Task<JsonDocumentMetadata>)new CompletedTask<JsonDocumentMetadata>(deserializeJsonDocumentMetadata);
 				}
