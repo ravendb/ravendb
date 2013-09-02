@@ -767,15 +767,14 @@ task PublishSymbolSources -depends CreateNugetPackages {
 			}
 		}
 		
-		if (Test-Path "$nuget_dir\$dirName\lib") {
-			Get-ChildItem "$nuget_dir\$dirName\lib\*.*" -recurse -exclude Raven* | ForEach-Object {
-				Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
-			}
+		Get-ChildItem "$nuget_dir\$dirName\*.dll" -recurse -exclude Raven* | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
 		}
-		if (Test-Path "$nuget_dir\$dirName\tools") {
-			Get-ChildItem "$nuget_dir\$dirName\tools\*.*" -recurse -exclude Raven* | ForEach-Object {
-				Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
-			}
+		Get-ChildItem "$nuget_dir\$dirName\*.pdb" -recurse -exclude Raven* | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+		}
+		Get-ChildItem "$nuget_dir\$dirName\*.xml" -recurse | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
 		}
 		
 		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
