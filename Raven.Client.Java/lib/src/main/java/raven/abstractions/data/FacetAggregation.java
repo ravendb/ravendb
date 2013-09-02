@@ -1,10 +1,10 @@
 package raven.abstractions.data;
 
-import raven.abstractions.basic.SerializeAsFlags;
+import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.UseSharpEnum;
 
 @UseSharpEnum
-@SerializeAsFlags
+@SerializeUsingValue
 public enum FacetAggregation{
   NONE(0),
   COUNT(1),

@@ -18,6 +18,7 @@ import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.MapperConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
+import org.codehaus.jackson.map.SerializationConfig.Feature;
 import org.codehaus.jackson.map.SerializerProvider;
 import org.codehaus.jackson.map.deser.std.FromStringDeserializer;
 import org.codehaus.jackson.map.deser.std.StdDeserializer;
@@ -27,9 +28,10 @@ import org.codehaus.jackson.map.introspect.AnnotatedParameter;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.codehaus.jackson.map.ser.std.SerializerBase;
 
-import raven.abstractions.basic.SerializeAsFlags;
+import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
+import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -47,6 +49,7 @@ public class JsonExtensions {
         objectMapper = new ObjectMapper();
         objectMapper.setPropertyNamingStrategy(new DotNetNamingStrategy());
         objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
+        objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
         objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
         jsonFactory = objectMapper.getJsonFactory();
 
@@ -63,14 +66,40 @@ public class JsonExtensions {
     module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer<RavenJToken>(RavenJToken.class));
     module.addDeserializer(RavenJArray.class, new RavenJTokenDeserializer<RavenJArray>(RavenJArray.class));
     module.addDeserializer(RavenJValue.class, new RavenJTokenDeserializer<RavenJValue>(RavenJValue.class));
-    module.addSerializer(EnumSet.class, new EnumSetSerializer());
+    module.addSerializer(EnumSet.class, new RavenEnumSetSerializer());
+    //TODO: add deserializer for enumset and enum!
+    module.addSerializer(SortOptions.class, new RavenEnumSerializer(SortOptions.class));
     return module;
   }
 
-  @SuppressWarnings("rawtypes")
-  public static class EnumSetSerializer extends SerializerBase<EnumSet> {
+  public static class RavenEnumSerializer extends SerializerBase<Enum<?>> {
 
-    protected EnumSetSerializer() {
+    @SuppressWarnings("unchecked")
+    protected RavenEnumSerializer(Class<? extends Enum<?>> t) {
+      super((Class<Enum< ? >>) t);
+    }
+
+    @Override
+    public void serialize(Enum< ? > value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonGenerationException {
+      if (value == null) {
+        jgen.writeNull();
+        return;
+      }
+      try {
+        Method method = value.getClass().getMethod("getValue");
+        Integer intValue = (Integer) method.invoke(value, new Object[] { } );
+        jgen.writeNumber(intValue);
+      } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+  }
+
+  @SuppressWarnings("rawtypes")
+  public static class RavenEnumSetSerializer extends SerializerBase<EnumSet> {
+
+    protected RavenEnumSetSerializer() {
       super(EnumSet.class);
     }
 
@@ -82,7 +111,7 @@ public class JsonExtensions {
           jgen.writeNumber(0);
         } else {
           Enum firstEnum= (Enum) value.iterator().next();
-          SerializeAsFlags serializeAsFlags = firstEnum.getClass().getAnnotation(SerializeAsFlags.class);
+          SerializeUsingValue serializeAsFlags = firstEnum.getClass().getAnnotation(SerializeUsingValue.class);
           if (serializeAsFlags != null) {
             Method method = firstEnum.getClass().getMethod("getValue");
             int result = 0;

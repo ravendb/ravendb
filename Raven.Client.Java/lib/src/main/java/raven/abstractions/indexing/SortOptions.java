@@ -1,5 +1,6 @@
 package raven.abstractions.indexing;
 
+import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.UseSharpEnum;
 
 /**

@@ -97,8 +97,26 @@ public class DynamicAggregationQuery<T> {
   private void setFacet(Path<?> path, FacetAggregation facetAggregation) {
     AggregationQueryDsl last = facets.get(facets.size() - 1);
     last.setAggregrationField(ExpressionExtensions.toPropertyPath(path));
-    last.setAggregationType(path.getType().getName()); //TODO: java class to .net class!
+    last.setAggregationType(mapJavaToDotNetNumberClass(path.getType()));
     last.getAggregation().add(facetAggregation);
+  }
+
+  private String mapJavaToDotNetNumberClass(Class<?> clazz) {
+    if (Integer.class.equals(clazz)) {
+      return "System.Int32";
+    } else if (Long.class.equals(clazz)){
+      return "System.Int64";
+    } else if (Float.class.equals(clazz)) {
+      return "System.Single";
+    } else if (Double.class.equals(clazz)) {
+      return "System.Double";
+    } else if (Short.class.equals(clazz)) {
+      return "System.Int16";
+    } else if (Enum.class.isAssignableFrom(clazz)) {
+      return "System.Int32";
+    } else {
+      throw new IllegalStateException("The isn't mapping defined for: " + clazz.getName());
+    }
   }
 
   public DynamicAggregationQuery<T> maxOn(Path<?> path) {

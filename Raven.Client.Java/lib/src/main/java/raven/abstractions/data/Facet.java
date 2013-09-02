@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 import raven.abstractions.indexing.NumberUtil;
 import raven.abstractions.util.RavenQuery;
@@ -56,7 +57,7 @@ public class Facet {
     return aggregationField;
   }
   public String getDisplayName() {
-    return displayName;
+    return displayName != null ? displayName : name;
   }
   public Integer getMaxResults() {
     return maxResults;
@@ -73,6 +74,8 @@ public class Facet {
   public FacetTermSortMode getTermSortMode() {
     return termSortMode;
   }
+
+  @JsonProperty("includeRemainingTerms") //TODO: it doesn't work!
   public boolean isIncludeRemainingTerms() {
     return includeRemainingTerms;
   }
@@ -82,6 +85,7 @@ public class Facet {
   public void setDisplayName(String displayName) {
     this.displayName = displayName;
   }
+  @JsonProperty("includeRemainingTerms")
   public void setIncludeRemainingTerms(boolean includeRemainingTerms) {
     this.includeRemainingTerms = includeRemainingTerms;
   }
@@ -100,13 +104,19 @@ public class Facet {
   public void setTermSortMode(FacetTermSortMode termSortMode) {
     this.termSortMode = termSortMode;
   }
-  //TODO: remember to set ranges and should use ranges in setRange(Expression method)
 
 
   public void setRanges(BooleanExpression... exprs) {
     for (BooleanExpression expr: exprs) {
       this.ranges.add(parse(expr));
     }
+
+    boolean shouldUseRanges = ranges.size() > 0; //TODO: and type != String.
+    mode = shouldUseRanges ? FacetMode.RANGES : FacetMode.DEFAULT;
+    if (!name.endsWith("_Range")) {
+      name += "_Range";
+    }
+
   }
 
   public void setName(Path<?> path) {

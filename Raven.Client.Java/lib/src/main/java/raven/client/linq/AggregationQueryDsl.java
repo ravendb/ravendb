@@ -40,8 +40,8 @@ public class AggregationQueryDsl extends AggregationQuery {
       FacetMode mode = shouldUseRanges ? FacetMode.RANGES : FacetMode.DEFAULT;
 
       Facet facet = new Facet();
-      facet.setName(aggregationQuery.getName());
-      facet.setDisplayName(aggregationQuery.getDisplayName());
+      facet.setDisplayName(aggregationQuery.getDisplayName() != null ? aggregationQuery.getDisplayName() : aggregationQuery.getName());
+      facet.setName(aggregationQuery.getName() + (shouldUseRanges ? "_Range" : ""));
       facet.setAggregation(aggregationQuery.getAggregation());
       facet.setAggregationType(aggregationQuery.getAggregationType());
       facet.setAggregationField(aggregationQuery.getAggregrationField());

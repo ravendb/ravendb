@@ -233,7 +233,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected Action1<QueryResult> afterQueryExecutedCallback;
   protected Etag cutoffEtag;
-  private QueryOperator defaultOperator;
+  private QueryOperator defaultOperator = QueryOperator.OR;
 
   private static final Pattern ESPACE_POSTFIX_WILDCARD = Pattern.compile("\\\\\\*($|\\s)");
 
