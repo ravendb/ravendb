@@ -47,7 +47,7 @@
         <Storyboard x:Key="HideErrorsPanel">
             <DoubleAnimation Storyboard.TargetName="ErrorArea" Storyboard.TargetProperty="Height" To="24" Duration="0:0:0.1"/>
         </Storyboard>
-        <DataTemplate x:Key="IndexFieldTemplate">
+        <DataTemplate x:Key="IndexFieldTemplate" DataType="Models:FieldProperties">
 			<Border BorderBrush="#FFE9E9E9"
                     BorderThickness="1,1,1,1"
                     CornerRadius="4"
@@ -79,13 +79,26 @@
 
 					<TextBlock Text="Field"
                                VerticalAlignment="Center" />
-					<TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Grid.Column="1"
-                             Grid.ColumnSpan="3"
-                             VerticalAlignment="Center" />
+					<sdk:AutoCompleteBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+										 Grid.Column="1"
+					                     Grid.Row="0" 
+										 Grid.ColumnSpan="3"
+										 MinimumPrefixLength="0"
+										 IsTextCompletionEnabled="True"
+										 VerticalAlignment="Center" >
+						<i:Interaction.Behaviors>
+							<Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
+						</i:Interaction.Behaviors>
+						<i:Interaction.Triggers>
+							<i:EventTrigger EventName="GotFocus">
+								<Behaviors:ShowAutoCompleteDropDown/>
+							</i:EventTrigger>
+						</i:Interaction.Triggers>
+					</sdk:AutoCompleteBox>
 
 					<Button x:Name="RemoveField"
-                            Grid.Column="4"
+					        Grid.Row="0" 
+							Grid.Column="4"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
                             Padding="2"
                             Margin="4 -2 -2 0"
