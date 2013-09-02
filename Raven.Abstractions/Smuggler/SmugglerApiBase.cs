@@ -19,6 +19,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -410,7 +411,7 @@ namespace Raven.Abstractions.Smuggler
 			ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
 
 			ShowProgress("Begin reading documents");
-			var documentCount = await ImportDocuments(jsonReader, sizeStream, options);
+			var documentCount = await ImportDocuments(jsonReader, options);
 			ShowProgress(string.Format("Done with reading documents, total: {0}", documentCount));
 
 			ShowProgress("Begin reading attachments");
@@ -499,7 +500,51 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-		private async Task<int> ImportDocuments(JsonTextReader jsonReader, Stream sizeStream, SmugglerOptions options)
+        private long GetRoughSize(RavenJToken token)
+        {
+            long sum; 
+            switch (token.Type)
+            {
+                case JTokenType.None:
+                    return 0;
+                case JTokenType.Object:
+                    sum = 2;// {}
+                    foreach (var prop in (RavenJObject)token)
+                    {
+                        sum += prop.Key.Length + 1; // name:
+                        sum += GetRoughSize(prop.Value);
+                    }
+                    return sum;
+                case JTokenType.Array:
+                    // the 1 is for ,
+                    return 2 + ((RavenJArray) token).Sum(prop => 1 + GetRoughSize(prop));
+                case JTokenType.Constructor:
+                case JTokenType.Property:
+                case JTokenType.Comment:
+                case JTokenType.Raw:
+                    return 0;
+                case JTokenType.Boolean:
+                    return token.Value<bool>() ? 4 : 5;
+                case JTokenType.Null:
+                    return 4;
+                case JTokenType.Undefined:
+                    return 9;
+                case JTokenType.Date:
+                    return 21;
+                case JTokenType.Bytes:
+                case JTokenType.Integer:
+                case JTokenType.Float:
+                case JTokenType.String:
+                case JTokenType.Guid:
+                case JTokenType.TimeSpan:
+                case JTokenType.Uri:
+                    return token.Value<string>().Length;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+		private async Task<int> ImportDocuments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
 			var count = 0;
 
@@ -516,12 +561,11 @@ namespace Raven.Abstractions.Smuggler
 
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-				var before = sizeStream.Position;
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-				var size = sizeStream.Position - before;
+			    var size = GetRoughSize(document);
 				if (size > 1024 * 1024)
 				{
-					Console.WriteLine("{0:#,#.##;;0} kb - {1}",
+					Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
 									  (double)size / 1024,
 									  document["@metadata"].Value<string>("@id"));
 				}
