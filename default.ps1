@@ -623,19 +623,19 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
-	$nugetVersion = "$version.$env:buildlabel"
+	$global:nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$nugetVersion += "-Unstable"
+		$global:nugetVersion += "-Unstable"
 	}
 	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 
 		$nuspec = [xml](Get-Content $_.FullName)
-		$nuspec.package.metadata.version = $nugetVersion
+		$nuspec.package.metadata.version = $global:nugetVersion
 		$nuspec | Select-Xml '//dependency' |% {
 			if($_.Node.Id.StartsWith('RavenDB')){
-				$_.Node.Version = "[$nugetVersion]"
+				$_.Node.Version = "[$global:nugetVersion]"
 			}
 		}
 		$nuspec.Save($_.FullName);
@@ -659,7 +659,7 @@ task CreateNugetPackages -depends Compile {
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey -Source $sourceFeed }
+			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed }
 		}
 		
 	}
@@ -799,8 +799,8 @@ task PublishSymbolSources -depends CreateNugetPackages {
 		
 		$packages | ForEach-Object {
 			try {
-				Write-Host "Publish symbol package $($_.BaseName).$nugetVersion.symbols.nupkg"
-				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
+				Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
+				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
 			} catch {
 				Write-Host $error[0]
 			}
