@@ -21,7 +21,8 @@ public class AggregationQueryDsl extends AggregationQuery {
     this.ranges = ranges;
   }
 
-  public static List<Facet> getFacets(List<AggregationQueryDsl> aggregationQueries) {
+  //TODO: name clash with parent static method
+  public static List<Facet> getDslFacets(List<AggregationQueryDsl> aggregationQueries) {
     List<Facet> facetsList = new ArrayList<>();
     for (AggregationQueryDsl aggregationQuery : aggregationQueries) {
       if (aggregationQuery.getAggregation().equals(EnumSet.of(FacetAggregation.NONE))) {

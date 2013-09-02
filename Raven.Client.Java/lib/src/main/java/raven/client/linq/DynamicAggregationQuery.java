@@ -127,11 +127,11 @@ public class DynamicAggregationQuery<T> {
   }
 
   public FacetResults toList() {
-    return handleRenames(queryable.toFacets(AggregationQueryDsl.getFacets(facets)));
+    return handleRenames(queryable.toFacets(AggregationQueryDsl.getDslFacets(facets)));
   }
 
   public Lazy<FacetResults> toListLazy() {
-    final Lazy<FacetResults> facetsLazy = queryable.toFacetsLazy(AggregationQueryDsl.getFacets(facets));
+    final Lazy<FacetResults> facetsLazy = queryable.toFacetsLazy(AggregationQueryDsl.getDslFacets(facets));
     return new Lazy<>(new Function0<FacetResults>() {
 
       @Override
