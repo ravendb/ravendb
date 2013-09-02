@@ -802,6 +802,7 @@ task PublishSymbolSources -depends CreateNugetPackages {
 				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
 			} catch {
 				Write-Host $error[0]
+				$LastExitCode = 0
 			}
 		}
 		
