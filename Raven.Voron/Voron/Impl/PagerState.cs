@@ -61,6 +61,11 @@ namespace Voron.Impl
             Interlocked.Increment(ref _refs);
 #if DEBUG
             AddedRefs.Enqueue(new StackTrace(true));
+	        while (AddedRefs.Count > 500)
+	        {
+		        StackTrace trace;
+		        AddedRefs.TryDequeue(out trace);
+	        }
 #endif
         }
     }

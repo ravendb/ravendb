@@ -1,6 +1,7 @@
-﻿namespace Voron
+﻿using System;
+
+namespace Voron
 {
-	using System;
 	using System.IO;
 
 	public class ReadResult : IDisposable
@@ -14,7 +15,6 @@
 		public Stream Stream { get; private set; }
 
 		public ushort Version { get; private set; }
-
 		public void Dispose()
 		{
 			Stream.Dispose();

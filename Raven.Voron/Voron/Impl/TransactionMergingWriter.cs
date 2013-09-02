@@ -7,9 +7,10 @@
 	using System.IO;
 	using System.Linq;
 	using System.Threading;
+	using System.Threading.Tasks;
 
-	using Voron.Impl.Extensions;
-	using Voron.Trees;
+	using Extensions;
+	using Trees;
 
 	public class TransactionMergingWriter
 	{
@@ -117,6 +118,8 @@
 						case WriteBatch.BatchOperationType.MultiDelete:
 							tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
 							break;
+						default:
+							throw new ArgumentOutOfRangeException();
 					}
 				}
 			}

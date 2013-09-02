@@ -13,9 +13,11 @@ namespace Voron
 {
 	public unsafe class StorageEnvironment : IDisposable
 	{
-		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions = new ConcurrentDictionary<long, Transaction>();
+		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions = 
+			new ConcurrentDictionary<long, Transaction>();
 
-		private readonly ConcurrentDictionary<string, Tree> _trees = new ConcurrentDictionary<string, Tree>();
+		private readonly ConcurrentDictionary<string, Tree> _trees
+			= new ConcurrentDictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly bool _ownsPager;
 		private readonly IVirtualPager _pager;
@@ -39,7 +41,7 @@ namespace Voron
 			{
 				_pager = pager;
 				_ownsPager = ownsPager;
-				_freeSpaceRepository = new FreeSpaceRepository(this);
+				_freeSpaceRepository = new NoFreeSpaceRepository();
 				_sliceComparer = NativeMethods.memcmp;
 
 				Setup(pager);
