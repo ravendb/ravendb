@@ -73,7 +73,7 @@ namespace Raven.Client.Document
 			OperationId = Guid.NewGuid();
 			operationClient = client;
 			operationChanges = changes;
-			queue = new BlockingCollection<RavenJObject>(options.BatchSize * 8);
+            queue = new BlockingCollection<RavenJObject>(Math.Max(128, options.BatchSize / 2));
 
 			operationTask = StartBulkInsertAsync(options);
 #if !MONO
