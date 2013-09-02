@@ -703,6 +703,7 @@
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\Apo\Lazy.cs" />
     <Compile Include="MailingList\AsyncSpatial.cs" />
+    <Compile Include="MailingList\AutoGenIndexLinqQuery.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BooleanAndDateTimeNullables.cs" />
     <Compile Include="MailingList\BoundingBox.cs" />
