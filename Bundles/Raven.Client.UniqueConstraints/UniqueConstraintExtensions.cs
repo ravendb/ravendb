@@ -20,17 +20,8 @@ namespace Raven.Client.UniqueConstraints
 		{
 			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
-			MemberExpression body;
-			if (keySelector.Body is MemberExpression)
-			{
-				body = ((MemberExpression)keySelector.Body);
-			}
-			else
-			{
-				var op = ((UnaryExpression)keySelector.Body).Operand;
-				body = ((MemberExpression)op);
-			}
-			var propertyName = body.Member.Name;
+			var body = GetMemberExpression(keySelector);
+		    var propertyName = body.Member.Name;
             var att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(body.Member, typeof(UniqueConstraintAttribute));
 
 
@@ -44,8 +35,23 @@ namespace Raven.Client.UniqueConstraints
 			return string.IsNullOrEmpty(id) ? default(T) : session.Load<T>(id);
 		}
 
+	    private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector)
+	    {
+	        MemberExpression body;
+	        if (keySelector.Body is MemberExpression)
+	        {
+	            body = ((MemberExpression) keySelector.Body);
+	        }
+	        else
+	        {
+	            var op = ((UnaryExpression) keySelector.Body).Operand;
+	            body = ((MemberExpression) op);
+	        }
+	        return body;
+	    }
 
-		public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
+
+	    public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
 		{
 			var properties = UniqueConstraintsTypeDictionary.GetProperties(typeof (T));
 			T[] loadedDocs = null;
@@ -78,7 +84,7 @@ namespace Raven.Client.UniqueConstraints
 		{
 			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
-			var body = (MemberExpression) keySelector.Body;
+            var body = GetMemberExpression(keySelector);
 			var propertyName = body.Member.Name;
 		    var att = (UniqueConstraintAttribute) Attribute.GetCustomAttribute(body.Member, typeof (UniqueConstraintAttribute));
 
