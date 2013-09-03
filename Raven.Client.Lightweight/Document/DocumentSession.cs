@@ -179,6 +179,14 @@ namespace Raven.Client.Document
 			return AddLazyOperation<TResult>(lazyLoadOperation, null);
 		}
 
+		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(string[] ids)
+		{
+			var transformer = new TTransformer().TransformerName;
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, null);
+			var lazyOp = new LazyMultiLoadOperation<TResult>(multiLoadOperation, ids, null, transformer);
+			return AddLazyOperation<TResult[]>(lazyOp, null);
+		}
+
 		/// <summary>
 		/// Begin a load while including the specified path 
 		/// </summary>

@@ -71,13 +71,30 @@ namespace Raven.Tests.MailingList
         }
 
 		[Fact]
-		public void Should_get_id_when_transformer_loads_document_lazy()
+		public void LazyLoadById()
 		{
 			using (var session = store.OpenSession())
 			{
 				var contactViewModel = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1");
 				var contactDto = contactViewModel.Value;
 				foreach (var detail in contactDto.ContactDetails)
+				{
+					Assert.NotNull(detail.Id);
+				}
+			}
+		}
+
+		[Fact]
+		public void LazyLoadByIds()
+		{
+			using (var session = store.OpenSession())
+			{
+				var contactViewModel = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1", "contacts/2");
+				var result = contactViewModel.Value;
+				Assert.NotNull(result[0]);
+				Assert.Null(result[1]);
+
+				foreach (var detail in result[0].ContactDetails)
 				{
 					Assert.NotNull(detail.Id);
 				}
