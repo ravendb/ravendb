@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-					var transactionInformation = GetRequestTransaction(context);
+			var transactionInformation = GetRequestTransaction(context);
 
 			var nonAuthoritativeInformationBehavior =
 				Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(

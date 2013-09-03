@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
 using Xunit;
@@ -9,62 +10,81 @@ namespace Raven.Tests.MailingList
 {
     public class TransformWithLoad : RavenTestBase
     {
+	    private EmbeddableDocumentStore store;
+
+	    public TransformWithLoad()
+	    {
+		    store = NewDocumentStore();
+			new ContactTransformer().Execute(store);
+			new Contact_ByName().Execute(store);
+
+		    using (var session = store.OpenSession())
+		    {
+			    var detail1 = new Detail
+			    {
+				    Name = "Detail 1",
+			    };
+			    var detail2 = new Detail
+			    {
+				    Name = "Detail 2"
+			    };
+			    session.Store(detail1);
+			    session.Store(detail2);
+			    session.SaveChanges();
+
+
+			    var contact = new Contact
+			    {
+					Id = "contacts/1",
+				    Name = "Contact 1",
+				    DetailIds = new List<string>
+				    {
+					    detail1.Id,
+					    detail2.Id
+				    }
+			    };
+			    session.Store(contact);
+			    session.SaveChanges();
+		    }
+	    }
+
         [Fact]
         public void Should_get_id_when_transformer_loads_document()
         {
-            using (var store = NewDocumentStore())
-            {
-                new ContactTransformer().Execute(store);
-                new Contact_ByName().Execute(store);
+	        using (var session = store.OpenSession())
+	        {
+		        // Act
+		        var contactListViewModel = session.Query<Contact, Contact_ByName>().TransformWith<ContactTransformer, ContactDto>().ToList();
 
-                using (var session = store.OpenSession())
-                {
-                    var detail1 = new Detail
-                    {
-                        Name = "Detail 1",
-                    };
-                    var detail2 = new Detail
-                    {
-                        Name = "Detail 2"
-                    };
-                    session.Store(detail1);
-                    session.Store(detail2);
-                    session.SaveChanges();
+		        // Assert
+		        foreach (var detail in contactListViewModel.SelectMany(c => c.ContactDetails))
+		        {
+			        Assert.NotNull(detail.Id);
+		        }
 
-
-                    var contact = new Contact
-                    {
-                        Name = "Contact 1",
-                        DetailIds = new List<string>
-                        {
-                            detail1.Id,
-                            detail2.Id
-                        }
-                    };
-
-                    session.Store(contact);
-                    session.SaveChanges();
-
-                    // Act
-                    var contactListViewModel = session.Query<Contact, Contact_ByName>().TransformWith<ContactTransformer, ContactDto>().ToList();
-
-                    // Assert
-                    foreach (var detail in contactListViewModel.SelectMany(c => c.ContactDetails))
-                    {
-                        Assert.NotNull(detail.Id);
-                    }
-
-                    var contactViewModel = session.Load<ContactTransformer, ContactDto>(contact.Id);
-                    foreach (var detail in contactViewModel.ContactDetails)
-                    {
-                        Assert.NotNull(detail.Id);
-                    }
-                }
-            }
+		        var contactViewModel = session.Load<ContactTransformer, ContactDto>("contacts/1");
+		        foreach (var detail in contactViewModel.ContactDetails)
+		        {
+			        Assert.NotNull(detail.Id);
+		        }
+	        }
         }
 
+		[Fact]
+		public void Should_get_id_when_transformer_loads_document_lazy()
+		{
+			using (var session = store.OpenSession())
+			{
+				var contactViewModel = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1");
+				var contactDto = contactViewModel.Value;
+				foreach (var detail in contactDto.ContactDetails)
+				{
+					Assert.NotNull(detail.Id);
+				}
+			}
+		}
 
-        public class Contact
+	    public class Contact
         {
             public Contact()
             {
@@ -87,13 +107,13 @@ namespace Raven.Tests.MailingList
         {
             public ContactTransformer()
             {
-                TransformResults = contacts => from c in contacts
-                                               select new
-                                               {
-                                                   ContactId = c.Id,
-                                                   ContactName = c.Name,
-                                                   ContactDetails = LoadDocument<Detail>(c.DetailIds)
-                                               };
+	            TransformResults = contacts => from c in contacts
+	                                           select new
+	                                           {
+		                                           ContactId = c.Id,
+		                                           ContactName = c.Name,
+		                                           ContactDetails = LoadDocument<Detail>(c.DetailIds)
+	                                           };
             }
         }
 

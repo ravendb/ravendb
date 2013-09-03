@@ -429,7 +429,7 @@ namespace Raven.Client.Shard
 			{
 				var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
 				return new DisposableAction(() => list.ForEach(x => x.Dispose()));
-			}, id));
+			}, id), HandleInternalMetadata);
 			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
 		}
 
@@ -492,6 +492,22 @@ namespace Raven.Client.Shard
 		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
 			return Lazily.Load(documentKeys, onEval);
+		}
+
+		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
+		{
+			var cmds = GetCommandsToOperateOn(new ShardRequestData
+			{
+				Keys = { id },
+				EntityType = typeof(TTransformer)
+			});
+
+			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
+			{
+				var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
+				return new DisposableAction(() => list.ForEach(x => x.Dispose()));
+			}, id), HandleInternalMetadata);
+			return AddLazyOperation<TResult>(lazyLoadOperation, null, cmds);
 		}
 
 		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)

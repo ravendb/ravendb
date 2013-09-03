@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Document.Batches
 {
@@ -116,6 +117,8 @@ namespace Raven.Client.Document.Batches
 		/// Or whatever your conventions specify.
 		/// </remarks>
 		Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval);
+
+		Lazy<TResult> Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Load documents with the specified key prefix
