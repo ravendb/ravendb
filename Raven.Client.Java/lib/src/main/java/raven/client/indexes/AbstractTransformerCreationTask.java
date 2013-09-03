@@ -6,7 +6,6 @@ import raven.client.IDocumentStore;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ServerClient;
 import raven.client.document.DocumentConvention;
-import raven.linq.dsl.TransformerExpression;
 
 /**
  * Base class for creating transformers
@@ -18,7 +17,6 @@ public abstract class AbstractTransformerCreationTask extends AbstractCommonApiF
 
   private DocumentConvention conventions;
   protected String transformResults;
-  protected TransformerExpression transformResultsExpression;
 
   /**
    * Gets the name of the index.
@@ -36,8 +34,6 @@ public abstract class AbstractTransformerCreationTask extends AbstractCommonApiF
     this.conventions = convention;
   }
 
-  //TODO: protected RavenJToken Query(string key)
-
   /**
    * Creates the Transformer definition.
    * @return
@@ -45,17 +41,10 @@ public abstract class AbstractTransformerCreationTask extends AbstractCommonApiF
   public TransformerDefinition createTransformerDefinition() {
     TransformerDefinition transformerDefinition = new TransformerDefinition();
     transformerDefinition.setName(getTransformerName());
-    if (transformResults != null && transformResultsExpression != null) {
-      throw new IllegalStateException("You can't define both transformerDefinition and transformResultsExpression");
-    }
-    if (transformResults == null && transformResultsExpression == null) {
-      throw new IllegalStateException("You must define either transformerDefinition or transformResultsExpression");
-    }
     if (transformResults != null) {
-      transformerDefinition.setTransformResults(transformResults);
-    } else {
-      transformerDefinition.setTransformResults(transformResultsExpression.toLinq());
+      throw new IllegalStateException("You must define transformerDefinition");
     }
+    transformerDefinition.setTransformResults(transformResults);
 
     return transformerDefinition;
   }
@@ -81,8 +70,5 @@ public abstract class AbstractTransformerCreationTask extends AbstractCommonApiF
     });
 
   }
-
-  //TODO: public object Include(string key)
-  //TODO:   public object Include(IEnumerable<string> key)
 
 }

@@ -12,18 +12,13 @@ import raven.abstractions.indexing.FieldTermVector;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.indexing.SpatialOptions;
-import raven.abstractions.indexing.SpatialOptions.SpatialSearchStrategy;
 import raven.abstractions.indexing.SpatialOptionsFactory;
 import raven.abstractions.indexing.SuggestionOptions;
 import raven.client.IDocumentStore;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ServerClient;
 import raven.client.document.DocumentConvention;
-import raven.linq.dsl.LinqExpressionMixin;
-import raven.linq.dsl.LinqOps;
 
-import com.mysema.query.support.Expressions;
-import com.mysema.query.types.Operation;
 import com.mysema.query.types.Path;
 
 /**
@@ -77,72 +72,6 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     return getClass().getSimpleName().replace('_', '/');
   }
 
-  protected Operation<?> createField(String name, Path<?> value, boolean stored, boolean analyzed) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.CREATE_FIELD4,
-        Expressions.constant(name), value, Expressions.constant(stored), Expressions.constant(analyzed));
-  }
-
-  protected Operation<?> createField(String name, Path<?> value) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.CREATE_FIELD2,
-        Expressions.constant(name), value);
-  }
-
-  public static Operation<?> spatialGenerate(String fieldName, Path<? extends Number> lat, Path<? extends Number> lng) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_GENERATE3,
-        Expressions.constant(fieldName), lat, lng);
-  }
-
-  public static Operation<?> spatialGenerate(Path<? extends Number> lat, Path<? extends Number> lng) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_GENERATE2, lat, lng);
-  }
-
-  public Operation<?> spatialClustering(String fieldName, Path<? extends Number> lat, Path<? extends Number> lng) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_CLUSTERING3,
-        Expressions.constant(fieldName), lat, lng);
-  }
-
-  public Operation<?> spatialClustering(String fieldName, Path<? extends Number> lat, Path<? extends Number> lng, int minPrecision, int maxPrecision) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_CLUSTERING5,
-        Expressions.constant(fieldName), lat, lng, Expressions.constant(minPrecision), Expressions.constant(maxPrecision));
-  }
-
-  protected static class SpatialIndex {
-    /**
-     * Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-     * @param lat
-     * @param lng
-     * @return
-     */
-    public static Object generate(Path<? extends Number> lat, Path<? extends Number> lng) {
-      return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_INDEX_GENERATE2, lat, lng);
-    }
-
-    /**
-     * Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-     * @param fieldName
-     * @param lat
-     * @param lng
-     * @return
-     */
-    public static Object generate(String fieldName, Path<? extends Number> lat, Path<? extends Number> lng) {
-      return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_INDEX_GENERATE3,
-          Expressions.constant(fieldName), lat, lng);
-    }
-  }
-
-  public static Object spatialGenerate(String fieldName, String shapeWKT) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_WKT_GENERATE2, Expressions.constant(fieldName), Expressions.constant(shapeWKT));
-  }
-
-  public static Object spatialGenerate(String fieldName, String shapeWKT, SpatialSearchStrategy strategy) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_WKT_GENERATE3, Expressions.constant(fieldName),
-        Expressions.constant(shapeWKT), Expressions.constant(strategy));
-  }
-
-  public static Object spatialGenerate(String fieldName, String shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel) {
-    return (Operation< ? >) Expressions.operation(LinqExpressionMixin.class, LinqOps.Markers.SPATIAL_WKT_GENERATE4, Expressions.constant(fieldName),
-        Expressions.constant(shapeWKT), Expressions.constant(strategy), Expressions.constant(maxTreeLevel));
-  }
 
   /**
    * Executes the index creation against the specified document store.

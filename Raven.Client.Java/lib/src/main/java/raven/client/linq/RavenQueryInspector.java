@@ -12,6 +12,7 @@ import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
 
+import raven.abstractions.LinqOps;
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
@@ -33,7 +34,6 @@ import raven.client.document.InMemoryDocumentSessionOperations;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
-import raven.linq.dsl.LinqOps;
 
 public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
 

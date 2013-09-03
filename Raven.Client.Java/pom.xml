@@ -28,7 +28,6 @@
 
   <modules>
     <module>lib</module>
-    <module>dsl</module>
   </modules>
 
   <dependencyManagement>

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import raven.abstractions.LinqOps;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.QueryResult;
@@ -18,7 +19,6 @@ import raven.client.document.DocumentQueryCustomiation;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.IAbstractDocumentQuery;
 import raven.client.linq.LinqPathProvider.Result;
-import raven.linq.dsl.LinqOps;
 
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Constant;
