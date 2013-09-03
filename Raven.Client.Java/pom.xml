@@ -5,6 +5,11 @@
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
 
   <build>
     <plugins>
@@ -15,6 +20,7 @@
         <configuration>
           <source>1.7</source>
           <target>1.7</target>
+          <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
     </plugins>

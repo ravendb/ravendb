@@ -1,5 +1,6 @@
 package raven.abstractions.data;
 
+import java.util.Locale;
 import java.util.UUID;
 
 public class Constants {
@@ -49,7 +50,9 @@ public class Constants {
   public final static double EARTH_MEAN_RADIUS_KM = 6371.0087714;
   public final static double MILES_TO_KM = 1.60934;
 
-
+  public final static Locale getDefaultLocale() {
+    return Locale.US;
+  }
 
 
 

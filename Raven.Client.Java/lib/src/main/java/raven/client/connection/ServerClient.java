@@ -1871,7 +1871,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
       requestUri += "&distance=" + UrlUtils.escapeDataString(SharpEnum.value(suggestionQuery.getDistance()));
     }
     if (suggestionQuery.getAccuracy() != null) {
-      requestUri += "&accuracy=" + String.format("%.4f", suggestionQuery.getAccuracy());
+      requestUri += "&accuracy=" + String.format(Constants.getDefaultLocale(), "%.4f", suggestionQuery.getAccuracy());
     }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(

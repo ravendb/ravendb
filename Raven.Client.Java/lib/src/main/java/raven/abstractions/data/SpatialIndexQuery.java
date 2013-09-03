@@ -7,7 +7,7 @@ import raven.client.utils.UrlUtils;
 
 public class SpatialIndexQuery extends IndexQuery {
   public static String getQueryShapeFromLatLon(double lat, double lng, double radius) {
-    return String.format("Circle(%.6f %.6f d=%.6f)", lng, lat, radius);
+    return String.format(Constants.getDefaultLocale(), "Circle(%.6f %.6f d=%.6f)", lng, lat, radius);
   }
 
   private String queryShape;
@@ -88,7 +88,7 @@ public class SpatialIndexQuery extends IndexQuery {
     if (radiusUnitOverride != null) {
       unitsParam = String.format("&spatialUnits=%s", SharpEnum.value(radiusUnitOverride));
     }
-    return String.format("queryShape=%s&spatialRelation=%s&spatialField=%s&distErrPrc=%.5f%s", UrlUtils.escapeDataString(queryShape), SharpEnum.value(spatialRelation), spatialFieldName,
+    return String.format(Constants.getDefaultLocale(), "queryShape=%s&spatialRelation=%s&spatialField=%s&distErrPrc=%.5f%s", UrlUtils.escapeDataString(queryShape), SharpEnum.value(spatialRelation), spatialFieldName,
         distanceErrorPercentage, unitsParam);
   }
 

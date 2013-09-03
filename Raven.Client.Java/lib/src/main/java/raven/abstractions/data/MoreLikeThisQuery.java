@@ -232,7 +232,7 @@ public class MoreLikeThisQuery {
       uri.append("boost=true&");
     }
     if (boostFactor != null && !boostFactor.equals(DEFAULT_BOOST_FACTOR)) {
-      uri.append(String.format("boostFactor=%.4f&", boostFactor));
+      uri.append(String.format(Constants.getDefaultLocale(), "boostFactor=%.4f&", boostFactor));
     }
     if (maximumQueryTerms != null && !maximumQueryTerms.equals(DEFAULT_MAXIMUM_QUERY_TERMS)) {
       uri.append("maxQueryTerms=").append(maximumQueryTerms).append("&");

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
@@ -32,7 +33,7 @@ public class HttpRequestHelper {
       } else {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         GZIPOutputStream gzipOS = new GZIPOutputStream(baos);
-        IOUtils.write(postedData, gzipOS);
+        IOUtils.write(postedData, gzipOS, Consts.UTF_8.name());
         IOUtils.closeQuietly(gzipOS);
         ByteArrayEntity entity = new ByteArrayEntity(baos.toByteArray(), ContentType.APPLICATION_JSON);
         entity.setChunked(true);

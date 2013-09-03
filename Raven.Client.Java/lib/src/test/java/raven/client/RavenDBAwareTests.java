@@ -5,11 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -27,6 +29,7 @@ import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.document.DocumentConvention;
+import raven.client.document.DocumentStore;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 
@@ -87,12 +90,24 @@ public abstract class RavenDBAwareTests {
     convention = new DocumentConvention();
     convention.setEnlistInDistributedTransactions(false);
     factory = new HttpJsonRequestFactory(10);
+
     replicationInformer = new ReplicationInformer(convention);
 
     serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, null,
         new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
         UUID.randomUUID(), new IDocumentConflictListener[0]);
   }
+
+  protected void useFiddler(IDocumentStore store){
+    /*System.setProperty("http.proxyHost", "127.0.0.1");
+    System.setProperty("https.proxyHost", "127.0.0.1");
+    System.setProperty("http.proxyPort", "8888");
+    System.setProperty("https.proxyPort", "8888");*/
+    HttpHost proxy = new HttpHost("127.0.0.1", 8888, "http");
+    store.getJsonRequestFactory().getHttpClient().getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
+  }
+
+
 
 
   /**

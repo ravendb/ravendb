@@ -61,6 +61,8 @@ import raven.tests.spatial.SpatialIndexTestHelper;
 
 public class DocumentStoreServerTest extends RemoteClientTest {
 
+  //TODO can_create_index_using_linq_from_client_using_map_reduce(raven.tests.document.DocumentStoreServerTest): java.lang.RuntimeException: Waited for 15015ms for the query to return non stale result.
+
   @Test
   public void should_insert_into_db_and_set_id() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
@@ -379,7 +381,10 @@ public class DocumentStoreServerTest extends RemoteClientTest {
   @Test
   public void can_query_using_special_characters() throws Exception {
 
+
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      //store.getJsonRequestFactory().setDisableRequestCompression(true);
 
       IndexDefinition indexDefinition = new IndexDefinition();
       indexDefinition.setMap("from doc in docs select new { doc.Language, doc.Type}");
@@ -410,7 +415,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
   public void can_query_indexes_returning_complex_objects() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
 
-      IndexDefinition indexDefinition = new IndexDefinition();;
+      IndexDefinition indexDefinition = new IndexDefinition();
       indexDefinition.setMap("from doc in docs select new { doc.Language, doc.Type, Value = new{ Answers = 42, Paths = 7 }  }");
       indexDefinition.getStores().put("Value", FieldStorage.YES);
 

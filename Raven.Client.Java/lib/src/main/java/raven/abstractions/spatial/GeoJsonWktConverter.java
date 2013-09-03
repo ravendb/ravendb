@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import raven.abstractions.basic.Reference;
+import raven.abstractions.data.Constants;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
@@ -211,7 +212,7 @@ public class GeoJsonWktConverter {
         }
       }
 
-      result.value.append(String.format("%f %f", vals.get(0).value(Double.class), vals.get(1).value(Double.class)));
+      result.value.append(String.format(Constants.getDefaultLocale(), "%f %f", vals.get(0).value(Double.class), vals.get(1).value(Double.class)));
       return true;
     }
     return false;
