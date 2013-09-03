@@ -73,6 +73,8 @@ namespace Raven.Tests.Issues
 						Assert.Equal(1, foos.Count);
 						Assert.Equal("foos/2", foos[0].Id);
 						Assert.Equal("N2", foos[0].Name);
+
+                        Assert.Null(session.Load<Foo>(1));
 					}
 				}
 			}
