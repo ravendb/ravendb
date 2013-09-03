@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Tests.Indexes;
+using Raven.Tests.Notifications;
 using Raven.Tests.Track;
 
 namespace Raven.Tryouts
@@ -12,9 +13,9 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 100; i++)
 			{
 				Console.WriteLine(i);
-                using (var x = new RavenDB_1280())
+                using (var x = new WithIIS())
 				{
-					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();
+					x.CheckNotificationInIIS();
 				}
 			}
 			
