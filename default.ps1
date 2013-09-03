@@ -466,6 +466,7 @@ task DoRelease -depends Compile, `
 	CopyInstaller, `
 	SignInstaller, `
 	CreateNugetPackages, `
+	PublishSymbolSources, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
 }
@@ -622,28 +623,61 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
-	$nugetVersion = "$version.$env:buildlabel"
+	$global:nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$nugetVersion += "-Unstable"
+		$global:nugetVersion += "-Unstable"
 	}
 	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 
 		$nuspec = [xml](Get-Content $_.FullName)
-		$nuspec.package.metadata.version = $nugetVersion
+		$nuspec.package.metadata.version = $global:nugetVersion
 		$nuspec | Select-Xml '//dependency' |% {
 			if($_.Node.Id.StartsWith('RavenDB')){
-				$_.Node.Version = "[$nugetVersion]"
+				$_.Node.Version = "[$global:nugetVersion]"
 			}
 		}
 		$nuspec.Save($_.FullName);
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
 	
+	
+	
+	# Upload packages
+	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	$sourceFeed = "https://nuget.org/"
+	
+	if ($global:uploadMode -eq "Vnext3") {
+		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
+		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
+	}
+	
+	if ( (Test-Path $accessPath) ) {
+		$accessKey = Get-Content $accessPath
+		$accessKey = $accessKey.Trim()
+		
+		# Push to nuget repository
+		$packages | ForEach-Object {
+			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed }
+		}
+		
+	}
+	else {
+		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+	}
+}
+
+task PublishSymbolSources -depends CreateNugetPackages {
+	
+	$nuget_dir = "$build_dir\NuGet"
+	
+	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
+	
 	# Package the symbols package
 	$packages | ForEach-Object { 
 		$dirName = [io.path]::GetFileNameWithoutExtension($_)
+		Remove-Item $nuget_dir\$dirName\src -Force -Recurse -ErrorAction SilentlyContinue
 		New-Item $nuget_dir\$dirName\src -Type directory | Out-Null
 		
 		$srcDirName = $dirName
@@ -676,8 +710,10 @@ task CreateNugetPackages -depends Compile {
                 $fileToCopy = $compile.Include
                 $copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
                 
-				Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
-				Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+				if ($global:isDebugEnabled) {
+					Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
+					Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+				}
 				New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
                 Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
             }
@@ -719,8 +755,10 @@ task CreateNugetPackages -depends Compile {
 						$fileToCopy = $compile.Include;
 						$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
 						
-						Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
-						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+						if ($global:isDebugEnabled) {
+							Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
+							Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+						}
 						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
 						Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
 					}
@@ -728,13 +766,22 @@ task CreateNugetPackages -depends Compile {
 				
 			}
 		}
-
+		
+		Get-ChildItem "$nuget_dir\$dirName\*.dll" -recurse -exclude Raven* | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+		}
+		Get-ChildItem "$nuget_dir\$dirName\*.pdb" -recurse -exclude Raven* | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+		}
+		Get-ChildItem "$nuget_dir\$dirName\*.xml" -recurse | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+		}
+		
+		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
+		
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
 	}
-	
-	
-	Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
-	Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
@@ -749,19 +796,16 @@ task CreateNugetPackages -depends Compile {
 		$accessKey = Get-Content $accessPath
 		$accessKey = $accessKey.Trim()
 		
-		# Push to nuget repository
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey -Source $sourceFeed }
-		}
-		if($false){ // disable for now
-			$packages | ForEach-Object {
-				try {
-					&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 2400
-				} catch {
-					Write-Host $error[0]
-				}
+			try {
+				Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
+				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
+			} catch {
+				Write-Host $error[0]
+				$LastExitCode = 0
 			}
 		}
+		
 	}
 	else {
 		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
