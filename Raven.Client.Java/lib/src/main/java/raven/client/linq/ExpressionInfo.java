@@ -1,6 +1,5 @@
 package raven.client.linq;
 
-import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 
 /**

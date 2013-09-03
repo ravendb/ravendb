@@ -12,7 +12,6 @@ import raven.client.RavenQueryStatistics;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 import raven.client.indexes.AbstractIndexCreationTask;
-import raven.linq.dsl.expressions.AnonymousExpression;
 
 import com.mysema.query.annotations.QueryEntity;
 

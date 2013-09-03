@@ -7,7 +7,27 @@
   </parent>
   <artifactId>lib</artifactId>
 
+  <properties>
+    <queryDsl.version>3.1.1</queryDsl.version>
+  </properties>
+
   <dependencies>
+    <dependency>
+      <groupId>com.mysema.querydsl</groupId>
+      <artifactId>querydsl-sql</artifactId>
+      <version>${queryDsl.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysema.querydsl</groupId>
+      <artifactId>querydsl-collections</artifactId>
+      <version>${queryDsl.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysema.querydsl</groupId>
+      <artifactId>querydsl-lucene</artifactId>
+      <version>${queryDsl.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>

@@ -41,7 +41,7 @@ public abstract class AbstractTransformerCreationTask extends AbstractCommonApiF
   public TransformerDefinition createTransformerDefinition() {
     TransformerDefinition transformerDefinition = new TransformerDefinition();
     transformerDefinition.setName(getTransformerName());
-    if (transformResults != null) {
+    if (transformResults == null) {
       throw new IllegalStateException("You must define transformerDefinition");
     }
     transformerDefinition.setTransformResults(transformResults);
