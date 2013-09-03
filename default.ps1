@@ -669,8 +669,6 @@ task CreateNugetPackages -depends Compile {
 }
 
 task PublishSymbolSources -depends CreateNugetPackages {
-	
-	return # currently timed out
 
 	$nuget_dir = "$build_dir\NuGet"
 	
@@ -693,7 +691,10 @@ task PublishSymbolSources -depends CreateNugetPackages {
 		
 		$srcDirNames = @($srcDirName1)
 		if ($dirName -eq "RavenDB.Client") {
-			$srcDirNames = @($srcDirName1, "Raven.Client.Silverlight")
+			$srcDirNames += @("Raven.Client.Silverlight")
+		}
+		elseif ($dirName -eq "RavenDB.Server") {
+			$srcDirNames += @("Raven.Smuggler")
 		}		
 		
         foreach ($srcDirName in $srcDirNames) {
@@ -705,6 +706,7 @@ task PublishSymbolSources -depends CreateNugetPackages {
 				$indexOf = $_.FullName.IndexOf($srcDirName)
 				$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
 				$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+                
 				New-Item -ItemType File -Path $copyTo -Force | Out-Null
 				Copy-Item $_.FullName $copyTo -Recurse -Force
 			}
@@ -719,12 +721,18 @@ task PublishSymbolSources -depends CreateNugetPackages {
 					$fileToCopy = $compile.Include
 					$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
 					
-					if ($global:isDebugEnabled) {
+					
 						Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
 						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+					
+					if ($fileToCopy.EndsWith("\*.cs")) {
+						#Get-ChildItem "$srcDirName\$fileToCopy" | ForEach-Object {
+						#	Copy-Item $_.FullName "$nuget_dir\$dirName\src\$copyToPath".Replace("\*.cs", "\") -Recurse -Force
+						#}
+					} else {
+						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
+						Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
 					}
-					New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
-					Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
 				}
 			}
 			
