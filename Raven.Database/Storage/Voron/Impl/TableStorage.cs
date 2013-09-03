@@ -42,6 +42,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table Queues { get; private set; }
 
+		public Table Lists { get; private set; }
+
 	    public void Write(WriteBatch writeBatch)
 	    {
 	        env.Writer.Write(writeBatch);
@@ -67,11 +69,19 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateLastIndexedEtagsSchema(tx);
 				CreateDocumentReferencesSchema(tx);
 				CreateQueuesSchema(tx);
+				CreateListsSchema(tx);
 
                 //TODO : add trees creation code here as needed - when accessors are added to StorageActionAccessor class 
 
                 tx.Commit();
 			}
+		}
+
+		private void CreateListsSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.Lists.TableName);
+			env.CreateTree(tx, Lists.GetIndexKey(Tables.Lists.Indices.ByName));
+			env.CreateTree(tx, Lists.GetIndexKey(Tables.Lists.Indices.ByNameAndKey));
 		}
 
 		private void CreateQueuesSchema(Transaction tx)
@@ -118,6 +128,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName);
 			DocumentReferences = new Table(Tables.DocumentReferences.TableName, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
 			Queues = new Table(Tables.Queues.TableName, Tables.Queues.Indices.ByName);
+			Lists = new Table(Tables.Lists.TableName, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
 	    }
 	}
 }
