@@ -79,6 +79,7 @@ public class AggregationTest extends RemoteClientTest {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       new Orders_All().execute(store);
       try (IDocumentSession session = store.openSession()) {
+
         Order order1 = new Order();
         order1.setCurrency(Currency.EUR);
         order1.setProduct("Milk");
@@ -173,8 +174,8 @@ public class AggregationTest extends RemoteClientTest {
         for (FacetValue facetValue : facetResult.getValues()) {
           sumLookup.put(facetValue.getRange(), facetValue.getSum());
         }
-        assertEquals(Double.valueOf(3336), sumLookup.get("eur"), 0.001);
-        assertEquals(Double.valueOf(9), sumLookup.get("nis"), 0.001);
+        assertEquals(Double.valueOf(3336), sumLookup.get(Integer.toString(Currency.EUR.ordinal())), 0.001);
+        assertEquals(Double.valueOf(9), sumLookup.get(Integer.toString(Currency.NIS.ordinal())), 0.001);
 
       }
     }

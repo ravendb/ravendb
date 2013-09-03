@@ -76,11 +76,11 @@ public class DynamicAggregationQuery<T> {
 
   private boolean isNumeric(Path<?> path) {
     Class< ? > type = path.getType();
-    return int.class.equals(type)
-        || long.class.equals(type)
-        || short.class.equals(type)
-        || double.class.equals(type)
-        || float.class.equals(type);
+    return int.class.equals(type) || Integer.class.equals(type)
+        || long.class.equals(type) || Long.class.equals(type)
+        || short.class.equals(type) || Short.class.equals(type)
+        || double.class.equals(type) || Double.class.equals(type)
+        || float.class.equals(type) || Float.class.equals(type);
   }
 
   public DynamicAggregationQuery<T> addRanges(BooleanExpression... paths) {
@@ -112,10 +112,8 @@ public class DynamicAggregationQuery<T> {
       return "System.Double";
     } else if (Short.class.equals(clazz)) {
       return "System.Int16";
-    } else if (Enum.class.isAssignableFrom(clazz)) {
-      return "System.Int32";
     } else {
-      throw new IllegalStateException("The isn't mapping defined for: " + clazz.getName());
+      return clazz.getCanonicalName();
     }
   }
 

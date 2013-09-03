@@ -11,7 +11,7 @@ import raven.abstractions.data.FacetAggregation;
 import raven.abstractions.data.FacetMode;
 
 public class AggregationQueryDsl extends AggregationQuery {
-  private List<BooleanExpression> ranges;
+  private List<BooleanExpression> ranges = new ArrayList<>();
 
   public List<BooleanExpression> getRanges() {
     return ranges;
@@ -40,8 +40,8 @@ public class AggregationQueryDsl extends AggregationQuery {
       FacetMode mode = shouldUseRanges ? FacetMode.RANGES : FacetMode.DEFAULT;
 
       Facet facet = new Facet();
-      facet.setDisplayName(aggregationQuery.getDisplayName() != null ? aggregationQuery.getDisplayName() : aggregationQuery.getName());
-      facet.setName(aggregationQuery.getName() + (shouldUseRanges ? "_Range" : ""));
+      facet.setName(aggregationQuery.getName());
+      facet.setDisplayName(aggregationQuery.getDisplayName() != null ? aggregationQuery.getDisplayName()  : aggregationQuery.getName());
       facet.setAggregation(aggregationQuery.getAggregation());
       facet.setAggregationType(aggregationQuery.getAggregationType());
       facet.setAggregationField(aggregationQuery.getAggregrationField());

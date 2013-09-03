@@ -13,7 +13,7 @@ public class SharpEnumTest {
   public void testEnumReadWrite() throws Exception {
     ObjectMapper mapper = JsonExtensions.getDefaultObjectMapper();
 
-    assertEquals("\"Short\"", mapper.writeValueAsString(SortOptions.SHORT));
+    assertEquals("8", mapper.writeValueAsString(SortOptions.SHORT));
     assertEquals(SortOptions.SHORT, mapper.readValue("\"Short\"", SortOptions.class));
   }
 }
