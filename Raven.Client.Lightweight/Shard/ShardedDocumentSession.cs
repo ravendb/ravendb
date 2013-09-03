@@ -510,6 +510,11 @@ namespace Raven.Client.Shard
 			return AddLazyOperation<TResult>(lazyLoadOperation, null, cmds);
 		}
 
+		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(params string[] ids)
+		{
+			return LazyLoadInternal<TResult>(ids.ToArray(), new KeyValuePair<string, Type>[0], null);
+		}
+
 		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
 		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
