@@ -15,16 +15,19 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly MultiLoadOperation loadOperation;
 		private readonly string[] ids;
+		private readonly string transformer;
 		private readonly KeyValuePair<string, Type>[] includes;
 
 		public LazyMultiLoadOperation(
 			MultiLoadOperation loadOperation,
 			string[] ids,
-			KeyValuePair<string, Type>[] includes)
+			KeyValuePair<string, Type>[] includes,
+			string transformer = null)
 		{
 			this.loadOperation = loadOperation;
 			this.ids = ids;
 			this.includes = includes;
+			this.transformer = transformer;
 		}
 
 		public GetRequest CreateRequest()
@@ -35,6 +38,8 @@ namespace Raven.Client.Document.Batches
 				query += string.Join("&", includes.Select(x => "include=" + x.Key).ToArray());
 			}
 			query += "&" + string.Join("&", ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
+			if (!string.IsNullOrEmpty(transformer))
+				query += "&transformer=" + transformer;
 			return new GetRequest
 			{
 				Url = "/queries/",
@@ -60,10 +65,10 @@ namespace Raven.Client.Document.Batches
 			var capacity = list.Max(x => x.Results.Count);
 
 			var finalResult = new MultiLoadResult
-			                  	{
-									Includes = new List<RavenJObject>(),
-			                  		Results = new List<RavenJObject>(Enumerable.Range(0,capacity).Select(x=> (RavenJObject)null))
-			                  	};
+			{
+				Includes = new List<RavenJObject>(),
+				Results = new List<RavenJObject>(Enumerable.Range(0, capacity).Select(x => (RavenJObject) null))
+			};
 
 
 			foreach (var multiLoadResult in list)
@@ -110,8 +115,8 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			var includePaths = this.includes != null ? this.includes.Select(x => x.Key).ToArray() : null;
-			return commands.Get(ids, includePaths);
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+			return commands.Get(ids, includePaths, transformer);
 		}
 
 		public void HandleEmbeddedResponse(object result)

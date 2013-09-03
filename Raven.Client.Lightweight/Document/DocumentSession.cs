@@ -172,6 +172,13 @@ namespace Raven.Client.Document
 			return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
 		}
 
+		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
+		{
+			var transformer = new TTransformer().TransformerName;
+			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), transformer);
+			return AddLazyOperation<TResult>(lazyLoadOperation, null);
+		}
+
 		/// <summary>
 		/// Begin a load while including the specified path 
 		/// </summary>
@@ -544,7 +551,7 @@ namespace Raven.Client.Document
 		public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
-			return this.LoadInternal<TResult>(new string[] { id }, transformer).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, transformer).FirstOrDefault();
 		}
 
 		public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
@@ -552,13 +559,13 @@ namespace Raven.Client.Document
 			var transformer = new TTransformer().TransformerName;
 			var configuration = new RavenLoadConfiguration();
 			configure(configuration);
-			return this.LoadInternal<TResult>(new string[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+			return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
 		}
 
 		public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
-			return this.LoadInternal<TResult>(ids, transformer);
+			return LoadInternal<TResult>(ids, transformer);
 
 		}
 
@@ -567,7 +574,7 @@ namespace Raven.Client.Document
 			var transformer = new TTransformer().TransformerName;
 			var configuration = new RavenLoadConfiguration();
 			configure(configuration);
-			return this.LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+			return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
 		}
 
 		/// <summary>
@@ -884,8 +891,8 @@ namespace Raven.Client.Document
 		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
 		{
 			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude)
-								   .Select(TrackEntity<T>)
-								   .ToArray();
+			                       .Select(TrackEntity<T>)
+			                       .ToArray();
 		}
 
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)

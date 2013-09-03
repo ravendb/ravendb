@@ -18,24 +18,36 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly string key;
 		private readonly LoadOperation loadOperation;
+		private readonly string transformer;
 
-		public LazyLoadOperation(string key, LoadOperation loadOperation)
+		public LazyLoadOperation(string key, LoadOperation loadOperation, string transformer = null)
 		{
 			this.key = key;
 			this.loadOperation = loadOperation;
+			this.transformer = transformer;
 		}
 
 		public GetRequest CreateRequest()
 		{
-			return new GetRequest
+			string path;
+			if (string.IsNullOrEmpty(transformer) == false)
 			{
-				Url = "/docs/" + Uri.EscapeDataString(key)
-			};
+				path = "/queries/" + Uri.EscapeDataString(key);
+				if (!string.IsNullOrEmpty(transformer))
+					path += "&transformer=" + transformer;
+			}
+			else
+			{
+				path = "/docs/" + Uri.EscapeDataString(key);
+			}
+
+			return new GetRequest {Url = path};
 		}
 
 		public object Result { get; set; }
 
 		public bool RequiresRetry { get; set; }
+
 #if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
@@ -64,7 +76,6 @@ namespace Raven.Client.Document.Batches
 
 		private void HandleResponse(JsonDocument jsonDocument)
 		{
-
 			RequiresRetry = loadOperation.SetResult(jsonDocument);
 			if (RequiresRetry == false)
 				Result = loadOperation.Complete<T>();
@@ -78,12 +89,24 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
+			if (string.IsNullOrEmpty(transformer) == false)
+				return commands.Get(new[] {key}, null, transformer);
+
 			return commands.Get(key);
 		}
 #endif
 
 		public void HandleEmbeddedResponse(object result)
 		{
+			var multiLoadResult = result as MultiLoadResult;
+			if (multiLoadResult != null)
+			{
+				var resultItem = multiLoadResult.Results.FirstOrDefault();
+				var jsonDocument = SerializationHelper.RavenJObjectToJsonDocument((RavenJObject)resultItem.Value<RavenJArray>("$values")[0]);
+				HandleResponse(jsonDocument);
+				return;
+			}
+
 			HandleResponse((JsonDocument) result);
 		}
 	}

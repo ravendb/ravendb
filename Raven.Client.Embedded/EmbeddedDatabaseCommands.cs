@@ -152,7 +152,7 @@ namespace Raven.Client.Embedded
 			return jsonDocument;
 		}
 
-	    /// <summary>
+		/// <summary>
 	    /// Retrieves the document with the specified key and performs the transform operation specified on that document
 	    /// </summary>
 	    /// <param name="key">The key</param>

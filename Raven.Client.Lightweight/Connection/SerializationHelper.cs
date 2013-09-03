@@ -56,6 +56,7 @@ namespace Raven.Client.Connection
 
 			var etag = Extract(metadata, "@etag", Etag.Empty, (string g) => HttpExtensions.EtagHeaderToEtag(g));
 			var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
+
 			var jsonDocument = new JsonDocument
 			{
 				Key = key,
