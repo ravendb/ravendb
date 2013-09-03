@@ -19,11 +19,13 @@ namespace Raven.Client.Document.Batches
 		private readonly string key;
 		private readonly LoadOperation loadOperation;
 		private readonly string transformer;
+		private readonly Action<RavenJObject> handleInternalMetadata;
 
-		public LazyLoadOperation(string key, LoadOperation loadOperation, string transformer = null)
+		public LazyLoadOperation(string key, LoadOperation loadOperation, Action<RavenJObject> handleInternalMetadata, string transformer = null)
 		{
 			this.key = key;
 			this.loadOperation = loadOperation;
+			this.handleInternalMetadata = handleInternalMetadata;
 			this.transformer = transformer;
 		}
 
@@ -102,7 +104,16 @@ namespace Raven.Client.Document.Batches
 			if (multiLoadResult != null)
 			{
 				var resultItem = multiLoadResult.Results.FirstOrDefault();
-				var jsonDocument = SerializationHelper.RavenJObjectToJsonDocument((RavenJObject)resultItem.Value<RavenJArray>("$values")[0]);
+				var ravenJObject = resultItem.Value<RavenJArray>("$values")
+				                             .Cast<RavenJObject>()
+											 .Select(value =>
+											 {
+												 if (handleInternalMetadata != null)
+													 handleInternalMetadata(value);
+												 return value;
+											 })
+				                             .FirstOrDefault();
+				var jsonDocument = SerializationHelper.RavenJObjectToJsonDocument(ravenJObject);
 				HandleResponse(jsonDocument);
 				return;
 			}

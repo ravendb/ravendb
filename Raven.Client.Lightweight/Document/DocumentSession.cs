@@ -132,7 +132,7 @@ namespace Raven.Client.Document
 		{
 			if (IsLoaded(id))
 				return new Lazy<T>(() => Load<T>(id));
-			var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
+			var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), handleInternalMetadata: HandleInternalMetadata);
 			return AddLazyOperation(lazyLoadOperation, onEval);
 		}
 
@@ -175,7 +175,7 @@ namespace Raven.Client.Document
 		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
 		{
 			var transformer = new TTransformer().TransformerName;
-			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), transformer);
+			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), HandleInternalMetadata, transformer);
 			return AddLazyOperation<TResult>(lazyLoadOperation, null);
 		}
 
