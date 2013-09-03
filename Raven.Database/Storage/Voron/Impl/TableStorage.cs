@@ -12,7 +12,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public class TableStorage : IDisposable
 	{
-	    private readonly IPersistanceSource persistanceSource;
+		private readonly IPersistanceSource persistanceSource;
 
 		private readonly StorageEnvironment env;
 
@@ -21,18 +21,18 @@ namespace Raven.Database.Storage.Voron.Impl
 			this.persistanceSource = persistanceSource;
 			env = new StorageEnvironment(persistanceSource.Pager, ownsPager: false);
 
-            Initialize();
-            CreateSchema();
-        }
+			Initialize();
+			CreateSchema();
+		}
 
-	    public SnapshotReader CreateSnapshot()
-	    {
-	        return env.CreateSnapshot();
-	    }	
+		public SnapshotReader CreateSnapshot()
+		{
+			return env.CreateSnapshot();
+		}
 
 		public Table Details { get; private set; }
 
-        public Table Documents { get; private set; }
+		public Table Documents { get; private set; }
 
 		public Table IndexingStats { get; private set; }
 
@@ -44,10 +44,20 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table Lists { get; private set; }
 
-	    public void Write(WriteBatch writeBatch)
-	    {
-	        env.Writer.Write(writeBatch);
-	    }
+		public Table Tasks { get; private set; }
+
+		public void Write(WriteBatch writeBatch)
+		{
+			env.Writer.Write(writeBatch);
+		}
+
+		public long GetEntriesCount(TableBase table)
+		{
+			using (var tx = env.NewTransaction(TransactionFlags.Read))
+			{
+				return env.GetTree(tx, table.TableName).State.EntriesCount;
+			}
+		}
 
 		public void Dispose()
 		{
@@ -58,7 +68,7 @@ namespace Raven.Database.Storage.Voron.Impl
 				env.Dispose();
 		}
 
-        //create all relevant storage trees in one place
+		//create all relevant storage trees in one place
 		private void CreateSchema()
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
@@ -70,11 +80,19 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateDocumentReferencesSchema(tx);
 				CreateQueuesSchema(tx);
 				CreateListsSchema(tx);
+				CreateTasksSchema(tx);
 
-                //TODO : add trees creation code here as needed - when accessors are added to StorageActionAccessor class 
+				//TODO : add trees creation code here as needed - when accessors are added to StorageActionAccessor class 
 
-                tx.Commit();
+				tx.Commit();
 			}
+		}
+
+		private void CreateTasksSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.Tasks.TableName);
+			env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndexAndType));
+			env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByType));
 		}
 
 		private void CreateListsSchema(Transaction tx)
@@ -120,15 +138,16 @@ namespace Raven.Database.Storage.Voron.Impl
 			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
 		}
 
-	    private void Initialize()
-	    {
-            Documents = new Table(Tables.Documents.TableName, Tables.Documents.Indices.KeyByEtag);
-            Details = new Table(Tables.Details.TableName);
+		private void Initialize()
+		{
+			Documents = new Table(Tables.Documents.TableName, Tables.Documents.Indices.KeyByEtag);
+			Details = new Table(Tables.Details.TableName);
 			IndexingStats = new Table(Tables.IndexingStats.TableName);
 			LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName);
 			DocumentReferences = new Table(Tables.DocumentReferences.TableName, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
 			Queues = new Table(Tables.Queues.TableName, Tables.Queues.Indices.ByName);
 			Lists = new Table(Tables.Lists.TableName, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
-	    }
+			Tasks = new Table(Tables.Tasks.TableName, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType);
+		}
 	}
 }

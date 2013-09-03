@@ -1,0 +1,179 @@
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TasksStorageActions.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+namespace Raven.Database.Storage.Voron
+{
+	using System;
+
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Extensions;
+	using Raven.Abstractions.Logging;
+	using Raven.Database.Impl;
+	using Raven.Database.Storage.Voron.Impl;
+	using Raven.Database.Tasks;
+	using Raven.Json.Linq;
+
+	using global::Voron;
+	using global::Voron.Impl;
+
+	public class TasksStorageActions : ITasksStorageActions
+	{
+		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+
+		private readonly TableStorage tableStorage;
+
+		private readonly IUuidGenerator generator;
+
+		private readonly SnapshotReader snapshot;
+
+		private readonly WriteBatch writeBatch;
+
+		public TasksStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
+		{
+			this.tableStorage = tableStorage;
+			this.generator = generator;
+			this.snapshot = snapshot;
+			this.writeBatch = writeBatch;
+		}
+
+		public void AddTask(Task task, DateTime addedAt)
+		{
+			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+
+			var type = task.GetType().FullName;
+			var id = generator.CreateSequentialUuid(UuidType.Tasks);
+
+			tableStorage.Tasks.Add(
+				writeBatch,
+				id.ToString(),
+				new RavenJObject
+				{
+					{ "index", task.Index },
+					{ "id", id.ToByteArray() },
+					{ "time", addedAt },
+					{ "type", type },
+					{ "task", task.AsBytes() }
+				});
+
+			tasksByType.MultiAdd(writeBatch, type, id.ToString());
+			tasksByIndexAndType.MultiAdd(writeBatch, task.Index + "/" + type, id.ToString());
+		}
+
+		public bool HasTasks
+		{
+			get { return ApproximateTaskCount > 0; }
+		}
+
+		public long ApproximateTaskCount
+		{
+			get
+			{
+				return tableStorage.GetEntriesCount(tableStorage.Tasks);
+			}
+		}
+
+		public T GetMergedTask<T>() where T : Task
+		{
+			var type = typeof(T).FullName;
+			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+
+			using (var iterator = tasksByType.MultiRead(snapshot, type))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+					return null;
+
+				do
+				{
+					using (var read = tableStorage.Tasks.Read(snapshot, iterator.CurrentKey))
+					{
+						var value = read.Stream.ToJObject();
+
+						Task task;
+						try
+						{
+							task = Task.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						}
+						catch (Exception e)
+						{
+							Logger.ErrorException(
+								string.Format("Could not create instance of a task: {0}", value),
+								e);
+							continue;
+						}
+
+						MergeSimilarTasks(task, value.Value<byte[]>("id"));
+						RemoveTask(iterator.CurrentKey, task.Index, type);
+
+						return (T)task;
+					}
+
+				}
+				while (iterator.MoveNext());
+			}
+
+			return null;
+		}
+
+		private void MergeSimilarTasks(Task task, byte[] taskId)
+		{
+			var id = Etag.Parse(taskId);
+			var type = task.GetType().FullName;
+			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+
+			using (var iterator = tasksByIndexAndType.MultiRead(snapshot, task.Index + "/" + type))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+					return;
+
+				int totalTaskCount = 0;
+
+				do
+				{
+					var currentId = Etag.Parse(iterator.CurrentKey.ToString());
+					if (currentId == id)
+						continue;
+
+					using (var read = tableStorage.Tasks.Read(snapshot, iterator.CurrentKey))
+					{
+						var value = read.Stream.ToJObject();
+
+						Task existingTask;
+						try
+						{
+							existingTask = Task.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						}
+						catch (Exception e)
+						{
+							Logger.ErrorException(
+								string.Format("Could not create instance of a task: {0}", value),
+								e);
+
+							RemoveTask(iterator.CurrentKey, task.Index, type);
+							continue;
+						}
+
+						task.Merge(existingTask);
+						RemoveTask(iterator.CurrentKey, task.Index, type);
+
+						if (totalTaskCount++ > 1024)
+							break;
+					}
+				}
+				while (iterator.MoveNext());
+			}
+		}
+
+		private void RemoveTask(Slice taskId, string index, string type)
+		{
+			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+
+			tableStorage.Tasks.Delete(writeBatch, taskId);
+			tasksByType.MultiDelete(writeBatch, type, taskId);
+			tasksByIndexAndType.MultiDelete(writeBatch, index + "/" + type, taskId);
+		}
+	}
+}

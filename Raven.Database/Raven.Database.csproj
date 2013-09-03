@@ -837,6 +837,7 @@
     <Compile Include="Storage\Voron\Impl\TableBase.cs" />
     <Compile Include="Storage\Voron\Impl\Tables.cs" />
     <Compile Include="Storage\Voron\Impl\TableStorage.cs" />
+    <Compile Include="Storage\Voron\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />

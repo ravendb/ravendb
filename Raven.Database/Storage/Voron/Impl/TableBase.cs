@@ -18,7 +18,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public abstract class TableBase
 	{
-		protected string TableName { get; private set; }
+		public string TableName { get; private set; }
 
 		protected TableBase(string tableName)
 		{
