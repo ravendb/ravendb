@@ -27,7 +27,7 @@ namespace Raven.Client.Extensions
 		/// </remarks>
 		public static void EnsureDatabaseExists(this IGlobalAdminDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.Commannds.ForSystemDatabase() as ServerClient;
+			var serverClient = self.Commands.ForSystemDatabase() as ServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Multiple databases are not supported in the embedded API currently");
 

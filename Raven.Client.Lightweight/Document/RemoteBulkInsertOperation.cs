@@ -149,7 +149,7 @@ namespace Raven.Client.Document
 		private Task<RavenJToken> GetAuthToken(string operationUrl)
 		{
 #if !SILVERLIGHT
-			var request = operationClient.CreateRequest("POST", operationUrl + "&op=generate-single-use-auth-token",
+			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", 
 														disableRequestCompression: true);
 
 			return new CompletedTask<RavenJToken>(request.ReadResponseJson());
@@ -163,11 +163,8 @@ namespace Raven.Client.Document
 
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string operationUrl, string token)
 		{
-#if !SILVERLIGHT
-            var request = operationClient.CreateRequest("POST", operationUrl + "&op=generate-single-use-auth-token", disableRequestCompression: true);
-#else
 			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", disableRequestCompression: true);
-#endif
+
             request.DisableAuthentication();
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 			var result = await request.ReadResponseJsonAsync();
@@ -176,11 +173,8 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
 		{
-#if !SILVERLIGHT
-			var request = operationClient.CreateRequest("POST", operationUrl, disableRequestCompression: true);
-#else
 			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
-#endif
+
 			request.DisableAuthentication();
 			// the request may take a long time to process, so we need to set a large timeout value
 			request.PrepareForLongRequest();

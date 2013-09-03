@@ -31,7 +31,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public static byte[] HashReduceKey(string reduceKey)
 		{
-			return localSha1.Value.Compute(Encoding.UTF8.GetBytes(reduceKey));
+			return localSha1.Value.Compute20(Encoding.UTF8.GetBytes(reduceKey));
 		}
 
 		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)

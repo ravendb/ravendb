@@ -316,17 +316,16 @@ namespace Raven.Client.Connection
 					throw new InvalidOperationException(readToEnd, new ErrorResponseException(Response));
 				}
 			}
-
 		}
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
 			if (writeCalled == false)
 				webRequest.ContentLength = 0;
-			using (var webResponse = await webRequest.GetResponseAsync())
-			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url));
+			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
 			{
-				ResponseHeaders = new NameValueCollection(webResponse.Headers);
+				SetResponseHeaders(Response);
 				return await stream.ReadDataAsync();
 			}
 		}

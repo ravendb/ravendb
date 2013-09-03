@@ -28,7 +28,9 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		byte[] ComputeForOAuth(byte[] bytes);
 
-		byte[] Compute(byte[] bytes);
+		byte[] Compute16(byte[] bytes);
+
+		byte[] Compute20(byte[] bytes);
 	}
 
 	public interface ISymmetricalEncryptor : IDisposable

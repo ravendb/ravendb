@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Util.Encryptors
 					try
 					{
 						current = new DefaultEncryptor();
-						current.Hash.Compute(new byte[] { 1 });
+						current.Hash.Compute16(new byte[] { 1 });
 
 						return false;
 					}

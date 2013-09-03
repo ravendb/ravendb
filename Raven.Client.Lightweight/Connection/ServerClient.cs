@@ -157,7 +157,7 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		public HttpJsonRequest CreateRequest(string method, string requestUrl, bool disableRequestCompression = false)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method,  bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
@@ -2219,7 +2219,7 @@ namespace Raven.Client.Connection
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
 
-			var req = CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(dbname));
+			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
 			req.Write(doc.ToString(Formatting.Indented));
 			req.ExecuteRequest();
 		}

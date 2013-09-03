@@ -56,7 +56,7 @@ namespace Raven.Abstractions.Connection
 #else
 			if (sha1 == null)
 				sha1 = Encryptor.Current.CreateHash();
-			var hash = sha1.Compute(bytes);
+			var hash = sha1.Compute20(bytes);
 			return BytesToString(hash);
 #endif
 		}

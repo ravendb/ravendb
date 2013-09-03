@@ -160,7 +160,7 @@ namespace Raven.Bundles.Encryption
 
 		private static byte[] GetSaltFromEncryptionKey(byte[] key)
 		{
-			return Encryptor.Current.Hash.Compute(key);
+			return Encryptor.Current.Hash.Compute16(key);
 		}
 
 		public struct EncodedBlock

@@ -324,7 +324,6 @@
     <Compile Include="MissingFromSilverlight\BlockingCollection.cs" />
     <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\InvalidDataException.cs" />
-    <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
     <Compile Include="DotNetZip\BlockState.cs" />
     <Compile Include="DotNetZip\CompressionLevel.cs" />

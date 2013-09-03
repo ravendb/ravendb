@@ -524,7 +524,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		void CompactDatabase(string databaseName);
 
-        IDatabaseCommands Commannds { get; }
+        IDatabaseCommands Commands { get; }
 	}
 
 	public interface IAdminDatabaseCommands

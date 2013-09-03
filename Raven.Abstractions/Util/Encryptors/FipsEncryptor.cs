@@ -31,28 +31,32 @@ namespace Raven.Abstractions.Util.Encryptors
 				}
 			}
 
+			//HMACSHA1
+
 			public byte[] ComputeForStorage(byte[] bytes)
 			{
-				return Compute(bytes, StorageHashSize);
+				if(StorageHashSize == 20)
+					return Compute20(bytes);
+				return Compute16(bytes);
 			}
 
 			public byte[] ComputeForOAuth(byte[] bytes)
 			{
-				return Compute(bytes);
+				return Compute16(bytes);
 			}
 
-			public byte[] Compute(byte[] bytes)
+			public byte[] Compute16(byte[] bytes)
 			{
-				return Compute(bytes, 16);
+				return MD5Core.GetHash(bytes);
 			}
 
-			private byte[] Compute(byte[] bytes, int? size)
+			public byte[] Compute20(byte[] bytes)
 			{
 #if !SILVERLIGHT
-				return ComputeHash(SHA1.Create(), bytes, size);
+				return ComputeHash(HMACSHA1.Create(), bytes, 20);
 #else
-				return ComputeHash(new SHA1Managed(), bytes, size);
-#endif
+				return ComputeHash(new SHA1Managed(), bytes, 20);
+#endif		
 			}
 		}
 

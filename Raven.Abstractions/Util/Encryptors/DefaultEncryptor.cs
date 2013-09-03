@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 #if !SILVERLIGHT
 	using System.Security.Cryptography;
 #else
-using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Abstractions.Util;
 #endif
 
 namespace Raven.Abstractions.Util.Encryptors
@@ -54,10 +54,19 @@ namespace Raven.Abstractions.Util.Encryptors
 #endif
 			}
 
-			public byte[] Compute(byte[] bytes)
+			public byte[] Compute16(byte[] bytes)
 			{
 #if !SILVERLIGHT
 				return ComputeHash(MD5.Create(), bytes);
+#else
+				return MD5Core.GetHash(bytes);
+#endif
+			}
+
+			public byte[] Compute20(byte[] bytes)
+			{
+#if !SILVERLIGHT
+				return ComputeHash(SHA1.Create(), bytes);
 #else
 				return MD5Core.GetHash(bytes);
 #endif

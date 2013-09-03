@@ -39,7 +39,7 @@ namespace Raven.Client.Connection
             adminRequest.DeleteDatabase(databaseName, hardDelete).ExecuteRequest();
         }
 
-        public IDatabaseCommands Commannds { get { return innerServerClient; } }
+        public IDatabaseCommands Commands { get { return innerServerClient; } }
 
         public void CompactDatabase(string databaseName)
         {

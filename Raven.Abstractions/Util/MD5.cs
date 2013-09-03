@@ -2,7 +2,7 @@
 using System;
 using System.Text;
 
-namespace Raven.Client.Silverlight.MissingFromSilverlight
+namespace Raven.Abstractions.Util
 {
 
 	// **************************************************************

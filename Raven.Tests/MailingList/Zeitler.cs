@@ -39,7 +39,7 @@ namespace Raven.Tests.MailingList
 				//	Url = "http://localhost:8082/databases/entitytagstore"
 				//}.Initialize();
 
-				byte[] hash = Encryptor.Current.Hash.Compute(Encoding.UTF8.GetBytes("/api/Cars"));
+				byte[] hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes("/api/Cars"));
 
 				var persistentCacheKey = new PersistentCacheKey()
 				{

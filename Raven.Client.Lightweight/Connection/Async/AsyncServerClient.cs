@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 #if SILVERLIGHT || NETFX_CORE
 using Raven.Abstractions.Replication;
-using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Abstractions.Util;
 #else
 using System.Transactions;
 #endif
@@ -1385,12 +1385,15 @@ namespace Raven.Client.Connection.Async
 
 				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior,
 				                                    HandleReplicationStatusChanges);
-
 				ErrorResponseException responseException;
 				try
 				{
 					var result = await request.ReadResponseBytesAsync();
 					var memoryStream = new MemoryStream(result);
+					if (request.Response.StatusCode == HttpStatusCode.Conflict)
+					{
+						var doc = await request.ReadResponseJsonAsync();
+					}
 					return new Attachment
 					{
 						Data = () => memoryStream,
