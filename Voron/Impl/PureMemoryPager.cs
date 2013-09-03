@@ -11,6 +11,23 @@ namespace Voron.Impl
 		private long _allocatedSize;
 		private byte* _base;
 
+        public PureMemoryPager(byte[] data)
+	    {
+            _ptr = Marshal.AllocHGlobal(data.Length);
+            _base = (byte*)_ptr.ToPointer();
+            NumberOfAllocatedPages = data.Length / PageSize;
+            PagerState.Release();
+            PagerState = new PagerState
+            {
+                Ptr = _ptr
+            };
+            PagerState.AddRef();
+            fixed (byte* origin = data)
+            {
+                NativeMethods.memcpy(_base, origin, data.Length);
+            }
+	    }
+
 		public PureMemoryPager()
 		{
 			_ptr = Marshal.AllocHGlobal(MinIncreaseSize);
