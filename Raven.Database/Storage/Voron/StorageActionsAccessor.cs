@@ -29,6 +29,7 @@ namespace Raven.Database.Storage.Voron
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatch, snapshot, storage.Documents);
 			Indexing = new IndexingStorageActions(storage, snapshot, writeBatch);
 			Queue = new QueueStorageActions(storage, generator, snapshot, writeBatch);
+			Lists = new ListsStorageActions(storage, generator, snapshot, writeBatch);
 		}
 
 

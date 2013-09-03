@@ -7,6 +7,7 @@ namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
 	using System.IO;
+	using System.Text;
 
 	using Raven.Abstractions.Extensions;
 	using Raven.Json.Linq;
@@ -27,9 +28,15 @@ namespace Raven.Database.Storage.Voron.Impl
 			TableName = tableName;
 		}
 
+		public virtual void Add(WriteBatch writeBatch, Slice key, string value)
+		{
+			Add(writeBatch, key, Encoding.UTF8.GetBytes(value));
+		}
+
 		public virtual void Add(WriteBatch writeBatch, Slice key, byte[] value)
 		{
-			AddOrUpdate(writeBatch, key, value, 0);
+			var stream = new MemoryStream(value);
+			AddOrUpdate(writeBatch, key, stream, 0);
 		}
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value)
