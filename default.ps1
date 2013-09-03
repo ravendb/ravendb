@@ -183,7 +183,7 @@ task MeasurePerformance -depends Compile {
 	}
 }
 
-task TestSilverlight -depends Compile, CopyServer {
+task TestSilverlight -depends Compile, CopyServer  {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
@@ -194,7 +194,9 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 	finally
 	{
-		Stop-Process -InputObject $process
+		if ($process -ne $null) {
+			Stop-Process -InputObject $process
+		}
 	}
 }
 
