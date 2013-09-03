@@ -670,6 +670,8 @@ task CreateNugetPackages -depends Compile {
 
 task PublishSymbolSources -depends CreateNugetPackages {
 	
+	return # currently timed out
+
 	$nuget_dir = "$build_dir\NuGet"
 	
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
