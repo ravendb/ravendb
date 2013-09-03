@@ -202,7 +202,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (untilEtag != null && count > 0)
 				{
 					var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-					if (EtagUtil.IsGreaterThanOrEqual(docEtag, untilEtag))
+					if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
 						yield break;
 				}
 				var readCurrentDocument = ReadCurrentDocument();
@@ -327,7 +327,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 			try
 			{
-
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);

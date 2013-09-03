@@ -1198,7 +1198,7 @@
     <Compile Include="Storage\Voron\VoronIntegrationTests.cs" />
     <Compile Include="Storage\Voron\VoronListStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\VoronQueueStorageActionsTests.cs" />
-    <Compile Include="Storage\Voron\VoronTransactionalStorageTests.cs" />
+    <Compile Include="Storage\Voron\DocumentsStoragetActionsTests.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />

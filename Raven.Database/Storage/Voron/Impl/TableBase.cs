@@ -7,9 +7,9 @@ namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
 	using System.IO;
-	using System.Text;
 
 	using Raven.Abstractions.Extensions;
+	using Raven.Database.Util.Streams;
 	using Raven.Json.Linq;
 
 	using global::Voron;
@@ -28,49 +28,27 @@ namespace Raven.Database.Storage.Voron.Impl
 			TableName = tableName;
 		}
 
-		public virtual void Add(WriteBatch writeBatch, Slice key, string value)
-		{
-			Add(writeBatch, key, Encoding.UTF8.GetBytes(value));
-		}
+        public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
+        {
+            var stream = new MemoryStream(value); 
+            writeBatch.Add(key, stream, TableName, expectedVersion);
+        }
 
-		public virtual void Add(WriteBatch writeBatch, Slice key, byte[] value)
-		{
-			var stream = new MemoryStream(value);
-			AddOrUpdate(writeBatch, key, stream, 0);
-		}
+        public virtual void Add(WriteBatch writeBatch, string key, Stream value, ushort? expectedVersion = null)
+        {
+            writeBatch.Add(key, value, TableName, expectedVersion);
+        }
 
-		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value)
-		{
-			AddOrUpdate(writeBatch, key, value, 0);
-		}
+        public virtual void Add(WriteBatch writeBatch, string key, RavenJToken value, ushort? expectedVersion = null)
+        {
+            var stream = new MemoryStream(); //TODO : change to BufferPoolStream
+            value.WriteTo(stream);
 
-		public virtual void Add(WriteBatch writeBatch, Slice key, RavenJToken value)
-		{
-			AddOrUpdate(writeBatch, key, value, 0);
-		}
-
-		public virtual void AddOrUpdate(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
-		{
-			var stream = new MemoryStream(value);
-			writeBatch.Add(key, stream, TableName, expectedVersion);
-		}
-
-		public virtual void AddOrUpdate(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null)
-		{
-			writeBatch.Add(key, value, TableName, expectedVersion);
-		}
-
-		public virtual void AddOrUpdate(WriteBatch writeBatch, Slice key, RavenJToken value, ushort? expectedVersion = null)
-		{
-			var stream = new MemoryStream();
-			value.WriteTo(stream);
-			stream.Position = 0;
-
-			writeBatch.Add(key, stream, TableName, expectedVersion);
-		}
+            writeBatch.Add(key, stream, TableName, expectedVersion);
+        }
 
 		public virtual void MultiAdd(WriteBatch writeBatch, Slice key, Slice value, ushort? expectedVersion = null)
-		{
+		{            
 			writeBatch.MultiAdd(key, value, TableName, expectedVersion);
 		}
 
@@ -89,9 +67,19 @@ namespace Raven.Database.Storage.Voron.Impl
 			return snapshot.Iterate(TableName);
 		}
 
-		public bool Contains(SnapshotReader snapshot, Slice key)
+		public bool Contains(SnapshotReader snapshot, string key)
 		{
 			return snapshot.ReadVersion(TableName, key) > 0;
+		}
+
+	    public int GetDataSize(SnapshotReader snapshot, string key)
+	    {
+	        return snapshot.GetDataSize(TableName, key);
+	    }
+
+		public virtual void Delete(WriteBatch writeBatch, string key, ushort? expectedVersion = null)
+		{
+			writeBatch.Delete(key, TableName, expectedVersion);
 		}
 
 		public virtual void Delete(WriteBatch writeBatch, Slice key, ushort? expectedVersion = null)

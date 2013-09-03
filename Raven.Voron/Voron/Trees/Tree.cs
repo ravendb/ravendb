@@ -437,6 +437,21 @@ namespace Voron.Trees
             }
         }
 
+	    public int GetDataSize(Transaction tx, Slice key)
+	    {
+            using (var cursor = tx.NewCursor(this))
+            {
+                var p = FindPageFor(tx, key, cursor);
+                var node = p.Search(key, _cmp);
+
+                if (node == null)
+                    return -1;
+
+                return node->DataSize;
+            }
+	        
+	    }
+
 		public ushort ReadVersion(Transaction tx, Slice key)
 		{
 			using (var cursor = tx.NewCursor(this))
@@ -445,8 +460,7 @@ namespace Voron.Trees
 				var node = p.Search(key, _cmp);
 
 				if (node == null) 
-					return 0;
-
+					return 0;                
 				return node->Version;
 			}
 		}
