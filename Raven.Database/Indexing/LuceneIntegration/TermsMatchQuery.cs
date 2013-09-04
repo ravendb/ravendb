@@ -32,6 +32,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			this.field = field;
 			this.matches = matches;
 			this.matches.Sort(StringComparer.Ordinal);
+			RewriteMethod = SCORING_BOOLEAN_QUERY_REWRITE;
 		}
 
 		public override string ToString(string fld)
@@ -146,8 +147,9 @@ namespace Raven.Database.Indexing.LuceneIntegration
 			matches.AddRange(termsMatchQuery.matches);
 
 			matches = matches.Distinct()
-				.Where(x => string.IsNullOrWhiteSpace(x) == false)
-				.OrderBy(s => s, StringComparer.Ordinal).ToList();
+			                 .Where(x => string.IsNullOrWhiteSpace(x) == false)
+			                 .OrderBy(s => s, StringComparer.Ordinal)
+			                 .ToList();
 			return this;
 		}
 	}

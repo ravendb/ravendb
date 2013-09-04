@@ -19,11 +19,13 @@ namespace Raven.Database.Storage
 		void AddIndex(string name, bool createMapReduce);
 		void DeleteIndex(string name);
 
+	    void SetIndexPriority(string name, IndexingPriority priority);
+
 
 		IndexFailureInformation GetFailureRate(string index);
 
-		void UpdateLastIndexed(string index, Guid etag, DateTime timestamp);
-		void UpdateLastReduced(string index, Guid etag, DateTime timestamp);
+		void UpdateLastIndexed(string index, Etag etag, DateTime timestamp);
+		void UpdateLastReduced(string index, Etag etag, DateTime timestamp);
 		void TouchIndexEtag(string index);
 		void UpdateIndexingStats(string index, IndexingWorkStats stats);
 		void UpdateReduceStats(string index, IndexingWorkStats stats);

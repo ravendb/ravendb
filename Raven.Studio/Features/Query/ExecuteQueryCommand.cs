@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using Raven.Studio.Extensions;
@@ -19,7 +18,6 @@ namespace Raven.Studio.Features.Query
 	public class ExecuteQueryCommand : Command
 	{
 		private readonly QueryModel model;
-		private string query;
 
 		public ExecuteQueryCommand(QueryModel model)
 		{
@@ -28,22 +26,20 @@ namespace Raven.Studio.Features.Query
 
 		public override void Execute(object parameter)
 		{
-			query = model.Query;
 			ClearRecentQuery();
 			model.RememberHistory();
 
-			Observable.FromEventPattern<VirtualCollectionSourceChangedEventArgs>(
-				h => model.CollectionSource.CollectionChanged += h, h => model.CollectionSource.CollectionChanged -= h)
-				.Where(p => p.EventArgs.ChangeType == ChangeType.Refresh)
+			Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(
+				h => model.CollectionSource.QueryStatisticsUpdated += h, h => model.CollectionSource.QueryStatisticsUpdated -= h)
 				.Take(1)
 				.ObserveOnDispatcher()
-				.Subscribe(_ =>
-							   {
-								   if (model.CollectionSource.Count == 0)
-								   {
-									   SuggestResults();
-								   }
-							   });
+				.Subscribe(e =>
+				{
+					if (e.EventArgs.Statistics.TotalResults == 0)
+					{
+						SuggestResults();
+					}
+				});
 
             model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
 		    var templateQuery = model.CreateTemplateQuery();

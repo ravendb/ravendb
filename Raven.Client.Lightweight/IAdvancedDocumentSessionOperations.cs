@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 
@@ -115,7 +114,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="instance">The instance.</param>
 		/// <returns></returns>
-		Guid? GetEtagFor<T>(T instance);
+		Etag GetEtagFor<T>(T instance);
 
 		/// <summary>
 		/// Gets the document id for the specified entity.

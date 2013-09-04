@@ -26,21 +26,6 @@
 								 Margin="{StaticResource Margin_ContentPage}" />
 		
 		<StackPanel Grid.Row="2" HorizontalAlignment="Center">
-			<StackPanel Orientation="Horizontal" Visibility="{Binding ElementName=CreateSampleData, Path=IsEnabled, Converter={StaticResource BooleanToVisibility}}"
-                        HorizontalAlignment="Center">
-				<TextBlock>
-					<Run Text="There are no documents in this database yet." />
-					<LineBreak />
-					<Run Text="Would you like to generate some sample data?" />
-				</TextBlock>
-				<Button x:Name="CreateSampleData"
-						Padding="12,0,12,0"
-						Margin="8,0,0,0"
-						HorizontalAlignment="Left"
-						Command="{Binding CreateSampleData}"
-						Content="Create sample data" />
-			</StackPanel>
-
 		  <toolkit:DockPanel 
 						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource BooleanToVisibility}}" Margin="0,10,0,0">
 		    <TextBlock Text="Generating Sample Data :"

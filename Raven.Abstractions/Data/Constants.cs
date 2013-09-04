@@ -1,5 +1,4 @@
 using System;
-using System.Security.Cryptography;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -14,6 +13,8 @@ namespace Raven.Abstractions.Data
 			};
 			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
+
+		public const string RavenEtagSynchronization = "Raven/Etag/Synchronization";
 		
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
@@ -25,10 +26,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenLastModified = "Raven-Last-Modified";
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
-		public const string DefaultSpatialFieldName = "__spatial";
-		public const string SpatialShapeFieldName = "__spatialShape";
-		public const double DefaultSpatialDistanceErrorPct = 0.025d;
-		public const string DistanceFieldName = "__distance";
 		public const string RandomFieldName = "__random";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
 		public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
@@ -36,6 +33,7 @@ namespace Raven.Abstractions.Data
 		public const string EmptyString = "EMPTY_STRING";
 		public const string DocumentIdFieldName = "__document_id";
 		public const string ReduceKeyFieldName = "__reduce_key";
+		public const string ReduceValueFieldName = "__reduced_val";
 		public const string IntersectSeparator = " INTERSECT ";
 		public const string RavenClrType = "Raven-Clr-Type";
 		public const string RavenEntityName = "Raven-Entity-Name";
@@ -71,7 +69,9 @@ namespace Raven.Abstractions.Data
 
 		public const int DefaultIndexFileBlockSize = 12 * 1024;
 
-		public static readonly Type DefaultCryptoServiceProvider = typeof(AesManaged);
+#if !NETFX_CORE
+		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesManaged);
+#endif
 
 		//Quotas
 		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";
@@ -94,5 +94,20 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
+
+		//Spatial
+		public const string DefaultSpatialFieldName = "__spatial";
+		public const string SpatialShapeFieldName = "__spatialShape";
+		public const double DefaultSpatialDistanceErrorPct = 0.025d;
+		public const string DistanceFieldName = "__distance";
+		/// <summary>
+		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
+		///
+		/// [1] http://en.wikipedia.org/wiki/Earth_radius
+		/// </summary>
+		public const double EarthMeanRadiusKm = 6371.0087714;
+		public const double MilesToKm = 1.60934;
+
+		public const string RavenClientVersion = "Raven-Client-Version";
 	}
 }

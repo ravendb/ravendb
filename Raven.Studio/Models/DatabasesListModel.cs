@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Extensions;
 using Raven.Studio.Infrastructure;
@@ -11,7 +13,7 @@ using System.Linq;
 
 namespace Raven.Studio.Models
 {
-    public class DatabasesListModel : PageViewModel
+	public class DatabasesListModel : PageViewModel, IAutoCompleteSuggestionProvider
     {
         private readonly ChangeDatabaseCommand changeDatabase;
 
@@ -19,6 +21,7 @@ namespace Raven.Studio.Models
         {
             ModelUrl = "/databases";
 	        ApplicationModel.Current.Server.Value.RawUrl = "databases";
+			GoToDatabaseName = new Observable<string>();
             changeDatabase = new ChangeDatabaseCommand();
             DatabasesWithEditableBundles = new List<string>();
             Databases = new BindableCollection<DatabaseListItemModel>(m => m.Name);
@@ -52,7 +55,17 @@ namespace Raven.Studio.Models
             }
         }
 
-        public bool ShowEditBundles
+		public Observable<string> GoToDatabaseName { get; set; }
+
+		public ICommand GoToDatabase
+		{
+			get
+			{
+				return new ActionCommand(() => SelectedDatabase = Databases.FirstOrDefault(model => model.Name == GoToDatabaseName.Value));
+			}
+		}
+
+		public bool ShowEditBundles
         {
             get { return SelectedDatabase != null && DatabasesWithEditableBundles.Contains(SelectedDatabase.Name); }
         }
@@ -93,5 +106,13 @@ namespace Raven.Studio.Models
                     name => new DatabaseListItemModel(name)).ToArray());
             OnPropertyChanged(() => SelectedDatabase);
         }
+
+		public int ItemWidth{get { return Databases.Max(model => model.Name.Length) * 7; }}
+
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			var list = Databases.Select(model => model.Name).Cast<object>().ToList();
+			return TaskEx.FromResult<IList<object>>(list);
+		}
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -40,14 +41,11 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				WaitForUserToContinueTheTest(store);
-
 				using (var session = store.OpenSession())
 				{
 					var result = session.Advanced.LuceneQuery<DynamicMultiMapDataSetIndex.Result, DynamicMultiMapDataSetIndex>()
 						  .WaitForNonStaleResults()
 						  .AddOrder("N1_Range", true, typeof(double))
-						  .SelectFields<DataView>("SongId", "Title", "Interpret", "Year", "Attributes")
 						  .ToList();
 					Assert.Equal(50, result.Count); //FAIL(:
 					Assert.Equal(49.50, result.First().Attributes.First(x => x.Name == "N1").Value);
@@ -154,7 +152,7 @@ namespace Raven.Tests.MailingList
 										Interpret = g.Select(x => x.Interpret).FirstOrDefault(x => x != null),
 										Year = g.Select(x => x.Year).FirstOrDefault(x => x >= 0),
 										Attributes = g.SelectMany(x => x.Attributes).Where(x => x != null),
-										_ = g.SelectMany(x => x.Attributes).Select(x => CreateField(x.Name, x.Value))
+										_ = g.SelectMany(x => x.Attributes).Select(x => CreateField(x.Name, x.Value, true, true))
 									};
 			}
 		}

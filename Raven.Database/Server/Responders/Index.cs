@@ -11,530 +11,622 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Linq;
 using Raven.Database.Queries;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
-	using System;
-	using System.Linq.Expressions;
+    public class Index : AbstractRequestResponder
+    {
+        public override string UrlPattern
+        {
+            get { return @"^/indexes/(.+)"; }
+        }
 
-	using Raven.Database.Indexing;
-	using Raven.Database.Linq;
+        public override string[] SupportedVerbs
+        {
+            get { return new[] { "GET", "PUT", "POST", "DELETE", "HEAD", "RESET" }; }
+        }
 
-	public class Index : AbstractRequestResponder
-	{
-		public override string UrlPattern
-		{
-			get { return @"^/indexes/(.+)"; }
-		}
+        public override void Respond(IHttpContext context)
+        {
+            var match = urlMatcher.Match(context.GetRequestUrl());
+            var index = match.Groups[1].Value;
 
-		public override string[] SupportedVerbs
-		{
-			get { return new[] {"GET", "PUT", "DELETE","HEAD","RESET"}; }
-		}
+            switch (context.Request.HttpMethod)
+            {
+                case "HEAD":
+                    if (Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.OrdinalIgnoreCase) == false)
+                        context.SetStatusToNotFound();
+                    break;
+                case "GET":
+                    OnGet(context, index);
+                    break;
+                case "POST":
+                    OnPost(context, index);
+                    break;
+                case "PUT":
+                    Put(context, index);
+                    break;
+                case "RESET":
+                    Database.ResetIndex(index);
+                    context.WriteJson(new { Reset = index });
+                    break;
+                case "DELETE":
+                    context.SetStatusToDeleted();
+                    Database.DeleteIndex(index);
+                    break;
+            }
+        }
 
-		public override void Respond(IHttpContext context)
-		{
-			var match = urlMatcher.Match(context.GetRequestUrl());
-			var index = match.Groups[1].Value;
-			
-			switch (context.Request.HttpMethod)
-			{
-				case "HEAD":
-					if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
-						context.SetStatusToNotFound();
-					break;
-				case "GET":
-					OnGet(context, index);
-					break;
-				case "PUT":
-					Put(context, index);
-					break;
-				case "RESET":
-					Database.ResetIndex(index);
-					context.WriteJson(new {Reset = index});
-					break;
-				case "DELETE":
-					context.SetStatusToDeleted();
-					Database.DeleteIndex(index);
-					break;
-			}
-		}
+        private void OnPost(IHttpContext context, string index)
+        {
+            if ("forceWriteToDisk".Equals(context.Request.QueryString["op"], StringComparison.InvariantCultureIgnoreCase))
+            {
+                Database.IndexStorage.ForceWriteToDisk(index);
+            }
+            else if ("lockModeChange".Equals(context.Request.QueryString["op"], StringComparison.InvariantCultureIgnoreCase))
+            {
+                HandleIndexLockModeChange(context, index);
+            }
+            else
+            {
+                context.SetStatusToBadRequest();
+                context.WriteJson(new
+                {
+                    Error = "Not idea how to handle a POST on " + index + " with op=" + (context.Request.QueryString["op"] ?? "<no val specified>")
+                });
+            }
+        }
 
-		private void Put(IHttpContext context, string index)
-		{
-			var data = context.ReadJsonObject<IndexDefinition>();
-			if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
-			{
-				context.SetStatusToBadRequest();
-				context.Write("Expected json document with 'Map' or 'Maps' property");
-				return;
-			}
+        private void HandleIndexLockModeChange(IHttpContext context, string index)
+        {
+            var lockModeStr = context.Request.QueryString["mode"];
 
-			context.SetStatusToCreated("/indexes/" + Uri.EscapeUriString(index));
-			context.WriteJson(new { Index = Database.PutIndex(index, data) });
-		}
+            IndexLockMode indexLockMode;
+            if (Enum.TryParse(lockModeStr, out indexLockMode) == false)
+            {
+                context.SetStatusToBadRequest();
+                context.WriteJson(new
+                {
+                    Error = "Cannot understand index lock mode: " + lockModeStr
+                });
+                return;
+            }
 
-		private void OnGet(IHttpContext context, string index)
-		{
-			if (string.IsNullOrEmpty(context.Request.QueryString["definition"]) == false)
-			{
-				GetIndexDefinition(context, index);
-			}
-			else if (string.IsNullOrEmpty(context.Request.QueryString["source"]) == false)
-			{
-				GetIndexSource(context, index);
-			}
-			else if (string.IsNullOrEmpty(context.Request.QueryString["debug"]) == false)
-			{
-				DebugIndex(context, index);
-			}
-			else if (string.IsNullOrEmpty(context.Request.QueryString["explain"]) == false)
-			{
-				GetExplanation(context, index);
-			}
-			else 
-			{
-				GetIndexQueryResult(context, index);
-			}
-		}
+            var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
+            if (indexDefinition == null)
+            {
+                context.SetStatusToNotFound();
+                context.WriteJson(new
+                {
+                    Error = "Cannot find index : " + index
+                });
+                return;
+            }
+            var definition = indexDefinition.Clone();
+            definition.LockMode = indexLockMode;
+            Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+        }
 
-		private void DebugIndex(IHttpContext context, string index)
-		{
-			switch (context.Request.QueryString["debug"].ToLowerInvariant())
-			{
-				case "map":
-					GetIndexMappedResult(context, index);
-					break;
-				case "reduce":
-					GetIndexReducedResult(context, index);
-					break;
-				case "keys":
-					GetIndexKeysStats(context, index);
-					break;
-				case "entries":
-					GetIndexEntries(context, index);
-					break;
-				case "stats":
-					GetIndexStats(context, index);
-					break;
-				default:
-					context.WriteJson(new
+        private void Put(IHttpContext context, string index)
+        {
+            var data = context.ReadJsonObject<IndexDefinition>();
+            if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
+            {
+                context.SetStatusToBadRequest();
+                context.WriteJson(new { Error = "Expected json document with 'Map' or 'Maps' property" });
+                return;
+            }
+
+            try
+            {
+                Database.PutIndex(index, data);
+                context.SetStatusToCreated("/indexes/" + Uri.EscapeUriString(index));
+                context.WriteJson(new {Index = index});
+            }
+            catch (Exception ex)
+            {
+                var compilationException = ex as IndexCompilationException;
+                
+                context.SetStatusToBadRequest();
+                context.WriteJson(new
+                {
+                    Message = ex.Message, 
+                    IndexDefinitionProperty=compilationException != null ? compilationException.IndexDefinitionProperty : "",
+                    ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
+                    Error = ex.ToString()
+                });
+            }
+        }
+
+        private void OnGet(IHttpContext context, string index)
+        {
+            if (string.IsNullOrEmpty(context.Request.QueryString["definition"]) == false)
+            {
+                GetIndexDefinition(context, index);
+            }
+            else if (string.IsNullOrEmpty(context.Request.QueryString["source"]) == false)
+            {
+                GetIndexSource(context, index);
+            }
+            else if (string.IsNullOrEmpty(context.Request.QueryString["debug"]) == false)
+            {
+                DebugIndex(context, index);
+            }
+            else if (string.IsNullOrEmpty(context.Request.QueryString["explain"]) == false)
+            {
+                GetExplanation(context, index);
+            }
+            else
+            {
+                GetIndexQueryResult(context, index);
+            }
+        }
+
+        private void DebugIndex(IHttpContext context, string index)
+        {
+            switch (context.Request.QueryString["debug"].ToLowerInvariant())
+            {
+                case "map":
+                    GetIndexMappedResult(context, index);
+                    break;
+                case "reduce":
+                    GetIndexReducedResult(context, index);
+                    break;
+                case "schedules":
+                    GetIndexScheduledReduces(context, index);
+                    break;
+                case "keys":
+                    GetIndexKeysStats(context, index);
+                    break;
+                case "entries":
+                    GetIndexEntries(context, index);
+                    break;
+                case "stats":
+                    GetIndexStats(context, index);
+                    break;
+                default:
+                    context.WriteJson(new
+                    {
+                        Error = "Unknown debug option " + context.Request.QueryString["debug"]
+                    });
+                    context.SetStatusToBadRequest();
+                    break;
+            }
+        }
+
+        private void GetIndexScheduledReduces(IHttpContext context, string index)
+        {
+            List<ScheduledReductionDebugInfo> mappedResult = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                mappedResult = accessor.MapReduce.GetScheduledReductionForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
+                    .ToList();
+            });
+            context.WriteJson(new
+            {
+                mappedResult.Count,
+                Results = mappedResult
+            });
+        }
+
+        private void GetIndexKeysStats(IHttpContext context, string index)
+        {
+            if (Database.IndexDefinitionStorage.GetIndexDefinition(index) == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
+
+            List<ReduceKeyAndCount> keys = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                keys = accessor.MapReduce.GetKeysStats(index,
+                         context.GetStart(),
+                         context.GetPageSize(Database.Configuration.MaxPageSize))
+                    .ToList();
+            });
+            context.WriteJson(new
+            {
+                keys.Count,
+                Results = keys
+            });
+        }
+
+        private void GetIndexStats(IHttpContext context, string index)
+        {
+            IndexStats stats = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                stats = accessor.Indexing.GetIndexStats(index);
+            });
+
+            if (stats == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
+
+            stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(index);
+            stats.Performance = Database.IndexStorage.GetIndexingPerformance(index);
+
+            context.WriteJson(stats);
+        }
+
+        private void GetIndexEntries(IHttpContext context, string index)
+        {
+            var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+            var totalResults = new Reference<int>();
+
+            var isDynamic = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+                            || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase);
+
+            if (isDynamic)
+            {
+                GetIndexEntriesForDynamicIndex(context, index, indexQuery, totalResults);
+            }
+            else
+            {
+                GetIndexEntriesForExistingIndex(context, index, indexQuery, totalResults);
+            }
+        }
+
+        private void GetIndexEntriesForDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
+        {
+            string entityName;
+            var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
+
+            if (dynamicIndexName == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
+            GetIndexEntriesForExistingIndex(context, dynamicIndexName, indexQuery, totalResults);
+        }
+
+        private void GetIndexEntriesForExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
+        {
+            var results = Database
+                    .IndexStorage
+                    .IndexEntires(index, indexQuery, Database.IndexQueryTriggers, totalResults)
+                    .ToArray();
+
+            Tuple<DateTime, Etag> indexTimestamp = null;
+            bool isIndexStale = false;
+	        
+	        Database.TransactionalStorage.Batch(
+                accessor =>
+                {
+	                isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
+					if (isIndexStale == false && indexQuery.Cutoff == null && indexQuery.CutoffEtag == null)
 					{
-						Error = "Unknown debug option " + context.Request.QueryString["debug"]
-					});
-					context.SetStatusToBadRequest();
-					break;
-			}
-		}
+						var indexInstance = Database.IndexStorage.GetIndexInstance(index);
+						isIndexStale = isIndexStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
+					}
 
-		private void GetIndexKeysStats(IHttpContext context, string index)
-		{
-			if (Database.IndexDefinitionStorage.GetIndexDefinition(index) == null)
-			{
-				context.SetStatusToNotFound();
-				return;
-			}
+                    indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
+                });
+            var indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
+            context.WriteETag(indexEtag);
+            context.WriteJson(
+                new
+                {
+                    Count = results.Length,
+                    Results = results,
+                    Includes = new string[0],
+                    IndexTimestamp = indexTimestamp.Item1,
+                    IndexEtag = indexTimestamp.Item2,
+                    TotalResults = totalResults.Value,
+                    SkippedResults = 0,
+                    NonAuthoritativeInformation = false,
+                    ResultEtag = indexEtag,
+                    IsStale = isIndexStale,
+                    IndexName = index,
+                    LastQueryTime = Database.IndexStorage.GetLastQueryTime(index)
+                });
+        }
 
-			List<ReduceKeyAndCount> keys = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				keys = accessor.MapReduce.GetKeysStats(index,
-						 context.GetStart(), 
-						 context.GetPageSize(Database.Configuration.MaxPageSize))
-					.ToList();
-			});
-			context.WriteJson(new
-			{
-				keys.Count,
-				Results = keys
-			});
-		}
+        private void GetExplanation(IHttpContext context, string index)
+        {
+            var dynamicIndex = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
+                               index.Equals("dynamic", StringComparison.OrdinalIgnoreCase);
 
-		private void GetIndexStats(IHttpContext context, string index)
-		{
-			IndexStats stats = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				stats = accessor.Indexing.GetIndexStats(index);
-			});
+            if (dynamicIndex == false)
+            {
+                context.SetStatusToBadRequest();
+                context.WriteJson(new
+                                {
+                                    Error = "Explain can only work on dynamic indexes"
+                                });
+                return;
+            }
 
-			if (stats == null)
-			{
-				context.SetStatusToNotFound();
-				return;
-			}
+            var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+            string entityName = null;
+            if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+                entityName = index.Substring("dynamic/".Length);
 
-			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(index);
-			stats.Performance = Database.IndexStorage.GetIndexingPerformance(index);
+            var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
 
-			context.WriteJson(stats);
-		}
+            context.WriteJson(explanations);
+        }
 
-		private void GetIndexEntries(IHttpContext context, string index)
-		{
-			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-			var totalResults = new Reference<int>();
+        private void GetIndexMappedResult(IHttpContext context, string index)
+        {
+            if (Database.IndexDefinitionStorage.GetIndexDefinition(index) == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
+            var key = context.Request.QueryString["key"];
+            if (string.IsNullOrEmpty(key))
+            {
+                List<string> keys = null;
+                Database.TransactionalStorage.Batch(accessor =>
+                {
+                    keys = accessor.MapReduce.GetKeysForIndexForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
+                        .ToList();
+                });
 
-			var isDynamic = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase)
-			                || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+                context.WriteJson(new
+                {
+                    Error = "Query string argument \'key\' is required",
+                    Keys = keys
+                });
+                context.SetStatusToBadRequest();
+                return;
+            }
 
-			if (isDynamic)
-			{
-				GetIndexEntriesForDynamicIndex(context, index, indexQuery, totalResults);
-			} 
-			else
-			{
-				GetIndexEntriesForExistingIndex(context, index, indexQuery, totalResults);
-			}
-		}
+            List<MappedResultInfo> mappedResult = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                mappedResult = accessor.MapReduce.GetMappedResultsForDebug(index, key, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
+                    .ToList();
+            });
+            context.WriteJson(new
+            {
+                mappedResult.Count,
+                Results = mappedResult
+            });
+        }
 
-		private void GetIndexEntriesForDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
-		{
-			string entityName;
-			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
+        private void GetIndexReducedResult(IHttpContext context, string index)
+        {
+            if (Database.IndexDefinitionStorage.GetIndexDefinition(index) == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
+            var key = context.Request.QueryString["key"];
+            if (string.IsNullOrEmpty(key))
+            {
+                context.WriteJson(new
+                {
+                    Error = "Query string argument 'key' is required"
+                });
+                context.SetStatusToBadRequest();
+                return;
+            }
 
-			if(dynamicIndexName == null)
-			{
-				context.SetStatusToNotFound();
-				return;
-			}
-			GetIndexEntriesForExistingIndex(context, dynamicIndexName, indexQuery, totalResults);
-		}
+            int level;
+            if (int.TryParse(context.Request.QueryString["level"], out level) == false || (level != 1 && level != 2))
+            {
+                context.WriteJson(new
+                {
+                    Error = "Query string argument 'level' is required and must be 1 or 2"
+                });
+                context.SetStatusToBadRequest();
+                return;
+            }
 
-		private void GetIndexEntriesForExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, Reference<int> totalResults)
-		{
-			var results = Database
-					.IndexStorage
-					.IndexEntires(index, indexQuery, Database.IndexQueryTriggers, totalResults)
-					.ToArray();
+            List<MappedResultInfo> mappedResult = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                mappedResult = accessor.MapReduce.GetReducedResultsForDebug(index, key, level, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
+                    .ToList();
+            });
+            context.WriteJson(new
+            {
+                mappedResult.Count,
+                Results = mappedResult
+            });
+        }
 
-			Tuple<DateTime, Guid> indexTimestamp = null;
-			bool isIndexStale = false;
-			Database.TransactionalStorage.Batch(
-				accessor =>
-				{
-					isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
-					indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
-				});
-			var indexEtag = Database.GetIndexEtag(index, null);
-			context.WriteETag(indexEtag);
-			context.WriteJson(
-				new
-				{
-					Count = results.Length,
-					Results = results,
-					Includes = new string[0],
-					IndexTimestamp = indexTimestamp.Item1,
-					IndexEtag = indexTimestamp.Item2,
-					TotalResults = totalResults.Value,
-					SkippedResults = 0,
-					NonAuthoritativeInformation = false,
-					ResultEtag = indexEtag,
-					IsStale = isIndexStale,
-					IndexName = index,
-					LastQueryTime = Database.IndexStorage.GetLastQueryTime(index)
-				});
-		}
+        private void GetIndexQueryResult(IHttpContext context, string index)
+        {
+            Etag indexEtag;
+            var queryResult = ExecuteQuery(context, index, out indexEtag);
 
-		private void GetExplanation(IHttpContext context, string index)
-		{
-			var dynamicIndex = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ||
-			                   index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+            if (queryResult == null)
+                return;
 
-			if(dynamicIndex == false)
-			{
-				context.SetStatusToBadRequest();
-				context.WriteJson(new
-				              	{
-				              		Error = "Explain can only work on dynamic indexes"
-				              	});
-				return;
-			}
+            var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
+            var loadedIds = new HashSet<string>(
+                queryResult.Results
+                    .Where(x => x["@metadata"] != null)
+                    .Select(x => x["@metadata"].Value<string>("@id"))
+                    .Where(x => x != null)
+                );
+            var command = new AddIncludesCommand(Database, GetRequestTransaction(context),
+                                                 (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+            foreach (var result in queryResult.Results)
+            {
+                command.Execute(result);
+            }
+            command.AlsoInclude(queryResult.IdsToInclude);
 
-			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-			string entityName = null;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
-				entityName = index.Substring("dynamic/".Length);
+            context.WriteETag(indexEtag);
+            if (queryResult.NonAuthoritativeInformation)
+                context.SetStatusToNonAuthoritativeInformation();
 
-			var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+            context.WriteJson(queryResult);
+        }
 
-			context.WriteJson(explanations);
-		}
+        private void GetIndexDefinition(IHttpContext context, string index)
+        {
+            var indexDefinition = Database.GetIndexDefinition(index);
+            if (indexDefinition == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
 
-		private void GetIndexMappedResult(IHttpContext context, string index)
-		{
-			if(Database.IndexDefinitionStorage.GetIndexDefinition(index)==null)
-			{
-				context.SetStatusToNotFound();
-				return;
-			}
-			var key = context.Request.QueryString["key"];
-			if(string.IsNullOrEmpty(key))
-			{
-				List<string> keys = null;
-				Database.TransactionalStorage.Batch(accessor =>
-				{
-					keys = accessor.MapReduce.GetKeysForIndexForDebug(index, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
-						.ToList();
-				});
+            indexDefinition.Fields = Database.GetIndexFields(index);
 
-				context.WriteJson(new
-				{
-					Error = "Query string argument \'key\' is required",
-					Keys = keys
-				});
-				context.SetStatusToBadRequest();
-				return;
-			}
+            context.WriteJson(new
+            {
+                Index = indexDefinition,
+            });
+        }
 
-			List<MappedResultInfo> mappedResult = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				mappedResult = accessor.MapReduce.GetMappedResultsForDebug(index, key, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
-					.ToList();
-			});
-			context.WriteJson(new
-			{
-				mappedResult.Count,
-				Results = mappedResult
-			});
-		}
+        private void GetIndexSource(IHttpContext context, string index)
+        {
+            var viewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(index);
+            if (viewGenerator == null)
+            {
+                context.SetStatusToNotFound();
+                return;
+            }
 
-		private void GetIndexReducedResult(IHttpContext context, string index)
-		{
-			if (Database.IndexDefinitionStorage.GetIndexDefinition(index) == null)
-			{
-				context.SetStatusToNotFound();
-				return;
-			}
-			var key = context.Request.QueryString["key"];
-			if (string.IsNullOrEmpty(key))
-			{
-				context.WriteJson(new
-				{
-					Error = "Query string argument 'key' is required"
-				});
-				context.SetStatusToBadRequest();
-				return;
-			}
+            context.Write(viewGenerator.SourceCode);
+        }
 
-			int level;
-			if(int.TryParse(context.Request.QueryString["level"], out level) == false || (level != 1 && level != 2))
-			{
-				context.WriteJson(new
-				{
-					Error = "Query string argument 'level' is required and must be 1 or 2"
-				});
-				context.SetStatusToBadRequest();
-				return;
-			}
+        private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Etag indexEtag)
+        {
+            var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+            RewriteDateQueriesFromOldClients(context, indexQuery);
 
-			List<MappedResultInfo> mappedResult = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				mappedResult = accessor.MapReduce.GetReducedResultsForDebug(index, key, level, context.GetStart(), context.GetPageSize(Settings.MaxPageSize))
-					.ToList();
-			});
-			context.WriteJson(new
-			{
-				mappedResult.Count,
-				Results = mappedResult
-			});
-		}
+            var sp = Stopwatch.StartNew();
+            var result = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ?
+                PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) :
+                PerformQueryAgainstExistingIndex(context, index, indexQuery, out indexEtag);
 
-		private void GetIndexQueryResult(IHttpContext context, string index)
-		{
-			Guid indexEtag;
-			var queryResult = ExecuteQuery(context, index, out indexEtag);
+            sp.Stop();
 
-			if (queryResult == null)
-				return;
+            context.Log(log => log.Debug(() =>
+            {
+                var sb = new StringBuilder("\tQuery: ")
+                    .Append(indexQuery.Query)
+                    .AppendLine();
+                sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
 
-			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
-			var loadedIds = new HashSet<string>(
-				queryResult.Results
-					.Where(x => x["@metadata"] != null)
-					.Select(x => x["@metadata"].Value<string>("@id"))
-					.Where(x => x != null)
-				);
-			var command = new AddIncludesCommand(Database, GetRequestTransaction(context),
-			                                     (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
-			foreach (var result in queryResult.Results)
-			{
-				command.Execute(result);
-			}
-			command.AlsoInclude(queryResult.IdsToInclude);
+                if (result == null)
+                    return sb.ToString();
 
-			context.WriteETag(indexEtag);
-			if(queryResult.NonAuthoritativeInformation)
-				context.SetStatusToNonAuthoritativeInformation();
-			context.WriteJson(queryResult);
-		}
+                sb.Append("\tIndex: ")
+                    .AppendLine(result.IndexName);
+                sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
 
-		private void GetIndexDefinition(IHttpContext context, string index)
-		{
-			var indexDefinition = Database.GetIndexDefinition(index);
-			if(indexDefinition == null)
-			{
-				context.SetStatusToNotFound();
-				return;
-			}
+                return sb.ToString();
+            }));
 
-			indexDefinition.Fields = Database.GetIndexFields(index);
+            return result;
+        }
 
-			context.WriteJson(new
-			{
-				Index = indexDefinition,
-			});
-		}
+        static Regex oldDateTimeFormat = new Regex(@"(\:|\[|{|TO\s) \s* (\d{17})", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
-		private void GetIndexSource(IHttpContext context, string index)
-		{
-			var viewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(index);
-			if (viewGenerator == null)
-			{
-				context.SetStatusToNotFound();
-				return;
-			}
+        private void RewriteDateQueriesFromOldClients(IHttpContext context, IndexQuery indexQuery)
+        {
+            var clientVersion = context.Request.Headers["Raven-Client-Version"];
+            if (string.IsNullOrEmpty(clientVersion) == false) // new client
+                return;
 
-			context.Write(viewGenerator.SourceCode);
-		}
+            var matches = oldDateTimeFormat.Matches(indexQuery.Query);
+            if (matches.Count == 0)
+                return;
+            var builder = new StringBuilder(indexQuery.Query);
+            for (int i = matches.Count - 1; i >= 0; i--) // working in reverse so as to avoid invalidating previous indexes
+            {
+                var dateTimeString = matches[i].Groups[2].Value;
 
-		private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)
-		{
-			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-			RewriteDateQueriesFromOldClients(context,indexQuery);
+                DateTime time;
+                if (DateTime.TryParseExact(dateTimeString, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture, DateTimeStyles.None, out time) == false)
+                    continue;
 
-			var sp = Stopwatch.StartNew();
-			var result = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
-				PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) : 
-				PerformQueryAgainstExistingIndex(context, index, indexQuery, out indexEtag);
+                builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
+                var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite);
+                builder.Insert(matches[i].Groups[2].Index, newDateTimeFormat);
+            }
+            indexQuery.Query = builder.ToString();
+        }
 
-			sp.Stop();
+        private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Etag indexEtag)
+        {
+            indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
+            if (context.MatchEtag(indexEtag))
+            {
+                Database.IndexStorage.MarkCachedQuery(index);
+                context.SetStatusToNotModified();
+                return null;
+            }
 
-			context.Log(log => log.Debug(() =>
-			{
-				var sb = new StringBuilder("\tQuery: ")
-					.Append(indexQuery.Query)
-					.AppendLine();
-				sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
+            var queryResult = Database.Query(index, indexQuery);
+            indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
+            return queryResult;
+        }
 
-				if (result == null)
-					return sb.ToString();
+        private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Etag indexEtag)
+        {
+            string entityName;
+            var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
-				sb.Append("\tIndex: ")
-					.AppendLine(result.IndexName);
-				sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
+            if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
+            {
+                indexEtag = Database.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);
+                if (context.MatchEtag(indexEtag))
+                {
+                    Database.IndexStorage.MarkCachedQuery(dynamicIndexName);
+                    context.SetStatusToNotModified();
+                    return null;
+                }
+            }
 
-				return sb.ToString();
-			}));
+            if (dynamicIndexName == null && // would have to create a dynamic index
+                Database.Configuration.CreateAutoIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
+            {
+                indexEtag = Etag.InvalidEtag;
+                var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+                context.SetStatusToBadRequest();
+                var target = entityName == null ? "all documents" : entityName + " documents";
+                context.WriteJson(new
+                                    {
+                                        Error = "Executing the query " + indexQuery.Query + " on " + target + " require creation of temporary index, and it has been explicitly disabled.",
+                                        Explanations = explanations
+                                    });
+                return null;
+            }
 
-			return result;
-		}
+            var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
 
-		static Regex oldDateTimeFormat = new Regex(@"(\:|\[|{|TO\s) \s* (\d{17})", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+            // have to check here because we might be getting the index etag just 
+            // as we make a switch from temp to auto, and we need to refresh the etag
+            // if that is the case. This can also happen when the optimizer
+            // decided to switch indexes for a query.
+            indexEtag = (dynamicIndexName == null || queryResult.IndexName == dynamicIndexName)
+                            ? Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag, indexQuery.ResultsTransformer)
+                            : Etag.InvalidEtag;
 
-		private void RewriteDateQueriesFromOldClients(IHttpContext context,IndexQuery indexQuery)
-		{
-			var clientVersion = context.Request.Headers["Raven-Client-Version"];
-			if (string.IsNullOrEmpty(clientVersion) == false) // new client
-				return;
+            return queryResult;
+        }
 
-			var matches = oldDateTimeFormat.Matches(indexQuery.Query);
-			if (matches.Count == 0)
-				return;
-			var builder = new StringBuilder(indexQuery.Query);
-			for (int i = matches.Count-1; i >= 0; i--) // working in reverse so as to avoid invalidating previous indexes
-			{
-				var dateTimeString = matches[i].Groups[2].Value;
+        private string GetDynamicIndexName(string index, IndexQuery indexQuery, out string entityName)
+        {
+            entityName = null;
+            if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+                entityName = index.Substring("dynamic/".Length);
 
-				DateTime time;
-				if (DateTime.TryParseExact(dateTimeString, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture, DateTimeStyles.None, out time) == false)
-					continue;
-
-				builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
-				var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite);
-				builder.Insert(matches[i].Groups[2].Index, newDateTimeFormat);
-			}
-			indexQuery.Query = builder.ToString();
-		}
-
-		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
-		{
-			indexEtag = Database.GetIndexEtag(index, null);
-			if (context.MatchEtag(indexEtag))
-			{
-				Database.IndexStorage.MarkCachedQuery(index);
-				context.SetStatusToNotModified();
-				return null;
-			}
-
-			var queryResult = Database.Query(index, indexQuery);
-			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag);
-			return queryResult;
-		}
-
-		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
-		{
-			string entityName;
-			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
-
-			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
-			{
-				indexEtag = Database.GetIndexEtag(dynamicIndexName, null);
-				if (context.MatchEtag(indexEtag))
-				{
-					Database.IndexStorage.MarkCachedQuery(dynamicIndexName);
-					context.SetStatusToNotModified();
-					return null;
-				}
-			}
-
-			if (dynamicIndexName == null && // would have to create a dynamic index
-				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
-			{
-				indexEtag = Guid.NewGuid();
-				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
-				context.SetStatusToBadRequest();
-				var target = entityName == null ? "all documents" : entityName + " documents";
-				context.WriteJson(new
-				                  	{
-				                  		Error = "Executing the query " + indexQuery.Query +" on " + target +" require creation of temporary index, and it has been explicitly disabled.",
-										Explanations = explanations
-				                  	});
-				return null;
-			}
-
-			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
-
-			// have to check here because we might be getting the index etag just 
-			// as we make a switch from temp to auto, and we need to refresh the etag
-			// if that is the case. This can also happen when the optimizer
-			// decided to switch indexes for a query.
-			indexEtag = (dynamicIndexName  == null || queryResult.IndexName == dynamicIndexName) ?
-				Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag) : 
-				Guid.NewGuid();
-
-			return queryResult;
-		}
-
-		private string GetDynamicIndexName(string index, IndexQuery indexQuery, out string entityName)
-		{
-			entityName = null;
-			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
-				entityName = index.Substring("dynamic/".Length);
-
-			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
-			return dynamicIndexName;
-		}
-	}
+            var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
+            return dynamicIndexName;
+        }
+    }
 }

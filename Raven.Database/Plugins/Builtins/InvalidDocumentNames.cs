@@ -8,7 +8,7 @@ namespace Raven.Database.Plugins.Builtins
 		{
 			if(key.Contains(@"\"))
 				return VetoResult.Deny(@"Document names cannot contains '\' but attempted to save with: " + key);
-			if(string.Equals(key, "Raven/Databases/System", StringComparison.InvariantCultureIgnoreCase))
+			if(string.Equals(key, "Raven/Databases/System", StringComparison.OrdinalIgnoreCase))
 				return
 					VetoResult.Deny(
 						@"Cannot create a tenant database with the name 'System', that name is reserved for the actual system database");

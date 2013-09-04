@@ -7,7 +7,8 @@
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
              xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
              xmlns:System="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:QueryModel}">
+    d:DesignHeight="50
+			 " d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:QueryModel}">
 
     <Delay:PopupButton Margin="4,0"
                        ToolTipService.ToolTip="Show Advanced Query Options">
@@ -21,7 +22,7 @@
             <Border Background="{StaticResource Brush_ToolbarBackground}"
                     BorderThickness="1"
                     BorderBrush="Gray"
-                    Margin="0,20,0,0">
+                    Margin="0,0,0,0">
                 <Border.Effect>
                     <DropShadowEffect Opacity="0.4" />
                 </Border.Effect>
@@ -58,8 +59,8 @@
                               ToolTipService.ToolTip="Show the raw index entries instead of matching documents"
                               Margin="4" Content="Index Entries">
                     </CheckBox>
-
-                    <CheckBox IsChecked="{Binding SkipTransformResults, Mode=TwoWay}"
+										
+					<CheckBox IsChecked="{Binding SkipTransformResults, Mode=TwoWay}"
                               HorizontalAlignment="Left"
                               ToolTipService.ToolTip="Prevents the Transform Results stage of the index being applied"
                               Margin="4"

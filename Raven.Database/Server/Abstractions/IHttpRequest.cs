@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Web;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -22,5 +23,17 @@ namespace Raven.Database.Server.Abstractions
 		Stream GetBufferLessInputStream();
 		bool HasCookie(string name);
 		string GetCookie(string name);
+	}
+
+	internal class HttpRequestHelper
+	{
+		public static NameValueCollection ParseQueryStringWithLegacySupport(string ravenClientVersion, string query)
+		{
+			if (ravenClientVersion == null || ravenClientVersion.StartsWith("1.0") || ravenClientVersion.StartsWith("2.0"))
+			{
+				query = Uri.UnescapeDataString(query);
+			}
+			return HttpUtility.ParseQueryString(query);
+		}
 	}
 }

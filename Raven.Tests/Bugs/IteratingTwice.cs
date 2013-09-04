@@ -91,7 +91,7 @@ namespace Raven.Tests.Bugs
 					{
 						var listAsync = query.ToListAsync();
 						listAsync.Wait();
-						foreach (var user in listAsync.Result.Item2)
+						foreach (var user in listAsync.Result)
 						{
 							Assert.NotNull(user.Id);
 						}

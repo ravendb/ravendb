@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server.Security;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -12,9 +13,10 @@ namespace Raven.Tests.MultiGet
 {
 	public class MultiGetSecurity : RemoteClientTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode =AnonymousUserAccessMode.Get;
+			Authentication.EnableOnce();
 		}
 
 		[Fact]

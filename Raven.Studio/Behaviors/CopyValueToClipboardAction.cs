@@ -1,10 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
+﻿using System.Windows;
 using System.Windows.Interactivity;
 
 
@@ -24,9 +18,7 @@ namespace Raven.Studio.Behaviors
         protected override void Invoke(object parameter)
         {
             if (Value != null)
-            {
                 Clipboard.SetText(Value.ToString());
-            }
         }
     }
 }

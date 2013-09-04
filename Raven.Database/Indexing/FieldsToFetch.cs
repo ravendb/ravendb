@@ -30,7 +30,7 @@ namespace Raven.Database.Indexing
 			IsDistinctQuery = aggregationOperation.HasFlag(AggregationOperation.Distinct) &&
 							  fieldsToFetch != null && fieldsToFetch.Length > 0;
 			
-			IsProjection = fieldsToFetch != null && fieldsToFetch.Length != 0;
+			IsProjection = this.fieldsToFetch != null && this.fieldsToFetch.Count > 0;
 		
 			if(IsProjection && IsDistinctQuery == false)
 				EnsureHasField(additionalField);
@@ -82,6 +82,11 @@ namespace Raven.Database.Indexing
 			if (ensuredFieldNames == null)
 				ensuredFieldNames = new HashSet<string>();
 			ensuredFieldNames.Add(ensuredFieldName);
+		}
+
+		public bool HasField(string name)
+		{
+			return fieldsToFetch.Contains(name);
 		}
 	}
 }

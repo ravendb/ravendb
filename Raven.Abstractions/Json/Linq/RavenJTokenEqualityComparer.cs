@@ -36,7 +36,7 @@ namespace Raven.Json.Linq
 			return obj.GetDeepHashCode();
 		}
 
-		public bool Equals(object x, object y)
+		public new bool Equals(object x, object y)
 		{
 			return this.Equals((RavenJToken) x, (RavenJToken) y);
 		}

@@ -5,13 +5,13 @@
 //-----------------------------------------------------------------------
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Exceptions;
 using Raven.Tests.Storage;
 using Xunit;
 

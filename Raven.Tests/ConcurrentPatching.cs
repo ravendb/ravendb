@@ -13,7 +13,7 @@ namespace Raven.Tests
 		[Fact]
 		public void CanConcurrentlyUpdateSameDocument()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				using (var s = store.OpenSession())
 				{
@@ -21,7 +21,7 @@ namespace Raven.Tests
 					s.SaveChanges();
 				}
 
-				int numberOfComments = 128;
+				const int numberOfComments = 50;
 				var patches = Enumerable.Range(0, numberOfComments).Select(x =>
 				                                                           new PatchRequest
 				                                                           {

@@ -46,7 +46,7 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 				                                               },
 				                                               new string[0]);
 
-				Assert.Equal("Temp/AllDocs/ByAgeAndName", queryResult.IndexName);
+				Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
 
 				queryResult = store.DatabaseCommands.Query("dynamic",
 															   new IndexQuery
@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 															   },
 															   new string[0]);
 
-				Assert.Equal("Temp/AllDocs/ByAgeAndName", queryResult.IndexName);
+				Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
 			}
 		}
 
@@ -90,7 +90,107 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 			}
 		}
 
-		[Fact]
+        [Fact]
+        public void WillCreateWiderIndex()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var queryResult = store.DatabaseCommands.Query("dynamic",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Name:3"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/AllDocs/ByName", queryResult.IndexName);
+
+                queryResult = store.DatabaseCommands.Query("dynamic",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Age:3"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
+
+                queryResult = store.DatabaseCommands.Query("dynamic",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Name:Ayende"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/AllDocs/ByAgeAndName", queryResult.IndexName);
+            }
+        }
+      
+        [Fact]
+        public void WillCreateWiderIndex_UsingEnityName()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var queryResult = store.DatabaseCommands.Query("dynamic/Users",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Name:3"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
+
+                queryResult = store.DatabaseCommands.Query("dynamic/Users",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Age:3"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
+
+                queryResult = store.DatabaseCommands.Query("dynamic/Users",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Name:Ayende"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
+            }
+        }
+        [Fact]
+        public void WillCreateWiderIndex_UsingDifferentEntityNames()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var queryResult = store.DatabaseCommands.Query("dynamic/Users",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Name:3"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
+
+                queryResult = store.DatabaseCommands.Query("dynamic/Cars",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Age:3"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/Cars/ByAge", queryResult.IndexName);
+
+                queryResult = store.DatabaseCommands.Query("dynamic/Users",
+                                                               new IndexQuery
+                                                               {
+                                                                   Query = "Name:Ayende"
+                                                               },
+                                                               new string[0]);
+
+                Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
+            }
+        }
+        [Fact]
 		public void WillUseWiderIndex()
 		{
 			using (var store = NewDocumentStore())

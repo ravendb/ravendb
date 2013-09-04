@@ -5,8 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -46,18 +49,18 @@ namespace Raven.Studio.Features.Query
 
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
-            return GetQueryResults(start, pageSize)
-                .ContinueWith(task =>
-                {
-                    var documents =
-                        SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
-                            .Select(x => new ViewableDocument(x))
-                            .ToArray();
+	        return GetQueryResults(start, pageSize)
+		        .ContinueWith(task =>
+		        {
+			        var documents =
+				        SerializationHelper.RavenJObjectsToJsonDocuments(task.Result.Results)
+				                           .Select(x => new ViewableDocument(x))
+				                           .ToArray();
 
-					SetCount(Math.Max(task.Result.TotalResults - task.Result.SkippedResults, documents.Length));
+			        SetCount(Math.Max(task.Result.TotalResults - task.Result.SkippedResults, documents.Length));
 
-                    return (IList<ViewableDocument>)documents;
-                });
+			        return (IList<ViewableDocument>) documents;
+		        });
         }
 
         private Task<QueryResult> GetQueryResults(int start, int pageSize)
@@ -81,50 +84,50 @@ namespace Raven.Studio.Features.Query
 			var queryStartTime = SystemTime.UtcNow.Ticks;
             var queryEndtime = DateTime.MinValue.Ticks;
 
-            return ApplicationModel.DatabaseCommands
-                .QueryAsync(indexName,
-                            query,
-                            new string[] { }, MetadataOnly)
-                            .ContinueWith(task =>
-                                              {
-												  queryEndtime = SystemTime.UtcNow.Ticks;
+	        return ApplicationModel.DatabaseCommands
+	                               .QueryAsync(indexName,
+	                                           query,
+	                                           new string[] {}, MetadataOnly)
+	                               .ContinueWith(task =>
+	                               {
+		                               queryEndtime = SystemTime.UtcNow.Ticks;
 
-                                                  var queryTime = new TimeSpan(queryEndtime - queryStartTime);
+		                               var queryTime = new TimeSpan(queryEndtime - queryStartTime);
 
-                                                  RavenQueryStatistics statistics;
-                                                  if (!task.IsFaulted)
-                                                  {
-                                                      statistics = new RavenQueryStatistics
-                                                                       {
-                                                                           IndexEtag = task.Result.IndexEtag,
-                                                                           IndexName = task.Result.IndexName,
-                                                                           IndexTimestamp =
-                                                                               task.Result.IndexTimestamp,
-                                                                           IsStale = task.Result.IsStale,
-                                                                           SkippedResults =
-                                                                               task.Result.SkippedResults,
-																		   Timestamp = SystemTime.UtcNow,
-                                                                           TotalResults = task.Result.TotalResults
-                                                                       };
-                                                  }
-                                                  else
-                                                  {
-													  statistics = new RavenQueryStatistics() { Timestamp = SystemTime.UtcNow };
-                                                  }
+		                               RavenQueryStatistics statistics;
+		                               if (!task.IsFaulted)
+		                               {
+			                               statistics = new RavenQueryStatistics
+			                               {
+				                               IndexEtag = task.Result.IndexEtag,
+				                               IndexName = task.Result.IndexName,
+				                               IndexTimestamp =
+					                               task.Result.IndexTimestamp,
+				                               IsStale = task.Result.IsStale,
+				                               SkippedResults =
+					                               task.Result.SkippedResults,
+				                               Timestamp = SystemTime.UtcNow,
+				                               TotalResults = task.Result.TotalResults
+			                               };
+		                               }
+		                               else
+		                               {
+			                               statistics = new RavenQueryStatistics {Timestamp = SystemTime.UtcNow};
+		                               }
 
-                                                  OnQueryStatisticsUpdated(new QueryStatisticsUpdatedEventArgs()
-                                                                               {
-                                                                                   QueryTime = queryTime,
-                                                                                   Statistics = statistics
-                                                                               });
+		                               OnQueryStatisticsUpdated(new QueryStatisticsUpdatedEventArgs()
+		                               {
+			                               QueryTime = queryTime,
+			                               Statistics = statistics
+		                               });
 
-                                                  if (task.IsFaulted)
-                                                  {
-                                                      OnQueryError(new QueryErrorEventArgs() { Exception = task.Exception});
-                                                  }
+		                               if (task.IsFaulted)
+		                               {
+			                               OnQueryError(new QueryErrorEventArgs {Exception = task.Exception});
+		                               }
 
-                                                  return task.Result;
-                                              }, TaskContinuationOptions.ExecuteSynchronously);
+		                               return task.Result;
+	                               }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         protected void OnQueryStatisticsUpdated(QueryStatisticsUpdatedEventArgs e)
@@ -146,6 +149,47 @@ namespace Raven.Studio.Features.Query
 	            else
 					handler(this, e);
             }
+        }
+
+        public async override Task<IAsyncEnumerator<JsonDocument>> StreamAsync(Reference<long> totalResults)
+        {
+            IndexQuery templateQuery;
+            string indexName;
+
+            lock (_lockObject)
+            {
+                templateQuery = TemplateQuery;
+                indexName = _indexName;
+            }
+
+            if (templateQuery == null)
+            {
+                totalResults.Value = 0;
+                return (IAsyncEnumerator<JsonDocument>)(new EmptyAsyncEnumerator<JsonDocument>());
+            }
+
+            var query = templateQuery.Clone();
+            query.Start = 0;
+            query.PageSize = int.MaxValue;
+
+            var reference = new Reference<QueryHeaderInformation>();
+
+            var enumerator = await ApplicationModel.DatabaseCommands.StreamQueryAsync(indexName, query,reference);
+
+            totalResults.Value = reference.Value.TotalResults;
+
+            return new ConvertingEnumerator<JsonDocument, RavenJObject>(enumerator, doc => doc.ToJsonDocument());
+        }
+
+        public void Clear()
+        {
+            lock (_lockObject)
+            {
+                _templateQuery = null;
+            }
+
+            Refresh(RefreshMode.ClearStaleData);
+            SetCount(0);
         }
     }
 

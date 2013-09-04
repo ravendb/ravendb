@@ -6,45 +6,45 @@
 using System;
 using System.Net;
 using Raven.Abstractions.Data;
-using System.Linq;
-
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Connection
 {
 	public static class HttpExtensions
 	{
-		public static Guid GetEtagHeader(this HttpWebResponse response)
+		public static Etag GetEtagHeader(this HttpWebResponse response)
 		{
-#if SILVERLIGHT
-			return EtagHeaderToGuid(response.Headers["ETag"]);
+#if SILVERLIGHT || NETFX_CORE
+			return EtagHeaderToEtag(response.Headers["ETag"]);
 #else
-			return EtagHeaderToGuid(response.GetResponseHeader("ETag"));
+			return EtagHeaderToEtag(response.GetResponseHeader("ETag"));
 #endif
 		}
 
-		public static Guid GetEtagHeader(this GetResponse response)
+		public static Etag GetEtagHeader(this GetResponse response)
 		{
-			return EtagHeaderToGuid(response.Headers["ETag"]);
+			return EtagHeaderToEtag(response.Headers["ETag"]);
 		}
 
 
-		public static Guid GetEtagHeader(this HttpJsonRequest request)
+		public static Etag GetEtagHeader(this HttpJsonRequest request)
 		{
-			return EtagHeaderToGuid(request.ResponseHeaders["ETag"]);
+			return EtagHeaderToEtag(request.ResponseHeaders["ETag"]);
 		}
 
-		internal static Guid EtagHeaderToGuid(string responseHeader)
+		internal static Etag EtagHeaderToEtag(string responseHeader)
 		{
 			if (string.IsNullOrEmpty(responseHeader))
 				throw new InvalidOperationException("Response didn't had an ETag header");
 
 			if (responseHeader[0] == '\"')
-				return new Guid(responseHeader.Substring(1, responseHeader.Length - 2));
+				return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
 
-			return new Guid(responseHeader);
+			return Etag.Parse(responseHeader);
 		}
 	}
 }

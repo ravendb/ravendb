@@ -8,7 +8,7 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsAuthConfigureHttpListener : IConfigureHttpListener
 	{
-		public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/[\w.-_\d]+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/[\w\.\-_]+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		private InMemoryRavenConfiguration configuration;
 		public void Configure(HttpListener listener, InMemoryRavenConfiguration config)
@@ -24,8 +24,9 @@ namespace Raven.Database.Server.Security.Windows
 		{
 			var authHeader = request.Headers["Authorization"];
 			var hasApiKey = "True".Equals(request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
+			var hasSingleUseToken = string.IsNullOrEmpty(request.Headers["Single-Use-Auth-Token"]) == false;
 			var hasOAuthTokenInCookie = request.Cookies["OAuth-Token"] != null;
-			if (hasApiKey || hasOAuthTokenInCookie || 
+			if (hasApiKey || hasOAuthTokenInCookie || hasSingleUseToken  ||
 					string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				// this is an OAuth request that has a token
@@ -34,7 +35,11 @@ namespace Raven.Database.Server.Security.Windows
 			}
 			if (NeverSecret.Urls.Contains(request.Url.AbsolutePath))
 				return AuthenticationSchemes.Anonymous;
-					
+
+			//CORS pre-flight.
+			if(!String.IsNullOrEmpty(configuration.AccessControlAllowOrigin) && request.HttpMethod == "OPTIONS") 
+				{ return AuthenticationSchemes.Anonymous; }
+
 			if (IsAdminRequest.IsMatch(request.RawUrl) && 
 				configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
 				return AuthenticationSchemes.IntegratedWindowsAuthentication;

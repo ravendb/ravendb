@@ -72,7 +72,7 @@ namespace Raven.Munin
 				case JTokenType.Float:
 					return (x.Value<double>()).CompareTo(y.Value<double>());
 				case JTokenType.String:
-					return StringComparer.InvariantCultureIgnoreCase.Compare(x.Value<string>(), y.Value<string>());
+					return StringComparer.OrdinalIgnoreCase.Compare(x.Value<string>(), y.Value<string>());
 				case JTokenType.Boolean:
 					return x.Value<bool>().CompareTo(y.Value<bool>());
 				case JTokenType.Date:
@@ -126,7 +126,7 @@ namespace Raven.Munin
 					var jStr = ((RavenJValue)obj);
 					if (jStr.Value == null)
 						return 0;
-					return StringComparer.InvariantCultureIgnoreCase.GetHashCode(jStr.Value<string>());
+					return StringComparer.OrdinalIgnoreCase.GetHashCode(jStr.Value<string>());
 				case JTokenType.Raw:
 				case JTokenType.Comment:
 				case JTokenType.Constructor:

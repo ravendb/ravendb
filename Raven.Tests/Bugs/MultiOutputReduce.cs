@@ -10,9 +10,9 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanGetCorrectResultsFromAllItems()
 		{
-			for (int xx = 0; xx < 50; xx++)
+			for (int xx = 0; xx < 10; xx++)
 			{
-				using (var store = NewDocumentStore(requestedStorage: "munin"))
+				using (var store = NewDocumentStore(requestedStorage: "esent"))
 				{
 					new Orders_Search().Execute(store);
 

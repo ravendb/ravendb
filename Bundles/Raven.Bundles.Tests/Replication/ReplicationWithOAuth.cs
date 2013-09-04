@@ -14,6 +14,7 @@ namespace Raven.Bundles.Tests.Replication
 		protected override void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.None;
+			database::Raven.Database.Server.Security.Authentication.EnableOnce();
 		}
 
 
@@ -31,8 +32,8 @@ namespace Raven.Bundles.Tests.Replication
 		[Fact]
 		public void CanReplicateDocumentWithOAuth()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			var store1 = CreateStore(enableAuthorization:true);
+			var store2 = CreateStore(enableAuthorization: true);
 
 			foreach (var server in servers)
 			{

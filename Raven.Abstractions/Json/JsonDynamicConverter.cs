@@ -27,6 +27,18 @@ namespace Raven.Abstractions.Json
 		/// <param name="serializer">The calling serializer.</param>
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
+			if (value == null)
+			{
+					writer.WriteNull();
+				return;
+			}
+			if (value.GetType() == typeof (object))
+			{
+				writer.WriteStartObject();
+				writer.WriteEndObject();
+				return;
+			}
+
 			var dynamicValue = ((IDynamicMetaObjectProvider) value).GetMetaObject(Expression.Constant(value));
 
 			writer.WriteStartObject();

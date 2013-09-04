@@ -7,7 +7,7 @@ namespace Raven.Client.Connection.Profiling
 	/// <summary>
 	/// Information about a particular session
 	/// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 	[Serializable]
 #endif
 	public class ProfilingInformation

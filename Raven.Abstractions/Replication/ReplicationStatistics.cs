@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Replication
 {
 	public class ReplicationStatistics
 	{
 		public string Self { get; set; }
-		public Guid MostRecentDocumentEtag { get; set; }
-		public Guid MostRecentAttachmentEtag { get; set; }
+		public Etag MostRecentDocumentEtag { get; set; }
+		public Etag MostRecentAttachmentEtag { get; set; }
 		public List<DestinationStats> Stats { get; set; }
 
 		public ReplicationStatistics()
@@ -21,8 +22,8 @@ namespace Raven.Abstractions.Replication
 		public int FailureCountInternal = 0;
 		public string Url { get; set; }
 		public DateTime? LastHeartbeatReceived { get; set; }
-		public Guid? LastEtagCheckedForReplication { get; set; }
-		public Guid? LastReplicatedEtag { get; set; }
+		public Etag LastEtagCheckedForReplication { get; set; }
+		public Etag LastReplicatedEtag { get; set; }
 		public DateTime? LastReplicatedLastModified { get; set; }
 		public DateTime? LastSuccessTimestamp { get; set; }
 		public DateTime? LastFailureTimestamp { get; set; }

@@ -43,13 +43,13 @@ namespace Raven.Tests.Json
 				var definition = store.DatabaseCommands.GetIndex(new Stations_ByLocation().IndexName);
 
 				Assert.Equal(@"docs.Stations.Select(s => new {
-    _ = SpatialIndex.Generate(((double ? )((double) s.lat)), ((double ? )((double) s.@long)))
+    _ = SpatialIndex.Generate(((double ? ) s.lat), ((double ? ) s.@long))
 })", definition.Map);
 
 
 
 				Assert.NotEqual(@"docs.Stations.Select(s => new {
-    _ = SpatialIndex.Generate(((double ? )((double) s.Latitude)), ((double ? )((double) s.Longitude)))
+    _ = SpatialIndex.Generate(((double ? )  s.Latitude), ((double ? ) s.Longitude))
 })", definition.Map);
 			}
 		}

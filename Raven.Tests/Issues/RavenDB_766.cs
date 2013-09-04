@@ -89,17 +89,10 @@ namespace Raven.Tests.Issues
 					accessor.Indexing.AddIndex("a", true);
 					accessor.Indexing.AddIndex("b", true);
 
-					accessor.MapReduce.ScheduleReductions("a", 1,
-														  new List<ReduceKeyAndBucket>()
-					                                      {
-						                                      new ReduceKeyAndBucket(1, "a"),
-						                                      new ReduceKeyAndBucket(2, "a")
-					                                      });
-					accessor.MapReduce.ScheduleReductions("b", 1, new List<ReduceKeyAndBucket>()
-					                                      {
-						                                      new ReduceKeyAndBucket(1, "b"),
-						                                      new ReduceKeyAndBucket(2, "b")
-					                                      });
+					accessor.MapReduce.ScheduleReductions("a", 1, new ReduceKeyAndBucket(1, "a"));
+					accessor.MapReduce.ScheduleReductions("a", 1, new ReduceKeyAndBucket(2, "a"));
+					accessor.MapReduce.ScheduleReductions("b", 1, new ReduceKeyAndBucket(1, "b"));
+					accessor.MapReduce.ScheduleReductions("b", 1, new ReduceKeyAndBucket(2, "b"));
 				});
 
 				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));

@@ -8,162 +8,199 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Server.Connections
 {
-	public class ConnectionState
-	{
-		private readonly ConcurrentSet<string> matchingIndexes =
+    public class ConnectionState
+    {
+        private readonly ConcurrentSet<string> matchingIndexes =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingDocuments =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+        private readonly ConcurrentSet<string> matchingDocumentPrefixes =
+            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+		private readonly ConcurrentSet<string> matchingBulkInserts =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocuments =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private EventsTransport eventsTransport;
 
-		private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
+        private int watchAllDocuments;
+        private int watchAllIndexes;
+        private int watchAllReplicationConflicts;
 
-		private EventsTransport eventsTransport;
+        public ConnectionState(EventsTransport eventsTransport)
+        {
+            this.eventsTransport = eventsTransport;
+        }
 
-		private int watchAllDocuments;
-		private int watchAllIndexes;
+        public object DebugStatus
+        {
+            get
+            {
+                return new
+                {
+                    eventsTransport.Id,
+                    eventsTransport.Connected,
+                    WatchAllDocuments = watchAllDocuments > 0,
+                    WatchAllIndexes = watchAllIndexes > 0,
+                    WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
+                    WatchIndexes = matchingIndexes.ToArray(),
+                    WatchDocuments = matchingDocuments.ToArray(),
+                };
+            }
+        }
 
-		public ConnectionState(EventsTransport eventsTransport)
+        public void WatchIndex(string name)
+        {
+            matchingIndexes.TryAdd(name);
+        }
+
+        public void UnwatchIndex(string name)
+        {
+            matchingIndexes.TryRemove(name);
+        }
+
+		public void WatchBulkInsert(string operationId)
 		{
-			this.eventsTransport = eventsTransport;
+			matchingBulkInserts.TryAdd(operationId);
 		}
 
-		public void WatchIndex(string name)
+		public void UnwatchBulkInsert(string operationId)
 		{
-			matchingIndexes.TryAdd(name);
+			matchingBulkInserts.TryRemove(operationId);
 		}
 
-		public void UnwatchIndex(string name)
-		{
-			matchingIndexes.TryRemove(name);
-		}
+        public void WatchAllIndexes()
+        {
+            Interlocked.Increment(ref watchAllIndexes);
+        }
 
-		public void WatchAllIndexes()
-		{
-			Interlocked.Increment(ref watchAllIndexes);
-		}
+        public void UnwatchAllIndexes()
+        {
+            Interlocked.Decrement(ref watchAllIndexes);
+        }
 
-		public void UnwatchAllIndexes()
+		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
 		{
-			Interlocked.Decrement(ref watchAllIndexes);
-		}
+			var value = new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" };
 
-		public void Send(DocumentChangeNotification documentChangeNotification)
-		{
-			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
-			if (watchAllDocuments > 0)
-			{
-				Enqueue(value);
+			if (matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString()) == false)
 				return;
-			}
 
-			if (documentChangeNotification.Id != null)
-			{
-				if (matchingDocuments.Contains(documentChangeNotification.Id))
-				{
-					Enqueue(value);
-					return;
-				}
-
-				var hasPrefix = matchingDocumentPrefixes.Any(
-						x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
-				if (hasPrefix == false)
-					return;
-			}
 			Enqueue(value);
 		}
 
-		public void Send(IndexChangeNotification indexChangeNotification)
-		{
-			var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
+        public void Send(DocumentChangeNotification documentChangeNotification)
+        {
+            var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
+            if (watchAllDocuments > 0)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			if (watchAllIndexes > 0)
-			{
-				Enqueue(value);
-				return;
-			}
+            if (documentChangeNotification.Id != null)
+            {
+                if (matchingDocuments.Contains(documentChangeNotification.Id))
+                {
+                    Enqueue(value);
+                    return;
+                }
 
-			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
-				return;
+                var hasPrefix = matchingDocumentPrefixes.Any(
+                        x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
+                if (hasPrefix == false)
+                    return;
+            }
+            Enqueue(value);
+        }
 
-			Enqueue(value);
-		}
+        public void Send(IndexChangeNotification indexChangeNotification)
+        {
+            var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
 
-		private void Enqueue(object msg)
-		{
-			if (eventsTransport == null || eventsTransport.Connected == false)
-			{
-				pendingMessages.Enqueue(msg);
-				return;
-			}
+            if (watchAllIndexes > 0)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			eventsTransport.SendAsync(msg)
-				.ContinueWith(task =>
-								{
-									if (task.IsFaulted == false)
-										return;
-									pendingMessages.Enqueue(msg);
-								});
-		}
+            if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
+                return;
 
-		public void WatchAllDocuments()
-		{
-			Interlocked.Increment(ref watchAllDocuments);
-		}
+            Enqueue(value);
+        }
 
-		public void UnwatchAllDocuments()
-		{
-			Interlocked.Decrement(ref watchAllDocuments);
-		}
+        public void Send(ReplicationConflictNotification replicationConflictNotification)
+        {
+            var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
 
-		public void WatchDocument(string name)
-		{
-			matchingDocuments.TryAdd(name);
-		}
+            if (watchAllReplicationConflicts <= 0)
+            {
+                return;
+            }
 
-		public void UnwatchDocument(string name)
-		{
-			matchingDocuments.TryRemove(name);
-		}
+            Enqueue(value);
+        }
 
-		public void WatchDocumentPrefix(string name)
-		{
-			matchingDocumentPrefixes.TryAdd(name);
-		}
+        private void Enqueue(object msg)
+        {
+            if (eventsTransport == null || eventsTransport.Connected == false)
+            {
+                return;
+            }
 
-		public void UnwatchDocumentPrefix(string name)
-		{
-			matchingDocumentPrefixes.TryRemove(name);
-		}
+            eventsTransport.SendAsync(msg);
+        }
 
-		public void Reconnect(EventsTransport transport)
-		{
-			eventsTransport = transport;
-			var items = new List<object>();
-			object result;
-			while (pendingMessages.TryDequeue(out result))
-			{
-				items.Add(result);
-			}
+        public void WatchAllDocuments()
+        {
+            Interlocked.Increment(ref watchAllDocuments);
+        }
 
-			eventsTransport.SendManyAsync(items)
-				.ContinueWith(task =>
-								{
-									if (task.IsFaulted == false)
-										return;
-									foreach (var item in items)
-									{
-										pendingMessages.Enqueue(item);
-									}
-								});
-		}
+        public void UnwatchAllDocuments()
+        {
+            Interlocked.Decrement(ref watchAllDocuments);
+        }
 
-		public void Disconnect()
-		{
-			if (eventsTransport != null)
-				eventsTransport.Disconnect();
-		}
-	}
+        public void WatchDocument(string name)
+        {
+            matchingDocuments.TryAdd(name);
+        }
+
+        public void UnwatchDocument(string name)
+        {
+            matchingDocuments.TryRemove(name);
+        }
+
+        public void WatchDocumentPrefix(string name)
+        {
+            matchingDocumentPrefixes.TryAdd(name);
+        }
+
+        public void UnwatchDocumentPrefix(string name)
+        {
+            matchingDocumentPrefixes.TryRemove(name);
+        }
+
+        public void WatchAllReplicationConflicts()
+        {
+            Interlocked.Increment(ref watchAllReplicationConflicts);
+        }
+
+        public void UnwatchAllReplicationConflicts()
+        {
+            Interlocked.Decrement(ref watchAllReplicationConflicts);
+        }
+
+        public void Reconnect(EventsTransport transport)
+        {
+            eventsTransport = transport;
+        }
+
+        public void Dispose()
+        {
+            if (eventsTransport != null)
+                eventsTransport.Dispose();
+        }
+    }
 }

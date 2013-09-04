@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
 using Raven.Abstractions.Extensions;
@@ -48,17 +48,16 @@ namespace Raven.Storage.Managed
 			storage.Lists.Remove(readResult.Key);
 		}
 
-		public IEnumerable<ListItem> Read(string name, Guid start, Guid? end, int take)
+		public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
 		{
-			var endComparer = end == null ? null : new ComparableByteArray(end.Value);
 			return storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
 			{
 				{ "name", name },
 				{ "etag", start.ToByteArray() }
 			})
 			.TakeWhile(x=> 
-				StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("name"), name) &&
-				(endComparer == null || endComparer.CompareTo(x.Value<byte[]>("etag")) > 0 )
+				StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("name"), name) &&
+				(end == null || end.CompareTo(Etag.Parse(x.Value<byte[]>("etag"))) > 0)
 				)
 			.Take(take)
 			.Select(result =>
@@ -67,13 +66,13 @@ namespace Raven.Storage.Managed
 				return new ListItem
 				{
 					Data = readResult.Data().ToJObject(),
-					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+					Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag")),
 					Key = readResult.Key.Value<string>("key")
 				};
 			});
 		}
 
-		public void RemoveAllBefore(string name, Guid etag)
+		public void RemoveAllBefore(string name, Etag etag)
 		{
 			var comparable = new ComparableByteArray(etag);
 			var results = storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
@@ -81,7 +80,7 @@ namespace Raven.Storage.Managed
 				{"name", name},
 				{"etag", Guid.Empty.ToByteArray()}
 			})
-				.TakeWhile(x => String.Equals(x.Value<string>("name"), name, StringComparison.InvariantCultureIgnoreCase) &&
+				.TakeWhile(x => String.Equals(x.Value<string>("name"), name, StringComparison.OrdinalIgnoreCase) &&
 				                comparable.CompareTo(x.Value<byte[]>("etag")) >= 0);
 
 			foreach (var result in results)
@@ -105,7 +104,7 @@ namespace Raven.Storage.Managed
 			{
 				Data = readResult.Data().ToJObject(),
 				Key = readResult.Key.Value<string>("key"),
-				Etag = new Guid(readResult.Key.Value<byte[]>("etag"))
+				Etag = Etag.Parse(readResult.Key.Value<byte[]>("etag"))
 			};
 		}
 	}

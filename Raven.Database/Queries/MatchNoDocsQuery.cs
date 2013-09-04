@@ -26,7 +26,7 @@ namespace Raven.Database.Queries
 		private class MatchNoDocsWeight : Weight
 		{
 			private readonly MatchNoDocsQuery enclosingInstance;
-			private readonly Lucene.Net.Search.Similarity similarity;
+			private readonly Similarity similarity;
 
 			public MatchNoDocsWeight(Searcher searcher, MatchNoDocsQuery enclosingInstance)
 			{

@@ -59,13 +59,13 @@ namespace Raven.Abstractions.Data
 		/// The last etag indexed by the index.
 		/// This can be used to determine whatever the results can be cached.
 		/// </summary>
-		public Guid IndexEtag { get; set; }
+		public Etag IndexEtag { get; set; }
 
 		/// <summary>
 		/// The ETag value for this index current state, which include what we docs we indexed,
 		/// what document were deleted, etc.
 		/// </summary>
-		public Guid ResultEtag { get; set; }
+		public Etag ResultEtag { get; set; }
 
         /// <summary>
         /// Gets or sets highlighter results 
@@ -82,6 +82,11 @@ namespace Raven.Abstractions.Data
 		/// The timestamp of the last time the index was queried
 		/// </summary>
 		public DateTime LastQueryTime { get; set; }
+
+		/// <summary>
+		/// The duration of actually executing the query server side
+		/// </summary>
+		public long DurationMilliseconds { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.

@@ -1,38 +1,75 @@
-﻿using System;
+﻿#if !SILVERLIGHT && !NETFX_CORE
+using System;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+#if !SILVERLIGHT
+using Raven.Client.Changes;
 using Raven.Client.Connection;
+#else
+using Raven.Client.Connection.Async;
+#endif
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
 	public class BulkInsertOperation : IDisposable
 	{
+		public Guid OperationId
+		{
+			get
+			{
+				return operation.OperationId;
+			}
+		}
+
 		private readonly IDocumentStore documentStore;
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
-		private readonly IDatabaseCommands databaseCommands;
+#if !SILVERLIGHT
+		public IDatabaseCommands DatabaseCommands { get; private set; }
+#else
+		public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
+#endif
 		private readonly EntityToJson entityToJson;
 
 		public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
 
-		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { }; 
+		public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
 
-		public event Action<string>  Report
+		public event Action<string> Report
 		{
 			add { operation.Report += value; }
 			remove { operation.Report -= value; }
 		}
 
-		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options)
+		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes)
 		{
 			this.documentStore = documentStore;
-			databaseCommands = database == null
-				                   ? documentStore.DatabaseCommands.ForSystemDatabase()
-				                   : documentStore.DatabaseCommands.ForDatabase(database);
 
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, databaseCommands, entity));
-			operation = databaseCommands.GetBulkInsertOperation(options);
+			database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
+
+#if !SILVERLIGHT
+			// Fitzchak: Should not be ever null because of the above code, please refactor this.
+			DatabaseCommands = database == null
+								   ? documentStore.DatabaseCommands.ForSystemDatabase()
+								   : documentStore.DatabaseCommands.ForDatabase(database);
+
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, DatabaseCommands, entity));
+#else
+			DatabaseCommands = database == null
+								   ? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
+								   : documentStore.AsyncDatabaseCommands.ForDatabase(database);
+
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).Result);
+#endif
+			operation = DatabaseCommands.GetBulkInsertOperation(options, changes);
 			entityToJson = new EntityToJson(documentStore, listeners);
+		}
+
+		public Task DisposeAsync()
+		{
+			return operation.DisposeAsync();
 		}
 
 		public void Dispose()
@@ -40,9 +77,11 @@ namespace Raven.Client.Document
 			operation.Dispose();
 		}
 
-		public void Store(object entity)
+		public string Store(object entity)
 		{
-			Store(entity, GetId(entity));
+			var id = GetId(entity);
+			Store(entity, id);
+			return id;
 		}
 
 		public void Store(object entity, string id)
@@ -58,6 +97,13 @@ namespace Raven.Client.Document
 			OnBeforeEntityInsert(id, data, metadata);
 
 			operation.Write(id, metadata, data);
+		}
+
+		public void Store(RavenJObject document, RavenJObject metadata, string id)
+		{
+			OnBeforeEntityInsert(id, document, metadata);
+
+			operation.Write(id, metadata, document);
 		}
 
 		private string GetId(object entity)
@@ -76,3 +122,4 @@ namespace Raven.Client.Document
 		}
 	}
 }
+#endif

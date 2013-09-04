@@ -22,6 +22,7 @@ using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
@@ -34,9 +35,9 @@ namespace Raven.Database.Config
 
 		public InMemoryRavenConfiguration()
 		{
-			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
+			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
-			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
+			CreateAutoIndexesForAdHocQueriesIfNeeded = true;
 
 			CreatePluginsDirectoryIfNotExisting = true;
 			CreateAnalyzersDirectoryIfNotExisting = true;
@@ -62,7 +63,7 @@ namespace Raven.Database.Config
 
 		public void Initialize()
 		{
-			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
+			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
@@ -79,21 +80,22 @@ namespace Raven.Database.Config
 
 			MemoryCacheLimitCheckInterval = ravenSettings.MemoryCacheLimitCheckInterval.Value;
 
+			// Discovery
+			DisableClusterDiscovery = ravenSettings.DisableClusterDiscovery.Value;
+
+			// TODO: Validate the cluster name. Valid names are only valid chars in documents IDs.
+			ClusterName = ravenSettings.ClusterName.Value;
+
+			ServerName = ravenSettings.ServerName.Value;
+
+			MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
+			AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
+
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
+			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
-
-			if (MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default)
-			{
-				InitialNumberOfItemsToIndexInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch;
-			}
-			else
-			{
-				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItemsToIndexInSingleBatch, InitialNumberOfItemsToIndexInSingleBatch);
-			}
-
-			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
@@ -101,17 +103,20 @@ namespace Raven.Database.Config
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
 																	MaxNumberOfItemsToIndexInSingleBatch);
 			}
-
-			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
-			if (MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default)
-			{
-				InitialNumberOfItemsToReduceInSingleBatch = defaultInitialNumberOfItemsToIndexInSingleBatch / 2;
-			}
 			else
 			{
-				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(MaxNumberOfItemsToReduceInSingleBatch,
-																	InitialNumberOfItemsToReduceInSingleBatch);
+				InitialNumberOfItemsToIndexInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch == ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Default ?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch :
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
 			}
+			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
+
+
+
+			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
+			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
+				 defaultInitialNumberOfItemsToIndexInSingleBatch / 2 :
+				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch / 2));
 
 			NumberOfItemsToExecuteReduceInSingleStep = ravenSettings.NumberOfItemsToExecuteReduceInSingleStep.Value;
 
@@ -124,15 +129,13 @@ namespace Raven.Database.Config
 
 			MaxNumberOfParallelIndexTasks = ravenSettings.MaxNumberOfParallelIndexTasks.Value;
 
-			TempIndexPromotionMinimumQueryCount = ravenSettings.TempIndexPromotionMinimumQueryCount.Value;
+			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
-			TempIndexPromotionThreshold = ravenSettings.TempIndexPromotionThreshold.Value;
+			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
 
-			TempIndexCleanupPeriod = ravenSettings.TempIndexCleanupPeriod.Value;
+			MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
 
-			TempIndexCleanupThreshold = ravenSettings.TempIndexCleanupThreshold.Value;
-
-			TempIndexInMemoryMaxBytes = ravenSettings.TempIndexInMemoryMaxMb.Value;
+			MaxNumberOfStoredCommitPoints = ravenSettings.MaxNumberOfStoredCommitPoints.Value;
 
 			// Data settings
 			RunInMemory = ravenSettings.RunInMemory.Value;
@@ -142,7 +145,13 @@ namespace Raven.Database.Config
 				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 			}
 
-			CreateTemporaryIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateTemporaryIndexesForAdHocQueriesIfNeeded.Value;
+			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
+
+			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
+			TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
+
+			TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
+			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
 
@@ -160,7 +169,11 @@ namespace Raven.Database.Config
 			HostName = ravenSettings.HostName.Value;
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
+				UseSsl = ravenSettings.UseSsl.Value;
+			}
+
 			SetVirtualDirectory();
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
@@ -176,10 +189,14 @@ namespace Raven.Database.Config
 
 			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
 
+			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
+
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
 
 			PluginsDirectory = ravenSettings.PluginsDirectory.Value.ToFullPath();
+
+			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
 
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
 			if (taskSchedulerType != null)
@@ -192,6 +209,14 @@ namespace Raven.Database.Config
 
 			PostInit();
 		}
+
+		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
+
+		public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
 
 		private void FilterActiveBundles()
 		{
@@ -214,9 +239,22 @@ namespace Raven.Database.Config
 			var exportedValues = Container.GetExportedValues<IStartupTask>().ToArray();
 		}
 
+		public List<string> ActiveBundles
+		{
+			get
+			{
+				var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
+
+				return activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
+				                    .Select(x => x.Trim())
+				                    .ToList();
+
+			}
+		} 
+
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
-			if (catalogs.Count != 1) 
+			if (catalogs.Count != 1)
 				return new AggregateCatalog(catalogs.Select(GetUnfilteredCatalog));
 			return GetUnfilteredCatalog(catalogs.First());
 		}
@@ -259,6 +297,11 @@ namespace Raven.Database.Config
 
 			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
 
+		}
+
+		public bool UseDefaultOAuthTokenServer
+		{
+			get { return Settings["Raven/OAuthTokenServer"] == null;  }
 		}
 
 		private void SetupOAuth()
@@ -312,7 +355,7 @@ namespace Raven.Database.Config
 						Query = ""
 					}.Uri.ToString();
 				}
-				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
+				return new UriBuilder(UseSsl ? "https" : "http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
 			}
 		}
 
@@ -368,7 +411,11 @@ namespace Raven.Database.Config
 		/// The initial number of items to take when indexing a batch
 		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
-		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
+		public int InitialNumberOfItemsToIndexInSingleBatch
+		{
+			get { return initialNumberOfItemsToIndexInSingleBatch; }
+			set { initialNumberOfItemsToIndexInSingleBatch = value; }
+		}
 
 		/// <summary>
 		/// Max number of items to take for reducing in a batch
@@ -405,38 +452,11 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-		/// Time (in milliseconds) the index has to be queried at least once in order for it to
-		/// become permanent
-		/// Default: 60000 (once per minute)
-		/// </summary>
-		public int TempIndexPromotionThreshold { get; set; }
-
-		/// <summary>
-		/// How many times a temporary, auto-generated index has to be accessed before it can
-		/// be promoted to be a permanent one
-		/// Default: 100
-		/// </summary>
-		public int TempIndexPromotionMinimumQueryCount { get; set; }
-
-		/// <summary>
-		/// How often to run the temporary index cleanup process (in seconds)
-		/// Default: 600 (10 minutes)
-		/// </summary>
-		public TimeSpan TempIndexCleanupPeriod { get; set; }
-
-		/// <summary>
-		/// How much time in seconds to wait after a temporary index has been used before removing it if no further
-		/// calls were made to it during that time
-		/// Default: 1200 (20 minutes)
-		/// </summary>
-		public TimeSpan TempIndexCleanupThreshold { get; set; }
-
-		/// <summary>
-		/// Temp indexes are kept in memory until they reach this integer value in bytes
-		/// Default: 25 MB
+		/// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
+		/// Default: 64 MB
 		/// Minimum: 1 MB
 		/// </summary>
-		public int TempIndexInMemoryMaxBytes { get; set; }
+		public int NewIndexInMemoryMaxBytes { get; set; }
 
 		#endregion
 
@@ -447,6 +467,11 @@ namespace Raven.Database.Config
 		/// Default: none, binds to all host names
 		/// </summary>
 		public string HostName { get; set; }
+
+		/// <summary>
+		/// Whatever we should use SSL for this connection
+		/// </summary>
+		public bool UseSsl { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
@@ -517,7 +542,11 @@ namespace Raven.Database.Config
 		/// Allowed values: All, Get, None
 		/// Default: Get
 		/// </summary>
-		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
+		public AnonymousUserAccessMode AnonymousUserAccessMode
+		{
+			get { return anonymousUserAccessMode; }
+			set { anonymousUserAccessMode = value; }
+		}
 
 		/// <summary>
 		/// If set local request don't require authentication
@@ -608,7 +637,7 @@ namespace Raven.Database.Config
 				ResetContainer();
 				// remove old directory catalog
 				var matchingCatalogs = Catalog.Catalogs.OfType<DirectoryCatalog>()
-					.Concat(Catalog.Catalogs.OfType<FilteredCatalog>()
+					.Concat(Catalog.Catalogs.OfType<Raven.Database.Plugins.Catalogs.FilteredCatalog>()
 								.Select(x => x.CatalogToFilter as DirectoryCatalog)
 								.Where(x => x != null)
 					)
@@ -636,10 +665,17 @@ namespace Raven.Database.Config
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
+		/// <summary>
+		/// Where to cache the compiled indexes
+		/// Default: ~\Raven\CompiledIndexCache
+		/// </summary>
+		public string CompiledIndexCacheDirectory { get; set; }
+
 		public string OAuthTokenServer { get; set; }
 
 		#endregion
 
+		[JsonIgnore]
 		public CompositionContainer Container
 		{
 			get { return container ?? (container = new CompositionContainer(Catalog)); }
@@ -652,12 +688,17 @@ namespace Raven.Database.Config
 
 		public bool DisableDocumentPreFetchingForIndexing { get; set; }
 
+		public int MaxNumberOfItemsToPreFetchForIndexing { get; set; }
+
+		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
+		private int initialNumberOfItemsToIndexInSingleBatch;
+		private AnonymousUserAccessMode anonymousUserAccessMode;
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>
@@ -667,7 +708,26 @@ namespace Raven.Database.Config
 		/// Controls whatever RavenDB will create temporary indexes 
 		/// for queries that cannot be directed to standard indexes
 		/// </summary>
-		public bool CreateTemporaryIndexesForAdHocQueriesIfNeeded { get; set; }
+		public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
+
+		/// <summary>
+		/// Maximum time interval for storing commit points for map indexes when new items were added.
+		/// The commit points are used to restore index if unclean shutdown was detected.
+		/// Default: 00:05:00 
+		/// </summary>
+		public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
+
+		/// <summary>
+		/// Minumum interval between between successive indexing that will allow to store a  commit point
+		/// Default: 00:01:00
+		/// </summary>
+		public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
+
+		/// <summary>
+		/// Maximum number of kept commit points to restore map index after unclean shutdown
+		/// Default: 5
+		/// </summary>
+		public int MaxNumberOfStoredCommitPoints { get; set; }
 
 		public string IndexStoragePath
 		{
@@ -685,6 +745,36 @@ namespace Raven.Database.Config
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
+		
+		/// <summary>
+		/// If True, cluster discovery will be disabled. Default is False
+		/// </summary>
+		public bool DisableClusterDiscovery { get; set; }
+
+		/// <summary>
+		/// The cluster name
+		/// </summary>
+		public string ClusterName { get; set; }
+
+		/// <summary>
+		/// The server name
+		/// </summary>
+		public string ServerName { get; set; }
+		
+		/// <summary>
+		/// The maximum number of steps (instructions) to give a script before timing out.
+		/// Default: 10,000
+		/// </summary>
+		public int MaxStepsForScript { get; set; }
+
+		/// <summary>
+		/// The number of additional steps to add to a given script based on the processed document's quota.
+		/// Set to 0 to give use a fixed size quota. This value is multiplied with the doucment size.
+		/// Default: 5
+		/// </summary>
+		public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
+
+		public int MaxIndexWritesBeforeRecreate { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -716,7 +806,7 @@ namespace Raven.Database.Config
 				var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
 				return (AnonymousUserAccessMode)val;
 			}
-			return AnonymousUserAccessMode.Get;
+			return AnonymousUserAccessMode.Admin;
 		}
 
 		public string GetFullUrl(string baseUrl)
@@ -810,10 +900,10 @@ namespace Raven.Database.Config
 		public void CustomizeValuesForTenant(string tenantId)
 		{
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
 
 			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Tenants", tenantId);
+				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
 		}
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)

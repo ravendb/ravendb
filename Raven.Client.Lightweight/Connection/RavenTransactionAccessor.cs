@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Transactions;
@@ -31,6 +31,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		[ThreadStatic]
+		private static bool supressExplicitRavenTransaction = false;
+
 		/// <summary>
 		/// Starts a transaction
 		/// </summary>
@@ -49,7 +52,7 @@ namespace Raven.Client.Connection
 		{
 			CurrentRavenTransactions.Push(new TransactionInformation
 			{
-				Id = Guid.NewGuid(),
+				Id = Guid.NewGuid().ToString(),
 				Timeout = timeout
 			});
 			return new DisposableAction(() => CurrentRavenTransactions.Pop());
@@ -63,15 +66,24 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public static TransactionInformation GetTransactionInformation()
 		{
-			if (CurrentRavenTransactions.Count >0)
+			if (CurrentRavenTransactions.Count > 0 && supressExplicitRavenTransaction == false)
 				return CurrentRavenTransactions.Peek();
 			if (Transaction.Current == null)
 				return null;
 			return new TransactionInformation
 			{
-				Id = PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(Transaction.Current.TransactionInformation),
+                Id = Transaction.Current.TransactionInformation.LocalIdentifier,
 				Timeout = DefaultTimeout ?? TransactionManager.DefaultTimeout
 			};
+		}
+
+		internal static IDisposable SupressExplicitRavenTransaction()
+		{
+			supressExplicitRavenTransaction = true;
+			return new DisposableAction(() =>
+			{
+				supressExplicitRavenTransaction = false;
+			});
 		}
 	}
 }

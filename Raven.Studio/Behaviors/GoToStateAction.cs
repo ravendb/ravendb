@@ -38,13 +38,9 @@ namespace Raven.Studio.Behaviors
             FrameworkElement target;
 
             if (string.IsNullOrEmpty(TargetName) && !IsTargetObjectSet)
-            {
                 VisualStateUtilities.TryFindNearestStatefulControl(AssociatedObject as FrameworkElement, out target);
-            }
             else
-            {
                 target = Target;
-            }
 
             _stateTarget = target;
         }
@@ -52,9 +48,7 @@ namespace Raven.Studio.Behaviors
         protected override void Invoke(object parameter)
         {
             if (_stateTarget == null || StateName == null)
-            {
                 return;
-            }
 
             VisualStateUtilities.GoToState(_stateTarget, StateName, UseTransitions);
         }

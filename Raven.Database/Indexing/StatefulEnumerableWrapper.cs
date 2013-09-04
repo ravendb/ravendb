@@ -60,8 +60,12 @@ namespace Raven.Database.Indexing
 
 			public void Dispose()
 			{
-				if (CurrentIndexingScope.Current != null)
-					CurrentIndexingScope.Current.Source = null;
+				// This has been EXPLICITLY removed because of http://issues.hibernatingrhinos.com/issue/RavenDB-987
+				// when we have a SelectMany, dispose is called after the source is exhuasted, but BEFORE we are done
+				// enumerating the rest of the collection
+				// We will rely on the caller code to release the CurrentIndexingScope.Current itself for us.
+				//if (CurrentIndexingScope.Current != null)
+				//	CurrentIndexingScope.Current.Source = null;
 				inner.Dispose();
 			}
 
@@ -72,7 +76,7 @@ namespace Raven.Database.Indexing
 				if (moveNext == false)
 					statefulEnumerableWrapper.enumerationCompleted = true;
 
-				if (CurrentIndexingScope.Current != null)
+				if (CurrentIndexingScope.Current != null && moveNext)
 					CurrentIndexingScope.Current.Source = inner.Current;
 				return moveNext;
 			}

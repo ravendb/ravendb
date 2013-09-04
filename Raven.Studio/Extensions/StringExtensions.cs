@@ -22,6 +22,13 @@ namespace Raven.Studio.Extensions
 			return str.Substring(0, margin) + replacement + str.Substring(str.Length - margin - 1);
 		}
 
+		public static bool Contains(this string source, string toCheck, StringComparison comp)
+		{
+			if (source == null)
+				return false;
+			return source.IndexOf(toCheck, comp) >= 0;
+		}
+
         public static string TrimmedViewOfString(this string str, int maxWidth, string replacement = "...")
         {
             if (str.Length <= maxWidth)

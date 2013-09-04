@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+using System.Windows.Threading;
 using Kent.Boogaart.KBCsv;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Studio.Controls;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
@@ -43,35 +39,33 @@ namespace Raven.Studio.Commands
             var collectionSource = model.Documents.Source;
 
             if (model.DocumentsHaveId)
-            {
                 columns.Insert(0, new ColumnDefinition() { Binding = "$JsonDocument:Key", Header = "Id" });
-            }
 
             var cts = new CancellationTokenSource();
 
             var progressWindow = new ProgressWindow() { Title = "Exporting Report"};
             progressWindow.Closed += delegate { cts.Cancel(); };
 
-            var exporter = new Exporter(stream, collectionSource, columns);
+            var exporter = new Exporter(stream, (DocumentsVirtualCollectionSourceBase)collectionSource, columns);
 
-            var exportTask = exporter.ExportAsync(cts.Token, progress => progressWindow.Progress = progress)
-                                     .ContinueOnUIThread(t =>
-                                     {
-                                         // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
-                                         // disabled; so delay closing the window by a few milliseconds
-                                         TaskEx.Delay(TimeSpan.FromMilliseconds(350))
-                                               .ContinueOnSuccessInTheUIThread(progressWindow.Close);
+	        exporter.ExportAsync(cts.Token, progress => progressWindow.Progress = progress)
+	                .ContinueOnUIThread(t =>
+	                {
+		                // there's a bug in silverlight where if a ChildWindow gets closed too soon after it's opened, it leaves the UI
+		                // disabled; so delay closing the window by a few milliseconds
+		                TaskEx.Delay(TimeSpan.FromMilliseconds(350))
+		                      .ContinueOnSuccessInTheUIThread(progressWindow.Close);
 
-                                         if (t.IsFaulted)
-                                         {
-                                             ApplicationModel.Current.AddErrorNotification(t.Exception,
-                                                                                           "Exporting Report Failed");
-                                         }
-                                         else if (!t.IsCanceled)
-                                         {
-                                             ApplicationModel.Current.AddInfoNotification("Report Exported Successfully");
-                                         }
-                                     });
+		                if (t.IsFaulted)
+		                {
+			                ApplicationModel.Current.AddErrorNotification(t.Exception,
+			                                                              "Exporting Report Failed");
+		                }
+		                else if (!t.IsCanceled)
+		                {
+			                ApplicationModel.Current.AddInfoNotification("Report Exported Successfully");
+		                }
+	                });
 
             progressWindow.Show();
         }
@@ -103,17 +97,11 @@ namespace Raven.Studio.Commands
         private class Exporter
         {
             private readonly Stream stream;
-            private readonly IVirtualCollectionSource<ViewableDocument> collectionSource;
+            private readonly DocumentsVirtualCollectionSourceBase collectionSource;
             private readonly IList<ColumnDefinition> columns;
-            private CsvWriter writer;
-            private DocumentColumnsExtractor extractor;
-            private const int PageSize = 100;
-            private int fetchedDocuments = 0;
-            private TaskCompletionSource<bool> tcs;
-            private CancellationToken cancellationToken;
-            private Action<int> ReportProgress;
+            private const int BatchSize = 100;
 
-            public Exporter(Stream stream, IVirtualCollectionSource<ViewableDocument> collectionSource,
+            public Exporter(Stream stream, DocumentsVirtualCollectionSourceBase collectionSource,
                             IList<ColumnDefinition> columns)
             {
                 this.stream = stream;
@@ -121,65 +109,69 @@ namespace Raven.Studio.Commands
                 this.columns = columns;
             }
 
-            public Task ExportAsync(CancellationToken cancellationToken, Action<int> reportProgress)
+            public async Task ExportAsync(CancellationToken cancellationToken, Action<int> reportProgress)
             {
-                this.cancellationToken = cancellationToken;
-                this.ReportProgress = reportProgress ?? delegate { };
+                reportProgress = reportProgress ?? delegate { };
+                var context = SynchronizationContext.Current;
 
-                tcs = new TaskCompletionSource<bool>();
-                writer = new CsvWriter(stream);
-                extractor = new DocumentColumnsExtractor(columns);
-
-                writer.WriteHeaderRecord(columns.Select(c => c.Header));
-
-                FetchNextPage();
-
-                return tcs.Task;
-            }
-
-            private void FetchNextPage()
-            {
-                collectionSource.GetPageAsync(fetchedDocuments, PageSize, null).ContinueOnUIThread(t =>
+                using (stream)
+                using (var writer = new CsvWriter(stream))
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    var extractor = new DocumentColumnsExtractor(columns);
+                    writer.WriteHeaderRecord(columns.Select(c => c.Header));
+
+                    // we do the streaming of documents on a background thread mainly to escape the
+                    // SynchronizationContext: when there's no synchronization context involved the
+                    // async methods can resume on any thread instead of having to hop back to the UI thread.
+                    // This avoids massive overheads
+                    await TaskEx.Run(async () =>
                     {
-                        tcs.SetCanceled();
-                        CleanUp();
-                        return;
-                    }
+                       var totalResults = new Reference<long>();
 
-                    if (!t.IsFaulted)
-                    {
-                        WriteColumnsForDocuments(writer, t.Result, extractor);
-                        fetchedDocuments += t.Result.Count;
-
-                        ReportProgress((int) (((double) fetchedDocuments/collectionSource.Count)*100));
-
-                        if (fetchedDocuments < collectionSource.Count)
+                        using (var documentsStream = await collectionSource.StreamAsync(totalResults))
                         {
-                            FetchNextPage();
+                            IList<JsonDocument> documentBatch;
+                            var fetchedDocuments = 0;
+
+                            do
+                            {
+                                documentBatch = await GetNextBatch(documentsStream, cancellationToken);
+
+                                fetchedDocuments += documentBatch.Count;
+
+                                // extracting properties from the documents has to be done on the UI thread
+                                // because it might involve using FrameworkElements and Silverlight databinding
+                                context.Send(delegate
+                                {
+                                    WriteColumnsForDocuments(writer, documentBatch, extractor);
+                                    reportProgress((int) (((double) fetchedDocuments/totalResults.Value)*100));
+                                }, null);
+
+                            } while (documentBatch.Count > 0);
                         }
-                        else
-                        {
-                            tcs.SetResult(true);
-                            CleanUp();
-                        }
-                    }
-                    else
-                    {
-                        tcs.SetException(t.Exception);
-                        CleanUp();
-                    }
-                });
+
+                    });
+                }
             }
 
-            private void CleanUp()
+            private async Task<IList<JsonDocument>> GetNextBatch(IAsyncEnumerator<JsonDocument> documentsStream, CancellationToken token)
             {
-                writer.Close();
-                stream.Close();
+                var documents = new List<JsonDocument>();
+                var count = 0;
+
+                while (await documentsStream.MoveNextAsync().ConfigureAwait(false) && count < BatchSize)
+                {
+                    documents.Add(documentsStream.Current);
+                    count++;
+
+                    token.ThrowIfCancellationRequested();
+                }
+
+                return documents;
             }
 
-            private void WriteColumnsForDocuments(CsvWriter writer, IList<ViewableDocument> documents, DocumentColumnsExtractor extractor)
+
+            private void WriteColumnsForDocuments(CsvWriter writer, IEnumerable<JsonDocument> documents, DocumentColumnsExtractor extractor)
             {
                 foreach (var document in documents)
                 {

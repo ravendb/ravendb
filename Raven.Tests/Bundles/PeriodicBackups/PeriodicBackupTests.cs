@@ -4,19 +4,19 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Xunit;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Bundles.PeriodicBackups
 {
 	public class PeriodicBackupTests : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
 		}
@@ -28,10 +28,9 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 		[Fact]
 		public void CanBackupToDirectory()
 		{
-			var backupPath = GetPath("BackupFolder");
+			var backupPath = NewDataPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
-				Guid? etagForBackups;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -44,10 +43,9 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 
 					session.SaveChanges();
 
-					etagForBackups = session.Advanced.GetEtagFor(periodicBackupSetup);
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey) != null, 10000);
 
 			}
 
@@ -58,7 +56,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					BackupPath = backupPath
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
-				dataDumper.ImportData(smugglerOptions, true);
+				dataDumper.ImportData(smugglerOptions, true).Wait();
 
 				using (var session = store.OpenSession())
 				{
@@ -71,10 +69,9 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 		[Fact]
 		public void CanBackupToDirectory_MultipleBackups()
 		{
-			var backupPath = GetPath("BackupFolder");
+			var backupPath = NewDataPath("BackupFolder");
 			using (var store = NewDocumentStore())
 			{
-				Guid? etagForBackups;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
@@ -87,19 +84,24 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 
 					session.SaveChanges();
 
-					etagForBackups = session.Advanced.GetEtagFor(periodicBackupSetup);
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+				{
+					var jsonDocument = store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey);
+					if (jsonDocument == null)
+						return false;
+					var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
+					return periodicBackupStatus.LastDocsEtag != Etag.Empty && periodicBackupStatus.LastDocsEtag != null;
+				});
 
-				etagForBackups= store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag;
+				var etagForBackups= store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "ayende" });
 					session.SaveChanges();
 				}
 				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupSetup.RavenDocumentKey).Etag != etagForBackups);
+					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag != etagForBackups);
 
 			}
 
@@ -110,7 +112,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					BackupPath = backupPath
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
-				dataDumper.ImportData(smugglerOptions, true);
+				dataDumper.ImportData(smugglerOptions, true).Wait();
 
 				using (var session = store.OpenSession())
 				{

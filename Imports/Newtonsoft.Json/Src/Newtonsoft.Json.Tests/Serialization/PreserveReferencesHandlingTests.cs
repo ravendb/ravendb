@@ -26,15 +26,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
-using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
+using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using TestFixture = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestClassAttribute;
+using Test = Microsoft.VisualStudio.TestPlatform.UnitTestFramework.TestMethodAttribute;
 #endif
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
@@ -1054,6 +1055,27 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 
       Assert.IsTrue(ReferenceEquals(c2, c3));
       Assert.IsFalse(ReferenceEquals(c2, c4));
+    }
+
+    [Test]
+    public void DuplicateId()
+    {
+      string json = @"{
+  ""Data"": {
+    ""Prop1"": {
+      ""$id"": ""1"",
+      ""MyProperty"": 0
+    },
+    ""Prop2"": {
+      ""$id"": ""1"",
+      ""MyProperty"": 0
+    }
+  }
+}";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "Error reading object reference '1'. Path 'Data.Prop2.MyProperty', line 9, position 20.",
+        () => JsonConvert.DeserializeObject<PropertyItemIsReferenceObject>(json));
     }
   }
 

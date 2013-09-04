@@ -1,4 +1,8 @@
-﻿using Raven.Studio.Features.Documents;
+﻿using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
+using Raven.Studio.Features.Documents;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -19,5 +23,7 @@ namespace Raven.Studio.Infrastructure
                     Refresh(RefreshMode.PermitStaleDataWhilstRefreshing);
             }
         }
+
+        public abstract Task<IAsyncEnumerator<JsonDocument>> StreamAsync(Reference<long> totalResults);
     }
 }

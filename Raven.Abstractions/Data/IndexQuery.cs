@@ -4,17 +4,21 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
 	/// <summary>
 	/// All the information required to query a Raven index
 	/// </summary>
-	public class IndexQuery
+	public class IndexQuery : IEquatable<IndexQuery>
 	{
+	    private int pageSize;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
 		/// </summary>
@@ -22,8 +26,13 @@ namespace Raven.Abstractions.Data
 		{
 			TotalSize = new Reference<int>();
 			SkippedResults = new Reference<int>();
-			PageSize = 128;
+			pageSize = 128;
 		}
+
+		/// <summary>
+		/// Whatever the page size was explicitly set or still at its default value
+		/// </summary>
+		public bool PageSizeSet { get; private set; }
 
 		/// <summary>
 		/// Gets or sets the query.
@@ -37,6 +46,11 @@ namespace Raven.Abstractions.Data
 		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
 
+        /// <summary>
+        /// Additional query inputs
+        /// </summary>
+        public Dictionary<string, RavenJToken> QueryInputs { get; set; }
+
 		/// <summary>
 		/// Gets or sets the start of records to read.
 		/// </summary>
@@ -47,7 +61,15 @@ namespace Raven.Abstractions.Data
 		/// Gets or sets the size of the page.
 		/// </summary>
 		/// <value>The size of the page.</value>
-		public int PageSize { get; set; }
+		public int PageSize
+		{
+			get { return pageSize; }
+			set
+			{
+				pageSize = value;
+				PageSizeSet = true;
+			}
+		}
 
 		/// <summary>
 		/// The aggregation operation for this query
@@ -93,7 +115,7 @@ namespace Raven.Abstractions.Data
 		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
 		/// use the Cutoff date option, instead.
 		/// </remarks>
-		public Guid? CutoffEtag { get; set; }
+		public Etag CutoffEtag { get; set; }
 
 		/// <summary>
 		/// The default field to use when querying directly on the Lucene query
@@ -141,6 +163,16 @@ namespace Raven.Abstractions.Data
         /// </summary>
 	    public string[] HighlighterPostTags { get; set; }
 
+        /// <summary>
+        /// Gets or sets the results transformer
+        /// </summary>
+	    public string ResultsTransformer { get; set; }
+
+		/// <summary>
+		/// Whatever we should disable caching of query results
+		/// </summary>
+		public bool DisableCaching { get; set; }
+
 	    /// <summary>
 		/// Gets the index query URL.
 		/// </summary>
@@ -148,7 +180,7 @@ namespace Raven.Abstractions.Data
 		/// <param name="index">The index.</param>
 		/// <param name="operationName">Name of the operation.</param>
 		/// <returns></returns>
-		public string GetIndexQueryUrl(string operationUrl, string index, string operationName)
+		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			if (operationUrl.EndsWith("/"))
 				operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
@@ -159,9 +191,7 @@ namespace Raven.Abstractions.Data
 				.Append("/")
 				.Append(index);
 
-			AppendQueryString(path);
-
-
+			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet);
 
 			return path.ToString();
 		}
@@ -181,7 +211,7 @@ namespace Raven.Abstractions.Data
 			return sb.ToString();
 		}
 
-		public void AppendQueryString(StringBuilder path)
+		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			path.Append("?");
 
@@ -190,7 +220,8 @@ namespace Raven.Abstractions.Data
 			if (Start != 0)
 				path.Append("&start=").Append(Start);
 
-			path.Append("&pageSize=").Append(PageSize);
+			if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
+				path.Append("&pageSize=").Append(PageSize);
 			
 
 			if(AggregationOperation != AggregationOperation.None)
@@ -208,15 +239,27 @@ namespace Raven.Abstractions.Data
                 path.Append("&skipTransformResults=true");
             }
 
+            if (string.IsNullOrEmpty(ResultsTransformer) == false)
+            {
+                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
+            }
+
+			if (QueryInputs != null)
+			{
+				foreach (var input in QueryInputs)
+				{
+					path.AppendFormat("&qp-{0}={1}", input.Key, input.Value);
+				}
+			}
+
 			if (Cutoff != null)
 			{
-				var cutOffAsString =
-					Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
+				var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
 				path.Append("&cutOff=").Append(cutOffAsString);
 			}
 			if (CutoffEtag != null)
 			{
-				path.Append("&cutOffEtag=").Append(CutoffEtag.Value.ToString());
+				path.Append("&cutOffEtag=").Append(CutoffEtag);
 			}
 
 		    this.HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
@@ -231,8 +274,12 @@ namespace Raven.Abstractions.Data
 
 		private void AppendMinimalQueryString(StringBuilder path)
 		{
-			path.Append("query=")
-				.Append(Uri.EscapeUriString(Uri.EscapeDataString(Query ?? "")));
+			if (string.IsNullOrEmpty(Query) == false)
+			{
+				path.Append("&query=")
+				    .Append(Uri.EscapeDataString(Query));
+			}
+			
 			if (string.IsNullOrEmpty(DefaultField) == false)
 			{
 				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
@@ -259,6 +306,85 @@ namespace Raven.Abstractions.Data
 		{
 			return (IndexQuery)MemberwiseClone();
 		}
+
+		public override string ToString()
+		{
+			return Query;
+		}
+
+        public bool Equals(IndexQuery other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return PageSizeSet.Equals(other.PageSizeSet) && 
+                   String.Equals(Query, other.Query) && 
+                   Equals(TotalSize, other.TotalSize) && 
+                   Equals(QueryInputs, other.QueryInputs) && 
+                   Start == other.Start && 
+                   AggregationOperation == other.AggregationOperation && 
+                   Equals(GroupBy, other.GroupBy) && 
+                   Equals(FieldsToFetch, other.FieldsToFetch) && 
+                   Equals(SortedFields, other.SortedFields) && 
+                   Cutoff.Equals(other.Cutoff) && 
+                   Equals(CutoffEtag, other.CutoffEtag) && 
+                   String.Equals(DefaultField, other.DefaultField) && 
+                   DefaultOperator == other.DefaultOperator && 
+                   SkipTransformResults.Equals(other.SkipTransformResults) && 
+                   Equals(SkippedResults, other.SkippedResults) && 
+                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
+                   Equals(HighlightedFields, other.HighlightedFields) && 
+                   Equals(HighlighterPreTags, other.HighlighterPreTags) && 
+                   Equals(HighlighterPostTags, other.HighlighterPostTags) && 
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
+                   DisableCaching.Equals(other.DisableCaching);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj.GetType() == GetType() && Equals((IndexQuery)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = PageSizeSet.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (QueryInputs != null ? QueryInputs.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Start;
+                hashCode = (hashCode * 397) ^ (int)AggregationOperation;
+                hashCode = (hashCode * 397) ^ (GroupBy != null ? GroupBy.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
+                hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (int)DefaultOperator;
+                hashCode = (hashCode * 397) ^ SkipTransformResults.GetHashCode();
+                hashCode = (hashCode * 397) ^ (SkippedResults != null ? SkippedResults.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
+                hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        public static bool operator ==(IndexQuery left, IndexQuery right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(IndexQuery left, IndexQuery right)
+        {
+            return !Equals(left, right);
+        }
+
 	}
 
     public enum QueryOperator

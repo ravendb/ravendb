@@ -32,11 +32,6 @@ namespace Raven.Storage.Esent
 			this.inner = inner;
 		}
 
-		public ITransactionStorageActions Transactions
-		{
-			get { return inner; }
-		}
-
 		public IDocumentStorageActions Documents
 		{
 			get { return inner; }
@@ -82,7 +77,9 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
-		public event Action OnStorageCommit
+        public bool IsNested { get; set; }
+
+	    public event Action OnStorageCommit
 		{
 			add { inner.OnStorageCommit += value; }
 			remove { inner.OnStorageCommit -= value; }
@@ -98,6 +95,7 @@ namespace Raven.Storage.Esent
 				case JET_err.WriteConflict:
 				case JET_err.SessionWriteConflict:
 				case JET_err.WriteConflictPrimaryIndex:
+				case JET_err.KeyDuplicate:
 					return true;
 				default:
 					return false;

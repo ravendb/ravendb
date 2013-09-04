@@ -39,14 +39,16 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void TransactionStorageIdRemainsConstantAcrossRestarts()
 		{
+			var dataDir = NewDataPath();
+
 			Guid id;
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				Assert.Equal(tx.Id, tx.Id);
 				id = tx.Id;
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				Assert.Equal(id, tx.Id);
 			}
@@ -55,7 +57,9 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetNewIdentityValueAfterRestart()
 		{
-			using (var tx = NewTransactionalStorage())
+			var dataDir = NewDataPath();
+
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator =>
 				{
@@ -67,7 +71,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using(var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 
 				tx.Batch(mutator =>
@@ -80,6 +84,5 @@ namespace Raven.Tests.Storage
 				});
 			}
 		}
-
 	}
 }

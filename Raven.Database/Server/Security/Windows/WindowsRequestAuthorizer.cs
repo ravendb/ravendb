@@ -54,10 +54,10 @@ namespace Raven.Database.Server.Security.Windows
 								: new List<WindowsAuthData>();
 		}
 
-		public bool Authorize(IHttpContext ctx)
+		public bool Authorize(IHttpContext ctx, bool ignoreDb)
 		{
 			Action onRejectingRequest;
-			var databaseName = database().Name ?? Constants.SystemDatabase;
+			var databaseName = TenantId ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
@@ -75,8 +75,11 @@ namespace Raven.Database.Server.Security.Windows
 				// admins always go through
 				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
 					return true;
-			}
 
+				// backup operators can go through
+				if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
+					return true;
+			}
 
 			var httpRequest = ctx.Request;
 			bool isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
@@ -92,11 +95,14 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.None:
 					if (userCreated)
 					{
-						if (user.AdminDatabases.Contains(databaseName))
+						if (user.AdminDatabases.Contains(databaseName) ||
+							user.AdminDatabases.Contains("*") || ignoreDb)
 							return true;
-						if (user.ReadWriteDatabases.Contains(databaseName))
+						if (user.ReadWriteDatabases.Contains(databaseName) ||
+							user.ReadWriteDatabases.Contains("*"))
 							return true;
-						if (isGetRequest && user.ReadOnlyDatabases.Contains(databaseName))
+						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
+							user.ReadOnlyDatabases.Contains("*")))
 							return true;
 					}
 
@@ -187,16 +193,16 @@ namespace Raven.Database.Server.Security.Windows
 		}
 
 
-		public override List<string> GetApprovedDatabases(IHttpContext context)
+		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
-			var user = context.User as PrincipalWithDatabaseAccess;
-			if (user == null)
+			var winUser = user as PrincipalWithDatabaseAccess;
+			if (winUser == null)
 				return new List<string>();
 
 			var list = new List<string>();
-			list.AddRange(user.AdminDatabases);
-			list.AddRange(user.ReadOnlyDatabases);
-			list.AddRange(user.ReadWriteDatabases);
+			list.AddRange(winUser.AdminDatabases);
+			list.AddRange(winUser.ReadOnlyDatabases);
+			list.AddRange(winUser.ReadWriteDatabases);
 
 			return list;
 		}
@@ -204,6 +210,14 @@ namespace Raven.Database.Server.Security.Windows
 		public override void Dispose()
 		{
 			WindowsSettingsChanged -= UpdateSettings;
+		}
+
+		public IPrincipal GetUser(IHttpContext ctx)
+		{
+			Action onRejectingRequest;
+			var databaseName = TenantId ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
+			return userCreated ? ctx.User : null;
 		}
 	}
 }

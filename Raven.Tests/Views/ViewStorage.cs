@@ -5,14 +5,8 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.MEF;
-using Raven.Database.Plugins;
 using Raven.Json.Linq;
-using Raven.Database.Config;
-using Raven.Database.Impl;
-using Raven.Database.Indexing;
 using Raven.Database.Storage;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Views
@@ -47,7 +41,6 @@ namespace Raven.Tests.Views
 		public void CanUpdateValue()
 		{
 			transactionalStorage.Batch(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}")));
-
 
 			transactionalStorage.Batch(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}")));
 		}
@@ -107,7 +100,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog", new HashSet<ReduceKeyAndBucket>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog", new Dictionary<ReduceKeyAndBucket, int>());
 				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
 			});
 
@@ -130,8 +123,8 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2", new HashSet<ReduceKeyAndBucket>());
-				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1", new HashSet<ReduceKeyAndBucket>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2", new Dictionary<ReduceKeyAndBucket, int>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1", new Dictionary<ReduceKeyAndBucket, int>());
 			});
 
 			transactionalStorage.Batch(actions =>

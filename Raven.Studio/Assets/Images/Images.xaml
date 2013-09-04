@@ -7,6 +7,11 @@
 	<BitmapImage x:Key="Image_Online" UriSource="online.png"/>
 	<BitmapImage x:Key="Image_Offline" UriSource="offline.png"/>
     <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="index_tiny.png"/>
+	<BitmapImage x:Key="Image_Transformer_Tiny" UriSource="transformer_tiny.png"/>
+	<BitmapImage x:Key="Image_Transformer_Small" UriSource="transformer_small.png"/>
+	<BitmapImage x:Key="Image_Transformer_Add_Tiny" UriSource="transformer_add_tiny.png"/>
+	<BitmapImage x:Key="Image_Transformer_Delete_Tiny" UriSource="transformer_delete_tiny.png"/>
+	<BitmapImage x:Key="Image_Transformer_Edit_Tiny" UriSource="transformers_edit_tiny.png"/>
 	<BitmapImage x:Key="Image_DocumentIndex_Small" UriSource="index_small.png"/>
 	<BitmapImage x:Key="Image_DeleteIndex_Small" UriSource="index_delete_small.png"/>
 	<BitmapImage x:Key="Image_DeleteIndex_Tiny" UriSource="index_delete_Tiny.png"/>
@@ -25,10 +30,14 @@
 	<BitmapImage x:Key="Image_Key_Add_Tiny" UriSource="Image_Key_Add_Tiny.png"/>
 	<BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="save_tiny.png"/>
-    <BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
+	<BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
+	<BitmapImage x:Key="Image_Lock_Tiny" UriSource="lock.png" />
+	<BitmapImage x:Key="Image_Lock_Open_Tiny" UriSource="lock_open.png" />
+	<BitmapImage x:Key="Image_Lock_Error_Tiny" UriSource="lock_preferences.png" />
     <BitmapImage x:Key="Image_Undo_Small" UriSource="undo_tiny.png"/>
     <BitmapImage x:Key="Image_Query_Small" UriSource="index_query_tiny.png"/>
     <BitmapImage x:Key="Image_Edit_Small" UriSource="edit_tiny.png"/>
+	<BitmapImage x:Key="Image_Index_Down" UriSource="index_down.png"/>
     <BitmapImage x:Key="Image_OpenDocument_Small" UriSource="edit_tiny.png"/>
     <BitmapImage x:Key="Image_Reformat_Small" UriSource="reformatjson_tiny.png"/>
     <BitmapImage x:Key="Image_Delete_Tiny" UriSource="remove_tiny.png"/>
@@ -56,8 +65,9 @@
     <BitmapImage x:Key="Image_CopyToClipboard_Tiny" UriSource="copy_to_clipboard_tiny.png"/>
     <BitmapImage x:Key="Image_Logs_Small" UriSource="logs_small.png"/>
     <BitmapImage x:Key="Image_Tasks_Small" UriSource="tasks_small.png"/>
-    <BitmapImage x:Key="Image_ToggleExpansion_Tiny" UriSource="Collapse_tiny.png"/>
-    <BitmapImage x:Key="Image_IndexFields_Tiny" UriSource="index_showfields.png"/>
+	<BitmapImage x:Key="Image_ToggleExpansion_Tiny" UriSource="Collapse_tiny.png"/>
+	<BitmapImage x:Key="Image_Expand_Tiny" UriSource="Expand_tiny.png"/>
+	<BitmapImage x:Key="Image_IndexFields_Tiny" UriSource="index_showfields.png"/>
     <BitmapImage x:Key="Image_SkipTransform_Tiny" UriSource="index_skiptransform.png"/>
     <BitmapImage x:Key="Image_VisitLink_Tiny" UriSource="VisitLink_Tiny.png"/>
     <BitmapImage x:Key="Image_RecentQueries_Tiny" UriSource="recent_queries_tiny.png"/>
@@ -75,5 +85,6 @@
     <BitmapImage x:Key="Image_WhatIf_Tiny" UriSource="whatif_tiny.png"/>
     <BitmapImage x:Key="Image_ExportDetails_Tiny" UriSource="export_details_tiny.png"/>
     <BitmapImage x:Key="Image_ImportCsv_Tiny" UriSource="import_csv_tiny.png"/>
-    
+    <BitmapImage x:Key="Image_Execute_Tiny" UriSource="execute_tiny.png"/>
+    <BitmapImage x:Key="Image_OpenInDocumentPad_Tiny" UriSource="to_documentpad_tiny.png"/>
 </ResourceDictionary>

@@ -1,4 +1,3 @@
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Xunit;
 
@@ -9,11 +8,7 @@ namespace Raven.Tests.Bugs.Async
 		[Fact]
 		public void Can_query_using_async_session()
 		{
-			using(GetNewServer())
-			using(var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
+			using(var store = NewRemoteDocumentStore())
 			{
 				using (var s = store.OpenAsyncSession())
 				{
@@ -29,7 +24,7 @@ namespace Raven.Tests.Bugs.Async
 
 					queryResultAsync.Wait();
 
-					var result = queryResultAsync.Result.Item2;
+					var result = queryResultAsync.Result;
 					Assert.Equal("Ayende",
 						result[0].Name);
 				}

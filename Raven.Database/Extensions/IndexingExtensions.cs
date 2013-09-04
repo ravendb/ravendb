@@ -14,6 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
+using Raven.Database.Linq;
 using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
 
@@ -135,7 +136,7 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
+		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
 			var spatialQuery = self as SpatialIndexQuery;
 			var sortedFields = self.SortedFields;
@@ -162,8 +163,9 @@ namespace Raven.Database.Extensions
 								}
 								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
 								{
-									var shape = SpatialIndex.ReadShape(spatialQuery.QueryShape);
-									var dsort = new SpatialDistanceFieldComparatorSource(shape.GetCenter());
+									var spatialField = viewGenerator.GetSpatialField(spatialQuery.SpatialFieldName);
+									var shape = spatialField.ReadShape(spatialQuery.QueryShape);
+									var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);

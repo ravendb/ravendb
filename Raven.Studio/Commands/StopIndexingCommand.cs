@@ -20,11 +20,11 @@ namespace Raven.Studio.Commands
 			ShouldExecute = false;
 			output("Disabling indexing... (will wait for current indexing batch to complete)");
 			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.StopIndexingAsync()
-				.ContinueOnSuccessInTheUIThread(() =>
-				                                	{
-				                                		output("Indexing disabled");
-				                                		afterAction();
-				                                	});
+			                .ContinueOnSuccessInTheUIThread(() =>
+			                {
+				                output("Indexing disabled");
+				                afterAction();
+			                });
 		}
 	}
 }

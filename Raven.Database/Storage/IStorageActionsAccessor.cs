@@ -10,7 +10,6 @@ namespace Raven.Database.Storage
 {
 	public interface IStorageActionsAccessor : IDisposable
 	{
-		ITransactionStorageActions Transactions { get; }
 		IDocumentStorageActions Documents { get; }
 		IQueueStorageActions Queue { get; }
 		IListsStorageActions Lists { get; }
@@ -20,7 +19,8 @@ namespace Raven.Database.Storage
 		IIndexingStorageActions Indexing { get; }
 		IGeneralStorageActions General { get; }
 		IMappedResultsStorageAction MapReduce { get; }
-		event Action OnStorageCommit;
+	    bool IsNested { get; set; }
+	    event Action OnStorageCommit;
 		bool IsWriteConflict(Exception exception);
 		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.Task;
 		void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit);

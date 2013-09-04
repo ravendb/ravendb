@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Database.Indexing;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -16,25 +17,29 @@ namespace Raven.Database.Storage
 		IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize);
 
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
-		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
-		void UpdateRemovedMapReduceStats(string view, HashSet<ReduceKeyAndBucket> removed);
+		void IncrementReduceKeyCounter(string view, string reduceKey, int val);
+		void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed);
+		void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed);
 		void DeleteMappedResultsForView(string view);
 
 		IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take);
 
 		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int start, int take);
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take);
+		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string indexName, int start, int take);
 
-		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
+		void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
 		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
+		void DeleteScheduledReduction(string indexName, int level, string reduceKey);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
 		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int take, int limitOfItemsToReduceInSingleStep);
 		void UpdatePerformedReduceType(string indexName, string reduceKey, ReduceType performedReduceType);
 		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
-		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, string[] keysToReduce, bool loadData);
+		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, IEnumerable<string> keysToReduce, bool loadData);
+		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take);
 	}
 
 	public class GetItemsToReduceParams
@@ -101,14 +106,23 @@ namespace Raven.Database.Storage
 	public class ScheduledReductionInfo
 	{
 		public DateTime Timestamp { get; set; }
+		public Etag Etag { get; set; }
+	}
+
+	public class ScheduledReductionDebugInfo
+	{
+		public DateTime Timestamp { get; set; }
 		public Guid Etag { get; set; }
+		public string Key { get; set; }
+		public int Level { get; set; }
+		public int Bucket { get; set; }
 	}
 
 	public class MappedResultInfo
 	{
 		public string ReduceKey { get; set; }
 		public DateTime Timestamp { get; set; }
-		public Guid Etag { get; set; }
+		public Etag Etag { get; set; }
 
 		public RavenJObject Data { get; set; }
 		[JsonIgnore]

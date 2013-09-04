@@ -28,12 +28,18 @@ namespace Raven.Abstractions.Indexing
 			Fields = new List<string>();
 			Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
+			SpatialIndexes = new Dictionary<string, SpatialOptions>();
 		}
 
 		/// <summary>
 		/// Get or set the name of the index
 		/// </summary>
 		public string Name { get; set; }
+
+		/// <summary>
+		/// Get or set the index lock mode
+		/// </summary>
+		public IndexLockMode LockMode { get; set; }
 
 		/// <summary>
 		/// Gets or sets the map function, if there is only one
@@ -68,6 +74,7 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Gets or sets the translator function
 		/// </summary>
+		[Obsolete("Use Result Transformers instead.")]
 		public string TransformResults { get; set; }
 
 		/// <summary>
@@ -82,14 +89,6 @@ namespace Raven.Abstractions.Indexing
 		}
 
 		public bool IsCompiled { get; set; }
-
-		/// <summary>
-		/// Returns a boolean value indicating whether this IndexDefinition is of a temporary index
-		/// </summary>
-		public bool IsTemp
-		{
-			get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase); }
-		}
 
 		/// <summary>
 		/// Gets or sets the stores options
@@ -133,6 +132,12 @@ namespace Raven.Abstractions.Indexing
 		public IDictionary<string, FieldTermVector> TermVectors { get; set; }
 
 		/// <summary>
+		/// Gets or sets the spatial options
+		/// </summary>
+		/// <value>The spatial options.</value>
+		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+
+		/// <summary>
 		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
@@ -152,7 +157,8 @@ namespace Raven.Abstractions.Indexing
 					DictionaryEquals(other.Analyzers, Analyzers) &&
 					DictionaryEquals(other.SortOptions, SortOptions) &&
 					DictionaryEquals(other.Suggestions, Suggestions) &&
-					DictionaryEquals(other.TermVectors, TermVectors);
+					DictionaryEquals(other.TermVectors, TermVectors) &&
+					DictionaryEquals(other.SpatialIndexes, SpatialIndexes);
 		}
 
 		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
@@ -235,6 +241,7 @@ namespace Raven.Abstractions.Indexing
 				result = (result * 397) ^ DictionaryHashCode(SortOptions);
 				result = (result * 397) ^ DictionaryHashCode(Suggestions);
 				result = (result * 397) ^ DictionaryHashCode(TermVectors);
+				result = (result * 397) ^ DictionaryHashCode(SpatialIndexes);
 				return result;
 			}
 		}
@@ -244,9 +251,7 @@ namespace Raven.Abstractions.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Temp"))
-					return "Temp";
-				if (name.StartsWith("Auto"))
+				if (name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
 					return "Auto";
 				if (IsCompiled)
 					return "Compiled";
@@ -256,12 +261,12 @@ namespace Raven.Abstractions.Indexing
 			}
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Remove the default values that we don't actually need
 		/// </summary>
 		public void RemoveDefaultValues()
 		{
-			var defaultStorage = IsMapReduce ? FieldStorage.Yes : FieldStorage.No;
+			const FieldStorage defaultStorage = FieldStorage.No;
 			foreach (var toRemove in Stores.Where(x => x.Value == defaultStorage).ToArray())
 			{
 				Stores.Remove(toRemove);
@@ -286,6 +291,11 @@ namespace Raven.Abstractions.Indexing
 			{
 				TermVectors.Remove(toRemove);
 			}
+		}
+
+		public override string ToString()
+		{
+			return Name ?? Map;
 		}
 
 		public IndexDefinition Clone()
@@ -314,7 +324,53 @@ namespace Raven.Abstractions.Indexing
 				indexDefinition.Suggestions = new Dictionary<string, SuggestionOptions>(Suggestions);
 			if (TermVectors != null)
 				indexDefinition.TermVectors = new Dictionary<string, FieldTermVector>(TermVectors);
+			if (SpatialIndexes != null)
+				indexDefinition.SpatialIndexes = new Dictionary<string, SpatialOptions>(SpatialIndexes);
 			return indexDefinition;
+		}
+	}
+
+	public enum IndexLockMode
+	{
+		Unlock,
+		LockedIgnore,
+		LockedError
+	}
+
+	public class TransformerDefinition
+	{
+		/// <summary>
+		/// Gets or sets the translator function
+		/// </summary>
+		public string TransformResults { get; set; }
+		public string Name { get; set; }
+
+		public bool Equals(TransformerDefinition other)
+		{
+			return string.Equals(TransformResults, other.TransformResults);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != GetType()) return false;
+			return Equals((TransformerDefinition) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			return (TransformResults != null ? TransformResults.GetHashCode() : 0);
+		}
+
+		public TransformerDefinition Clone()
+		{
+			return (TransformerDefinition) MemberwiseClone();
+		}
+
+		public override string ToString()
+		{
+			return Name ?? TransformResults;
 		}
 	}
 }

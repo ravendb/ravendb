@@ -38,11 +38,11 @@ namespace Raven.Tests.Bugs.Indexing
 
 					Assert.Equal(2, objects.Length);
 
-					Assert.Equal("2", objects[0].Count);
+					Assert.Equal(2, objects[0].Count);
 					Assert.Equal("New York", objects[0].Address.City);
 
 
-					Assert.Equal("2", objects[1].Count);
+					Assert.Equal(2, objects[1].Count);
 					Assert.Equal("Halom", objects[1].Address.City);
 				}
 			}

@@ -1,1 +1,1 @@
-﻿eval('while(true){}');
+﻿print(isFinite(val));

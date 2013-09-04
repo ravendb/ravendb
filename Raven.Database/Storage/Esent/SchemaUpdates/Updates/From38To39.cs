@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Impl;
 
@@ -16,7 +17,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 		{
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
 			using(var tasks = new Table(session, dbid, "tasks",OpenTableGrbit.None))
 			{

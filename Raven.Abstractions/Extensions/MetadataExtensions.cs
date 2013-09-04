@@ -3,18 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Raven.Imports.Newtonsoft.Json;
-using System;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
 #endif
 
 namespace Raven.Abstractions.Extensions
@@ -33,6 +33,7 @@ namespace Raven.Abstractions.Extensions
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",
 			"Raven-Last-Modified",
+			"Has-Api-Key",
 
 			// COTS
 			"Access-Control-Allow-Origin",
@@ -106,6 +107,12 @@ namespace Raven.Abstractions.Extensions
 			"Upgrade",
 			"Via",
 			"Warning",
+
+			// IIS Application Request Routing Module
+			"X-ARR-LOG-ID",
+			"X-ARR-SSL",
+			"X-Forwarded-For",
+			"X-Original-URL"
 		};
 
 		/// <summary>
@@ -211,7 +218,7 @@ namespace Raven.Abstractions.Extensions
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this NameValueCollection self)
 		{
-			var metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
+			var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
 			foreach (string header in self)
 			{
 				try
@@ -244,7 +251,11 @@ namespace Raven.Abstractions.Extensions
 			var lastWasDash = true;
 			var sb = new StringBuilder(header.Length);
 
+#if NETFX_CORE
+			foreach (var ch in header.ToCharArray())
+#else
 			foreach (var ch in header)
+#endif
 			{
 				sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
 
@@ -274,8 +285,8 @@ namespace Raven.Abstractions.Extensions
 				DateTimeOffset dateTimeOffset;
 				if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
 					return new RavenJValue(dateTimeOffset);
-				
-				return new RavenJValue(val);
+
+				return new RavenJValue(Uri.UnescapeDataString(val));
 
 			}
 			catch (Exception exc)

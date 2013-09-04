@@ -102,6 +102,7 @@ namespace Raven.Tests.Json
 			Assert.Equal(3, obj3.Value<RavenJObject>("Me").Value<int>("ObjectID"));
 		}
 
+        [Fact]
 		public void ShouldNotFail()
 		{
 			var root = new RavenJObject();

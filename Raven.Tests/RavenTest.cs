@@ -4,14 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Util;
-using Raven.Tests.Document;
 using Raven.Tests.Helpers;
+using System.Diagnostics;
 
 namespace Raven.Tests
 {
@@ -19,21 +16,11 @@ namespace Raven.Tests
 	{
 		static RavenTest()
 		{
-			File.Delete("test.log");
+			LogManager.RegisterTarget<DatabaseMemoryTarget>();
 		}
 
 		public RavenTest()
 		{
-			DatabaseMemoryTarget databaseMemoryTarget = null;
-			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
-			{
-				databaseMemoryTarget = LogManager.Configuration.AllTargets.OfType<DatabaseMemoryTarget>().FirstOrDefault();
-			}
-			if (databaseMemoryTarget != null)
-			{
-				databaseMemoryTarget.ClearAll();
-			}
-
 			SystemTime.UtcDateTime = () => DateTime.UtcNow;
 		}
 
@@ -42,19 +29,13 @@ namespace Raven.Tests
 			
 		}
 
-		public string GetPath(string subFolderName)
-		{
-			string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			return Path.Combine(retPath, subFolderName).Substring(6); // remove leading file://
-		}
-
 		public double Timer(Action action)
 		{
-			var startTime = SystemTime.UtcNow;
+			var timer = Stopwatch.StartNew();
 			action.Invoke();
-			var timeTaken = SystemTime.UtcNow.Subtract(startTime);
-			Console.WriteLine("Time take (ms)- " + timeTaken.TotalMilliseconds);
-			return timeTaken.TotalMilliseconds;
+            timer.Stop();
+            Console.WriteLine("Time take (ms)- " + timer.Elapsed.TotalMilliseconds);
+            return timer.Elapsed.TotalMilliseconds;
 		}
 	}
 }

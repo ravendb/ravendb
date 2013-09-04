@@ -138,13 +138,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 	public class OptimizedIndexReader : OptimizedIndexReader<object>
 	{
-		public OptimizedIndexReader() : base(128)
+		public OptimizedIndexReader() : base(32)
 		{
 			
-		}
-
-		public OptimizedIndexReader(int size) : base( size)
-		{
 		}
 
 		public bool Add(JET_SESID session, JET_TABLEID table)

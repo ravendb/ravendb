@@ -4,10 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
+using Raven.Json.Linq;
+using Raven.Smuggler;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Versioning
@@ -17,7 +21,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_set_metadata()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -36,8 +40,8 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Can_exclude_entities_from_versioning()
 		{
-			var user = new User {Name = "User Name"};
-			var comment = new Comment {Name = "foo"};
+			var user = new User { Name = "User Name" };
+			var comment = new Comment { Name = "foo" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(user);
@@ -62,7 +66,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_update_metadata_on_next_insert()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -83,7 +87,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_create_duplicate_on_first_insert()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -102,7 +106,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_automatically_create_duplicate_on_next_insert()
 		{
-			var company = new Company {Name = "Company Name"};
+			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -160,7 +164,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_delete_old_revisions()
 		{
-			var company = new Company {Name = "Company #1"};
+			var company = new Company { Name = "Company #1" };
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(company);
@@ -259,7 +263,7 @@ namespace Raven.Tests.Bundles.Versioning
 		[Fact]
 		public void Will_delete_child_revisions_if_purge_is_true()
 		{
-			using(var session = documentStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
 				session.Store(new VersioningConfiguration
 				{
@@ -329,6 +333,129 @@ namespace Raven.Tests.Bundles.Versioning
 			{
 				var doc = session.Load<object>("companies/1/revisions/1");
 				Assert.NotNull(doc);
+			}
+		}
+
+		[Fact]
+		public void After_a_put_delete_put_sequence_Will_continue_revision_numbers_from_last_value_if_purge_is_false()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new VersioningConfiguration
+				{
+					Exclude = false,
+					PurgeOnDelete = false,
+					Id = "Raven/Versioning/Companies",
+					MaxRevisions = 5
+				});
+				session.SaveChanges();
+			}
+
+			var company = new Company { Id = "companies/1", Name = "Company Name" };
+
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+				company.Name = "Company Name 2";
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<Company>("companies/1");
+				var metadata = session.Advanced.GetMetadataFor(doc);
+				Assert.Equal(2, metadata.Value<int>("Raven-Document-Revision"));
+
+				session.Delete(doc);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+
+				var metadata = session.Advanced.GetMetadataFor(company);
+				Assert.Equal(3, metadata.Value<int>("Raven-Document-Revision"));
+			}
+		}
+
+		[Fact]
+		public void Previously_deleted_docs_will_survive_export_import_cycle_if_purge_is_false()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new VersioningConfiguration
+				{
+					Exclude = false,
+					PurgeOnDelete = false,
+					Id = "Raven/Versioning/Companies",
+					MaxRevisions = 5
+				});
+				session.SaveChanges();
+			}
+
+			var company = new Company { Id = "companies/1", Name = "Company Name" };
+
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+				company.Name = "Company Name 2";
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<Company>("companies/1");
+				Assert.Equal(2, session.Advanced.GetMetadataFor(doc).Value<int>("Raven-Document-Revision"));
+
+				session.Delete(doc);
+				session.SaveChanges();
+			}
+
+			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
+			try
+			{
+				var exportSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = documentStore.Url });
+				using (var file = File.Create(options.BackupPath))
+				{
+					exportSmuggler.ExportData(file, options, false).Wait();
+				}
+
+				using (CreateRavenDbServer(port: 8078))
+				using (var documentStore2 = CreateDocumentStore(port: 8078))
+				{
+					var importSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions
+					{
+						Url = documentStore2.Url,
+						Credentials = documentStore2.Credentials
+					});
+					importSmuggler.ImportData(options).Wait();
+
+					using (var session = documentStore2.OpenSession())
+					{
+						session.Store(company);
+						session.SaveChanges();
+						Assert.Equal(3, session.Advanced.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
+					}
+
+					using (var session = documentStore2.OpenSession())
+					{
+						var doc = session.Load<Company>("companies/1");
+						doc.Name = "Company Name 3";
+						session.SaveChanges();
+						Assert.Equal(4, session.Advanced.GetMetadataFor(doc).Value<int>("Raven-Document-Revision"));
+					}
+				}
+			}
+			finally
+			{
+				if (File.Exists(options.BackupPath))
+				{
+					File.Delete(options.BackupPath);
+				}
 			}
 		}
 

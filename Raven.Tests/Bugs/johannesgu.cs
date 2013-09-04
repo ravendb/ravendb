@@ -1,6 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
-using Raven.Database.Exceptions;
+using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 			 {
 				 var tx = new TransactionInformation
 				 {
-					 Id = Guid.NewGuid(),
+                     Id = Guid.NewGuid().ToString(),
 					 Timeout = TimeSpan.FromMinutes(1)
 				 };
 

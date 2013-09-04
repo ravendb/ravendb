@@ -45,9 +45,8 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     public static char IntToHex(int n)
     {
       if (n <= 9)
-      {
         return (char)(n + 48);
-      }
+
       return (char)((n - 10) + 97);
     }
 
@@ -83,8 +82,15 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 
     public static bool ApproxEquals(double d1, double d2)
     {
-      // are values equal to within 6 (or so) digits of precision?
-      return Math.Abs(d1 - d2) < (Math.Abs(d1) * 1e-6);
+      const double epsilon = 2.2204460492503131E-16;
+
+      if (d1 == d2)
+        return true;
+
+      double tolerance = ((Math.Abs(d1) + Math.Abs(d2)) + 10.0) * epsilon;
+      double difference = d1 - d2;
+
+      return (-tolerance < difference && tolerance > difference);
     }
   }
 }

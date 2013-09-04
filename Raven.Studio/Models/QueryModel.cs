@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using ActiproSoftware.Text;
@@ -13,7 +14,9 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client;
+using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
@@ -25,7 +28,7 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
-	public class QueryModel : PageViewModel, IHasPageTitle
+	public class QueryModel : PageViewModel, IHasPageTitle, IAutoCompleteSuggestionProvider
 	{
         private ICommand executeQuery;
         private RavenQueryStatistics results;
@@ -57,13 +60,19 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuerySupported = value;
-                if (!isSpatialQuerySupported)
-                {
-                    IsSpatialQuery = false;
-                }
+				if (!isSpatialQuerySupported)
+				{
+					IsSpatialQuery = false;
+				}
 
 				OnPropertyChanged(() => IsSpatialQuerySupported);
 			}
+		}
+
+		public void UpdateSpatialFields(List<SpatialQueryField> spatialFields)
+		{
+			IsSpatialQuerySupported = spatialFields.Count > 0;
+			SpatialQuery.UpdateFields(spatialFields);
 		}
 
 		private bool isSpatialQuery;
@@ -73,62 +82,16 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuery = value;
-                if (!isSpatialQuery)
-                {
-                    Latitude = null;
-                    Longitude = null;
-                    Radius = null;
-                }
+				if (!isSpatialQuery)
+				{
+					SpatialQuery.Clear();
+				}
 
 				OnPropertyChanged(() => IsSpatialQuery);
 			}
 		}
 
-		private double? latitude;
-		public double? Latitude
-		{
-			get { return latitude; }
-			set
-			{
-				latitude = value;
-				OnPropertyChanged(() => Latitude);
-			}
-		}
-
-		private double? longitude;
-		public double? Longitude
-		{
-			get { return longitude; }
-			set
-			{
-				longitude = value;
-				OnPropertyChanged(() => Longitude);
-			}
-		}
-
-		private double? radius;
-		public double? Radius
-		{
-			get { return radius; }
-			set
-			{
-				radius = value;
-				OnPropertyChanged(() => Radius);
-			}
-		}
-
-		private string address;
-		public string Address
-		{
-			get { return address; }
-			set
-			{
-				address = value;
-				OnPropertyChanged(() => Address);
-			}
-		}
-
-		public ICommand CalculateFromAddress { get { return new CalculateGeocodeFromAddressCommand(this); } }
+		public SpatialQueryModel SpatialQuery { get; set; }
 
 		#endregion
 
@@ -152,22 +115,52 @@ namespace Raven.Studio.Models
 			{
 				return indexName;
 			}
-			private set
+			set
 			{
 				if (string.IsNullOrWhiteSpace(value))
-					UrlUtil.Navigate("/indexes");
+					return;
 
-				indexName = value;
+                if (HasIndexChanged(value))
+                {
+                    NavigateToIndexQuery(value);
+                    return;
+                }
+
+			    indexName = value;
 				DocumentsResult.Context = "Index/" + indexName;
 				ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 																	   "/indexes/" + indexName;
+
+				SpatialQuery.IndexName = indexName;
+				
 				OnPropertyChanged(() => IndexName);
 			}
 		}
 
-		
-		private QueryOperator defaultOperator;
+	    private static void NavigateToIndexesList()
+	    {
+	        UrlUtil.Navigate("/indexes");
+	    }
+
+	    private static void NavigateToIndexQuery(string indexName)
+	    {
+	        UrlUtil.Navigate("/query/" + indexName);
+	    }
+
+	    private bool HasIndexChanged(string newIndexName)
+	    {
+            if (newIndexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+	        var currentIndex = new UrlParser(UrlUtil.Url.Substring(ModelUrl.Length)).Path.Trim('/');
+            return !newIndexName.Equals(currentIndex, StringComparison.OrdinalIgnoreCase);
+	    }
+
+
+	    private QueryOperator defaultOperator;
 		public QueryOperator DefaultOperator
 		{
 			get { return defaultOperator; }
@@ -203,6 +196,32 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		private bool showSkipTransform = true;
+		private bool useTransformer;
+		public bool UseTransformer
+		{
+			get { return useTransformer; }
+			set
+			{
+				useTransformer = value;
+				if (value == true)
+				{
+					SkipTransformResults = true;
+					showSkipTransform = false;
+				}
+				else
+				{
+					showSkipTransform = true;
+				}
+				OnPropertyChanged(() => UseTransformer);
+				OnPropertyChanged(() => HasTransform);
+				Requery();
+			}
+		}
+
+		public Observable<string> SelectedTransformer { get; set; }
+		public List<string> Transformers { get; set; } 
+
 	    public bool SkipTransformResults
 	    {
 	        get { return skipTransformResults; }
@@ -216,6 +235,7 @@ namespace Raven.Studio.Models
 	    #region Sorting
 
 		public const string SortByDescSuffix = " DESC";
+		public const string SortByRangeSuffix = "_Range";
 
 		public class StringRef : NotifyPropertyChangedBase
 		{
@@ -240,6 +260,22 @@ namespace Raven.Studio.Models
 			get { return new RemoveSortByCommand(this); }
 		}
 
+	    public ICommand AddTransformer
+	    {
+	        get { return (addTransformer ?? (addTransformer = new ActionCommand(() => UseTransformer = true))); }
+	    }
+
+	    public ICommand RemoveTransformer
+	    {
+	        get
+	        {
+	            return (removeTransformer ?? (removeTransformer = new ActionCommand(() =>
+	            {
+	                UseTransformer = false;
+	                SelectedTransformer.Value = "None";
+	            })));
+	        }
+	    }
 		private class RemoveSortByCommand : Command
 		{
 			private string field;
@@ -274,7 +310,9 @@ namespace Raven.Studio.Models
 			foreach (var item in items)
 			{
 				SortByOptions.Add(item);
-				SortByOptions.Add(item + SortByDescSuffix);
+				SortByOptions.Add(item + SortByDescSuffix); 
+				SortByOptions.Add(item + SortByRangeSuffix);
+				SortByOptions.Add(item + SortByRangeSuffix + SortByDescSuffix );
 			}
 		}
 		
@@ -329,28 +367,41 @@ namespace Raven.Studio.Models
 
 	    private void BeginUpdateFieldsAndSortOptions(string collection)
 	    {
-	        DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
-	                                    new IndexQuery() {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
-	            .ContinueOnSuccessInTheUIThread(result =>
-	                                                {
-                                                        if (result.Results.Count > 0)
-                                                        {
-                                                            var fields = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true)
-                                                                .ToList();
+		    DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
+		                                new IndexQuery {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
+		                    .ContinueOnSuccessInTheUIThread(result =>
+		                    {
+			                    if (result.Results.Count > 0)
+			                    {
+				                    var fields =
+					                    DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties: true,
+					                                                              includeMetadata: false,
+					                                                              excludeParentPropertyNames: true)
+					                                   .ToList();
 
-                                                            SetSortByOptions(fields);
-                                                            QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
-                                                            RestoreHistory();
-                                                        }
-	                                                });
+				                    SetSortByOptions(fields);
+				                    QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
+				                    RestoreHistory();
+			                    }
+		                    });
 	    }
 
 	    public QueryModel()
 		{
 			ModelUrl = "/query";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+            SelectedTransformer = new Observable<string> { Value = "None" };
+            SelectedTransformer.PropertyChanged += (sender, args) => Requery();
+
+		    ApplicationModel.DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
+		    {
+                Transformers = new List<string>{"None"};
+			    Transformers.AddRange(transformers.Select(definition => definition.Name));
+			    
+			    OnPropertyChanged(() => Transformers);
+		    });
             
-			queryDocument = new EditorDocument()
+			queryDocument = new EditorDocument
             {
                 Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
             };
@@ -388,11 +439,16 @@ namespace Raven.Studio.Models
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
-
+	        AvailableIndexes = new BindableCollection<string>(x => x);
+		    SpatialQuery = new SpatialQueryModel {IndexName = indexName};
 		}
 
-		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
+	    public BindableCollection<string> AvailableIndexes { get; private set; }
+
+	    Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
 	    private ICommand deleteMatchingResultsCommand;
+	    private ICommand addTransformer;
+	    private ICommand removeTransformer;
 
 	    private void HandleQueryError(Exception exception)
 		{
@@ -434,6 +490,11 @@ namespace Raven.Studio.Models
 
 		public void ClearQueryError()
 		{
+			if (Database.Value.Statistics.Value.Errors.Any(error => error.Index == IndexName))
+			{
+				QueryErrorMessage.Value = "The index " + IndexName + " has errors";
+				return;
+			}
 			QueryErrorMessage.Value = string.Empty;
 			IsErrorVisible.Value = false;
 		}
@@ -453,6 +514,7 @@ namespace Raven.Studio.Models
         {
             var urlParser = new UrlParser(parameters);
 
+            UpdateAvailableIndexes();
             ClearCurrentQuery();
 
             if (urlParser.GetQueryParam("mode") == "dynamic")
@@ -480,25 +542,81 @@ namespace Raven.Studio.Models
             }
 
             IsDynamicQuery = false;
-            IndexName = urlParser.Path.Trim('/');
+            var newIndexName = urlParser.Path.Trim('/');
 
-            DatabaseCommands.GetIndexAsync(IndexName)
+            if (string.IsNullOrEmpty(newIndexName))
+            {
+                if (AvailableIndexes.Any())
+                {
+                    NavigateToIndexQuery(AvailableIndexes.FirstOrDefault());
+                    return;
+                }
+            }
+
+            IndexName = newIndexName;
+
+	        if (Database.Value.Statistics.Value.Errors.Any(error => error.Index == IndexName))
+	        {
+		        QueryErrorMessage.Value = "The index " + IndexName + " has errors";
+		        IsErrorVisible.Value = true;
+	        }
+
+	        DatabaseCommands.GetIndexAsync(IndexName)
                 .ContinueOnUIThread(task =>
                 {
                     if (task.IsFaulted || task.Result == null)
                     {
-                        IndexDefinitionModel.HandleIndexNotFound(IndexName);
+                        if (AvailableIndexes.Any())
+                        {
+
+                            NavigateToIndexQuery(AvailableIndexes.FirstOrDefault());
+                        }
+                        else
+                        {
+                            NavigateToIndexesList();
+                        }
                         return;
                     }
+
                     var fields = task.Result.Fields;
                     QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
 
-                    const string spatialindexGenerateLegacy = "SpatialIndex.Generate";
-					const string spatialindexGenerate = "SpatialGenerate";
+	                var regex1 = new Regex(@"(?:SpatialIndex\.Generate|SpatialGenerate)");
+	                var regex2 = new Regex(@"(?:SpatialIndex\.Generate|SpatialGenerate)\(@?\""([^\""]+)\""");
 
-                    IsSpatialQuerySupported =
-						task.Result.Maps.Any(x => x.Contains(spatialindexGenerate) || x.Contains(spatialindexGenerateLegacy)) ||
-						(task.Result.Reduce != null && (task.Result.Reduce.Contains(spatialindexGenerate) || task.Result.Reduce.Contains(spatialindexGenerateLegacy)));
+	                var strs = task.Result.Maps.ToList();
+					if (task.Result.Reduce != null)
+						strs.Add(task.Result.Reduce);
+					
+					var legacyFields = new HashSet<string>();
+					foreach (var map in task.Result.Maps)
+					{
+						var count = regex1.Matches(map).Count;
+						var matches = regex2.Matches(map).Cast<Match>().Select(x => x.Groups[1].Value).ToList();
+						if (matches.Count < count)
+							legacyFields.Add(Constants.DefaultSpatialFieldName);
+
+						matches.ForEach(x => legacyFields.Add(x));
+					}
+
+					var spatialFields = task.Result.SpatialIndexes
+						.Select(x => new SpatialQueryField
+						{
+							Name = x.Key,
+							IsGeographical = x.Value.Type == SpatialFieldType.Geography,
+							Units = x.Value.Units
+						})
+						.ToList();
+
+					legacyFields.ForEach(x => spatialFields.Add(new SpatialQueryField
+						{
+							Name = x,
+							IsGeographical = true,
+							Units = SpatialUnits.Kilometers
+						}));
+
+					UpdateSpatialFields(spatialFields);
+
                     HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
                     DocumentsResult.SetChangesObservable(
@@ -509,21 +627,33 @@ namespace Raven.Studio.Models
                     SetSortByOptions(fields);
                     RestoreHistory();
                 }).Catch();
+
+
         }
+
+	    private void UpdateAvailableIndexes()
+	    {
+            if (Database.Value == null || Database.Value.Statistics.Value == null)
+            {
+                return;
+            }
+
+	        AvailableIndexes.Match(Database.Value.Statistics.Value.Indexes.Select(i => i.Name).ToArray());
+	    }
 
 	    private void ClearCurrentQuery()
 	    {
 	        Query = string.Empty;
             SortBy.Clear();
-	        IsSpatialQuery = false;
-	        Latitude = null;
-	        Longitude = null;
-	        Radius = null;
+			SpatialQuery.Clear();
+            ClearQueryError();
+            Suggestions.Clear();
+	        CollectionSource.Clear();
 	    }
 
 	    public bool HasTransform
 	    {
-            get { return hasTransform; }
+            get { return hasTransform && showSkipTransform; }
             private set
             {
                 hasTransform = value;
@@ -538,7 +668,7 @@ namespace Raven.Studio.Models
                 return;
             } 
 
-            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value), IsSpatialQuery, Latitude, Longitude, Radius);
+            var state = new QueryState(this);
 
             PerDatabaseState.QueryHistoryManager.StoreQuery(state);
 		}
@@ -568,11 +698,25 @@ namespace Raven.Studio.Models
 	        if (state == null)
 	            return;
 
-	        Query = state.Query;
-	        IsSpatialQuery = state.IsSpatialQuery;
-	        Latitude = state.Latitude;
-	        Longitude = state.Longitude;
-	        Radius = state.Radius;
+	        UpdateFromState(state);
+
+	        Requery();
+	    }
+
+		private void UpdateFromState(QueryState state)
+		{
+			Query = state.Query;
+
+			IsSpatialQuery = state.IsSpatialQuery;
+			SpatialQuery.UpdateFromState(state);
+
+	        UseTransformer = state.UseTransformer;
+			DefaultOperator = state.DefaultOperator;
+			SelectedTransformer.Value = state.Transformer;
+			SkipTransformResults = state.SkipTransform;
+			ShowFields = state.ShowFields;
+			ShowEntries = state.ShowEntries;
+
 
 	        SortBy.Clear();
 
@@ -581,11 +725,9 @@ namespace Raven.Studio.Models
 		        if (SortByOptions.Contains(sortOption))
 			        SortBy.Add(new StringRef() {Value = sortOption});
 	        }
+		}
 
-	        Requery();
-	    }
-
-        public ICommand DeleteMatchingResults { get
+		public ICommand DeleteMatchingResults { get
         {
             return deleteMatchingResultsCommand ??
                    (deleteMatchingResultsCommand = new ActionCommand(HandleDeleteMatchingResults));
@@ -682,11 +824,16 @@ namespace Raven.Studio.Models
 		}
 
 	    public IndexQuery CreateTemplateQuery()
-        {
+	    {
+		    var transformer = SelectedTransformer.Value;
+			if (transformer == "None" || !UseTransformer)
+				transformer = "";
+
             var q = new IndexQuery
             {
                 Query = Query,
-                DefaultOperator = DefaultOperator
+                DefaultOperator = DefaultOperator,
+				ResultsTransformer = transformer
             };
 
             if (SortBy != null && SortBy.Count > 0)
@@ -712,16 +859,22 @@ namespace Raven.Studio.Models
             q.DebugOptionGetIndexEntries = ShowEntries;
 
             q.SkipTransformResults = SkipTransformResults;
-            if (IsSpatialQuerySupported && Latitude.HasValue && Longitude.HasValue)
-            {
-                q = new SpatialIndexQuery(q)
-                {
-                    QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(Latitude.Value, Longitude.Value, Radius.HasValue ? Radius.Value : 1),
-                    SpatialRelation = SpatialRelation.Within,
-                    SpatialFieldName = Constants.DefaultSpatialFieldName,
-                    DefaultOperator = DefaultOperator
-                };
-            }
+
+
+
+			if (IsSpatialQuerySupported && SpatialQuery.Y.HasValue && SpatialQuery.X.HasValue)
+			{
+				var radiusValue = SpatialQuery.Radius.HasValue ? SpatialQuery.Radius.Value : 1;
+
+				q = new SpatialIndexQuery(q)
+				{
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(SpatialQuery.Y.Value, SpatialQuery.X.Value, radiusValue),
+					SpatialRelation = SpatialRelation.Within,
+					SpatialFieldName = SpatialQuery.FieldName,
+					DefaultOperator = DefaultOperator,
+					RadiusUnitOverride = SpatialQuery.RadiusUnits
+				};
+			}
 
             return q;
         }
@@ -739,6 +892,25 @@ namespace Raven.Studio.Models
                                 () => ApplicationModel.Current.AddInfoNotification("Documents successfully deleted"))
                             .Catch();
                     });
+        }
+
+        protected override void OnViewLoaded()
+        {
+            base.OnViewLoaded();
+
+            Database.ObservePropertyChanged()
+                            .TakeUntil(Unloaded)
+                            .Subscribe(_ =>
+                            {
+                                UpdateAvailableIndexes();
+
+                                Database.Value.Statistics.ObservePropertyChanged()
+                                        .TakeUntil(
+                                            Database.ObservePropertyChanged().Select(__ => Unit.Default).Amb(Unloaded))
+                                        .Subscribe(__ => UpdateAvailableIndexes());
+                            });
+
+            UpdateAvailableIndexes();
         }
 
 		private class RepairTermInQueryCommand : Command
@@ -772,5 +944,26 @@ namespace Raven.Studio.Models
 	    {
 	        get { return queryDocument; }
 	    }
+		public Task<IList<object>> ProvideSuggestions(string enteredText)
+		{
+			var list = new List<object>();
+			if(PerDatabaseState.RecentAddresses.ContainsKey(IndexName))
+				list = PerDatabaseState.RecentAddresses[IndexName].Keys.Cast<object>().ToList();
+			return TaskEx.FromResult<IList<object>>(list);			
+		}
+
+	
+	}
+
+	public class AddressData
+	{
+		public string Address { get; set; }
+		public double Latitude { get; set; }
+		public double Longitude { get; set; }
+
+		public override string ToString()
+		{
+			return Address;
+		}
 	}
 }

@@ -23,7 +23,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
 			var defaultVal = BitConverter.GetBytes(0);
 			Api.JetSetColumnDefaultValue(session, dbid, "reduce_keys_status", "reduce_type", defaultVal, defaultVal.Length,

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,9 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
 {
@@ -23,12 +27,12 @@ namespace Raven.Client.Shard
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
 	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>,
-	                                           IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
+											   IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
 	{
 		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
 		public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
-		                                   ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
+										   ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
 			: base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands)
 		{
 			GenerateDocumentKeysOnStore = false;
@@ -56,7 +60,7 @@ namespace Raven.Client.Shard
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
 			{
-				return CompletedTask.With((T) existingEntity);
+				return CompletedTask.With((T)existingEntity);
 			}
 
 			IncrementRequestCount();
@@ -100,7 +104,7 @@ namespace Raven.Client.Shard
 				if (shardsContainThisDocument.Count() > 1)
 				{
 					throw new InvalidOperationException("Found document with id: " + id +
-					                                    " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+														" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
 				}
 
 				return shardsContainThisDocument.FirstOrDefault();
@@ -140,70 +144,185 @@ namespace Raven.Client.Shard
 			return LoadAsyncInternal<T>(ids, null);
 		}
 
-		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
+		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName);
+			return result.FirstOrDefault();
+		}
+
+		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var ravenLoadConfiguration = new RavenLoadConfiguration();
+			configure(ravenLoadConfiguration);
+			var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+			return result.FirstOrDefault();
+		}
+
+		public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			return LoadAsyncInternal<T>(ids, null, new TTransformer().TransformerName);
+		}
+
+		public Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var ravenLoadConfiguration = new RavenLoadConfiguration();
+			configure(ravenLoadConfiguration);
+			return LoadAsyncInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+		}
+
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			var results = new T[ids.Length];
-			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includes);
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
 
 			if (!idsToLoad.Any())
-				return CompletedTask.With(new T[ids.Length]);
+				return results;
 
 			IncrementRequestCount();
 
-			var loadTasks = idsToLoad.Select(shardsAndIds => (Func<Task>) (() =>
+			foreach (var shard in idsToLoad)
 			{
-				var shards = shardsAndIds.Key;
-				var idsForCurrentShards = shardsAndIds.Select(x => x.Id).ToArray();
-
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
+				var currentShardIds = shard.Select(x => x.Id).ToArray();
+				var multiLoadOperations = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key, new ShardRequestData
 				{
 					EntityType = typeof(T),
-					Keys = idsForCurrentShards
-				}, (commands, i) =>
+					Keys = currentShardIds.ToList()
+				}, async (dbCmd, i) =>
 				{
-					var multiLoadOperation = new MultiLoadOperation(this, commands.DisableAllCaching, idsForCurrentShards, includes);
-
-					Func<Task<MultiLoadOperation>> executer = null;
-					executer = () =>
+					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
+					MultiLoadResult multiLoadResult;
+					do
 					{
 						multiLoadOperation.LogOperation();
-
-						IDisposable loadContext = multiLoadOperation.EnterMultiLoadContext();
-						return commands.GetAsync(idsForCurrentShards, includes).ContinueWith(task =>
+						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							loadContext.Dispose();
-
-							if (multiLoadOperation.SetResult(task.Result))
-								return executer();
-							return CompletedTask.With(multiLoadOperation);
-						}).Unwrap();
-					};
-
-					return executer();
-				});
-
-				return multiLoadOperations.ContinueWith(task =>
-				{
-					foreach (var loadResults in task.Result.Select(multiLoadOperation => multiLoadOperation.Complete<T>()))
-					{
-						for (int i = 0; i < loadResults.Length; i++)
-						{
-							if (ReferenceEquals(loadResults[i], null))
-								continue;
-							var id = idsForCurrentShards[i];
-							var itemPosition = Array.IndexOf(ids, id);
-							if (ReferenceEquals(results[itemPosition], default(T)) == false)
-							{
-								throw new InvalidOperationException("Found document with id: " + id +
-								                                    " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-							}
-							results[itemPosition] = loadResults[i];
+							multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths);
 						}
-					}
+					} while (multiLoadOperation.SetResult(multiLoadResult));
+					return multiLoadOperation;
 				});
-			}));
+				foreach (var multiLoadOperation in multiLoadOperations)
+				{
+					var loadResults = multiLoadOperation.Complete<T>();
+					for (int i = 0; i < loadResults.Length; i++)
+					{
+						if (ReferenceEquals(loadResults[i], null))
+							continue;
+						var id = currentShardIds[i];
+						var itemPosition = Array.IndexOf(ids, id);
+						if (ReferenceEquals(results[itemPosition], default(T)) == false)
+						{
+							throw new InvalidOperationException("Found document with id: " + id +
+																" on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+						}
+						results[itemPosition] = loadResults[i];
+					}
+				}
+			}
+			return ids.Select(id => // so we get items that were skipped because they are already in the session cache
+			{
+				object val;
+				entitiesByKey.TryGetValue(id, out val);
+				return (T)val;
+			}).ToArray();
+		}
 
-			return loadTasks.StartInParallel().WithResult(() => results);
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+		{
+			var results = new T[ids.Length];
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths).ToList();
+
+			if (!idsToLoad.Any())
+				return results;
+
+			IncrementRequestCount();
+
+			if (typeof(T).IsArray)
+			{
+				foreach (var shard in idsToLoad)
+				{
+					var currentShardIds = shard.Select(x => x.Id).ToArray();
+					var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
+							new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
+							async (dbCmd, i) =>
+							{
+								// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
+								// With a single Id
+								var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs))
+															.Results
+															.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
+															.Select(values =>
+															{
+																var array = values.Select(y =>
+																{
+																	HandleInternalMetadata(y);
+																	return ConvertToEntity<T>(null, y, new RavenJObject());
+																}).ToArray();
+																var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
+																Array.Copy(array, newArray, array.Length);
+																return newArray;
+															})
+															.Cast<T>()
+															.ToArray();
+
+								return arrayOfArrays;
+							});
+
+					return shardResults.SelectMany(x => x).ToArray();
+				}
+			}
+
+			foreach (var shard in idsToLoad)
+			{
+				var currentShardIds = shard.Select(x => x.Id).ToArray();
+				var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
+						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
+						async (dbCmd, i) =>
+						{
+							var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs))
+								.Results
+								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
+								.Select(JsonExtensions.ToJObject)
+								.Select(
+										x =>
+										{
+											HandleInternalMetadata(x);
+											return ConvertToEntity<T>(null, x, new RavenJObject());
+										})
+								.Cast<T>()
+								.ToArray();
+
+							if (items.Length > currentShardIds.Length)
+							{
+								throw new InvalidOperationException(
+									String.Format(
+										"A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
+										transformer,
+										typeof(T).Name));
+							}
+
+							return items;
+						});
+
+				foreach (var shardResult in shardResults)
+				{
+					for (int i = 0; i < shardResult.Length; i++)
+					{
+						if (ReferenceEquals(shardResult[i], null))
+							continue;
+						var id = currentShardIds[i];
+						var itemPosition = Array.IndexOf(ids, id);
+						if (ReferenceEquals(results[itemPosition], default(T)) == false)
+							throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+
+						results[itemPosition] = shardResult[i];
+					}
+				}
+			}
+
+			return results;
 		}
 
 		public IAsyncLoaderWithInclude<object> Include(string path)
@@ -225,7 +344,20 @@ namespace Raven.Client.Shard
 
 		#region Queries
 
-		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce )
+		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
+																			RavenQueryStatistics ravenQueryStatistics,
+																			RavenQueryHighlightings highlightings)
+		{
+#if !SILVERLIGHT
+			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
+				 null,
+				 shardDbCommands.Values.ToList());
+#else
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
+#endif
+		}
+
+		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce)
 		{
 			throw new NotSupportedException("The async sharded document store doesn't support synchronous operations");
 		}
@@ -235,7 +367,7 @@ namespace Raven.Client.Shard
 			return AsyncLuceneQuery<T>(indexName);
 		}
 
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25, string exclude = null)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -248,8 +380,21 @@ namespace Raven.Client.Shard
 			{
 				EntityType = typeof(T),
 				Keys = { keyPrefix }
-			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, start, pageSize))
-			                    .ContinueWith(task => (IEnumerable<T>) task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
+			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, start, pageSize, exclude: exclude))
+								.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
+		}
+
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var index = new TIndexCreator();
+
+			return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
 		}
 
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName, bool isMapReduce = false)
@@ -262,6 +407,37 @@ namespace Raven.Client.Shard
 			return AsyncLuceneQuery<T>(GetDynamicIndexName<T>());
 		}
 
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
+		{
+			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query)
+		{
+			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
 		#endregion
 
 		/// <summary>
@@ -270,65 +446,65 @@ namespace Raven.Client.Shard
 		Task IAsyncDocumentSession.SaveChangesAsync()
 		{
 			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
-			                                 .ContinueWith(keysTask =>
-			                                 {
-				                                 keysTask.AssertNotFailed();
+											 .ContinueWith(keysTask =>
+											 {
+												 keysTask.AssertNotFailed();
 
-				                                 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
-				                                 try
-				                                 {
-					                                 var data = PrepareForSaveChanges();
-					                                 if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
-					                                 {
-						                                 cachingScope.Dispose();
-						                                 return new CompletedTask(); // nothing to do here
-					                                 }
+												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
+												 try
+												 {
+													 var data = PrepareForSaveChanges();
+													 if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
+													 {
+														 cachingScope.Dispose();
+														 return new CompletedTask(); // nothing to do here
+													 }
 
-					                                 IncrementRequestCount();
-					                                 LogBatch(data);
+													 IncrementRequestCount();
+													 LogBatch(data);
 
-					                                 // split by shards
-					                                 var saveChangesPerShard = GetChangesToSavePerShard(data);
+													 // split by shards
+													 var saveChangesPerShard = GetChangesToSavePerShard(data);
 
-					                                 var saveTasks = new List<Func<Task<BatchResult[]>>>();
-					                                 var saveChanges = new List<SaveChangesData>();
-					                                 // execute on all shards
-					                                 foreach (var shardAndObjects in saveChangesPerShard)
-					                                 {
-						                                 var shardId = shardAndObjects.Key;
+													 var saveTasks = new List<Func<Task<BatchResult[]>>>();
+													 var saveChanges = new List<SaveChangesData>();
+													 // execute on all shards
+													 foreach (var shardAndObjects in saveChangesPerShard)
+													 {
+														 var shardId = shardAndObjects.Key;
 
-						                                 IAsyncDatabaseCommands databaseCommands;
-						                                 if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
-							                                 throw new InvalidOperationException(
-								                                 string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
+														 IAsyncDatabaseCommands databaseCommands;
+														 if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
+															 throw new InvalidOperationException(
+																 string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
-						                                 var localCopy = shardAndObjects.Value;
-						                                 saveChanges.Add(localCopy);
-						                                 saveTasks.Add(() => databaseCommands.BatchAsync(localCopy.Commands.ToArray()));
-					                                 }
+														 var localCopy = shardAndObjects.Value;
+														 saveChanges.Add(localCopy);
+														 saveTasks.Add(() => databaseCommands.BatchAsync(localCopy.Commands.ToArray()));
+													 }
 
-					                                 return saveTasks.StartInParallel().ContinueWith(task =>
-					                                 {
-						                                 try
-						                                 {
-							                                 var results = task.Result;
-							                                 for (int index = 0; index < results.Length; index++)
-							                                 {
-								                                 UpdateBatchResults(results[index], saveChanges[index]);
-							                                 }
-						                                 }
-						                                 finally
-						                                 {
-							                                 cachingScope.Dispose();
-						                                 }
-					                                 });
-				                                 }
-				                                 catch
-				                                 {
-					                                 cachingScope.Dispose();
-					                                 throw;
-				                                 }
-			                                 }).Unwrap();
+													 return saveTasks.StartInParallel().ContinueWith(task =>
+													 {
+														 try
+														 {
+															 var results = task.Result;
+															 for (int index = 0; index < results.Length; index++)
+															 {
+																 UpdateBatchResults(results[index], saveChanges[index]);
+															 }
+														 }
+														 finally
+														 {
+															 cachingScope.Dispose();
+														 }
+													 });
+												 }
+												 catch
+												 {
+													 cachingScope.Dispose();
+													 throw;
+												 }
+											 }).Unwrap();
 		}
 
 		protected override string GenerateKey(object entity)
@@ -351,3 +527,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif

@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
+using Raven.Studio.Features.Tasks;
 
 namespace Raven.Studio.Infrastructure.Converters
 {
@@ -9,12 +10,12 @@ namespace Raven.Studio.Infrastructure.Converters
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			var text = value as string;
-			if (text == null)
+			var output = value as DatabaseTaskOutput;
+            if (output == null)
 				return new SolidColorBrush(Colors.Black);
 
-			if (text.Contains("Error") || text.Contains("Exception"))
-				return new SolidColorBrush(Colors.Red);
+			if (output.OutputType == OutputType.Error)
+				return new SolidColorBrush(Color.FromArgb(255, 196, 29, 29));
 			return new SolidColorBrush(Colors.Black);
 		}
 

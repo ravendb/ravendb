@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
 
@@ -82,7 +83,7 @@ namespace Raven.Tests.Silverlight
 		[TestMethod]
 		public void Extracts_etag_from_metadata()
 		{
-			var etag = Guid.NewGuid();
+			var etag = Etag.Parse(Guid.NewGuid().ToByteArray());
 
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
@@ -101,7 +102,7 @@ namespace Raven.Tests.Silverlight
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
-			Assert.AreEqual(Guid.Empty, output.First().Etag);
+			Assert.AreEqual(Etag.Empty, output.First().Etag);
 		}
 
 		[TestMethod]

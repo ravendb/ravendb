@@ -20,6 +20,11 @@ namespace Raven.Client
 		public bool IsStale { get; set; }
 
 		/// <summary>
+		/// The duration of the query _server side_
+		/// </summary>
+		public long DurationMilliseconds { get; set; }
+
+		/// <summary>
 		/// What was the total count of the results that matched the query
 		/// </summary>
 		public int TotalResults { get; set; }
@@ -47,7 +52,7 @@ namespace Raven.Client
 		/// <summary>
 		/// The etag of the queried index
 		/// </summary>
-		public Guid IndexEtag { get; set; }
+		public Etag IndexEtag { get; set; }
 
 		/// <summary>
 		/// Gets or sets a value indicating whether any of the documents returned by this query
@@ -66,6 +71,7 @@ namespace Raven.Client
 		internal void UpdateQueryStats(QueryResult qr)
 		{
 			IsStale = qr.IsStale;
+			DurationMilliseconds = qr.DurationMilliseconds;
 			NonAuthoritativeInformation= qr.NonAuthoritativeInformation;
 			TotalResults = qr.TotalResults;
 			SkippedResults = qr.SkippedResults;

@@ -1,233 +1,152 @@
-﻿namespace Raven.Tryouts
+﻿using System;
+using System.Collections.Generic;
+using Raven.Tests.Indexes;
+using Raven.Tests.Notifications;
+using Raven.Tests.Track;
+
+namespace Raven.Tryouts
 {
-    #region
+	class Program
+	{
+		private static void Main(string[] args)
+		{
+			for (int i = 0; i < 100; i++)
+			{
+				Console.WriteLine(i);
+                using (var x = new WithIIS())
+				{
+					x.CheckNotificationInIIS();
+				}
+			}
+			
+		}
+	}
 
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
+	public class OrderTotalResult
+	{
+		public string Employee, Company;
+		public decimal Total;
+	}
+}
 
-    using Raven.Client.Embedded;
-    using Raven.Client.Indexes;
+namespace Orders
+{
+	public class Company
+	{
+		public string Id { get; set; }
+		public string ExternalId { get; set; }
+		public string Name { get; set; }
+		public Contact Contact { get; set; }
+		public Address Address { get; set; }
+		public string Phone { get; set; }
+		public string Fax { get; set; }
+	}
 
-    #endregion
+	public class Address
+	{
+		public string Line1 { get; set; }
+		public string Line2 { get; set; }
+		public string City { get; set; }
+		public string Region { get; set; }
+		public string PostalCode { get; set; }
+		public string Country { get; set; }
+	}
 
-    internal class Program
-    {
-        #region Methods
+	public class Contact
+	{
+		public string Name { get; set; }
+		public string Title { get; set; }
+	}
 
-        private int forthCounter = 0;
-        private static string GetRandomForthTag()
-        {
-            secondCounter++;
-            if (secondCounter > 21)
-            {
-                secondCounter = 0;
-            }
+	public class Category
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public string Description { get; set; }
+	}
 
-            return secondCounter.ToString() + "Number";
-        }
+	public class Order
+	{
+		public string Id { get; set; }
+		public string Company { get; set; }
+		public string Employee { get; set; }
+		public DateTime OrderedAt { get; set; }
+		public DateTime RequireAt { get; set; }
+		public DateTime? ShippedAt { get; set; }
+		public Address ShipTo { get; set; }
+		public string ShipVia { get; set; }
+		public decimal Freight { get; set; }
+		public List<OrderLine> Lines { get; set; }
+	}
 
-        private static int secondCounter = 0;
-        private static string GetRandomSecondTag()
-        {
-            secondCounter++;
-            if (secondCounter > 20)
-            {
-                secondCounter = 0;
-            }
-            if (secondCounter > 3)
-            {
-                return "Second";
-            }
-            if (secondCounter > 9)
-            {
-                return "Third";
-            }
-            return secondCounter > 16 ? "Forth" : "First";
-        }
+	public class OrderLine
+	{
+		public string Product { get; set; }
+		public string ProductName { get; set; }
+		public decimal PricePerUnit { get; set; }
+		public int Quantity { get; set; }
+		public decimal Discount { get; set; }
+	}
 
-        private static int thirdCounter = 0;
-        private static string GetRandomThirdTag()
-        {
-            thirdCounter++;
-            if (thirdCounter > 20)
-            {
-                thirdCounter = 0;
-            }
+	public class Product
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public string Supplier { get; set; }
+		public string Category { get; set; }
+		public string QuantityPerUnit { get; set; }
+		public decimal PricePerUser { get; set; }
+		public int UnitsInStock { get; set; }
+		public int UnitsOnOrder { get; set; }
+		public bool Discontinued { get; set; }
+		public int ReorderLevel { get; set; }
+	}
 
-            return thirdCounter > 10 ? "gandalf" : "bombor";
-        }
+	public class Supplier
+	{
+		public string Id { get; set; }
+		public Contact Contact { get; set; }
+		public string Name { get; set; }
+		public Address Address { get; set; }
+		public string Phone { get; set; }
+		public string Fax { get; set; }
+		public string HomePage { get; set; }
+	}
 
-        private static List<DummyObject.Tag> GetTags()
-        {
-            var tags = new List<DummyObject.Tag>
-                           {
-                               new DummyObject.Tag { Type = "AllTheSame", TagValue = "TheSame" },
-                               new DummyObject.Tag
-                                   {
-                                       Type = "SecondTagWithFourValues",
-                                       TagValue = GetRandomSecondTag()
-                                   },
-                               new DummyObject.Tag
-                                   {
-                                       Type = "ThirdWithTwoValues",
-                                       TagValue = GetRandomThirdTag()
-                                   },
-                               new DummyObject.Tag
-                                   {
-                                       Type = "SpeciesGroupId",
-                                       TagValue = GetRandomForthTag()
-                                   }
-                           };
-            return tags;
-        }
+	public class Employee
+	{
+		public string Id { get; set; }
+		public string LastName { get; set; }
+		public string FirstName { get; set; }
+		public string Title { get; set; }
+		public Address Address { get; set; }
+		public DateTime HiredAt { get; set; }
+		public DateTime Birthday { get; set; }
+		public string HomePhone { get; set; }
+		public string Extension { get; set; }
+		public string ReportsTo { get; set; }
+		public List<string> Notes { get; set; }
 
-        private static void Main(string[] args)
-        {
-            using (var documentStore = new EmbeddableDocumentStore
-            {
-                //RunInMemory = true, 
-                UseEmbeddedHttpServer = true
-            })
-            {
-                documentStore.Initialize();
-                IndexCreation.CreateIndexes(typeof(DummyIndex).Assembly, documentStore);
+		public List<string> Territories { get; set; }
+	}
 
-                var id = 1;
-                for (var o = 0; o < 10; o++)
-                {
-                    using (var bulkInsertOperation = documentStore.BulkInsert())
-                    {
-                        for (var i = 0; i < 20000; i++)
-                        {
-                            var dummyObject = new DummyObject { Id = id, Tags = GetTags() };
-                            bulkInsertOperation.Store(dummyObject);
-                            id++;
-                        }
-                    }
-                }
+	public class Region
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public List<Territory> Territories { get; set; }
+	}
 
-                Console.WriteLine("Wait for nonstale indexes: press any key");
-                Console.ReadKey();
+	public class Territory
+	{
+		public string Code { get; set; }
+		public string Name { get; set; }
+	}
 
-                var session = documentStore.OpenSession();
-
-                var sumOfAllTags =
-                    session.Query<DummyIndex.Result, DummyIndex>()
-                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                           .Take(1000)
-                           .ToList()
-                           .Sum(x => x.Count);
-                Console.WriteLine(
-                    "sum of all the tags should equal all document * 4 : " + (id - 1) + " documents, " + sumOfAllTags
-                    + " tags....");
-
-                var sumOfSecondTag =
-                    session.Query<DummyIndex.Result, DummyIndex>()
-                           .Where(x => x.Type == "SecondTagWithFourValues")
-                           .Take(1000)
-                           .ToList()
-                           .Sum(x => x.Count);
-                Console.WriteLine(
-                    "sum of secondtag should equal all document: " + (id - 1) + " documents, " + sumOfSecondTag
-                    + " SecondTagWithFourValues....");
-
-                var sumOfThirdTag =
-                    session.Query<DummyIndex.Result, DummyIndex>()
-                           .Where(x => x.Type == "ThirdWithTwoValues")
-                           .Take(1000)
-                           .ToList()
-                           .Sum(x => x.Count);
-                Console.WriteLine(
-                    "sum of thirdtag should equal all document: " + (id - 1) + " documents, " + sumOfThirdTag
-                    + " ThirdWithTwoValues....");
-
-                var sumOfForthTag =
-                    session.Query<DummyIndex.Result, DummyIndex>()
-                           .Where(x => x.Type == "SpeciesGroupId")
-                           .Take(1000)
-                           .ToList()
-                           .Sum(x => x.Count);
-                Console.WriteLine(
-                    "sum of forthtag should equal all document: " + (id - 1) + " documents, " + sumOfForthTag
-                    + " SpeciesGroupId....");
-
-                var sumOfAllTheSameTag =
-                    session.Query<DummyIndex.Result, DummyIndex>()
-                           .Where(x => x.Type == "AllTheSame")
-                           .Take(1000)
-                           .ToList()
-                           .Sum(x => x.Count);
-                Console.WriteLine(
-                    "sum of allthesametag should equal all document: " + (id - 1) + " documents, " + sumOfAllTheSameTag
-                    + " allthesametags....");
-
-                Console.ReadKey();
-            }
-        }
-
-        #endregion
-    }
-
-    public class DummyIndex : AbstractIndexCreationTask<DummyObject, DummyIndex.Result>
-    {
-        #region Constructors and Destructors
-
-        public DummyIndex()
-        {
-            this.Map =
-                dummys =>
-                from dummy in dummys
-                from tag in dummy.Tags
-                select new Result { Type = tag.Type, TagValue = tag.TagValue, Count = 1 };
-
-            this.Reduce = results => from r in results
-                                     group r by new { r.Type, r.TagValue }
-                                         into g
-                                         select
-                                             new Result
-                                             {
-                                                 Type = g.Key.Type,
-                                                 TagValue = g.Key.TagValue,
-                                                 Count = g.Sum(x => x.Count)
-                                             };
-        }
-
-        #endregion
-
-        public class Result
-        {
-            #region Public Properties
-
-            public int Count { get; set; }
-
-            public string TagValue { get; set; }
-
-            public string Type { get; set; }
-
-            #endregion
-        }
-    }
-
-    public class DummyObject
-    {
-        #region Public Properties
-
-        public int Id { get; set; }
-
-        public List<Tag> Tags { get; set; }
-
-        #endregion
-
-        public class Tag
-        {
-            #region Public Properties
-
-            public string TagValue { get; set; }
-
-            public string Type { get; set; }
-
-            #endregion
-        }
-    }
+	public class Shipper
+	{
+		public string Id { get; set; }
+		public string Name { get; set; }
+		public string Phone { get; set; }
+	}
 }

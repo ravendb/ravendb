@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#endif
 using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Data;
@@ -16,9 +13,12 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #else
-using Raven.Client.Indexes;
+using System.Collections.Specialized;
 #endif
+using Raven.Client.Indexes;
 using Raven.Client.Connection.Async;
 
 
@@ -46,6 +46,16 @@ namespace Raven.Client
 		IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
 
 		/// <summary>
+		/// Setup the context for aggressive caching.
+		/// </summary>
+		/// <remarks>
+		/// Aggressive caching means that we will not check the server to see whatever the response
+		/// we provide is current or not, but will serve the information directly from the local cache
+		/// without touching the server.
+		/// </remarks>
+		IDisposable AggressivelyCache();
+
+		/// <summary>
 		/// Setup the context for no aggressive caching
 		/// </summary>
 		/// <remarks>
@@ -59,7 +69,7 @@ namespace Raven.Client
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		NameValueCollection SharedOperationsHeaders { get; }
 #else
 		IDictionary<string,string> SharedOperationsHeaders { get; }
@@ -100,7 +110,7 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -123,11 +133,15 @@ namespace Raven.Client
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
 
-		
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
 		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
+
+		/// <summary>
+		/// Executes the transformer creation
+		/// </summary>
+		void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
 #endif
 
 		/// <summary>
@@ -145,9 +159,9 @@ namespace Raven.Client
 		/// Gets the etag of the last document written by any session belonging to this 
 		/// document store
 		///</summary>
-		Guid? GetLastWrittenEtag();
+		Etag GetLastWrittenEtag();
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 	}

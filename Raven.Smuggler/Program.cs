@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
@@ -50,7 +52,7 @@ namespace Raven.Smuggler
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = true,
-															   Value = val
+															   Values = new List<string>{val}
 			            			                       })
 			            			},
 								{
@@ -59,7 +61,7 @@ namespace Raven.Smuggler
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = false,
-															   Value = val
+															   Values = new List<string>{val}
 			            			                       })
 			            			},
 			            		{
@@ -68,7 +70,7 @@ namespace Raven.Smuggler
 			            			              {
 													  Path = key,
 													  ShouldMatch = true,
-				            			              Value = val
+													  Values = new List<string>{val}
 			            			              })
 			            			},
 								{
@@ -76,10 +78,16 @@ namespace Raven.Smuggler
 			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
 			            			              {
 													  Path = key,
-													  ShouldMatch = true,
-				            			              Value = val
+													  ShouldMatch = false,
+													  Values = new List<string>{val}
 			            			              })
 			            			},
+			            		{
+			            			"transform:", "Transform documents using a given script (import only)", script => options.TransformScript = script
+			            		},
+								{
+			            			"transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
+			            		},
 								{"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s) },
 								{"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s) },
 			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
@@ -96,7 +104,7 @@ namespace Raven.Smuggler
 
 		private NetworkCredential Credentials
 		{
-			get { return connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential()); }
+			get { return (NetworkCredential)(connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential())); }
 		}
 
 		static void Main(string[] args)
@@ -145,58 +153,64 @@ namespace Raven.Smuggler
 				incremental = true;
 			}
 
-			var smugglerApi = new SmugglerApi(options,connectionStringOptions);
+			var smugglerApi = new SmugglerApi(options, connectionStringOptions);
 
 			try
 			{
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(options, incremental);
-						if(waitForIndexing)
-							smugglerApi.WaitForIndexing(options);
+						smugglerApi.ImportData(options, incremental).Wait();
+						if (waitForIndexing)
+							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(options, incremental);
+						smugglerApi.ExportData(null, options, incremental).Wait();
 						break;
 				}
 			}
-			catch (WebException e)
+			catch (AggregateException ex)
 			{
-				if (e.Status == WebExceptionStatus.ConnectFailure)
+				var exception = ex.ExtractSingleInnerException();
+				var e = exception as WebException;
+				if (e != null)
 				{
-					Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
-					var socketException = e.InnerException as SocketException;
-					if (socketException != null)
+
+					if (e.Status == WebExceptionStatus.ConnectFailure)
 					{
-						Console.WriteLine("Details: {0}", socketException.Message);
-						Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
+						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
+						var socketException = e.InnerException as SocketException;
+						if (socketException != null)
+						{
+							Console.WriteLine("Details: {0}", socketException.Message);
+							Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
+						}
+
+						Environment.Exit((int)e.Status);
 					}
 
-					Environment.Exit((int)e.Status);
-				}
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse == null)
+						throw;
+					Console.WriteLine("Error: " + e.Message);
+					Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
 
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				Console.WriteLine("Error: " + e.Message);
-				Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
-
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
+					using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
 					{
-						Console.WriteLine(line);
+						string line;
+						while ((line = reader.ReadLine()) != null)
+						{
+							Console.WriteLine(line);
+						}
 					}
-				}
 
-				Environment.Exit((int)httpWebResponse.StatusCode);
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e);
-				Environment.Exit(-1);
+					Environment.Exit((int)httpWebResponse.StatusCode);
+				}
+				else
+				{
+					Console.WriteLine(ex);
+					Environment.Exit(-1);
+				}
 			}
 		}
 

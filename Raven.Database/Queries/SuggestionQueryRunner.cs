@@ -70,7 +70,7 @@ namespace Raven.Database.Queries
 
 				long _;
 				var task = Task.Factory.StartNew(() => suggestionQueryIndexExtension.Init(indexReader));
-				database.AddTask(task, new RavenJObject(), out _);
+				database.AddTask(task, new object(), out _);
 
 				// wait for a bit for the suggestions to complete, but not too much (avoid IIS resets)
 				task.Wait(15000, database.WorkContext.CancellationToken);

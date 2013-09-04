@@ -255,11 +255,29 @@ namespace Jint.Native {
             var value = arguments[0];
             return BooleanClass.New((value != NumberClass["NaN"]
                 && value != NumberClass["POSITIVE_INFINITY"]
-                && value != NumberClass["NEGATIVE_INFINITY"])
+                && value != NumberClass["NEGATIVE_INFINITY"] 
+				&& isFiniteClrValue(value))
             );
         }
 
-        protected JsInstance DecodeURI(JsInstance[] arguments) {
+	    private bool isFiniteClrValue(JsInstance jsInstance)
+	    {
+		    if (jsInstance.Value is float)
+		    {
+			    var f = (float) jsInstance.Value;
+			    return float.IsNaN(f) == false &&
+			           float.IsInfinity(f) == false;
+		    }
+		    if (jsInstance.Value is double)
+		    {
+			    var d = (double)jsInstance.Value;
+			    return double.IsNaN(d) == false &&
+			           double.IsInfinity(d) == false;
+		    }
+		    return true;
+	    }
+
+	    protected JsInstance DecodeURI(JsInstance[] arguments) {
             if (arguments.Length < 1 || arguments[0] == JsUndefined.Instance) {
                 return StringClass.New();
             }

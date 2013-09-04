@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
@@ -210,6 +211,16 @@ namespace Raven.Json.Linq
 			return Load(jsonTextReader);
 		}
 
+		public static async Task<RavenJToken> TryLoadAsync(Stream stream)
+		{
+			var jsonTextReader = new JsonTextReaderAsync(new StreamReader(stream));
+			if (await jsonTextReader.ReadAsync() == false || jsonTextReader.TokenType == JsonToken.None)
+			{
+				return null;
+			}
+			return await ReadFromAsync(jsonTextReader);
+		}
+
 		/// <summary>
 		/// Creates a <see cref="RavenJToken"/> from a <see cref="JsonReader"/>.
 		/// </summary>
@@ -302,6 +313,12 @@ namespace Raven.Json.Linq
 								RavenJToken token;
 								if (otherObj.TryGetValue(kvp.Key, out token) == false)
 									return false;
+								if (kvp.Value == null)
+								{
+									if (token != null && token.Type != JTokenType.Null)
+										return false;
+									continue;
+								}
 								switch (kvp.Value.Type)
 								{
 									case JTokenType.Array:
@@ -314,6 +331,8 @@ namespace Raven.Json.Linq
 										byte[] tokenBytes = token.Type == JTokenType.String
 																? Convert.FromBase64String(token.Value<string>())
 																: token.Value<byte[]>();
+								        if (tokenBytes == null)
+								            return false;
 										if (bytes.Length != tokenBytes.Length)
 											return false;
 
@@ -774,5 +793,34 @@ namespace Raven.Json.Linq
 			return new RavenJValue(value);
 		}
 		#endregion
+
+		public static async Task<RavenJToken> ReadFromAsync(JsonTextReaderAsync reader)
+		{
+			if (reader.TokenType == JsonToken.None)
+			{
+				if (!await reader.ReadAsync())
+					throw new Exception("Error reading RavenJToken from JsonReader.");
+			}
+
+			switch (reader.TokenType)
+			{
+				case JsonToken.StartObject:
+					return await RavenJObject.LoadAsync(reader);
+				case JsonToken.StartArray:
+					return await RavenJArray.LoadAsync(reader);
+				case JsonToken.String:
+				case JsonToken.Integer:
+				case JsonToken.Float:
+				case JsonToken.Date:
+				case JsonToken.Boolean:
+				case JsonToken.Bytes:
+				case JsonToken.Null:
+				case JsonToken.Undefined:
+					return new RavenJValue(reader.Value);
+			}
+
+			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+
+		}
 	}
 }

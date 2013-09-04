@@ -6,25 +6,19 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class ResetIndexCommand : ItemSelectionCommand<IndexItem>
+	public class ResetIndexCommand : Command
 	{
-	    public ResetIndexCommand(IndexesModel model) : base(model.ItemSelection)
-        {
-        }
+		private readonly IndexesModel model;
 
-        protected override bool CanExecuteOverride(IEnumerable<IndexItem> items)
-        {
-            return items.Any();
-        }
+		public ResetIndexCommand(IndexesModel model)
+	    {
+		    this.model = model;
+	    }
 
-        protected override void ExecuteOverride(IEnumerable<IndexItem> items)
-        {
-            var index = items
-				.Select(x => x.Name)
-				.FirstOrDefault();
-
-			AskUser.ConfirmationAsync("Confirm Reset", string.Format("Are you sure that you want to reset this index? ({0})", index))
-				.ContinueWhenTrue(() => ResetIndex(index));
+		public override void Execute(object parameter)
+		{
+			AskUser.ConfirmationAsync("Confirm Reset", string.Format("Are you sure that you want to reset this index? ({0})", model.ItemSelection.Name))
+				.ContinueWhenTrue(() => ResetIndex(model.ItemSelection.Name));
 		}
 
 		private void ResetIndex(string indexName)

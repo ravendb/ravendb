@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using ICSharpCode.NRefactory.CSharp;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Linq.Ast
 {
@@ -20,9 +21,9 @@ namespace Raven.Database.Linq.Ast
 			switch (expression.Identifier)
 			{
 				case "SpatialGenerate":
-					throw new InvalidOperationException("SpatialIndex.Generate or SpatialGenerate cannot be used from transform results");
+                    throw new TransformCompilationException("SpatialIndex.Generate or SpatialGenerate cannot be used from transform results");
 				case "CreateField":
-					throw new InvalidOperationException("CreateField cannot be used from transform results");
+                    throw new TransformCompilationException("CreateField cannot be used from transform results");
 			}
 			return base.VisitInvocationExpression(invocationExpression, data);
 		}

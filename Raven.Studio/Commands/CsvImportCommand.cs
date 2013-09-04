@@ -6,10 +6,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using Kent.Boogaart.KBCsv;
@@ -21,9 +23,9 @@ namespace Raven.Studio.Commands
 	{
 		const int BatchSize = 512;
 		private readonly Action<string> output;
-		private readonly TaskModel taskModel;
+		private readonly CsvImportTaskSectionModel taskModel;
 
-		public CsvImportCommand(TaskModel taskModel, Action<string> output)
+		public CsvImportCommand(CsvImportTaskSectionModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;
@@ -32,9 +34,9 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var openFile = new OpenFileDialog
-							   {
-								   Filter = "csv|*.csv"
-							   };
+			{
+				Filter = "csv|*.csv"
+			};
 
 			if (openFile.ShowDialog() != true)
 				return;
@@ -57,7 +59,7 @@ namespace Raven.Studio.Commands
 
 		public class ImportImpl : IDisposable
 		{
-			private readonly TaskModel taskModel;
+			private readonly CsvImportTaskSectionModel taskModel;
 			private readonly Action<string> output;
 			private readonly IAsyncDatabaseCommands databaseCommands;
 			private readonly CsvReader csvReader;
@@ -68,7 +70,7 @@ namespace Raven.Studio.Commands
 			private int totalCount;
 			private bool hadError = false;
 
-			public ImportImpl(StreamReader reader, string file, TaskModel taskModel, Action<string> output, IAsyncDatabaseCommands databaseCommands)
+			public ImportImpl(StreamReader reader, string file, CsvImportTaskSectionModel taskModel, Action<string> output, IAsyncDatabaseCommands databaseCommands)
 			{
 				this.taskModel = taskModel;
 				this.output = output;
@@ -78,6 +80,7 @@ namespace Raven.Studio.Commands
 				entity = Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(file)));
 				if (entity.Length > 0 &&  char.IsLower(entity[0]))
 					entity = char.ToUpper(entity[0]) + entity.Substring(1);
+
 				sw = Stopwatch.StartNew();
 
 				enumerator = csvReader.DataRecords.GetEnumerator();
@@ -87,6 +90,7 @@ namespace Raven.Studio.Commands
 			{
 				if (hadError)
 					return new CompletedTask();
+
 				var batch = new List<RavenJObject>();
 				var columns = header.Values.Where(x => x.StartsWith("@") == false).ToArray();
 				while (enumerator.MoveNext())
@@ -102,13 +106,20 @@ namespace Raven.Studio.Commands
 
 						try
 						{
-							if (string.Equals("id", column, StringComparison.InvariantCultureIgnoreCase))
+							if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
 							{
 								id = record[column];
 							}
-							else if (string.Equals("Raven-Entity-Name", column, StringComparison.InvariantCultureIgnoreCase))
+							else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
 							{
-								metadata = new RavenJObject { { "Raven-Entity-Name", record[column] } };
+								metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenEntityName] = record[column];
+								id = id ?? record[column] + "/";
+							}
+							else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
+							{
+								metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenClrType] = record[column];
 								id = id ?? record[column] + "/";
 							}
 							else
@@ -118,10 +129,14 @@ namespace Raven.Studio.Commands
 						}
 						catch (Exception e)
 						{
-							taskModel.ReportError(e);
-							taskModel.ReportError("Import not completed");
-							taskModel.TaskStatus = TaskStatus.Ended;
-							return new CompletedTask();
+							Infrastructure.Execute.OnTheUI(() =>
+							{
+								taskModel.ReportError(e);
+								taskModel.ReportError("Import not completed");
+								taskModel.TaskStatus = TaskStatus.Ended;
+								return new CompletedTask();
+							});
+
 						}
 					}
 
@@ -169,6 +184,7 @@ namespace Raven.Studio.Commands
 
 								return t;
 							}
+
 							return t.IsCompleted ? ImportAsync() : t;
 						})
 						.Unwrap();
@@ -183,11 +199,9 @@ namespace Raven.Studio.Commands
 			private static RavenJToken SetValueInDocument(string value)
 			{
 				if (string.IsNullOrEmpty(value))
-				{
 					return value;
-				}
 
-				char ch = value[0];
+				var ch = value[0];
 				if (ch == '[' || ch == '{')
 				{
 					try
@@ -222,7 +236,7 @@ namespace Raven.Studio.Commands
 				return value;
 			}
 
-			Task FlushBatch(List<RavenJObject> batch)
+			Task FlushBatch(ICollection<RavenJObject> batch)
 			{
 				totalCount += batch.Count;
 				var sw = Stopwatch.StartNew();

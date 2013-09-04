@@ -101,9 +101,7 @@
 					<Infrastructure:FlexibleTemplateItemsControl.ItemTemplate>
 						<DataTemplate DataType="Documents:PathSegment">
 							<StackPanel Orientation="Horizontal">
-								<TextBlock x:Name="Arrow" Text=">"
-							       VerticalAlignment="Center"
-							       Margin="4,0" />
+								<controls:NavTriangle/>
 								<HyperlinkButton Content="{Binding Name, Converter={StaticResource TrimmedString}, ConverterParameter=35}"
                                                  ToolTipService.ToolTip="{Binding Name}"
                                                  Style="{StaticResource Style_Link_Breadcrumb_Initial}"
@@ -138,9 +136,7 @@
 					</Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
 				</Infrastructure:FlexibleTemplateItemsControl>
 
-				<TextBlock Text=">"
-                           VerticalAlignment="Center"
-                           Margin="4,0"/>
+				<controls:NavTriangle/>
 
 				<TextBlock Text="{Binding DisplayId}"
                            Style="{StaticResource Style_TextBlock_Breadcrumb}"
@@ -209,7 +205,8 @@
 						<Delay:SplitButtonPopup Command="{Binding ToggleExpansion}"
                                                 Margin="4,0"
                                                 ToolTipService.ToolTip="Toggle Outlining Expansion"
-                                                DropDownToolTip="More Options">
+                                                DropDownToolTip="More Options"
+                                                x:Name="PopupButton">
 							<StackPanel Orientation="Horizontal">
 								<Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
                                        Stretch="None" />
@@ -222,7 +219,7 @@
 								<Border Background="White"
                                         BorderThickness="1"
                                         BorderBrush="Gray"
-                                        Margin="0,20,0,0">
+                                        Margin="0,0,0,0">
 									<Border.Effect>
 										<DropShadowEffect Opacity="0.4" />
 									</Border.Effect>
@@ -232,7 +229,12 @@
 										</Border>
 										<ListBox ItemsSource="{Binding OutliningModes}" SelectedItem="{Binding SelectedOutliningMode, Mode=TwoWay}"
                                                  Style="{StaticResource Style_ListBox_RadioButtons}">
-											<ListBox.ItemTemplate>
+                                            <i:Interaction.Triggers>
+                                                <Behaviors:HandledMouseLeftButtonUpTrigger>
+                                                    <Behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                                </Behaviors:HandledMouseLeftButtonUpTrigger>
+                                            </i:Interaction.Triggers>
+                                            <ListBox.ItemTemplate>
 												<DataTemplate>
 													<TextBlock Text="{Binding Name}"/>
 												</DataTemplate>
@@ -590,6 +592,7 @@
 								</Grid.RowDefinitions>
 
 								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt.Value, Mode=TwoWay}"/>
+								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt, Mode=TwoWay}"/>
 							</Grid>
 						</StackPanel>
 					</Border>

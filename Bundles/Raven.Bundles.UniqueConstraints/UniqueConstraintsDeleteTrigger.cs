@@ -33,10 +33,9 @@ namespace Raven.Bundles.UniqueConstraints
 
 			foreach (var property in uniqueConstraits)
 			{
-				var propName = property.Value<string>(); // the name of the constraint property
-
-				var prefix = "UniqueConstraints/" + entityName + property + "/"; // UniqueConstraints/EntityNamePropertyName/
-				var prop = doc.DataAsJson[propName];
+			    var constraint = Util.GetConstraint(property);
+                var prefix = "UniqueConstraints/" + entityName + constraint.PropName+ "/"; // UniqueConstraints/EntityNamePropertyName/
+                var prop = doc.DataAsJson[constraint.PropName];
 				if (prop == null || prop.Type == JTokenType.Null)
 					continue;
 				var array = prop as RavenJArray;
@@ -44,7 +43,7 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var checkKey in checkKeys)
 				{
-					Database.Delete(prefix + Util.EscapeUniqueValue(checkKey), null, transactionInformation);
+					Database.Delete(prefix + Util.EscapeUniqueValue(checkKey, constraint.CaseInsensitive), null, transactionInformation);
 				}
 			}
 		}

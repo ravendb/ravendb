@@ -1,4 +1,4 @@
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="RavenClientEnlistment.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -10,6 +10,7 @@ using System.IO.IsolatedStorage;
 using System.Threading;
 using System.Transactions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Document.DTC;
 
 namespace Raven.Client.Document
 {
@@ -21,19 +22,24 @@ namespace Raven.Client.Document
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
+		private readonly DocumentStoreBase documentStore;
 		private readonly ITransactionalDocumentSession session;
 		private readonly Action onTxComplete;
 		private readonly TransactionInformation transaction;
+		private ITransactionRecoveryStorageContext ctx;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenClientEnlistment"/> class.
 		/// </summary>
-		public RavenClientEnlistment(ITransactionalDocumentSession session, Action onTxComplete)
+		public RavenClientEnlistment(DocumentStoreBase documentStore,ITransactionalDocumentSession session, Action onTxComplete)
 		{
 			transaction = Transaction.Current.TransactionInformation;
+			this.documentStore = documentStore;
 			this.session = session;
 			this.onTxComplete = onTxComplete;
 			TransactionRecoveryInformationFileName = Guid.NewGuid() + ".recovery-information";
+
+			ctx = documentStore.TransactionRecoveryStorage.Create();
 		}
 
 		/// <summary>
@@ -44,25 +50,32 @@ namespace Raven.Client.Document
 		{
 			try
 			{
+
 				onTxComplete();
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				ctx.CreateFile(TransactionRecoveryInformationFileName, stream =>
 				{
-					var name = TransactionRecoveryInformationFileName;
-					using (var file = machineStoreForApplication.CreateFile(name + ".temp"))
-					using (var writer = new BinaryWriter(file))
-					{
-						writer.Write(session.ResourceManagerId.ToString());
-						writer.Write(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction).ToString());
-						writer.Write(session.DatabaseName ?? "");
-						writer.Write(preparingEnlistment.RecoveryInformation());
-						file.Flush(true);
-					}
-					machineStoreForApplication.MoveFile(name + ".temp", name);
-				}
+					var writer = new BinaryWriter(stream);
+					writer.Write(session.ResourceManagerId.ToString());
+					writer.Write(transaction.LocalIdentifier);
+					writer.Write(session.DatabaseName ?? "");
+					writer.Write(preparingEnlistment.RecoveryInformation());
+				});
+
+				session.PrepareTransaction(transaction.LocalIdentifier); 
 			}
 			catch (Exception e)
 			{
 				logger.ErrorException("Could not prepare distributed transaction", e);
+			    try
+			    {
+                    session.Rollback(transaction.LocalIdentifier);
+                    DeleteFile();
+			    }
+			    catch (Exception e2)
+			    {
+			        logger.ErrorException("Could not roll back transaction after prepare failed", e2);
+			    }
+
 				preparingEnlistment.ForceRollback(e);
 				return;
 			}
@@ -80,7 +93,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Commit(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+                session.Commit(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -90,7 +103,7 @@ namespace Raven.Client.Document
 				return; // nothing to do, DTC will mark tx as hang
 			}
 			enlistment.Done();
-
+			ctx.Dispose();
 		}
 
 		/// <summary>
@@ -102,7 +115,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+                session.Rollback(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -111,35 +124,12 @@ namespace Raven.Client.Document
 				logger.ErrorException("Could not rollback distributed transaction", e);
 			}
 			enlistment.Done(); // will happen anyway, tx will be rolled back after timeout
+			ctx.Dispose();
 		}
 
 		private void DeleteFile()
 		{
-			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
-			{
-				// docs says to retry: http://msdn.microsoft.com/en-us/library/system.io.isolatedstorage.isolatedstoragefile.deletefile%28v=vs.95%29.aspx
-				int retries = 10;
-				while (true)
-				{
-					if (machineStoreForApplication.FileExists(TransactionRecoveryInformationFileName) == false)
-						break;
-					try
-					{
-						machineStoreForApplication.DeleteFile(TransactionRecoveryInformationFileName);
-						break;
-					}
-					catch (IsolatedStorageException)
-					{
-						retries -= 1;
-						if (retries > 0)
-						{
-							Thread.Sleep(100);
-							continue;
-						}
-						throw;
-					}
-				}
-			}
+			ctx.DeleteFile(TransactionRecoveryInformationFileName);
 		}
 
 		/// <summary>
@@ -151,7 +141,7 @@ namespace Raven.Client.Document
 			try
 			{
 				onTxComplete();
-				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+                session.Rollback(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -160,6 +150,7 @@ namespace Raven.Client.Document
 				logger.ErrorException("Could not mark distributed transaction as in doubt", e);
 			}
 			enlistment.Done(); // what else can we do?
+			ctx.Dispose();
 		}
 
 		/// <summary>
@@ -178,7 +169,7 @@ namespace Raven.Client.Document
 			onTxComplete();
 			try
 			{
-				session.Rollback(PromotableRavenClientEnlistment.GetLocalOrDistributedTransactionId(transaction));
+                session.Rollback(transaction.LocalIdentifier);
 
 				DeleteFile();
 			}
@@ -189,6 +180,7 @@ namespace Raven.Client.Document
 				return;
 			}
 			singlePhaseEnlistment.Aborted();
+			ctx.Dispose();
 		}
 	}
 }

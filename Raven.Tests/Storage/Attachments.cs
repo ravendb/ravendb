@@ -3,14 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-using Raven.Database.Data;
 using Xunit;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Tests.Storage
 {
@@ -29,10 +28,19 @@ namespace Raven.Tests.Storage
 					attachment = viewer.Attachments.GetAttachment("Ayende");
 				});
 
-				tx.Batch(_ =>
-				{
-					Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
-				});
+				tx.Batch(_ => Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData()));
+			}
+		}
+
+		[Fact]
+		public async Task CanAddAndReadAttachmentsAsyncInEmbedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				await store.AsyncDatabaseCommands.PutAttachmentAsync("Ayende", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+
+				Attachment attachment = await store.AsyncDatabaseCommands.GetAttachmentAsync("Ayende");
+				Assert.Equal(new byte[] {1, 2, 3}, attachment.Data().ReadData());
 			}
 		}
 
@@ -74,8 +82,8 @@ namespace Raven.Tests.Storage
 
 				tx.Batch(viewer =>
 				{
-					var attachments = viewer.Attachments.GetAttachmentsAfter(Guid.Empty, 100, long.MaxValue).ToArray();
-					var strings = viewer.Attachments.GetAttachmentsAfter(Guid.Empty, 100, long.MaxValue).Select(x => x.Key).ToArray();
+					var attachments = viewer.Attachments.GetAttachmentsAfter(Etag.Empty, 100, long.MaxValue).ToArray();
+					var strings = viewer.Attachments.GetAttachmentsAfter(Etag.Empty, 100, long.MaxValue).Select(x => x.Key).ToArray();
 					Assert.Equal(new[] { "1", "2", "3" }, strings);
 					Assert.Equal(new[] { "2", "3" }, viewer.Attachments.GetAttachmentsAfter(attachments[0].Etag, 100, long.MaxValue).Select(x => x.Key).ToArray());
 					Assert.Equal(new[] { "3" }, viewer.Attachments.GetAttachmentsAfter(attachments[1].Etag, 100, long.MaxValue).Select(x => x.Key).ToArray());
@@ -89,12 +97,13 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanAddAndReadAttachmentsAfterReopen()
 		{
-			using (var tx = NewTransactionalStorage())
+			string dataDir = NewDataPath();
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				Attachment attachment = null;
 				tx.Batch(viewer =>
@@ -112,13 +121,14 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanDeleteAttachment()
 		{
-			using (var tx = NewTransactionalStorage())
+			string dataDir = NewDataPath();
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
 				tx.Batch(accessor => accessor.Attachments.DeleteAttachment("Ayende", null));
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(viewer => Assert.Null(viewer.Attachments.GetAttachment("Ayende")));
 			}

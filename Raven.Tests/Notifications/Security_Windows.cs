@@ -10,15 +10,17 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Xunit;
 
 namespace Raven.Tests.Notifications
 {
 	public class Security_Windows : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            Authentication.EnableOnce();
 		}
 
 		[Fact]

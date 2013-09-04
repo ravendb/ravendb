@@ -11,6 +11,7 @@ using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -18,9 +19,10 @@ namespace Raven.Tests.Notifications
 {
 	public class SecurityOAuth : RavenTest
 	{
-		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            Authentication.EnableOnce();
 			configuration.PostInit();
 		}
 
@@ -32,7 +34,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthOnSystemDatabase()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
@@ -78,7 +80,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthWrongKeyFails()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
@@ -113,7 +115,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthOnSpecificDatabase()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{
@@ -170,7 +172,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthOnSpecificDatabaseWontWorkForAnother()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/Databases/OAuthTest1", null, RavenJObject.FromObject(new DatabaseDocument
 				{
@@ -226,7 +228,7 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void WithOAuthWithStarWorksForAnyDatabaseOtherThenSystem()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication:true))
 			{
 				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{

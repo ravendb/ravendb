@@ -39,7 +39,17 @@ namespace Raven.Database.Server.Responders
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var fileName = match.Groups[1].Value;
 			var paths = GetPaths(fileName, Database.Configuration.WebDir);
-			var matchingPath = paths.FirstOrDefault(File.Exists);
+			var matchingPath = paths.FirstOrDefault(path =>
+			{
+				try
+				{
+					return File.Exists(path);
+				}
+				catch (Exception)
+				{
+					return false;
+				}
+			});
 			if (matchingPath != null)
 			{
 				context.WriteFile(matchingPath);
@@ -55,6 +65,7 @@ namespace Raven.Database.Server.Responders
 
 		public static IEnumerable<string> GetPaths(string fileName, string webDir)
 		{
+		    yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"sl5", fileName);
 			// dev path
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Raven.Studio\bin\debug", fileName);
 			// dev path
@@ -74,12 +85,37 @@ namespace Raven.Database.Server.Responders
 			              	};
 			foreach (var option in options)
 			{
-				if (Directory.Exists(option) == false)
-					continue;
-				foreach (var dir in Directory.GetDirectories(option, "RavenDB.Embedded*").OrderByDescending(x => x))
+				try
+				{
+					if (Directory.Exists(option) == false)
+						continue;
+				}
+				catch (Exception)
+				{
+					yield break;
+				}
+				string[] directories;
+				try
+				{
+					directories = Directory.GetDirectories(option, "RavenDB.Embedded*");
+				}
+				catch (Exception)
+				{
+					yield break;
+				}
+				foreach (var dir in directories.OrderByDescending(x => x))
 				{
 					var contentDir = Path.Combine(dir, "content");
-					if (Directory.Exists(contentDir))
+					bool exists;
+					try
+					{
+						exists = Directory.Exists(contentDir);
+					}
+					catch (Exception)
+					{
+						continue;
+					}
+					if (exists)
 						yield return contentDir;
 				}
 			}

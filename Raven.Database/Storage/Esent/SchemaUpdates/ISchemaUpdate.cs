@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
@@ -15,6 +16,6 @@ namespace Raven.Storage.Esent.SchemaUpdates
 	{
 		string FromSchemaVersion { get;  }
 	    void Init(IUuidGenerator generator);
-		void Update(Session session, JET_DBID dbid);
+		void Update(Session session, JET_DBID dbid, Action<string> output);
 	}
 }

@@ -21,16 +21,19 @@ namespace Raven.Client.Document.Batches
 
 		private readonly string matches;
 
+	    private readonly string exclude;
+
 		private readonly int start;
 
 		private readonly int pageSize;
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 
-		public LazyStartsWithOperation(string keyPrefix, string matches, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations)
+		public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations)
 		{
 			this.keyPrefix = keyPrefix;
 			this.matches = matches;
+		    this.exclude = exclude;
 			this.start = start;
 			this.pageSize = pageSize;
 			this.sessionOperations = sessionOperations;
@@ -39,15 +42,17 @@ namespace Raven.Client.Document.Batches
 		public GetRequest CreateRequest()
 		{
 			return new GetRequest
-				   {
-					   Url =
-						   string.Format(
-							   "/docs?startsWith={0}&matches={3}&start={1}&pageSize={2}",
-							   Uri.EscapeDataString(keyPrefix),
-							   start.ToInvariantString(),
-							   pageSize.ToInvariantString(),
-							   Uri.EscapeDataString(matches ?? ""))
-				   };
+			{
+				Url = "/docs",
+				Query =
+					string.Format(
+						"startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}",
+						Uri.EscapeDataString(keyPrefix),
+						start.ToInvariantString(),
+						pageSize.ToInvariantString(),
+						Uri.EscapeDataString(matches ?? ""),
+                        Uri.EscapeDataString(exclude ?? ""))
+			};
 		}
 
 		public object Result { get; set; }
@@ -69,7 +74,7 @@ namespace Raven.Client.Document.Batches
 				.Select(sessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
-
+#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			if (responses.Any(x => x.RequestHasErrors()))
@@ -96,18 +101,20 @@ namespace Raven.Client.Document.Batches
 				.Select(sessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
-
+#endif
 		public IDisposable EnterContext()
 		{
 			return null;
 		}
 
+#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.StartsWith(keyPrefix, matches, start, pageSize)
 				.Select(sessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
+#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{

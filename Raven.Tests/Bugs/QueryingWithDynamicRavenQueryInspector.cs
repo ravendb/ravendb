@@ -1,27 +1,16 @@
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Linq;
-using Raven.Database.Server;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
 	public class QueryingWithDynamicRavenQueryInspector : RemoteClientTest
 	{
-		private string path;
-		private int port;
-
-		public QueryingWithDynamicRavenQueryInspector()
-		{
-			port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-		}
-
 		[Fact()]
 		public void CanInitializeDynamicRavenQueryInspector()
 		{
+			var port = 8079;
 			var blogOne = new Blog
 			{
 				Title = "one",
@@ -38,12 +27,10 @@ namespace Raven.Tests.Bugs.Queries
 				Category = "Rhinos"
 			};
 
-			using (var server = GetNewServer(port, path))
+			using (var server = GetNewServer(port))
 			{
-				using (var store = new DocumentStore { Url = "http://localhost:" + port })
+				using (var store = new DocumentStore { Url = "http://localhost:" + port }.Initialize())
 				{
-					store.Initialize();
-
 					using (var s = store.OpenSession())
 					{
 						s.Store(blogOne);
