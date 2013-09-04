@@ -3,51 +3,61 @@ using System.IO;
 
 namespace Voron.Trees
 {
-    public unsafe class EmptyIterator : IIterator
-    {
-        public bool Seek(Slice key)
-        {
-            return false;
-        }
+	public unsafe class EmptyIterator : IIterator
+	{
+		public bool Seek(Slice key)
+		{
+			return false;
+		}
 
-        public Slice CurrentKey
-        {
-            get { return new Slice(Current); }
-        }
+		public Slice CurrentKey
+		{
+			get { return new Slice(Current); }
+		}
 
-        public  int GetCurrentDataSize()
-        {
-            throw new InvalidOperationException("No current page");
-        }
+		public int GetCurrentDataSize()
+		{
+			throw new InvalidOperationException("No current page");
+		}
 
-        public Stream CreateStreamForCurrent()
-        {
-            throw new InvalidOperationException("No current page");
-        }
+		public void Skip(int count)
+		{
+			throw new InvalidOperationException("No records");
+		}
 
-        public unsafe NodeHeader* Current
-        {
-            get
-            {
-               throw new InvalidOperationException("No current page");
-            }
-        }
+		public Stream CreateStreamForCurrent()
+		{
+			throw new InvalidOperationException("No current page");
+		}
 
-        public Slice MaxKey { get; set; }
+		public unsafe NodeHeader* Current
+		{
+			get
+			{
+				throw new InvalidOperationException("No current page");
+			}
+		}
 
-        public Slice RequiredPrefix
-        {
-            get;
-            set;
-        }
+		public Slice MaxKey { get; set; }
 
-        public bool MoveNext()
-        {
-            return false;
-        }
+		public Slice RequiredPrefix
+		{
+			get;
+			set;
+		}
 
-        public void Dispose()
-        {
-        }
-    }
+		public bool MoveNext()
+		{
+			return false;
+		}
+
+		public bool MovePrev()
+		{
+			return false;
+		}
+
+		public void Dispose()
+		{
+		}
+	}
 }

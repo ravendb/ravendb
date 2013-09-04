@@ -11,7 +11,7 @@ namespace Voron.Trees
 		private readonly SliceComparer _cmp;
 		private readonly Cursor _cursor;
 		private Page _currentPage;
-        private readonly Slice _currentKey = new Slice(SliceOptions.Key);
+		private readonly Slice _currentKey = new Slice(SliceOptions.Key);
 
 		public TreeIterator(Tree tree, Transaction tx, SliceComparer cmp)
 		{
@@ -22,10 +22,10 @@ namespace Voron.Trees
 		}
 
 
-        public int GetCurrentDataSize()
-        {
-            return NodeHeader.GetDataSize(_tx, Current);
-        }
+		public int GetCurrentDataSize()
+		{
+			return NodeHeader.GetDataSize(_tx, Current);
+		}
 
 		public bool Seek(Slice key)
 		{
@@ -36,21 +36,21 @@ namespace Voron.Trees
 			{
 				return false;
 			}
-            _currentKey.Set(node);
-			return this.ValidateCurrentKey(Current,_cmp);
+			_currentKey.Set(node);
+			return this.ValidateCurrentKey(Current, _cmp);
 		}
 
-	    public Slice CurrentKey
-	    {
-	        get
-	        {
-                if (_currentPage == null || _currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
-                    throw new InvalidOperationException("No current page was set");
-                return _currentKey;
-	        }
-	    }
+		public Slice CurrentKey
+		{
+			get
+			{
+				if (_currentPage == null || _currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+					throw new InvalidOperationException("No current page was set");
+				return _currentKey;
+			}
+		}
 
-	    public NodeHeader* Current
+		public NodeHeader* Current
 		{
 			get
 			{
@@ -101,13 +101,13 @@ namespace Voron.Trees
 					{
 						_cursor.Push(_currentPage);
 						var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tx.GetReadOnlyPage(node->PageNumber);
-                        _currentPage.LastSearchPosition = 0;                        
+						_currentPage = _tx.GetReadOnlyPage(node->PageNumber);
+						_currentPage.LastSearchPosition = 0;
 					}
-				    var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
+					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 					if (this.ValidateCurrentKey(current, _cmp) == false)
 						return false;
-                    _currentKey.Set(current);
+					_currentKey.Set(current);
 					return true;// there is another entry in this page
 				}
 				if (_cursor.PageCount == 0)
@@ -118,40 +118,54 @@ namespace Voron.Trees
 			return false;
 		}
 
-	    public Stream CreateStreamForCurrent()
-	    {
-	        return NodeHeader.Stream(_tx, Current);
-	    }
-
-	    public void Dispose()
+		public void Skip(int count)
 		{
-		    _cursor.Dispose();
+			if (count == 0)
+				return;
+
+			var moveMethod = (count > 0) ? (Func<bool>)MoveNext : MovePrev;
+
+			for (int i = 0; i < Math.Abs(count); i++)
+			{
+				if (!moveMethod())
+					break;
+			}
+		}
+
+		public Stream CreateStreamForCurrent()
+		{
+			return NodeHeader.Stream(_tx, Current);
+		}
+
+		public void Dispose()
+		{
+			_cursor.Dispose();
 		}
 
 		public Slice RequiredPrefix { get; set; }
 
 		public Slice MaxKey { get; set; }
 
-	
+
 	}
 
-    public static class IteratorExtensions
-    {
-        public unsafe static bool ValidateCurrentKey(this IIterator self,NodeHeader* node, SliceComparer cmp)
-        {
-            if (self.RequiredPrefix != null)
-            {
-                var currentKey = new Slice(node);
-                if (currentKey.StartsWith(self.RequiredPrefix, cmp) == false)
-                    return false;
-            }
-            if (self.MaxKey != null)
-            {
-                var currentKey = new Slice(node);
-                if (currentKey.Compare(self.MaxKey, cmp) >= 0)
-                    return false;
-            }
-            return true;
-        }
-    }
+	public static class IteratorExtensions
+	{
+		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node, SliceComparer cmp)
+		{
+			if (self.RequiredPrefix != null)
+			{
+				var currentKey = new Slice(node);
+				if (currentKey.StartsWith(self.RequiredPrefix, cmp) == false)
+					return false;
+			}
+			if (self.MaxKey != null)
+			{
+				var currentKey = new Slice(node);
+				if (currentKey.Compare(self.MaxKey, cmp) >= 0)
+					return false;
+			}
+			return true;
+		}
+	}
 }

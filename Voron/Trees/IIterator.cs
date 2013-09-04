@@ -11,6 +11,8 @@ namespace Voron.Trees
         Slice RequiredPrefix { get; set; }
         Slice MaxKey { get; set; }
         bool MoveNext();
+		bool MovePrev();
+	    void Skip(int count);
         Stream CreateStreamForCurrent();
     }
 }
