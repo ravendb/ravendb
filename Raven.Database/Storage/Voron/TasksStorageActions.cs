@@ -41,9 +41,11 @@ namespace Raven.Database.Storage.Voron
 		public void AddTask(Task task, DateTime addedAt)
 		{
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
 			var type = task.GetType().FullName;
+			var index = task.Index ?? string.Empty;
 			var id = generator.CreateSequentialUuid(UuidType.Tasks);
 
 			tableStorage.Tasks.Add(
@@ -59,7 +61,8 @@ namespace Raven.Database.Storage.Voron
 				});
 
 			tasksByType.MultiAdd(writeBatch, type, id.ToString());
-			tasksByIndexAndType.MultiAdd(writeBatch, task.Index + "/" + type, id.ToString());
+			tasksByIndex.MultiAdd(writeBatch, index, id.ToString());
+			tasksByIndexAndType.MultiAdd(writeBatch, index + "/" + type, id.ToString());
 		}
 
 		public bool HasTasks
@@ -168,11 +171,15 @@ namespace Raven.Database.Storage.Voron
 
 		private void RemoveTask(Slice taskId, string index, string type)
 		{
+			index = index ?? string.Empty;
+
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
 			tableStorage.Tasks.Delete(writeBatch, taskId);
 			tasksByType.MultiDelete(writeBatch, type, taskId);
+			tasksByIndex.MultiDelete(writeBatch, index, taskId);
 			tasksByIndexAndType.MultiDelete(writeBatch, index + "/" + type, taskId);
 		}
 	}

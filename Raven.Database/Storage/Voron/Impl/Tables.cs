@@ -79,6 +79,45 @@ namespace Raven.Database.Storage.Voron.Impl
 				public const string ByType = "by_type";
 
 				public const string ByIndexAndType = "by_index_and_type";
+
+				public const string ByIndex = "by_index";
+			}
+		}
+
+		public class ScheduledReductions
+		{
+			public const string TableName = "scheduled_reductions";
+
+			public class Indices
+			{
+				public const string ByView = "by_view";
+
+				public const string ByViewAndLevelAndReduceKey  = "by_view_and_level_and_reduce_key";
+			}
+		}
+
+		public class Attachments
+		{
+			public const string TableName = "attachments";
+
+			public class Indices
+			{
+				public const string ByEtag = "by_etag";
+			}
+		}
+
+		public class MappedResults
+		{
+			public const string TableName = "mapped_results";
+		}
+
+		public class ReduceKeys
+		{
+			public const string TableName = "reduce_keys";
+
+			public class Indices
+			{
+				public const string ByView = "by_view";
 			}
 		}
 	}

@@ -832,7 +832,9 @@
     <Compile Include="Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
     <Compile Include="Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Storage\Voron\ListsStorageActions.cs" />
+    <Compile Include="Storage\Voron\MappedResultsStorageActions.cs" />
     <Compile Include="Storage\Voron\QueueStorageActions.cs" />
+    <Compile Include="Storage\Voron\StalenessStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Voron\Impl\TableBase.cs" />
     <Compile Include="Storage\Voron\Impl\Tables.cs" />

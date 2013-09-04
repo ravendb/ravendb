@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.MEF;
-using Raven.Database.Impl;
-using Raven.Database.Plugins;
-using Raven.Database.Tasks;
-using Voron.Impl;
-
-namespace Raven.Database.Storage.Voron
+﻿namespace Raven.Database.Storage.Voron
 {
+	using System;
+	using System.Collections.Generic;
+
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.MEF;
+	using Raven.Database.Impl;
+	using Raven.Database.Plugins;
 	using Raven.Database.Storage.Voron.Impl;
+	using Raven.Database.Tasks;
+
+	using global::Voron.Exceptions;
+	using global::Voron.Impl;
 
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
@@ -31,6 +32,8 @@ namespace Raven.Database.Storage.Voron
 			Queue = new QueueStorageActions(storage, generator, snapshot, writeBatch);
 			Lists = new ListsStorageActions(storage, generator, snapshot, writeBatch);
 			Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatch);
+			Staleness = new StalenessStorageActions(storage, generator, snapshot, writeBatch);
+			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatch);
 		}
 
 
