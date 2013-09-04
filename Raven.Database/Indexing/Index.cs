@@ -472,7 +472,7 @@ namespace Raven.Database.Indexing
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
 		    IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
-		                                                          ? new IndexReaderWarmersWrapper(name, context.IndexReaderWarmers)
+		                                                          ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
 		                                                          : null;
 			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
 		}

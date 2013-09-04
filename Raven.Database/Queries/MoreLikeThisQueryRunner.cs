@@ -42,7 +42,7 @@ namespace Raven.Database.Queries
 				throw new InvalidOperationException("The document id or map group fields are mandatory");
 
 			IndexSearcher searcher;
-			using (database.IndexStorage.GetCurrentIndexSearcher(query.IndexName, out searcher))
+			using (database.IndexStorage.GetCurrentIndexSearcher(index.indexId, out searcher))
 			{
 				var documentQuery = new BooleanQuery();
 

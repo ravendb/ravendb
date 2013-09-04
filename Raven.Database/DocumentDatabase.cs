@@ -417,9 +417,9 @@ namespace Raven.Database
 		                    index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
 		                    if (indexDefinition != null)
 			                    index.LockMode = indexDefinition.LockMode;
-		                    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Name).ForEntityNames.ToList();
+		                    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToList();
 		                    IndexSearcher searcher;
-		                    using (IndexStorage.GetCurrentIndexSearcher(index.Name, out searcher))
+		                    using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
 		                    {
 			                    index.DocsCount = searcher.IndexReader.NumDocs();
 		                    }
@@ -1273,22 +1273,15 @@ namespace Raven.Database
             return result;
         }
 
-        public QueryResultWithIncludes Query(string index, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
-        {
-            index = IndexDefinitionStorage.FixupIndexName(index);
-            var queryStat = AddToCurrentlyRunningQueryList(index, query);
-            var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-            try
-	        var scoreExplanations = new Dictionary<string, string>();
-            var definition = IndexDefinitionStorage.GetIndexDefinition(index);
+        public QueryResultWithIncludes Query(string indexName, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult) {
 
-            Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
-            {
+            var queryStat = AddToCurrentlyRunningQueryList(indexName, query);
 
-	            index = index != null ? index.Trim() : null;
+            try {
+
+                indexName = indexName != null ? indexName.Trim() : null;
                 var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-                Func<IndexQueryResult, object> tryRecordHighlighting = queryResult =>
-                {
+                Func<IndexQueryResult, object> tryRecordHighlighting = queryResult => {
                     if (queryResult.Highligtings != null && queryResult.Key != null)
                         highlightings.Add(queryResult.Key, queryResult.Highligtings);
                     return null;
@@ -1298,61 +1291,55 @@ namespace Raven.Database
                 Etag resultEtag = Etag.Empty;
                 var nonAuthoritativeInformation = false;
 
-                if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
-                {
+                if (string.IsNullOrEmpty(query.ResultsTransformer) == false) {
                     query.FieldsToFetch = new[] { Constants.AllFields };
                 }
 
                 var duration = Stopwatch.StartNew();
                 var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 TransactionalStorage.Batch(
-                    actions =>
-                    {
-                        var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
+                    actions => {
+                        var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+                       var index = IndexDefinitionStorage.GetIndexDefinition(indexName);
                         if (viewGenerator == null)
-                            throw new IndexDoesNotExistsException("Could not find index named: " + index);
+                            throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
 
-                        resultEtag = GetIndexEtag(index, null, query.ResultsTransformer);
+                        resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
 
-                        stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
+                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
 
-                        if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
-                        {
-                            var indexInstance = IndexStorage.GetIndexInstance(index);
+                        if (stale == false && query.Cutoff == null && query.CutoffEtag == null) {
+                            var indexInstance = IndexStorage.GetIndexInstance(indexName);
                             stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
                         }
 
-                        indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
-                        var indexFailureInformation = actions.Indexing.GetFailureRate(index);
-                        if (indexFailureInformation.IsInvalidIndex)
-                        {
+                        indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
+                        var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
+                        if (indexFailureInformation.IsInvalidIndex) {
                             throw new IndexDisabledException(indexFailureInformation);
                         }
                         var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
-                        var indexDefinition = GetIndexDefinition(index);
                         var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
                                                               viewGenerator.ReduceDefinition == null
                                                                 ? Constants.DocumentIdFieldName
                                                                 : Constants.ReduceKeyFieldName);
                         Func<IndexQueryResult, bool> shouldIncludeInResults =
-                            result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
-                        var indexQueryResults = IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers);
+                            result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch);
+                        var indexQueryResults = IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers);
                         indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
                         var transformerErrors = new List<string>();
                         var results = GetQueryResults(query, viewGenerator, docRetriever,
                                                       from queryResult in indexQueryResults
-                                                      let doc = docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
+                                                      let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch)
                                                       where doc != null
                                                       let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
                                                       let __ = tryRecordHighlighting(queryResult)
                                                       select doc, transformerErrors);
 
-                        if (headerInfo != null)
-                        {
-                            headerInfo(new QueryHeaderInformation
-                            {
-                                Index = index,
+                        if (headerInfo != null) {
+                            headerInfo(new QueryHeaderInformation {
+                                Index = indexName,
                                 IsStable = stale,
                                 ResultEtag = resultEtag,
                                 IndexTimestamp = indexTimestamp.Item1,
@@ -1360,14 +1347,11 @@ namespace Raven.Database
                                 TotalResults = query.TotalSize.Value
                             });
                         }
-                        using (new CurrentTransformationScope(docRetriever))
-                        {
-                            foreach (var result in results)
-                            {
+                        using (new CurrentTransformationScope(docRetriever)) {
+                            foreach (var result in results) {
                                 onResult(result);
                             }
-                            if (transformerErrors.Count > 0)
-                            {
+                            if (transformerErrors.Count > 0) {
                                 throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
                             }
 
@@ -1376,9 +1360,8 @@ namespace Raven.Database
 
                     });
 
-                return new QueryResultWithIncludes
-                {
-                    IndexName = index,
+                return new QueryResultWithIncludes {
+                    IndexName = indexName,
                     IsStale = stale,
                     NonAuthoritativeInformation = nonAuthoritativeInformation,
                     SkippedResults = query.SkippedResults.Value,
@@ -1391,12 +1374,11 @@ namespace Raven.Database
                     Highlightings = highlightings,
                     DurationMilliseconds = duration.ElapsedMilliseconds
                 };
-            }
-            finally
-            {
-                RemoveFromCurrentlyRunningQueryList(index, queryStat);
+            } finally {
+                RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
             }
         }
+
 
         private void RemoveFromCurrentlyRunningQueryList(string index, ExecutingQueryInfo queryStat)
         {
@@ -1470,7 +1452,8 @@ namespace Raven.Database
                 TransactionalStorage.Batch(
                     actions =>
                     {
-                        isStale = actions.Staleness.IsIndexStale(index, query.Cutoff, null);
+                        var definition = IndexDefinitionStorage.GetIndexDefinition(index); 
+                        isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
 
                         if (isStale == false && query.Cutoff == null)
                         {
@@ -1478,7 +1461,7 @@ namespace Raven.Database
                             isStale = isStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
                         }
 
-                        var indexFailureInformation = actions.Indexing.GetFailureRate(index);
+                        var indexFailureInformation = actions.Indexing.GetFailureRate(definition.IndexId);
 
                         if (indexFailureInformation.IsInvalidIndex)
                         {

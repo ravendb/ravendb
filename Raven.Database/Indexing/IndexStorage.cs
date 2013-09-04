@@ -880,9 +880,9 @@ namespace Raven.Database.Indexing
 			return GetIndexByName(indexName).GetCurrentStateHolder();
 		}
 
-		public IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
+		public IDisposable GetCurrentIndexSearcher(int indexId, out IndexSearcher searcher)
 		{
-			return GetIndexByName(indexName).GetSearcher(out searcher);
+			return GetIndexInstance(indexId).GetSearcher(out searcher);
 		}
 
 		public IDisposable GetCurrentIndexSearcherAndTermDocs(string indexName, out IndexSearcher searcher, out RavenJObject[] termsDocs)

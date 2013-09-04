@@ -292,7 +292,6 @@ namespace Raven.Database.Data
 			var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexDefinition.IndexId);
 			if (abstractViewGenerator == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
 
-			this.Items = this.Items.Union(
             this.Items = this.Items.Union(
                 abstractViewGenerator.Fields
                    .Where(field => this.Items.All(item => item.To != field) && !field.StartsWith("__"))

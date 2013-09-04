@@ -25,10 +25,11 @@ namespace Raven.Database.Queries
 		{
 			if(field == null) throw new ArgumentNullException("field");
 			if(index == null) throw new ArgumentNullException("index");
-			
+
 			var result = new HashSet<string>();
 			IndexSearcher currentIndexSearcher;
-			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
+      var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(index);
+			using(database.IndexStorage.GetCurrentIndexSearcher(indexDefinition.IndexId, out currentIndexSearcher))
 			{
 				if(currentIndexSearcher == null)
 				{

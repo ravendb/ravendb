@@ -30,10 +30,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 return null;
             var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();
             var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexId);
-            scriptedIndexResults.Id = indexName;
-            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
             if (abstractViewGenerator == null)
                 throw new InvalidOperationException("Could not find view generator for: " + indexId);
+            scriptedIndexResults.Id = indexId.ToString();
             return new Batcher(Database, scriptedIndexResults, abstractViewGenerator.ForEntityNames);
         }
 

@@ -490,7 +490,7 @@ namespace Raven.Studio.Models
 
 		public void ClearQueryError()
 		{
-			if (Database.Value.Statistics.Value.Errors.Any(error => error.Index == IndexName))
+			if (Database.Value.Statistics.Value.Errors.Any(error => error.IndexName == IndexName))
 			{
 				QueryErrorMessage.Value = "The index " + IndexName + " has errors";
 				return;
@@ -555,7 +555,7 @@ namespace Raven.Studio.Models
 
             IndexName = newIndexName;
 
-	        if (Database.Value.Statistics.Value.Errors.Any(error => error.Index == IndexName))
+	        if (Database.Value.Statistics.Value.Errors.Any(error => error.IndexName == IndexName))
 	        {
 		        QueryErrorMessage.Value = "The index " + IndexName + " has errors";
 		        IsErrorVisible.Value = true;

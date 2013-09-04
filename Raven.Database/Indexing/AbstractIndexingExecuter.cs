@@ -215,11 +215,11 @@ namespace Raven.Database.Indexing
                 {
                     foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
                     {
-                        var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
+                        var failureRate = actions.Indexing.GetFailureRate(indexesStat.Id);
                         if (failureRate.IsInvalidIndex)
                         {
                             Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-                                           indexesStat.Name,
+                                           indexesStat.Id,
                                            failureRate.FailureRate);
                             continue;
                         }
@@ -229,7 +229,7 @@ namespace Raven.Database.Indexing
                         if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
                             continue;
                         var indexToWorkOn = GetIndexToWorkOn(indexesStat);
-                        var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
+                        var index = context.IndexStorage.GetIndexInstance(indexesStat.Id);
                         if (index == null || // not there
                             index.CurrentMapIndexingTask != null) // busy doing indexing work already, not relevant for this batch
                             continue;

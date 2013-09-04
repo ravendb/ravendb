@@ -104,7 +104,7 @@ namespace Raven.Database.Storage
             {
                 try
                 {
-                    var indexDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(index), Default.Converters);
+                    var indexDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(transformer), Default.Converters);
                     AddAndCompileTransform(indexDefinition);
                     AddTransform(indexDefinition.IndexId, indexDefinition);
                 }
@@ -236,7 +236,6 @@ namespace Raven.Database.Storage
 
         public void RemoveIndex(int id)
         {
-			var fixedName = FixupIndexName(name);
             AbstractViewGenerator ignoredViewGenerator;
             int ignoredId;
             if (indexCache.TryRemove(id, out ignoredViewGenerator))
@@ -406,7 +405,6 @@ namespace Raven.Database.Storage
 
         public AbstractTransformer GetTransformer(int id)
         {
-			var fixedName = FixupIndexName(name);
             AbstractTransformer value;
             if (transformCache.TryGetValue(id, out value) == false)
                 return null;

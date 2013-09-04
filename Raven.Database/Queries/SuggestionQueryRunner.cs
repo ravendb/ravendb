@@ -44,9 +44,10 @@ namespace Raven.Database.Queries
 									 database.IndexStorage.GetIndexExtensionByPrefix(indexName, MonoHttpUtility.UrlEncode(suggestionQuery.Field)) 
 			                     ) as SuggestionQueryIndexExtension;
 
+		    var definition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 
 			IndexSearcher currentSearcher;
-			using (database.IndexStorage.GetCurrentIndexSearcher(indexName, out currentSearcher))
+			using (database.IndexStorage.GetCurrentIndexSearcher(definition.IndexId, out currentSearcher))
 			{
 				if (currentSearcher == null)
 				{
