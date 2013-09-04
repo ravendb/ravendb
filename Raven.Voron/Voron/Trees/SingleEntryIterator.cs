@@ -56,7 +56,18 @@ namespace Voron.Trees
             return false;
         }
 
-        public Stream CreateStreamForCurrent()
+	    public bool MovePrev()
+	    {
+			CurrentKey = null;
+			return false;
+	    }
+
+	    public void Skip(int count)
+	    {
+			throw new NotSupportedException("There is only one entry in single entry iterator");
+	    }
+
+	    public Stream CreateStreamForCurrent()
         {
             throw new NotSupportedException("There is no value for single entry iterator");
         }
