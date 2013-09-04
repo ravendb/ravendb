@@ -12,7 +12,7 @@ namespace Voron.Trees
         Slice MaxKey { get; set; }
         bool MoveNext();
 		bool MovePrev();
-	    void Skip(int count);
+	    bool Skip(int count);
         Stream CreateStreamForCurrent();
     }
 }

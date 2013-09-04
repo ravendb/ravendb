@@ -15,6 +15,7 @@ namespace Raven.Database.Storage.Voron
 	using Raven.Abstractions.Data;
 	using Raven.Abstractions.Exceptions;
 	using Raven.Abstractions.Extensions;
+	using Raven.Database.Impl;
 	using Raven.Database.Indexing;
 	using Raven.Database.Storage.Voron.Impl;
 	using Raven.Json.Linq;
@@ -30,9 +31,12 @@ namespace Raven.Database.Storage.Voron
 
 		private readonly WriteBatch writeBatch;
 
-		public IndexingStorageActions(TableStorage tableStorage, SnapshotReader snapshot, WriteBatch writeBatch)
+		private readonly IUuidGenerator generator;
+
+		public IndexingStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
 		{
 			this.tableStorage = tableStorage;
+			this.generator = generator;
 			this.snapshot = snapshot;
 			this.writeBatch = writeBatch;
 		}
@@ -101,7 +105,7 @@ namespace Raven.Database.Storage.Voron
 					{ "reduce_attempts", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
 					{ "reduce_successes", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
 					{ "reduce_failures", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "lastReducedEtag", createMapReduce ? Guid.Empty.ToByteArray() : (RavenJToken)RavenJValue.Null },
+					{ "lastReducedEtag", createMapReduce ? Etag.Empty.ToByteArray() : (RavenJToken)RavenJValue.Null },
 					{ "lastReducedTimestamp", createMapReduce ? DateTime.MinValue : (RavenJToken)RavenJValue.Null }
 				}, 0);
 
@@ -240,7 +244,8 @@ namespace Raven.Database.Storage.Voron
 
 			foreach (var reference in references)
 			{
-				var newKey = Guid.NewGuid().ToString();
+				var newKey = generator.CreateSequentialUuid(UuidType.DocumentReferences);
+				var newKeyAsString = newKey.ToString();
 				var value = new RavenJObject
 				            {
 					            { "view", view }, 
@@ -248,11 +253,11 @@ namespace Raven.Database.Storage.Voron
 								{ "ref", reference }
 				            };
 
-				tableStorage.DocumentReferences.Add(writeBatch, newKey, value);
-				documentReferencesByKey.MultiAdd(writeBatch, key, newKey);
-				documentReferencesByRef.MultiAdd(writeBatch, reference, newKey);
-				documentReferencesByView.MultiAdd(writeBatch, view, newKey);
-				documentReferencesByViewAndKey.MultiAdd(writeBatch, view + "/" + key, newKey);
+				tableStorage.DocumentReferences.Add(writeBatch, newKeyAsString, value);
+				documentReferencesByKey.MultiAdd(writeBatch, key, newKeyAsString);
+				documentReferencesByRef.MultiAdd(writeBatch, reference, newKeyAsString);
+				documentReferencesByView.MultiAdd(writeBatch, view, newKeyAsString);
+				documentReferencesByViewAndKey.MultiAdd(writeBatch, view + "/" + key, newKeyAsString);
 			}
 		}
 

@@ -50,6 +50,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table MappedResults { get; private set; }
 
+		public Table ReduceResults { get; private set; }
+
 		public Table Attachments { get; private set; }
 
 		public Table ReduceKeys { get; private set; }
@@ -94,9 +96,15 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateMappedResultsSchema(tx);
 				CreateAttachmentsSchema(tx);
 				CreateReduceKeysSchema(tx);
+				CreateReduceResultsSchema(tx);
 
 				tx.Commit();
 			}
+		}
+
+		private void CreateReduceResultsSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.ReduceResults.TableName);
 		}
 
 		private void CreateReduceKeysSchema(Transaction tx)
@@ -191,7 +199,8 @@ namespace Raven.Database.Storage.Voron.Impl
 			ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
 			MappedResults = new Table(Tables.MappedResults.TableName);
 			ReduceKeys = new Table(Tables.ReduceKeys.TableName, Tables.ReduceKeys.Indices.ByView);
-			Attachments = new Table(Tables.Attachments.TableName); 
+			Attachments = new Table(Tables.Attachments.TableName);
+			ReduceResults = new Table(Tables.ReduceResults.TableName);
 		}
 	}
 }

@@ -62,7 +62,7 @@ namespace Voron.Trees
 			return false;
 	    }
 
-	    public void Skip(int count)
+	    public bool Skip(int count)
 	    {
 			throw new NotSupportedException("There is only one entry in single entry iterator");
 	    }

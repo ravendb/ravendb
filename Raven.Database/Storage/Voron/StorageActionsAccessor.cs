@@ -28,11 +28,11 @@
 			this.writeBatch = writeBatch;
 			this.snapshot = snapshot;
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatch, snapshot, storage.Documents);
-			Indexing = new IndexingStorageActions(storage, snapshot, writeBatch);
+			Indexing = new IndexingStorageActions(storage, generator, snapshot, writeBatch);
 			Queue = new QueueStorageActions(storage, generator, snapshot, writeBatch);
 			Lists = new ListsStorageActions(storage, generator, snapshot, writeBatch);
 			Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatch);
-			Staleness = new StalenessStorageActions(storage, generator, snapshot, writeBatch);
+			Staleness = new StalenessStorageActions(storage, snapshot);
 			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatch);
 		}
 

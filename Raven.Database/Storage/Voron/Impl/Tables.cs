@@ -93,6 +93,8 @@ namespace Raven.Database.Storage.Voron.Impl
 				public const string ByView = "by_view";
 
 				public const string ByViewAndLevelAndReduceKey  = "by_view_and_level_and_reduce_key";
+
+				public const string ByViewAndLevel = "by_view_and_level";
 			}
 		}
 
@@ -109,6 +111,19 @@ namespace Raven.Database.Storage.Voron.Impl
 		public class MappedResults
 		{
 			public const string TableName = "mapped_results";
+
+			public class Indices
+			{
+				public const string ByViewAndDocumentId = "by_view_and_document_id";
+
+				public const string ByView = "by_view";
+
+				public const string ByViewAndReduceKey = "by_view_and_reduce_key";
+
+				public const string ByViewAndReduceKeyAndSourceBucket = "by_view_and_reduce_key_and_source_bucket";
+
+				public const string Data = "data";
+			}
 		}
 
 		public class ReduceKeys
@@ -118,6 +133,20 @@ namespace Raven.Database.Storage.Voron.Impl
 			public class Indices
 			{
 				public const string ByView = "by_view";
+			}
+		}
+
+		public class ReduceResults
+		{
+			public const string TableName = "reduce_results";
+
+			public class Indices
+			{
+				public const string ByViewAndReduceKeyAndLevelAndSourceBucket = "by_view_and_reduce_key_and_level_and_source_bucket";
+
+				public const string ByViewAndReduceKeyAndLevel = "by_view_and_reduce_key_and_level";
+
+				public const string Data = "data";
 			}
 		}
 	}

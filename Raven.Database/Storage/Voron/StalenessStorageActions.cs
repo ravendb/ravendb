@@ -5,7 +5,6 @@
 	using Raven.Abstractions.Data;
 	using Raven.Abstractions.Exceptions;
 	using Raven.Abstractions.Extensions;
-	using Raven.Database.Impl;
 	using Raven.Database.Storage.Voron.Impl;
 	using Raven.Json.Linq;
 
@@ -16,18 +15,12 @@
 	{
 		private readonly TableStorage tableStorage;
 
-		private readonly IUuidGenerator generator;
-
 		private readonly SnapshotReader snapshot;
 
-		private readonly WriteBatch writeBatch;
-
-		public StalenessStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
+		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot)
 		{
 			this.tableStorage = tableStorage;
-			this.generator = generator;
 			this.snapshot = snapshot;
-			this.writeBatch = writeBatch;
 		}
 
 		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)

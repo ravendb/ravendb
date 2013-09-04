@@ -20,7 +20,7 @@ namespace Voron.Trees
 			throw new InvalidOperationException("No current page");
 		}
 
-		public void Skip(int count)
+		public bool Skip(int count)
 		{
 			throw new InvalidOperationException("No records");
 		}
