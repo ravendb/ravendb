@@ -154,6 +154,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			env.CreateTree(tx, Tables.Queues.TableName);
 			env.CreateTree(tx, Queues.GetIndexKey(Tables.Queues.Indices.ByName));
+			env.CreateTree(tx, Queues.GetIndexKey(Tables.Queues.Indices.Data));
 		}
 
 		private void CreateDocumentReferencesSchema(Transaction tx)
@@ -193,7 +194,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			IndexingStats = new Table(Tables.IndexingStats.TableName);
 			LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName);
 			DocumentReferences = new Table(Tables.DocumentReferences.TableName, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
-			Queues = new Table(Tables.Queues.TableName, Tables.Queues.Indices.ByName);
+			Queues = new Table(Tables.Queues.TableName, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
 			Lists = new Table(Tables.Lists.TableName, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
 			Tasks = new Table(Tables.Tasks.TableName, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
 			ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);

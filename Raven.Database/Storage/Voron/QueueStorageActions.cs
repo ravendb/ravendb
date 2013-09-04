@@ -9,6 +9,7 @@ namespace Raven.Database.Storage.Voron
 	using System.Collections.Generic;
 
 	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Extensions;
 	using Raven.Database.Impl;
 	using Raven.Database.Storage.Voron.Impl;
 	using Raven.Json.Linq;
@@ -35,6 +36,7 @@ namespace Raven.Database.Storage.Voron
 		public void EnqueueToQueue(string name, byte[] data)
 		{
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
+			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 
 			var id = generator.CreateSequentialUuid(UuidType.Queue);
 			var key = CreateKey(name, id);
@@ -43,10 +45,10 @@ namespace Raven.Database.Storage.Voron
 			{
 				{"name", name},
 				{"id", id.ToByteArray()},
-				{"reads", 0},
-				{"data", data}
+				{"reads", 0}
 			}, 0);
 
+			queuesData.Add(writeBatch, key, data, 0);
 			queuesByName.MultiAdd(writeBatch, name, key);
 		}
 
@@ -71,14 +73,14 @@ namespace Raven.Database.Storage.Voron
 
 					if (value.Value<int>("reads") > 5) // read too much, probably poison message, remove it
 					{
-						tableStorage.Queues.Delete(writeBatch, key);
+						DeleteQueue(key);
 						continue;
 					}
 
 					value["reads"] = value.Value<int>("reads") + 1;
 					tableStorage.Queues.Add(writeBatch, key, value);
 
-					yield return new Tuple<byte[], object>(value.Value<byte[]>("data"), value.Value<byte[]>("id"));
+					yield return new Tuple<byte[], object>(ReadDataFromQueue(key), value.Value<byte[]>("id"));
 				}
 				while (iterator.MoveNext());
 			}
@@ -91,6 +93,24 @@ namespace Raven.Database.Storage.Voron
 			var key = this.CreateKey(name, Etag.Parse((byte[])id));
 			tableStorage.Queues.Delete(writeBatch, key);
 			queuesByName.MultiDelete(writeBatch, name, key);
+		}
+
+		private void DeleteQueue(Slice key)
+		{
+			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
+
+			tableStorage.Queues.Delete(writeBatch, key);
+			queuesData.Delete(writeBatch, key);
+		}
+
+		private byte[] ReadDataFromQueue(Slice key)
+		{
+			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
+
+			using (var read = queuesData.Read(Snapshot, key))
+			{
+				return read.Stream.ReadData();
+			}
 		}
 	}
 }

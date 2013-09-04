@@ -55,6 +55,8 @@ namespace Raven.Database.Storage.Voron.Impl
 			public class Indices
 			{
 				public const string ByName = "by_name";
+
+				public const string Data = "data";
 			}
 		}
 
