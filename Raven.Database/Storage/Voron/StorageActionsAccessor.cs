@@ -34,6 +34,7 @@
 			Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatch);
 			Staleness = new StalenessStorageActions(storage, generator, snapshot, writeBatch);
 			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatch);
+			Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatch, snapshot, generator);
 		}
 
 

@@ -13,6 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Storage.Voron
 {
+	[Trait("VoronTest","DocumentStorage")]
     public class DocumentsStorageActionsTests : RavenTest
     {
         private readonly string baseDataFolder = AppDomain.CurrentDomain.BaseDirectory;

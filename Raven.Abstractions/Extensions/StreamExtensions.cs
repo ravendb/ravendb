@@ -9,6 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
+using System.Runtime.InteropServices;
+using System.Text;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -27,6 +30,49 @@ namespace Raven.Abstractions.Extensions
 					return;
 				other.Write(buffer, 0, read);
 			}
+		}
+
+		public static void Write(this Stream stream, int value)
+		{
+			var buffer = BitConverter.GetBytes(value);
+			stream.Write(buffer, 0, 4);
+		}
+
+		public static int ReadInt32(this Stream stream)
+		{
+			var buffer = new byte[4];
+			stream.Read(buffer, 0, 4);
+
+			return BitConverter.ToInt32(buffer, 0);
+		}
+
+		public static string ReadString(this Stream stream,Encoding encoding)
+		{
+			var stringLength = stream.ReadInt32();
+			var buffer = new byte[stringLength];
+			stream.Read(buffer, 0, stringLength);
+
+			return encoding.GetString(buffer);
+		}
+
+		public static void Write(this Stream stream,string value,Encoding encoding)
+		{
+			stream.Write(value.Length);
+			var buffer = encoding.GetBytes(value);
+			stream.Write(buffer, 0, value.Length);
+		}
+
+		public static void Write(this Stream stream, Etag etag)
+		{
+			var buffer = etag.ToByteArray();
+			stream.Write(buffer, 0, 16);
+		}
+
+		public static Etag ReadEtag(this Stream stream)
+		{
+			var buffer = new byte[16]; //etag size is 16 bytes
+			stream.Read(buffer, 0, 16);
+			return Etag.Parse(buffer);
 		}
 
 		/// <summary>

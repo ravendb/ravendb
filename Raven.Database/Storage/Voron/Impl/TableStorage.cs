@@ -108,7 +108,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		private void CreateAttachmentsSchema(Transaction tx)
 		{
 			env.CreateTree(tx, Tables.Attachments.TableName);
-			env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.ByEtag));
+			env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.KeyByEtag));
 		}
 
 		private void CreateMappedResultsSchema(Transaction tx)
@@ -191,7 +191,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
 			MappedResults = new Table(Tables.MappedResults.TableName);
 			ReduceKeys = new Table(Tables.ReduceKeys.TableName, Tables.ReduceKeys.Indices.ByView);
-			Attachments = new Table(Tables.Attachments.TableName); 
+			Attachments = new Table(Tables.Attachments.TableName,Tables.Attachments.Indices.KeyByEtag); 
 		}
 	}
 }
