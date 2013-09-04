@@ -66,31 +66,31 @@ namespace Raven.Database.Storage.Voron
                 throw new ArgumentException("must have zero or positive value", "take");
             if (take == 0) yield break;
 
-            var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-                                     .Iterate(snapshot);
+			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
+										    .Iterate(snapshot))
+			{
+				int fetchedDocumentCount = 0;
+				iter.Seek(Slice.AfterAllKeys);
+				iter.Skip(-start);
+				do
+				{
+					if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
+						yield break;
 
-            int fetchedDocumentCount = 0;
-            iter.Seek(Slice.AfterAllKeys);
-            iter.Skip(-start);
-            do
-            {
-                if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
-                    yield break;
+					var keyBytes = iter.CreateStreamForCurrent().ReadData();
+					var key = Encoding.Unicode.GetString(keyBytes);
 
-                var keyBytes = iter.CreateStreamForCurrent().ReadData();
-                var key = Encoding.Unicode.GetString(keyBytes);
+					var document = DocumentByKey(key, null);
+					if (document == null) //precaution - should never be true
+					{
+						throw new ApplicationException(String.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
+					}
 
-                var document = DocumentByKey(key, null);
-                if (document == null) //precaution - should never be true
-                {
-                    throw new ApplicationException(String.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found",key));
-                }
-                
-                yield return document;
-                
-                fetchedDocumentCount++;
-            } while (iter.MovePrev() && fetchedDocumentCount < take);
+					yield return document;
 
+					fetchedDocumentCount++;
+				} while (iter.MovePrev() && fetchedDocumentCount < take);
+			}
         }
 
         public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null)
@@ -102,48 +102,49 @@ namespace Raven.Database.Storage.Voron
             if (String.IsNullOrEmpty(etag))
                 throw new ArgumentNullException("etag");
 
-            var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-                                     .Iterate(snapshot);
+			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
+									 .Iterate(snapshot))
+			{
+				iter.Seek(Slice.BeforeAllKeys);
+				long fetchedDocumentTotalSize = 0;
+				int fetchedDocumentCount = 0;
 
-            iter.Seek(Slice.BeforeAllKeys);
-            long fetchedDocumentTotalSize = 0;
-            int fetchedDocumentCount = 0;
+				do
+				{
+					if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
+						yield break;
 
-            do
-            {
-                if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
-                    yield break;
-                
-                var docEtag = Etag.Parse(iter.CurrentKey.ToString());
-                
-                if (!EtagUtil.IsGreaterThan(docEtag, etag)) continue;
+					var docEtag = Etag.Parse(iter.CurrentKey.ToString());
 
-                if (untilEtag != null && fetchedDocumentCount > 0)
-                {
-                    if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
-                        yield break;
-                }
+					if (!EtagUtil.IsGreaterThan(docEtag, etag)) continue;
 
-                var keyBytes = iter.CreateStreamForCurrent().ReadData();
-                var key = Encoding.Unicode.GetString(keyBytes);
+					if (untilEtag != null && fetchedDocumentCount > 0)
+					{
+						if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
+							yield break;
+					}
 
-                var document = DocumentByKey(key, null);
-                if (document == null) //precaution - should never be true
-                {
-                    throw new ApplicationException(String.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
-                }
+					var keyBytes = iter.CreateStreamForCurrent().ReadData();
+					var key = Encoding.Unicode.GetString(keyBytes);
 
-                fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
-                fetchedDocumentCount++;
+					var document = DocumentByKey(key, null);
+					if (document == null) //precaution - should never be true
+					{
+						throw new ApplicationException(String.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
+					}
 
-                if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
-                {
-                    yield return document;
-                    yield break;
-                }
+					fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
+					fetchedDocumentCount++;
 
-                yield return document;
-            } while (iter.MoveNext() && fetchedDocumentCount < take);
+					if (maxSize.HasValue && fetchedDocumentTotalSize >= maxSize)
+					{
+						yield return document;
+						yield break;
+					}
+
+					yield return document;
+				} while (iter.MoveNext() && fetchedDocumentCount < take);
+			}
         }
 
         public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
@@ -155,40 +156,43 @@ namespace Raven.Database.Storage.Voron
             if (take < 0)
                 throw new ArgumentException("must have zero or positive value", "take");
 
-            var iter = documentsTable.Iterate(snapshot);
-            
-            iter.RequiredPrefix = idPrefix.ToLowerInvariant();
-            if (take == 0 || iter.Seek(iter.RequiredPrefix) == false)
-                yield break;
+			using (var iter = documentsTable.Iterate(snapshot))
+			{
+				iter.RequiredPrefix = idPrefix.ToLowerInvariant();
+				if (take == 0 || iter.Seek(iter.RequiredPrefix) == false)
+					yield break;
 
-            var fetchedDocumentCount = 0;
-            var alreadySkippedCount = 0; //we have to do it this way since we store in the same tree both data and metadata entries
-            iter.Skip(start);
-            do
-            {
-                var dataKey = iter.CurrentKey.ToString();
-                if (alreadySkippedCount++ < start || dataKey.Contains(MetadataSuffix)) continue; 
-                
-                fetchedDocumentCount++;
-                yield return DocumentByKey(OriginalKey(dataKey), null);
-            } while (iter.MoveNext() && fetchedDocumentCount < take);
+				var fetchedDocumentCount = 0;
+				var alreadySkippedCount = 0; //we have to do it this way since we store in the same tree both data and metadata entries
+				iter.Skip(start);
+				do
+				{
+					var dataKey = iter.CurrentKey.ToString();
+					if (alreadySkippedCount++ < start || dataKey.Contains(MetadataSuffix)) continue;
+
+					fetchedDocumentCount++;
+					yield return DocumentByKey(OriginalKey(dataKey), null);
+				} while (iter.MoveNext() && fetchedDocumentCount < take);
+			}
         }
 
         public long GetDocumentsCount()
         {
-            var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-                                     .Iterate(snapshot);
-            long documentCount = 0;
-            
-            iter.Seek(Slice.BeforeAllKeys);
+			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
+										    .Iterate(snapshot))
+			{
+				long documentCount = 0;
 
-            do
-            {
-                if(iter.CurrentKey != null && !iter.CurrentKey.Equals(Slice.Empty))
-                    ++documentCount;
-            } while (iter.MoveNext()); 
+				iter.Seek(Slice.BeforeAllKeys);
 
-            return documentCount;
+				do
+				{
+					if (iter.CurrentKey != null && !iter.CurrentKey.Equals(Slice.Empty))
+						++documentCount;
+				} while (iter.MoveNext());
+
+				return documentCount;
+			}
         }
 
         public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
