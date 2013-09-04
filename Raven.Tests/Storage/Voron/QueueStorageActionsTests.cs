@@ -134,5 +134,23 @@ namespace Raven.Tests.Storage.Voron
 					});
 			}
 		}
+
+		[Fact]
+		public void PeekingMoreThan5TimesFromQueueShouldRemoveItem()
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			{
+				var value = Encoding.UTF8.GetBytes("123");
+
+				storage.Batch(accessor => accessor.Queue.EnqueueToQueue("queue1", value));
+				for (int i = 0; i < 5; i++)
+				{
+					storage.Batch(accessor => Assert.Equal(1, accessor.Queue.PeekFromQueue("queue1").Count()));
+				}
+
+				storage.Batch(accessor => Assert.Equal(1, accessor.Queue.PeekFromQueue("queue1").Count()));
+				storage.Batch(accessor => Assert.Equal(0, accessor.Queue.PeekFromQueue("queue1").Count()));
+			}
+		}
 	}
 }

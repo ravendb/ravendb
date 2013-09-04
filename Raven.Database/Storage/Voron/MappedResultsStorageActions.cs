@@ -21,31 +21,29 @@
 
 	using Index = Raven.Database.Storage.Voron.Impl.Index;
 
-	public class MappedResultsStorageActions : IMappedResultsStorageAction
+	public class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
 	{
 		private readonly TableStorage tableStorage;
 
 		private readonly IUuidGenerator generator;
-
-		private readonly SnapshotReader snapshot;
 
 		private readonly WriteBatch writeBatch;
 
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
 		public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, SnapshotReader snapshot, WriteBatch writeBatch)
+			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
 			this.documentCodecs = documentCodecs;
-			this.snapshot = snapshot;
 			this.writeBatch = writeBatch;
 		}
 
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize)
 		{
 			var reduceKeysByView = tableStorage.ReduceKeys.GetIndex(Tables.ReduceKeys.Indices.ByView);
-			using (var iterator = reduceKeysByView.MultiRead(snapshot, view))
+			using (var iterator = reduceKeysByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -53,7 +51,7 @@
 				var count = 0;
 				do
 				{
-					using (var read = tableStorage.ReduceKeys.Read(snapshot, iterator.CurrentKey))
+					using (var read = tableStorage.ReduceKeys.Read(Snapshot, iterator.CurrentKey))
 					{
 						var value = read.Stream.ToJObject();
 
@@ -102,18 +100,18 @@
 
 			mappedResultsData.Add(writeBatch, idAsString, ms, 0);
 
-			mappedResultsByViewAndDocumentId.MultiAdd(writeBatch, view + "/" + docId, idAsString);
+			mappedResultsByViewAndDocumentId.MultiAdd(writeBatch, CreateKey(view, docId), idAsString);
 			mappedResultsByView.MultiAdd(writeBatch, view, idAsString);
-			mappedResultsByViewAndReduceKey.MultiAdd(writeBatch, view + "/" + reduceKey, idAsString);
-			mappedResultsByViewAndReduceKeyAndSourceBucket.MultiAdd(writeBatch, view + "/" + reduceKey + "/" + bucket, idAsString);
+			mappedResultsByViewAndReduceKey.MultiAdd(writeBatch, CreateKey(view, reduceKey), idAsString);
+			mappedResultsByViewAndReduceKeyAndSourceBucket.MultiAdd(writeBatch, CreateKey(view, reduceKey, bucket), idAsString);
 		}
 
 		public void IncrementReduceKeyCounter(string view, string reduceKey, int val)
 		{
-			var key = view + "/" + reduceKey;
+			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = Load(tableStorage.ReduceKeys, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
 
 			if (value == null)
 			{
@@ -138,10 +136,10 @@
 
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
-			var viewAndDocumentId = view + "/" + documentId;
+			var viewAndDocumentId = CreateKey(view, documentId);
 
 			var mappedResultsByViewAndDocumentId = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndDocumentId);
-			using (var iterator = mappedResultsByViewAndDocumentId.MultiRead(snapshot, viewAndDocumentId))
+			using (var iterator = mappedResultsByViewAndDocumentId.MultiRead(Snapshot, viewAndDocumentId))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -149,7 +147,7 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 					var reduceKey = value.Value<string>("reduceKey");
 					var bucket = value.Value<int>("bucket");
 
@@ -181,7 +179,7 @@
 			var statsByKey = new Dictionary<string, int>();
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
 
-			using (var iterator = mappedResultsByView.MultiRead(snapshot, view))
+			using (var iterator = mappedResultsByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -189,7 +187,7 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 					var reduceKey = value.Value<string>("reduceKey");
 					var bucket = value.Value<string>("bucket");
 
@@ -209,7 +207,7 @@
 		public IEnumerable<string> GetKeysForIndexForDebug(string view, int start, int take)
 		{
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
-			using (var iterator = mappedResultsByView.MultiRead(snapshot, view))
+			using (var iterator = mappedResultsByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return Enumerable.Empty<string>();
@@ -218,7 +216,7 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 
 					results.Add(value.Value<string>("reduceKey"));
 				}
@@ -233,11 +231,11 @@
 
 		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string view, string key, int start, int take)
 		{
-			var viewAndReduceKey = view + "/" + key;
+			var viewAndReduceKey = CreateKey(view, key);
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
 			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
 
-			using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(snapshot, viewAndReduceKey))
+			using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -246,8 +244,8 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.MappedResults, iterator.CurrentKey, out version);
-					var size = tableStorage.MappedResults.GetDataSize(snapshot, iterator.CurrentKey);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, true, mappedResultsData);
 
 					count++;
@@ -258,12 +256,12 @@
 
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string view, string key, int level, int start, int take)
 		{
-			var viewAndReduceKeyAndLevel = view + "/" + key + "/" + level;
+			var viewAndReduceKeyAndLevel = CreateKey(view, key, level);
 			var reduceResultsByViewAndReduceKeyAndLevel =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
 			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
 
-			using (var iterator = reduceResultsByViewAndReduceKeyAndLevel.MultiRead(snapshot, viewAndReduceKeyAndLevel))
+			using (var iterator = reduceResultsByViewAndReduceKeyAndLevel.MultiRead(Snapshot, viewAndReduceKeyAndLevel))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -272,8 +270,8 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.ReduceResults, iterator.CurrentKey, out version);
-					var size = tableStorage.ReduceResults.GetDataSize(snapshot, iterator.CurrentKey);
+					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, out version);
+					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, true, reduceResultsData);
 
@@ -286,7 +284,7 @@
 		public IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string view, int start, int take)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(snapshot, view))
+			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -295,7 +293,7 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
 
 					yield return new ScheduledReductionDebugInfo
 					{
@@ -332,8 +330,8 @@
 			});
 
 			scheduledReductionsByView.MultiAdd(writeBatch, view, idAsString);
-			scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch, view + "/" + level + "/" + reduceKeysAndBuckets.ReduceKey, idAsString);
-			scheduledReductionsByViewAndLevel.MultiAdd(writeBatch, view + "/" + level, idAsString);
+			scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch, CreateKey(view, level, reduceKeysAndBuckets.ReduceKey), idAsString);
+			scheduledReductionsByViewAndLevel.MultiAdd(writeBatch, CreateKey(view, level), idAsString);
 		}
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
@@ -343,8 +341,8 @@
 			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
-				var viewAndLevelAndReduceKey = getItemsToReduceParams.Index + "/" + getItemsToReduceParams.Level + "/" + reduceKey;
-				using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(snapshot, viewAndLevelAndReduceKey))
+				var viewAndLevelAndReduceKey = CreateKey(getItemsToReduceParams.Index, getItemsToReduceParams.Level, reduceKey);
+				using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(Snapshot, viewAndLevelAndReduceKey))
 				{
 					if (!iterator.Seek(Slice.BeforeAllKeys))
 						continue;
@@ -352,7 +350,7 @@
 					do
 					{
 						ushort version;
-						var value = Load(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
+						var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
 
 						var indexFromDb = value.Value<string>("view");
 						var levelFromDb = value.Value<int>("level");
@@ -413,11 +411,11 @@
 
 		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(string view, string reduceKey, int level, int bucket, bool loadData)
 		{
-			var viewAndReduceKeyAndLevelAndSourceBucket = view + "/" + reduceKey + "/" + level + "/" + bucket;
+			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, bucket);
 
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
 			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
-			using (var iterator = reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(snapshot, viewAndReduceKeyAndLevelAndSourceBucket))
+			using (var iterator = reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(Snapshot, viewAndReduceKeyAndLevelAndSourceBucket))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 				{
@@ -433,8 +431,8 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.ReduceResults, iterator.CurrentKey, out version);
-					var size = tableStorage.ReduceResults.GetDataSize(snapshot, iterator.CurrentKey);
+					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, out version);
+					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, loadData, reduceResultsData);
 				}
@@ -444,12 +442,12 @@
 
 		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(string view, string reduceKey, int bucket, bool loadData)
 		{
-			var viewAndReduceKeyAndSourceBucket = view + "/" + reduceKey + "/" + bucket;
+			var viewAndReduceKeyAndSourceBucket = CreateKey(view, reduceKey, bucket);
 
 			var mappedResultsByViewAndReduceKeyAndSourceBucket = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket);
 			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
 
-			using (var iterator = mappedResultsByViewAndReduceKeyAndSourceBucket.MultiRead(snapshot, viewAndReduceKeyAndSourceBucket))
+			using (var iterator = mappedResultsByViewAndReduceKeyAndSourceBucket.MultiRead(Snapshot, viewAndReduceKeyAndSourceBucket))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 				{
@@ -465,8 +463,8 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.MappedResults, iterator.CurrentKey, out version);
-					var size = tableStorage.MappedResults.GetDataSize(snapshot, iterator.CurrentKey);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, loadData, mappedResultsData);
 				}
@@ -483,7 +481,7 @@
 			{
 				var etag = Etag.Parse(token.Value<byte[]>("etag"));
 				var etagAsString = etag.ToString();
-				using (var read = tableStorage.ScheduledReductions.Read(snapshot, etagAsString))
+				using (var read = tableStorage.ScheduledReductions.Read(Snapshot, etagAsString))
 				{
 					if (read == null)
 						continue;
@@ -511,7 +509,7 @@
 		public void DeleteScheduledReduction(string view, int level, string reduceKey)
 		{
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
-			using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(snapshot, view + "/" + level + "/" + reduceKey))
+			using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(Snapshot, CreateKey(view, level, reduceKey)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -557,8 +555,8 @@
 
 			reduceResultsData.Add(writeBatch, idAsString, ms, 0);
 
-			var viewAndReduceKeyAndLevelAndSourceBucket = view + "/" + reduceKey + "/" + level + "/" + sourceBucket;
-			var viewAndReduceKeyAndLevel = view + "/" + reduceKey + "/" + level;
+			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
+			var viewAndReduceKeyAndLevel = CreateKey(view, reduceKey, level);
 
 			reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiAdd(writeBatch, viewAndReduceKeyAndLevelAndSourceBucket, idAsString);
 			reduceResultsByViewAndReduceKeyAndLevel.MultiAdd(writeBatch, viewAndReduceKeyAndLevel, idAsString);
@@ -566,11 +564,11 @@
 
 		public void RemoveReduceResults(string view, int level, string reduceKey, int sourceBucket)
 		{
-			var viewAndReduceKeyAndLevelAndSourceBucket = view + "/" + reduceKey + "/" + level + "/" + sourceBucket;
+			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
 
-			using (var iterator = reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(snapshot, viewAndReduceKeyAndLevelAndSourceBucket))
+			using (var iterator = reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(Snapshot, viewAndReduceKeyAndLevelAndSourceBucket))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -587,9 +585,9 @@
 		{
 			var allKeysToReduce = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-			var viewAndLevel = view + "/" + 0;
+			var viewAndLevel = CreateKey(view, 0);
 			var scheduledReductionsByViewAndLevel = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevel);
-			using (var iterator = scheduledReductionsByViewAndLevel.MultiRead(snapshot, viewAndLevel))
+			using (var iterator = scheduledReductionsByViewAndLevel.MultiRead(Snapshot, viewAndLevel))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return Enumerable.Empty<ReduceTypePerKey>();
@@ -597,7 +595,7 @@
 				do
 				{
 					ushort version;
-					var value = this.Load(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
+					var value = this.LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
 
 					allKeysToReduce.Add(value.Value<string>("reduceKey"));
 				}
@@ -620,10 +618,10 @@
 
 		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)
 		{
-			var key = view + "/" + reduceKey;
+			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = Load(tableStorage.ReduceKeys, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
 			if (value == null)
 				return 0;
 
@@ -632,10 +630,10 @@
 
 		public void UpdatePerformedReduceType(string view, string reduceKey, ReduceType reduceType)
 		{
-			var key = view + "/" + reduceKey;
+			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = Load(tableStorage.ReduceKeys, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
 			if (value == null)
 			{
 				AddReduceKey(key, view, reduceKey, reduceType, 0, 0);
@@ -674,10 +672,10 @@
 
 		public ReduceType GetLastPerformedReduceType(string view, string reduceKey)
 		{
-			var key = view + "/" + reduceKey;
+			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = Load(tableStorage.ReduceKeys, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
 			if (value == null)
 				return ReduceType.None;
 
@@ -686,10 +684,10 @@
 
 		public IEnumerable<int> GetMappedBuckets(string view, string reduceKey)
 		{
-			var viewAndReduceKey = view + "/" + reduceKey;
+			var viewAndReduceKey = CreateKey(view, reduceKey);
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
 
-			using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(snapshot, viewAndReduceKey))
+			using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return Enumerable.Empty<int>();
@@ -698,7 +696,7 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 
 					results.Add(value.Value<int>("bucket"));
 				}
@@ -715,8 +713,8 @@
 
 			foreach (var reduceKey in keysToReduce)
 			{
-				var viewAndReduceKey = view + "/" + reduceKey;
-				using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(snapshot, viewAndReduceKey))
+				var viewAndReduceKey = CreateKey(view, reduceKey);
+				using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
 				{
 					if (!iterator.Seek(Slice.BeforeAllKeys))
 						continue;
@@ -724,8 +722,8 @@
 					do
 					{
 						ushort version;
-						var value = Load(tableStorage.MappedResults, iterator.CurrentKey, out version);
-						var size = tableStorage.MappedResults.GetDataSize(snapshot, iterator.CurrentKey);
+						var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 						yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, loadData, mappedResultsData);
 					}
@@ -752,7 +750,7 @@
 		{
 			var reduceKey = value.Value<string>("reduceKey");
 
-			using (var read = dataIndex.Read(snapshot, key))
+			using (var read = dataIndex.Read(Snapshot, key))
 			{
 				if (read == null)
 					return null;
@@ -765,7 +763,7 @@
 		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take)
 		{
 			var reduceKeysByView = tableStorage.ReduceKeys.GetIndex(Tables.ReduceKeys.Indices.ByView);
-			using (var iterator = reduceKeysByView.MultiRead(snapshot, view))
+			using (var iterator = reduceKeysByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -774,7 +772,7 @@
 				do
 				{
 					ushort version;
-					var value = Load(tableStorage.ReduceKeys, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ReduceKeys, iterator.CurrentKey, out version);
 
 					yield return new ReduceTypePerKey(value.Value<string>("reduceKey"), (ReduceType)value.Value<int>("reduceType"));
 
@@ -792,15 +790,15 @@
 
 			tableStorage.ScheduledReductions.Delete(writeBatch, id);
 			scheduledReductionsByView.MultiDelete(writeBatch, view, id);
-			scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch, view + "/" + level + "/" + reduceKey, id);
-			scheduledReductionsByViewAndLevel.MultiDelete(writeBatch, view + "/" + level, id);
+			scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch, CreateKey(view, level, reduceKey), id);
+			scheduledReductionsByViewAndLevel.MultiDelete(writeBatch, CreateKey(view, level), id);
 		}
 
 		private void DeleteMappedResult(Slice id, string view, string documentId, string reduceKey, string bucket)
 		{
-			var viewAndDocumentId = view + "/" + documentId;
-			var viewAndReduceKey = view + "/" + reduceKey;
-			var viewAndReduceKeyAndSourceBucket = view + "/" + reduceKey + "/" + bucket;
+			var viewAndDocumentId = CreateKey(view, documentId);
+			var viewAndReduceKey = CreateKey(view, reduceKey);
+			var viewAndReduceKeyAndSourceBucket = CreateKey(view, reduceKey, bucket);
 			var mappedResultsByViewAndDocumentId = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndDocumentId);
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
@@ -817,8 +815,8 @@
 
 		private void RemoveReduceResult(Slice id, string view, int level, string reduceKey, int sourceBucket)
 		{
-			var viewAndReduceKeyAndLevelAndSourceBucket = view + "/" + reduceKey + "/" + level + "/" + sourceBucket;
-			var viewAndReduceKeyAndLevel = view + "/" + reduceKey + "/" + level;
+			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
+			var viewAndReduceKeyAndLevel = CreateKey(view, reduceKey, level);
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
 			var reduceResultsByViewAndReduceKeyAndLevel =
@@ -829,21 +827,6 @@
 			reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiDelete(writeBatch, viewAndReduceKeyAndLevelAndSourceBucket, id);
 			reduceResultsByViewAndReduceKeyAndLevel.MultiDelete(writeBatch, viewAndReduceKeyAndLevel, id);
 			reduceResultsData.Delete(writeBatch, id);
-		}
-
-		private RavenJObject Load(Table table, Slice key, out ushort version)
-		{
-			using (var read = table.Read(snapshot, key))
-			{
-				if (read == null)
-				{
-					version = 0;
-					return null;
-				}
-
-				version = read.Version;
-				return read.Stream.ToJObject();
-			}
 		}
 	}
 }

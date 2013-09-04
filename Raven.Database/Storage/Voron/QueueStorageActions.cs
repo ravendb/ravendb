@@ -9,7 +9,6 @@ namespace Raven.Database.Storage.Voron
 	using System.Collections.Generic;
 
 	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Extensions;
 	using Raven.Database.Impl;
 	using Raven.Database.Storage.Voron.Impl;
 	using Raven.Json.Linq;
@@ -17,20 +16,18 @@ namespace Raven.Database.Storage.Voron
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class QueueStorageActions : IQueueStorageActions
+	public class QueueStorageActions : StorageActionsBase, IQueueStorageActions
 	{
 		private readonly TableStorage tableStorage;
-
-		private readonly SnapshotReader snapshot;
 
 		private readonly WriteBatch writeBatch;
 
 		private readonly IUuidGenerator generator;
 
 		public QueueStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
+			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
-			this.snapshot = snapshot;
 			this.writeBatch = writeBatch;
 			this.generator = generator;
 		}
@@ -40,7 +37,7 @@ namespace Raven.Database.Storage.Voron
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
 			var id = generator.CreateSequentialUuid(UuidType.Queue);
-			var key = name + "/" + id;
+			var key = CreateKey(name, id);
 
 			tableStorage.Queues.Add(writeBatch, key, new RavenJObject
 			{
@@ -57,7 +54,7 @@ namespace Raven.Database.Storage.Voron
 		{
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
-			using (var iterator = queuesByName.MultiRead(snapshot, name))
+			using (var iterator = queuesByName.MultiRead(Snapshot, name))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					yield break;
@@ -65,23 +62,23 @@ namespace Raven.Database.Storage.Voron
 				do
 				{
 					var key = iterator.CurrentKey;
-					using (var read = tableStorage.Queues.Read(snapshot, key))
+
+					ushort version;
+					var value = LoadJson(tableStorage.Queues, key, out version);
+
+					if (value == null)
+						yield break;
+
+					if (value.Value<int>("reads") > 5) // read too much, probably poison message, remove it
 					{
-						if (read == null)
-							yield break;
-
-						var value = read.Stream.ToJObject();
-						if (value.Value<int>("reads") > 5) // read too much, probably poison message, remove it
-						{
-							tableStorage.Queues.Delete(writeBatch, key);
-							continue;
-						}
-
-						value["reads"] = value.Value<int>("reads") + 1;
-						tableStorage.Queues.Add(writeBatch, key, value);
-
-						yield return new Tuple<byte[], object>(value.Value<byte[]>("data"), value.Value<byte[]>("id"));
+						tableStorage.Queues.Delete(writeBatch, key);
+						continue;
 					}
+
+					value["reads"] = value.Value<int>("reads") + 1;
+					tableStorage.Queues.Add(writeBatch, key, value);
+
+					yield return new Tuple<byte[], object>(value.Value<byte[]>("data"), value.Value<byte[]>("id"));
 				}
 				while (iterator.MoveNext());
 			}
@@ -91,7 +88,7 @@ namespace Raven.Database.Storage.Voron
 		{
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
-			var key = name + "/" + Etag.Parse((byte[])id);
+			var key = this.CreateKey(name, Etag.Parse((byte[])id));
 			tableStorage.Queues.Delete(writeBatch, key);
 			queuesByName.MultiDelete(writeBatch, name, key);
 		}

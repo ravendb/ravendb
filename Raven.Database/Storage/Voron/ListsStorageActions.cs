@@ -17,21 +17,19 @@ namespace Raven.Database.Storage.Voron
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class ListsStorageActions : IListsStorageActions
+	public class ListsStorageActions : StorageActionsBase, IListsStorageActions
 	{
 		private readonly TableStorage tableStorage;
 
 		private readonly IUuidGenerator generator;
 
-		private readonly SnapshotReader snapshot;
-
 		private readonly WriteBatch writeBatch;
 
 		public ListsStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
+			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
-			this.snapshot = snapshot;
 			this.writeBatch = writeBatch;
 		}
 
@@ -41,10 +39,11 @@ namespace Raven.Database.Storage.Voron
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
 			var etag = generator.CreateSequentialUuid(type);
+			var etagAsString = etag.ToString();
 
 			tableStorage.Lists.Add(
 				writeBatch,
-				etag.ToString(),
+				etagAsString,
 				new RavenJObject
 				{
 					{ "name", name }, 
@@ -53,8 +52,8 @@ namespace Raven.Database.Storage.Voron
 					{ "data", data }
 				}, 0);
 
-			listsByName.MultiAdd(writeBatch, name, etag.ToString());
-			listsByNameAndKey.Add(writeBatch, name + "/" + key, etag.ToString(), 0);
+			listsByName.MultiAdd(writeBatch, name, etagAsString);
+			listsByNameAndKey.Add(writeBatch, CreateKey(name, key), etagAsString, 0);
 		}
 
 		public void Remove(string name, string key)
@@ -62,9 +61,9 @@ namespace Raven.Database.Storage.Voron
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var nameAndKey = name + "/" + key;
+			var nameAndKey = CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(snapshot, nameAndKey))
+			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey))
 			{
 				if (read == null)
 					return;
@@ -83,7 +82,7 @@ namespace Raven.Database.Storage.Voron
 		{
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 
-			using (var iterator = listsByName.MultiRead(snapshot, name))
+			using (var iterator = listsByName.MultiRead(Snapshot, name))
 			{
 				if (!iterator.Seek(start.ToString()))
 					yield break;
@@ -112,9 +111,9 @@ namespace Raven.Database.Storage.Voron
 		public ListItem Read(string name, string key)
 		{
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
-			var nameAndKey = name + "/" + key;
+			var nameAndKey = CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(snapshot, nameAndKey))
+			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey))
 			{
 				if (read == null)
 					return null;
@@ -132,7 +131,7 @@ namespace Raven.Database.Storage.Voron
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			using (var iterator = listsByName.MultiRead(snapshot, name))
+			using (var iterator = listsByName.MultiRead(Snapshot, name))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -143,14 +142,14 @@ namespace Raven.Database.Storage.Voron
 
 					if (currentEtag.CompareTo(etag) < 0)
 					{
-						using (var read = tableStorage.Lists.Read(snapshot, iterator.CurrentKey))
+						using (var read = tableStorage.Lists.Read(Snapshot, iterator.CurrentKey))
 						{
 							var value = read.Stream.ToJObject();
 							var key = value.Value<string>("key");
 
 							tableStorage.Lists.Delete(writeBatch, currentEtag.ToString());
 							listsByName.MultiDelete(writeBatch, name, etag.ToString());
-							listsByNameAndKey.Delete(writeBatch, name + "/" + key);
+							listsByNameAndKey.Delete(writeBatch, CreateKey(name, key));
 						}
 					}
 				}
@@ -160,7 +159,7 @@ namespace Raven.Database.Storage.Voron
 
 		private ListItem ReadInternal(string id)
 		{
-			using (var read = tableStorage.Lists.Read(snapshot, id))
+			using (var read = tableStorage.Lists.Read(Snapshot, id))
 			{
 				if (read == null)
 					return null;
