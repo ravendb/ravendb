@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="VoronTasksStorageActions.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="TasksStorageActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -11,7 +11,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using Xunit;
 
-	public class VoronTasksStorageActions : RavenTest
+	public class TasksStorageActions : RavenTest
 	{
 		[Fact]
 		public void SimpleTask()

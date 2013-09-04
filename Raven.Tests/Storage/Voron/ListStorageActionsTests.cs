@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="VoronListStorageActionsTests.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ListStorageActionsTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -15,7 +15,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using global::Voron.Exceptions;
 
-	public class VoronListStorageActionsTests : RavenTest
+	public class ListStorageActionsTests : RavenTest
 	{
 		[Fact]
 		public void Set()

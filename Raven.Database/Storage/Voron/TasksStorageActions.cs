@@ -58,7 +58,7 @@ namespace Raven.Database.Storage.Voron
 					{ "time", addedAt },
 					{ "type", type },
 					{ "task", task.AsBytes() }
-				});
+				}, 0);
 
 			tasksByType.MultiAdd(writeBatch, type, id.ToString());
 			tasksByIndex.MultiAdd(writeBatch, index, id.ToString());

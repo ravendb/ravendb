@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Voron
 {
-	public class VoronStorageIntegrationTests : RavenTest
+	public class StorageIntegrationTests : RavenTest
 	{
 		[Fact]
 		public void RemoteStorageInitialized_Exception_Not_Thrown()

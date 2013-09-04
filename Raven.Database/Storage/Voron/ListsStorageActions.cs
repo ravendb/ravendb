@@ -51,10 +51,10 @@ namespace Raven.Database.Storage.Voron
 					{ "key", key }, 
 					{ "etag", etag.ToByteArray() }, 
 					{ "data", data }
-				});
+				}, 0);
 
 			listsByName.MultiAdd(writeBatch, name, etag.ToString());
-			listsByNameAndKey.Add(writeBatch, name + "/" + key, etag.ToString());
+			listsByNameAndKey.Add(writeBatch, name + "/" + key, etag.ToString(), 0);
 		}
 
 		public void Remove(string name, string key)

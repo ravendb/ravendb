@@ -30,7 +30,7 @@
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
 		private OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
-        private readonly IDocumentCacher documentCacher;
+		private readonly IDocumentCacher documentCacher;
 		private IUuidGenerator uuidGenerator;
 
 		private readonly InMemoryRavenConfiguration configuration;
@@ -43,7 +43,7 @@
 		{
 			this.configuration = configuration;
 			this.onCommit = onCommit;
-            documentCacher = new DocumentCacher(configuration);
+			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
 		}
 
@@ -80,60 +80,60 @@
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
-	    public void Batch(Action<IStorageActionsAccessor> action)
-	    {
-            if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
-            {
-                if (current.Value != null) // check again, just to be sure
-                {
-                    current.Value.IsNested = true;
-                    action(current.Value);
-                    current.Value.IsNested = false;
-                    return;
-                }
-            }
+		public void Batch(Action<IStorageActionsAccessor> action)
+		{
+			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
+			{
+				if (current.Value != null) // check again, just to be sure
+				{
+					current.Value.IsNested = true;
+					action(current.Value);
+					current.Value.IsNested = false;
+					return;
+				}
+			}
 
-            disposerLock.EnterReadLock();
-            try
-            {
-                if (disposed)
-                {
-                    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
-                    return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
-                }
+			disposerLock.EnterReadLock();
+			try
+			{
+				if (disposed)
+				{
+					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+				}
 
-                ExecuteBatch(action);
-            }
-            finally
-            {
-                disposerLock.ExitReadLock();
-                if (disposed == false && disableBatchNesting.Value == null)
-                    current.Value = null;
-            }
+				ExecuteBatch(action);
+			}
+			finally
+			{
+				disposerLock.ExitReadLock();
+				if (disposed == false && disableBatchNesting.Value == null)
+					current.Value = null;
+			}
 
-            onCommit(); // call user code after we exit the lock
-        }
+			onCommit(); // call user code after we exit the lock
+		}
 
-	    private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
-	    {
-            using(var snapshot = tableStorage.CreateSnapshot())
-	        using (var writeBatch = new WriteBatch())
-	        {
-	            var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, documentCodecs,
-	                documentCacher, writeBatch, snapshot, tableStorage);
+		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
+		{
+			using (var snapshot = tableStorage.CreateSnapshot())
+			using (var writeBatch = new WriteBatch())
+			{
+				var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, documentCodecs,
+					documentCacher, writeBatch, snapshot, tableStorage);
 
-	            if (disableBatchNesting.Value == null)
-	                current.Value = storageActionsAccessor;
+				if (disableBatchNesting.Value == null)
+					current.Value = storageActionsAccessor;
 
-	            action(storageActionsAccessor);
-	            storageActionsAccessor.SaveAllTasks();
+				action(storageActionsAccessor);
+				storageActionsAccessor.SaveAllTasks();
 
-	            tableStorage.Write(writeBatch);
-	            return storageActionsAccessor;
-	        }
-	    }
+				tableStorage.Write(writeBatch);
+				return storageActionsAccessor;
+			}
+		}
 
-	    public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
+		public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
 		{
 			throw new NotImplementedException();
 		}
@@ -161,10 +161,10 @@
 			{
 				using (var snapshot = tableStorage.CreateSnapshot())
 				{
-                    using (var stream = tableStorage.Details.Read(snapshot, "id").Stream)
-					using (var reader = new BinaryReader(stream))
+					using (var read = tableStorage.Details.Read(snapshot, "id"))
+					using (var reader = new BinaryReader(read.Stream))
 					{
-						Id = new Guid(reader.ReadBytes((int)stream.Length));
+						Id = new Guid(reader.ReadBytes((int)read.Stream.Length));
 					}
 				}
 			}
@@ -218,8 +218,8 @@
 			var newId = Guid.NewGuid();
 			using (var changeIdWriteBatch = new WriteBatch())
 			{
-                tableStorage.Details.Delete(changeIdWriteBatch, "id");
-                tableStorage.Details.Add(changeIdWriteBatch, "id", newId.ToByteArray());
+				tableStorage.Details.Delete(changeIdWriteBatch, "id");
+				tableStorage.Details.Add(changeIdWriteBatch, "id", newId.ToByteArray());
 
 				tableStorage.Write(changeIdWriteBatch);
 			}

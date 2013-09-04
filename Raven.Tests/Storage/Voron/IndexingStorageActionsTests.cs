@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="VoronIndexingStorageActionsTests.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="IndexingStorageActionsTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -17,7 +17,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using global::Voron.Exceptions;
 
-	public class VoronIndexingStorageActionsTests : RavenTest
+	public class IndexingStorageActionsTests : RavenTest
 	{
 		[Fact]
 		public void IndexCreation()

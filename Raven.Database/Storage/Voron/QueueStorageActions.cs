@@ -48,7 +48,7 @@ namespace Raven.Database.Storage.Voron
 				{"id", id.ToByteArray()},
 				{"reads", 0},
 				{"data", data}
-			});
+			}, 0);
 
 			queuesByName.MultiAdd(writeBatch, name, key);
 		}
@@ -78,7 +78,7 @@ namespace Raven.Database.Storage.Voron
 						}
 
 						value["reads"] = value.Value<int>("reads") + 1;
-						tableStorage.Queues.Add(writeBatch, key.ToString(), value);
+						tableStorage.Queues.Add(writeBatch, key, value);
 
 						yield return new Tuple<byte[], object>(value.Value<byte[]>("data"), value.Value<byte[]>("id"));
 					}

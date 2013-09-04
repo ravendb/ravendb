@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="VoronQueueStorageActionsTests.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="QueueStorageActionsTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -12,7 +12,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using Xunit;
 
-	public class VoronQueueStorageActionsTests : RavenTest
+	public class QueueStorageActionsTests : RavenTest
 	{
 		[Fact]
 		public void SimpleQueue()
