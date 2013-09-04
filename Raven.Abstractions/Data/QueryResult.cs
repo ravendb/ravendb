@@ -101,6 +101,7 @@ namespace Raven.Abstractions.Data
 			Results = new List<RavenJObject>();
 			Includes = new List<RavenJObject>();
 		    Highlightings = new Dictionary<string, Dictionary<string, string[]>>();
+			ScoreExplanations = new Dictionary<string, string>();
 		}
 
 		/// <summary>

@@ -164,7 +164,7 @@ namespace Raven.Client.Connection
 						try
 						{
 							Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url));
-
+							SetResponseHeaders(Response);
 
 							ResponseStatusCode = Response.StatusCode;
 						}

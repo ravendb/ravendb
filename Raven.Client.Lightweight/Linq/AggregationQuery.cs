@@ -63,7 +63,7 @@ namespace Raven.Client.Linq
 					Name = aggregationQuery.Name,
 					DisplayName = aggregationQuery.DisplayName,
 					Aggregation = aggregationQuery.Aggregation,
-					AggregationType = aggregationQuery.AggregationType,
+					AggregationType = aggregationQuery.AggregationType ?? aggregationQuery.Aggregation.ToString(),
 					AggregationField = aggregationQuery.AggregationField,
 					Mode = FacetMode.Default
 				});

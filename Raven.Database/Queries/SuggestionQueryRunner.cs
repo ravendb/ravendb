@@ -42,7 +42,8 @@ namespace Raven.Database.Queries
 			if (suggestionQuery.Distance.HasValue == false)
 				suggestionQuery.Distance = StringDistanceTypes.Default;
 
-			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field);
+			var indexExtensionKey =
+				MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
 			var indexExtension = database.IndexStorage.GetIndexExtensionByPrefix(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
 			IndexSearcher currentSearcher;
