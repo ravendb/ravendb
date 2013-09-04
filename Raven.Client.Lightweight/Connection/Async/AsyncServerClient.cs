@@ -477,23 +477,19 @@ namespace Raven.Client.Connection.Async
 																		.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
 																		.ExecuteRequestAsync());
 		}
-
+		
 		/// <summary>
 		/// Deletes the document for the specified id asynchronously
 		/// </summary>
 		/// <param name="id">The id.</param>
 		public Task DeleteDocumentAsync(string id)
 		{
-#if !SILVERLIGHT
-			throw new NotImplementedException();
-#else
 			return ExecuteWithReplication("DELETE", url =>
 			{
-			    return url.Docs(id)
+			    return url.Document(id)
 			        .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
 			        .ExecuteRequestAsync();
 			});
-#endif
 		}
 
 		/// <summary>
