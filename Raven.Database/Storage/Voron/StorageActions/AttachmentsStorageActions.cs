@@ -44,7 +44,7 @@ namespace Raven.Database.Storage.Voron
 			var dataKey = Util.DataKey(lowercaseKey);
 			var metadataKey = Util.MetadataKey(lowercaseKey);
 
-			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.KeyByEtag);
+			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
 			var isUpdate = attachmentsTable.Contains(snapshot, lowercaseKey);			
 			if (isUpdate)
 			{

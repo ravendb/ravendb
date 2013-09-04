@@ -148,7 +148,7 @@
 
 		public Etag GetMostRecentAttachmentEtag()
 		{
-			var attachmentsByEtag = tableStorage.Attachments.GetIndex(Tables.Attachments.Indices.KeyByEtag);
+			var attachmentsByEtag = tableStorage.Attachments.GetIndex(Tables.Attachments.Indices.ByEtag);
 			using (var iterator = attachmentsByEtag.Iterate(snapshot))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
