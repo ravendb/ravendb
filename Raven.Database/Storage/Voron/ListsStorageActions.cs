@@ -42,7 +42,7 @@ namespace Raven.Database.Storage.Voron
 
 			var etag = generator.CreateSequentialUuid(type);
 
-			tableStorage.Lists.AddOrUpdate(
+			tableStorage.Lists.Add(
 				writeBatch,
 				etag.ToString(),
 				new RavenJObject

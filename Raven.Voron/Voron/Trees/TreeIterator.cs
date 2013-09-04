@@ -27,6 +27,17 @@ namespace Voron.Trees
             return NodeHeader.GetDataSize(_tx, Current);
         }
 
+	    public void Skip(int skipCount)
+	    {
+            var moveMethod = (skipCount > 0) ? (Func<bool>)MoveNext : MovePrev;
+
+	        for (int skipIndex = 0; skipIndex < Math.Abs(skipCount); skipIndex++)
+	        {
+	            if(!moveMethod())
+                    break;	            
+	        }
+	    }
+
 		public bool Seek(Slice key)
 		{
 			_currentPage = _tree.FindPageFor(_tx, key, _cursor);

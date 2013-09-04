@@ -223,7 +223,7 @@ namespace Raven.Tests.Helpers
 			if (storageType == "munin")
 				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
 			else if (storageType == "voron")
-				newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
+				newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(),RunInMemory = true }, () => { });
 			else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
 
