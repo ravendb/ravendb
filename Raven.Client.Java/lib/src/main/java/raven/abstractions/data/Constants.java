@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public class Constants {
 
-  public static final String VERSION = "1.0-SNAPSHOT";
+  public static final String VERSION = "3.0.0.0";
 
   public final static String RAVEN_CLIENT_PRIMARY_SERVER_URL = "Raven-Client-Primary-Server-Url";
   public final static String RAVEN_CLIENT_PRIMARY_SERVER_LAST_CHECK = "Raven-Client-Primary-Server-LastCheck";

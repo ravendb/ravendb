@@ -682,7 +682,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   @SuppressWarnings("unchecked")
-  protected <T> Lazy<T> addLazyOperation(final ILazyOperation operation, final Action1<T> onEval) {
+  public <T> Lazy<T> addLazyOperation(final ILazyOperation operation, final Action1<T> onEval) {
     pendingLazyOperations.add(operation);
     Lazy<T> lazyValue = new Lazy<>(new Function0<T>() {
       @Override

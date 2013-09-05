@@ -30,7 +30,9 @@ import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.IRavenQueryInspector;
 import raven.client.document.DocumentQueryCustomizationFactory;
+import raven.client.document.DocumentSession;
 import raven.client.document.InMemoryDocumentSessionOperations;
+import raven.client.document.LazyFacetsOperation;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
@@ -271,8 +273,15 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
 
   @Override
   public Lazy<FacetResults> toFacetsLazy(List<Facet> facets, int start, Integer pageSize) {
-    // TODO Auto-generated method stub
-    return null;
+    List<Facet> facetsList = facets;
+    if (facetsList.isEmpty()) {
+      throw new IllegalArgumentException("Facets must contain at least one entry");
+    }
+    IndexQuery query = getIndexQuery();
+
+    LazyFacetsOperation lazyOperation = new LazyFacetsOperation(getIndexQueried(), facetsList, query, start, pageSize);
+    DocumentSession session = (DocumentSession) getSession();
+    return session.addLazyOperation(lazyOperation, null);
   }
 
   @Override
@@ -287,8 +296,11 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
 
   @Override
   public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc, int start, Integer pageSize) {
-    // TODO Auto-generated method stub
-    return null;
+    IndexQuery query = getIndexQuery();
+
+    LazyFacetsOperation lazyOperation = new LazyFacetsOperation(getIndexQueried(), facetSetupDoc, query, start, pageSize);
+    DocumentSession documentSession = (DocumentSession) getSession();
+    return documentSession.addLazyOperation(lazyOperation, null);
   }
 
   @Override

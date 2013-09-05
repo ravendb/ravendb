@@ -36,7 +36,11 @@ public class ConditionalGetHelper {
     }
     HttpResponse response = getHttpResponseHandle304(getRequest);
 
-    responseEtag.value = HttpExtensions.getEtagHeader(response);
+    try {
+      responseEtag.value = HttpExtensions.getEtagHeader(response);
+    } catch (Exception e) {
+      responseEtag.value = null;
+    }
 
     EntityUtils.consumeQuietly(response.getEntity());
 
@@ -53,7 +57,7 @@ public class ConditionalGetHelper {
     HttpResponse response = getHttpResponseHandle304(request);
 
     try {
-    responseEtag.value = HttpExtensions.getEtagHeader(response);
+      responseEtag.value = HttpExtensions.getEtagHeader(response);
     } catch (Exception e) {
       responseEtag.value = null;
     }
