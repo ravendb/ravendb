@@ -770,17 +770,15 @@ namespace Raven.Database.Indexing
 			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers,
 			Reference<int> totalResults)
 		{
-            // TODO: Look up by name
-		    throw new NotImplementedException();
-	//		Index value;
-	//		if (indexes.TryGetValue(index, out value) == false)
-	//		{
-	//			log.Debug("Query on non existing index '{0}'", index);
-	//			throw new InvalidOperationException("Index '" + index + "' does not exists");
-	//		}
+      Index value = TryIndexByName(indexName);
+      if (value == null)
+      {
+        log.Debug("Query on non existing index '{0}'", indexName);
+        throw new InvalidOperationException("Index '" + indexName + "' does not exists");
+      }
 
-	//		var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, AggregationOperation.None, null), indexQueryTriggers);
-	//		return indexQueryOperation.IndexEntries(totalResults);
+      var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, AggregationOperation.None, null), indexQueryTriggers);
+      return indexQueryOperation.IndexEntries(totalResults);
 		}
 
 		protected internal static IDisposable EnsureInvariantCulture()
