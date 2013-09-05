@@ -456,6 +456,8 @@ more responsive application.
 		/// <returns></returns>
 		object ConvertToEntity(Type entityType, string id, RavenJObject documentFound, RavenJObject metadata)
 		{
+			try
+			{
 			if (entityType == typeof(RavenJObject))
 				return (object)documentFound.CloneToken();
 
@@ -498,6 +500,10 @@ more responsive application.
 
 			return entity;
 		}
+			catch (Exception ex)
+			{
+				throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + entityType, ex);
+			}
 		}
 
 		private void RegisterMissingProperties(object o, string key, JToken value)
@@ -566,6 +572,8 @@ more responsive application.
 		/// <returns></returns>
 		protected object ConvertToEntity<T>(string id, RavenJObject documentFound, RavenJObject metadata)
 		{
+			try
+			{
 			if (typeof(T) == typeof(RavenJObject))
 				return (T)(object)documentFound.CloneToken();
 
@@ -591,7 +599,7 @@ more responsive application.
 			{
 				var type = Type.GetType(documentType);
 				if (type != null)
-						entity = (T)documentFound.Deserialize(type, Conventions);
+					entity = (T)documentFound.Deserialize(type, Conventions);
 			}
 			if (Equals(entity, default(T)))
 			{
@@ -599,7 +607,7 @@ more responsive application.
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
-						entity = (T)(object)(new DynamicJsonObject(document));
+					entity = (T)(object)(new DynamicJsonObject(document));
 				}
 			}
 			GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
@@ -616,6 +624,10 @@ more responsive application.
 
 			return entity;
 		}
+			catch(Exception ex)
+			{
+				throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + typeof (T), ex);
+			}
 		}
 
 		private static void EnsureNotReadVetoed(RavenJObject metadata)
@@ -760,9 +772,9 @@ more responsive application.
 				string id;
 				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
 					return id;
-
+				
 				var key = await GenerateKeyAsync(entity);
-				// If we generated a new id, store it back into the Id field so the client has access to to it                    
+							// If we generated a new id, store it back into the Id field so the client has access to to it                    
 				if (key != null)
 					GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
 				return key;
@@ -812,7 +824,7 @@ more responsive application.
 
 			var result = await generator;
 			if (result != null && result.StartsWith("/"))
-				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
+					throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 
 			return result;
 		}
@@ -1217,11 +1229,11 @@ more responsive application.
 				{
 					IncludesUtil.Include(result, include, id =>
 					{
-						if (id == null)
+					    if (id == null)
 					        return false;
 						if (IsLoaded(id) == false)
 						{
-							RegisterMissing(id);
+						    RegisterMissing(id);
 						    return false;
 						}
 					    return true;
