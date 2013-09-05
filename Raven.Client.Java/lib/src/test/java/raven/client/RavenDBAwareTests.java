@@ -99,10 +99,6 @@ public abstract class RavenDBAwareTests {
   }
 
   protected void useFiddler(IDocumentStore store){
-    /*System.setProperty("http.proxyHost", "127.0.0.1");
-    System.setProperty("https.proxyHost", "127.0.0.1");
-    System.setProperty("http.proxyPort", "8888");
-    System.setProperty("https.proxyPort", "8888");*/
     HttpHost proxy = new HttpHost("127.0.0.1", 8888, "http");
     store.getJsonRequestFactory().getHttpClient().getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
   }
