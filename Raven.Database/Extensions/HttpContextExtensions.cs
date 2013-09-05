@@ -116,8 +116,9 @@ namespace Raven.Database.Extensions
 				HighlighterPreTags = context.Request.QueryString.GetValues("preTags"),
 				HighlighterPostTags = context.Request.QueryString.GetValues("postTags"),
                 ResultsTransformer = context.Request.QueryString["resultsTransformer"],
-                QueryInputs = context.ExtractQueryInputs()
-                };
+                QueryInputs = context.ExtractQueryInputs(),
+				ExplainScores = context.GetExplainScores()
+            };
 
 	
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;

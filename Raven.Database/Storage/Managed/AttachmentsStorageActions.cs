@@ -124,7 +124,7 @@ namespace Raven.Storage.Managed
 		{
 			return from key in storage.Attachments["ByKey"].SkipTo(new RavenJObject {{"key", idPrefix}})
 			       	.Skip(start)
-			       	.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
+			       	.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
 			       	.Take(pageSize)
 			       let attachment = GetAttachment(key.Value<string>("key"))
 			       select new AttachmentInformation

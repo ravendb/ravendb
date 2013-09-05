@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Commands;
@@ -16,12 +17,6 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
-using System.Collections.Specialized;
-#endif
 
 namespace Raven.Client.Connection
 {
@@ -35,6 +30,16 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <value>The operations headers.</value>
 		NameValueCollection OperationsHeaders { get; set; }
+
+		/// <summary>
+		/// Admin operations for current database
+		/// </summary>
+		IAdminDatabaseCommands Admin { get; }
+
+		/// <summary>
+		/// Admin operations performed against system database, like create/delete database
+		/// </summary>
+		IGlobalAdminDatabaseCommands GlobalAdmin { get; }
 
 		/// <summary>
 		/// Retrieves documents for the specified key prefix
@@ -270,7 +275,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale);
 
 		/// <summary>
@@ -297,7 +302,7 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
 
 		/// <summary>
@@ -305,8 +310,8 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
@@ -455,11 +460,6 @@ namespace Raven.Client.Connection
 		long NextIdentityFor(string name);
 
 		/// <summary>
-		/// Seeds the next identity value on the server
-		/// </summary>
-		long SeedIdentityFor(string name, long value);
-
-		/// <summary>
 		/// Get the full URL for the given document key
 		/// </summary>
 		string UrlFor(string documentKey);
@@ -500,6 +500,59 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
 		void PrepareTransaction(string txId);
+	}
+
+	public interface IGlobalAdminDatabaseCommands
+	{
+		/// <summary>
+		/// Get admin statistics
+		/// </summary>
+		AdminStatistics GetStatistics();
+
+		/// <summary>
+		/// Creates a database
+		/// </summary>
+		void CreateDatabase(DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Deteles a database with the specified name
+		/// </summary>
+		void DeleteDatabase(string dbName, bool hardDelete = false);
+
+		/// <summary>
+		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
+		/// </summary>
+		void CompactDatabase(string databaseName);
+
+        IDatabaseCommands Commands { get; }
+	}
+
+	public interface IAdminDatabaseCommands
+	{
+		/// <summary>
+		/// Disables all indexing
+		/// </summary>
+		void StopIndexing();
+
+		/// <summary>
+		/// Enables indexing
+		/// </summary>
+		void StartIndexing();
+
+		/// <summary>
+		/// Begins a backup operation
+		/// </summary>
+		void StartBackup(string backupLocation, DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Begins a restore operation
+		/// </summary>
+		void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+
+		/// <summary>
+		/// Get the indexing status
+		/// </summary>
+		string GetIndexingStatus();
 	}
 }
 #endif

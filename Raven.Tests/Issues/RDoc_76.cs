@@ -5,8 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
+using Raven.Client;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -58,28 +59,21 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					var mbs = session
-						.Query<MasterBedroom>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToList();
+					var mbs = session.Query<MasterBedroom>()
+					                 .Customize(x => x.WaitForNonStaleResults())
+					                 .ToList();
 				}
 
-				var mb = store.DatabaseCommands.Get("mb/1");
-				var gr = store.DatabaseCommands.Get("gr/2");
-				var b = store.DatabaseCommands.Get("b/3");
-				var rm = store.DatabaseCommands.Get("r/4");
-				var k = store.DatabaseCommands.Get("k/5");
-
-				Assert.NotNull(mb);
-				Assert.NotNull(gr);
-				Assert.NotNull(b);
-				Assert.NotNull(rm);
-				Assert.NotNull(k);
+				Assert.NotNull(store.DatabaseCommands.Get("mb/1"));
+				Assert.NotNull(store.DatabaseCommands.Get("gr/2"));
+				Assert.NotNull(store.DatabaseCommands.Get("b/3"));
+				Assert.NotNull(store.DatabaseCommands.Get("r/4"));
+				Assert.NotNull(store.DatabaseCommands.Get("k/5"));
 			}
 		}
 
 		[Fact]
-		public void RegisterIdConventionShouldWorkProperlyForDerivedTypesAsync()
+		public async Task RegisterIdConventionShouldWorkProperlyForDerivedTypesAsync()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -91,73 +85,63 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenAsyncSession())
 				{
-					session.Store(new MasterBedroom { Sth = "1" });
-					session.Store(new Guestroom { Sth = "2" });
-					session.Store(new Bedroom { Sth = "3" });
-					session.Store(new Room { Sth = "4" });
-					session.Store(new Kitchen { Sth = "5" });
+					await session.StoreAsync(new MasterBedroom { Sth = "1" });
+					await session.StoreAsync(new Guestroom { Sth = "2" });
+					await session.StoreAsync(new Bedroom { Sth = "3" });
+					await session.StoreAsync(new Room { Sth = "4" });
+					await session.StoreAsync(new Kitchen { Sth = "5" });
 
-					session.SaveChangesAsync().Wait();
+					await session.SaveChangesAsync();
 				}
 
-				using (var session = store.OpenSession())
+				using (var session = store.OpenAsyncSession())
 				{
-					var mbs = session
-						.Query<MasterBedroom>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToList();
+					var mbs = await session.Query<MasterBedroom>()
+					                       .Customize(x => x.WaitForNonStaleResults())
+					                       .ToListAsync();
 				}
 
-				var mb = store.DatabaseCommands.Get("mb/1");
-				var gr = store.DatabaseCommands.Get("gr/2");
-				var b = store.DatabaseCommands.Get("b/3");
-				var rm = store.DatabaseCommands.Get("r/4");
-				var k = store.DatabaseCommands.Get("k/5");
-
-				Assert.NotNull(mb);
-				Assert.NotNull(gr);
-				Assert.NotNull(b);
-				Assert.NotNull(rm);
-				Assert.NotNull(k);
+				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("mb/1"));
+				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("gr/2"));
+				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("b/3"));
+				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("r/4"));
+				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("k/5"));
 			}
 		}
 
 		[Fact]
-		public void ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
+		public async Task ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
 		{
-			var exception = Assert.Throws<InvalidOperationException>(() =>
+			using (var store = NewRemoteDocumentStore())
 			{
-				using (var store = NewRemoteDocumentStore())
+				store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, cmds, r) => new CompletedTask<string>("b/" + r.Sth));
+
+				using (var session = store.OpenSession())
 				{
-					store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, cmds, r) => new CompletedTask<string>("b/" + r.Sth));
-
-					using (var session = store.OpenSession())
-					{
-						session.Store(new Bedroom { Sth = "3" });
-
-						session.SaveChanges();
-					}
-				}
-			});
-
-			Assert.Equal("Id convention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
-
-			exception = Assert.Throws<InvalidOperationException>(() =>
-			{
-				using (var store = NewRemoteDocumentStore())
-				{
-					store.Conventions.RegisterIdConvention<Bedroom>((dbName, cmds, r) => "b/" + r.Sth);
-
-					using (var session = store.OpenAsyncSession())
+					var exception = Assert.Throws<InvalidOperationException>(() =>
 					{
 						session.Store(new Bedroom {Sth = "3"});
-
-						session.SaveChangesAsync().Wait();
-					}
+						session.SaveChanges();
+					});
+					Assert.Equal("Id convention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
 				}
-			});
+			}
 
-			Assert.Equal("Id convention for asynchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
+
+			using (var store = NewRemoteDocumentStore())
+			{
+				store.Conventions.RegisterIdConvention<Bedroom>((dbName, cmds, r) => "b/" + r.Sth);
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var exception = await AssertAsync.Throws<InvalidOperationException>(async () =>
+					{
+						 await session.StoreAsync(new Bedroom {Sth = "3"});
+						 await session.SaveChangesAsync();
+					});
+					Assert.Equal("Id convention for asynchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
+				}
+			}
 		}
 
 		[Fact]
@@ -171,28 +155,23 @@ namespace Raven.Tests.Issues
 				using (var session = store.OpenSession())
 				{
 					session.Store(new MasterBedroom { Sth = "1" });
-
 					session.SaveChanges();
 				}
 
 				using (var session = store.OpenSession())
 				{
-					var mbs = session
-						.Query<MasterBedroom>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToList();
+					var mbs = session.Query<MasterBedroom>()
+					                 .Customize(x => x.WaitForNonStaleResults())
+					                 .ToList();
 				}
 
-				var a = store.DatabaseCommands.Get("a/1");
-				var mb = store.DatabaseCommands.Get("mb/1");
-
-				Assert.Null(a);
-				Assert.NotNull(mb);
+				Assert.Null(store.DatabaseCommands.Get("a/1"));
+				Assert.NotNull(store.DatabaseCommands.Get("mb/1"));
 			}
 		}
 
 		[Fact]
-		public void RegisteringConventionForSameTypeShouldOverrideOldOneAsync()
+		public async Task RegisteringConventionForSameTypeShouldOverrideOldOneAsync()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -201,24 +180,19 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenAsyncSession())
 				{
-					session.Store(new MasterBedroom { Sth = "1" });
-
-					session.SaveChangesAsync().Wait();
+					await session.StoreAsync(new MasterBedroom { Sth = "1" });
+					await session.SaveChangesAsync();
 				}
 
-				using (var session = store.OpenSession())
+				using (var session = store.OpenAsyncSession())
 				{
-					var mbs = session
-						.Query<MasterBedroom>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToList();
+					var mbs = await session.Query<MasterBedroom>()
+					                       .Customize(x => x.WaitForNonStaleResults())
+					                       .ToListAsync();
 				}
 
-				var a = store.DatabaseCommands.Get("a/1");
-				var mb = store.DatabaseCommands.Get("mb/1");
-
-				Assert.Null(a);
-				Assert.NotNull(mb);
+				Assert.Null(store.DatabaseCommands.Get("a/1"));
+				Assert.NotNull(store.DatabaseCommands.Get("mb/1"));
 			}
 		}
 	}

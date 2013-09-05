@@ -4,20 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Changes;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Extensions
 {
-	using Raven.Client.Connection.Async;
-	using System.Threading.Tasks;
-	using Raven.Client.Indexes;
-
 	///<summary>
 	/// Extension methods to create multitenant databases
 	///</summary>
@@ -30,24 +25,22 @@ namespace Raven.Client.Extensions
 		/// <remarks>
 		/// This operation happens _outside_ of any transaction
 		/// </remarks>
-		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
+		public static void EnsureDatabaseExists(this IGlobalAdminDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForSystemDatabase() as ServerClient;
+			var serverClient = self.Commands.ForSystemDatabase() as ServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Multiple databases are not supported in the embedded API currently");
 
 			serverClient.ForceReadFromMaster();
 
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
-			var docId = "Raven/Databases/" + name;
+
 			try
 			{
-				if (serverClient.Get(docId) != null)
+				if (serverClient.Get(doc.Id) != null)
 					return;
 
-				var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
-				req.Write(doc.ToString(Formatting.Indented));
-				req.ExecuteRequest();
+				serverClient.GlobalAdmin.CreateDatabase(doc);
 			}
 			catch (Exception)
 			{
@@ -65,123 +58,59 @@ namespace Raven.Client.Extensions
 			}
 		}
 
+		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
+		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
+		{
+			self.GlobalAdmin.EnsureDatabaseExists(name, ignoreFailures);
+		}
+
+		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.Admin.CreateDatabase instead.")]
 		public static void CreateDatabase(this IDatabaseCommands self, DatabaseDocument databaseDocument)
 		{
-			var serverClient = self.ForSystemDatabase() as ServerClient;
-			if (serverClient == null)
-				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
-
-			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
-			var doc = RavenJObject.FromObject(databaseDocument);
-			doc.Remove("Id");
-
-			var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
-			req.Write(doc.ToString(Formatting.Indented));
-			req.ExecuteRequest();
+			self.GlobalAdmin.CreateDatabase(databaseDocument);
 		}
+
 #endif
 
-#if SILVERLIGHT || NETFX_CORE
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
-		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
+		public static async Task EnsureDatabaseExistsAsync(this IAsyncGlobalAdminDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
-			if (serverClient == null)
-				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
-
-			serverClient.ForceReadFromMaster();
-			
-			var doc = MultiDatabase.CreateDatabaseDocument(name);
-			var docId = "Raven/Databases/" + name;
-
-			return serverClient.GetAsync(docId)
-				.ContinueWith(get =>
-				{
-					if (get.Result != null)
-						return get;
-
-
-					return (Task)serverClient.PutAsync(docId, null, doc, new RavenJObject());
-				})
-				.Unwrap()
-				.ContinueWith(x=>
-				{
-					if (ignoreFailures == false)
-						x.Wait(); // will throw on error
-
-					var observedException = x.Exception;
-					GC.KeepAlive(observedException);
-				});
-		}
-
-		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
-		{
-			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
-			if (serverClient == null)
-				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
-
-			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
-			var doc = RavenJObject.FromObject(databaseDocument);
-			doc.Remove("Id");
-
-			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
-			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
-		}
-#else
-		///<summary>
-		/// Ensures that the database exists, creating it if needed
-		///</summary>
-		public static async Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
-		{
-			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
+			var serverClient = ((IAsyncDatabaseCommands)self).ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
-			var docId = "Raven/Databases/" + name;
 
 			serverClient.ForceReadFromMaster();
 
-			var get = await serverClient.GetAsync(docId);
+			var get = await serverClient.GetAsync(doc.Id);
 			if (get != null)
 				return;
 
-			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(name), "PUT");
-			req.Write(doc.ToString(Formatting.Indented));
 			try
 			{
-				await req.ExecuteRequestAsync();
+				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc);
 			}
 			catch (Exception)
 			{
-				if (ignoreFailures)
-					return;
+				if (ignoreFailures == false)
+					throw;
 			}
 			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
 		}
 
-		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
+		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
+		public static Task EnsureDatabaseExists(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
-			if (serverClient == null)
-				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
-
-			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
-			var doc = RavenJObject.FromObject(databaseDocument);
-			doc.Remove("Id");
-
-			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
-			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
+			return self.GlobalAdmin.EnsureDatabaseExistsAsync(name, ignoreFailures);
 		}
 
-#endif
+		[Obsolete("The method was moved to be under the Admin property. Use the store.AsyncDatabaseCommands.Admin.CreateDatabaseAsync instead.")]
+		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument)
+		{
+			return self.GlobalAdmin.CreateDatabaseAsync(databaseDocument);
+		}
 	}
 }

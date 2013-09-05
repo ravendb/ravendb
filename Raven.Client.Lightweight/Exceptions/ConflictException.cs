@@ -41,6 +41,7 @@ namespace Raven.Client.Exceptions
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
 		/// <param name="message">The message.</param>
+		/// <param name="properlyHandlesClientSideResolution"></param>
 		public ConflictException(string message, bool properlyHandlesClientSideResolution)
 			: base(message)
 		{

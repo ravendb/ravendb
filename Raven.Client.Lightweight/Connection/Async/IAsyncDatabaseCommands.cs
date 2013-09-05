@@ -35,8 +35,17 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }
+
+		/// <summary>
+		/// Admin operations performed against system database, like create/delete database
+		/// </summary>
 		IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get; }
+
+		/// <summary>
+		/// Admin operations for current database
+		/// </summary>
 		IAsyncAdminDatabaseCommands Admin { get; }
+		
 		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
@@ -140,7 +149,15 @@ namespace Raven.Client.Connection.Async
 		Task DeleteIndexAsync(string name);
 
 		/// <summary>
-		/// Perform a set based deletes using the specified index.
+		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete);
+
+		/// <summary>
+		/// Perform a set based deletes using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
@@ -307,7 +324,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
@@ -344,31 +361,6 @@ namespace Raven.Client.Connection.Async
 		/// Gets the build number
 		/// </summary>
 		Task<BuildNumber> GetBuildNumberAsync();
-
-		/// <summary>
-		/// Begins an async backup operation
-		/// </summary>
-		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
-
-		/// <summary>
-		/// Begins an async restore operation
-		/// </summary>
-		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
-
-		/// <summary>
-		/// Sends an async command that enables indexing
-		/// </summary>
-		Task StartIndexingAsync();
-
-		/// <summary>
-		/// Sends an async command that disables all indexing
-		/// </summary>
-		Task StopIndexingAsync();
-
-		/// <summary>
-		/// Get the indexing status
-		/// </summary>
-		Task<string> GetIndexingStatusAsync();
 
 		/// <summary>
 		/// Get documents with id of a specific prefix
@@ -415,11 +407,49 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <returns></returns>
 		Task<AdminStatistics> GetStatisticsAsync();
+
+		/// <summary>
+		/// Sends an async command to create a database
+		/// </summary>
+		Task CreateDatabaseAsync(DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Sends an async command to delete a database
+		/// </summary>
+		Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false);
+
+		/// <summary>
+		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
+		/// </summary>
+		Task CompactDatabaseAsync(string databaseName);
 	}
 	
 	public interface IAsyncAdminDatabaseCommands
 	{
-		
+		/// <summary>
+		/// Sends an async command that disables all indexing
+		/// </summary>
+		Task StopIndexingAsync();
+
+		/// <summary>
+		/// Sends an async command that enables indexing
+		/// </summary>
+		Task StartIndexingAsync();
+
+		/// <summary>
+		/// Begins an async backup operation
+		/// </summary>
+		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Begins an async restore operation
+		/// </summary>
+		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+
+		/// <summary>
+		/// Get the indexing status
+		/// </summary>
+		Task<string> GetIndexingStatusAsync();
 	}
 
 	public interface IAsyncInfoDatabaseCommands

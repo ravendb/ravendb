@@ -210,6 +210,11 @@ namespace Raven.Client.Document
 		protected bool disableCaching;
 
 		/// <summary>
+		/// Determine if scores of query results should be explained
+		/// </summary>
+		protected bool shouldExplainScores;
+
+		/// <summary>
 		///   Get the name of the index being queried
 		/// </summary>
 		public string IndexQueried
@@ -370,6 +375,7 @@ namespace Raven.Client.Document
 		    queryInputs = other.queryInputs;
 			disableEntitiesTracking = other.disableEntitiesTracking;
 			disableCaching = other.disableCaching;
+			shouldExplainScores = other.shouldExplainScores;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -718,25 +724,22 @@ namespace Raven.Client.Document
 		///   Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
-		public Task<QueryResult> QueryResultAsync
+		public async Task<QueryResult> QueryResultAsync()
 		{
-			get
-			{
-				return InitAsync()
-					.ContinueWith(x => x.Result.CurrentQueryResults.CreateSnapshot());
-			}
+			var result = await InitAsync();
+			return result.CurrentQueryResults.CreateSnapshot();
 		}
 
-		protected virtual Task<QueryOperation> InitAsync()
+		protected virtual async Task<QueryOperation> InitAsync()
 		{
 			if (queryOperation != null)
-				return CompletedTask.With(queryOperation);
+				return queryOperation;
 			ClearSortHints(AsyncDatabaseCommands);
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
 			theSession.IncrementRequestCount();
-			return ExecuteActualQueryAsync();
+			return await ExecuteActualQueryAsync();
 		}
 
 		protected void ExecuteBeforeQueryListeners()
@@ -895,22 +898,21 @@ namespace Raven.Client.Document
 		}
 #endif
 
-		private Task<Tuple<QueryOperation,IList<T>>> ProcessEnumerator(Task<QueryOperation> task)
+		private async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
 		{
-			var currentQueryOperation = task.Result;
 			try
 			{
 				var list = currentQueryOperation.Complete<T>();
-				return Task.Factory.StartNew(() => Tuple.Create(currentQueryOperation, list));
+				return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
 			}
 			catch (Exception e)
 			{
 				if (queryOperation.ShouldQueryAgain(e) == false)
 					throw;
-				return ExecuteActualQueryAsync()
-					.ContinueWith(t => ProcessEnumerator(t))
-					.Unwrap();
 			}
+
+			var result = await ExecuteActualQueryAsync();
+			return await ProcessEnumerator(result);
 		}
 
 		/// <summary>
@@ -1695,42 +1697,25 @@ If you really want to do in memory filtering on the data returned from the query
 
 		#endregion
 
-		protected virtual Task<QueryOperation> ExecuteActualQueryAsync()
+		protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
 		{
-			using(queryOperation.EnterQueryContext())
+			using (queryOperation.EnterQueryContext())
 			{
 				queryOperation.LogQuery();
-				return theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray())
-					.ContinueWith(task =>
+				var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+
+				if (queryOperation.IsAcceptable(result) == false)
 					{
-						if (queryOperation.IsAcceptable(task.Result) == false)
-						{
-							return TaskDelay(100)
-								.ContinueWith(_ => ExecuteActualQueryAsync())
-								.Unwrap();
+#if SILVERLIGHT
+					await TaskEx.Delay(100);
+#else
+					await Task.Delay(100);
+#endif
+					return await ExecuteActualQueryAsync();
 						}
 						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-						return Task.Factory.StartNew(() => queryOperation);
-					}).Unwrap();
+				return queryOperation;
 			}
-		}
-
-		private static Task TaskDelay(int dueTimeMilliseconds)
-		{
-#if NETFX_CORE
-			return Task.Delay(dueTimeMilliseconds);
-#else
-			var taskCompletionSource = new TaskCompletionSource<object>();
-			var cancellationTokenRegistration = new CancellationTokenRegistration();
-			var timer = new Timer(o =>
-			{
-				cancellationTokenRegistration.Dispose();
-				((Timer)o).Dispose();
-				taskCompletionSource.TrySetResult(null);
-			});
-			timer.Change(dueTimeMilliseconds, -1);
-			return taskCompletionSource.Task;
-#endif
 		}
 
 		/// <summary>
@@ -1768,7 +1753,8 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
                     QueryInputs  = queryInputs,
-					DisableCaching = disableCaching
+					DisableCaching = disableCaching,
+					ExplainScores = shouldExplainScores
 				};
 			}
 
@@ -1789,7 +1775,8 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
                 QueryInputs = queryInputs,
-				DisableCaching = disableCaching
+				DisableCaching = disableCaching,
+				ExplainScores = shouldExplainScores
 			};
 
 			if (pageSize != null)
@@ -2075,23 +2062,23 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public Task<IList<T>> ToListAsync()
+		public async Task<IList<T>> ToListAsync()
 		{
-			return InitAsync()
-				.ContinueWith(t => ProcessEnumerator(t))
-				.Unwrap()
-				.ContinueWith(t => t.Result.Item2);
+			var currentQueryOperation = await InitAsync();
+			var tuple = await ProcessEnumerator(currentQueryOperation);
+			return tuple.Item2;
 		}
 
 		/// <summary>
 		/// Gets the total count of records for this query
 		/// </summary>
-		public Task<int> CountAsync()
+		public async Task<int> CountAsync()
 		{
 			Take(0);
-			return QueryResultAsync
-				.ContinueWith(r => r.Result.TotalResults);
+			var result = await QueryResultAsync();
+			return result.TotalResults;
 		}
+
 		public string GetMemberQueryPathForOrderBy(Expression expression)
 		{
 			var memberQueryPath = GetMemberQueryPath(expression);

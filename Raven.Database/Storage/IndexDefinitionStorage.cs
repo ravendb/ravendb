@@ -350,7 +350,7 @@ namespace Raven.Database.Storage
 		        return index;
             index = index.Trim();
             string prefix = null;
-            if (index.StartsWith("Temp/") || index.StartsWith("Auto/"))
+			if (index.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase) || index.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
             {
                 prefix = index.Substring(0, 5);
             }

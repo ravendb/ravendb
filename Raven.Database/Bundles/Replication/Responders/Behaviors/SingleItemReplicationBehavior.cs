@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -49,8 +50,11 @@ namespace Raven.Bundles.Replication.Responders
 
 			// we just got the same version from the same source - request playback again?
 			// at any rate, not an error, moving on
-			if (existingMetadata.Value<string>(Constants.RavenReplicationSource) == metadata.Value<string>(Constants.RavenReplicationSource)
-				&& existingMetadata.Value<long>(Constants.RavenReplicationVersion) == metadata.Value<long>(Constants.RavenReplicationVersion))
+			if (existingMetadata.Value<string>(Constants.RavenReplicationSource) ==
+			    metadata.Value<string>(Constants.RavenReplicationSource)
+			    &&
+			    existingMetadata.Value<long>(Constants.RavenReplicationVersion) ==
+			    metadata.Value<long>(Constants.RavenReplicationVersion))
 			{
 				return;
 			}
@@ -58,8 +62,10 @@ namespace Raven.Bundles.Replication.Responders
 
 			var existingDocumentIsInConflict = existingMetadata[Constants.RavenReplicationConflict] != null;
 
-			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
-				(Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))		// this update is direct child of the existing doc, so we are fine with overwriting this
+			if (existingDocumentIsInConflict == false &&
+			    // if the current document is not in conflict, we can continue without having to keep conflict semantics
+			    (Historian.IsDirectChildOfCurrent(metadata, existingMetadata)))
+				// this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
 
@@ -93,19 +99,19 @@ namespace Raven.Bundles.Replication.Responders
 				var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
 
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
-												  existingMetadata);
+					existingMetadata);
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-																	Database.RaiseNotifications(new ReplicationConflictNotification()
-																	{
-																		Id = id,
-																		Etag = createdConflict.Etag,
-																		ItemType = ReplicationConflict,
-																		OperationType = ReplicationOperationTypes.Put,
-																		Conflicts = createdConflict.ConflictedIds
-																	}));
-			}
+				Database.RaiseNotifications(new ReplicationConflictNotification()
+				                            {
+					                            Id = id,
+					                            Etag = createdConflict.Etag,
+					                            ItemType = ReplicationConflict,
+					                            OperationType = ReplicationOperationTypes.Put,
+					                            Conflicts = createdConflict.ConflictedIds
+				                            }));
+		}
 
 		protected abstract ReplicationConflictTypes ReplicationConflict { get; }
 
@@ -117,7 +123,7 @@ namespace Raven.Bundles.Replication.Responders
 			AddWithoutConflict(
 				newDocumentConflictId,
 				null, // we explicitly want to overwrite a document if it already exists, since it  is known uniuque by the key 
-				metadata, 
+				metadata,
 				incoming);
 			return newDocumentConflictId;
 		}
@@ -146,13 +152,13 @@ namespace Raven.Bundles.Replication.Responders
 
 
 				if (metadata.ContainsKey(Constants.RavenReplicationVersion) &&
-					metadata.ContainsKey(Constants.RavenReplicationSource))
+				    metadata.ContainsKey(Constants.RavenReplicationSource))
 				{
 					existingHistory.Add(new RavenJObject
-						{
-							{Constants.RavenReplicationVersion, metadata[Constants.RavenReplicationVersion]},
-							{Constants.RavenReplicationSource, metadata[Constants.RavenReplicationSource]}
-						});
+					                    {
+						                    {Constants.RavenReplicationVersion, metadata[Constants.RavenReplicationVersion]},
+						                    {Constants.RavenReplicationSource, metadata[Constants.RavenReplicationSource]}
+					                    });
 				}
 
 				while (existingHistory.Length > Constants.ChangeHistoryLength)
@@ -163,7 +169,7 @@ namespace Raven.Bundles.Replication.Responders
 				MarkAsDeleted(id, metadata);
 				return;
 			}
-			if (Historian.IsDirectChildOfCurrent(metadata, existingMetadata))// not modified
+			if (Historian.IsDirectChildOfCurrent(metadata, existingMetadata)) // not modified
 			{
 				log.Debug("Delete of existing item {0} was replicated successfully from {1}", id, Src);
 				DeleteItem(id, existingEtag);
@@ -190,16 +196,16 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-														Database.RaiseNotifications(new ReplicationConflictNotification()
-														{
-															Id = id,
-															Etag = createdConflict.Etag,
-															Conflicts = createdConflict.ConflictedIds,
-															ItemType = ReplicationConflictTypes.DocumentReplicationConflict,
-															OperationType = ReplicationOperationTypes.Delete
-														}));
+				Database.RaiseNotifications(new ReplicationConflictNotification()
+				                            {
+					                            Id = id,
+					                            Etag = createdConflict.Etag,
+					                            Conflicts = createdConflict.ConflictedIds,
+					                            ItemType = ReplicationConflictTypes.DocumentReplicationConflict,
+					                            OperationType = ReplicationOperationTypes.Delete
+				                            }));
 
-			}
+		}
 
 		protected abstract void DeleteItem(string id, Etag etag);
 
@@ -207,22 +213,31 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected abstract void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, TExternal incoming);
 
-		protected abstract CreatedConflict CreateConflict(string id, string newDocumentConflictId, string existingDocumentConflictId, TInternal existingItem, RavenJObject existingMetadata);
+		protected abstract CreatedConflict CreateConflict(string id, string newDocumentConflictId,
+			string existingDocumentConflictId, TInternal existingItem, RavenJObject existingMetadata);
 
-		protected abstract CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, TInternal existingItem);
+		protected abstract CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId,
+			RavenJObject existingMetadata, TInternal existingItem);
 
-		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag, out bool deleted);
+		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag,
+			out bool deleted);
 
 		protected abstract bool TryResolveConflict(string id, RavenJObject metadata, TExternal document,
-												  TInternal existing);
+			TInternal existing);
 
 
 		private static string HashReplicationIdentifier(RavenJObject metadata)
 		{
 			using (var md5 = MD5.Create())
 			{
-				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + metadata.Value<string>("@etag"));
-				return new Guid(md5.ComputeHash(bytes)).ToString();
+				var bytes =
+					Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" +
+					                       metadata.Value<string>("@etag"));
+
+				var hash = Encryptor.Current.Hash.Compute16(bytes);
+				Array.Resize(ref hash, 16);
+
+				return new Guid(hash).ToString();
 			}
 		}
 
@@ -231,7 +246,11 @@ namespace Raven.Bundles.Replication.Responders
 			using (var md5 = MD5.Create())
 			{
 				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
-				return new Guid(md5.ComputeHash(bytes)).ToString();
+
+				var hash = Encryptor.Current.Hash.Compute16(bytes);
+				Array.Resize(ref hash, 16);
+
+				return new Guid(hash).ToString();
 			}
 		}
 	}

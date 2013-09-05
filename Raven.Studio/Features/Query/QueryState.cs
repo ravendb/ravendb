@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Abstractions.Util;
 using System.Linq;
 using Raven.Studio.Models;
 

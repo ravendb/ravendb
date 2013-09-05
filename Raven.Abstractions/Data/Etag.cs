@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text;
 using System.Linq;
 #if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Abstractions.Util;
 #else
 using System.Security.Cryptography;
 #endif

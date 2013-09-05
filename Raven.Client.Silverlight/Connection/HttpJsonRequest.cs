@@ -5,15 +5,17 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Net.Browser;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Ionic.Zlib;
 using Raven.Abstractions.Util;
-using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -35,12 +37,17 @@ namespace Raven.Client.Silverlight.Connection
 	/// </summary>
 	public class HttpJsonRequest
 	{
-		private readonly string url;
+		internal readonly string Url;
+		internal readonly string Method;
 		private readonly DocumentConvention conventions;
-		internal volatile HttpWebRequest webRequest;
+
+		private bool writeCalled;
+		private HttpClientHandler handler;
+		internal HttpClient httpClient;
+
 		private byte[] postedData;
 		private int retries;
-		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
+		public static readonly string ClientVersion = new AssemblyName(typeof (HttpJsonRequest).Assembly.FullName).Version.ToString();
 		private bool disabledAuthRetries;
 
 		private string primaryUrl;
@@ -49,42 +56,29 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
-		public string ContentType
-		{
-			get { return webRequest.ContentType; }
-			set { webRequest.ContentType = value; }
-		}
-
-		public WebHeaderCollection Headers
-		{
-			get { return webRequest.Headers; }
-		}
-
-		private Task RecreateWebRequest(Action<HttpWebRequest> result)
+		private async Task RecreateWebRequest(Action<HttpClient> result)
 		{
 			retries++;
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
-			var newWebRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
-			newWebRequest.Method = webRequest.Method;
-			HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
-			newWebRequest.Credentials = webRequest.Credentials;
-			result(newWebRequest);
-			webRequest = newWebRequest;
+			var newHttpClient = new HttpClient(new HttpClientHandler
+			{
+				Credentials = handler.Credentials,
+			});
+			// HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			result(newHttpClient);
+			httpClient = newHttpClient;
 			requestSendToServer = false;
 
 			if (postedData == null)
-			{
-				var taskCompletionSource = new TaskCompletionSource<object>();
-				taskCompletionSource.SetResult(null);
-				return taskCompletionSource.Task;
-			}
-			else return WriteAsync(postedData);
+				return;
+
+			await WriteAsync(postedData);
 		}
 
 		public void DisableAuthentication()
 		{
-			webRequest.Credentials = null;
-			webRequest.UseDefaultCredentials = false;
+			handler.Credentials = null;
+			handler.UseDefaultCredentials = false;
 			disabledAuthRetries = true;
 		}
 
@@ -105,32 +99,37 @@ namespace Raven.Client.Silverlight.Connection
 
 		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
-			this.url = requestParams.Url;
-			this.conventions = requestParams.Convention;
+			Url = requestParams.Url;
+			Method = requestParams.Method;
+			conventions = requestParams.Convention;
 			this.factory = factory;
-			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
+			
 			noopWaitForTask = new CompletedTask();
 			WaitForTask = noopWaitForTask;
 
-			webRequest.Headers["Raven-Client-Version"] = ClientVersion;
+			handler = new HttpClientHandler
+			{
+				
+			};
+			httpClient = new HttpClient(handler);
+			httpClient.DefaultRequestHeaders.Add("Raven-Client-Version", ClientVersion);
 
 			WriteMetadata(requestParams.Metadata);
-			webRequest.Method = requestParams.Method;
 			if (requestParams.Method != "GET")
-				webRequest.ContentType = "application/json; charset=utf-8";
+				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") {CharSet = "utf-8"});
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
 				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
-					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
-					webRequest.Headers["Content-Encoding"] = "gzip";
+				    requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
 			}
 		}
 
-		public Task<RavenJToken> ReadResponseJsonAsync()
+		public async Task<RavenJToken> ReadResponseJsonAsync()
 		{
-			return ReadResponseStringAsync()
-				.ContinueWith(task => RavenJToken.Parse(task.Result));
+			var result = await ReadResponseStringAsync();
+			return RavenJToken.Parse(result);
 		}
 
 		public Task ExecuteRequestAsync()
@@ -143,25 +142,49 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		private Task<string> ReadResponseStringAsync()
+		private async Task<string> ReadResponseStringAsync()
 		{
 			if (requestSendToServer)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 
 			requestSendToServer = true;
 
-			return WaitForTask.ContinueWith(_ => webRequest
-													.GetResponseAsync()
-													.ConvertSecurityExceptionToServerNotFound()
-                                                    .MaterializeBadRequestAsException()
-													.AddUrlIfFaulting(webRequest.RequestUri)
-													.ContinueWith(t => ReadStringInternal(() => t.Result))
-													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
-													.Unwrap())
-													.Unwrap();
+			await WaitForTask;
+
+			if (writeCalled == false)
+			{
+				Task<HttpResponseMessage> sendTask;
+				try
+				{
+					sendTask = httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
+						.ConvertSecurityExceptionToServerNotFound()
+						// .MaterializeBadRequestAsException()
+						.AddUrlIfFaulting(new Uri(Url));
+				}
+				catch (Exception e)
+				{
+					throw;
+				}
+				try
+				{
+					Response = await sendTask;
+				}
+				catch (Exception e)
+				{
+					throw;
+				}
+			}
+
+
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
+
+			return await ReadStringInternal();
+			//	 .ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync)).Unwrap()
+			;
 		}
 
-		private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
+		/*private Task<T> RetryIfNeedTo<T>(Task<T> task, Func<Task<T>> generator)
 		{
 			var exception = task.Exception.ExtractSingleInnerException() as WebException;
 			if (exception == null || retries >= 3 || disabledAuthRetries)
@@ -169,9 +192,9 @@ namespace Raven.Client.Silverlight.Connection
 
 			var webResponse = exception.Response as HttpWebResponse;
 			if (webResponse == null ||
-				(webResponse.StatusCode != HttpStatusCode.Unauthorized &&
-				 webResponse.StatusCode != HttpStatusCode.Forbidden &&
-				 webResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+			    (webResponse.StatusCode != HttpStatusCode.Unauthorized &&
+			     webResponse.StatusCode != HttpStatusCode.Forbidden &&
+			     webResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 				task.AssertNotFailed();
 
 			if (webResponse.StatusCode == HttpStatusCode.Forbidden)
@@ -185,20 +208,20 @@ namespace Raven.Client.Silverlight.Connection
 			if (authorizeResponse == null)
 			{
 				task.AssertNotFailed();
-				return task;// never get called
+				return task; // never get called
 			}
 
 
 			return authorizeResponse
 				.ContinueWith(task1 =>
 				{
-					task1.Wait();// throw if error
+					task1.Wait(); // throw if error
 					return generator();
 				})
 				.Unwrap();
-		}
+		}*/
 
-		private void HandleForbiddenResponseAsync(HttpWebResponse forbiddenResponse)
+		private void HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse)
 		{
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
@@ -206,34 +229,38 @@ namespace Raven.Client.Silverlight.Connection
 			conventions.HandleForbiddenResponseAsync(forbiddenResponse);
 		}
 
-		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
+		public async Task HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
-				return null;
+				return;
 
 			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
-
 			if (unauthorizedResponseAsync == null)
-				return null;
+				return;
 
-			return unauthorizedResponseAsync.ContinueWith(task => RecreateWebRequest(task.Result)).Unwrap();
+			var result = await unauthorizedResponseAsync;
+			// await RecreateWebRequest(result);
+			throw new NotImplementedException();
 		}
 
-		public Task<byte[]> ReadResponseBytesAsync()
+		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			return WaitForTask.ContinueWith(_ => webRequest
-													.GetResponseAsync()
-													.ConvertSecurityExceptionToServerNotFound()
-													.AddUrlIfFaulting(webRequest.RequestUri)
-													.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
-													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
-													.Unwrap())
-													.Unwrap();
+			await WaitForTask;
+			
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
+			                           .ConvertSecurityExceptionToServerNotFound()
+			                           .AddUrlIfFaulting(new Uri(Url));
+
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
+
+			// TODO: Use RetryIfNeedTo(task, ReadResponseBytesAsync)
+			return ConvertStreamToBytes(await Response.GetResponseStreamWithHttpDecompression());
 		}
 
-		static byte[] ConvertStreamToBytes(Stream input)
+		private static byte[] ConvertStreamToBytes(Stream input)
 		{
-			var buffer = new byte[16 * 1024];
+			var buffer = new byte[16*1024];
 			using (var ms = new MemoryStream())
 			{
 				int read;
@@ -245,37 +272,25 @@ namespace Raven.Client.Silverlight.Connection
 			}
 		}
 
-		private string ReadStringInternal(Func<WebResponse> getResponse)
+		private async Task<string> ReadStringInternal()
 		{
-			return ReadResponse(getResponse, responseStream =>
-				{
-					var reader = new StreamReader(responseStream);
-					var text = reader.ReadToEnd();
-					return text;
-				}
-			);
-
+			var responseStream = await Response.GetResponseStreamWithHttpDecompression();
+			var reader = new StreamReader(responseStream);
+			var text = reader.ReadToEnd();
+			return text;
 		}
 
-		private T ReadResponse<T>(Func<WebResponse> getResponse, Func<Stream, T> handleResponse)
+		/*private T ReadResponse<T>(Func<Stream, T> handleResponse)
 		{
-			WebResponse response;
-			try
-			{
-				response = getResponse();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-					throw;
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null ||
+				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+				httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				throw;
 
-				using (var sr = new StreamReader(e.Response.GetResponseStream()))
-				{
-					throw new InvalidOperationException(sr.ReadToEnd(), e);
-				}
+			using (var sr = new StreamReader(e.Response.GetResponseStream()))
+			{
+				throw new InvalidOperationException(sr.ReadToEnd(), e);
 			}
 
 			ResponseHeaders = new NameValueCollection();
@@ -284,13 +299,13 @@ namespace Raven.Client.Silverlight.Connection
 				ResponseHeaders[key] = response.Headers[key];
 			}
 
-			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+			ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
 
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				return handleResponse(responseStream);
 			}
-		}
+		}*/
 
 
 		/// <summary>
@@ -303,16 +318,8 @@ namespace Raven.Client.Silverlight.Connection
 		/// The task to wait all other actions on
 		/// </summary>
 		public Task WaitForTask { get; set; }
-		
-		public string Method
-		{
-			get { return webRequest.Method; }
-		}
 
-		public string Url
-		{
-			get { return webRequest.RequestUri.ToString(); }
-		}
+		public HttpResponseMessage Response { get; set; }
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
@@ -341,19 +348,30 @@ namespace Raven.Client.Silverlight.Connection
 				if (headerName == "ETag")
 					headerName = "If-None-Match";
 				if (headerName.StartsWith("@") ||
-					headerName == Constants.LastModified ||
-					headerName == Constants.RavenLastModified)
+				    headerName == Constants.LastModified ||
+				    headerName == Constants.RavenLastModified)
 					continue;
-				switch (headerName)
+
+				try
 				{
-					case "Content-Length":
-						break;
-					case "Content-Type":
-						webRequest.ContentType = value;
-						break;
-					default:
-						webRequest.Headers[headerName] = value;
-						break;
+					switch (headerName)
+					{
+						case "If-None-Match":
+							httpClient.DefaultRequestHeaders.IfNoneMatch.Add(new EntityTagHeaderValue("\"" + value + "\""));
+							break;
+						case "Content-Length":
+							break;
+						case "Content-Type":
+							httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
+							break;
+						default:
+							httpClient.DefaultRequestHeaders.TryAddWithoutValidation(headerName, value);
+							break;
+					}
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Make sure to set the header correctly.", e);
 				}
 			}
 		}
@@ -361,43 +379,36 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		public Task WriteAsync(string data)
+		public async Task WriteAsync(string data)
 		{
-			return WaitForTask.ContinueWith(_ =>
-											webRequest.GetRequestStreamAsync()
-												.ContinueWith(task =>
-												{
-													Stream dataStream = factory.DisableRequestCompression == false ?
-														new GZipStream(task.Result, CompressionMode.Compress) :
-														task.Result;
-													var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
-													return streamWriter.WriteAsync(data)
-														.ContinueWith(writeTask =>
-														{
-															streamWriter.Dispose();
-															dataStream.Dispose();
-															task.Result.Dispose();
-															return writeTask;
-														}).Unwrap();
-												}).Unwrap())
-				.Unwrap();
+			await WaitForTask;
+
+			writeCalled = true;
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
+			{
+				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
+			});
+
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 		}
+
 
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		public Task WriteAsync(byte[] byteArray)
+		public async Task WriteAsync(byte[] byteArray)
 		{
+			writeCalled = true;
 			postedData = byteArray;
-			return WaitForTask.ContinueWith(_ => webRequest.GetRequestStreamAsync().ContinueWith(t =>
+
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				var dataStream = new GZipStream(t.Result, CompressionMode.Compress);
-				using (dataStream)
-				{
-					dataStream.Write(byteArray, 0, byteArray.Length);
-					dataStream.Close();
-				}
-			})).Unwrap();
+				Content = new CompressedStreamContent(byteArray)
+			});
+
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 		}
 
 		/// <summary>
@@ -408,7 +419,7 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			foreach (var header in operationsHeaders)
 			{
-				webRequest.Headers[header.Key] = header.Value;
+				httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
 			}
 			return this;
 		}
@@ -418,13 +429,14 @@ namespace Raven.Client.Silverlight.Connection
 		/// </summary>
 		public HttpJsonRequest AddOperationHeader(string key, string value)
 		{
-			webRequest.Headers[key] = value;
+			httpClient.DefaultRequestHeaders.Add(key, value);
 			return this;
 		}
 
 		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
-			return WaitForTask.ContinueWith(__ =>
+			throw new NotImplementedException();
+			/*return WaitForTask.ContinueWith(__ =>
 			{
 				webRequest.AllowReadStreamBuffering = false;
 				webRequest.AllowWriteStreamBuffering = false;
@@ -481,31 +493,19 @@ namespace Raven.Client.Silverlight.Connection
 						   .Unwrap();
 				   }).Unwrap();
 			})
-				.Unwrap();
+				.Unwrap();*/
 		}
 
-		public Task ExecuteWriteAsync(string data)
+		public async Task ExecuteWriteAsync(string data)
 		{
-			return WriteAsync(data)
-				.ContinueWith(task =>
-								{
-									if (task.IsFaulted)
-										return task;
-									return ExecuteRequestAsync();
-								})
-				.Unwrap();
+			await WriteAsync(data);
+			await ExecuteRequestAsync();
 		}
 
-		public Task ExecuteWriteAsync(byte[] data)
+		public async Task ExecuteWriteAsync(byte[] data)
 		{
-			return WriteAsync(data)
-				.ContinueWith(task =>
-				{
-					if (task.IsFaulted)
-						return task;
-					return ExecuteRequestAsync();
-				})
-				.Unwrap();
+			await WriteAsync(data);
+			await ExecuteRequestAsync();
 		}
 
 		public double CalculateDuration()
@@ -521,8 +521,8 @@ namespace Raven.Client.Silverlight.Connection
 				return this; // not because of failover, no need to do this.
 
 			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
-			webRequest.Headers[Constants.RavenClientPrimaryServerUrl] = ToRemoteUrl(thePrimaryUrl);
-			webRequest.Headers[Constants.RavenClientPrimaryServerLastCheck] = lastPrimaryCheck.ToString("s");
+			httpClient.DefaultRequestHeaders.TryAddWithoutValidation(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
+			httpClient.DefaultRequestHeaders.TryAddWithoutValidation(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
 
 			primaryUrl = thePrimaryUrl;
 			operationUrl = currentUrl;
@@ -541,16 +541,19 @@ namespace Raven.Client.Silverlight.Connection
 		public void PrepareForLongRequest()
 		{
 			Timeout = TimeSpan.FromHours(6);
-			webRequest.AllowWriteStreamBuffering = false;
+			// webRequest.AllowWriteStreamBuffering = false;
 		}
 
 		public Task<Stream> GetRawRequestStream()
 		{
-			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
+			throw new NotImplementedException();
+			//	return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
 		public Task<WebResponse> RawExecuteRequestAsync()
 		{
+			throw new NotImplementedException();
+/*
 			if (requestSendToServer)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 
@@ -562,7 +565,7 @@ namespace Raven.Client.Silverlight.Connection
 													 .GetResponseAsync()
 													 .ConvertSecurityExceptionToServerNotFound()
 													 .AddUrlIfFaulting(webRequest.RequestUri))
-													 .Unwrap();
+													 .Unwrap();*/
 		}
 	}
 }

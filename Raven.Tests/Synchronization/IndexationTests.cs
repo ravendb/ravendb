@@ -120,6 +120,9 @@ namespace Raven.Tests.Synchronization
 										 .Take(1001)
 										 .ToList();
 
+
+					WaitForUserToContinueTheTest(store);
+
 					Assert.Equal(1000, results.Count);
 
 					foreach (var result in results)

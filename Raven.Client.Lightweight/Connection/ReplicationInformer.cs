@@ -27,6 +27,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -55,6 +56,11 @@ namespace Raven.Client.Connection
 		{
 			get { return replicationDestinations; }
 		}
+
+		/// <summary>
+		/// Urls of failover servers set manually in config file or when document store was initialized
+		/// </summary>
+		public string[] FailoverUrls { get; internal set; }
 
 		/// <summary>
 		/// Gets the replication destinations.
@@ -308,6 +314,9 @@ namespace Raven.Client.Connection
 				return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
 				{
 					JsonDocument document;
+
+					var fromFailoverUrls = false;
+
 					if (getTask.Status == TaskStatus.RanToCompletion)
 					{
 						document = getTask.Result;
@@ -317,8 +326,28 @@ namespace Raven.Client.Connection
 					{
 						log.ErrorException("Could not contact master for new replication information", getTask.Exception);
 						document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+
+						if (document == null)
+						{
+							if (FailoverUrls != null && FailoverUrls.Length > 0) // try to use configured failover servers
+							{
+								var failoverServers = new ReplicationDocument { Destinations = new List<ReplicationDestination>() };
+
+								foreach (var failoverUrl in FailoverUrls)
+								{
+									failoverServers.Destinations.Add(new ReplicationDestination()
+									{
+										Url = failoverUrl
+									});
 					}
 
+								document = new JsonDocument();
+								document.DataAsJson = RavenJObject.FromObject(failoverServers);
+
+								fromFailoverUrls = true;
+							}
+						}
+					}
 
 					if (IsInvalidDestinationsDocument(document))
 					{
@@ -326,6 +355,7 @@ namespace Raven.Client.Connection
 						return;
 					}
 
+					if(!fromFailoverUrls)
 					ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 					UpdateReplicationInformationFromDocument(document);
@@ -342,6 +372,8 @@ namespace Raven.Client.Connection
 				var serverHash = ServerHash.GetServerHash(commands.Url);
 
 				JsonDocument document;
+				var fromFailoverUrls = false;
+
 				try
 				{
 					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
@@ -351,13 +383,35 @@ namespace Raven.Client.Connection
 				{
 					log.ErrorException("Could not contact master for new replication information", e);
 					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+
+					if (document == null)
+					{
+						if (FailoverUrls != null && FailoverUrls.Length > 0) // try to use configured failover servers
+						{
+							var failoverServers = new ReplicationDocument {Destinations = new List<ReplicationDestination>()};
+
+							foreach (var failoverUrl in FailoverUrls)
+							{
+								failoverServers.Destinations.Add(new ReplicationDestination()
+								{
+									Url = failoverUrl
+								});
+							}
+
+							document = new JsonDocument();
+							document.DataAsJson = RavenJObject.FromObject(failoverServers);
+						}
+					}
 				}
+					
+				
 				if (document == null)
 				{
 					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 					return;
 				}
 
+				if(!fromFailoverUrls)
 				ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 				UpdateReplicationInformationFromDocument(document);

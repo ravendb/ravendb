@@ -3,10 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading.Tasks;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -31,7 +30,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void CanChangeConventionJustForOneType_Async()
+		public async Task CanChangeConventionJustForOneType_Async()
 		{
 			using(GetNewServer())
 			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
@@ -41,8 +40,8 @@ namespace Raven.Tests.Issues
 				using (var session = store.OpenAsyncSession())
 				{
 					var entity = new User { Name = "Ayende" };
-					session.Store(entity);
-					session.SaveChangesAsync().Wait();
+					await session.StoreAsync(entity);
+					await session.SaveChangesAsync();
 					Assert.Equal("users/Ayende", session.Advanced.GetDocumentId(entity));
 				}
 			}

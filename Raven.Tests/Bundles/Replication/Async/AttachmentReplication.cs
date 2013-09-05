@@ -111,9 +111,10 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
+			store1.DatabaseCommands.PutAttachment("ayende2", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 		  
 			TellFirstInstanceToReplicateToSecondInstance();
-
+			WaitForAttachment(store2, "ayende2");
 			var aggregateException = Assert.Throws<AggregateException>(() =>
 			{
 				for (int i = 0; i < RetriesCount; i++)
@@ -121,6 +122,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 					store2.AsyncDatabaseCommands.GetAttachmentAsync("ayende").Wait();
 				}
 			});
+
 			var conflictException = Assert.IsType<ConflictException>(aggregateException.Flatten().InnerException);
 
 			Assert.Equal("Conflict detected on ayende, conflict must be resolved before the attachment will be accessible", conflictException.Message);
@@ -133,10 +135,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			var store2 = CreateStore();
 
 			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
-
-
 			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
-
 
 			TellFirstInstanceToReplicateToSecondInstance();
 

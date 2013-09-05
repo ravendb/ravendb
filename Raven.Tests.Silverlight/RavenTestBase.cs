@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions;
+using Raven.Client;
+using Raven.Client.Document;
 using Raven.Tests.Silverlight.UnitTestProvider;
 
 namespace Raven.Tests.Silverlight
@@ -23,6 +25,11 @@ namespace Raven.Tests.Silverlight
 			return generateNewDatabaseName
 				.Substring(0, generateNewDatabaseName.IndexOf(">"))
 				.Replace("Raven.Tests.Silverlight.", string.Empty) + SystemTime.UtcNow.Ticks;
+		}
+
+		protected IDocumentStore NewDocumentStore()
+		{
+			return new DocumentStore { Url = Url + Port }.Initialize();
 		}
 	}
 }

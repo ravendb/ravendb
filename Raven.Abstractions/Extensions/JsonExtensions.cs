@@ -90,7 +90,7 @@ namespace Raven.Abstractions.Extensions
 		}
 		
 		/// <summary>
-		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
+		/// Deserialize a <param name="stream"/> to an instance of<typeparam name="T"/>
 		/// </summary>
 		public static T JsonDeserialization<T>(this Stream stream)
 		{

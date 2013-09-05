@@ -12,6 +12,8 @@ using Raven.Database.Extensions;
 
 namespace Raven.Tests.Util
 {
+	using Raven.Tests.Helpers;
+
 	[CLSCompliant(false)]
 	public class RavenDBDriver : ProcessDriver, IDisposable
 	{
@@ -39,7 +41,7 @@ namespace Raven.Tests.Util
 				throw new Exception("Could not find Raven.server.exe");
 			}
 
-			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox --set=Ravne/AnonymousAccess==Admin");
+			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox --set=Raven/AnonymousAccess==Admin --set=Raven/Encryption/FIPS==" + SettingsHelper.UseFipsEncryptionAlgorithms);
 
 			Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 

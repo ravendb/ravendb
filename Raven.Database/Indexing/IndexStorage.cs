@@ -46,7 +46,7 @@ namespace Raven.Database.Indexing
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
 		private readonly DocumentDatabase documentDatabase;
-		private const string IndexVersion = "2.0.0.1"; 
+		private const string IndexVersion = "2.0.0.1";
 		private const string MapReduceIndexVersion = "2.5.0.1";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
@@ -232,18 +232,16 @@ namespace Raven.Database.Indexing
 					var key = Path.GetFileName(directory);
 					var decodedKey = MonoHttpUtility.UrlDecode(key);
 					var lastIndexOfDash = decodedKey.LastIndexOf('-');
-					var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1));
 					var lastIndexOfDistance = decodedKey.LastIndexOf('-', lastIndexOfDash - 1);
 					StringDistanceTypes distanceType;
 					Enum.TryParse(decodedKey.Substring(lastIndexOfDistance + 1, lastIndexOfDash - lastIndexOfDistance - 1),
 								  true, out distanceType);
-					var field = decodedKey.Substring(0, lastIndexOfDistance);
+					var field = decodedKey.Substring(0, lastIndexOfDistance); // left for backward compatibility
 					var extension = new SuggestionQueryIndexExtension(
 						documentDatabase.WorkContext,
 						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
-						SuggestionQueryRunner.GetStringDistance(distanceType),
-						field,
-						accuracy);
+						field);
+
 					indexImplementation.SetExtension(key, extension);
 				}
 			}
@@ -378,7 +376,7 @@ namespace Raven.Database.Indexing
 		public static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
 			var version = IndexVersion;
-			if(indexDefinition.IsMapReduce)
+			if (indexDefinition.IsMapReduce)
 			{
 				version = MapReduceIndexVersion;
 			}
@@ -392,7 +390,7 @@ namespace Raven.Database.Indexing
 		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
 			var versionToCheck = IndexVersion;
-			if(indexDefinition.IsMapReduce)
+			if (indexDefinition.IsMapReduce)
 			{
 				versionToCheck = MapReduceIndexVersion;
 			}
@@ -501,7 +499,7 @@ namespace Raven.Database.Indexing
 					{
 						foreach (var deletedKey in deletedKeys)
 						{
-							writer.WriteLine(deletedKey);	
+							writer.WriteLine(deletedKey);
 						}
 					}
 				}
