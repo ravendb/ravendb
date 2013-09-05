@@ -113,25 +113,11 @@
 			ushort version;
 			var value = LoadJson(tableStorage.ReduceKeyCounts, key, out version);
 
-			if (value == null)
-			{
-				if (val <= 0)
-					return;
+			var newValue = val;
+			if (value != null)
+				newValue += value.Value<int>("mappedItemsCount");
 
-				AddReduceKeyCount(key, view, reduceKey, val, 0);
-				return;
-			}
-
-			var newValue = value.Value<int>("mappedItemsCount") + val;
-
-			if (newValue > 0)
-			{
-				AddReduceKeyCount(key, view, reduceKey, newValue, version);
-			}
-			else
-			{
-				DeleteReduceKey(key, view, version);
-			}
+			AddReduceKeyCount(key, view, reduceKey, newValue, version);
 		}
 
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)

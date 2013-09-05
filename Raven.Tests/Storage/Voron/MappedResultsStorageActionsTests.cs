@@ -17,39 +17,7 @@ namespace Raven.Tests.Storage.Voron
 	{
 		[Theory]
 		[PropertyData("Storages")]
-		public void IncrementReduceKeyCounterWithValuesEqualOrLessThan0ShouldNotUpdateItemIfItemDoesNotExist(string requestedStorage)
-		{
-			using (var storage = NewTransactionalStorage(requestedStorage))
-			{
-				storage.Batch(
-					accessor =>
-					{
-						var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
-						var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
-
-						Assert.Equal(0, reduceKeysAndTypes.Count);
-						Assert.Equal(0, keyStats.Count);
-					});
-
-				storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter("view1", "reduceKey1", 0));
-				storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter("view1", "reduceKey1", -1));
-				storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter("view1", "reduceKey1", -10));
-
-				storage.Batch(
-					accessor =>
-					{
-						var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
-						var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
-
-						Assert.Equal(0, reduceKeysAndTypes.Count);
-						Assert.Equal(0, keyStats.Count);
-					});
-			}
-		}
-
-		[Theory]
-		[PropertyData("Storages")]
-		public void IncrementReduceKeyCounterWithValuesEqualOrLessThan0ShouldUpdateItemIfItemDoesExist(string requestedStorage)
+		public void IncrementReduceKeyCounterWithNegativeValues(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
@@ -211,36 +179,6 @@ namespace Raven.Tests.Storage.Voron
 					reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view2", 0, 10).ToList();
 					Assert.Equal(1, reduceKeyAndTypes.Count);
 					Assert.Equal("reduceKey4", reduceKeyAndTypes[0].ReduceKey);
-				});
-			}
-		}
-
-		[Fact]
-		public void T1()
-		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "esent"))
-			{
-				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType("view1", "reduceKey1", ReduceType.SingleStep));
-				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType("view1", "reduceKey2", ReduceType.SingleStep));
-				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType("view1", "reduceKey3", ReduceType.SingleStep));
-
-				storage.Batch(accessor =>
-				{
-					var reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 1).ToList();
-					Assert.Equal(1, reduceKeyAndTypes.Count);
-					var k1 = reduceKeyAndTypes[0];
-
-					reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 1, 1).ToList();
-					Assert.Equal(1, reduceKeyAndTypes.Count);
-					var k2 = reduceKeyAndTypes[0];
-
-					reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 2, 1).ToList();
-					Assert.Equal(1, reduceKeyAndTypes.Count);
-					var k3 = reduceKeyAndTypes[0];
-
-					Assert.NotEqual(k1.ReduceKey, k2.ReduceKey);
-					Assert.NotEqual(k1.ReduceKey, k3.ReduceKey);
-					Assert.NotEqual(k2.ReduceKey, k3.ReduceKey);
 				});
 			}
 		}
