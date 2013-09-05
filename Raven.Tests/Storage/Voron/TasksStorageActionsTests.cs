@@ -10,21 +10,17 @@ namespace Raven.Tests.Storage.Voron
 	using Raven.Database.Tasks;
 
 	using Xunit;
+	using Xunit.Extensions;
 
-	public class TasksStorageActionsTests : RavenTest
+	public class TasksStorageActionsTests : TransactionalStorageTestBase
 	{
-		[Fact]
-		public void SimpleTask()
+		[Theory]
+		[PropertyData("Storages")]
+		public void SimpleTask(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask(), DateTime.Now));
-
-				storage.Batch(accessor =>
-				{
-					Assert.True(accessor.Tasks.HasTasks);
-					Assert.Equal(1, accessor.Tasks.ApproximateTaskCount);
-				});
+				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = "index1" }, DateTime.Now));
 
 				storage.Batch(accessor =>
 				{
@@ -40,19 +36,14 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void MergingTask()
+		[Theory]
+		[PropertyData("Storages")]
+		public void MergingTask(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask(), DateTime.Now));
-				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask(), DateTime.Now));
-
-				storage.Batch(accessor =>
-				{
-					Assert.True(accessor.Tasks.HasTasks);
-					Assert.Equal(2, accessor.Tasks.ApproximateTaskCount);
-				});
+				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = "index1" }, DateTime.Now));
+				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = "index1" }, DateTime.Now));
 
 				storage.Batch(accessor =>
 				{

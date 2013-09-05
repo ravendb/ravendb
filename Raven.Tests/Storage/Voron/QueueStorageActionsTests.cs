@@ -8,16 +8,16 @@ namespace Raven.Tests.Storage.Voron
 	using System.Linq;
 	using System.Text;
 
-	using Raven.Abstractions.Data;
-
 	using Xunit;
+	using Xunit.Extensions;
 
-	public class QueueStorageActionsTests : RavenTest
+	public class QueueStorageActionsTests : TransactionalStorageTestBase
 	{
-		[Fact]
-		public void SimpleQueue()
+		[Theory]
+		[PropertyData("Storages")]
+		public void SimpleQueue(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var value = Encoding.UTF8.GetBytes("123");
 
@@ -31,7 +31,7 @@ namespace Raven.Tests.Storage.Voron
 
 					var tuple = tuples[0];
 					Assert.True(value.SequenceEqual(tuple.Item1));
-					Assert.False(Etag.Parse((byte[])tuple.Item2).Equals(Etag.InvalidEtag));
+					Assert.True(tuple.Item2 != null);
 
 					accessor.Queue.DeleteFromQueue("queue1", tuple.Item2);
 				});
@@ -45,10 +45,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void QueueWithMultipleValues()
+		[Theory]
+		[PropertyData("Storages")]
+		public void QueueWithMultipleValues(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var value1 = Encoding.UTF8.GetBytes("123");
 				var value2 = Encoding.UTF8.GetBytes("321");
@@ -67,11 +68,11 @@ namespace Raven.Tests.Storage.Voron
 
 					var tuple1 = tuples[0];
 					Assert.True(value1.SequenceEqual(tuple1.Item1));
-					Assert.False(Etag.Parse((byte[])tuple1.Item2).Equals(Etag.InvalidEtag));
+					Assert.True(tuple1.Item2 != null);
 
 					var tuple2 = tuples[1];
 					Assert.True(value2.SequenceEqual(tuple2.Item1));
-					Assert.False(Etag.Parse((byte[])tuple2.Item2).Equals(Etag.InvalidEtag));
+					Assert.True(tuple2.Item2 != null);
 
 					accessor.Queue.DeleteFromQueue("queue1", tuple1.Item2);
 				});
@@ -84,7 +85,7 @@ namespace Raven.Tests.Storage.Voron
 
 						var tuple = tuples[0];
 						Assert.True(value2.SequenceEqual(tuple.Item1));
-						Assert.False(Etag.Parse((byte[])tuple.Item2).Equals(Etag.InvalidEtag));
+						Assert.True(tuple.Item2 != null);
 
 						accessor.Queue.DeleteFromQueue("queue1", tuple.Item2);
 					});
@@ -98,10 +99,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void MultipleQueues()
+		[Theory]
+		[PropertyData("Storages")]
+		public void MultipleQueues(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var value1 = Encoding.UTF8.GetBytes("123");
 				var value2 = Encoding.UTF8.GetBytes("321");
@@ -122,7 +124,7 @@ namespace Raven.Tests.Storage.Voron
 
 						var tuple = tuples1[0];
 						Assert.True(value1.SequenceEqual(tuple.Item1));
-						Assert.False(Etag.Parse((byte[])tuple.Item2).Equals(Etag.InvalidEtag));
+						Assert.True(tuple.Item2 != null);
 
 						var tuples2 = accessor.Queue.PeekFromQueue("queue2").ToList();
 
@@ -130,15 +132,16 @@ namespace Raven.Tests.Storage.Voron
 
 						tuple = tuples2[0];
 						Assert.True(value2.SequenceEqual(tuple.Item1));
-						Assert.False(Etag.Parse((byte[])tuple.Item2).Equals(Etag.InvalidEtag));
+						Assert.True(tuple.Item2 != null);
 					});
 			}
 		}
 
-		[Fact]
-		public void PeekingMoreThan5TimesFromQueueShouldRemoveItem()
+		[Theory]
+		[PropertyData("Storages")]
+		public void PeekingMoreThan5TimesFromQueueShouldRemoveItem(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var value = Encoding.UTF8.GetBytes("123");
 

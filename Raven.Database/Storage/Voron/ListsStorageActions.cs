@@ -50,10 +50,10 @@ namespace Raven.Database.Storage.Voron
 					{ "key", key }, 
 					{ "etag", etag.ToByteArray() }, 
 					{ "data", data }
-				}, 0);
+				});
 
 			listsByName.MultiAdd(writeBatch, name, etagAsString);
-			listsByNameAndKey.Add(writeBatch, CreateKey(name, key), etagAsString, 0);
+			listsByNameAndKey.Add(writeBatch, CreateKey(name, key), etagAsString);
 		}
 
 		public void Remove(string name, string key)
@@ -84,7 +84,7 @@ namespace Raven.Database.Storage.Voron
 
 			using (var iterator = listsByName.MultiRead(Snapshot, name))
 			{
-				if (!iterator.Seek(start.ToString()))
+				if (!iterator.Seek(start.ToString()) || !iterator.MoveNext())
 					yield break;
 
 				int count = 0;
@@ -98,7 +98,7 @@ namespace Raven.Database.Storage.Voron
 					if (start.CompareTo(etag) > 0)
 						continue;
 
-					if (end != null && end.CompareTo(etag) < 0)
+					if (end != null && end.CompareTo(etag) <= 0)
 						yield break;
 
 					count++;

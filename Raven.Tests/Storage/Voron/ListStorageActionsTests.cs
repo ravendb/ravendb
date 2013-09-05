@@ -12,15 +12,17 @@ namespace Raven.Tests.Storage.Voron
 	using Raven.Json.Linq;
 
 	using Xunit;
+	using Xunit.Extensions;
 
 	using global::Voron.Exceptions;
 
-	public class ListStorageActionsTests : RavenTest
+	public class ListStorageActionsTests : TransactionalStorageTestBase
 	{
-		[Fact]
-		public void Set()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Set(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
 
@@ -35,26 +37,30 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void CannotAddTwoIdenticalKeys()
+		[Theory]
+		[PropertyData("Storages")]
+		public void CanAddTwoIdenticalKeys(string requestedStorage)
 		{
-			var e = Assert.Throws<ConcurrencyException>(
-				() =>
-				{
-					using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
+				storage.Batch(
+					accessor =>
 					{
-						storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
-						storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
-					}
-				});
-
-			Assert.Equal("Cannot add 'name1/key1'. Version mismatch. Expected: 0. Actual: 1.", e.Message);
+						var item = accessor.Lists.Read("name1", "key1");
+						Assert.NotNull(item);
+						Assert.Equal("key1", item.Key);
+						Assert.Equal("321", item.Data.Value<string>("data"));
+					});
+			}
 		}
 
-		[Fact]
-		public void CanAddTwoDifferentKeys()
+		[Theory]
+		[PropertyData("Storages")]
+		public void CanAddTwoDifferentKeys(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key2", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
@@ -75,10 +81,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void Remove()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Remove(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key2", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
@@ -110,10 +117,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void Read1()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Read1(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key2", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
@@ -126,33 +134,34 @@ namespace Raven.Tests.Storage.Voron
 					var item3 = accessor.Lists.Read("name1", "key3");
 
 					var items = accessor.Lists.Read("name1", item1.Etag, null, 10).ToList();
-					Assert.Equal(3, items.Count);
-					CompareListItems(item1, items[0]);
-					CompareListItems(item2, items[1]);
-					CompareListItems(item3, items[2]);
-
-					items = accessor.Lists.Read("name1", item1.Etag, null, 2).ToList();
-					Assert.Equal(2, items.Count);
-					CompareListItems(item1, items[0]);
-					CompareListItems(item2, items[1]);
-
-					items = accessor.Lists.Read("name1", item1.Etag, item2.Etag, 10).ToList();
-					Assert.Equal(2, items.Count);
-					CompareListItems(item1, items[0]);
-					CompareListItems(item2, items[1]);
-
-					items = accessor.Lists.Read("name1", item2.Etag, null, 10).ToList();
 					Assert.Equal(2, items.Count);
 					CompareListItems(item2, items[0]);
 					CompareListItems(item3, items[1]);
+
+					items = accessor.Lists.Read("name1", item1.Etag, null, 2).ToList();
+					Assert.Equal(2, items.Count);
+					CompareListItems(item2, items[0]);
+					CompareListItems(item3, items[1]);
+
+					items = accessor.Lists.Read("name1", item1.Etag, item2.Etag, 10).ToList();
+					Assert.Equal(0, items.Count);
+
+					items = accessor.Lists.Read("name1", item2.Etag, null, 10).ToList();
+					Assert.Equal(1, items.Count);
+					CompareListItems(item3, items[0]);
+
+					items = accessor.Lists.Read("name1", item1.Etag, item3.Etag, 10).ToList();
+					Assert.Equal(1, items.Count);
+					CompareListItems(item2, items[0]);
 				});
 			}
 		}
 
-		[Fact]
-		public void Read2()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Read2(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
 				storage.Batch(accessor => accessor.Lists.Set("name2", "key1", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));

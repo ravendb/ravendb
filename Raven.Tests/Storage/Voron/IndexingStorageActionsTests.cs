@@ -14,15 +14,17 @@ namespace Raven.Tests.Storage.Voron
 	using Raven.Database.Indexing;
 
 	using Xunit;
+	using Xunit.Extensions;
 
 	using global::Voron.Exceptions;
 
-	public class IndexingStorageActionsTests : RavenTest
+	public class IndexingStorageActionsTests : TransactionalStorageTestBase
 	{
-		[Fact]
-		public void IndexCreation()
+		[Theory]
+		[PropertyData("Storages")]
+		public void IndexCreation(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor =>
 				{
@@ -86,10 +88,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void CannotAddDuplicateIndex()
+		[Theory]
+		[PropertyData("Storages")]
+		public void CannotAddDuplicateIndex(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
 
@@ -109,10 +112,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void IndexStats()
+		[Theory]
+		[PropertyData("Storages")]
+		public void IndexStats(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(
 					accessor =>
@@ -165,10 +169,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void IndexPriority()
+		[Theory]
+		[PropertyData("Storages")]
+		public void IndexPriority(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
 
@@ -190,10 +195,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void FailureRate()
+		[Theory]
+		[PropertyData("Storages")]
+		public void FailureRate(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(
 					accessor =>
@@ -225,10 +231,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void UpdateLastIndexed()
+		[Theory]
+		[PropertyData("Storages")]
+		public void UpdateLastIndexed(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
 
@@ -247,10 +254,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void UpdateLastReduced()
+		[Theory]
+		[PropertyData("Storages")]
+		public void UpdateLastReduced(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
 
@@ -269,10 +277,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void TouchIndexEtag()
+		[Theory]
+		[PropertyData("Storages")]
+		public void TouchIndexEtag(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
 
@@ -303,10 +312,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void UpdateIndexingStats()
+		[Theory]
+		[PropertyData("Storages")]
+		public void UpdateIndexingStats(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
 
@@ -336,10 +346,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void UpdateReduceStats()
+		[Theory]
+		[PropertyData("Storages")]
+		public void UpdateReduceStats(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
 
@@ -368,10 +379,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void DocumentReferences1()
+		[Theory]
+		[PropertyData("Storages")]
+		public void DocumentReferences1(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
 
@@ -404,10 +416,11 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
-		[Fact]
-		public void DocumentReferences2()
+		[Theory]
+		[PropertyData("Storages")]
+		public void DocumentReferences2(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage: "voron"))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
 
