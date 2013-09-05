@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
