@@ -207,7 +207,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			do
 			{
-				var indexFromDb = Api.RetrieveColumnAsInt64(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
+				var indexFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
 				var levelFromDb =
 							Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], RetrieveColumnGrbit.RetrieveFromIndex).
 								Value;
@@ -231,14 +231,14 @@ namespace Raven.Storage.Esent.StorageActions
 			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
 			{
-				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index.ToString(), Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, 0, MakeKeyGrbit.None);
 				if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
 					continue;
 
-				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index.ToString(), Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Index, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, ScheduledReductions, getItemsToReduceParams.Level, MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, HashReduceKey(reduceKey), MakeKeyGrbit.None);
 				Api.MakeKey(session, ScheduledReductions, int.MaxValue, MakeKeyGrbit.None);
@@ -260,14 +260,14 @@ namespace Raven.Storage.Esent.StorageActions
 				{
                     if (getItemsToReduceParams.Take <= 0)
                         break;
-					var indexFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+					var indexFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
 					var levelFromDb =
 						Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], RetrieveColumnGrbit.RetrieveFromIndex).
 							Value;
 					var reduceKeyFromDb = Api.RetrieveColumnAsString(session, ScheduledReductions,
 												   tableColumnsCache.ScheduledReductionColumns["reduce_key"]);
 
-					if (string.Equals(getItemsToReduceParams.Index.ToString(), indexFromDb, StringComparison.OrdinalIgnoreCase) == false)
+					if (getItemsToReduceParams.Index != indexFromDb)
 						continue;
 					if (levelFromDb != getItemsToReduceParams.Level)
 						continue;
@@ -342,7 +342,7 @@ namespace Raven.Storage.Esent.StorageActions
 			bool returnedResults = false;
 			do
 			{
-				var indexFromDb = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
+				var indexFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
 				if (indexFromDb != view ||
@@ -393,7 +393,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			do
 			{
-				var indexFromDb = Api.RetrieveColumnAsInt64(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
+				var indexFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
 				var bucketFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["source_bucket"], RetrieveColumnGrbit.RetrieveFromIndex).Value;
 				if (indexFromDb != view ||
 					bucketFromDb != sourceBucket)
@@ -561,7 +561,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var results = new HashSet<string>();
 			do
 			{
-				var indexNameFromDb = Api.RetrieveColumnAsInt64(session, MappedResults,
+				var indexNameFromDb = Api.RetrieveColumnAsInt32(session, MappedResults,
 																 tableColumnsCache.MappedResultsColumns["view"],
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
@@ -598,7 +598,7 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 
-				var indexNameFromDb = Api.RetrieveColumnAsInt64(session, MappedResults,
+				var indexNameFromDb = Api.RetrieveColumnAsInt32(session, MappedResults,
 																 tableColumnsCache.MappedResultsColumns["view"], 
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, MappedResults,
@@ -651,7 +651,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			do
 			{
-				var indexNameFromDb = Api.RetrieveColumnAsInt64(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], 
+				var indexNameFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], 
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 
 			    var indexCompare = view - indexNameFromDb;
@@ -706,7 +706,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 				var levelFromDb =
 					Api.RetrieveColumnAsInt32(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["level"]).Value;
-				var indexNameFromDb = Api.RetrieveColumnAsInt64(session, ReducedResults,
+				var indexNameFromDb = Api.RetrieveColumnAsInt32(session, ReducedResults,
 																 tableColumnsCache.ReduceResultsColumns["view"], 
 																 RetrieveColumnGrbit.RetrieveFromIndex);
 				var keyFromDb = Api.RetrieveColumnAsString(session, ReducedResults,
@@ -757,7 +757,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			do
 			{
-				var indexFromDb = Api.RetrieveColumnAsInt64(session, ScheduledReductions,
+				var indexFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions,
 															 tableColumnsCache.ScheduledReductionColumns["view"], 
 															 RetrieveColumnGrbit.RetrieveFromIndex);
 
@@ -914,7 +914,7 @@ namespace Raven.Storage.Esent.StorageActions
 				yield break;
 			do
 			{
-				var viewFromDb = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
+				var viewFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 				if (viewFromDb != view)
 					continue;
 
@@ -942,7 +942,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 				do
 				{
-					var indexFromDb = Api.RetrieveColumnAsInt64(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
+					var indexFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
 					var hashKeyFromDb = Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["hashed_reduce_key"]);
 
 					if (indexFromDb != view ||

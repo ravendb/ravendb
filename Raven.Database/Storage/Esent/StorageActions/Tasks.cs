@@ -95,7 +95,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var expectedTaskType = task.GetType().FullName;
 
 			Api.JetSetCurrentIndex(session, Tasks, "by_index_and_task_type");
-			Api.MakeKey(session, Tasks, task.Index.ToString(), Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
 			// there are no tasks matching the current one, just return
 			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
@@ -104,13 +104,13 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			int totalTaskCount = 0;
-			Api.MakeKey(session, Tasks, task.Index.ToString(), Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
-				if (Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["for_index"]) != task.Index)
+				if (Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]) != task.Index)
 					continue;
 				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != expectedTaskType)
 					continue;
