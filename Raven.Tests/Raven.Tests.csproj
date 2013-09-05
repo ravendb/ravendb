@@ -1197,6 +1197,7 @@
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
+    <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
