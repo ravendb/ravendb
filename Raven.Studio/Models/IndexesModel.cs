@@ -135,6 +135,8 @@ namespace Raven.Studio.Models
 
 		private string GetIndexGroup(IndexStats index)
 		{
+			if (index.ForEntityName == null)
+				return "Others";
 			if (index.ForEntityName.Count == 1)
 				return index.ForEntityName.First();
 			return "Others";

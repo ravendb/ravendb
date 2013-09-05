@@ -1894,14 +1894,14 @@ namespace Raven.Database
 
         public RavenJArray GetIndexes(int start, int pageSize)
         {
-            return new RavenJArray(
-                IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
-                    .Select(
-                        indexName => new RavenJObject
-							{
-								{"name", new RavenJValue(indexName) },
-								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
-							}));
+	        return new RavenJArray(
+		        from indexName in IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
+		        let indexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexName)
+		        select new RavenJObject
+		        {
+			        {"name", new RavenJValue(indexName)},
+			        {"definition", indexDefinition != null ? RavenJObject.FromObject(indexDefinition) : null},
+		        });
         }
 
 		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
