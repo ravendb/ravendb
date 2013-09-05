@@ -64,6 +64,9 @@ namespace Voron.Trees
 
 	    public bool Skip(int count)
 	    {
+			if (count == 0)
+				return this.ValidateCurrentKey(Current, _cmp);
+
 			throw new NotSupportedException("There is only one entry in single entry iterator");
 	    }
 

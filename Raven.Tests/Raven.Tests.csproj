@@ -1194,11 +1194,13 @@
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
     <Compile Include="Storage\Lists.cs" />
+    <Compile Include="Storage\TransactionalStorageTestBase.cs" />
     <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />
     <Compile Include="Storage\Voron\ListStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
-    <Compile Include="Storage\Voron\TasksStorageActions.cs" />
+    <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />

@@ -128,9 +128,19 @@ namespace Raven.Database.Storage.Voron.Impl
 			}
 		}
 
-		public class ReduceKeys
+		public class ReduceKeyCounts
 		{
-			public const string TableName = "reduce_keys";
+			public const string TableName = "reduce_key_counts";
+
+			public class Indices
+			{
+				public const string ByView = "by_view";
+			}
+		}
+
+		public class ReduceKeyTypes
+		{
+			public const string TableName = "reduce_key_types";
 
 			public class Indices
 			{

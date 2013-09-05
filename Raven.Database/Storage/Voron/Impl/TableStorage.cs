@@ -54,7 +54,9 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table Attachments { get; private set; }
 
-		public Table ReduceKeys { get; private set; }
+		public Table ReduceKeyCounts { get; private set; }
+
+		public Table ReduceKeyTypes { get; private set; }
 
 		public void Write(WriteBatch writeBatch)
 		{
@@ -95,7 +97,8 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateScheduledReductionsSchema(tx);
 				CreateMappedResultsSchema(tx);
 				CreateAttachmentsSchema(tx);
-				CreateReduceKeysSchema(tx);
+				CreateReduceKeyCountsSchema(tx);
+				CreateReduceKeyTypesSchema(tx);
 				CreateReduceResultsSchema(tx);
 
 				tx.Commit();
@@ -107,10 +110,16 @@ namespace Raven.Database.Storage.Voron.Impl
 			env.CreateTree(tx, Tables.ReduceResults.TableName);
 		}
 
-		private void CreateReduceKeysSchema(Transaction tx)
+		private void CreateReduceKeyCountsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.ReduceKeys.TableName);
-			env.CreateTree(tx, ReduceKeys.GetIndexKey(Tables.ReduceKeys.Indices.ByView));
+			env.CreateTree(tx, Tables.ReduceKeyCounts.TableName);
+			env.CreateTree(tx, ReduceKeyCounts.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
+		}
+
+		private void CreateReduceKeyTypesSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.ReduceKeyTypes.TableName);
+			env.CreateTree(tx, ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
 		}
 
 		private void CreateAttachmentsSchema(Transaction tx)
@@ -199,7 +208,8 @@ namespace Raven.Database.Storage.Voron.Impl
 			Tasks = new Table(Tables.Tasks.TableName, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
 			ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
 			MappedResults = new Table(Tables.MappedResults.TableName);
-			ReduceKeys = new Table(Tables.ReduceKeys.TableName, Tables.ReduceKeys.Indices.ByView);
+			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, Tables.ReduceKeyCounts.Indices.ByView);
+			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, Tables.ReduceKeyTypes.Indices.ByView);
 			Attachments = new Table(Tables.Attachments.TableName);
 			ReduceResults = new Table(Tables.ReduceResults.TableName);
 		}

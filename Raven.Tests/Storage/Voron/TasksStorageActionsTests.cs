@@ -11,7 +11,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using Xunit;
 
-	public class TasksStorageActions : RavenTest
+	public class TasksStorageActionsTests : RavenTest
 	{
 		[Fact]
 		public void SimpleTask()

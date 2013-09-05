@@ -42,8 +42,8 @@
 
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize)
 		{
-			var reduceKeysByView = tableStorage.ReduceKeys.GetIndex(Tables.ReduceKeys.Indices.ByView);
-			using (var iterator = reduceKeysByView.MultiRead(Snapshot, view))
+			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
+			using (var iterator = reduceKeyCountsByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -51,7 +51,7 @@
 				var count = 0;
 				do
 				{
-					using (var read = tableStorage.ReduceKeys.Read(Snapshot, iterator.CurrentKey))
+					using (var read = tableStorage.ReduceKeyCounts.Read(Snapshot, iterator.CurrentKey))
 					{
 						var value = read.Stream.ToJObject();
 
@@ -111,22 +111,22 @@
 			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeyCounts, key, out version);
 
 			if (value == null)
 			{
 				if (val <= 0)
 					return;
 
-				AddReduceKey(key, view, reduceKey, ReduceType.None, val, 0);
+				AddReduceKeyCount(key, view, reduceKey, val, 0);
 				return;
 			}
 
-			var decrementedValue = value.Value<int>("mappedItemsCount") + val;
+			var newValue = value.Value<int>("mappedItemsCount") + val;
 
-			if (decrementedValue > 0)
+			if (newValue > 0)
 			{
-				AddReduceKey(key, view, reduceKey, ReduceType.None, decrementedValue, version);
+				AddReduceKeyCount(key, view, reduceKey, newValue, version);
 			}
 			else
 			{
@@ -621,7 +621,7 @@
 			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeyCounts, key, out version);
 			if (value == null)
 				return 0;
 
@@ -631,43 +631,55 @@
 		public void UpdatePerformedReduceType(string view, string reduceKey, ReduceType reduceType)
 		{
 			var key = CreateKey(view, reduceKey);
+			var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key);
 
-			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
-			if (value == null)
-			{
-				AddReduceKey(key, view, reduceKey, reduceType, 0, 0);
-				return;
-			}
-
-			value["reduceType"] = (int)reduceType;
-			tableStorage.ReduceKeys.Add(writeBatch, key, value, version);
+			AddReduceKeyType(key, view, reduceKey, reduceType, version);
 		}
 
-		private void AddReduceKey(string key, string view, string reduceKey, ReduceType reduceType, int mappedItemsCount, ushort? expectedVersion)
+		private void AddReduceKeyCount(string key, string view, string reduceKey, int count, ushort? expectedVersion)
 		{
-			var reduceKeysByView = tableStorage.ReduceKeys.GetIndex(Tables.ReduceKeys.Indices.ByView);
+			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
-			tableStorage.ReduceKeys.Add(
+			tableStorage.ReduceKeyCounts.Add(
 						writeBatch,
 						key,
 						new RavenJObject
 						{
 							{ "view", view },
 							{ "reduceKey", reduceKey },
-							{ "reduceType", (int)reduceType },
-							{ "mappedItemsCount", mappedItemsCount }
+							{ "mappedItemsCount", count }
 						}, expectedVersion);
 
-			reduceKeysByView.MultiAdd(writeBatch, view, key);
+			reduceKeyCountsByView.MultiAdd(writeBatch, view, key);
+		}
+
+		private void AddReduceKeyType(string key, string view, string reduceKey, ReduceType status, ushort? expectedVersion)
+		{
+			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
+
+			tableStorage.ReduceKeyTypes.Add(
+						writeBatch,
+						key,
+						new RavenJObject
+						{
+							{ "view", view },
+							{ "reduceKey", reduceKey },
+							{ "reduceType", (int)status }
+						}, expectedVersion);
+
+			reduceKeyTypesByView.MultiAdd(writeBatch, view, key);
 		}
 
 		private void DeleteReduceKey(string key, string view, ushort? expectedVersion)
 		{
-			var reduceKeysByView = tableStorage.ReduceKeys.GetIndex(Tables.ReduceKeys.Indices.ByView);
+			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
+			var reduceKeTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
 
-			tableStorage.ReduceKeys.Delete(writeBatch, key, expectedVersion);
-			reduceKeysByView.MultiDelete(writeBatch, view, key);
+			tableStorage.ReduceKeyCounts.Delete(writeBatch, key, expectedVersion);
+			reduceKeyCountsByView.MultiDelete(writeBatch, view, key);
+
+			tableStorage.ReduceKeyTypes.Delete(writeBatch, key, expectedVersion);
+			reduceKeTypesByView.MultiDelete(writeBatch, view, key);
 		}
 
 		public ReduceType GetLastPerformedReduceType(string view, string reduceKey)
@@ -675,7 +687,7 @@
 			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeys, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeyTypes, key, out version);
 			if (value == null)
 				return ReduceType.None;
 
@@ -762,8 +774,8 @@
 
 		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take)
 		{
-			var reduceKeysByView = tableStorage.ReduceKeys.GetIndex(Tables.ReduceKeys.Indices.ByView);
-			using (var iterator = reduceKeysByView.MultiRead(Snapshot, view))
+			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
+			using (var iterator = reduceKeyTypesByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -772,7 +784,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceKeys, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ReduceKeyTypes, iterator.CurrentKey, out version);
 
 					yield return new ReduceTypePerKey(value.Value<string>("reduceKey"), (ReduceType)value.Value<int>("reduceType"));
 

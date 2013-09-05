@@ -874,7 +874,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, ReduceKeysStatus, SeekGrbit.SeekGE) == false)
 				yield break;
 
-			if (TryMoveTableRecords(MappedResults, start, false))
+			if (TryMoveTableRecords(ReduceKeysStatus, start, false))
 				yield break;
 
 			do
