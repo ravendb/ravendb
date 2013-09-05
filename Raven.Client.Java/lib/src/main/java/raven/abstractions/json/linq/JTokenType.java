@@ -37,6 +37,10 @@ public enum JTokenType {
   /**
    * A collection of bytes value.
    */
-  BYTES;
+  BYTES,
+  /**
+   * A date value.
+   */
+  DATE;
 
 }

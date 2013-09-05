@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import raven.abstractions.LinqOps;
+import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.QueryResult;
@@ -28,6 +29,7 @@ import com.mysema.query.types.Ops;
 import com.mysema.query.types.Order;
 import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
+import com.mysema.query.types.PredicateOperation;
 import com.mysema.query.types.expr.BooleanOperation;
 
 /**
@@ -121,11 +123,12 @@ public class RavenQueryProviderProcessor<T> {
   /**
    * Visits the expression and generate the lucene query
    */
+  @SuppressWarnings("unchecked")
   protected void visitExpression(Expression<?> expression) {
     //TODO: finish me
     if (expression instanceof Operation) {
-      if (expression instanceof BooleanOperation) {
-        visitBooleanOperation((BooleanOperation) expression);
+      if (expression instanceof BooleanOperation || expression instanceof PredicateOperation) {
+        visitBooleanOperation((Operation<Boolean>) expression);
       } else {
         visitOperation((Operation<?>)expression);
       }
@@ -147,7 +150,7 @@ public class RavenQueryProviderProcessor<T> {
       visitQueryableMethodCall(expression);
       //TODO: finish me
     } else {
-      throw new IllegalArgumentException("Expression is not supported");
+      throw new IllegalArgumentException("Expression is not supported:" + expression);
     }
   }
 
@@ -208,17 +211,130 @@ public class RavenQueryProviderProcessor<T> {
     }
   }
 
-  private void visitBooleanOperation(BooleanOperation expression) {
-    if (expression.getOperator().equals(Ops.EQ)) {
+  private void visitBooleanOperation(Operation<Boolean> expression) {
+
+    //TODO: support for QueryDSL between
+    if (expression.getOperator().equals(Ops.OR)) {
+      visitOrElse(expression);
+    } else if (expression.getOperator().equals(Ops.AND)) {
+      visitAndAlso(expression);
+    } else if (expression.getOperator().equals(Ops.NE)) {
+      visitNotEquals(expression);
+    } else if (expression.getOperator().equals(Ops.EQ)) {
       visitEquals(expression);
     } else if (expression.getOperator().equals(Ops.GT)) {
       visitGreatherThan(expression);
+    } else if (expression.getOperator().equals(Ops.GOE)) {
+      visitGreatherThanOrEqual(expression);
+    } else if (expression.getOperator().equals(Ops.LT)) {
+      visitLessThan(expression);
+    } else if (expression.getOperator().equals(Ops.LOE)) {
+      visitLessThanOrEqual(expression);
     } else {
       throw new IllegalArgumentException("Expression is not supported");
     }
   }
 
-  private void visitGreatherThan(BooleanOperation expression) {
+  private void visitAndAlso(Operation<Boolean> andAlso) {
+    if (tryHandleBetween(andAlso)) {
+      return;
+    }
+    if (subClauseDepth > 0) {
+      luceneQuery.openSubclause();
+    }
+    subClauseDepth++;
+    visitExpression(andAlso.getArg(0));
+    luceneQuery.andAlso();
+    visitExpression(andAlso.getArg(1));
+    subClauseDepth--;
+    if (subClauseDepth > 0) {
+      luceneQuery.closeSubclause();
+    }
+  }
+
+  private boolean tryHandleBetween(Operation<Boolean> andAlso) {
+    // x.Foo > 100 && x.Foo < 200
+    // x.Foo < 200 && x.Foo > 100
+    // 100 < x.Foo && 200 > x.Foo
+    // 200 > x.Foo && 100 < x.Foo
+
+    Expression< ? > leftExp = andAlso.getArg(0);
+    Expression< ? > rightExp = andAlso.getArg(1);
+
+    Operation<?> left = null;
+    Operation<?> right = null;
+    if (leftExp instanceof Operation) {
+      left = (Operation< ? >) leftExp;
+    }
+    if (rightExp instanceof Operation) {
+      right = (Operation< ? >) rightExp;
+    }
+
+    if (left == null || right == null) {
+      return false;
+    }
+
+    boolean isPossibleBetween =
+        (left.getOperator().equals(Ops.GT) && right.getOperator().equals(Ops.LT)) ||
+        (left.getOperator().equals(Ops.GOE) && right.getOperator().equals(Ops.LOE)) ||
+        (left.getOperator().equals(Ops.LT) && right.getOperator().equals(Ops.GT)) ||
+        (left.getOperator().equals(Ops.LOE) && right.getOperator().equals(Ops.GT));
+
+    if (!isPossibleBetween) {
+      return false;
+    }
+
+    Tuple<ExpressionInfo, Object> leftMember = getMemberForBetween(left);
+    Tuple<ExpressionInfo, Object> rightMember = getMemberForBetween(right);
+
+    if (leftMember == null || rightMember == null) {
+      return false;
+    }
+
+    // both must be on the same property
+    if (!leftMember.getItem1().getPath().equals(rightMember.getItem1().getPath())) {
+      return false;
+    }
+
+    Object min = (left.getOperator().equals(Ops.LT) || left.getOperator().equals(Ops.LOE)) ? rightMember.getItem2() : leftMember.getItem2();
+    Object max = (left.getOperator().equals(Ops.LT) || left.getOperator().equals(Ops.LOE)) ? leftMember.getItem2() : rightMember.getItem2();
+
+    if (left.getOperator().equals(Ops.GOE) || left.getOperator().equals(Ops.LOE)) {
+      luceneQuery.whereBetweenOrEqual(leftMember.getItem1().getPath(), min, max);
+    } else {
+      luceneQuery.whereBetween(leftMember.getItem1().getPath(), min, max);
+    }
+    return true;
+  }
+
+  private Tuple<ExpressionInfo, Object> getMemberForBetween(Operation< ? > binaryExpression) {
+    if (isMemberAccessForQuerySource(binaryExpression.getArg(0))) {
+      ExpressionInfo expressionInfo = getMember(binaryExpression.getArg(0));
+      return Tuple.create(expressionInfo, getValueFromExpression(binaryExpression.getArg(1), expressionInfo.getClazz()));
+    }
+    if (isMemberAccessForQuerySource(binaryExpression.getArg(1))) {
+      ExpressionInfo expressionInfo = getMember(binaryExpression.getArg(1));
+      return Tuple.create(expressionInfo, getValueFromExpression(binaryExpression.getArg(0), expressionInfo.getClazz()));
+    }
+    return null;
+  }
+
+  private void visitOrElse(Operation<Boolean> orElse) {
+    if (subClauseDepth > 0) {
+      luceneQuery.openSubclause();
+    }
+    subClauseDepth++;
+    visitExpression(orElse.getArg(0));
+    luceneQuery.orElse();
+    visitExpression(orElse.getArg(1));
+    subClauseDepth--;
+    if (subClauseDepth > 0) {
+      luceneQuery.closeSubclause();
+    }
+
+  }
+
+  private void visitGreatherThan(Operation<Boolean> expression) {
     if (!isMemberAccessForQuerySource(expression.getArg(0)) &&  isMemberAccessForQuerySource(expression.getArg(1))) {
       visitLessThan((BooleanOperation) BooleanOperation.create(Ops.LT, expression.getArg(1), expression.getArg(0)));
       return;
@@ -229,7 +345,18 @@ public class RavenQueryProviderProcessor<T> {
     luceneQuery.whereGreaterThan(getFieldNameForRangeQuery(memberInfo, value), value);
   }
 
-  private void visitLessThan(BooleanOperation expression) {
+  private void visitGreatherThanOrEqual(Operation<Boolean> expression) {
+    if (!isMemberAccessForQuerySource(expression.getArg(0)) &&  isMemberAccessForQuerySource(expression.getArg(1))) {
+      visitLessThan((BooleanOperation) BooleanOperation.create(Ops.LOE, expression.getArg(1), expression.getArg(0)));
+      return;
+    }
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
+
+    luceneQuery.whereGreaterThanOrEqual(getFieldNameForRangeQuery(memberInfo, value), value);
+  }
+
+  private void visitLessThan(Operation<Boolean> expression) {
     if (!isMemberAccessForQuerySource(expression.getArg(0)) && isMemberAccessForQuerySource(expression.getArg(1))) {
       visitGreatherThan((BooleanOperation) BooleanOperation.create(Ops.GT, expression.getArg(1), expression.getArg(0)));
       return;
@@ -238,8 +365,20 @@ public class RavenQueryProviderProcessor<T> {
     Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
 
     luceneQuery.whereLessThan(getFieldNameForRangeQuery(memberInfo, value), value);
+  }
+
+  private void visitLessThanOrEqual(Operation<Boolean> expression) {
+    if (!isMemberAccessForQuerySource(expression.getArg(0)) && isMemberAccessForQuerySource(expression.getArg(1))) {
+      visitGreatherThan((BooleanOperation) BooleanOperation.create(Ops.GOE, expression.getArg(1), expression.getArg(0)));
+      return;
+    }
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
+
+    luceneQuery.whereLessThanOrEqual(getFieldNameForRangeQuery(memberInfo, value), value);
 
   }
+
 
   private String getFieldNameForRangeQuery(ExpressionInfo expression, Object value) {
     Field identityProperty = luceneQuery.getDocumentConvention().getIdentityProperty(clazz);
@@ -252,7 +391,7 @@ public class RavenQueryProviderProcessor<T> {
     return expression.getPath();
   }
 
-  private void visitEquals(BooleanOperation expression) {
+  private void visitEquals(Operation<Boolean> expression) {
     Constant<?> constantExpression = null;
     if (expression.getArg(1) instanceof Constant<?>) {
       constantExpression = (Constant< ? >) expression.getArg(1);
@@ -289,14 +428,6 @@ public class RavenQueryProviderProcessor<T> {
 
   }
 
-  private Object getValueFromExpression(Expression< ? > expression, Class< ? > type) {
-    return linqPathProvider.getValueFromExpression(expression, type);
-  }
-
-  private Class<?> getMemberType(ExpressionInfo memberInfo) {
-    return memberInfo.getClazz();
-  }
-
   private boolean isMemberAccessForQuerySource(Expression< ? > arg) {
     //TODO: parameter
     if (!(arg instanceof Path<?>)) {
@@ -304,6 +435,24 @@ public class RavenQueryProviderProcessor<T> {
     }
     return true;
   }
+
+  private void visitNotEquals(Operation<Boolean> expression) {
+    //TODO: implement me
+  }
+
+  private Class<?> getMemberType(ExpressionInfo memberInfo) {
+    return memberInfo.getClazz();
+  }
+
+
+
+  private Object getValueFromExpression(Expression< ? > expression, Class< ? > type) {
+    return linqPathProvider.getValueFromExpression(expression, type);
+  }
+
+
+
+
 
   /**
    * Gets member info for the specified expression and the path to that expression

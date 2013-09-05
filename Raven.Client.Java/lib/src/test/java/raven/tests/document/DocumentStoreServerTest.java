@@ -15,6 +15,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
@@ -356,6 +357,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
       Calendar cal = Calendar.getInstance();
       cal.set(2000, 0, 1);
       Date date = DateUtils.truncate(cal.getTime(), Calendar.DAY_OF_MONTH);
+
 
       try (IDocumentSession session = store.openSession()) {
         IDocumentQuery<DateHolder> query = session.advanced().luceneQuery(Object.class, "my_index").selectFields(DateHolder.class, "Date").waitForNonStaleResults();

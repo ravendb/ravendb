@@ -3,6 +3,7 @@ package raven.abstractions.extensions;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.EnumSet;
 import java.util.Iterator;
 
@@ -28,6 +29,7 @@ import org.codehaus.jackson.map.introspect.AnnotatedParameter;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.codehaus.jackson.map.ser.std.SerializerBase;
 
+import raven.abstractions.Default;
 import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;
@@ -51,6 +53,9 @@ public class JsonExtensions {
         objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
         objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
         objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+        objectMapper.configure(Feature.WRITE_DATES_AS_TIMESTAMPS, false);
+        objectMapper.setSerializationConfig(objectMapper.getSerializationConfig().withDateFormat(new SimpleDateFormat(Default.DATE_TIME_FORMATS_TO_WRITE)));
+        objectMapper.setDeserializationConfig(objectMapper.getDeserializationConfig().withDateFormat(new SimpleDateFormat(Default.DATE_TIME_FORMATS_TO_WRITE)));
         jsonFactory = objectMapper.getJsonFactory();
 
         objectMapper.registerModule(createCustomSerializeModule());

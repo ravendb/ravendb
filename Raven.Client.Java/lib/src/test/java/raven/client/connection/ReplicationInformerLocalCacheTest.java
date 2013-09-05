@@ -1,9 +1,11 @@
 package raven.client.connection;
 
+import java.util.Calendar;
 import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
 
 import raven.abstractions.data.Etag;
@@ -15,9 +17,9 @@ import raven.abstractions.json.linq.RavenJValue;
 public class ReplicationInformerLocalCacheTest {
 
   @Test
-  public void simpleCacheTest(){
+  public void simpleCacheTest() {
 
-    Date now = new Date();
+    Date now = DateUtils.truncate(new Date(), Calendar.SECOND);
 
     RavenJObject doc = new RavenJObject();
     doc.add("date", new RavenJValue(now));

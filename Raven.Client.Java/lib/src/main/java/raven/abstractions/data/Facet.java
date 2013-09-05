@@ -1,12 +1,14 @@
 package raven.abstractions.data;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
-import org.codehaus.jackson.annotate.JsonProperty;
+import org.apache.commons.lang.time.FastDateFormat;
 
+import raven.abstractions.Default;
 import raven.abstractions.indexing.NumberUtil;
 import raven.abstractions.util.RavenQuery;
 
@@ -30,7 +32,7 @@ public class Facet {
   private List<String> ranges;
   private Integer maxResults;
   private FacetTermSortMode termSortMode;
-  private boolean includeRemainingTerms;
+  private Boolean includeRemainingTerms = false;
 
   public Facet() {
     this.ranges = new ArrayList<>();
@@ -74,20 +76,19 @@ public class Facet {
   public FacetTermSortMode getTermSortMode() {
     return termSortMode;
   }
-
-  @JsonProperty("includeRemainingTerms") //TODO: it doesn't work!
-  public boolean isIncludeRemainingTerms() {
+  public Boolean getIncludeRemainingTerms() {
     return includeRemainingTerms;
   }
+
+  public void setIncludeRemainingTerms(Boolean includeRemainingTerms) {
+    this.includeRemainingTerms = includeRemainingTerms;
+  }
+
   public void setAggregationField(String aggregationField) {
     this.aggregationField = aggregationField;
   }
   public void setDisplayName(String displayName) {
     this.displayName = displayName;
-  }
-  @JsonProperty("includeRemainingTerms")
-  public void setIncludeRemainingTerms(boolean includeRemainingTerms) {
-    this.includeRemainingTerms = includeRemainingTerms;
   }
   public void setMaxResults(Integer maxResults) {
     this.maxResults = maxResults;
@@ -113,6 +114,9 @@ public class Facet {
 
     boolean shouldUseRanges = ranges.size() > 0; //TODO: and type != String.
     mode = shouldUseRanges ? FacetMode.RANGES : FacetMode.DEFAULT;
+    if (name == null) {
+      throw new IllegalStateException("Set facet name first!");
+    }
     if (!name.endsWith("_Range")) {
       name += "_Range";
     }
@@ -120,7 +124,7 @@ public class Facet {
   }
 
   public void setName(Path<?> path) {
-    //TODO: finish + remeber to append _Range if needed
+    name = StringUtils.capitalize(path.getMetadata().getName());
   }
 
   @SuppressWarnings("unchecked")
@@ -162,7 +166,7 @@ public class Facet {
     if (validOperators && validMemberNames) {
       return getStringRepresentation(left.getOperator(), right.getOperator(), parseSubExpression(left), parseSubExpression(right));
     }
-    throw new IllegalStateException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
+    throw new IllegalArgumentException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
   }
 
   private static String getFieldName(Path<?> left) {
@@ -176,7 +180,7 @@ public class Facet {
     }
 
     //TODO: handle other types like x.total.gt(someExtenal variable)
-    throw new IllegalStateException("Unable to parse expression: " + operation);
+    throw new IllegalArgumentException("Unable to parse expression: " + operation);
   }
   private static String getStringRepresentation(Operator<? super Boolean> op, Object value) {
     String valueAsStr = getStringValue(value);
@@ -190,7 +194,7 @@ public class Facet {
     } else if (Ops.GOE.equals(op)) {
       return String.format("{%s TO NULL]", valueAsStr);
     }
-    throw new IllegalStateException("Unable to parse the given operation " + op.getId() + ", into a facet range!!! ");
+    throw new IllegalArgumentException("Unable to parse the given operation " + op.getId() + ", into a facet range!!! ");
   }
 
   private static String getStringRepresentation(Operator<? super Boolean> leftOp, Operator<? super Boolean> rightOp, Object lValue, Object rValue) {
@@ -213,20 +217,21 @@ public class Facet {
     String clazzName = value.getClass().getName();
 
     switch (clazzName) {
-      case "java.util.Date":
-//  TODO      return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite));
-      case "java.lang.Integer":
-        return NumberUtil.numberToString(((int)value));
-      case "java.lang.Long":
-        return NumberUtil.numberToString((long)value);
-      case "java.lang.Float":
-        return NumberUtil.numberToString((float)value);
-      case "java.lang.Double":
-        return NumberUtil.numberToString((double)value);
-      case "java.lang.String":
-        return RavenQuery.escape(value.toString());
-      default:
-        throw new IllegalStateException("Unable to parse the given type " + value.getClass().getName() + ", into a facet range!!! ");
+    case "java.util.Date":
+      FastDateFormat fdf = FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE);
+      return RavenQuery.escape(fdf.format(value));
+    case "java.lang.Integer":
+      return NumberUtil.numberToString(((int)value));
+    case "java.lang.Long":
+      return NumberUtil.numberToString((long)value);
+    case "java.lang.Float":
+      return NumberUtil.numberToString((float)value);
+    case "java.lang.Double":
+      return NumberUtil.numberToString((double)value);
+    case "java.lang.String":
+      return RavenQuery.escape(value.toString());
+    default:
+      throw new IllegalStateException("Unable to parse the given type " + value.getClass().getName() + ", into a facet range!!! ");
     }
   }
 

@@ -224,11 +224,11 @@ public class RavenJObjectsTest {
     assertEquals(JTokenType.INTEGER, new RavenJValue(JTokenType.BOOLEAN).getType());
     assertEquals(JTokenType.FLOAT, new RavenJValue(Float.valueOf(12.34f)).getType());
     assertEquals(JTokenType.FLOAT, new RavenJValue(Double.valueOf(12.34f)).getType());
-    assertEquals(JTokenType.INTEGER, new RavenJValue(new Date()).getType());
+    assertEquals(JTokenType.DATE, new RavenJValue(new Date()).getType());
     assertEquals(JTokenType.BOOLEAN, new RavenJValue(Boolean.FALSE).getType());
     assertEquals(JTokenType.STRING, new RavenJValue(new URI("http://ravendb.net")).getType());
     assertEquals(JTokenType.BYTES, new RavenJValue("test".getBytes()).getType());
-    assertEquals(JTokenType.INTEGER, new RavenJValue(new Date()).getType());
+    assertEquals(JTokenType.DATE, new RavenJValue(new Date()).getType());
   }
 
 

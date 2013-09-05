@@ -8,8 +8,10 @@ import java.util.Arrays;
 import java.util.Date;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.time.FastDateFormat;
 import org.codehaus.jackson.JsonGenerator;
 
+import raven.abstractions.Default;
 import raven.abstractions.exceptions.JsonWriterException;
 
 public class RavenJValue extends RavenJToken {
@@ -107,7 +109,7 @@ public class RavenJValue extends RavenJToken {
    * @param value
    */
   public RavenJValue(Date value) {
-    this(value.getTime(), JTokenType.INTEGER);
+    this(value, JTokenType.DATE);
   }
 
   /**
@@ -262,6 +264,9 @@ public class RavenJValue extends RavenJToken {
       case STRING:
         writer.writeString((String) value);
         return;
+      case DATE:
+        writer.writeString(FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE).format(value));
+        break;
       default:
         throw new JsonWriterException("Unexpected token:" + valueType);
       }

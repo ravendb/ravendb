@@ -18,7 +18,10 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.time.DateUtils;
+import org.apache.commons.lang.time.FastDateFormat;
 
+import raven.abstractions.Default;
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
@@ -1517,16 +1520,12 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if ("".equals(whereParams.getValue())) {
       return Constants.EMPTY_STRING_NOT_ANALYZED;
     }
-    /*TODO:
-    if (whereParams.Value is DateTime)
-    {
-      var dateTime = (DateTime) whereParams.Value;
-      var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite);
-      if(dateTime.Kind == DateTimeKind.Utc)
-        dateStr += "Z";
+    if (whereParams.getValue() instanceof Date) {
+      Date dateTime = (Date) whereParams.getValue();
+      FastDateFormat fdf = FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE);
+      String dateStr = fdf.format(dateTime);
       return dateStr;
     }
-     */
     if (Constants.DOCUMENT_ID_FIELD_NAME.equals(whereParams.getFieldName()) && !(whereParams.getValue() instanceof String))  {
       return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(), clazz, false);
     }
