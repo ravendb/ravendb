@@ -98,7 +98,7 @@ namespace Raven.Database.Storage.Voron
 					{ "priority", 1 },
 					{ "touches", 0 },
 					{ "createdTimestamp", SystemTime.UtcNow },
-					{ "lastIndexingTime", SystemTime.UtcNow },
+					{ "lastIndexingTime", DateTime.MinValue },
 					{ "reduce_attempts", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
 					{ "reduce_successes", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
 					{ "reduce_failures", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },

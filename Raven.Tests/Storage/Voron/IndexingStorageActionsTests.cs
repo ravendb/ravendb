@@ -9,6 +9,8 @@ namespace Raven.Tests.Storage.Voron
 	using System.Collections.Generic;
 	using System.Linq;
 
+	using Microsoft.Isam.Esent.Interop;
+
 	using Raven.Abstractions;
 	using Raven.Abstractions.Data;
 	using Raven.Database.Indexing;
@@ -45,7 +47,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(IndexingPriority.Normal, stat1.Priority);
 					Assert.Equal(0, stat1.TouchCount);
 					Assert.True((SystemTime.UtcNow - stat1.CreatedTimestamp).TotalSeconds < 10);
-					Assert.True((SystemTime.UtcNow - stat1.LastIndexingTime).TotalSeconds < 10);
+					Assert.Equal(DateTime.MinValue, stat1.LastIndexingTime);
 					Assert.Null(stat1.ReduceIndexingAttempts);
 					Assert.Null(stat1.ReduceIndexingSuccesses);
 					Assert.Null(stat1.ReduceIndexingErrors);
@@ -63,7 +65,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(IndexingPriority.Normal, stat2.Priority);
 					Assert.Equal(0, stat2.TouchCount);
 					Assert.True((SystemTime.UtcNow - stat2.CreatedTimestamp).TotalSeconds < 10);
-					Assert.True((SystemTime.UtcNow - stat2.LastIndexingTime).TotalSeconds < 10);
+					Assert.Equal(DateTime.MinValue, stat2.LastIndexingTime);
 					Assert.Equal(0, stat2.ReduceIndexingAttempts);
 					Assert.Equal(0, stat2.ReduceIndexingSuccesses);
 					Assert.Equal(0, stat2.ReduceIndexingErrors);
@@ -92,15 +94,36 @@ namespace Raven.Tests.Storage.Voron
 		[PropertyData("Storages")]
 		public void CannotAddDuplicateIndex(string requestedStorage)
 		{
+			Type exception1Type = null;
+			Type exception2Type = null;
+			string exception1Message = null;
+			string exception2Message = null;
+			if (requestedStorage == "esent")
+			{
+				exception1Type = typeof(EsentKeyDuplicateException);
+				exception1Message = "Illegal duplicate key";
+
+				exception2Type = typeof(EsentKeyDuplicateException);
+				exception2Message = "Illegal duplicate key";
+			}
+			else if (requestedStorage == "voron")
+			{
+				exception1Type = typeof(ArgumentException);
+				exception1Message = "There is already an index with the name: 'index1'";
+
+				exception2Type = typeof(ConcurrencyException);
+				exception2Message = "Cannot add 'index2'. Version mismatch. Expected: 0. Actual: 1.";
+			}
+
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
 
-				var e1 = Assert.Throws<ArgumentException>(() => storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false)));
+				var e1 = Assert.Throws(exception1Type, () => storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false)));
 
-				Assert.Equal("There is already an index with the name: 'index1'", e1.Message);
+				Assert.Equal(exception1Message, e1.Message);
 
-				var e2 = Assert.Throws<ConcurrencyException>(
+				var e2 = Assert.Throws(exception2Type,
 					() => storage.Batch(
 						accessor =>
 						{
@@ -108,7 +131,7 @@ namespace Raven.Tests.Storage.Voron
 							accessor.Indexing.AddIndex("index2", true);
 						}));
 
-				Assert.Equal("Cannot add 'index2'. Version mismatch. Expected: 0. Actual: 1.", e2.Message);
+				Assert.Equal(exception2Message, e2.Message);
 			}
 		}
 
@@ -138,7 +161,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(IndexingPriority.Normal, stat1.Priority);
 					Assert.Equal(0, stat1.TouchCount);
 					Assert.True((SystemTime.UtcNow - stat1.CreatedTimestamp).TotalSeconds < 10);
-					Assert.True((SystemTime.UtcNow - stat1.LastIndexingTime).TotalSeconds < 10);
+					Assert.Equal(DateTime.MinValue, stat1.LastIndexingTime);
 					Assert.Null(stat1.ReduceIndexingAttempts);
 					Assert.Null(stat1.ReduceIndexingSuccesses);
 					Assert.Null(stat1.ReduceIndexingErrors);
@@ -156,7 +179,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(IndexingPriority.Normal, stat2.Priority);
 					Assert.Equal(0, stat2.TouchCount);
 					Assert.True((SystemTime.UtcNow - stat2.CreatedTimestamp).TotalSeconds < 10);
-					Assert.True((SystemTime.UtcNow - stat2.LastIndexingTime).TotalSeconds < 10);
+					Assert.Equal(DateTime.MinValue, stat2.LastIndexingTime);
 					Assert.Equal(0, stat2.ReduceIndexingAttempts);
 					Assert.Equal(0, stat2.ReduceIndexingSuccesses);
 					Assert.Equal(0, stat2.ReduceIndexingErrors);
