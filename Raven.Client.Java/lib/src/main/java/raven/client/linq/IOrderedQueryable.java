@@ -44,6 +44,13 @@ public interface IOrderedQueryable<T> {
 
   public IQueryProvider getProvider();
 
+  /**
+   * Project using a different type
+   * @param clazz
+   * @return
+   */
+  public <TResult> IRavenQueryable<TResult> as(Class<TResult> clazz);
+
   // LinqExtensions
 
   /**
