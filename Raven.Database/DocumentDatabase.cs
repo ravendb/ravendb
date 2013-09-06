@@ -411,11 +411,11 @@ namespace Raven.Database
 
                     result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
                     result.CountOfDocuments = actions.Documents.GetDocumentsCount();
-	                result.StaleIndexes = IndexStorage.Indexes
+                    result.StaleIndexes = IndexStorage.Indexes
 	                                                  .Where(indexId =>
-	                                                  {
+                        {
 		                                                  var indexInstance = IndexStorage.GetIndexInstance(indexId);
-		                                                  return (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
+	                        return (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
 		                                                         actions.Staleness.IsIndexStale(indexId, null, null);
 	                                                  })
 	                                                  .Select(indexId =>
@@ -452,7 +452,7 @@ namespace Raven.Database
 		                    using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
 		                    {
 			                    index.DocsCount = searcher.IndexReader.NumDocs();
-	                    }
+		                    }
 		                   
 	                    }
 	                    catch (Exception)
@@ -1146,22 +1146,22 @@ namespace Raven.Database
         {
             try
             {
-                try
-                {
+	            try
+	            {
 		            inFlightTransactionalState.Commit(txId);
 		            log.Debug("Commit of tx {0} completed", txId);
 		            workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
-                }
-                finally
-                {
-                    inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
-                }
+	            }
+	            finally
+	            {
+		            inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
+	            }
             }
             catch (Exception e)
             {
-                if (TransactionalStorage.HandleException(e))
-                    return;
-                throw;
+	            if (TransactionalStorage.HandleException(e))
+		            return;
+	            throw;
             }
             finally
             {
@@ -1202,7 +1202,9 @@ namespace Raven.Database
             if (name == null)
                 throw new ArgumentNullException("name");
 
-            var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+	        var fixedName = IndexDefinitionStorage.FixupIndexName(name);
+
+			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(fixedName);
 
             if (existingIndex != null)
             {
@@ -1230,7 +1232,7 @@ namespace Raven.Database
                     break;
             }
 
-			IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
+			IndexDefinitionStorage.RegisterNewIndexInThisSession(fixedName, definition);
 
             // this has to happen in this fashion so we will expose the in memory status after the commit, but 
             // before the rest of the world is notified about this.
@@ -1248,9 +1250,9 @@ namespace Raven.Database
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
-            InvokeSuggestionIndexing(name, definition);
+			InvokeSuggestionIndexing(fixedName, definition);
 
-            workContext.ClearErrorsFor(name);
+			workContext.ClearErrorsFor(fixedName);
 
             TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
             {
@@ -1314,15 +1316,15 @@ namespace Raven.Database
                 var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
                 var scoreExplanations = new Dictionary<string, string>();
                 Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
-                    {
+                {
                         if (queryResult.Key == null)
                             return null;
                         if (queryResult.Highligtings != null)
-                            highlightings.Add(queryResult.Key, queryResult.Highligtings);
+                        highlightings.Add(queryResult.Key, queryResult.Highligtings);
                         if (queryResult.ScoreExplanation != null)
                             scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
-                        return null;
-                    };
+                    return null;
+                };
                 var stale = false;
                 Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
                 Etag resultEtag = Etag.Empty;
@@ -1497,32 +1499,32 @@ namespace Raven.Database
             var queryStat = AddToCurrentlyRunningQueryList(index,query);
             try
             {
-                    bool isStale = false;
+                bool isStale = false;
                 HashSet<string> loadedIds = null;
                 TransactionalStorage.Batch(
                     actions =>
                     {
                         var definition = IndexDefinitionStorage.GetIndexDefinition(index); 
                         isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
-           
-	                if (isStale == false && query.Cutoff == null)
-	                {
-						var indexInstance = IndexStorage.GetIndexInstance(index);
-		                isStale = isStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
-	                }
+
+                        if (isStale == false && query.Cutoff == null)
+                        {
+                            var indexInstance = IndexStorage.GetIndexInstance(index);
+                            isStale = isStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
+                        }
 
                          var indexFailureInformation = actions.Indexing.GetFailureRate(definition.IndexId);
-                   
-                    if (indexFailureInformation.IsInvalidIndex)
-                    {
-                        throw new IndexDisabledException(indexFailureInformation);
-                    }
-                    loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constants.DocumentIdFieldName), IndexQueryTriggers)
-                                                    select queryResult.Key);
-                });
-            stale = isStale;
-            return loadedIds;
-        }
+
+                        if (indexFailureInformation.IsInvalidIndex)
+                        {
+                            throw new IndexDisabledException(indexFailureInformation);
+                        }
+                        loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constants.DocumentIdFieldName), IndexQueryTriggers)
+                                                        select queryResult.Key);
+                    });
+                stale = isStale;
+                return loadedIds;
+            }
             finally
             {
                 RemoveFromCurrentlyRunningQueryList(index, queryStat);
@@ -2367,13 +2369,15 @@ namespace Raven.Database
 
         public Etag GetIndexEtag(string indexName, Etag previousEtag, string resultTransformer = null)
         {
+	        var fixedName = IndexDefinitionStorage.FixupIndexName(indexName);
+
             Etag lastDocEtag = Etag.Empty;
             Etag lastReducedEtag = null;
             bool isStale = false;
             int touchCount = 0;
             TransactionalStorage.Batch(accessor =>
             {
-				var indexInstance = IndexStorage.GetIndexInstance(indexName);
+				var indexInstance = IndexStorage.GetIndexInstance(fixedName);
 	            isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
 	                      accessor.Staleness.IsIndexStale(indexInstance.indexId, null, null);
                 lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
@@ -2386,7 +2390,7 @@ namespace Raven.Database
             });
 
 
-            var indexDefinition = GetIndexDefinition(indexName);
+			var indexDefinition = GetIndexDefinition(fixedName);
             if (indexDefinition == null)
                 return Etag.Empty; // this ensures that we will get the normal reaction of IndexNotFound later on.
             using (var md5 = MD5.Create())
@@ -2449,7 +2453,7 @@ namespace Raven.Database
 	                    try
 	                    {
 							RemoveReservedProperties(doc.DataAsJson);
-							RemoveMetadataReservedProperties(doc.Metadata);
+							RemoveMetadataReservedProperties(doc.Metadata);                                                       
 
                             ScheduleDocumentsForReindexIfNeeded(doc.Key);
 
@@ -2546,7 +2550,7 @@ namespace Raven.Database
             {
 	            if (value.Task.IsFaulted || value.Task.IsCanceled)
 		            value.Task.Wait(); //throws
-                return value.State;
+	            return value.State;
             }
             return null;
         }

@@ -128,7 +128,7 @@ namespace Raven.Database.Storage
 	    public int[] Indexes
 	    {
             get { return indexCache.Keys.OrderBy(name => name).ToArray(); }
-	    }
+        }
 
         public string IndexDefinitionsPath
         {
@@ -218,10 +218,10 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
-        public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)
-        {
+		public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)
+		{
           newDefinitionsThisSession.TryAdd(definition.IndexId, definition);
-        }
+		}
 
         public void AddIndex(int id, IndexDefinition definition)
         {
@@ -258,7 +258,7 @@ namespace Raven.Database.Storage
         {
             return Path.Combine(path, id.ToString());
         }
-        
+
         public IndexDefinition GetIndexDefinition(string name)
         {
             int id = 0;
@@ -318,7 +318,7 @@ namespace Raven.Database.Storage
                     ? IndexCreationOptions.Noop
                     : IndexCreationOptions.Update;
             }
-	        return IndexCreationOptions.Create;
+            return IndexCreationOptions.Create;
         }
 
         public bool Contains(string indexName)
