@@ -21,7 +21,6 @@ import raven.client.spatial.SpatialCriteriaFactory;
  *
  * @param <T>
  */
-//TODO: insert extensions from LinqExtensions class
 public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<T>> {
   /**
    * Selects the specified fields directly from the index
@@ -103,6 +102,114 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    * @return
    */
   public FacetResults getFacets(List<Facet> facets, int facetStart, Integer facetPageSize);
+
+  /**
+   * Query the facets results for this query using the specified facet document with the given start and pageSize
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc);
+
+  /**
+   * Query the facets results for this query using the specified facet document with the given start and pageSize
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc, int start);
+
+  /**
+   * Query the facets results for this query using the specified facet document with the given start and pageSize
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc, int start, Integer pageSize);
+
+  /**
+   * Query the facets results for this query using the specified list of facets with the given start and pageSize
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets);
+
+  /**
+   * Query the facets results for this query using the specified list of facets with the given start and pageSize
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets, int start);
+
+  /**
+   * Query the facets results for this query using the specified list of facets with the given start and pageSize
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets, int start, Integer pageSize);
+
+  /**
+   * Query the facets results for this query using the specified facet document with the given start and pageSize
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults toFacets(String facetSetupDoc);
+
+  /**
+   * Query the facets results for this query using the specified facet document with the given start and pageSize
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults toFacets(String facetSetupDoc, int start);
+
+  /**
+   * Query the facets results for this query using the specified facet document with the given start and pageSize
+   * @param facetSetupDoc
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults toFacets(String facetSetupDoc, int start, Integer pageSize);
+
+  /**
+   * Query the facets results for this query using the specified list of facets with the given start and pageSize
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults toFacets(List<Facet> facets);
+
+  /**
+   * Query the facets results for this query using the specified list of facets with the given start and pageSize
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults toFacets(List<Facet> facets, int start);
+
+  /**
+   * Query the facets results for this query using the specified list of facets with the given start and pageSize
+   * @param facets
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public FacetResults toFacets(List<Facet> facets, int start, Integer pageSize);
 
   /**
    * Returns first result

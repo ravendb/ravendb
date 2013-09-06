@@ -18,6 +18,10 @@ public class Tuple<T, S> {
     this.item2 = item2;
   }
 
+  public Tuple() {
+
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#equals(java.lang.Object)
    */

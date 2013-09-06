@@ -123,6 +123,7 @@ public abstract class FacetTestBase extends RemoteClientTest {
       cal.set(1980 + random.nextInt(30), random.nextInt(12), random.nextInt(27));
       camera.setDateOfListing(cal.getTime());
       camera.setManufacturer(MANUFACTURERS.get(random.nextInt(MANUFACTURERS.size())));
+      camera.setModel(MODELS.get(random.nextInt(MODELS.size())));
       camera.setCost(random.nextDouble() * 900.0 + 100.0);
       camera.setZoom((int) (random.nextDouble() * 10.0 + 1.0));
       camera.setMegapixels(random.nextDouble() * 10.0 + 1.0);

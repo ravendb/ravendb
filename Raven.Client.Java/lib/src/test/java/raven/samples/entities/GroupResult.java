@@ -8,6 +8,16 @@ import com.mysema.query.annotations.QueryEntity;
 public class GroupResult implements Serializable {
   private String name;
   private int count;
+
+
+  public GroupResult() {
+    super();
+  }
+  public GroupResult(String name, int count) {
+    super();
+    this.name = name;
+    this.count = count;
+  }
   public String getName() {
     return name;
   }
