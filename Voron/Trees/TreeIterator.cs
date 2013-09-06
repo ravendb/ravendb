@@ -118,18 +118,19 @@ namespace Voron.Trees
 			return false;
 		}
 
-		public void Skip(int count)
+		public bool Skip(int count)
 		{
-			if (count == 0)
-				return;
-
-			var moveMethod = (count > 0) ? (Func<bool>)MoveNext : MovePrev;
-
-			for (int i = 0; i < Math.Abs(count); i++)
+			if (count != 0)
 			{
-				if (!moveMethod())
-					break;
+				var moveMethod = (count > 0) ? (Func<bool>)MoveNext : MovePrev;
+
+				for (int i = 0; i < Math.Abs(count); i++)
+				{
+					if (!moveMethod()) break;
+				}
 			}
+
+			return _currentPage != null && this.ValidateCurrentKey(Current, _cmp);
 		}
 
 		public Stream CreateStreamForCurrent()
