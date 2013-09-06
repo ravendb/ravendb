@@ -6,31 +6,28 @@
 	using Raven.Abstractions.Exceptions;
 	using Raven.Abstractions.Extensions;
 	using Raven.Database.Storage.Voron.Impl;
-	using Raven.Json.Linq;
 
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class StalenessStorageActions : IStalenessStorageActions
+	public class StalenessStorageActions : StorageActionsBase, IStalenessStorageActions
 	{
 		private readonly TableStorage tableStorage;
 
-		private readonly SnapshotReader snapshot;
-
 		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot)
+			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
-			this.snapshot = snapshot;
 		}
 
 		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
 		{
 			ushort version;
-			var indexingStats = Load(tableStorage.IndexingStats, name, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, name, out version);
 			if (indexingStats == null)
 				return false; // index does not exists
 
-			var lastIndexedEtags = Load(tableStorage.LastIndexedEtags, name, out version);
+			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, out version);
 
 			if (IsMapStale(name) || IsReduceStale(name))
 			{
@@ -58,7 +55,7 @@
 			}
 
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
-			using (var iterator = tasksByIndex.MultiRead(snapshot, name))
+			using (var iterator = tasksByIndex.MultiRead(Snapshot, name))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -68,14 +65,11 @@
 
 				do
 				{
-					using (var read = tableStorage.Tasks.Read(snapshot, iterator.CurrentKey))
-					{
-						var value = read.Stream.ToJObject();
-						var time = value.Value<DateTime>("time");
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, out version);
+					var time = value.Value<DateTime>("time");
 
-						if (time <= cutOff.Value)
-							return true;
-					}
+					if (time <= cutOff.Value)
+						return true;
 				}
 				while (iterator.MoveNext());
 			}
@@ -86,7 +80,7 @@
 		public bool IsReduceStale(string view)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(snapshot, view))
+			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, view))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -98,7 +92,7 @@
 		public bool IsMapStale(string name)
 		{
 			ushort version;
-			var read = Load(tableStorage.LastIndexedEtags, name, out version);
+			var read = LoadJson(tableStorage.LastIndexedEtags, name, out version);
 			if (read == null)
 				return false;
 
@@ -111,11 +105,11 @@
 		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
 		{
 			ushort version;
-			var indexingStats = Load(tableStorage.IndexingStats, name, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, name, out version);
 			if (indexingStats == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
-			var lastIndexedEtags = Load(tableStorage.LastIndexedEtags, name, out version);
+			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, out version);
 			if (lastIndexedEtags.Value<object>("lastReducedTimestamp") != null)
 			{
 				return Tuple.Create(
@@ -130,7 +124,7 @@
 		public Etag GetMostRecentDocumentEtag()
 		{
 			var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
-			using (var iterator = documentsByEtag.Iterate(snapshot))
+			using (var iterator = documentsByEtag.Iterate(Snapshot))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
 					return Etag.Empty;
@@ -142,7 +136,7 @@
 		public Etag GetMostRecentAttachmentEtag()
 		{
 			var attachmentsByEtag = tableStorage.Attachments.GetIndex(Tables.Attachments.Indices.ByEtag);
-			using (var iterator = attachmentsByEtag.Iterate(snapshot))
+			using (var iterator = attachmentsByEtag.Iterate(Snapshot))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
 					return Etag.Empty;
@@ -154,27 +148,12 @@
 		public int GetIndexTouchCount(string name)
 		{
 			ushort version;
-			var indexingStats = Load(tableStorage.IndexingStats, name, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, name, out version);
 
 			if (indexingStats == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
 			return indexingStats.Value<int>("touches");
-		}
-
-		private RavenJObject Load(Table table, string name, out ushort version)
-		{
-			using (var read = table.Read(snapshot, name))
-			{
-				if (read == null)
-				{
-					version = 0;
-					return null;
-				}
-
-				version = read.Version;
-				return read.Stream.ToJObject();
-			}
 		}
 	}
 }

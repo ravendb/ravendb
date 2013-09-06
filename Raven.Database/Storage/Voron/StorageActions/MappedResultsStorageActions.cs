@@ -51,18 +51,16 @@
 				var count = 0;
 				do
 				{
-					using (var read = tableStorage.ReduceKeyCounts.Read(Snapshot, iterator.CurrentKey))
-					{
-						var value = read.Stream.ToJObject();
+					ushort version;
+					var value = LoadJson(tableStorage.ReduceKeyCounts, iterator.CurrentKey, out version);
 
-						yield return new ReduceKeyAndCount
-									 {
-										 Count = value.Value<int>("mappedItemsCount"),
-										 Key = value.Value<string>("reduceKey")
-									 };
+					yield return new ReduceKeyAndCount
+								 {
+									 Count = value.Value<int>("mappedItemsCount"),
+									 Key = value.Value<string>("reduceKey")
+								 };
 
-						count++;
-					}
+					count++;
 				}
 				while (iterator.MoveNext() && count < pageSize);
 			}
@@ -467,26 +465,24 @@
 			{
 				var etag = Etag.Parse(token.Value<byte[]>("etag"));
 				var etagAsString = etag.ToString();
-				using (var read = tableStorage.ScheduledReductions.Read(Snapshot, etagAsString))
+
+				ushort version;
+				var value = LoadJson(tableStorage.ScheduledReductions, etagAsString, out version);
+				if (value == null)
+					continue;
+
+				if (etag.CompareTo(currentEtag) > 0)
 				{
-					if (read == null)
-						continue;
-
-					var value = read.Stream.ToJObject();
-
-					if (etag.CompareTo(currentEtag) > 0)
-					{
-						hasResult = true;
-						result.Etag = etag;
-						result.Timestamp = value.Value<DateTime>("timestamp");
-					}
-
-					var view = value.Value<string>("view");
-					var level = value.Value<int>("level");
-					var reduceKey = value.Value<string>("reduceKey");
-
-					DeleteScheduledReduction(etagAsString, view, level, reduceKey);
+					hasResult = true;
+					result.Etag = etag;
+					result.Timestamp = value.Value<DateTime>("timestamp");
 				}
+
+				var view = value.Value<string>("view");
+				var level = value.Value<int>("level");
+				var reduceKey = value.Value<string>("reduceKey");
+
+				DeleteScheduledReduction(etagAsString, view, level, reduceKey);
 			}
 
 			return hasResult ? result : null;

@@ -142,15 +142,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					if (currentEtag.CompareTo(etag) < 0)
 					{
-						using (var read = tableStorage.Lists.Read(Snapshot, iterator.CurrentKey))
-						{
-							var value = read.Stream.ToJObject();
-							var key = value.Value<string>("key");
+						ushort version;
+						var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, out version);
 
-							tableStorage.Lists.Delete(writeBatch, currentEtag.ToString());
-							listsByName.MultiDelete(writeBatch, name, etag.ToString());
-							listsByNameAndKey.Delete(writeBatch, CreateKey(name, key));
-						}
+						var key = value.Value<string>("key");
+
+						tableStorage.Lists.Delete(writeBatch, currentEtag.ToString());
+						listsByName.MultiDelete(writeBatch, name, etag.ToString());
+						listsByNameAndKey.Delete(writeBatch, CreateKey(name, key));
 					}
 				}
 				while (iterator.MoveNext());
@@ -159,22 +158,20 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private ListItem ReadInternal(string id)
 		{
-			using (var read = tableStorage.Lists.Read(Snapshot, id))
+			ushort version;
+			var value = LoadJson(tableStorage.Lists, id, out version);
+			if (value == null)
+				return null;
+
+			var etag = Etag.Parse(value.Value<byte[]>("etag"));
+			var k = value.Value<string>("key");
+
+			return new ListItem
 			{
-				if (read == null)
-					return null;
-
-				var value = read.Stream.ToJObject();
-				var etag = Etag.Parse(value.Value<byte[]>("etag"));
-				var k = value.Value<string>("key");
-
-				return new ListItem
-				{
-					Data = value.Value<RavenJObject>("data"),
-					Etag = etag,
-					Key = k
-				};
-			}
+				Data = value.Value<RavenJObject>("data"),
+				Etag = etag,
+				Key = k
+			};
 		}
 	}
 }
