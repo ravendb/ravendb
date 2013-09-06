@@ -130,7 +130,7 @@ namespace Voron.Trees
 				}
 			}
 
-			return this.ValidateCurrentKey(Current, _cmp);
+			return _currentPage != null && this.ValidateCurrentKey(Current, _cmp);
 		}
 
 		public Stream CreateStreamForCurrent()
