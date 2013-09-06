@@ -44,18 +44,18 @@
 			var dataKey = Util.DataKey(lowercaseKey);
 			var metadataKey = Util.MetadataKey(lowercaseKey);
 
-			var keyByETagIndice = this.attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
-			var isUpdate = this.attachmentsTable.Contains(this.snapshot, lowercaseKey);			
+			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
+			var isUpdate = attachmentsTable.Contains(snapshot, lowercaseKey);			
 			if (isUpdate)
 			{
-				if (!this.attachmentsTable.Contains(this.snapshot, metadataKey)) //precaution
+				if (!attachmentsTable.Contains(snapshot, metadataKey)) //precaution
 				{
 					throw new ApplicationException(String.Format(@"Headers for attachment with key = '{0}' were not found, 
 																		but the attachment itself was found. Data corruption?",key));
 				}
 
 				Etag existingEtag = null;
-				if (etag != null && !this.IsAttachmentEtagMatch(metadataKey, etag, out existingEtag))
+				if (etag != null && !IsAttachmentEtagMatch(metadataKey, etag, out existingEtag))
 				{
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
 											"' using a non current etag")
@@ -65,16 +65,16 @@
 					};
 				}
 
-				keyByETagIndice.Delete(this.writeBatch, existingEtag.ToString());
+				keyByETagIndice.Delete(writeBatch, existingEtag.ToString());
 			}
 
-			var newETag = this.uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
+			var newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
 	
 			data.Position = 0;
-			this.attachmentsTable.Add(this.writeBatch, dataKey, data);
-			keyByETagIndice.Add(this.writeBatch, newETag.ToString(), key);
+			attachmentsTable.Add(writeBatch, dataKey, data);
+			keyByETagIndice.Add(writeBatch, newETag.ToString(), key);
 
-			this.WriteAttachmentMetadata(metadataKey, newETag, headers);
+			WriteAttachmentMetadata(metadataKey, newETag, headers);
 
 			return newETag;
 		}
@@ -89,14 +89,14 @@
 			var lowerKey = key.ToLowerInvariant();
 			var dataKey = Util.DataKey(lowerKey);
 			var metadataKey = Util.MetadataKey(lowerKey);
-			if (!this.attachmentsTable.Contains(this.snapshot, dataKey))
+			if (!attachmentsTable.Contains(snapshot, dataKey))
 				return null;
 
-			using (var dataReadResult = this.attachmentsTable.Read(this.snapshot, dataKey))
+			using (var dataReadResult = attachmentsTable.Read(snapshot, dataKey))
 			{
 				if (dataReadResult == null) return null;
 				Etag currentEtag;
-				var headers = this.ReadAttachmentMetadata(metadataKey, out currentEtag);
+				var headers = ReadAttachmentMetadata(metadataKey, out currentEtag);
 
 				var attachmentStream = new MemoryStream((int)dataReadResult.Stream.Length);
 				dataReadResult.Stream.CopyTo(attachmentStream);
@@ -117,7 +117,7 @@
 
 		private Stream GetAttachmentStream(string dataKey)
 		{
-			var readResult = this.attachmentsTable.Read(this.snapshot, dataKey);
+			var readResult = attachmentsTable.Read(snapshot, dataKey);
 			if (readResult == null)
 				return null;
 
@@ -141,7 +141,7 @@
 
 		private Etag ReadCurrentEtag(string metadataKey)
 		{
-			using (var metadataReadResult = this.attachmentsTable.Read(this.snapshot, metadataKey))
+			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey))
 			{
 				if (metadataReadResult == null) //precaution
 				{
@@ -154,7 +154,7 @@
 
 		private RavenJObject ReadAttachmentMetadata(string metadataKey, out Etag etag)
 		{
-			using (var metadataReadResult = this.attachmentsTable.Read(this.snapshot, metadataKey))
+			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey))
 			{
 				if (metadataReadResult == null) //precaution
 				{
@@ -175,12 +175,12 @@
 			headers.WriteTo(memoryStream);
 
 			memoryStream.Position = 0;
-			this.attachmentsTable.Add(this.writeBatch, metadataKey, memoryStream);
+			attachmentsTable.Add(writeBatch, metadataKey, memoryStream);
 		}
 
 		private bool IsAttachmentEtagMatch(string metadataKey, Etag etag, out Etag existingEtag)
 		{
-			existingEtag = this.ReadCurrentEtag(metadataKey);
+			existingEtag = ReadCurrentEtag(metadataKey);
 			
 			if (existingEtag == null) return false;
 

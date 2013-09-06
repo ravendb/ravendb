@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Raven.Database.Storage.Voron
+﻿namespace Raven.Database.Storage.Voron.StorageActions
 {
+	using System.Linq;
+
 	public static class Util
 	{
 		public const string MetadataSuffix = "metadata";

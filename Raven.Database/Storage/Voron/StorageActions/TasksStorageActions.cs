@@ -37,17 +37,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void AddTask(Task task, DateTime addedAt)
 		{
-			var tasksByType = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
-			var tasksByIndex = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
-			var tasksByIndexAndType = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
+			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
 			var type = task.GetType().FullName;
 			var index = task.Index ?? string.Empty;
-			var id = this.generator.CreateSequentialUuid(UuidType.Tasks);
+			var id = generator.CreateSequentialUuid(UuidType.Tasks);
 			var idAsString = id.ToString();
 
-			this.tableStorage.Tasks.Add(
-				this.writeBatch,
+			tableStorage.Tasks.Add(
+				writeBatch,
 				idAsString,
 				new RavenJObject
 				{
@@ -58,30 +58,30 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "task", task.AsBytes() }
 				}, 0);
 
-			tasksByType.MultiAdd(this.writeBatch, type, idAsString);
-			tasksByIndex.MultiAdd(this.writeBatch, index, idAsString);
-			tasksByIndexAndType.MultiAdd(this.writeBatch, this.CreateKey(index, type), idAsString);
+			tasksByType.MultiAdd(writeBatch, type, idAsString);
+			tasksByIndex.MultiAdd(writeBatch, index, idAsString);
+			tasksByIndexAndType.MultiAdd(writeBatch, CreateKey(index, type), idAsString);
 		}
 
 		public bool HasTasks
 		{
-			get { return this.ApproximateTaskCount > 0; }
+			get { return ApproximateTaskCount > 0; }
 		}
 
 		public long ApproximateTaskCount
 		{
 			get
 			{
-				return this.tableStorage.GetEntriesCount(this.tableStorage.Tasks);
+				return tableStorage.GetEntriesCount(tableStorage.Tasks);
 			}
 		}
 
 		public T GetMergedTask<T>() where T : Task
 		{
 			var type = typeof(T).FullName;
-			var tasksByType = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 
-			using (var iterator = tasksByType.MultiRead(this.Snapshot, type))
+			using (var iterator = tasksByType.MultiRead(Snapshot, type))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return null;
@@ -89,7 +89,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = this.LoadJson(this.tableStorage.Tasks, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, out version);
 
 					Task task;
 					try
@@ -104,8 +104,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						continue;
 					}
 
-					this.MergeSimilarTasks(task, value.Value<byte[]>("id"));
-					this.RemoveTask(iterator.CurrentKey, task.Index, type);
+					MergeSimilarTasks(task, value.Value<byte[]>("id"));
+					RemoveTask(iterator.CurrentKey, task.Index, type);
 
 					return (T)task;
 				}
@@ -119,9 +119,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var id = Etag.Parse(taskId);
 			var type = task.GetType().FullName;
-			var tasksByIndexAndType = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
-			using (var iterator = tasksByIndexAndType.MultiRead(this.Snapshot, this.CreateKey(task.Index, type)))
+			using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, CreateKey(task.Index, type)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -135,7 +135,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						continue;
 
 					ushort version;
-					var value = this.LoadJson(this.tableStorage.Tasks, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, out version);
 
 					Task existingTask;
 					try
@@ -148,12 +148,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 							string.Format("Could not create instance of a task: {0}", value),
 							e);
 
-						this.RemoveTask(iterator.CurrentKey, task.Index, type);
+						RemoveTask(iterator.CurrentKey, task.Index, type);
 						continue;
 					}
 
 					task.Merge(existingTask);
-					this.RemoveTask(iterator.CurrentKey, task.Index, type);
+					RemoveTask(iterator.CurrentKey, task.Index, type);
 
 					if (totalTaskCount++ > 1024)
 						break;
@@ -166,14 +166,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			index = index ?? string.Empty;
 
-			var tasksByType = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
-			var tasksByIndex = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
-			var tasksByIndexAndType = this.tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
+			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
-			this.tableStorage.Tasks.Delete(this.writeBatch, taskId);
-			tasksByType.MultiDelete(this.writeBatch, type, taskId);
-			tasksByIndex.MultiDelete(this.writeBatch, index, taskId);
-			tasksByIndexAndType.MultiDelete(this.writeBatch, this.CreateKey(index, type), taskId);
+			tableStorage.Tasks.Delete(writeBatch, taskId);
+			tasksByType.MultiDelete(writeBatch, type, taskId);
+			tasksByIndex.MultiDelete(writeBatch, index, taskId);
+			tasksByIndexAndType.MultiDelete(writeBatch, CreateKey(index, type), taskId);
 		}
 	}
 }

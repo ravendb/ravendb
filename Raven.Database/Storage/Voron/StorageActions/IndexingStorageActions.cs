@@ -44,8 +44,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
-			using (var indexingStatsIterator = this.tableStorage.IndexingStats.Iterate(this.Snapshot))
-			using (var lastIndexedEtagIterator = this.tableStorage.LastIndexedEtags.Iterate(this.Snapshot))
+			using (var indexingStatsIterator = tableStorage.IndexingStats.Iterate(Snapshot))
+			using (var lastIndexedEtagIterator = tableStorage.LastIndexedEtags.Iterate(Snapshot))
 			{
 				if (!indexingStatsIterator.Seek(Slice.BeforeAllKeys))
 					yield break;
@@ -75,19 +75,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			ushort indexStatsVersion;
 			ushort lastIndexedEtagsVersion;
 
-			var indexStats = this.Load(this.tableStorage.IndexingStats, name, out indexStatsVersion);
-			var lastIndexedEtags = this.Load(this.tableStorage.LastIndexedEtags, name, out lastIndexedEtagsVersion);
+			var indexStats = Load(tableStorage.IndexingStats, name, out indexStatsVersion);
+			var lastIndexedEtags = Load(tableStorage.LastIndexedEtags, name, out lastIndexedEtagsVersion);
 
 			return GetIndexStats(indexStats, lastIndexedEtags);
 		}
 
 		public void AddIndex(string name, bool createMapReduce)
 		{
-			if (this.tableStorage.IndexingStats.Contains(this.Snapshot, name))
+			if (tableStorage.IndexingStats.Contains(Snapshot, name))
 				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", name));
 
-			this.tableStorage.IndexingStats.Add(
-				this.writeBatch,
+			tableStorage.IndexingStats.Add(
+				writeBatch,
 				name,
 				new RavenJObject
 				{
@@ -106,8 +106,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "lastReducedTimestamp", createMapReduce ? DateTime.MinValue : (RavenJToken)RavenJValue.Null }
 				}, 0);
 
-			this.tableStorage.LastIndexedEtags.Add(
-				this.writeBatch,
+			tableStorage.LastIndexedEtags.Add(
+				writeBatch,
 				name,
 				new RavenJObject
 				{
@@ -119,24 +119,24 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void DeleteIndex(string name)
 		{
-			this.tableStorage.IndexingStats.Delete(this.writeBatch, name);
-			this.tableStorage.LastIndexedEtags.Delete(this.writeBatch, name);
+			tableStorage.IndexingStats.Delete(writeBatch, name);
+			tableStorage.LastIndexedEtags.Delete(writeBatch, name);
 		}
 
 		public void SetIndexPriority(string name, IndexingPriority priority)
 		{
 			ushort version;
-			var index = this.Load(this.tableStorage.IndexingStats, name, out version);
+			var index = Load(tableStorage.IndexingStats, name, out version);
 
 			index["priority"] = (int)priority;
 
-			this.tableStorage.IndexingStats.Add(this.writeBatch, name, index, version);
+			tableStorage.IndexingStats.Add(writeBatch, name, index, version);
 		}
 
 		public IndexFailureInformation GetFailureRate(string name)
 		{
 			ushort version;
-			var index = this.Load(this.tableStorage.IndexingStats, name, out version);
+			var index = Load(tableStorage.IndexingStats, name, out version);
 
 			var indexFailureInformation = new IndexFailureInformation
 			{
@@ -155,7 +155,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public void UpdateLastIndexed(string name, Etag etag, DateTime timestamp)
 		{
 			ushort version;
-			var index = this.Load(this.tableStorage.LastIndexedEtags, name, out version);
+			var index = Load(tableStorage.LastIndexedEtags, name, out version);
 
 			if (Buffers.Compare(index.Value<byte[]>("lastEtag"), etag.ToByteArray()) >= 0)
 				return;
@@ -163,13 +163,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			index["lastEtag"] = etag.ToByteArray();
 			index["lastTimestamp"] = timestamp;
 
-			this.tableStorage.LastIndexedEtags.Add(this.writeBatch, name, index, version);
+			tableStorage.LastIndexedEtags.Add(writeBatch, name, index, version);
 		}
 
 		public void UpdateLastReduced(string name, Etag etag, DateTime timestamp)
 		{
 			ushort version;
-			var index = this.Load(this.tableStorage.IndexingStats, name, out version);
+			var index = Load(tableStorage.IndexingStats, name, out version);
 
 			if (Buffers.Compare(index.Value<byte[]>("lastReducedEtag"), etag.ToByteArray()) >= 0)
 				return;
@@ -177,63 +177,63 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			index["lastReducedEtag"] = etag.ToByteArray();
 			index["lastReducedTimestamp"] = timestamp;
 
-			this.tableStorage.IndexingStats.Add(this.writeBatch, name, index, version);
+			tableStorage.IndexingStats.Add(writeBatch, name, index, version);
 		}
 
 		public void TouchIndexEtag(string name)
 		{
 			ushort version;
-			var index = this.Load(this.tableStorage.IndexingStats, name, out version);
+			var index = Load(tableStorage.IndexingStats, name, out version);
 
 			index["touches"] = index.Value<int>("touches") + 1;
 
-			this.tableStorage.IndexingStats.Add(this.writeBatch, name, index, version);
+			tableStorage.IndexingStats.Add(writeBatch, name, index, version);
 		}
 
 		public void UpdateIndexingStats(string name, IndexingWorkStats stats)
 		{
 			ushort version;
-			var index = this.Load(this.tableStorage.IndexingStats, name, out version);
+			var index = Load(tableStorage.IndexingStats, name, out version);
 
 			index["attempts"] = index.Value<int>("attempts") + stats.IndexingAttempts;
 			index["successes"] = index.Value<int>("successes") + stats.IndexingSuccesses;
 			index["failures"] = index.Value<int>("failures") + stats.IndexingErrors;
 			index["lastIndexingTime"] = SystemTime.UtcNow;
 
-			this.tableStorage.IndexingStats.Add(this.writeBatch, name, index, version);
+			tableStorage.IndexingStats.Add(writeBatch, name, index, version);
 		}
 
 		public void UpdateReduceStats(string name, IndexingWorkStats stats)
 		{
 			ushort version;
-			var index = this.Load(this.tableStorage.IndexingStats, name, out version);
+			var index = Load(tableStorage.IndexingStats, name, out version);
 
 			index["reduce_attempts"] = index.Value<int>("reduce_attempts") + stats.ReduceAttempts;
 			index["reduce_successes"] = index.Value<int>("reduce_successes") + stats.ReduceSuccesses;
 			index["reduce_failures"] = index.Value<int>("reduce_failures") + stats.ReduceErrors;
 
-			this.tableStorage.IndexingStats.Add(this.writeBatch, name, index, version);
+			tableStorage.IndexingStats.Add(writeBatch, name, index, version);
 		}
 
 		public void RemoveAllDocumentReferencesFrom(string key)
 		{
-			this.RemoveDocumentReference(key);
+			RemoveDocumentReference(key);
 		}
 
 		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
 		{
-			var documentReferencesByKey = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
-			var documentReferencesByRef = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
-			var documentReferencesByView = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
-			var documentReferencesByViewAndKey = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
+			var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
+			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
+			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
+			var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
 
-			using (var iterator = documentReferencesByViewAndKey.MultiRead(this.Snapshot, this.CreateKey(view, key)))
+			using (var iterator = documentReferencesByViewAndKey.MultiRead(Snapshot, CreateKey(view, key)))
 			{
 				if (iterator.Seek(Slice.BeforeAllKeys))
 				{
 					do
 					{
-						this.RemoveDocumentReference(iterator.CurrentKey);
+						RemoveDocumentReference(iterator.CurrentKey);
 					}
 					while (iterator.MoveNext());
 				}
@@ -241,7 +241,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			foreach (var reference in references)
 			{
-				var newKey = this.generator.CreateSequentialUuid(UuidType.DocumentReferences);
+				var newKey = generator.CreateSequentialUuid(UuidType.DocumentReferences);
 				var newKeyAsString = newKey.ToString();
 				var value = new RavenJObject
 				            {
@@ -250,19 +250,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 								{ "ref", reference }
 				            };
 
-				this.tableStorage.DocumentReferences.Add(this.writeBatch, newKeyAsString, value);
-				documentReferencesByKey.MultiAdd(this.writeBatch, key, newKeyAsString);
-				documentReferencesByRef.MultiAdd(this.writeBatch, reference, newKeyAsString);
-				documentReferencesByView.MultiAdd(this.writeBatch, view, newKeyAsString);
-				documentReferencesByViewAndKey.MultiAdd(this.writeBatch, this.CreateKey(view, key), newKeyAsString);
+				tableStorage.DocumentReferences.Add(writeBatch, newKeyAsString, value);
+				documentReferencesByKey.MultiAdd(writeBatch, key, newKeyAsString);
+				documentReferencesByRef.MultiAdd(writeBatch, reference, newKeyAsString);
+				documentReferencesByView.MultiAdd(writeBatch, view, newKeyAsString);
+				documentReferencesByViewAndKey.MultiAdd(writeBatch, CreateKey(view, key), newKeyAsString);
 			}
 		}
 
 		public IEnumerable<string> GetDocumentsReferencing(string reference)
 		{
-			var documentReferencesByRef = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
+			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
 
-			using (var iterator = documentReferencesByRef.MultiRead(this.Snapshot, reference))
+			using (var iterator = documentReferencesByRef.MultiRead(Snapshot, reference))
 			{
 				var result = new List<string>();
 
@@ -272,7 +272,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var key = iterator.CurrentKey;
-					using (var read = this.tableStorage.DocumentReferences.Read(this.Snapshot, key))
+					using (var read = tableStorage.DocumentReferences.Read(Snapshot, key))
 					{
 						var value = read.Stream.ToJObject();
 						result.Add(value.Value<string>("key"));
@@ -286,9 +286,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public int GetCountOfDocumentsReferencing(string reference)
 		{
-			var documentReferencesByRef = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
+			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
 
-			using (var iterator = documentReferencesByRef.MultiRead(this.Snapshot, reference))
+			using (var iterator = documentReferencesByRef.MultiRead(Snapshot, reference))
 			{
 				var count = 0;
 
@@ -307,9 +307,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
-			var documentReferencesByKey = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
+			var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
 
-			using (var iterator = documentReferencesByKey.MultiRead(this.Snapshot, key))
+			using (var iterator = documentReferencesByKey.MultiRead(Snapshot, key))
 			{
 				var result = new List<string>();
 
@@ -318,7 +318,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					using (var read = this.tableStorage.DocumentReferences.Read(this.Snapshot, iterator.CurrentKey))
+					using (var read = tableStorage.DocumentReferences.Read(Snapshot, iterator.CurrentKey))
 					{
 						var value = read.Stream.ToJObject();
 						result.Add(value.Value<string>("ref"));
@@ -332,7 +332,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private RavenJObject Load(Table table, string name, out ushort version)
 		{
-			var value = this.LoadJson(table, name, out version);
+			var value = LoadJson(table, name, out version);
 			if (value == null) 
 				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", name));
 
@@ -366,12 +366,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private void RemoveDocumentReference(Slice key)
 		{
-			var documentReferencesByKey = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
-			var documentReferencesByRef = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
-			var documentReferencesByView = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
-			var documentReferencesByViewAndKey = this.tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
+			var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
+			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
+			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
+			var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
 
-			using (var iterator = documentReferencesByKey.MultiRead(this.Snapshot, key))
+			using (var iterator = documentReferencesByKey.MultiRead(Snapshot, key))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -380,7 +380,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var currentKey = iterator.CurrentKey;
 
-					using (var read = this.tableStorage.DocumentReferences.Read(this.Snapshot, currentKey))
+					using (var read = tableStorage.DocumentReferences.Read(Snapshot, currentKey))
 					{
 						var value = read.Stream.ToJObject();
 
@@ -388,11 +388,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						var reference = value.Value<string>("ref");
 						var view = value.Value<string>("view");
 
-						this.tableStorage.DocumentReferences.Delete(this.writeBatch, currentKey);
-						documentReferencesByKey.MultiDelete(this.writeBatch, key, currentKey);
-						documentReferencesByRef.MultiDelete(this.writeBatch, reference, currentKey);
-						documentReferencesByView.MultiDelete(this.writeBatch, view, currentKey);
-						documentReferencesByViewAndKey.MultiDelete(this.writeBatch, this.CreateKey(view, key), currentKey);
+						tableStorage.DocumentReferences.Delete(writeBatch, currentKey);
+						documentReferencesByKey.MultiDelete(writeBatch, key, currentKey);
+						documentReferencesByRef.MultiDelete(writeBatch, reference, currentKey);
+						documentReferencesByView.MultiDelete(writeBatch, view, currentKey);
+						documentReferencesByViewAndKey.MultiDelete(writeBatch, CreateKey(view, key), currentKey);
 					}
 				}
 				while (iterator.MoveNext());
