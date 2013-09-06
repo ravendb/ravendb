@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Database.Storage.Voron
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System.Collections.Generic;
 	using System.IO;
@@ -35,14 +35,14 @@ namespace Raven.Database.Storage.Voron
 
 		public void Set(string name, string key, RavenJObject data, UuidType type)
 		{
-			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
-			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
+			var listsByName = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+			var listsByNameAndKey = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var etag = generator.CreateSequentialUuid(type);
+			var etag = this.generator.CreateSequentialUuid(type);
 			var etagAsString = etag.ToString();
 
-			tableStorage.Lists.Add(
-				writeBatch,
+			this.tableStorage.Lists.Add(
+				this.writeBatch,
 				etagAsString,
 				new RavenJObject
 				{
@@ -52,18 +52,18 @@ namespace Raven.Database.Storage.Voron
 					{ "data", data }
 				});
 
-			listsByName.MultiAdd(writeBatch, name, etagAsString);
-			listsByNameAndKey.Add(writeBatch, CreateKey(name, key), etagAsString);
+			listsByName.MultiAdd(this.writeBatch, name, etagAsString);
+			listsByNameAndKey.Add(this.writeBatch, this.CreateKey(name, key), etagAsString);
 		}
 
 		public void Remove(string name, string key)
 		{
-			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
-			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
+			var listsByName = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+			var listsByNameAndKey = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var nameAndKey = CreateKey(name, key);
+			var nameAndKey = this.CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey))
+			using (var read = listsByNameAndKey.Read(this.Snapshot, nameAndKey))
 			{
 				if (read == null)
 					return;
@@ -71,18 +71,18 @@ namespace Raven.Database.Storage.Voron
 				using (var reader = new StreamReader(read.Stream))
 				{
 					var etag = reader.ReadToEnd();
-					tableStorage.Lists.Delete(writeBatch, etag);
-					listsByName.MultiDelete(writeBatch, name, etag);
-					listsByNameAndKey.Delete(writeBatch, nameAndKey);
+					this.tableStorage.Lists.Delete(this.writeBatch, etag);
+					listsByName.MultiDelete(this.writeBatch, name, etag);
+					listsByNameAndKey.Delete(this.writeBatch, nameAndKey);
 				}
 			}
 		}
 
 		public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
 		{
-			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+			var listsByName = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 
-			using (var iterator = listsByName.MultiRead(Snapshot, name))
+			using (var iterator = listsByName.MultiRead(this.Snapshot, name))
 			{
 				if (!iterator.Seek(start.ToString()) || !iterator.MoveNext())
 					yield break;
@@ -102,7 +102,7 @@ namespace Raven.Database.Storage.Voron
 						yield break;
 
 					count++;
-					yield return ReadInternal(etag);
+					yield return this.ReadInternal(etag);
 				}
 				while (iterator.MoveNext());
 			}
@@ -110,10 +110,10 @@ namespace Raven.Database.Storage.Voron
 
 		public ListItem Read(string name, string key)
 		{
-			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
-			var nameAndKey = CreateKey(name, key);
+			var listsByNameAndKey = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
+			var nameAndKey = this.CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey))
+			using (var read = listsByNameAndKey.Read(this.Snapshot, nameAndKey))
 			{
 				if (read == null)
 					return null;
@@ -121,17 +121,17 @@ namespace Raven.Database.Storage.Voron
 				using (var reader = new StreamReader(read.Stream))
 				{
 					var etag = reader.ReadToEnd();
-					return ReadInternal(etag);
+					return this.ReadInternal(etag);
 				}
 			}
 		}
 
 		public void RemoveAllBefore(string name, Etag etag)
 		{
-			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
-			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
+			var listsByName = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+			var listsByNameAndKey = this.tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			using (var iterator = listsByName.MultiRead(Snapshot, name))
+			using (var iterator = listsByName.MultiRead(this.Snapshot, name))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -142,14 +142,14 @@ namespace Raven.Database.Storage.Voron
 
 					if (currentEtag.CompareTo(etag) < 0)
 					{
-						using (var read = tableStorage.Lists.Read(Snapshot, iterator.CurrentKey))
+						using (var read = this.tableStorage.Lists.Read(this.Snapshot, iterator.CurrentKey))
 						{
 							var value = read.Stream.ToJObject();
 							var key = value.Value<string>("key");
 
-							tableStorage.Lists.Delete(writeBatch, currentEtag.ToString());
-							listsByName.MultiDelete(writeBatch, name, etag.ToString());
-							listsByNameAndKey.Delete(writeBatch, CreateKey(name, key));
+							this.tableStorage.Lists.Delete(this.writeBatch, currentEtag.ToString());
+							listsByName.MultiDelete(this.writeBatch, name, etag.ToString());
+							listsByNameAndKey.Delete(this.writeBatch, this.CreateKey(name, key));
 						}
 					}
 				}
@@ -159,7 +159,7 @@ namespace Raven.Database.Storage.Voron
 
 		private ListItem ReadInternal(string id)
 		{
-			using (var read = tableStorage.Lists.Read(Snapshot, id))
+			using (var read = this.tableStorage.Lists.Read(this.Snapshot, id))
 			{
 				if (read == null)
 					return null;

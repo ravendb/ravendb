@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Database.Storage.Voron
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
 	using System.Collections.Generic;
@@ -35,28 +35,28 @@ namespace Raven.Database.Storage.Voron
 
 		public void EnqueueToQueue(string name, byte[] data)
 		{
-			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
-			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
+			var queuesByName = this.tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
+			var queuesData = this.tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 
-			var id = generator.CreateSequentialUuid(UuidType.Queue);
-			var key = CreateKey(name, id);
+			var id = this.generator.CreateSequentialUuid(UuidType.Queue);
+			var key = this.CreateKey(name, id);
 
-			tableStorage.Queues.Add(writeBatch, key, new RavenJObject
+			this.tableStorage.Queues.Add(this.writeBatch, key, new RavenJObject
 			{
 				{"name", name},
 				{"id", id.ToByteArray()},
 				{"reads", 0}
 			}, 0);
 
-			queuesData.Add(writeBatch, key, data, 0);
-			queuesByName.MultiAdd(writeBatch, name, key);
+			queuesData.Add(this.writeBatch, key, data, 0);
+			queuesByName.MultiAdd(this.writeBatch, name, key);
 		}
 
 		public IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name)
 		{
-			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
+			var queuesByName = this.tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
-			using (var iterator = queuesByName.MultiRead(Snapshot, name))
+			using (var iterator = queuesByName.MultiRead(this.Snapshot, name))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					yield break;
@@ -66,21 +66,21 @@ namespace Raven.Database.Storage.Voron
 					var key = iterator.CurrentKey;
 
 					ushort version;
-					var value = LoadJson(tableStorage.Queues, key, out version);
+					var value = this.LoadJson(this.tableStorage.Queues, key, out version);
 
 					if (value == null)
 						yield break;
 
 					if (value.Value<int>("reads") > 5) // read too much, probably poison message, remove it
 					{
-						DeleteQueue(key);
+						this.DeleteQueue(key);
 						continue;
 					}
 
 					value["reads"] = value.Value<int>("reads") + 1;
-					tableStorage.Queues.Add(writeBatch, key, value);
+					this.tableStorage.Queues.Add(this.writeBatch, key, value);
 
-					yield return new Tuple<byte[], object>(ReadDataFromQueue(key), value.Value<byte[]>("id"));
+					yield return new Tuple<byte[], object>(this.ReadDataFromQueue(key), value.Value<byte[]>("id"));
 				}
 				while (iterator.MoveNext());
 			}
@@ -88,26 +88,26 @@ namespace Raven.Database.Storage.Voron
 
 		public void DeleteFromQueue(string name, object id)
 		{
-			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
+			var queuesByName = this.tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
 			var key = this.CreateKey(name, Etag.Parse((byte[])id));
-			tableStorage.Queues.Delete(writeBatch, key);
-			queuesByName.MultiDelete(writeBatch, name, key);
+			this.tableStorage.Queues.Delete(this.writeBatch, key);
+			queuesByName.MultiDelete(this.writeBatch, name, key);
 		}
 
 		private void DeleteQueue(Slice key)
 		{
-			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
+			var queuesData = this.tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 
-			tableStorage.Queues.Delete(writeBatch, key);
-			queuesData.Delete(writeBatch, key);
+			this.tableStorage.Queues.Delete(this.writeBatch, key);
+			queuesData.Delete(this.writeBatch, key);
 		}
 
 		private byte[] ReadDataFromQueue(Slice key)
 		{
-			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
+			var queuesData = this.tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 
-			using (var read = queuesData.Read(Snapshot, key))
+			using (var read = queuesData.Read(this.Snapshot, key))
 			{
 				return read.Stream.ReadData();
 			}

@@ -210,7 +210,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			MappedResults = new Table(Tables.MappedResults.TableName);
 			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, Tables.ReduceKeyCounts.Indices.ByView);
 			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, Tables.ReduceKeyTypes.Indices.ByView);
-			Attachments = new Table(Tables.Attachments.TableName);
+			Attachments = new Table(Tables.Attachments.TableName,Tables.Attachments.Indices.ByEtag); 
 			ReduceResults = new Table(Tables.ReduceResults.TableName);
 		}
 	}

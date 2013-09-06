@@ -8,6 +8,7 @@
 	using Raven.Database.Impl;
 	using Raven.Database.Plugins;
 	using Raven.Database.Storage.Voron.Impl;
+	using Raven.Database.Storage.Voron.StorageActions;
 	using Raven.Database.Tasks;
 
 	using global::Voron.Exceptions;
@@ -34,6 +35,7 @@
 			Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatch);
 			Staleness = new StalenessStorageActions(storage, snapshot);
 			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatch);
+			Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatch, snapshot, generator);
 		}
 
 

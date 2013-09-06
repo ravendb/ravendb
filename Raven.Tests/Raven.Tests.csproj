@@ -1195,6 +1195,7 @@
     <Compile Include="Spatial\WktSanitizerTests.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Storage\TransactionalStorageTestBase.cs" />
+    <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
     <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />

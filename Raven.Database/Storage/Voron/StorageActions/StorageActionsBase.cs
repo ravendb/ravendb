@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Database.Storage.Voron
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
 
@@ -42,7 +42,7 @@ namespace Raven.Database.Storage.Voron
 
 		protected RavenJObject LoadJson(Table table, Slice key, out ushort version)
 		{
-			using (var read = table.Read(Snapshot, key))
+			using (var read = table.Read(this.Snapshot, key))
 			{
 				if (read == null)
 				{
