@@ -398,7 +398,7 @@ public class IndexQuery {
     }
     if (highlightedFields != null) {
       for( HighlightedField field: highlightedFields) {
-        path.append("&hightlight=").append(field);
+        path.append("&highlight=").append(field);
       }
     }
     if (highlighterPreTags != null) {

@@ -14,6 +14,11 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.impl.cookie.DateParseException;
 import org.apache.http.impl.cookie.DateUtils;
+import org.codehaus.jackson.map.type.ArrayType;
+import org.codehaus.jackson.map.type.MapType;
+import org.codehaus.jackson.map.type.SimpleType;
+import org.codehaus.jackson.map.type.TypeFactory;
+import org.codehaus.jackson.type.JavaType;
 
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.Constants;
@@ -195,8 +200,11 @@ public class SerializationHelper {
       highlighings = new RavenJObject();
     }
     try {
-      @SuppressWarnings("unchecked")
-      Map<String, Map<String, String[]>> readValue = JsonExtensions.getDefaultObjectMapper().readValue(highlighings.toString(), Map.class);
+      TypeFactory typeFactory = JsonExtensions.getDefaultObjectMapper().getTypeFactory();
+      ArrayType arrayType = typeFactory.constructArrayType(String.class);
+      MapType innerMapType = typeFactory.constructMapType(Map.class, SimpleType.construct(String.class), arrayType);
+      MapType mapType = typeFactory.constructMapType(Map.class, SimpleType.construct(String.class), innerMapType);
+      Map<String, Map<String, String[]>> readValue = JsonExtensions.getDefaultObjectMapper().readValue(highlighings.toString(), mapType);
       result.setHighlightings(readValue);
     } catch (IOException e) {
       throw new RuntimeException("Unable to read highlighings info", e);
