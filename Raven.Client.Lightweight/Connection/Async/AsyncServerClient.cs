@@ -1185,7 +1185,7 @@ namespace Raven.Client.Connection.Async
                 var json = RavenJObject.Load(new JsonTextReader(content));
                 var error = json.Deserialize<ServerRequestError>(convention);
 
-                throw new ErrorResponseException(error.Error);
+                throw new ErrorResponseException(e.Response, error.Error);
             }
             return false;
         }

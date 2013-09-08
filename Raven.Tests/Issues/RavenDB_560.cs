@@ -141,14 +141,14 @@ namespace Raven.Tests.Issues
 			store1 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8113"
+				Url = "http://localhost.fiddler:8113"
 			};
 			store1.Initialize();
 
 			store2 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8114"
+                Url = "http://localhost.fiddler:8114"
 			};
 			store2.Initialize();
 

@@ -105,18 +105,17 @@ namespace Raven.Client.Connection
 				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
 				    requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
 				{
-					webRequest.Headers["Content-Encoding"] = "gzip";
-					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
+                    webRequest.Headers["Content-Encoding"] = "gzip";
+                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
 				}
 
-				webRequest.Headers["Accept-Encoding"] = "gzip";
-				httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip");
+                webRequest.Headers["Accept-Encoding"] = "gzip";
+                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip");
 			}
 
 			webRequest.ContentType = "application/json; charset=utf-8";
 			httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
-			webRequest.Headers.Add("Raven-Client-Version", ClientVersion);
-			httpClient.DefaultRequestHeaders.Add("Raven-Client-Version", ClientVersion);
+			headers.Add("Raven-Client-Version", ClientVersion);
 
 			WriteMetadata(requestParams.Metadata);
 			requestParams.UpdateHeaders(webRequest);
@@ -295,7 +294,7 @@ namespace Raven.Client.Connection
 					}
 					catch (Exception e)
 					{
-						throw new InvalidOperationException(readToEnd, e);
+                        throw new ErrorResponseException(Response, readToEnd, e);
 					}
 					if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
 					{
@@ -324,9 +323,9 @@ namespace Raven.Client.Connection
 							sb.AppendLine();
 						sb.Append(ravenJObject.Value<string>("Error"));
 
-						throw new InvalidOperationException(sb.ToString(), new ErrorResponseException(Response));
+						throw new ErrorResponseException(Response, sb.ToString());
 					}
-					throw new InvalidOperationException(readToEnd, new ErrorResponseException(Response));
+					throw new ErrorResponseException(Response, readToEnd);
 				}
 			}
 		    return null;
@@ -697,7 +696,7 @@ namespace Raven.Client.Connection
 		{
 			foreach (var header in operationsHeaders)
 			{
-				webRequest.Headers[header.Key] = header.Value;
+				headers[header.Key] = header.Value;
 			}
 			return this;
 		}
@@ -707,7 +706,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public HttpJsonRequest AddOperationHeader(string key, string value)
 		{
-			webRequest.Headers[key] = value;
+			headers[key] = value;
 			return this;
 		}
 
@@ -719,8 +718,8 @@ namespace Raven.Client.Connection
 				return this; // not because of failover, no need to do this.
 
 			var lastPrimaryCheck = replicationInformer.GetFailureLastCheck(thePrimaryUrl);
-			webRequest.Headers.Add(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
-			webRequest.Headers.Add(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
+			headers.Set(Constants.RavenClientPrimaryServerUrl, ToRemoteUrl(thePrimaryUrl));
+			headers.Set(Constants.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
 
 			primaryUrl = thePrimaryUrl;
 			operationUrl = currentUrl;
@@ -838,7 +837,7 @@ namespace Raven.Client.Connection
 				}
 				else
 				{
-					webRequest.Headers[headerName] = value;
+					headers[headerName] = value;
 				}
 			}
 		}

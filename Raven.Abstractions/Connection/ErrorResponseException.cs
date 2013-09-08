@@ -30,18 +30,22 @@ namespace Raven.Abstractions.Connection
 		{
 		}
 
-		public ErrorResponseException(string message) : base(message)
-		{
-		}
-
-		public ErrorResponseException(string message, Exception inner) : base(message, inner)
-		{
-		}
-
-		public ErrorResponseException(HttpResponseMessage response)
+		public ErrorResponseException(HttpResponseMessage response, string msg, Exception exception)
+             : base(msg, exception)
 		{
 			Response = response;
 		}
+
+        public ErrorResponseException(HttpResponseMessage response, string msg)
+            : base(msg)
+        {
+            Response = response;
+        }
+
+        public ErrorResponseException(HttpResponseMessage response)
+        {
+            Response = response;
+        }
 
 #if !NETFX_CORE && !SILVERLIGHT
 		protected ErrorResponseException(

@@ -16,6 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -766,6 +767,13 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				e = aggregateException.ExtractSingleInnerException();
 			}
 
+		    var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
+		    if (ere != null)
+		    {
+		        if (IsServerDown(ere.Response.StatusCode, out timeout))
+		            return true;
+		    }
+
 			var webException = (e as WebException) ?? (e.InnerException as WebException);
 			if (webException != null)
 			{
@@ -789,16 +797,8 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				var httpWebResponse = webException.Response as HttpWebResponse;
 				if (httpWebResponse != null)
 				{
-					switch (httpWebResponse.StatusCode)
-					{
-						case HttpStatusCode.RequestTimeout:
-						case HttpStatusCode.GatewayTimeout:
-							timeout = true;
-							return true;
-						case HttpStatusCode.BadGateway:
-						case HttpStatusCode.ServiceUnavailable:
-							return true;
-					}
+					if (IsServerDown(httpWebResponse.StatusCode, out timeout))
+                        return true;
 				}
 			}
 			return
@@ -808,7 +808,23 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				e.InnerException is IOException;
 		}
 
-		public virtual void Dispose()
+        private static bool IsServerDown(HttpStatusCode httpStatusCode, out bool timeout)
+	    {
+            timeout = false;
+            switch (httpStatusCode)
+	        {
+	            case HttpStatusCode.RequestTimeout:
+	            case HttpStatusCode.GatewayTimeout:
+	                timeout = true;
+	                return true;
+	            case HttpStatusCode.BadGateway:
+	            case HttpStatusCode.ServiceUnavailable:
+	                return true;
+	        }
+	        return false;
+	    }
+
+	    public virtual void Dispose()
 		{
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)
