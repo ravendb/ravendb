@@ -49,6 +49,8 @@ namespace Raven.Client.Connection
 		internal volatile HttpClient httpClient;
 		internal volatile HttpWebRequest webRequest;
 
+        private NameValueCollection headers = new NameValueCollection();
+
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
@@ -163,7 +165,16 @@ namespace Raven.Client.Connection
 					{
 						try
 						{
-							Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url));
+						    var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+						    for (int i = 0; i < headers.Count; i++)
+						    {
+						        var key = headers.GetKey(i);
+						        var values = headers.GetValues(i);
+						        Debug.Assert(values != null);
+						        httpRequestMessage.Headers.Add(key, values);
+						    }
+						    HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
+						    Response = httpResponseMessage;
 							SetResponseHeaders(Response);
 
 							ResponseStatusCode = Response.StatusCode;
@@ -172,7 +183,9 @@ namespace Raven.Client.Connection
 						{
 							sp.Stop();
 						}
-						await this.CheckForErrorsAsync();
+						var result = await this.CheckForErrorsAndReturnCachedResultIfAnyAsync();
+					    if (result != null)
+					        return result;
 					}
 					return await ReadJsonInternalAsync();
 				}
@@ -212,7 +225,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private async Task CheckForErrorsAsync()
+		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync()
 		{
 			if (Response.IsSuccessStatusCode == false)
 			{
@@ -253,7 +266,7 @@ namespace Raven.Client.Connection
 						PostedData = postedData
 					});
 
-					// return result;
+					return result;
 				}
 
 
@@ -316,6 +329,7 @@ namespace Raven.Client.Connection
 					throw new InvalidOperationException(readToEnd, new ErrorResponseException(Response));
 				}
 			}
+		    return null;
 		}
 
 		public async Task<byte[]> ReadResponseBytesAsync()
@@ -376,6 +390,16 @@ namespace Raven.Client.Connection
 				{
 					if (writeCalled == false)
 						webRequest.ContentLength = 0;
+				    for (int i = 0; i < headers.Count; i++)
+				    {
+				        var key = headers.GetKey(i);
+				        var values = headers.GetValues(i);
+                        Debug.Assert(values != null);
+				        foreach (var value in values)
+				        {
+				            webRequest.Headers.Set(key, value);
+				        }
+				    }
 					return ReadJsonInternal(webRequest.GetResponse);
 				}
 				catch (WebException e)
@@ -538,7 +562,7 @@ namespace Raven.Client.Connection
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
-					factory.CacheResponse(Url, data, Response.Headers);
+					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
@@ -856,7 +880,7 @@ namespace Raven.Client.Connection
 				try
 				{
 					Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url), HttpCompletionOption.ResponseHeadersRead);
-					await CheckForErrorsAsync();
+					await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 
 					var stream = await Response.GetResponseStreamWithHttpDecompression();
 					var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
@@ -1002,6 +1026,11 @@ namespace Raven.Client.Connection
 			Timeout = TimeSpan.FromHours(6);
 			webRequest.AllowWriteStreamBuffering = false;
 		}
+
+	    public void AddHeader(string key, string val)
+	    {
+	        headers.Set(key, val);
+	    }
 	}
 }
 #endif

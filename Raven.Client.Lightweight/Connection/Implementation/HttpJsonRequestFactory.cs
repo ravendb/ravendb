@@ -69,7 +69,7 @@ namespace Raven.Client.Connection
 
 			if (request.ShouldCacheRequest && createHttpJsonRequestParams.Method == "GET" && !DisableHttpCaching)
 			{
-				var cachedRequestDetails = ConfigureCaching(createHttpJsonRequestParams.Url, request.webRequest.Headers.Set);
+				var cachedRequestDetails = ConfigureCaching(createHttpJsonRequestParams.Url, request.AddHeader);
 				request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
 				request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
 			}

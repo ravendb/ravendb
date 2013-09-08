@@ -340,6 +340,9 @@ namespace Raven.Client.Document.Async
 				tcs.TrySetResult((T)entity);
 				return tcs.Task;
 			}
+		    if (IsDeleted(id))
+		        return new CompletedTask<T>(null);
+
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 			return CompleteLoadAsync<T>(id, loadOperation);
