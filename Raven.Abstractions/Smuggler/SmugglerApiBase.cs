@@ -359,7 +359,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected class AttachmentExportInfo
 		{
-			public byte[] Data { get; set; }
+			public Stream Data { get; set; }
 			public RavenJObject Metadata { get; set; }
 			public string Key { get; set; }
 		}

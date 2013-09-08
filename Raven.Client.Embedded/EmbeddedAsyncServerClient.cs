@@ -313,11 +313,8 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<string[]>(databaseCommands.GetDatabaseNames(pageSize, start));
 		}
 
-		public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
+		public Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata)
 		{
-			// Should the data paramater be changed to a Stream type so it matches IDatabaseCommands.PutAttachment?
-			var stream = new MemoryStream();
-			stream.Write(data, 0, data.Length);
 			databaseCommands.PutAttachment(key, etag, stream, metadata);
 			return new CompletedTask();
 		}

@@ -918,9 +918,9 @@ namespace Raven.Client.Connection
 			await ExecuteRequestAsync();
 		}
 
-		public async Task ExecuteWriteAsync(byte[] data)
+		public async Task ExecuteWriteAsync(Stream data)
 		{
-			await WriteAsync(new MemoryStream(data));
+			await WriteAsync(data);
 			await ExecuteRequestAsync();
 		}
 

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Silverlight.Testing;
@@ -26,7 +27,7 @@ namespace Raven.Tests.Silverlight
 
 				yield return documentStore.AsyncDatabaseCommands
 					.ForDatabase(dbname)
-					.PutAttachmentAsync("123", Etag.Empty, bytes, null);
+                    .PutAttachmentAsync("123", Etag.Empty, new MemoryStream(bytes), null);
 
 				var get = documentStore.AsyncDatabaseCommands
 					.ForDatabase(dbname)
@@ -54,7 +55,7 @@ namespace Raven.Tests.Silverlight
 
 				yield return documentStore.AsyncDatabaseCommands
 					.ForDatabase(dbname)
-					.PutAttachmentAsync("123", Etag.Empty, bytes, null);
+                    .PutAttachmentAsync("123", Etag.Empty, new MemoryStream(bytes), null);
 
 				yield return documentStore.AsyncDatabaseCommands
 					.ForDatabase(dbname)

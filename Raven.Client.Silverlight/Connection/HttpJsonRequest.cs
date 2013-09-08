@@ -45,7 +45,7 @@ namespace Raven.Client.Silverlight.Connection
 		private HttpClientHandler handler;
 		internal HttpClient httpClient;
 
-		private byte[] postedData;
+		private Stream postedData;
 		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof (HttpJsonRequest).Assembly.FullName).Version.ToString();
 		private bool disabledAuthRetries;
@@ -397,14 +397,14 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		public async Task WriteAsync(byte[] byteArray)
+		public async Task WriteAsync(Stream stream)
 		{
 			writeCalled = true;
-			postedData = byteArray;
+            postedData = stream;
 
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = new CompressedStreamContent(byteArray)
+                Content = new CompressedStreamContent(stream)
 			});
 
 			if (Response.IsSuccessStatusCode == false)
@@ -502,7 +502,7 @@ namespace Raven.Client.Silverlight.Connection
 			await ExecuteRequestAsync();
 		}
 
-		public async Task ExecuteWriteAsync(byte[] data)
+		public async Task ExecuteWriteAsync(Stream data)
 		{
 			await WriteAsync(data);
 			await ExecuteRequestAsync();

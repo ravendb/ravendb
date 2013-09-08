@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -13,11 +14,12 @@ namespace Raven.Client.Connection
 {
 	public class CompressedStreamContent : HttpContent
 	{
-		private readonly byte[] data;
+        private readonly Stream data;
 
-		public CompressedStreamContent(byte[] data)
+		public CompressedStreamContent(Stream data)
 		{
-			this.data = data;
+		    if (data == null) throw new ArgumentNullException("data");
+		    this.data = data;
 			Headers.ContentEncoding.Add("gzip");
 		}
 
@@ -25,15 +27,21 @@ namespace Raven.Client.Connection
 		{
 			using (var dataStream = new GZipStream(stream, CompressionMode.Compress, true))
 			{
-				await dataStream.WriteAsync(data, 0, data.Length);
+			    await data.CopyToAsync(dataStream);
 				await dataStream.FlushAsync();
 			}
 		}
 
 		protected override bool TryComputeLength(out long length)
 		{
-			length = -1;
-			return false;
+		    if (data.CanSeek)
+		    {
+		        length = data.Length;
+		        return true;
+		    }
+
+		    length = -1;
+		    return false;
 		}
 	}
 }

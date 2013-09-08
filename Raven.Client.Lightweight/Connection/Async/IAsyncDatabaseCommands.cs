@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
@@ -273,9 +274,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		/// <param name="data">The data.</param>
+        /// <param name="stream">The data stream.</param>
 		/// <param name="metadata">The metadata.</param>
-        Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata);
+        Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata);
 
 		/// <summary>
 		/// Gets the attachment by the specified key asynchronously

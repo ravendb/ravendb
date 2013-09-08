@@ -1341,9 +1341,9 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="etag">The etag.</param>
-        /// <param name="data">The data.</param>
+        /// <param name="data">The data stream.</param>
         /// <param name="metadata">The metadata.</param>
-        public Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata)
+        public Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata)
         {
             return ExecuteWithReplication("PUT", operationUrl =>
             {
@@ -1392,7 +1392,7 @@ namespace Raven.Client.Connection.Async
                     var memoryStream = new MemoryStream(result);
                     if (request.Response.StatusCode == HttpStatusCode.Conflict)
                     {
-                        var doc = await request.ReadResponseJsonAsync();
+                        await request.ReadResponseJsonAsync();//throw the conflict exception
                     }
                     return new Attachment
                     {
