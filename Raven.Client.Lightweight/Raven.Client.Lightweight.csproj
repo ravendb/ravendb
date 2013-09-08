@@ -83,6 +83,7 @@
     <Compile Include="Connection\CompressedStreamContent.cs" />
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\NameValueCollectionExtensions.cs" />
+    <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\ITransactionRecoveryStorage.cs" />
@@ -90,6 +91,7 @@
     <Compile Include="Document\DTC\LocalDirectoryTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
+    <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />

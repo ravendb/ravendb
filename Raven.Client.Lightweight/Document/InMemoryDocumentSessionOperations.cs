@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using Raven.Imports.Newtonsoft.Json.Linq;
 #if !SILVERLIGHT && !NETFX_CORE
 using System.Transactions;
 #endif
@@ -401,7 +400,7 @@ more responsive application.
             return TrackEntity(entityType, documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);
         }
 
-        /// <summary>
+		/// <summary>
         /// Tracks the entity.
         /// </summary>
 		/// <param name="entityType">The entity type.</param>

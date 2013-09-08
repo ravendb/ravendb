@@ -14,30 +14,18 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly string key;
 		private readonly LoadOperation loadOperation;
-		private readonly string transformer;
 		private readonly Action<RavenJObject> handleInternalMetadata;
 
-		public LazyLoadOperation(string key, LoadOperation loadOperation, Action<RavenJObject> handleInternalMetadata, string transformer = null)
+		public LazyLoadOperation(string key, LoadOperation loadOperation, Action<RavenJObject> handleInternalMetadata)
 		{
 			this.key = key;
 			this.loadOperation = loadOperation;
 			this.handleInternalMetadata = handleInternalMetadata;
-			this.transformer = transformer;
 		}
 
 		public GetRequest CreateRequest()
 		{
-			string path;
-			if (string.IsNullOrEmpty(transformer) == false)
-			{
-				path = "/queries/" + Uri.EscapeDataString(key);
-				if (!string.IsNullOrEmpty(transformer))
-					path += "&transformer=" + transformer;
-			}
-			else
-			{
-				path = "/docs/" + Uri.EscapeDataString(key);
-			}
+			string path = "/docs/" + Uri.EscapeDataString(key);
 
 			return new GetRequest {Url = path};
 		}
@@ -87,9 +75,6 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			if (string.IsNullOrEmpty(transformer) == false)
-				return commands.Get(new[] {key}, null, transformer);
-
 			return commands.Get(key);
 		}
 #endif
