@@ -387,7 +387,7 @@ more responsive application.
 			{
 				return GetDefaultValue(entityType); // document is not really there.
 			}
-			if (!documentFound.Metadata.ContainsKey("@etag"))
+			if (documentFound.Etag != null && !documentFound.Metadata.ContainsKey("@etag"))
 			{
 				documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
 			}

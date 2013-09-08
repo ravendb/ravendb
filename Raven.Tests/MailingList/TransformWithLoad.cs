@@ -84,6 +84,19 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
+		[Fact]
+		public void EagerLoadById()
+		{
+			using (var session = store.OpenSession())
+			{
+				var contactDto = session.Load<ContactTransformer, ContactDto>("contacts/1");
+				foreach (var detail in contactDto.ContactDetails)
+				{
+					Assert.NotNull(detail.Id);
+				}
+			}
+		}
+
 		[Fact(Skip = "Currently not working")]
 		public void LazyLoadByIds()
 		{
