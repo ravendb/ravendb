@@ -38,7 +38,7 @@ namespace Raven.Tests.Helpers
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
-		private readonly List<string> pathsToDelete = new List<string>();
+		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
 		public RavenTestBase()
 		{
@@ -162,7 +162,8 @@ namespace Raven.Tests.Helpers
 			string dataDirectory = null,
 			bool runInMemory = true, 
 			string requestedStorage = null,
-			bool enableAuthentication = false)
+			bool enableAuthentication = false,
+			string activeBundles = null)
 		{
 			if (dataDirectory != null)
 				pathsToDelete.Add(dataDirectory);
@@ -173,9 +174,17 @@ namespace Raven.Tests.Helpers
 				Port = port,
 				DataDirectory = dataDirectory ?? NewDataPath(),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+#if DEBUG
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+#endif
 				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
 			};
+
+			if (activeBundles != null)
+			{
+				ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
+			}
 
 			ModifyConfiguration(ravenConfiguration);
 
