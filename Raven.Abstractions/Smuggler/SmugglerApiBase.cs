@@ -392,8 +392,11 @@ namespace Raven.Abstractions.Smuggler
 			}
 			catch (Exception e)
 			{
-			    if (e is InvalidDataException == false &&
-			        e is ZlibException == false)
+			    if (e is InvalidDataException == false 
+#if SILVERLIGHT
+                    && e is ZlibException == false
+#endif
+                    )
 			        throw;
 
 				stream.Seek(0, SeekOrigin.Begin);
