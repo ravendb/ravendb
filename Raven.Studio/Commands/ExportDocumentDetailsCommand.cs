@@ -146,26 +146,22 @@ namespace Raven.Studio.Commands
                             } while (documentBatch.Count > 0);
                         }
 
-                    });
+                    }, cancellationToken);
                 }
             }
 
             private async Task<IList<JsonDocument>> GetNextBatch(IAsyncEnumerator<JsonDocument> documentsStream, CancellationToken token)
             {
                 var documents = new List<JsonDocument>();
-                var count = 0;
 
-                while (await documentsStream.MoveNextAsync().ConfigureAwait(false) && count < BatchSize)
+				while (documents.Count < BatchSize && await documentsStream.MoveNextAsync().ConfigureAwait(false))
                 {
                     documents.Add(documentsStream.Current);
-                    count++;
-
                     token.ThrowIfCancellationRequested();
                 }
 
                 return documents;
             }
-
 
             private void WriteColumnsForDocuments(CsvWriter writer, IEnumerable<JsonDocument> documents, DocumentColumnsExtractor extractor)
             {
