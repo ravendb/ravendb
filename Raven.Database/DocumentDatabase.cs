@@ -1257,7 +1257,9 @@ namespace Raven.Database
                 if (suggestionOption.Distance == StringDistanceTypes.None)
                     continue;
 
-                var indexExtensionKey = MonoHttpUtility.UrlEncode(field);
+                var indexExtensionKey =
+                    MonoHttpUtility.UrlEncode(field + "-" + suggestionOption.Distance + "-" +
+                                              suggestionOption.Accuracy);
 
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
                     workContext,
