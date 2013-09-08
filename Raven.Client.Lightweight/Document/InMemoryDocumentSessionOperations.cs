@@ -461,8 +461,8 @@ more responsive application.
         {
             try
             {
-                if (entityType == typeof(RavenJObject))
-                    return (object)documentFound.CloneToken();
+                if (entityType == typeof (RavenJObject))
+                    return documentFound.CloneToken();
 
                 var defaultValue = GetDefaultValue(entityType);
                 var entity = defaultValue;
@@ -482,7 +482,7 @@ more responsive application.
                     var document = entity as RavenJObject;
                     if (document != null)
                     {
-                        entity = (object)(new DynamicJsonObject(document));
+                        entity = (object) (new DynamicJsonObject(document));
                     }
                 }
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
@@ -493,6 +493,10 @@ more responsive application.
                 }
 
                 return entity;
+            }
+            catch (ReadVetoException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
