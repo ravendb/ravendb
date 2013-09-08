@@ -117,8 +117,10 @@ namespace Raven.Tests.Issues
 
 				while (true)
 				{
+					var name = db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant())
+					                 .Replace(".fiddler", "");
 					DateTime time;
-					if (replicationTask.Heartbeats.TryGetValue(db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant()), out time))
+					if (replicationTask.Heartbeats.TryGetValue(name, out time))
 					{
 						break;
 					}
@@ -155,8 +157,8 @@ namespace Raven.Tests.Issues
 				}
 			})
 			{
-
 				store.Initialize();
+
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
 				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
 
@@ -191,8 +193,10 @@ namespace Raven.Tests.Issues
 
 				while (true)
 				{
+					var name = db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant())
+					                 .Replace(".fiddler", "");
 					DateTime time;
-					if (replicationTask.Heartbeats.TryGetValue(db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant()), out time))
+					if (replicationTask.Heartbeats.TryGetValue(name, out time))
 					{
 						break;
 					}
