@@ -17,10 +17,10 @@ namespace Raven.Database.Linq.Ast
 			else
 			{
 				var target = invocationExpression.Target as MemberReferenceExpression;
-				if (target == null)
+				if (target == null || target.Target is IdentifierExpression)
 					return base.VisitQueryFromClause(fromClause, data);
 
-				node = target.Target;
+			    node = target.Target;
 			}
 
 			node.ReplaceWith(new ParenthesizedExpression(new CastExpression(new SimpleType("IEnumerable<dynamic>"), node.Clone())));
