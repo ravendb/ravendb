@@ -390,10 +390,15 @@ namespace Raven.Abstractions.Smuggler
 				if (jsonReader.Read() == false)
 					return;
 			}
-			catch (InvalidDataException)
+			catch (Exception e)
 			{
-				sizeStream = stream;
+			    if (e is InvalidDataException == false &&
+			        e is ZlibException == false)
+			        throw;
+
 				stream.Seek(0, SeekOrigin.Begin);
+
+                sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 
 				var streamReader = new StreamReader(stream);
 
