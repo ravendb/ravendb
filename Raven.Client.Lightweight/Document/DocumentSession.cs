@@ -327,18 +327,26 @@ namespace Raven.Client.Document
 			IncrementRequestCount();
 
             var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs).Results
-		                                  .Select(x => JsonObjectToClrInstancesWithoutTracking(typeof (T), x))
+		                                  .Select(x =>
+		                                  {
+		                                      var result = JsonObjectToClrInstancesWithoutTracking(typeof (T), x);
+		                                
+                                              var array = result as Array;
+                                              if (array != null &&  typeof(T).IsArray == false && array.Length > ids.Length)
+                                              {
+                                                  throw new InvalidOperationException(
+                                                      String.Format(
+                                                          "A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
+                                                          transformer,
+                                                          typeof(T).Name));
+                                              }
+
+		                                      return result;
+		                                  })
                                           .Cast<T>()
 		                                  .ToArray();
           
-            if (items.Length > ids.Length)
-            {
-                throw new InvalidOperationException(
-                    String.Format(
-                        "A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-                        transformer,
-                        typeof(T).Name));
-            }
+            
             return items;
 		}
 
