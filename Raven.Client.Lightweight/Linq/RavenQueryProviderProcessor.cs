@@ -213,11 +213,16 @@ namespace Raven.Client.Linq
 			// 100 < x.Foo && 200 > x.Foo
 			// 200 > x.Foo && 100 < x.Foo 
 
+			// x.Foo >= 100 && x.Foo <= 200
+			// x.Foo <= 200 && x.Foo >= 100 
+			// 100 <= x.Foo && 200 >= x.Foo
+			// 200 >= x.Foo && 100 <= x.Foo
+
 			var isPossibleBetween =
 				(andAlso.Left.NodeType == ExpressionType.GreaterThan && andAlso.Right.NodeType == ExpressionType.LessThan) ||
 				(andAlso.Left.NodeType == ExpressionType.GreaterThanOrEqual && andAlso.Right.NodeType == ExpressionType.LessThanOrEqual) ||
 				(andAlso.Left.NodeType == ExpressionType.LessThan && andAlso.Right.NodeType == ExpressionType.GreaterThan) ||
-				(andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThan);
+				(andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThanOrEqual);
 
 			if (isPossibleBetween == false)
 				return false;
