@@ -28,7 +28,6 @@ import raven.abstractions.extensions.ExpressionExtensions;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.EscapeQueryOptions;
 import raven.client.IDocumentQuery;
-import raven.client.LinqExtensionsQueryable;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.SearchOptions;
@@ -43,7 +42,7 @@ import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
-public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector, LinqExtensionsQueryable<T> {
+public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
 
   private Class<T> clazz;
   private final Expression<?> expression;

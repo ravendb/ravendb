@@ -3,7 +3,7 @@ package raven.client;
 import raven.abstractions.basic.SerializeUsingValue;
 
 @SerializeUsingValue
-public enum SearchOptions {
+public enum SearchOptions  {
 
   OR(1),
   AND(2),
