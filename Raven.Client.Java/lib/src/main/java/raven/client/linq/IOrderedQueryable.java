@@ -5,8 +5,8 @@ import java.util.List;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Predicate;
-
-public interface IOrderedQueryable<T> {
+//TODO java doc
+public interface IOrderedQueryable<T> extends Iterable<T> {
   /**
    * Filters a sequence of values based on a predicate.
    * @param predicate
@@ -23,15 +23,30 @@ public interface IOrderedQueryable<T> {
 
   public List<T> toList();
 
+  public IRavenQueryable<T> skip(int itemsToSkip);
+
+  public IRavenQueryable<T> take(int amount);
+
+  public T first();
+
+  public T firstOrDefault();
+
   public T single();
 
-  //IQueryable
+  public T singleOrDefault();
+
+  public int count();
+
+  public long longCount();
 
   public Class<?> getElementType();
 
   public Expression<?> getExpression();
 
   public IQueryProvider getProvider();
+
+
+
 
   /**
    * Project using a different type

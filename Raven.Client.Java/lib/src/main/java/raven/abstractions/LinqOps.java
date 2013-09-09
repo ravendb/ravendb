@@ -15,6 +15,15 @@ public class LinqOps {
     public static final Operator<Object> ORDER_BY_SCORE = new OperatorImpl<>("QUERY_ORDER_BY_SCORE");
     public static final Operator<Object> INTERSECT = new OperatorImpl<>("QUERY_INTERSECT");
 
+    public static final Operator<Object> FIRST_OR_DEFAULT = new OperatorImpl<>("QUERY_FIRST_OR_DEFAULT");
+    public static final Operator<Object> FIRST = new OperatorImpl<>("QUERY_FIRST");
+    public static final Operator<Object> COUNT = new OperatorImpl<>("QUERY_COUNT");
+    public static final Operator<Object> LONG_COUNT = new OperatorImpl<>("QUERY_LONG_COUNT");
+    public static final Operator<Object> SINGLE = new OperatorImpl<>("QUERY_SINGLE");
+    public static final Operator<Object> SINGLE_OR_DEFAULT = new OperatorImpl<>("QUERY_SINGLE_OR_DEFAULT");
+    public static final Operator<Object> SKIP = new OperatorImpl<>("QUERY_SKIP");
+    public static final Operator<Object> TAKE = new OperatorImpl<>("QUERY_TAKE");
+
     public static final String QUERY_OPERATORS_PREFIX = "QUERY_";
   }
 

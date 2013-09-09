@@ -426,8 +426,11 @@ public class RavenQueryProviderProcessor<T> {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void visitQueryableMethodCall(Operation< ? > expression) {
     //TODO finish me
+
+    //TODO of type
     String operatorId = expression.getOperator().getId();
     if (operatorId.equals(LinqOps.Query.WHERE.getId())) {
       insideWhere++;
@@ -448,6 +451,26 @@ public class RavenQueryProviderProcessor<T> {
       }
       chanedWhere = true;
       insideWhere--;
+      //TODO: select
+    } else if (operatorId.equals(LinqOps.Query.SKIP.getId())) {
+      visitExpression(expression.getArg(0));
+      visitSkip((Constant<Integer>) expression.getArg(1));
+    } else if (operatorId.equals(LinqOps.Query.TAKE.getId())) {
+      visitExpression(expression.getArg(0));
+      visitTake((Constant<Integer>) expression.getArg(1));
+    } else if (operatorId.equals(LinqOps.Query.FIRST_OR_DEFAULT.getId())) {
+      visitExpression(expression.getArg(0));
+      visitFirstOrDefault();
+    } else if (operatorId.equals(LinqOps.Query.FIRST.getId())) {
+      visitExpression(expression.getArg(0));
+      visitFirst();
+    } else if (operatorId.equals(LinqOps.Query.SINGLE.getId())) {
+      visitExpression(expression.getArg(0));
+      visitSingle();
+    } else if (operatorId.equals(LinqOps.Query.SINGLE_OR_DEFAULT.getId())) {
+      visitExpression(expression.getArg(0));
+      visitSingleOrDefault();
+      //TODO: all, any, count, long count, distinct, order by, then by, then by descinding, order by descending
     } else if (operatorId.equals(LinqOps.Query.ORDER_BY.getId())) {
       visitExpression(expression.getArg(0));
       Expression< ? > orderSpecExpression = expression.getArg(1);
@@ -459,6 +482,7 @@ public class RavenQueryProviderProcessor<T> {
       }
     } else if (operatorId.equals(LinqOps.Query.SEARCH.getId())) {
       visitSearch(expression);
+
     } else {
       throw new IllegalStateException("Unhandled expression: " + expression);
     }
@@ -567,10 +591,47 @@ public class RavenQueryProviderProcessor<T> {
 
   //TODO: private void VisitSelect(Expression operand)
 
-  //TODO: visit any, all, first, single, take
+  private void visitSkip(Constant<Integer> constantExpression) {
+    //Don't have to worry about the cast failing, the Skip() extension method only takes an int
+    luceneQuery.skip((int) constantExpression.getConstant());
+  }
 
+  private void visitTake(Constant<Integer> constantExpression) {
+    //Don't have to worry about the cast failing, the Take() extension method only takes an int
+    luceneQuery.take((int) constantExpression.getConstant());
+  }
 
+  //TODO: visit all, visitAny
 
+  private void visitCount() {
+    luceneQuery.take(0);
+    queryType = SpecialQueryType.COUNT;
+  }
+
+  private void visitLongCount() {
+    luceneQuery.take(0);
+    queryType = SpecialQueryType.LONG_COUNT;
+  }
+
+  private void visitSingle() {
+    luceneQuery.take(2);
+    queryType = SpecialQueryType.SINGLE;
+  }
+
+  private void visitSingleOrDefault() {
+    luceneQuery.take(2);
+    queryType = SpecialQueryType.SINGLE_OR_DEFAULT;
+  }
+
+  private void visitFirst() {
+    luceneQuery.take(1);
+    queryType = SpecialQueryType.FIRST;
+  }
+
+  private void visitFirstOrDefault() {
+    luceneQuery.take(1);
+    queryType = SpecialQueryType.FIRST_OR_DEFAULT;
+  }
 
   private String getFieldNameForRangeQuery(ExpressionInfo expression, Object value) {
     Field identityProperty = luceneQuery.getDocumentConvention().getIdentityProperty(clazz);

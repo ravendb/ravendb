@@ -23,12 +23,6 @@
       <version>${queryDsl.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.mysema.querydsl</groupId>
-      <artifactId>querydsl-lucene</artifactId>
-      <version>${queryDsl.version}</version>
-    </dependency>
-
-    <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.7</version>

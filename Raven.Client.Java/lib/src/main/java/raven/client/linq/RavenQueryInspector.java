@@ -1,7 +1,9 @@
 package raven.client.linq;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -42,7 +44,7 @@ import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
-public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
+public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector, Iterable<T> {
 
   private Class<T> clazz;
   private final Expression<?> expression;
@@ -96,28 +98,11 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return provider;
   }
 
+
   //TODO: support for runtime types check
   @Override
   public IRavenQueryable<T> where(Predicate predicate) {
     return getProvider().createQuery(Expressions.operation(expression.getType(), LinqOps.Query.WHERE, expression, predicate));
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public List<T> toList() {
-    Object execute = getProvider().execute(expression);
-    return ((IDocumentQuery<T>)execute).toList();
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public T single() {
-    Object execute = getProvider().execute(expression);
-    List<T> list = ((IDocumentQuery<T>)execute).toList();
-    if (list.size() != 1) {
-      throw new IllegalStateException("Expected single result! Got: " + list.size());
-    }
-    return list.get(0);
   }
 
   /**
@@ -378,7 +363,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   }
 
   private static void setSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query) {
-
+    //TODO: implement me!
   }
 
   @Override
@@ -411,6 +396,69 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   @Override
   public IRavenQueryable<T> orderByScore() {
     return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.ORDER_BY_SCORE, getExpression()));
+  }
+
+  @Override
+  public IRavenQueryable<T> skip(int itemsToSkip) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SKIP, getExpression(), Expressions.constant(itemsToSkip)));
+  }
+
+  @Override
+  public IRavenQueryable<T> take(int amount) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.TAKE, getExpression(), Expressions.constant(amount)));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public Iterator<T> iterator() {
+    Object execute = provider.execute(expression);
+    if (execute instanceof Iterable) {
+      return ((Iterable) execute).iterator();
+    } else {
+      return (Iterator<T>) Arrays.asList(execute).iterator();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public T firstOrDefault() {
+    Object execute = provider.execute(Expressions.operation(Object.class, LinqOps.Query.FIRST_OR_DEFAULT, getExpression()));
+    return (T) execute;
+  }
+
+  @Override
+  public List<T> toList() {
+    return EnumerableUtils.toList(iterator());
+  }
+
+  @Override
+  public T first() {
+    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.FIRST, getExpression()));
+    return EnumerableUtils.first(firstQuery.iterator());
+  }
+
+  @Override
+  public T singleOrDefault() {
+    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SINGLE_OR_DEFAULT, getExpression()));
+    return EnumerableUtils.first(firstQuery.iterator());
+  }
+
+  @Override
+  public T single() {
+    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SINGLE, getExpression()));
+    return EnumerableUtils.first(firstQuery.iterator());
+  }
+
+  @Override
+  public int count() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public long longCount() {
+    // TODO Auto-generated method stub
+    return 0;
   }
 
 

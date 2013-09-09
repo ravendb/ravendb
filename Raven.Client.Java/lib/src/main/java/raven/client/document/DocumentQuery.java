@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +31,7 @@ import raven.abstractions.json.linq.RavenJToken;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQuery;
 import raven.client.connection.IDatabaseCommands;
+import raven.client.linq.EnumerableUtils;
 import raven.client.listeners.IDocumentQueryListener;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
@@ -368,23 +370,11 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
-  public T first() {
-    pageSize = 1;
-    List<T> list = toList();
-    if (list.isEmpty()) {
-      return null;
-    } else {
-      return list.get(0);
-    }
-  }
-
-  @Override
-  public List<T> toList() {
-
+  public Iterator<T> iterator() {
     initSync();
     while (true) {
       try {
-        return queryOperation.complete(clazz);
+        return queryOperation.complete(clazz).iterator();
       } catch (Exception e) {
         if (!queryOperation.shouldQueryAgain(e)) {
           throw e;
@@ -394,21 +384,14 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     }
   }
 
+
+
   public String toString() {
     String query = super.toString();
     if (isSpatialQuery) {
       return String.format("%s SpatialField: %s QueryShape: %s Relation: %s", query, spatialFieldName, queryShape, spatialRelation);
     }
     return query;
-  }
-
-  @Override
-  public T single() {
-    List<T> list = toList();
-    if (list.size() != 1) {
-      throw new IllegalStateException("Expected one result. Got: " + list.size());
-    }
-    return list.get(0);
   }
 
   @Override
@@ -483,5 +466,31 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     }
     return getFacets(facets, start, pageSize);
   }
+
+  @Override
+  public List<T> toList() {
+    return EnumerableUtils.toList(iterator());
+  }
+
+  @Override
+  public T single() {
+    return EnumerableUtils.single(iterator());
+  }
+
+  @Override
+  public T first() {
+    return EnumerableUtils.first(iterator());
+  }
+
+  @Override
+  public T firstOrDefault() {
+    return EnumerableUtils.firstOrDefault(iterator());
+  }
+
+  @Override
+  public T singleOrDefault() {
+    return EnumerableUtils.singleOrDefault(iterator());
+  }
+
 
 }

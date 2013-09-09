@@ -21,7 +21,7 @@ import raven.client.spatial.SpatialCriteriaFactory;
  *
  * @param <T>
  */
-public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<T>> {
+public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<T>>, Iterable<T> {
   /**
    * Selects the specified fields directly from the index
    * @param projectionClass The class of the projection
@@ -218,6 +218,12 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
   public T first();
 
   /**
+   * Returns first result
+   * @return
+   */
+  public T firstOrDefault();
+
+  /**
    * Materialize query, executes request and returns with results
    * @return
    */
@@ -228,5 +234,11 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    * @return
    */
   public T single();
+
+  /**
+   * Returns single result
+   * @return
+   */
+  public T singleOrDefault();
 
 }
