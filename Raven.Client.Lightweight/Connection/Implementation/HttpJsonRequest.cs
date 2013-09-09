@@ -69,7 +69,7 @@ namespace Raven.Client.Connection
 		private string operationUrl;
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-		public Action<HttpResponseHeaders, string, string> HandleReplicationStatusChanges2 = delegate { };
+		public Action<HttpResponseHeaders, string, string> HandleReplicationStatusChangesAsync = delegate { };
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -252,7 +252,7 @@ namespace Raven.Client.Connection
 					factory.UpdateCacheTime(this);
 					var result = factory.GetCachedResponse(this, Response.Headers);
 
-					HandleReplicationStatusChanges2(Response.Headers, primaryUrl, operationUrl);
+					HandleReplicationStatusChangesAsync(Response.Headers, primaryUrl, operationUrl);
 
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
@@ -553,7 +553,7 @@ namespace Raven.Client.Connection
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
-			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
+			HandleReplicationStatusChangesAsync(Response.Headers, primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression())
 			{
@@ -561,7 +561,7 @@ namespace Raven.Client.Connection
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
-					factory.CacheResponse(Url, data, ResponseHeaders);
+					factory.CacheResponse(Url, data, Response.Headers);
 				}
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
