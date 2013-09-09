@@ -66,7 +66,12 @@ namespace Raven.Database.Indexing
 
 		internal readonly int indexId;
 
-		private readonly AbstractViewGenerator viewGenerator;
+	    public int IndexId
+	    {
+	        get { return indexId; }
+	    }
+
+	    private readonly AbstractViewGenerator viewGenerator;
 		protected readonly WorkContext context;
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
