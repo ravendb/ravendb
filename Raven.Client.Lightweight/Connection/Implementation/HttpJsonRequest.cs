@@ -969,6 +969,7 @@ namespace Raven.Client.Connection
 
 		public Task<Stream> GetRawRequestStream()
 		{
+            CopyHeadersToWebRequest();
 			webRequest.SendChunked = true;
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
@@ -977,6 +978,7 @@ namespace Raven.Client.Connection
 		{
 			try
 			{
+                CopyHeadersToWebRequest();
 				return webRequest.GetResponse();
 			}
 			catch (WebException we)
@@ -1006,6 +1008,7 @@ namespace Raven.Client.Connection
 		{
 			try
 			{
+                CopyHeadersToWebRequest();
 				return await webRequest.GetResponseAsync();
 			}
 			catch (WebException we)
