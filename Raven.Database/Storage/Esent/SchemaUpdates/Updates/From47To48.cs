@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
@@ -62,7 +63,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                 // TODO: This can fail, rollback
                 File.WriteAllText(path, JsonConvert.SerializeObject(definition, Formatting.Indented, Default.Converters));
 
-                var indexDirectory = IndexDefinitionStorage.FixupIndexName(definition.Name, configuration.IndexStoragePath);
+                var indexDirectory = FixupIndexName(definition.Name, configuration.IndexStoragePath);
 		        var oldStorageDirectory = Path.Combine(configuration.IndexStoragePath, MonoHttpUtility.UrlEncode(indexDirectory));
                 var newStorageDirectory = Path.Combine(configuration.IndexStoragePath, definition.IndexId.ToString());
 
@@ -247,6 +248,33 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
             filesToDelete.ForEach(File.Delete);
 			SchemaCreator.UpdateVersion(session, dbid, "4.8");
-		} 
+		}
+
+        public static string FixupIndexName(string index, string path)
+        {
+            if (index.EndsWith("=")) //allready encoded
+                return index;
+            index = index.Trim();
+            string prefix = null;
+            if (index.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase) || index.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
+            {
+                prefix = index.Substring(0, 5);
+            }
+            if (path.Length + index.Length > 230 ||
+                Encoding.Unicode.GetByteCount(index) >= 255)
+            {
+                using (var md5 = MD5.Create())
+                {
+                    var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
+                    var result = prefix + Convert.ToBase64String(bytes);
+
+                    if (path.Length + result.Length > 230)
+                        throw new InvalidDataException("index name with the given path is too long even after encoding: " + index);
+
+                    return result;
+                }
+            }
+            return index;
+        }
 	}
 }

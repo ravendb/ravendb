@@ -165,9 +165,15 @@ namespace Raven.Database.Storage
 		{
 			if (configuration.RunInMemory)
 				return;
-			var fixedName = FixupIndexName(transformerDefinition.Name);
-			var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(fixedName) + ".transform");
-			// Hash the name if it's too long (as a path)
+            string indexName;
+            int i = 0;
+            while (true)
+		    {
+		        indexName = Path.Combine(path, i + ".transform");
+		        if (File.Exists(indexName) == false)
+		            break;
+		        i++;
+		    }
 			File.WriteAllText(indexName, JsonConvert.SerializeObject(transformerDefinition, Formatting.Indented, Default.Converters));
 		}
 
@@ -314,38 +320,6 @@ namespace Raven.Database.Storage
         public bool Contains(string indexName)
         {
             return indexNameToId.ContainsKey(indexName);
-        }
-
-        public string FixupIndexName(string index)
-        {
-            return FixupIndexName(index, path);
-        }
-
-        public static string FixupIndexName(string index, string path)
-        {
-	        if (index.EndsWith("=")) //allready encoded
-		        return index;
-            index = index.Trim();
-            string prefix = null;
-			if (index.StartsWith("Temp/", StringComparison.OrdinalIgnoreCase) || index.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
-            {
-                prefix = index.Substring(0, 5);
-            }
-            if (path.Length + index.Length > 230 ||
-                Encoding.Unicode.GetByteCount(index) >= 255)
-            {
-                using (var md5 = MD5.Create())
-                {
-                    var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
-                    var result = prefix + Convert.ToBase64String(bytes);
-
-					if(path.Length + result.Length > 230)
-						throw new InvalidDataException("index name with the given path is too long even after encoding: " + index);
-
-	                return result;
-                }
-            }
-            return index;
         }
 
         public static void ResolveAnalyzers(IndexDefinition indexDefinition)
