@@ -40,6 +40,7 @@ namespace Raven.Tests.Issues
 
 					var queryResult = session.Advanced.LuceneQuery<Item>().ExplainScores().WaitForNonStaleResults().QueryResult;
 
+                    Assert.False(queryResult.IsStale);
 					Assert.Equal(2, queryResult.ScoreExplanations.Count);
 					Assert.False(string.IsNullOrEmpty(queryResult.ScoreExplanations["items/1"]));
 					Assert.False(string.IsNullOrEmpty(queryResult.ScoreExplanations["items/2"]));
