@@ -165,13 +165,7 @@ namespace Raven.Client.Connection
 						try
 						{
 						    var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-						    for (int i = 0; i < headers.Count; i++)
-						    {
-						        var key = headers.GetKey(i);
-						        var values = headers.GetValues(i);
-						        Debug.Assert(values != null);
-						        httpRequestMessage.Headers.Add(key, values);
-						    }
+						    CopyHeadersToHttpRequestMessage(httpRequestMessage);
 						    HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
 						    Response = httpResponseMessage;
 							SetResponseHeaders(Response);
@@ -212,7 +206,18 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private void SetResponseHeaders(HttpResponseMessage response)
+	    private void CopyHeadersToHttpRequestMessage(HttpRequestMessage httpRequestMessage)
+	    {
+	        for (int i = 0; i < headers.Count; i++)
+	        {
+	            var key = headers.GetKey(i);
+	            var values = headers.GetValues(i);
+	            Debug.Assert(values != null);
+	            httpRequestMessage.Headers.Add(key, values);
+	        }
+	    }
+
+	    private void SetResponseHeaders(HttpResponseMessage response)
 		{
 			ResponseHeaders = new NameValueCollection();
 			foreach (var header in response.Headers)
@@ -389,16 +394,7 @@ namespace Raven.Client.Connection
 				{
 					if (writeCalled == false)
 						webRequest.ContentLength = 0;
-				    for (int i = 0; i < headers.Count; i++)
-				    {
-				        var key = headers.GetKey(i);
-				        var values = headers.GetValues(i);
-                        Debug.Assert(values != null);
-				        foreach (var value in values)
-				        {
-				            webRequest.Headers.Set(key, value);
-				        }
-				    }
+				    CopyHeadersToWebRequest();
 					return ReadJsonInternal(webRequest.GetResponse);
 				}
 				catch (WebException e)
@@ -425,7 +421,21 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public bool HandleUnauthorizedResponse(HttpWebResponse unauthorizedResponse)
+	    private void CopyHeadersToWebRequest()
+	    {
+	        for (int i = 0; i < headers.Count; i++)
+	        {
+	            var key = headers.GetKey(i);
+	            var values = headers.GetValues(i);
+	            Debug.Assert(values != null);
+	            foreach (var value in values)
+	            {
+	                webRequest.Headers.Set(key, value);
+	            }
+	        }
+	    }
+
+	    public bool HandleUnauthorizedResponse(HttpWebResponse unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponse == null)
 				return false;
@@ -850,7 +860,7 @@ namespace Raven.Client.Connection
 		{
 			writeCalled = true;
 			postedData = data;
-
+            CopyHeadersToWebRequest();
 			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
@@ -859,6 +869,7 @@ namespace Raven.Client.Connection
 			writeCalled = true;
 			postedStream = streamToWrite;
 			webRequest.SendChunked = true;
+            CopyHeadersToWebRequest();
 			using (var stream = webRequest.GetRequestStream())
 			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 			{
