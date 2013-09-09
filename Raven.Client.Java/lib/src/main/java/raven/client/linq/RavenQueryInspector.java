@@ -22,22 +22,28 @@ import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryResult;
+import raven.abstractions.data.SuggestionQuery;
+import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.extensions.ExpressionExtensions;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.EscapeQueryOptions;
 import raven.client.IDocumentQuery;
+import raven.client.LinqExtensionsQueryable;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
+import raven.client.SearchOptions;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.IRavenQueryInspector;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentSession;
 import raven.client.document.InMemoryDocumentSessionOperations;
 import raven.client.document.LazyFacetsOperation;
+import raven.client.document.batches.LazySuggestOperation;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
-public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
+public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector, LinqExtensionsQueryable<T> {
 
   private Class<T> clazz;
   private final Expression<?> expression;
@@ -334,6 +340,78 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   @Override
   public FacetResults toFacets(String facetSetupDoc, int start, Integer pageSize) {
     return databaseCommands.getFacets(indexName, getIndexQuery(), facetSetupDoc, start, pageSize);
+  }
+
+  @Override
+  public IRavenQueryable<T> include(Path< ? > path) {
+    customize(new DocumentQueryCustomizationFactory().include(path));
+    return this;
+  }
+
+  @Override
+  public IRavenQueryable<T> intersect(IRavenQueryable<T> self) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.INTERSECT, getExpression()));
+  }
+
+  @Override
+  public SuggestionQueryResult suggest() {
+    return suggest(new SuggestionQuery());
+  }
+
+  @Override
+  public SuggestionQueryResult suggest(SuggestionQuery query) {
+    setSuggestionQueryFieldAndTerm(this, query);
+    return getDatabaseCommands().suggest(getIndexQueried(), query);
+  }
+
+  @Override
+  public Lazy<SuggestionQueryResult> suggestLazy() {
+    return suggestLazy(new SuggestionQuery());
+  }
+
+  @Override
+  public Lazy<SuggestionQueryResult> suggestLazy(SuggestionQuery query) {
+    setSuggestionQueryFieldAndTerm(this, query);
+    LazySuggestOperation lazyOperation = new LazySuggestOperation(getIndexQueried(), query);
+
+    DocumentSession documentSession = (DocumentSession) getSession();
+    return documentSession.addLazyOperation(lazyOperation, null);
+  }
+
+  private static void setSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query) {
+
+  }
+
+  @Override
+  public Lazy<List<T>> lazily(Action1<List<T>> onEval) {
+    return provider.lazily(clazz, getExpression(), onEval);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms) {
+    return search(fieldSelector, searchTerms, 1.0, SearchOptions.GUESS, EscapeQueryOptions.ESCAPE_ALL);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost) {
+    return search(fieldSelector, searchTerms, boost, SearchOptions.GUESS, EscapeQueryOptions.ESCAPE_ALL);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptions searchOptions) {
+    return search(fieldSelector, searchTerms, boost, searchOptions, EscapeQueryOptions.ESCAPE_ALL);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptions options, EscapeQueryOptions escapeQueryOptions) {
+    // we use constant null to preserve arguments indexes
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SEARCH, getExpression(), fieldSelector,
+        Expressions.constant(searchTerms), Expressions.constant(boost), Expressions.constant(options), Expressions.constant(escapeQueryOptions)));
+  }
+
+  @Override
+  public IRavenQueryable<T> orderByScore() {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.ORDER_BY_SCORE, getExpression()));
   }
 
 

@@ -137,6 +137,7 @@ public class BoostingDuringIndexingTest extends RemoteClientTest {
           .where(x.firstName.eq("Ayende").or(x.lastName.eq("Eini")))
           .toList();
 
+
         assertEquals("Ayende", users.get(0).getFirstName());
         assertEquals("Oren", users.get(1).getFirstName());
       }
