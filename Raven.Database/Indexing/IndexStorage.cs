@@ -646,7 +646,9 @@ namespace Raven.Database.Indexing
 		public void DeleteIndex(string name)
 		{
 		    var value = TryIndexByName(name);
-            DeleteIndex(value.indexId);
+		    if (value == null)
+		        return;
+		    DeleteIndex(value.indexId);
 		}
 		public void DeleteIndex(int id)
 		{
