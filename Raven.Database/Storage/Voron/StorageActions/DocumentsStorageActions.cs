@@ -36,9 +36,7 @@
         private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
         private readonly IDocumentCacher documentCacher;
 
-        private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
-        
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+	    private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
         public DocumentsStorageActions(IUuidGenerator uuidGenerator,
             OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
@@ -67,8 +65,11 @@
 										    .Iterate(snapshot))
 			{
 				int fetchedDocumentCount = 0;
-				iter.Seek(Slice.AfterAllKeys);
-				iter.Skip(-start);
+                if(!iter.Seek(Slice.AfterAllKeys))
+                    yield break;
+
+				if(!iter.Skip(-start))
+                    yield break;
 				do
 				{
 					if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
@@ -101,7 +102,11 @@
 			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
 											.Iterate(snapshot))
 			{
-				iter.Seek(Slice.BeforeAllKeys);
+			    if (!iter.Seek(Slice.BeforeAllKeys))
+			    {
+			        yield break;
+			    }
+
 				long fetchedDocumentTotalSize = 0;
 				int fetchedDocumentCount = 0;
 
@@ -148,7 +153,7 @@
 			using (var currentDataStream = iter.CreateStreamForCurrent())
 			{
 				var keyBytes = currentDataStream.ReadData();
-				key = Encoding.Unicode.GetString(keyBytes);
+                key = Encoding.UTF8.GetString(keyBytes);
 			}
 			return key;
 		}
@@ -170,11 +175,11 @@
 
 				var fetchedDocumentCount = 0;
 				var alreadySkippedCount = 0; //we have to do it this way since we store in the same tree both data and metadata entries
-				iter.Skip(start);
 				do
 				{
 					var dataKey = iter.CurrentKey.ToString();
-					if (alreadySkippedCount++ < start || dataKey.Contains(Util.MetadataSuffix)) continue;
+                    if(dataKey.Contains(Util.MetadataSuffix)) continue;				    
+					if (alreadySkippedCount++ < start) continue;
 
 					fetchedDocumentCount++;
 					yield return DocumentByKey(Util.OriginalKey(dataKey), null);
@@ -189,7 +194,10 @@
 			{
 				long documentCount = 0;
 
-				iter.Seek(Slice.BeforeAllKeys);
+			    if (!iter.Seek(Slice.BeforeAllKeys))
+			    {
+			        return 0;
+			    }
 
 				do
 				{
@@ -303,7 +311,7 @@
             if(String.IsNullOrEmpty(key))
                 throw new ArgumentNullException("key");
 
-            if (key != null && Encoding.Unicode.GetByteCount(key) >= UInt16.MaxValue)
+            if (key != null && Encoding.UTF8.GetByteCount(key) >= UInt16.MaxValue)
                 throw new ArgumentException(string.Format("The dataKey must be a maximum of {0} bytes in Unicode, key is: '{1}'", UInt16.MaxValue, key), "key");
 
             var lowerKey = key.ToLowerInvariant();
@@ -413,7 +421,7 @@
             var keyByEtagDocumentIndice = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
             keyByEtagDocumentIndice.Delete(writeBatch,preTouchEtag);
-            keyByEtagDocumentIndice.Add(writeBatch, newEtag, Encoding.Unicode.GetBytes(lowerKey));
+            keyByEtagDocumentIndice.Add(writeBatch, newEtag, Encoding.UTF8.GetBytes(lowerKey));
 
             logger.Debug("TouchDocument() - document with key = '{0}'", key);
         }
@@ -449,14 +457,8 @@
         {
 			var metadataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream
 
-			var etagBytes = metadata.Etag.ToByteArray();
-			metadataStream.Write(etagBytes, 0, etagBytes.Length);
-
-			var keyBytes = Encoding.Unicode.GetBytes(metadata.Key);
-
-			var keyLengthBytes = BitConverter.GetBytes(((ushort)keyBytes.Length));
-			metadataStream.Write(keyLengthBytes, 0, keyLengthBytes.Length);
-			metadataStream.Write(keyBytes, 0, keyBytes.Length);
+			metadataStream.Write(metadata.Etag);
+			metadataStream.Write(metadata.Key);
 
 			metadata.Metadata.WriteTo(metadataStream);
 
@@ -466,20 +468,6 @@
 			documentsTable.Add(writeBatch, metadataKey, metadataStream);
 
 			return documentsTable.Contains(snapshot, metadataKey);
-
-			//var metadataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream
-
-			//metadataStream.Write(metadata.Etag);
-			//metadataStream.Write(metadata.Key, Encoding.Unicode);
-
-			//metadata.Metadata.WriteTo(metadataStream);
-
-			//metadataStream.Position = 0;
-
-			//var metadataKey = Util.MetadataKey(metadata.Key.ToLowerInvariant());
-			//documentsTable.Add(writeBatch, metadataKey, metadataStream);
-
-			//return documentsTable.Contains(snapshot, metadataKey);
         }
 
 
@@ -491,16 +479,8 @@
 					return null;
 
 				metadataReadResult.Stream.Position = 0;
-				var etagBytes = new byte[16];
-				metadataReadResult.Stream.Read(etagBytes, 0, 16);
-				var etag = Etag.Parse(etagBytes);
-
-				var keySizeBytes = new byte[2]; //ushort --> 16 bit --> 2 bytes
-				metadataReadResult.Stream.Read(keySizeBytes, 0, keySizeBytes.Length);
-				int keySize = BitConverter.ToUInt16(keySizeBytes, 0);
-				var keyBytes = new byte[keySize];
-				metadataReadResult.Stream.Read(keyBytes, 0, keySize);
-				var originalKey = Encoding.Unicode.GetString(keyBytes);
+				var etag = metadataReadResult.Stream.ReadEtag();
+				var originalKey = metadataReadResult.Stream.ReadString();
 
 				var existingCachedDocument = documentCacher.GetCachedDocument(metadataKey, etag);
 
@@ -508,32 +488,11 @@
 
 				return new JsonDocumentMetadata
 				{
-					Key = originalKey,
+					Key = originalKey, 
 					Etag = etag,
-					Metadata = metadata
+					Metadata = metadata                   
 				};
 			}
-
-			//using (var metadataReadResult = documentsTable.Read(snapshot, metadataKey))
-			//{
-			//	if (metadataReadResult == null)
-			//		return null;
-
-			//	metadataReadResult.Stream.Position = 0;
-			//	var etag = metadataReadResult.Stream.ReadEtag();
-			//	var originalKey = metadataReadResult.Stream.ReadString(Encoding.Unicode);
-
-			//	var existingCachedDocument = documentCacher.GetCachedDocument(metadataKey, etag);
-
-			//	var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : metadataReadResult.Stream.ToJObject();
-
-			//	return new JsonDocumentMetadata
-			//	{
-			//		Key = originalKey, 
-			//		Etag = etag,
-			//		Metadata = metadata                   
-			//	};
-			//}
         }
 
         private bool WriteDocumentData(string dataKey,string originalKey, Etag etag, RavenJObject data, RavenJObject metadata,out Etag newEtag)
@@ -564,7 +523,7 @@
             var isUpdated = PutDocumentMetadataInternal(originalKey, metadata, newEtag, savedAt);
 
             var keyByEtagDocumentIndice = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag);
-            keyByEtagDocumentIndice.Add(writeBatch, newEtag, Encoding.Unicode.GetBytes(originalKey));
+            keyByEtagDocumentIndice.Add(writeBatch, newEtag, Encoding.UTF8.GetBytes(originalKey));
 
             return isUpdated;
         }

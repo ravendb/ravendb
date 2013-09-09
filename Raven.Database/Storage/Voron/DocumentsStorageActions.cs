@@ -70,7 +70,11 @@ namespace Raven.Database.Storage.Voron
 										    .Iterate(snapshot))
 			{
 				int fetchedDocumentCount = 0;
-				iter.Seek(Slice.AfterAllKeys);
+                if (!iter.Seek(Slice.AfterAllKeys))
+                {
+                    return new List<JsonDocument>();
+                }
+
 				iter.Skip(-start);
 				do
 				{
@@ -105,7 +109,12 @@ namespace Raven.Database.Storage.Voron
 			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
 									 .Iterate(snapshot))
 			{
-				iter.Seek(Slice.BeforeAllKeys);
+                int fetchedDocumentCount = 0;
+                if (!iter.Seek(Slice.BeforeAllKeys))
+                {
+                    return new List<JsonDocument>();
+                }
+
 				long fetchedDocumentTotalSize = 0;
 				int fetchedDocumentCount = 0;
 
@@ -183,7 +192,8 @@ namespace Raven.Database.Storage.Voron
 			{
 				long documentCount = 0;
 
-				iter.Seek(Slice.BeforeAllKeys);
+                if (!iter.Seek(Slice.BeforeAllKeys))
+                    return 0;
 
 				do
 				{

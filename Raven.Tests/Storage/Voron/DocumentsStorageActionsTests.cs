@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Permissions;
+using System.Security.Principal;
+using System.Web.UI.WebControls;
 using System.Web.WebSockets;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -10,6 +12,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs.Indexing;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Storage.Voron
 {
@@ -156,7 +159,21 @@ namespace Raven.Tests.Storage.Voron
             }
         }
 
-        [Fact]
+
+	    [Fact]
+	    public void DocumentStorage_GetDocumentCount_NoDocuments_ZeroReturned()
+	    {
+	        using (var voronStorage = NewVoronStorage())
+	        {
+                voronStorage.Batch(viewer =>
+                {                    
+                    var documentsCount = viewer.Documents.GetDocumentsCount();
+                    Assert.Equal(0,documentsCount);
+                });
+	        }
+	    }
+
+	    [Fact]
         public void DocumentStorage_GetDocumentCount_CountReturned()
         {
             const int DOCUMENT_COUNT = 10;
@@ -339,7 +356,16 @@ namespace Raven.Tests.Storage.Voron
             }
         }
 
-        [Fact]
+	    [Fact]
+	    public void DocumentStorage_GetDocumentsAfter_NoDocuments_EmptyCollectionReturned()
+	    {
+	        using (var voronStorage = NewVoronStorage())
+	        {
+                voronStorage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsAfter(Etag.Empty,25)));
+	        }
+	    }
+
+	    [Fact]
         public void DocumentStorage_GetDocumentsAfter()
         {
             const int DOCUMENT_COUNT = 12;
@@ -545,28 +571,46 @@ namespace Raven.Tests.Storage.Voron
             }
         }
 
-        [Fact]
-        public void DocumentStorage_GetDocumentsByReverseUpdateOrder_NonZeroStart_RetrievedWithCorrectOrder()
+	    [Fact]
+	    public void DocumentStorage_GetDocumentsByReverseUpdateOrder_NoDocuments_EmptyCollectionReturned()
+	    {
+	        using (var voronStorage = NewVoronStorage())
+	        {
+                voronStorage.Batch(viewer =>
+                {
+                    var fetchedDocuments = viewer.Documents.GetDocumentsByReverseUpdateOrder(0,125);
+                    Assert.Empty(fetchedDocuments);
+                });
+	        }
+	    }
+
+	    [Theory]
+        [InlineData(15, 0)]
+        [InlineData(15, 5)]
+        [InlineData(5, 7)]
+        public void DocumentStorage_GetDocumentsByReverseUpdateOrder_RetrievedWithCorrectOrder_DifferentSkipParameters(int itemCount, int skip)
         {
-            const int DOCUMENT_COUNT = 12;
-            const int DOCUMENT_SKIP = 2;
-            using (var voronStorage = NewVoronStorage())
+	        using (var voronStorage = NewVoronStorage())
             {
                 var documentAddResults = new List<AddDocumentResult>();
                 voronStorage.Batch(mutator =>
                 {
-                    for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
+                    for (int docIndex = 0; docIndex < itemCount; docIndex++)
+// ReSharper disable once AccessToModifiedClosure
                         documentAddResults.Add(mutator.Documents.InsertDocument("Foo" + docIndex,
                             RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
                 });
 
                 documentAddResults.Reverse();
-                documentAddResults = documentAddResults.Skip(DOCUMENT_SKIP).ToList();
+                documentAddResults = documentAddResults.Skip(skip).ToList();
 
                 List<JsonDocument> documentReverseOrderFetchResults = null;
-                voronStorage.Batch(viewer => documentReverseOrderFetchResults = viewer.Documents.GetDocumentsByReverseUpdateOrder(DOCUMENT_SKIP, documentAddResults.Count).ToList());
+                voronStorage.Batch(viewer => documentReverseOrderFetchResults = viewer.Documents.GetDocumentsByReverseUpdateOrder(skip, documentAddResults.Count).ToList());
 
                 Assert.NotNull(documentReverseOrderFetchResults);
+
+                if(skip >= itemCount)
+                    Assert.Empty(documentReverseOrderFetchResults);
 
                 for (var etagIndex = 0; etagIndex < documentAddResults.Count; etagIndex++)
                 {
@@ -575,35 +619,55 @@ namespace Raven.Tests.Storage.Voron
             }
         }
 
-        [Fact]
-        public void DocumentStorage_GetDocumentsWithIdStartingWith()
+        [Theory]
+        [InlineData(25, 0, 20)]
+        [InlineData(25, 5, 10)]
+        [InlineData(15, 3, 6)]
+        [InlineData(5, 0, 0)]
+        public void DocumentStorage_GetDocumentsWithIdStartingWith(int itemCount, int start, int take)
         {
             using (var voronStorage = NewVoronStorage())
             {
+                var inputData = new Dictionary<string, RavenJObject>();
                 voronStorage.Batch(mutator =>
                     {
-                        mutator.Documents.AddDocument("Foo1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar11" }), new RavenJObject());
-                        mutator.Documents.AddDocument("Bar1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar22" }), new RavenJObject());
-                        mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar33" }), new RavenJObject());
-                        mutator.Documents.AddDocument("Bar2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar44" }), new RavenJObject());
-                        mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar55" }), new RavenJObject());
-                        mutator.Documents.AddDocument("Bar3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar66" }), new RavenJObject());
+                        for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
+                        {
+                            var keyPrefix = (itemIndex%2 == 0) ? "Foo" : "Bar";
+                            var document = RavenJObject.FromObject(new {Name = "Bar" + itemIndex});
+
+                            mutator.Documents.AddDocument(keyPrefix + itemIndex, Etag.Empty, document, new RavenJObject());
+                            inputData.Add(keyPrefix + itemIndex,document);
+                        }
                     });
 
                 IList<JsonDocument> fetchedDocuments = null;
-                voronStorage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 0, 3).ToList());
+                voronStorage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", start, take).ToList());
 
                 Assert.NotNull(fetchedDocuments);
+                var relevantInputKeys = new HashSet<string>(inputData.Where(kvp => kvp.Key.StartsWith("Bar"))
+                                                                                          .OrderBy(kvp => kvp.Key)
+                                                                                          .Select(row => row.Key)
+                                                                                          .Skip(start)
+                                                                                          .Take(take));
 
-                Assert.True(fetchedDocuments.Count == 3);
-                Assert.True(fetchedDocuments.Any(row => row.Key == "Bar1"));
-                Assert.True(fetchedDocuments.Any(row => row.Key == "Bar2"));
-                Assert.True(fetchedDocuments.Any(row => row.Key == "Bar3"));
+                var fetchedDocumentKeys = new HashSet<string>(fetchedDocuments.Select(doc => doc.Key));
+
+                Assert.True(fetchedDocumentKeys.Count <= take);
+                Assert.True(fetchedDocumentKeys.SetEquals(relevantInputKeys));
             }
         }
 
+	    [Fact]
+	    public void DocumentStorage_GetDocumentsWithIdStartingWith_NoDocuments_EmptyCollectionReturned()
+	    {
+	        using (var voronStorage = NewVoronStorage())
+	        {
+                voronStorage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsWithIdStartingWith("Foo", 0, 25).ToList()));
+            }
+	    }
 
-        [Fact]
+	    [Fact]
         public void DocumentStorage_GetDocumentsWithIdStartingWith_WithNonZeroStart()
         {
             using (var voronStorage = NewVoronStorage())

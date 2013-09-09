@@ -35,8 +35,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
 		{
-			var stream = new MemoryStream(value);
-			writeBatch.Add(key, stream, TableName, expectedVersion);
+			var stream = new MemoryStream(value) { Position = 0 };
+		    writeBatch.Add(key, stream, TableName, expectedVersion);
 		}
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null)

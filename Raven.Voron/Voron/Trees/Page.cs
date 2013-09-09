@@ -70,12 +70,11 @@ namespace Voron.Trees
 
             var pageKey = new Slice(SliceOptions.Key);
             bool matched = false;
-            NodeHeader* node = null;
             while (low <= high)
             {
                 position = (low + high) >> 1;
 
-                node = GetNode(position);
+                var node = GetNode(position);
                 pageKey.Set(node);
 
                 LastMatch = key.Compare(pageKey, cmp);
@@ -91,7 +90,8 @@ namespace Voron.Trees
 
             if (matched == false)
             {
-                node = GetNode(position);
+                var node = GetNode(position);
+                pageKey.Set(node);
                 LastMatch = key.Compare(pageKey, cmp);
             }
 
@@ -103,7 +103,7 @@ namespace Voron.Trees
 
             if (position >= NumberOfEntries)
                 return null;
-            return node;
+            return GetNode(position);
         }
 
         public NodeHeader* GetNode(int n)

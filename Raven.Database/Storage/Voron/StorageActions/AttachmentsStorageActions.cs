@@ -1,20 +1,23 @@
-﻿namespace Raven.Database.Storage.Voron.StorageActions
+﻿using System.Diagnostics;
+using System.Text;
+using System.Web.UI;
+using Raven.Abstractions.Util;
+using Voron;
+
+namespace Raven.Database.Storage.Voron.StorageActions
 {
-	using Raven.Abstractions.Data;
-	using Raven.Database.Data;
-	using Raven.Database.Impl;
-	using Raven.Database.Storage.Voron.Impl;
-	using Raven.Json.Linq;
-
-	using System;
-	using System.Collections.Generic;
-	using System.IO;
-
-	using Raven.Abstractions.Exceptions;
-	using Raven.Abstractions.Extensions;
-	using Raven.Abstractions.Logging;
-
-	using global::Voron.Impl;
+    using global::Voron.Impl;
+    using Raven.Abstractions.Data;
+    using Raven.Abstractions.Exceptions;
+    using Raven.Abstractions.Extensions;
+    using Raven.Abstractions.Logging;
+    using Raven.Database.Data;
+    using Raven.Database.Impl;
+    using Raven.Database.Storage.Voron.Impl;
+    using Raven.Json.Linq;
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
 
 	public class AttachmentsStorageActions : IAttachmentsStorageActions
 	{
@@ -65,7 +68,13 @@
 					};
 				}
 
-				keyByETagIndice.Delete(writeBatch, existingEtag.ToString());
+			    if (existingEtag != null) //existingEtag can be null if etag parameter is null
+			        keyByETagIndice.Delete(writeBatch, existingEtag.ToString());
+			    else
+			    {
+			        var currentEtag = ReadCurrentEtag(metadataKey);
+                    keyByETagIndice.Delete(writeBatch, currentEtag.ToString());
+                }
 			}
 
 			var newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
@@ -75,14 +84,45 @@
 			keyByETagIndice.Add(writeBatch, newETag.ToString(), key);
 
 			WriteAttachmentMetadata(metadataKey, newETag, headers);
-
-			return newETag;
+            logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length);
+            return newETag;
 		}
 
 		public void DeleteAttachment(string key, Etag etag)
 		{
-			throw new NotImplementedException();
-		}
+            if (String.IsNullOrEmpty(key))
+                throw new ArgumentNullException("key");
+
+            var lowerKey = key.ToLowerInvariant();
+            var dataKey = Util.DataKey(lowerKey);
+            var metadataKey = Util.MetadataKey(lowerKey);
+		    
+            if (!attachmentsTable.Contains(snapshot, dataKey))
+		    {
+                logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
+                return;
+		    }
+
+		    var existingEtag = ReadCurrentEtag(metadataKey);
+            if(existingEtag == null) //precaution --> should never be null at this stage
+                throw new InvalidDataException("The attachment exists, but failed reading etag from metadata. Data corruption?");
+
+            if (existingEtag != etag && etag != null)
+            {
+                throw new ConcurrencyException("DELETE attempted on attachment '" + key + "' using a non current etag")
+                {
+                    ActualETag = existingEtag,
+                    ExpectedETag = etag
+                };
+            }
+
+            attachmentsTable.Delete(writeBatch, dataKey);
+            attachmentsTable.Delete(writeBatch, metadataKey);
+            attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
+                            .Delete(writeBatch, existingEtag);
+        
+            logger.Debug("Deleted document attachment (key = '{0}')", key);
+        }
 
 		public Attachment GetAttachment(string key)
 		{
@@ -97,6 +137,8 @@
 				if (dataReadResult == null) return null;
 				Etag currentEtag;
 				var headers = ReadAttachmentMetadata(metadataKey, out currentEtag);
+                if (headers == null) //precaution --> should never be null at this stage
+                    throw new InvalidDataException("The attachment exists, but failed reading metadata. Data corruption?");
 
 				var attachmentStream = new MemoryStream((int)dataReadResult.Stream.Length);
 				dataReadResult.Stream.CopyTo(attachmentStream);
@@ -111,48 +153,152 @@
 					Size = (int)attachmentStream.Length					
 				};
 
+                logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key,attachmentStream.Length);
 				return attachment;
 			}
 		}
 
-		private Stream GetAttachmentStream(string dataKey)
+	    public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
 		{
-			var readResult = attachmentsTable.Read(snapshot, dataKey);
-			if (readResult == null)
-				return null;
+            if (start < 0)
+                throw new ArgumentException("must have zero or positive value", "start");
 
-			return readResult.Stream;
-		}
+	        using (var iter = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
+	            .Iterate(snapshot))
+	        {
+	            if (!iter.Seek(Slice.AfterAllKeys))
+	                yield break;
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
-		{
-			throw new NotImplementedException();
+	            if(!iter.Skip(-start))
+                    yield break;
+	            do
+	            {
+                    if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
+                        yield break;
+
+                    string key;
+                    using (var keyStream = iter.CreateStreamForCurrent())
+                        key = keyStream.ReadStringWithoutPrefix();
+
+	                var attachmentInfo = AttachmentInfoByKey(key);
+	                if (attachmentInfo == null)
+	                {
+                        throw new ApplicationException(String.Format("Possible data corruption - the key = '{0}' was found in the attachments indice, but matching attachment data was not found", key));	                    
+	                }
+	                
+                    yield return attachmentInfo;
+	            } while (iter.MovePrev());
+	        }
 		}
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Etag value, int take, long maxTotalSize)
 		{
-			throw new NotImplementedException();
+            if (take < 0)
+                throw new ArgumentException("must have zero or positive value", "take");
+            if (maxTotalSize < 0)
+                throw new ArgumentException("must have zero or positive value", "maxTotalSize");
+
+            if(take == 0) yield break; //edge case
+
+            using (var iter = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
+		                                      .Iterate(snapshot))
+		    {
+		        if (!iter.Seek(Slice.BeforeAllKeys))
+		            yield break;
+
+		        var fetchedDocumentCount = 0;
+		        var fetchedTotalSize = 0;
+		        do
+		        {
+                    if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
+                        yield break;
+                    
+                    var attachmentEtag = Etag.Parse(iter.CurrentKey.ToString());
+
+                    if (!EtagUtil.IsGreaterThan(attachmentEtag, value)) continue;
+
+                    string key;
+                    using (var keyStream = iter.CreateStreamForCurrent())
+                        key = keyStream.ReadStringWithoutPrefix();
+
+                    var attachmentInfo = AttachmentInfoByKey(key);
+
+		            fetchedTotalSize += attachmentInfo.Size;
+                    fetchedDocumentCount++;
+
+                    if (fetchedTotalSize > maxTotalSize)
+                        yield break;
+
+                    if (fetchedDocumentCount >= take || fetchedTotalSize == maxTotalSize)
+		            {
+		                yield return attachmentInfo;
+		                yield break;
+		            }
+		            
+                    yield return attachmentInfo;
+
+		        } while (iter.MoveNext());
+		    }
+
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize)
+	    public IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize)
 		{
-			throw new NotImplementedException();
+            if (String.IsNullOrEmpty(idPrefix))
+                throw new ArgumentNullException("idPrefix");
+            if (start < 0)
+                throw new ArgumentException("must have zero or positive value", "start");
+            if (pageSize < 0)
+                throw new ArgumentException("must have zero or positive value", "pageSize");
+
+            if(pageSize == 0) //edge case
+                yield break;
+
+            using (var iter = attachmentsTable.Iterate(snapshot))
+            {
+                iter.RequiredPrefix = idPrefix.ToLowerInvariant();
+                if (iter.Seek(iter.RequiredPrefix) == false)
+                    yield break;
+                
+                var fetchedDocumentCount = 0;
+                var alreadySkippedCount = 0; //we have to do it this way since we store in the same tree both data and metadata entries
+                do
+                {
+                    var dataKey = iter.CurrentKey.ToString();
+                    if (dataKey.Contains(Util.MetadataSuffix)) continue;
+                    if (alreadySkippedCount++ < start) continue;
+
+                    fetchedDocumentCount++;
+                    yield return AttachmentInfoByKey(Util.OriginalKey(dataKey));
+                } while (iter.MoveNext() && fetchedDocumentCount < pageSize);
+            } 
 		}
 
-		private Etag ReadCurrentEtag(string metadataKey)
+        private AttachmentInformation AttachmentInfoByKey(string key)
+        {
+            var attachment = GetAttachment(key);
+
+            if (attachment == null) //precaution
+                throw new InvalidDataException(
+                    "Tried to read attachment with key='{0}' but failed. Data mismatch between attachment indice and attachment data? (key by etag indice)");
+
+            var attachmentInfo = new AttachmentInformation
+            {
+                Etag = attachment.Etag,
+                Key = attachment.Key,
+                Metadata = attachment.Metadata,
+                Size = attachment.Size
+            };
+            return attachmentInfo;
+        }
+        
+        private Etag ReadCurrentEtag(string metadataKey)
 		{
 			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey))
-			{
-				if (metadataReadResult == null) //precaution
-				{
-					return null;
-				}
-
-				return metadataReadResult.Stream.ReadEtag();
-			}
+			    return metadataReadResult == null ? null : metadataReadResult.Stream.ReadEtag();
 		}
 
-		private RavenJObject ReadAttachmentMetadata(string metadataKey, out Etag etag)
+	    private RavenJObject ReadAttachmentMetadata(string metadataKey, out Etag etag)
 		{
 			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey))
 			{

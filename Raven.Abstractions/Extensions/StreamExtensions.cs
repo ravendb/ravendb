@@ -32,22 +32,28 @@ namespace Raven.Abstractions.Extensions
 			}
 		}
 
-		public static void Write(this Stream stream, int value)
+	    public static void Write(this Stream stream, int value)
 		{
 			var buffer = BitConverter.GetBytes(value);
-			stream.Write(buffer, 0, 4);
+            stream.Write(buffer, 0, buffer.Length);
 		}
 
 		public static int ReadInt32(this Stream stream)
 		{
-			var buffer = new byte[4];
-			stream.Read(buffer, 0, 4);
+		    var int32Size = Marshal.SizeOf(typeof (int));
+            var buffer = new byte[int32Size];
+            stream.Read(buffer, 0, int32Size);
 
 			return BitConverter.ToInt32(buffer, 0);
 		}
 
-#if !SILVERLIGHT
-		public static string ReadString(this Stream stream,Encoding encoding)
+        #if !SILVERLIGHT
+        public static string ReadString(this Stream stream)
+	    {
+            return ReadString(stream, Encoding.UTF8);
+	    }
+
+	    public static string ReadString(this Stream stream,Encoding encoding)
 		{
 			var stringLength = stream.ReadInt32();
 			var buffer = new byte[stringLength];
@@ -55,14 +61,31 @@ namespace Raven.Abstractions.Extensions
 
 			return encoding.GetString(buffer);
 		}
-#endif
 
-		public static void Write(this Stream stream,string value,Encoding encoding)
+	    public static string ReadStringWithoutPrefix(this Stream stream)
+	    {
+            return ReadStringWithoutPrefix(stream, Encoding.UTF8);
+	    }
+
+	    public static string ReadStringWithoutPrefix(this Stream stream, Encoding encoding)
+	    {
+	        var buffer = stream.ReadData();
+
+	        return encoding.GetString(buffer);
+	    }
+        #endif
+
+	    public static void Write(this Stream stream,string value)
+	    {
+            Write(stream, value, Encoding.UTF8);
+	    }
+
+	    public static void Write(this Stream stream,string value,Encoding encoding)
 		{
-			stream.Write(value.Length);
-			var buffer = encoding.GetBytes(value);
-			stream.Write(buffer, 0, value.Length);
-		}
+            var buffer = encoding.GetBytes(value);
+            stream.Write(buffer.Length);
+            stream.Write(buffer, 0, buffer.Length);
+        }
 
 		public static void Write(this Stream stream, Etag etag)
 		{
