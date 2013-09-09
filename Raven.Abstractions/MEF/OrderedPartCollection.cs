@@ -82,7 +82,6 @@ namespace Raven.Abstractions.MEF
 			remove { inner.CollectionChanged -= value; }
 		}
 
-		[Obsolete("Use Result Transformers instead.")]
 		public IEnumerable<TResult> OfType<TResult>()
 		{
 			return this.Select(x => x.Value).OfType<TResult>();			
