@@ -16,7 +16,8 @@ namespace Raven.Tests.Issues
 	public class RavenDB_766 : RavenTest
 	{
 	    private int a = 100;
-	    private int b = 100;
+	    private int b = 200;
+
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]

@@ -34,12 +34,12 @@ namespace Raven.Storage.Esent.StorageActions
 			return localSha1.Value.Compute20(Encoding.UTF8.GetBytes(reduceKey));
 		}
 
-		public void PutMappedResult(int view, string docId, string reduceKey, RavenJObject data)
+		public void PutMappedResult(int indexId, string docId, string reduceKey, RavenJObject data)
 		{
 			Etag etag = uuidGenerator.CreateSequentialUuid(UuidType.MappedResults);
 			using (var update = new Update(session, MappedResults, JET_prep.Insert))
 			{
-				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], indexId);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["hashed_reduce_key"], HashReduceKey(reduceKey));
@@ -484,9 +484,6 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
-				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-				if (StringComparer.OrdinalIgnoreCase.Equals(viewFromDb, view) == false)
-					continue;
 				var documentIdFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"]);
 				if (StringComparer.OrdinalIgnoreCase.Equals(documentIdFromDb, documentId) == false)
 					continue;
@@ -500,18 +497,18 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-		public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed)
+		public void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			foreach (var keyAndBucket in removed)
 			{
-				DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
+				DecrementReduceKeyCounter(indexId, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
 			}
 		}
 
-		public void DeleteMappedResultsForView(int view)
+		public void DeleteMappedResultsForView(int indexId)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_doc_key");
-			Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, MappedResults, indexId, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 				return;
 
@@ -519,11 +516,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 			do
 			{
-				// esent index ranges are approximate, and we need to check them ourselves as well
-				var viewFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-				if (StringComparer.OrdinalIgnoreCase.Equals(viewFromDb, view) == false)
-					break;
-
 				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 				deletedReduceKeys.Add(reduceKey);
 
@@ -533,7 +525,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			foreach (var reduceKey in deletedReduceKeys)
 			{
-				DecrementReduceKeyCounter(view, reduceKey, 1);
+				DecrementReduceKeyCounter(indexId, reduceKey, 1);
 			}
 		}
 
@@ -985,11 +977,11 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void IncrementReduceKeyCounter(int view, string reduceKey, int val)
+		public void IncrementReduceKeyCounter(int indexId, string reduceKey, int val)
 		{
 			try
 			{
-				ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
+				ExecuteOnReduceKey(indexId, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
 								   () => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val),
 								   () => Api.SetColumn(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val));
 			}
@@ -1001,7 +993,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (e.Error != JET_err.WriteConflict)
 					throw;
 				logger.WarnException(
-					"Could not update the reduce key counter for index " + view + ", key: " + reduceKey +
+					"Could not update the reduce key counter for index " + indexId + ", key: " + reduceKey +
 					". Ignoring this, multi step reduce promotion may be delayed for this value.", e);
 			}
 		}

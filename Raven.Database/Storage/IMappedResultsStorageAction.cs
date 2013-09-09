@@ -16,11 +16,11 @@ namespace Raven.Database.Storage
 	{
 		IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize);
 
-		void PutMappedResult(int view, string docId, string reduceKey, RavenJObject data);
-		void IncrementReduceKeyCounter(int view, string reduceKey, int val);
+		void PutMappedResult(int indexId, string docId, string reduceKey, RavenJObject data);
+		void IncrementReduceKeyCounter(int indexId, string reduceKey, int val);
 		void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed);
-		void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed);
-		void DeleteMappedResultsForView(int view);
+		void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed);
+		void DeleteMappedResultsForView(int indexId);
 
 		IEnumerable<string> GetKeysForIndexForDebug(int index, int start, int take);
 

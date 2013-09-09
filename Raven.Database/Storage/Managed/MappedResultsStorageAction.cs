@@ -36,7 +36,7 @@ namespace Raven.Storage.Managed
 			this.documentCodecs = documentCodecs;
 		}
 
-		public void PutMappedResult(int view, string docId, string reduceKey, RavenJObject data)
+		public void PutMappedResult(int indexId, string docId, string reduceKey, RavenJObject data)
 		{
 			var ms = new MemoryStream();
 
@@ -47,7 +47,7 @@ namespace Raven.Storage.Managed
 			var byteArray = generator.CreateSequentialUuid(UuidType.MappedResults).ToByteArray();
 			var key = new RavenJObject
 			{
-				{"view", view},
+				{"view", indexId},
 				{"reduceKey", reduceKey},
 				{"docId", docId},
 				{"etag", byteArray},
@@ -85,7 +85,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed)
+		public void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			var statsByKey = new Dictionary<string, int>();
 			foreach (var reduceKeyAndBucket in removed)
@@ -95,15 +95,15 @@ namespace Raven.Storage.Managed
 
 			foreach (var reduceKeyStat in statsByKey)
 			{
-				IncrementReduceKeyCounter(view, reduceKeyStat.Key, reduceKeyStat.Value);
+				IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, reduceKeyStat.Value);
 			}
 		}
 
-		public void DeleteMappedResultsForView(int view)
+		public void DeleteMappedResultsForView(int indexId)
 		{
 			var statsByKey = new Dictionary<string, int>();
-			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", view } })
-            .TakeWhile(x => view.Equals(x.Value<string>("view"))))
+			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", indexId } })
+            .TakeWhile(x => indexId.Equals(x.Value<int>("view"))))
 			{
 				storage.MappedResults.Remove(key);
 
@@ -112,7 +112,7 @@ namespace Raven.Storage.Managed
 			}
 			foreach (var reduceKeyStat in statsByKey)
 			{
-				IncrementReduceKeyCounter(view, reduceKeyStat.Key, reduceKeyStat.Value);
+				IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, reduceKeyStat.Value);
 			}
 		}
 
@@ -587,9 +587,9 @@ namespace Raven.Storage.Managed
 		}
 
 
-		public void IncrementReduceKeyCounter(int view, string reduceKey, int value)
+		public void IncrementReduceKeyCounter(int indexId, string reduceKey, int value)
 		{
-			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", view.ToString() }, { "reduceKey", reduceKey } });
+			var readResult = storage.ReduceKeys.Read(new RavenJObject { { "view", indexId.ToString() }, { "reduceKey", reduceKey } });
 
 			if (readResult == null)
 			{
@@ -597,7 +597,7 @@ namespace Raven.Storage.Managed
 					return;
 				storage.ReduceKeys.Put(new RavenJObject
 				                       {
-					                       {"view", view},
+					                       {"view", indexId},
 					                       {"reduceKey", reduceKey},
 					                       {"reduceType", (int) ReduceType.None},
 					                       {"mappedItemsCount", value}
