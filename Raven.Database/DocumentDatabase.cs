@@ -171,7 +171,7 @@ namespace Raven.Database
         {
             this.configuration = configuration;
             this.transportState = transportState ?? new TransportState();
-
+            InitializeEncryption(configuration);
             using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
             {
                 if (configuration.IsTenantDatabase == false)
