@@ -36,15 +36,16 @@ namespace Raven.Tests.Issues
 
 				stopwatch.Restart();
 
+			    throw new NotImplementedException();
 				// Manually wait for the index
-				while (documentStore.DatabaseCommands.GetStatistics().StaleIndexes.Contains(ordersTotalByCustomerFor30Days.IndexName))
-					Thread.Sleep(100);
+			//	while (documentStore.DatabaseCommands.GetStatistics().StaleIndexes.Contains(ordersTotalByCustomerFor30Days.IndexName))
+			//		Thread.Sleep(100);
 
-				stopwatch.Stop();
-				Debug.WriteLine("Took {0} ms to finish indexing", stopwatch.ElapsedMilliseconds);
+			//	stopwatch.Stop();
+			//	Debug.WriteLine("Took {0} ms to finish indexing", stopwatch.ElapsedMilliseconds);
 
-				// It should be less, but at 20 seconds, there's definitely something wrong
-				Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 20000);
+			//	// It should be less, but at 20 seconds, there's definitely something wrong
+			//	Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 20000);
 				
 				//using (var session = documentStore.OpenSession())
 				//{

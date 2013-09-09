@@ -49,22 +49,24 @@ namespace Raven.Tests.Storage
 	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
 						});
+		    int searchIndex1 = db.IndexDefinitionStorage.GetIndexDefinition("Leases/SearchIndex").IndexId;
+		    int searchIndex2 = db.IndexDefinitionStorage.GetIndexDefinition("Leases/SearchIndex2").IndexId;
 
 			var one = Etag.Parse(new Guid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1).ToByteArray());
 			var time = DateTime.Today;
 
 
-			db.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateLastIndexed("Leases/SearchIndex", one, time));
+			db.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateLastIndexed(searchIndex1, one, time));
 
 			db.TransactionalStorage.Batch(accessor =>
 			{
-				var stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex").First();
+				var stats = accessor.Indexing.GetIndexesStats().Where(x => x.Id ==searchIndex1).First();
 
 				Assert.Equal(one, stats.LastIndexedEtag);
 
 				Assert.Equal(time, stats.LastIndexedTimestamp);
 
-				stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex2").First();
+				stats = accessor.Indexing.GetIndexesStats().Where(x => x.Id == searchIndex2).First();
 
 				Assert.Equal(Etag.Empty, stats.LastIndexedEtag);
 
@@ -95,21 +97,24 @@ namespace Raven.Tests.Storage
 "
 						});
 
+		    int searchIndex1 = db.IndexDefinitionStorage.GetIndexDefinition("Leases/SearchIndex").IndexId;
+		    int searchIndex2 = db.IndexDefinitionStorage.GetIndexDefinition("Leases/SearchIndex2").IndexId;
+
 			var one = Etag.Parse(new Guid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1).ToByteArray());
 			var time = DateTime.Today;
 
 
-			db.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateLastIndexed("Leases/SearchIndex2", one, time));
+			db.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateLastIndexed(searchIndex2, one, time));
 
 			db.TransactionalStorage.Batch(accessor =>
 			{
-				var stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex2").First();
+				var stats = accessor.Indexing.GetIndexesStats().Where(x => x.Id ==searchIndex2).First();
 
 				Assert.Equal(one, stats.LastIndexedEtag);
 
 				Assert.Equal(time, stats.LastIndexedTimestamp);
 
-				stats = accessor.Indexing.GetIndexesStats().Where(x => x.Name == "Leases/SearchIndex").First();
+				stats = accessor.Indexing.GetIndexesStats().Where(x => x.Id == searchIndex1).First();
 
 				Assert.Equal(Etag.Empty, stats.LastIndexedEtag);
 

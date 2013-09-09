@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
@@ -34,9 +35,17 @@ namespace Raven.Studio.Models
 
 		public override Task TimerTickedAsync()
 		{
+            // NOTE: I don't know how to Silverlight - Rob
 			return DatabaseCommands
-				.GetStatisticsAsync()
-				.ContinueOnSuccessInTheUIThread(UpdateGroupedIndexList);
+				.GetIndexesAsync(0, int.MaxValue)
+				.ContinueOnSuccessInTheUIThread((indexes) =>
+				{
+				    DatabaseCommands
+				        .GetStatisticsAsync()
+				        .ContinueOnSuccessInTheUIThread((stats) => {
+                            UpdateGroupedIndexList(indexes, stats);
+				        });
+				});
 		}
 
 		public IndexItem ItemSelection
@@ -95,10 +104,10 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private void UpdateGroupedIndexList(DatabaseStatistics statistics)
+		private void UpdateGroupedIndexList(IndexDefinition[] indexes, DatabaseStatistics statistics)
 		{
 			Indexes.Clear();
-			Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem{Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats}));
+			Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem{Name = indexes.First(x=>x.IndexId == stats.Id).Name, GroupName = GetIndexGroup(stats), IndexStats = stats}));
 			
 			CleanGroupIndexes();
 			foreach (var indexItem in Indexes)

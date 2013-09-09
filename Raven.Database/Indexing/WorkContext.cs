@@ -191,13 +191,19 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(string index, string key, string error, string component)
+		public void AddError(int index, string indexName, string key, string error )
+		{
+            AddError(index, indexName, key, "Unknown");
+		}
+
+		public void AddError(int index, string indexName, string key, string error, string component)
 		{
 			serverErrors.Enqueue(new ServerError
 			{
 				Document = key,
 				Error = error,
 				Index = index,
+                IndexName = indexName,
                 Action = component,
 				Timestamp = SystemTime.UtcNow
 			});

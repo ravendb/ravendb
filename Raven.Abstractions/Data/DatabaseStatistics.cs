@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Data
 
 		public long CountOfDocuments { get; set; }
 
-		public string[] StaleIndexes { get; set; }
+		public int[] StaleIndexes { get; set; }
 
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 		

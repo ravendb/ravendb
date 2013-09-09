@@ -211,28 +211,27 @@ namespace Raven.Database.Indexing
 
 			var indexesToWorkOn = new List<IndexToWorkOn>();
                 var localFoundOnlyIdleWork = new Reference<bool> { Value = true };
-			transactionalStorage.Batch(actions =>
-			{
-				foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
-				{
-					var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
-					if (failureRate.IsInvalidIndex)
-					{
-						Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-									   indexesStat.Name,
-									   failureRate.FailureRate);
-						continue;
-					}
-
+                 transactionalStorage.Batch(actions =>
+                {
+                    foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
+                    {
+                        var failureRate = actions.Indexing.GetFailureRate(indexesStat.Id);
+                        if (failureRate.IsInvalidIndex)
+                        {
+                            Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+                                           indexesStat.Id,
+                                           failureRate.FailureRate);
+                            continue;
+                        }
 					synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
 
-					if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
-						continue;
-					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
-					var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
-					if (index == null || // not there
-					    index.CurrentMapIndexingTask != null) // busy doing indexing work already, not relevant for this batch
-						continue;
+                        if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
+                            continue;
+                        var indexToWorkOn = GetIndexToWorkOn(indexesStat);
+                        var index = context.IndexStorage.GetIndexInstance(indexesStat.Id);
+                        if (index == null || // not there
+                            index.CurrentMapIndexingTask != null) // busy doing indexing work already, not relevant for this batch
+                            continue;
 
 					indexToWorkOn.Index = index;
 					indexesToWorkOn.Add(indexToWorkOn);

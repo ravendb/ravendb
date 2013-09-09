@@ -20,20 +20,20 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IStalenessStorageActions
 	{
-		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
+		public bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStats, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 			{
 				return false;
 			}
 
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStatsReduce, view, MakeKeyGrbit.NewKey);
 			var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
-			if (IsMapStale(name) || hasReduce && IsReduceStale(name))
+			if (IsMapStale(view) || hasReduce && IsReduceStale(view))
 			{
 				if (cutOff != null)
 				{
@@ -65,7 +65,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			Api.JetSetCurrentIndex(session, Tasks, "by_index");
-			Api.MakeKey(session, Tasks, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Tasks, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
 			{
 				return false;
@@ -77,21 +77,20 @@ namespace Raven.Storage.Esent.StorageActions
 			return cutOff.Value >= DateTime.FromBinary(addedAt);
 		}
 
-		public bool IsReduceStale(string name)
+		public bool IsReduceStale(int view)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
-			Api.MakeKey(session, ScheduledReductions, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
 				return false;
-			var view = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
-									   Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
-			return string.Equals(view, name, StringComparison.OrdinalIgnoreCase);
+			var dbView = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
+      return dbView == view;
 		}
 
-		public bool IsMapStale(string name)
+		public bool IsMapStale(int view)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStats, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				return false;
 
@@ -106,17 +105,17 @@ namespace Raven.Storage.Esent.StorageActions
 			return (Buffers.Compare(lastEtag, lastIndexedEtag) > 0);
 		}
 
-		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
+		public Tuple<DateTime, Etag> IndexLastUpdatedAt(int view)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStats, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 			{
-				throw new IndexDoesNotExistsException("Could not find index named: " + name);
+				throw new IndexDoesNotExistsException("Could not find index named: " + view);
 			}
 
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStatsReduce, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ))
 			{// for map-reduce indexes, we use the reduce stats
 
@@ -157,10 +156,10 @@ namespace Raven.Storage.Esent.StorageActions
 			return Etag.Parse(lastEtag);
 		}
 
-		public int GetIndexTouchCount(string name)
+		public int GetIndexTouchCount(int view)
 		{
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
-			Api.MakeKey(session, IndexesEtags, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesEtags, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) == false) // find the next greater view
 				return -1;
 

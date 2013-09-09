@@ -13,6 +13,10 @@ namespace Raven.Tests.Storage
 {
 	public class ReduceStaleness : RavenTest
 	{
+	    private int a = 100;
+	    private int b = 200;
+	    private int c = 300;
+
 		[Fact]
 		public void when_there_are_multiple_map_results_for_multiple_indexes()
 		{
@@ -20,20 +24,20 @@ namespace Raven.Tests.Storage
 			{
 				transactionalStorage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("a", true);
-					accessor.Indexing.AddIndex("b", true);
-					accessor.Indexing.AddIndex("c", true);
+					accessor.Indexing.AddIndex(a, true);
+					accessor.Indexing.AddIndex(b, true);
+					accessor.Indexing.AddIndex(c, true);
 
-					accessor.MapReduce.ScheduleReductions("a", 0, new ReduceKeyAndBucket(0, "a"));
-					accessor.MapReduce.ScheduleReductions("b", 0, new ReduceKeyAndBucket(0, "a"));
-					accessor.MapReduce.ScheduleReductions("c", 0, new ReduceKeyAndBucket(0, "a"));
+					accessor.MapReduce.ScheduleReductions(a, 0, new ReduceKeyAndBucket(0, "a"));
+					accessor.MapReduce.ScheduleReductions(b, 0, new ReduceKeyAndBucket(0, "a"));
+					accessor.MapReduce.ScheduleReductions(c, 0, new ReduceKeyAndBucket(0, "a"));
 				});
 
 				transactionalStorage.Batch(actionsAccessor =>
 				{
-					Assert.True(actionsAccessor.Staleness.IsReduceStale("a"));
-					Assert.True(actionsAccessor.Staleness.IsReduceStale("b"));
-					Assert.True(actionsAccessor.Staleness.IsReduceStale("c"));
+					Assert.True(actionsAccessor.Staleness.IsReduceStale(a));
+					Assert.True(actionsAccessor.Staleness.IsReduceStale(b));
+					Assert.True(actionsAccessor.Staleness.IsReduceStale(c));
 				});
 			}
 		}

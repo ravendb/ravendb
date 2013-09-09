@@ -245,7 +245,7 @@ namespace Raven.Studio.Features.Settings
 				return;
 			}
 
-			AvailableIndexes.Match(Database.Value.Statistics.Value.Indexes.Select(i => i.Name).ToArray());
+			AvailableIndexes.Match(Database.Value.Statistics.Value.Indexes.Select(i => i.Id.ToString()).ToArray());
 			if (IndexName == null)
 				IndexName = AvailableIndexes.FirstOrDefault();
 		}

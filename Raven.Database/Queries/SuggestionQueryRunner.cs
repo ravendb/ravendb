@@ -42,12 +42,13 @@ namespace Raven.Database.Queries
 			if (suggestionQuery.Distance.HasValue == false)
 				suggestionQuery.Distance = StringDistanceTypes.Default;
 
+		    var definition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 			var indexExtensionKey =
 				MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
 			var indexExtension = database.IndexStorage.GetIndexExtensionByPrefix(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
 			IndexSearcher currentSearcher;
-			using (database.IndexStorage.GetCurrentIndexSearcher(indexName, out currentSearcher))
+			using (database.IndexStorage.GetCurrentIndexSearcher(definition.IndexId, out currentSearcher))
 			{
 				if (currentSearcher == null)
 				{

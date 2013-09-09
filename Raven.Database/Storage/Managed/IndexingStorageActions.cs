@@ -43,14 +43,14 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IndexStats GetIndexStats(string index)
+		public IndexStats GetIndexStats(int index)
 		{
 			using (storage.ReadLock())
 			{
-				var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index } });
+				var readResult = storage.IndexingStats.Read(new RavenJObject { { "index", index.ToString() } });
 				if (readResult == null)
 					return null;
-				Table.ReadResult lastIndexedEtagReadResult = storage.LastIndexedEtags.Read(new RavenJObject { { "index", index } });
+				Table.ReadResult lastIndexedEtagReadResult = storage.LastIndexedEtags.Read(new RavenJObject { { "index", index.ToString() } });
 				return GetIndexStats(readResult, lastIndexedEtagReadResult);
 			}
 		}
@@ -66,7 +66,7 @@ namespace Raven.Storage.Managed
 				ReduceIndexingAttempts = indexingStatsResult.Key.Value<int?>("reduce_attempts"),
 				ReduceIndexingErrors = indexingStatsResult.Key.Value<int?>("reduce_failures"),
 				ReduceIndexingSuccesses = indexingStatsResult.Key.Value<int?>("reduce_successes"),
-				Name = indexingStatsResult.Key.Value<string>("index"),
+				Id = indexingStatsResult.Key.Value<int>("index"),
                 Priority = (IndexingPriority)indexingStatsResult.Key.Value<int>("priority"),
 				LastIndexedEtag = Etag.Parse(lastIndexedEtagsResult.Key.Value<byte[]>("lastEtag")),
 				LastIndexedTimestamp = lastIndexedEtagsResult.Key.Value<DateTime>("lastTimestamp"),
@@ -80,11 +80,11 @@ namespace Raven.Storage.Managed
 			};
 		}
 
-		public void AddIndex(string name, bool createMapReduce)
+		public void AddIndex(int name, bool createMapReduce)
 		{
 			using (storage.WriteLock())
 			{
-				var readResult = storage.IndexingStats.Read(name);
+				var readResult = storage.IndexingStats.Read(name.ToString());
 				if (readResult != null)
 					throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", name));
 
@@ -114,9 +114,9 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		private RavenJObject GetCurrentIndex(string index)
+		private RavenJObject GetCurrentIndex(int index)
 		{
-			var readResult = storage.IndexingStats.Read(index);
+			var readResult = storage.IndexingStats.Read(index.ToString());
 			if (readResult == null)
 				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
 			var key = (RavenJObject)readResult.Key;
@@ -124,7 +124,7 @@ namespace Raven.Storage.Managed
 		}
 
 
-		public void UpdateIndexingStats(string index, IndexingWorkStats stats)
+		public void UpdateIndexingStats(int index, IndexingWorkStats stats)
 		{
 			using (storage.WriteLock())
 			{
@@ -137,7 +137,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public void UpdateReduceStats(string index, IndexingWorkStats stats)
+		public void UpdateReduceStats(int index, IndexingWorkStats stats)
 		{
 			using (storage.WriteLock())
 			{
@@ -159,11 +159,11 @@ namespace Raven.Storage.Managed
 		}
 
 
-		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
+		public void UpdateDocumentReferences(int view, string key, HashSet<string> references)
 		{
 			foreach (var source in storage.DocumentReferences["ByViewAndKey"].SkipBefore(new RavenJObject { { "view", view }, { "key", key } })
 				.TakeWhile(x =>
-					 view.Equals(x.Value<string>("view"), StringComparison.CurrentCultureIgnoreCase) &&
+					 view.Equals(x.Value<int>("view")) &&
 					 key.Equals(x.Value<string>("key"), StringComparison.CurrentCultureIgnoreCase)))
 			{
 				storage.DocumentReferences.Remove(source);
@@ -206,24 +206,24 @@ namespace Raven.Storage.Managed
 				.Distinct(StringComparer.OrdinalIgnoreCase);
 		}
 
-		public void DeleteIndex(string name)
+		public void DeleteIndex(int id)
 		{
-			storage.IndexingStats.Remove(name);
-			storage.LastIndexedEtags.Remove(name);
+			storage.IndexingStats.Remove(id.ToString());
+			storage.LastIndexedEtags.Remove(id.ToString());
 
 			foreach (var table in new[] { storage.MappedResults, storage.ReduceResults, storage.ScheduleReductions, storage.ReduceKeys, storage.DocumentReferences })
 			{
-				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", name } })
-					.TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("view"), name)))
+				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", id } })
+					.TakeWhile(x => x.Value<int>("view") == id))
 				{
 					table.Remove(key);
 				}
 			}
 		}
 
-	    public IndexFailureInformation GetFailureRate(string index)
+	    public IndexFailureInformation GetFailureRate(int index)
 		{
-			var readResult = storage.IndexingStats.Read(index);
+			var readResult = storage.IndexingStats.Read(index.ToString());
 			if (readResult == null)
 				throw new IndexDoesNotExistsException("There is no index named: " + index);
 			var indexFailureInformation = new IndexFailureInformation
@@ -234,14 +234,14 @@ namespace Raven.Storage.Managed
 				ReduceAttempts = readResult.Key.Value<int?>("reduce_attempts"),
 				ReduceErrors = readResult.Key.Value<int?>("reduce_failures"),
 				ReduceSuccesses = readResult.Key.Value<int?>("reduce_successes"),
-				Name = readResult.Key.Value<string>("index"),
+				Id = readResult.Key.Value<int>("index"),
 			};
 			return indexFailureInformation;
 		}
 
-		public void TouchIndexEtag(string index)
+		public void TouchIndexEtag(int index)
 		{
-			var readResult = storage.IndexingStats.Read(index);
+			var readResult = storage.IndexingStats.Read(index.ToString());
 			if (readResult == null)
 				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
 			var key = (RavenJObject)readResult.Key.CloneToken();
@@ -249,9 +249,9 @@ namespace Raven.Storage.Managed
 			storage.IndexingStats.UpdateKey(key);
 		}
 
-		public void SetIndexPriority(string index, IndexingPriority priority)
+		public void SetIndexPriority(int index, IndexingPriority priority)
         {
-            var readResult = storage.IndexingStats.Read(index);
+            var readResult = storage.IndexingStats.Read(index.ToString());
             if (readResult == null)
                 throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
             var key = (RavenJObject)readResult.Key.CloneToken();
@@ -259,7 +259,7 @@ namespace Raven.Storage.Managed
             storage.IndexingStats.UpdateKey(key);
         }
 
-		public void UpdateLastIndexed(string index, Etag etag, DateTime timestamp)
+		public void UpdateLastIndexed(int index, Etag etag, DateTime timestamp)
 		{
 			using (storage.WriteLock())
 			{
@@ -269,7 +269,7 @@ namespace Raven.Storage.Managed
 
 				while (!updateOperationStatus)
 				{
-					var readResult = storage.LastIndexedEtags.Read(index);
+					var readResult = storage.LastIndexedEtags.Read(index.ToString());
 					if (readResult == null)
 						throw new ArgumentException("There is no index with the name: " + index);
 
@@ -298,11 +298,11 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public void UpdateLastReduced(string index, Etag etag, DateTime timestamp)
+		public void UpdateLastReduced(int index, Etag etag, DateTime timestamp)
 		{
 			using (storage.WriteLock())
 			{
-				var readResult = storage.IndexingStats.Read(index);
+				var readResult = storage.IndexingStats.Read(index.ToString());
 				if (readResult == null)
 					throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
 

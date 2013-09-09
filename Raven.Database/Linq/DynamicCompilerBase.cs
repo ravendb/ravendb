@@ -20,7 +20,7 @@ namespace Raven.Database.Linq
 		public Type GeneratedType { get; set; }
 		public string Name
 		{
-			get { return name; }
+          get { return name; }
 		}
 		public string CSharpSafeName { get; set; }
 
@@ -35,7 +35,6 @@ namespace Raven.Database.Linq
 				if (Directory.Exists(this.basePath) == false)
 					Directory.CreateDirectory(this.basePath);
 			}
-			this.name = MonoHttpUtility.UrlEncode(name);
 		}
 	}
 }

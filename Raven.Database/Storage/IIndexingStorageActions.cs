@@ -15,23 +15,23 @@ namespace Raven.Database.Storage
 	{
 		IEnumerable<IndexStats> GetIndexesStats();
 
-		IndexStats GetIndexStats(string index);
-		void AddIndex(string name, bool createMapReduce);
-		void DeleteIndex(string name);
+		IndexStats GetIndexStats(int index);
+		void AddIndex(int id, bool createMapReduce);
+		void DeleteIndex(int id);
 
-	    void SetIndexPriority(string name, IndexingPriority priority);
+	    void SetIndexPriority(int id, IndexingPriority priority);
 
 
-		IndexFailureInformation GetFailureRate(string index);
+		IndexFailureInformation GetFailureRate(int id);
 
-		void UpdateLastIndexed(string index, Etag etag, DateTime timestamp);
-		void UpdateLastReduced(string index, Etag etag, DateTime timestamp);
-		void TouchIndexEtag(string index);
-		void UpdateIndexingStats(string index, IndexingWorkStats stats);
-		void UpdateReduceStats(string index, IndexingWorkStats stats);
+		void UpdateLastIndexed(int id, Etag etag, DateTime timestamp);
+		void UpdateLastReduced(int id, Etag etag, DateTime timestamp);
+		void TouchIndexEtag(int id);
+		void UpdateIndexingStats(int id, IndexingWorkStats stats);
+		void UpdateReduceStats(int id, IndexingWorkStats stats);
 
 		void RemoveAllDocumentReferencesFrom(string key);
-		void UpdateDocumentReferences(string view, string key, HashSet<string> references);
+		void UpdateDocumentReferences(int id, string key, HashSet<string> references);
 		IEnumerable<string> GetDocumentsReferencing(string key);
 		int GetCountOfDocumentsReferencing(string key);
 		IEnumerable<string> GetDocumentsReferencesFrom(string key);

@@ -287,10 +287,10 @@ namespace Raven.Database.Data
 			}
 		}
 
-        public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
-        {
-            var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
-            if (abstractViewGenerator == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
+		public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
+		{
+			var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexDefinition.IndexId);
+			if (abstractViewGenerator == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
 
             this.Items = this.Items.Union(
                 abstractViewGenerator.Fields

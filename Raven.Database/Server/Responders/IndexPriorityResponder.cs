@@ -32,7 +32,8 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index, indexingPriority));
+		    var instance = Database.IndexStorage.GetIndexInstance(index);
+			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
 		}
 	}
 }

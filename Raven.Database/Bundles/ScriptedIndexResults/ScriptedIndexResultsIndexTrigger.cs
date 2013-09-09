@@ -22,17 +22,17 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
     {
         private static ILog log = LogManager.GetCurrentClassLogger();
 
-        public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
+        public override AbstractIndexUpdateTriggerBatcher CreateBatcher(int indexId)
         {
             //Only apply the trigger if there is a setup doc for this particular index
-            var jsonSetupDoc = Database.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexName, null);
+            var jsonSetupDoc = Database.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexId, null);
             if (jsonSetupDoc == null)
                 return null;
             var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();
-            scriptedIndexResults.Id = indexName;
-            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
+            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexId);
             if (abstractViewGenerator == null)
-                throw new InvalidOperationException("Could not find view generator for: " + indexName);
+                throw new InvalidOperationException("Could not find view generator for: " + indexId);
+            scriptedIndexResults.Id = indexId.ToString();
             return new Batcher(Database, scriptedIndexResults, abstractViewGenerator.ForEntityNames);
         }
 

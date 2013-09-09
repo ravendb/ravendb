@@ -440,7 +440,7 @@ namespace Raven.Client.Embedded
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			if (overwrite == false && database.IndexStorage.Indexes.Contains(name))
+			if (overwrite == false && database.IndexStorage.HasIndex(name))
 				throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			return database.PutIndex(name, definition);
 		}
