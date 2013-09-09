@@ -78,7 +78,7 @@ namespace Raven.Tests.Bugs
 					session.Query<UsersByName.Result, UsersByName>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-                var indexId = store.DocumentDatabase.GetIndexDefinition("test").IndexId;
+                var indexId = store.DocumentDatabase.GetIndexDefinition(index.IndexName).IndexId;
 				storage.Batch(accessor =>
 				{
 					var stats = accessor.MapReduce.GetKeysStats(indexId, 0, 10).ToList();
