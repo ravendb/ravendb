@@ -74,7 +74,7 @@ namespace Raven.Storage.Managed
 			{
 				{"view", view},
 				{"docId", documentId}
-			}).TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("view"), view) &&
+			}).TakeWhile(x => (view.Equals(x.Value<int>("view"))) &&
 							  StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("docId"), documentId)))
 			{
 				storage.MappedResults.Remove(key);
@@ -103,7 +103,7 @@ namespace Raven.Storage.Managed
 		{
 			var statsByKey = new Dictionary<string, int>();
 			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", view } })
-			.TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("view"), view)))
+            .TakeWhile(x => view.Equals(x.Value<string>("view"))))
 			{
 				storage.MappedResults.Remove(key);
 
@@ -528,7 +528,7 @@ namespace Raven.Storage.Managed
 			};
 
 			foreach (var result in storage.ScheduleReductions["ByViewLevelReduceKeyAndBucket"].SkipTo(keyCriteria)
-				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view))
+				.TakeWhile(x => view.Equals(x.Value<int>("view")))
 				.Skip(start)
 				.Take(take)
 			)
@@ -576,7 +576,7 @@ namespace Raven.Storage.Managed
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize)
 		{
 			return storage.ReduceKeys["ByView"].SkipTo(new RavenJObject { { "view", view } })
-				.TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("view"), view))
+				.TakeWhile(x => view.Equals(x.Value<int>("view")))
 				.Skip(start)
 				.Take(pageSize)
 				.Select(token => new ReduceKeyAndCount
@@ -633,7 +633,7 @@ namespace Raven.Storage.Managed
 		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take)
 		{
 			return storage.ReduceKeys["ByView"].SkipTo(new RavenJObject { { "view", view } })
-				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view))
+				.TakeWhile(x => view.Equals(x.Value<int>("view")))
 				.Skip(start)
 				.Take(take)
 				.Select(token => new ReduceTypePerKey(token.Value<string>("reduceKey"), (ReduceType)token.Value<int>("reduceType")));
