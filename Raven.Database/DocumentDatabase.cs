@@ -411,13 +411,19 @@ namespace Raven.Database
 
                     result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
                     result.CountOfDocuments = actions.Documents.GetDocumentsCount();
-                    result.StaleIndexes = IndexStorage.Indexes
-                        .Where(s =>
-                        {
-							var indexInstance = IndexStorage.GetIndexInstance(s);
-	                        return (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
-	                               actions.Staleness.IsIndexStale(s, null, null);
-                        }).ToArray();
+	                result.StaleIndexes = IndexStorage.Indexes
+	                                                  .Where(indexId =>
+	                                                  {
+		                                                  var indexInstance = IndexStorage.GetIndexInstance(indexId);
+		                                                  return (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
+		                                                         actions.Staleness.IsIndexStale(indexId, null, null);
+	                                                  })
+	                                                  .Select(indexId =>
+	                                                  {
+		                                                  var index = IndexStorage.GetIndexInstance(indexId);
+		                                                  return index == null ? null : index.PublicName;
+	                                                  })
+	                                                  .ToArray();
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).ToArray();
                 });
 
