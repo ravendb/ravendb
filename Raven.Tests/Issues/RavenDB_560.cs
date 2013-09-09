@@ -6,7 +6,6 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Database.Extensions;
 using Raven.Server;
 using Raven.Tests.Bundles.Replication;
 using Xunit;

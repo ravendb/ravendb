@@ -12,7 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Json;
 using Raven.Client.Changes;
 using Raven.Client.Listeners;
@@ -73,7 +72,7 @@ namespace Raven.Client.Connection
 			this.credentials = credentials;
 			this.replicationInformerGetter = replicationInformerGetter;
 			this.databaseName = databaseName;
-			this.replicationInformer = replicationInformerGetter(databaseName);
+			replicationInformer = replicationInformerGetter(databaseName);
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.currentSessionId = currentSessionId;
 			this.conflictListeners = conflictListeners;
@@ -164,21 +163,20 @@ namespace Raven.Client.Connection
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
-        public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
-        {
-            var metadata = new RavenJObject();
-            AddTransactionInformation(metadata);
+		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
 
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (currentServerUrl + requestUrl).NoCache(), method, credentials,
-                                                                              convention).AddOperationHeaders(OperationsHeaders);
-            createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (currentServerUrl + requestUrl).NoCache(), method, credentials,
+				convention).AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 
-            return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
-                                     .AddReplicationStatusHeaders(url, currentServerUrl, replicationInformer,
-                                                                  convention.FailoverBehavior, HandleReplicationStatusChanges);
-        }
+			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
+			                         .AddReplicationStatusHeaders(url, currentServerUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+		}
 
-        internal void ExecuteWithReplication(string method, Action<string> operation)
+		internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
 			ExecuteWithReplication<object>(method, operationUrl =>
 			{
@@ -273,16 +271,15 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
+		private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
 		{
-			if (!primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
+			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase)) 
+				return;
+
+			bool shouldForceCheck;
+			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
 			{
-				var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
-				bool shouldForceCheck;
-				if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
-				{
-					this.replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
-				}
+				replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
 			}
 		}
 
@@ -621,7 +618,7 @@ namespace Raven.Client.Connection
 					};
 				}
 
-				HandleReplicationStatusChanges(webRequest.ResponseHeaders, Url, operationUrl);
+				HandleReplicationStatusChanges(webRequest.ResponseHeaders[Constants.RavenForcePrimaryServerCheck], Url, operationUrl);
 
 				return new Attachment
 				{

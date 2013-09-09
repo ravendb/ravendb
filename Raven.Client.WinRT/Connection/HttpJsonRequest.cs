@@ -47,7 +47,7 @@ namespace Raven.Client.WinRT.Connection
 
 		private string operationUrl;
 
-		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
+		public Action<string, string, string> HandleReplicationStatusChanges = delegate { };
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
@@ -399,7 +399,7 @@ namespace Raven.Client.WinRT.Connection
 			return 0;
 		}
 
-		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<string, string, string> handleReplicationStatusChanges)
 		{
 			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return this;
