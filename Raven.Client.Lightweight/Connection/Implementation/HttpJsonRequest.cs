@@ -68,8 +68,7 @@ namespace Raven.Client.Connection
 
 		private string operationUrl;
 
-		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-		public Action<HttpResponseHeaders, string, string> HandleReplicationStatusChanges2 = delegate { };
+		public Action<string, string, string> HandleReplicationStatusChanges = delegate { };
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -257,7 +256,7 @@ namespace Raven.Client.Connection
 					factory.UpdateCacheTime(this);
 					var result = factory.GetCachedResponse(this, Response.Headers);
 
-					HandleReplicationStatusChanges2(Response.Headers, primaryUrl, operationUrl);
+					HandleReplicationStatusChanges(Response.Headers.GetFirstValue(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
 
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
@@ -534,7 +533,7 @@ namespace Raven.Client.Connection
 			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
-			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
+			HandleReplicationStatusChanges(ResponseHeaders[Constants.RavenForcePrimaryServerCheck], primaryUrl, operationUrl);
 
 			using (response)
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
@@ -563,7 +562,7 @@ namespace Raven.Client.Connection
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
-			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
+			HandleReplicationStatusChanges(Response.Headers.GetFirstValue(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression())
 			{
@@ -571,7 +570,7 @@ namespace Raven.Client.Connection
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
-					factory.CacheResponse(Url, data, ResponseHeaders);
+					factory.CacheResponse(Url, data, Response.Headers);
 				}
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
@@ -621,7 +620,7 @@ namespace Raven.Client.Connection
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this, httpWebResponse.Headers);
 
-				HandleReplicationStatusChanges(httpWebResponse.Headers, primaryUrl, operationUrl);
+				HandleReplicationStatusChanges(httpWebResponse.Headers[Constants.RavenForcePrimaryServerCheck], primaryUrl, operationUrl);
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
@@ -720,7 +719,7 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
-		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
+		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<string, string, string> handleReplicationStatusChanges)
 		{
 			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return this;

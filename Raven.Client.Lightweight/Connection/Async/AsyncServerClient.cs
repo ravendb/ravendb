@@ -722,7 +722,7 @@ namespace Raven.Client.Connection.Async
                 docKey = Uri.UnescapeDataString(docKey);
                 request.Response.Headers.Remove(Constants.DocumentIdFieldName);
                 var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
-                                                                                  request.ResponseHeaders,
+                                                                                  request.Response.Headers,
                                                                                   request.Response.StatusCode);
                 return deserializeJsonDocument;
             }
@@ -1152,8 +1152,7 @@ namespace Raven.Client.Connection.Async
                     AvoidCachingRequest = query.DisableCaching
                 }.AddOperationHeaders(OperationsHeaders));
 
-            request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior,
-                                                HandleReplicationStatusChanges);
+            request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
             ErrorResponseException responseException;
             try
@@ -1741,17 +1740,16 @@ namespace Raven.Client.Connection.Async
                                                                   convention.FailoverBehavior, HandleReplicationStatusChanges);
         }
 
-        private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
+        private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
         {
-            if (!primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
-            {
-                var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
-                bool shouldForceCheck;
-                if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
-                {
-                    replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
-                }
-            }
+	        if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
+				return;
+
+	        bool shouldForceCheck;
+	        if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
+	        {
+		        replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
+	        }
         }
 
         internal Task ExecuteWithReplication(string method, Func<string, Task> operation)
