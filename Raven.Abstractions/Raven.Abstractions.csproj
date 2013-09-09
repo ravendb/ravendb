@@ -216,6 +216,7 @@
     <Compile Include="Json\Linq\RavenJValue.cs" />
     <Compile Include="Json\RavenJsonConverter.cs" />
     <Compile Include="Json\RavenJsonTextReader.cs" />
+    <Compile Include="Json\StreamFromJsonConverter.cs" />
     <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Json\Utilities\StringUtils.cs" />
     <Compile Include="Linq\DynamicList.cs" />

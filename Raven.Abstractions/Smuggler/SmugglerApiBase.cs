@@ -484,7 +484,8 @@ namespace Raven.Abstractions.Smuggler
 					{
 						Converters =
 							{
-								new JsonToJsonConverter()
+								new JsonToJsonConverter(),
+                                new StreamFromJsonConverter()
 							}
 					}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 
