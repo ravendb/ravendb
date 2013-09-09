@@ -65,14 +65,14 @@ namespace Raven.Tests.Issues
 
 			// delete 'index-files.required-for-index-restore' to make backup corrupted according to the reported error
 			File.Delete(Path.Combine(incrementalDirectories.First(),
-			                         "Indexes\\Raven%2fDocumentsByEntityName\\index-files.required-for-index-restore"));
+			                         "Indexes\\0\\index-files.required-for-index-restore"));
 
 			var sb = new StringBuilder();
 
 			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
 
 			Assert.Contains(
-				"Error: Index Raven%2fDocumentsByEntityName could not be restored. All already copied index files was deleted." +
+				"Error: Index 0 could not be restored. All already copied index files was deleted." +
 				" Index will be recreated after launching Raven instance",
 				sb.ToString());
 
@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
 			IOExtensions.DeleteDirectory(DataDir);
 
 			// lock file to simulate IOException when restore operation will try to copy this file
-			using (var file = File.Open(Path.Combine(BackupDir, "Indexes\\Raven%2fDocumentsByEntityName\\segments.gen"),
+			using (var file = File.Open(Path.Combine(BackupDir, "Indexes\\0\\segments.gen"),
 				                     FileMode.Open, FileAccess.ReadWrite, FileShare.None))
 			{
 				var sb = new StringBuilder();
@@ -136,7 +136,7 @@ namespace Raven.Tests.Issues
 				DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
 
 				Assert.Contains(
-					"Error: Index Raven%2fDocumentsByEntityName could not be restored. All already copied index files was deleted." +
+					"Error: Index 0 could not be restored. All already copied index files was deleted." +
 					" Index will be recreated after launching Raven instance",
 					sb.ToString());
 			}
