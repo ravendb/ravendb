@@ -178,7 +178,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
    * @param field
    * @param storage
    */
-  protected void Store(Path<?> field, FieldStorage storage) {
+  protected void store(Path<?> field, FieldStorage storage) {
     stores.put(field, storage);
   }
 

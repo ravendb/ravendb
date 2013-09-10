@@ -9,17 +9,21 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 
+import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.Facet;
+import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
 import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
@@ -27,6 +31,7 @@ import raven.abstractions.json.linq.RavenJToken;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQuery;
 import raven.client.connection.IDatabaseCommands;
+import raven.client.linq.EnumerableUtils;
 import raven.client.listeners.IDocumentQueryListener;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
@@ -365,23 +370,11 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
-  public T first() {
-    pageSize = 1;
-    List<T> list = toList();
-    if (list.isEmpty()) {
-      return null;
-    } else {
-      return list.get(0);
-    }
-  }
-
-  @Override
-  public List<T> toList() {
-
+  public Iterator<T> iterator() {
     initSync();
     while (true) {
       try {
-        return queryOperation.complete(clazz);
+        return queryOperation.complete(clazz).iterator();
       } catch (Exception e) {
         if (!queryOperation.shouldQueryAgain(e)) {
           throw e;
@@ -390,6 +383,8 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
       }
     }
   }
+
+
 
   public String toString() {
     String query = super.toString();
@@ -400,12 +395,102 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
-  public T single() {
-    List<T> list = toList();
-    if (list.size() != 1) {
-      throw new IllegalStateException("Expected one result. Got: " + list.size());
-    }
-    return list.get(0);
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc) {
+    return toFacetsLazy(facetSetupDoc, 0, null);
   }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc, int start) {
+    return toFacetsLazy(facetSetupDoc, start, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(String facetSetupDoc, int start, Integer pageSize) {
+    IndexQuery indexQuery = getIndexQuery();
+
+    LazyFacetsOperation lazyOperation = new LazyFacetsOperation(getIndexQueried(), facetSetupDoc, indexQuery, start, pageSize);
+    DocumentSession documentSession = (DocumentSession) getSession();
+    return documentSession.addLazyOperation(lazyOperation, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets) {
+    return toFacetsLazy(facets, 0, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets, int start) {
+    return toFacetsLazy(facets, start, null);
+  }
+
+  @Override
+  public Lazy<FacetResults> toFacetsLazy(List<Facet> facets, int start, Integer pageSize) {
+    if (facets.isEmpty()) {
+      throw new IllegalArgumentException("Facets must contain at least one entry");
+    }
+    IndexQuery indexQuery = getIndexQuery();
+    LazyFacetsOperation lazyOperation = new LazyFacetsOperation(getIndexQueried(), facets, indexQuery, start, pageSize);
+    DocumentSession documentSession = (DocumentSession) getSession();
+    return documentSession.addLazyOperation(lazyOperation, null);
+  }
+
+  @Override
+  public FacetResults toFacets(String facetSetupDoc) {
+    return toFacets(facetSetupDoc, 0, null);
+  }
+
+  @Override
+  public FacetResults toFacets(String facetSetupDoc, int start) {
+    return toFacets(facetSetupDoc, start, null);
+  }
+
+  @Override
+  public FacetResults toFacets(String facetSetupDoc, int start, Integer pageSize) {
+    return getFacets(facetSetupDoc, start, pageSize);
+  }
+
+  @Override
+  public FacetResults toFacets(List<Facet> facets) {
+    return toFacets(facets, 0, null);
+  }
+
+  @Override
+  public FacetResults toFacets(List<Facet> facets, int start) {
+    return toFacets(facets, start, null);
+  }
+
+  @Override
+  public FacetResults toFacets(List<Facet> facets, int start, Integer pageSize) {
+    if (facets.isEmpty()) {
+      throw new IllegalArgumentException("Facets must contain at least one entry");
+    }
+    return getFacets(facets, start, pageSize);
+  }
+
+  @Override
+  public List<T> toList() {
+    return EnumerableUtils.toList(iterator());
+  }
+
+  @Override
+  public T single() {
+    return EnumerableUtils.single(iterator());
+  }
+
+  @Override
+  public T first() {
+    return EnumerableUtils.first(iterator());
+  }
+
+  @Override
+  public T firstOrDefault() {
+    return EnumerableUtils.firstOrDefault(iterator());
+  }
+
+  @Override
+  public T singleOrDefault() {
+    return EnumerableUtils.singleOrDefault(iterator());
+  }
+
 
 }

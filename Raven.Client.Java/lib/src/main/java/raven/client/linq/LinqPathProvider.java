@@ -162,7 +162,11 @@ public class LinqPathProvider {
   }
 
   public static boolean getValueFromExpressionWithoutConversion(Expression<?> expression, Reference<Object> valueRef) {
-    // TODO Auto-generated method stub
+    //TODO: update me
+    if (expression instanceof Constant) {
+      valueRef.value = ((Constant<?>) expression).getConstant();
+      return true;
+    }
     return false;
   }
 
@@ -177,7 +181,7 @@ public class LinqPathProvider {
   }
 
   private void assertNoComputation(Path<?> expression) {
-
+    //TODO
   }
 
 }

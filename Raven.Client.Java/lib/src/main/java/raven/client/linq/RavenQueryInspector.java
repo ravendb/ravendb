@@ -1,7 +1,9 @@
 package raven.client.linq;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -22,22 +24,27 @@ import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryResult;
+import raven.abstractions.data.SuggestionQuery;
+import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.extensions.ExpressionExtensions;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.EscapeQueryOptions;
 import raven.client.IDocumentQuery;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
+import raven.client.SearchOptions;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.IRavenQueryInspector;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentSession;
 import raven.client.document.InMemoryDocumentSessionOperations;
 import raven.client.document.LazyFacetsOperation;
+import raven.client.document.batches.LazySuggestOperation;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
-public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
+public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector, Iterable<T> {
 
   private Class<T> clazz;
   private final Expression<?> expression;
@@ -91,28 +98,11 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return provider;
   }
 
+
   //TODO: support for runtime types check
   @Override
   public IRavenQueryable<T> where(Predicate predicate) {
     return getProvider().createQuery(Expressions.operation(expression.getType(), LinqOps.Query.WHERE, expression, predicate));
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public List<T> toList() {
-    Object execute = getProvider().execute(expression);
-    return ((IDocumentQuery<T>)execute).toList();
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public T single() {
-    Object execute = getProvider().execute(expression);
-    List<T> list = ((IDocumentQuery<T>)execute).toList();
-    if (list.size() != 1) {
-      throw new IllegalStateException("Expected single result! Got: " + list.size());
-    }
-    return list.get(0);
   }
 
   /**
@@ -334,6 +324,141 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   @Override
   public FacetResults toFacets(String facetSetupDoc, int start, Integer pageSize) {
     return databaseCommands.getFacets(indexName, getIndexQuery(), facetSetupDoc, start, pageSize);
+  }
+
+  @Override
+  public IRavenQueryable<T> include(Path< ? > path) {
+    customize(new DocumentQueryCustomizationFactory().include(path));
+    return this;
+  }
+
+  @Override
+  public IRavenQueryable<T> intersect(IRavenQueryable<T> self) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.INTERSECT, getExpression()));
+  }
+
+  @Override
+  public SuggestionQueryResult suggest() {
+    return suggest(new SuggestionQuery());
+  }
+
+  @Override
+  public SuggestionQueryResult suggest(SuggestionQuery query) {
+    setSuggestionQueryFieldAndTerm(this, query);
+    return getDatabaseCommands().suggest(getIndexQueried(), query);
+  }
+
+  @Override
+  public Lazy<SuggestionQueryResult> suggestLazy() {
+    return suggestLazy(new SuggestionQuery());
+  }
+
+  @Override
+  public Lazy<SuggestionQueryResult> suggestLazy(SuggestionQuery query) {
+    setSuggestionQueryFieldAndTerm(this, query);
+    LazySuggestOperation lazyOperation = new LazySuggestOperation(getIndexQueried(), query);
+
+    DocumentSession documentSession = (DocumentSession) getSession();
+    return documentSession.addLazyOperation(lazyOperation, null);
+  }
+
+  private static void setSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query) {
+    //TODO: implement me!
+  }
+
+  @Override
+  public Lazy<List<T>> lazily(Action1<List<T>> onEval) {
+    return provider.lazily(clazz, getExpression(), onEval);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms) {
+    return search(fieldSelector, searchTerms, 1.0, SearchOptions.GUESS, EscapeQueryOptions.ESCAPE_ALL);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost) {
+    return search(fieldSelector, searchTerms, boost, SearchOptions.GUESS, EscapeQueryOptions.ESCAPE_ALL);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptions searchOptions) {
+    return search(fieldSelector, searchTerms, boost, searchOptions, EscapeQueryOptions.ESCAPE_ALL);
+  }
+
+  @Override
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptions options, EscapeQueryOptions escapeQueryOptions) {
+    // we use constant null to preserve arguments indexes
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SEARCH, getExpression(), fieldSelector,
+        Expressions.constant(searchTerms), Expressions.constant(boost), Expressions.constant(options), Expressions.constant(escapeQueryOptions)));
+  }
+
+  @Override
+  public IRavenQueryable<T> orderByScore() {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.ORDER_BY_SCORE, getExpression()));
+  }
+
+  @Override
+  public IRavenQueryable<T> skip(int itemsToSkip) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SKIP, getExpression(), Expressions.constant(itemsToSkip)));
+  }
+
+  @Override
+  public IRavenQueryable<T> take(int amount) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.TAKE, getExpression(), Expressions.constant(amount)));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public Iterator<T> iterator() {
+    Object execute = provider.execute(expression);
+    if (execute instanceof Iterable) {
+      return ((Iterable) execute).iterator();
+    } else {
+      return (Iterator<T>) Arrays.asList(execute).iterator();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public T firstOrDefault() {
+    Object execute = provider.execute(Expressions.operation(Object.class, LinqOps.Query.FIRST_OR_DEFAULT, getExpression()));
+    return (T) execute;
+  }
+
+  @Override
+  public List<T> toList() {
+    return EnumerableUtils.toList(iterator());
+  }
+
+  @Override
+  public T first() {
+    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.FIRST, getExpression()));
+    return EnumerableUtils.first(firstQuery.iterator());
+  }
+
+  @Override
+  public T singleOrDefault() {
+    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SINGLE_OR_DEFAULT, getExpression()));
+    return EnumerableUtils.first(firstQuery.iterator());
+  }
+
+  @Override
+  public T single() {
+    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SINGLE, getExpression()));
+    return EnumerableUtils.first(firstQuery.iterator());
+  }
+
+  @Override
+  public int count() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public long longCount() {
+    // TODO Auto-generated method stub
+    return 0;
   }
 
 

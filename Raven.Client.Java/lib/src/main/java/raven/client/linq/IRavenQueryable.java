@@ -3,6 +3,7 @@ package raven.client.linq;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.LinqExtensionsQueryable;
 import raven.client.RavenQueryStatistics;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.indexes.AbstractTransformerCreationTask;
@@ -16,7 +17,7 @@ import com.mysema.query.types.Path;
  *
  * @param <T>
  */
-public interface IRavenQueryable<T> extends IOrderedQueryable<T> {
+public interface IRavenQueryable<T> extends IOrderedQueryable<T>, LinqExtensionsQueryable<T> {
   /**
    * Provide statistics about the query, such as total count of matching records
    * @param stats
