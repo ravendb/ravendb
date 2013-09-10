@@ -23,8 +23,11 @@ import raven.client.document.DocumentQueryCustomiation;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.IAbstractDocumentQuery;
 import raven.client.linq.LinqPathProvider.Result;
+import raven.querydsl.CollectionAnyVisitor;
+import raven.querydsl.StackBasedContext;
 
 import com.google.common.collect.Lists;
+import com.mysema.query.support.Context;
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Constant;
 import com.mysema.query.types.Expression;
@@ -32,9 +35,11 @@ import com.mysema.query.types.Operation;
 import com.mysema.query.types.Ops;
 import com.mysema.query.types.Order;
 import com.mysema.query.types.OrderSpecifier;
+import com.mysema.query.types.ParamExpression;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.PredicateOperation;
 import com.mysema.query.types.expr.BooleanOperation;
+import com.mysema.query.types.expr.Param;
 
 /**
  * Process a Linq expression to a Lucene query
@@ -129,9 +134,8 @@ public class RavenQueryProviderProcessor<T> {
    */
   @SuppressWarnings("unchecked")
   protected void visitExpression(Expression<?> expression) {
-    //TODO visit not
     if (expression instanceof Operation) {
-      if (expression instanceof BooleanOperation || expression instanceof PredicateOperation) {
+      if (expression instanceof BooleanOperation || expression instanceof PredicateOperation || expression.getType().equals(Boolean.class)) {
         visitBooleanOperation((Operation<Boolean>) expression);
       } else {
         visitOperation((Operation<?>)expression);
@@ -166,9 +170,50 @@ public class RavenQueryProviderProcessor<T> {
       visitLessThan(expression);
     } else if (expression.getOperator().equals(Ops.LOE)) {
       visitLessThanOrEqual(expression);
+    } else if (expression.getOperator().equals(Ops.NOT)) {
+      // try match NOT_COL_IS_EMPTY
+      Expression< ? > subExpr1 = expression.getArg(0);
+      if (subExpr1 instanceof Operation) {
+        Operation<?> subOp1 = (Operation<?>) subExpr1;
+        if (subOp1.getOperator().equals(Ops.COL_IS_EMPTY)) {
+          visitCollectionEmpty(subOp1.getArg(0), false);
+          return;
+        }
+      }
+
+      luceneQuery.openSubclause();
+      luceneQuery.where("*:*");
+      luceneQuery.andAlso();
+      luceneQuery.negateNext();
+      visitExpression(expression.getArg(0));
+      luceneQuery.closeSubclause();
+    } else if (expression.getOperator().equals(Ops.COL_IS_EMPTY)) {
+      visitCollectionEmpty(expression.getArg(0), true);
+      return ;
     } else {
       throw new IllegalArgumentException("Expression is not supported");
     }
+  }
+
+  private void visitCollectionEmpty(Expression< ? > expression, boolean isNegated) {
+    if (isNegated) {
+      luceneQuery.openSubclause();
+      luceneQuery.where("*:*");
+      luceneQuery.andAlso();
+      luceneQuery.negateNext();
+    }
+    ExpressionInfo memberInfo = getMember(expression);
+    WhereParams whereParams = new WhereParams();
+    whereParams.setFieldName(memberInfo.getPath());
+    whereParams.setValue("*");
+    whereParams.setAllowWildcards(true);
+    whereParams.setAnalyzed(true);
+    whereParams.setNestedPath(memberInfo.isNestedPath());
+    luceneQuery.whereEquals(whereParams);
+    if (isNegated) {
+      luceneQuery.closeSubclause();
+    }
+
   }
 
   private void visitAndAlso(Operation<Boolean> andAlso) {
@@ -334,7 +379,14 @@ public class RavenQueryProviderProcessor<T> {
    * @return
    */
   protected ExpressionInfo getMember(Expression<?> expression) {
-    //TODO: get parameter expression
+    Param< ? > parameterExpression = getParameterExpressionIncludingConvertions(expression);
+    if (parameterExpression != null) {
+      if (currentPath.endsWith(",")) {
+        currentPath = currentPath.substring(0, currentPath.length() -1);
+      }
+      ExpressionInfo expressionInfo = new ExpressionInfo(currentPath, parameterExpression.getType(), false);
+      return expressionInfo;
+    }
     return getMemberDirect(expression);
   }
 
@@ -353,6 +405,13 @@ public class RavenQueryProviderProcessor<T> {
         ExpressionInfo expressionInfo = new ExpressionInfo(propertyName, result.getMemberType(), result.isNestedPath());
         expressionInfo.setMaybeProperty(result.getMaybeProperty());
         return expressionInfo;
+  }
+
+  private static Param<?> getParameterExpressionIncludingConvertions(Expression expression) {
+    if (expression instanceof ParamExpression){
+      return (Param< ? >) expression;
+    }
+    return null;
   }
 
   //TODO: private void VisitStringContains(MethodCallExpression _)
@@ -470,6 +529,9 @@ public class RavenQueryProviderProcessor<T> {
     } else if (operatorId.equals(LinqOps.Query.SINGLE_OR_DEFAULT.getId())) {
       visitExpression(expression.getArg(0));
       visitSingleOrDefault();
+    } else if (operatorId.equals(LinqOps.Query.COUNT.getId())) {
+      visitExpression(expression.getArg(0));
+      visitCount();
       //TODO: all, any, count, long count, distinct, order by, then by, then by descinding, order by descending
     } else if (operatorId.equals(LinqOps.Query.ORDER_BY.getId())) {
       visitExpression(expression.getArg(0));
@@ -482,7 +544,8 @@ public class RavenQueryProviderProcessor<T> {
       }
     } else if (operatorId.equals(LinqOps.Query.SEARCH.getId())) {
       visitSearch(expression);
-
+    } else if (operatorId.equals(LinqOps.Query.ANY.getId())) {
+      visitAny(expression);
     } else {
       throw new IllegalStateException("Unhandled expression: " + expression);
     }
@@ -601,7 +664,16 @@ public class RavenQueryProviderProcessor<T> {
     luceneQuery.take((int) constantExpression.getConstant());
   }
 
-  //TODO: visit all, visitAny
+  //TODO: visit all
+
+  private void visitAny(Operation<?> exp) {
+    ExpressionInfo memberInfo = getMember(exp.getArg(0));
+
+    String oldPath = currentPath;
+    currentPath = memberInfo.getPath() + ",";
+    visitExpression(exp.getArg(1));
+    currentPath = oldPath;
+  }
 
   private void visitCount() {
     luceneQuery.take(0);
@@ -658,6 +730,9 @@ public class RavenQueryProviderProcessor<T> {
 
   @SuppressWarnings("unchecked")
   public Object execute(Expression<?> expression) {
+
+    expression = tranformAny(expression);
+
     chanedWhere = false;
 
     luceneQuery = (IAbstractDocumentQuery<T>) getLuceneQueryFor(expression);
@@ -668,6 +743,13 @@ public class RavenQueryProviderProcessor<T> {
     var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
     return executeQueryWithProjectionType.Invoke(this, new object[0]);*/
     return null; //TODO:
+  }
+
+  private Expression< ? > tranformAny(Expression< ? > expression) {
+    CollectionAnyVisitor visitor = new CollectionAnyVisitor();
+    StackBasedContext context = new StackBasedContext();
+    Expression< ? > afterAny = expression.accept(visitor, context);
+    return afterAny;
   }
 
   private <TProjection> Object executeQuery(Class<TProjection> projectionClass) {

@@ -1474,7 +1474,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     if (whereParams.getValue() instanceof String) {
       String strValue = (String) whereParams.getValue();
-      strValue = RavenQuery.escape(strValue, whereParams.isAllowWildcards() && !whereParams.isAnalyzed(), true);
+      strValue = RavenQuery.escape(strValue, whereParams.isAllowWildcards() && whereParams.isAnalyzed(), true);
       return whereParams.isAnalyzed() ? strValue : "[[" + strValue + "]]";
     }
 

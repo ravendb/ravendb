@@ -1,0 +1,2 @@
+array.Any() -> array.isNotEmpty()
+array.Any() == false -> array.isEmpty()

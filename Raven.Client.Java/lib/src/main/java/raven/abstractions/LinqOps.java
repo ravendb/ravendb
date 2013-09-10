@@ -24,6 +24,8 @@ public class LinqOps {
     public static final Operator<Object> SKIP = new OperatorImpl<>("QUERY_SKIP");
     public static final Operator<Object> TAKE = new OperatorImpl<>("QUERY_TAKE");
 
+    public static final Operator<Object> ANY = new OperatorImpl<>("QUERY_ANY");
+
     public static final String QUERY_OPERATORS_PREFIX = "QUERY_";
   }
 
