@@ -428,10 +428,23 @@
 
         public Etag GetBestNextDocumentEtag(Etag etag)
         {
-            if (String.IsNullOrEmpty(etag))
-                throw new ArgumentNullException("etag");
+            if (etag == null) throw new ArgumentNullException("etag");
 
-            throw new NotImplementedException();
+            using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
+                                            .Iterate(snapshot))
+            {
+                if (!iter.Seek(Slice.BeforeAllKeys))
+                    return etag;
+
+                do
+                {
+                    var docEtag = Etag.Parse(iter.CurrentKey.ToString());
+                    if (EtagUtil.IsGreaterThan(docEtag, etag))
+                        return docEtag;
+                } while (iter.MoveNext());
+            }
+
+            return etag; //if not found, return the original etag
         }
 
         private Etag EnsureDocumentEtagMatch(string key, Etag etag)

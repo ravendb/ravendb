@@ -37,6 +37,68 @@ namespace Raven.Tests.Storage.Voron
             }
         }
 
+	    [Fact]
+	    public void DocumentStorage_GetBestNextDocumentEtag_NoDocuments_Returns_OriginalEtag()
+	    {
+	        using (var voronStorage = NewVoronStorage())
+	        {
+                Etag resultEtag = null;
+                voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(Etag.Empty));
+                Assert.Equal(resultEtag,Etag.Empty);
+            }	        
+	    }
+
+        [Fact]
+        public void DocumentStorage_GetBestNextDocumentEtag_ExistingDocumentEtag_AlreadyTheLargestEtag()
+        {
+            using (var voronStorage = NewVoronStorage())
+            {
+                Etag etag1 = null;
+                Etag etag2 = null;
+                Etag etag3 = null;
+                voronStorage.Batch(mutator =>
+                    etag1 = mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
+                        new RavenJObject()).Etag);
+                voronStorage.Batch(mutator =>
+                    etag2 = mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
+                        new RavenJObject()).Etag);
+                voronStorage.Batch(mutator =>
+                    etag3 = mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
+                        new RavenJObject()).Etag);
+
+                Etag resultEtag = null;
+                voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(etag3));
+
+                Assert.Equal(resultEtag, etag3);
+            }
+        }
+
+
+	    [Fact]
+        public void DocumentStorage_GetBestNextDocumentEtag_ExistingDocumentEtag()
+	    {
+	        using (var voronStorage = NewVoronStorage())
+	        {
+	            Etag etag1 = null;
+	            Etag etag2 = null;
+	            Etag etag3 = null;
+	            voronStorage.Batch(mutator =>
+                    etag1 = mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
+                        new RavenJObject()).Etag);
+                voronStorage.Batch(mutator =>
+                    etag2 = mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
+                        new RavenJObject()).Etag);
+                voronStorage.Batch(mutator =>
+                    etag3 = mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
+                        new RavenJObject()).Etag);
+
+	            Etag resultEtag = null;
+                voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(etag2));
+
+                Assert.Equal(resultEtag,etag3);
+	        }
+	    }
+
         [Fact]
         public void DocumentStorage_DocumentAdd_With_InvalidEtag_ExceptionThrown()
         {
