@@ -433,7 +433,8 @@
             using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
                                             .Iterate(snapshot))
             {
-                if (!iter.Seek(Slice.BeforeAllKeys))
+                if (!iter.Seek(etag.ToString()) && 
+                    !iter.Seek(Slice.BeforeAllKeys)) //if parameter etag not found, scan from beginning. if empty --> return original etag
                     return etag;
 
                 do
