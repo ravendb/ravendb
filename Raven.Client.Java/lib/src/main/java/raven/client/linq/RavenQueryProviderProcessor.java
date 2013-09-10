@@ -145,7 +145,7 @@ public class RavenQueryProviderProcessor<T> {
         // we have root node - just skip it
         return;
       } else {
-        throw new IllegalArgumentException("Expression is not supported:" + expression);
+        visitMemberAccess((Constant<?>) expression, true);
       }
     } else {
       throw new IllegalArgumentException("Expression is not supported:" + expression);
@@ -190,10 +190,16 @@ public class RavenQueryProviderProcessor<T> {
     } else if (expression.getOperator().equals(Ops.COL_IS_EMPTY)) {
       visitCollectionEmpty(expression.getArg(0), true);
       return ;
+    } else if (expression.getOperator().equals(Ops.IN)) {
+      visitContains(expression);
+    } else if (expression.getOperator().equals(Ops.STRING_CONTAINS)) {
+      throw new IllegalStateException("Contains is not supported, doing a substring match over a text field is a" +
+      		" very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
     } else {
-      throw new IllegalArgumentException("Expression is not supported");
+      throw new IllegalArgumentException("Expression is not supported: " + expression.getOperator());
     }
   }
+
 
   private void visitCollectionEmpty(Expression< ? > expression, boolean isNegated) {
     if (isNegated) {
@@ -466,11 +472,33 @@ public class RavenQueryProviderProcessor<T> {
     luceneQuery.whereLessThanOrEqual(getFieldNameForRangeQuery(memberInfo, value), value);
   }
 
-  //TODO private void VisitAny(MethodCallExpression expression)
 
-  //TODO : private void VisitContains(MethodCallExpression expression)
+  private void visitContains(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(1));
+    String oldPath = currentPath;
+    currentPath = memberInfo.getPath() + ",";
+    Expression< ? > containsArgument = expression.getArg(0);
+    visitExpression(containsArgument);
+    currentPath = oldPath;
+  }
 
-  //TODO: private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
+  private void visitMemberAccess(Constant< ? > expression, boolean boolValue) {
+    //TODO: handle non-strings
+
+    if (String.class.equals(expression.getType())) {
+      if (currentPath.endsWith(",")) {
+        currentPath = currentPath.substring(0, currentPath.length() - 1);
+      }
+
+      WhereParams whereParams = new WhereParams();
+      whereParams.setFieldName(currentPath);
+      whereParams.setValue(expression.getConstant());
+      whereParams.setAnalyzed(true);
+      whereParams.setAllowWildcards(false);
+      whereParams.setNestedPath(false);
+      luceneQuery.whereEquals(whereParams);
+    }
+  }
 
   //TODO: private void VisitMethodCall(MethodCallExpression expression, bool negated = false)
 
@@ -674,6 +702,7 @@ public class RavenQueryProviderProcessor<T> {
     visitExpression(exp.getArg(1));
     currentPath = oldPath;
   }
+
 
   private void visitCount() {
     luceneQuery.take(0);
