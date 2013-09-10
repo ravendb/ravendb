@@ -119,7 +119,7 @@ namespace Raven.Studio.Features.Query
 
 			foreach (var term in terms)
 			{
-				var maybeQuotedTerm = term.IndexOfAny(new[] {' ', '\t'}) == -1 ? term : "\"" + term + "\"";
+				var maybeQuotedTerm = term.IndexOfAny(new[] {' ', '\t', ':'}) == -1 ? term : "\"" + term + "\"";
 				session.Items.Add(new CompletionItem
 				{
 					Text = term,
