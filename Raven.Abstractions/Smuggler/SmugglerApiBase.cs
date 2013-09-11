@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
 		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag);
 		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
-		protected abstract Task<RavenJArray> GetTransformers(int totalCount);
+		protected abstract Task<RavenJArray> GetTransformers(int start);
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
 		protected abstract Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
@@ -131,7 +131,7 @@ namespace Raven.Abstractions.Smuggler
 
 					jsonWriter.WritePropertyName("Docs");
 					jsonWriter.WriteStartArray();
-					if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
+					if (options.OperateOnTypes.HasFlag(ItemType.Documents))
 					{
 						options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
 					}
@@ -139,7 +139,7 @@ namespace Raven.Abstractions.Smuggler
 
 					jsonWriter.WritePropertyName("Attachments");
 					jsonWriter.WriteStartArray();
-					if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
+					if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
 					{
 						options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
 					}
@@ -147,7 +147,7 @@ namespace Raven.Abstractions.Smuggler
 
 					jsonWriter.WritePropertyName("Transformers");
 					jsonWriter.WriteStartArray();
-					if ((options.OperateOnTypes & ItemType.Transformers) == ItemType.Transformers)
+					if (options.OperateOnTypes.HasFlag(ItemType.Transformers))
 					{
 						await ExportTransformers(jsonWriter);
 					}

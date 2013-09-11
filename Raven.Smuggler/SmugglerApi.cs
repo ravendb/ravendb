@@ -269,13 +269,13 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override Task<RavenJArray> GetTransformers(int totalCount)
+		protected override Task<RavenJArray> GetTransformers(int start)
 		{
 			if (Mode == SmugglerMode.Legacy)
 				return new CompletedTask<RavenJArray>(new RavenJArray());
 
 			RavenJArray transformers = null;
-			var request = CreateRequest("/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
+			var request = CreateRequest("/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + start);
 			request.ExecuteRequest(reader => transformers = RavenJArray.Load(new JsonTextReader(reader)));
 			return new CompletedTask<RavenJArray>(transformers);
 		}
