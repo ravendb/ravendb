@@ -593,7 +593,7 @@ namespace Raven.Storage.Esent
 			});
 		}
 
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         [CLSCompliant(false)]
         public void Batch(Action<IStorageActionsAccessor> action)
         {
@@ -649,7 +649,7 @@ namespace Raven.Storage.Esent
             onCommit(); // call user code after we exit the lock
         }
 
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         private Action ExecuteBatch(Action<IStorageActionsAccessor> action, EsentTransactionContext transactionContext)
         {
             var txMode = configuration.TransactionMode == TransactionMode.Lazy
