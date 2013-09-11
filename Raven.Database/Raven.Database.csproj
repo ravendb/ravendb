@@ -219,7 +219,6 @@
     <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
     <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
-    <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
