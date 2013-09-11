@@ -12,7 +12,7 @@ namespace Raven.Tests.Indexes
 		{
 			const int iterations = 8000;
 
-			using (var documentStore = NewRemoteDocumentStore())
+			using (var documentStore = NewRemoteDocumentStore(requestedStorage:"esent"))
 			{
 				new EmailIndex().Execute(documentStore);
 
