@@ -28,6 +28,7 @@ namespace Raven.Studio.Models
 		private string buildNumber;
 		private Observable<bool> isConnected;
 		public UserInfo UserInfo { get; set; }
+		private bool UserInfoSet = false;
 
 		private string rawUrl;
 		public string RawUrl
@@ -129,6 +130,7 @@ namespace Raven.Studio.Models
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(doc =>
 			                {
+				                UserInfoSet = true;
 				                UserInfo = DocumentStore.Conventions.CreateSerializer()
 				                                           .Deserialize<UserInfo>(new RavenJTokenReader(doc));
 			                });
@@ -147,7 +149,7 @@ namespace Raven.Studio.Models
 											return;
 
 										firstTick = false;
-										if (UserInfo == null)
+										if (UserInfoSet == false)
 											UpdateUserInfo();
 
 										if (UserInfo != null && UserInfo.IsAdminGlobal)
