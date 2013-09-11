@@ -31,12 +31,20 @@ namespace Raven.Database.Impl.DTC
 		public Session Session { get; private set; }
 		public DateTime CreatedAt { get; private set; }
 		public Transaction Transaction { get; private set; }
+	    private bool alreadyInContext;
 
 		public IDisposable EnterSessionContext()
 		{
-			Api.JetSetSessionContext(Session, sessionContext);
+		    if (alreadyInContext)
+		        return new DisposableAction(() => { });
 
-			return new DisposableAction(() => Api.JetResetSessionContext(Session));
+			Api.JetSetSessionContext(Session, sessionContext);
+		    alreadyInContext = true;
+			return new DisposableAction(() =>
+			{
+			    Api.JetResetSessionContext(Session);
+			    alreadyInContext = false;
+			});
 		}
 
 		public void AfterCommit(Action action)
@@ -46,9 +54,15 @@ namespace Raven.Database.Impl.DTC
 
 		public void Dispose()
 		{
-			if(Transaction != null)
-				Transaction.Dispose();
-			if(Session != null)
+		    if (Session == null)
+		        return;
+
+            using (EnterSessionContext())
+            {
+                if (Transaction != null)
+                    Transaction.Dispose();
+            }
+            if(Session != null)
 				Session.Dispose();
 		}
 	}
