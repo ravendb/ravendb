@@ -192,6 +192,12 @@ public class RavenQueryProviderProcessor<T> {
       return ;
     } else if (expression.getOperator().equals(Ops.IN)) {
       visitContains(expression);
+    } else if (expression.getOperator().equals(Ops.CONTAINS_KEY)) {
+      visitContainsKey(expression);
+    } else if (expression.getOperator().equals(Ops.CONTAINS_VALUE)) {
+      visitContainsValue(expression);
+    } else if (expression.getOperator().equals(Ops.IS_NULL)) {
+      visitIsNull(expression);
     } else if (expression.getOperator().equals(Ops.STRING_CONTAINS)) {
       throw new IllegalStateException("Contains is not supported, doing a substring match over a text field is a" +
       		" very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
@@ -200,6 +206,37 @@ public class RavenQueryProviderProcessor<T> {
     }
   }
 
+
+  private void visitIsNull(Operation<Boolean> expression) {
+
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+
+    WhereParams whereParams = new WhereParams();
+    whereParams.setFieldName(memberInfo.getPath());
+    whereParams.setValue(null);
+    whereParams.setAnalyzed(true);
+    whereParams.setAllowWildcards(false);
+    whereParams.setNestedPath(memberInfo.isNestedPath());
+    luceneQuery.whereEquals(whereParams);
+  }
+
+  private void visitContainsValue(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    String oldPath = currentPath;
+    currentPath = memberInfo.getPath() + "_Value";
+    Expression< ? > keyArgument = expression.getArg(1);
+    visitExpression(keyArgument);
+    currentPath = oldPath;
+  }
+
+  private void visitContainsKey(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    String oldPath = currentPath;
+    currentPath = memberInfo.getPath() + "_Key";
+    Expression< ? > keyArgument = expression.getArg(1);
+    visitExpression(keyArgument);
+    currentPath = oldPath;
+  }
 
   private void visitCollectionEmpty(Expression< ? > expression, boolean isNegated) {
     if (isNegated) {
