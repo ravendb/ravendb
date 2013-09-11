@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
 		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag);
 		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
-		protected abstract Task<RavenJArray> GetTransformers(int totalCount);
+		protected abstract Task<RavenJArray> GetTransformers(int start);
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
 		protected abstract Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
@@ -50,8 +50,6 @@ namespace Raven.Abstractions.Smuggler
 
 		protected bool EnsuredDatabaseExists;
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
-
-		protected SmugglerMode Mode { get; private set; }
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
@@ -103,7 +101,7 @@ namespace Raven.Abstractions.Smuggler
 			if(incremental)
 				throw new NotSupportedException("Incremental exports are not supported in SL.");
 #endif
-			Mode = await GetMode();
+			await DetectServerSupportedFeatures();
 
 			bool ownedStream = stream == null;
 			try
@@ -131,7 +129,7 @@ namespace Raven.Abstractions.Smuggler
 
 					jsonWriter.WritePropertyName("Docs");
 					jsonWriter.WriteStartArray();
-					if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
+					if (options.OperateOnTypes.HasFlag(ItemType.Documents))
 					{
 						options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
 					}
@@ -139,7 +137,7 @@ namespace Raven.Abstractions.Smuggler
 
 					jsonWriter.WritePropertyName("Attachments");
 					jsonWriter.WriteStartArray();
-					if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
+					if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
 					{
 						options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
 					}
@@ -147,7 +145,7 @@ namespace Raven.Abstractions.Smuggler
 
 					jsonWriter.WritePropertyName("Transformers");
 					jsonWriter.WriteStartArray();
-					if ((options.OperateOnTypes & ItemType.Transformers) == ItemType.Transformers)
+					if (options.OperateOnTypes.HasFlag(ItemType.Transformers))
 					{
 						await ExportTransformers(jsonWriter);
 					}
@@ -372,7 +370,7 @@ namespace Raven.Abstractions.Smuggler
 			if (options == null)
 				throw new ArgumentNullException("options");
 
-			Mode = await GetMode();
+			await DetectServerSupportedFeatures();
 
 			await EnsureDatabaseExists();
 			Stream sizeStream;
@@ -661,14 +659,16 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private async Task<SmugglerMode> GetMode()
+		private async Task DetectServerSupportedFeatures()
 		{
 #if !SILVERLIGHT
 			var serverVersion = await GetVersion();
 			if (string.IsNullOrEmpty(serverVersion))
 			{
-				ShowProgress("Running in legacy mode. Server version: N/A.");
-				return SmugglerMode.Legacy;
+				IsTransformersSupported = false;
+				IsDocsStreamingSupported = false;
+				ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
+				return;
 			}
 
 			var smugglerVersion = FileVersionInfo.GetVersionInfo(typeof(SmugglerApiBase).Assembly.Location).ProductVersion;
@@ -679,20 +679,21 @@ namespace Raven.Abstractions.Smuggler
 			var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
 			var intSmugglerVersion = int.Parse(subSmugglerVersion.Replace(".", string.Empty));
 
-			if (intServerVersion < intSmugglerVersion)
+			if (intServerVersion < 25)
 			{
-				ShowProgress("Running in legacy mode. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
-				return SmugglerMode.Legacy;
+				IsTransformersSupported = false;
+				IsDocsStreamingSupported = false;
+				ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+				return;
 			}
 #endif
-			return SmugglerMode.Normal;
+
+			IsTransformersSupported = true;
+			IsDocsStreamingSupported = true;
 		}
 
-		public enum SmugglerMode
-		{
-			Normal,
-			Legacy
-		}
+		public bool IsTransformersSupported { get; private set; }
+		public bool IsDocsStreamingSupported { get; private set; }
 	}
 }
 #endif
