@@ -77,7 +77,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var lastIndexingTime = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"]).Value;
 			return new IndexStats
 			{
-				Id = (int)id,
+				Id = id,
 				TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
 				IndexingAttempts =
 					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,

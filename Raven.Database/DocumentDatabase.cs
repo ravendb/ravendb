@@ -424,7 +424,15 @@ namespace Raven.Database
 		                                                  return index == null ? null : index.PublicName;
 	                                                  })
 	                                                  .ToArray();
-					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).ToArray();
+					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null)
+                        .Select(x =>
+                            {
+                                var indexInstance = IndexStorage.GetIndexInstance(x.Id);
+                                if (indexInstance != null)
+                                    x.PublicName = indexInstance.PublicName;
+                                return x;
+                            })
+                        .ToArray();
                 });
 
                 if (result.Indexes != null)
