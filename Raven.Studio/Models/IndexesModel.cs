@@ -22,6 +22,7 @@ namespace Raven.Studio.Models
 		private Group selectedGroup;
 		public ObservableCollection<IndexItem> Indexes { get; private set; }
 		public ObservableCollection<Group> GroupedIndexes { get; private set; }
+		private string currentDatabase;
 
 		public IndexesModel()
 		{
@@ -127,6 +128,13 @@ namespace Raven.Studio.Models
 
 		private void CleanGroupIndexes()
 		{
+			if (currentDatabase != ApplicationModel.Database.Value.Name)
+			{
+				currentDatabase = ApplicationModel.Database.Value.Name;
+				GroupedIndexes.Clear();
+				return;
+			}
+
 			foreach (var groupedIndex in GroupedIndexes)
 			{
 				groupedIndex.Items.Clear();
