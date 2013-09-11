@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Bundles.UniqueConstraints
@@ -27,12 +28,12 @@ namespace Raven.Bundles.UniqueConstraints
 
 			foreach (var property in properties)
 			{
-				var propName = ((RavenJValue) property).Value.ToString();
-				var prop = document[propName];
+			    var constraint = Util.GetConstraint(property);
+				var prop = document[constraint.PropName];
 				if (prop == null || prop.Type == JTokenType.Null)
 					continue;
 
-				var prefix = "UniqueConstraints/" + entityName + property + "/";
+                var prefix = "UniqueConstraints/" + entityName + constraint.PropName + "/";
 
 				var array = prop as RavenJArray;
 				var relatedKeys = array != null ? array.Select(p => p.Value<string>()) : new[] {prop.Value<string>()};
@@ -40,7 +41,7 @@ namespace Raven.Bundles.UniqueConstraints
 				foreach (var relatedKey in relatedKeys)
 				{
 					Database.Put(
-						prefix + Util.EscapeUniqueValue(relatedKey),
+                        prefix + Util.EscapeUniqueValue(relatedKey, constraint.CaseInsensitive),
 						null,
 						RavenJObject.FromObject(new {RelatedId = key}),
 						new RavenJObject { { Constants.IsConstraintDocument, true } },
@@ -73,10 +74,10 @@ namespace Raven.Bundles.UniqueConstraints
 
 			foreach (var property in properties)
 			{
-				var propName = property.Value<string>();
+			    var constraint = Util.GetConstraint(property);
 
-				var prefix = "UniqueConstraints/" + entityName + property + "/";
-				var prop = document[propName];
+                var prefix = "UniqueConstraints/" + entityName + constraint.PropName+ "/";
+                var prop = document[constraint.PropName];
 
 				if (prop == null || prop.Type == JTokenType.Null)
 					continue;
@@ -86,7 +87,7 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var checkKey in checkKeys)
 				{
-					var checkDoc = Database.Get(prefix + Util.EscapeUniqueValue(checkKey), transactionInformation);
+                    var checkDoc = Database.Get(prefix + Util.EscapeUniqueValue(checkKey, constraint.CaseInsensitive), transactionInformation);
 
 					if (checkDoc == null)
 						continue;
@@ -94,7 +95,7 @@ namespace Raven.Bundles.UniqueConstraints
 					var checkId = checkDoc.DataAsJson.Value<string>("RelatedId");
 
 					if (checkId != key)
-						invalidFields.Append(property + ", ");
+						invalidFields.Append(constraint.PropName + ", ");
 				}
 			}
 
@@ -132,14 +133,14 @@ namespace Raven.Bundles.UniqueConstraints
 
 			foreach (var property in metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints))
 			{
-				var propName = ((RavenJValue)property).Value.ToString();
+			    var constraint = Util.GetConstraint(property);
 
-				var oldValue = oldJson.Value<string>(propName);
-				if (oldValue == null || oldValue.Equals(document.Value<string>(propName))) continue;
+                var oldValue = oldJson.Value<string>(constraint.PropName);
+                if (oldValue == null || oldValue.Equals(document.Value<string>(constraint.PropName))) continue;
 
                 // Handle Updates in the constraint since it changed
-			    var prefix = "UniqueConstraints/" + entityName + property + "/";
-			    var prop = oldDoc.DataAsJson[propName];
+			    var prefix = "UniqueConstraints/" + entityName + constraint.PropName + "/";
+                var prop = oldDoc.DataAsJson[constraint.PropName];
 				if (prop == null || prop.Type == JTokenType.Null)
 					continue;
 				var array = prop as RavenJArray;
@@ -148,7 +149,7 @@ namespace Raven.Bundles.UniqueConstraints
 
 			    foreach (var deleteKey in deleteKeys)
 			    {
-					Database.Delete(prefix + Util.EscapeUniqueValue(deleteKey), null, transactionInformation);
+                    Database.Delete(prefix + Util.EscapeUniqueValue(deleteKey, constraint.CaseInsensitive), null, transactionInformation);
 			    }
 
 			}

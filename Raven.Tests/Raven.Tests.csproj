@@ -221,6 +221,8 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\MultiGetDoesNotUrlDecodeTwice.cs" />
+    <Compile Include="Bugs\MultiMap\MultiMapWithNullableEnum.cs" />
+    <Compile Include="Bugs\MultiMap\MultiMapWithNullableEnumAndCoalescingOperator.cs" />
     <Compile Include="Bugs\Nullable.cs" />
     <Compile Include="Bugs\ProjectionPersistenceTest.cs" />
     <Compile Include="Bugs\WhenUsingDtcWeMustMakeSureToUpdateTheIndexingAboutNewWorkSoWeWontHaveInfiniteStaleIndexes.cs" />
@@ -611,6 +613,8 @@
     <Compile Include="Issues\RavenDB_1235.cs" />
     <Compile Include="Issues\RavenDB_1251_1.cs" />
     <Compile Include="Issues\RavenDB_1288.cs" />
+    <Compile Include="Issues\RavenDB_1345.cs" />
+    <Compile Include="Issues\RavenDB_1346.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -701,6 +705,7 @@
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\Apo\Lazy.cs" />
     <Compile Include="MailingList\AsyncSpatial.cs" />
+    <Compile Include="MailingList\AutoGenIndexLinqQuery.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BooleanAndDateTimeNullables.cs" />
     <Compile Include="MailingList\BoundingBox.cs" />
@@ -745,6 +750,7 @@
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
+    <Compile Include="MailingList\HeadAsync.cs" />
     <Compile Include="MailingList\Holt.cs" />
     <Compile Include="MailingList\HttpIdTest.cs" />
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
@@ -807,6 +813,7 @@
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\Rudolph.cs" />
+    <Compile Include="MailingList\SessionAlreadyHaveSessionContext.cs" />
     <Compile Include="MailingList\ShardedFacets.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\SnapshotBug.cs" />
@@ -1193,6 +1200,7 @@
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
+    <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Storage\TransactionalStorageTestBase.cs" />
     <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />

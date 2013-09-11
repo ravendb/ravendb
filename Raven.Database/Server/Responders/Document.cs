@@ -98,11 +98,18 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
+			var transactionInformation = GetRequestTransaction(context);
+
+			var nonAuthoritativeInformationBehavior =
+				Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(
+					transactionInformation, docId);
+          
 			Database.TransactionalStorage.Batch(
 				_ => // we are running this here to ensure transactional safety for the two operations
 				{
-					var transactionInformation = GetRequestTransaction(context);
 					var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
+					if (nonAuthoritativeInformationBehavior != null)
+						nonAuthoritativeInformationBehavior(documentMetadata);
 					if (documentMetadata == null)
 					{
 						context.SetStatusToNotFound();

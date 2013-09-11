@@ -241,6 +241,7 @@ namespace Raven.Tests.MailingList
                     }
                 }
 
+                int count;
                 // Warm-up
                 using (var session = store.OpenSession())
                 {
@@ -253,7 +254,10 @@ namespace Raven.Tests.MailingList
                     var result = query.OrderBy(x => x.CreatedDate).ToList();
 
                     Assert.True(result.Count > 0);
+                    count = query.Count();
                 }
+
+
 
                 var orderedList = list.OrderBy(x => x.CreatedDate).ToList();
                 using (var session = store.OpenSession())
@@ -268,8 +272,7 @@ namespace Raven.Tests.MailingList
 
                     var streamQuery = query
                                     .OrderBy(x => x.CreatedDate)
-                                    .As<User>()
-									.Take(10*1000);
+                                    .As<User>();
 
                     var enumerator = session.Advanced.Stream(streamQuery);
                     var index = 0;
@@ -285,6 +288,7 @@ namespace Raven.Tests.MailingList
                             );
                         index++;
                     }
+                    Assert.Equal(index, count);
                 }
             }
         }
@@ -309,7 +313,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-    
+
     }
 
 }

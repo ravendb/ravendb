@@ -105,9 +105,11 @@ namespace Raven.Database.Indexing
 		{
 			if (indexName == null) throw new ArgumentNullException("indexName");
 
+			var fixedName = indexDefinitionStorage.FixupIndexName(indexName);
+
 			startupLog.Debug("Loading saved index {0}", indexName);
 
-			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
+			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(fixedName);
 			if (indexDefinition == null)
 				return;
 
@@ -122,7 +124,7 @@ namespace Raven.Database.Indexing
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
-					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
+					indexImplementation = CreateIndexImplementation(fixedName, indexDefinition, luceneDirectory);
 
 					var simpleIndex = indexImplementation as SimpleIndex; // no need to do this on m/r indexes, since we rebuild them from saved data anyway
 					if (simpleIndex != null && keysToDeleteAfterRecovery != null)
@@ -131,17 +133,17 @@ namespace Raven.Database.Indexing
 						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
 					}
 
-					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
+					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
-						IndexStats indexStats = accessor.Indexing.GetIndexStats(indexName);
+						IndexStats indexStats = accessor.Indexing.GetIndexStats(fixedName);
 						if (indexStats != null)
 						{
 							indexImplementation.Priority = indexStats.Priority;
 						}
 
 
-						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
+						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", fixedName);
 						if (read == null)
 							return;
 
@@ -162,17 +164,17 @@ namespace Raven.Database.Indexing
 						recoveryTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
 
-						keysToDeleteAfterRecovery = TryRecoveringIndex(indexName, indexDefinition, luceneDirectory);
+						keysToDeleteAfterRecovery = TryRecoveringIndex(fixedName, indexDefinition, luceneDirectory);
 					}
 					else
 					{
 						resetTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, forcibly resetting index", e);
-						TryResettingIndex(indexName, indexDefinition);
+						TryResettingIndex(fixedName, indexDefinition);
 					}
 				}
 			}
-			indexes.TryAdd(indexName, indexImplementation);
+			indexes.TryAdd(fixedName, indexImplementation);
 		}
 
 		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
@@ -669,16 +671,16 @@ namespace Raven.Database.Indexing
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
-			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
-			log.Debug("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
+			var fixedName = indexDefinitionStorage.FixupIndexName(indexDefinition.Name);
+			log.Debug("Creating index {0} with encoded name {1}", indexDefinition.Name, fixedName);
 
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 			AssertAnalyzersValid(indexDefinition);
 
-			indexes.AddOrUpdate(indexDefinition.Name, n =>
+			indexes.AddOrUpdate(fixedName, n =>
 			{
-				var directory = OpenOrCreateLuceneDirectory(indexDefinition, encodedName);
-				return CreateIndexImplementation(encodedName, indexDefinition, directory);
+				var directory = OpenOrCreateLuceneDirectory(indexDefinition, fixedName);
+				return CreateIndexImplementation(fixedName, indexDefinition, directory);
 			}, (s, index) => index);
 		}
 
@@ -940,6 +942,7 @@ namespace Raven.Database.Indexing
 				var autoIndexesSortedByLastQueryTime =
 					(from index in indexes
 					 let stats = accessor.Indexing.GetIndexStats(index.Key)
+					 where stats != null
 					 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
 					 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
 					 orderby lastQueryTime
@@ -1034,9 +1037,6 @@ namespace Raven.Database.Indexing
 
 		private void HandleActiveIndex(UnusedIndexState thisItem, double age, double lastQuery, IStorageActionsAccessor accessor, double timeToWaitForIdle)
 		{
-			if (age < timeToWaitForIdle)
-				return; // there isn't even a point in checking here further
-
 			if (age < (timeToWaitForIdle * 2.5) && lastQuery < (1.5 * timeToWaitForIdle))
 				return;
 

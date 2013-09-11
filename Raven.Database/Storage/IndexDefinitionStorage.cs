@@ -92,7 +92,7 @@ namespace Raven.Database.Storage
 
                 var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
 
-	            name = FixupIndexName(name, path);
+	            name = FixupIndexName(name);
 
                 transactionalStorage.Batch(actions =>
                 {
@@ -288,7 +288,7 @@ namespace Raven.Database.Storage
 
         private string GetIndexSourcePath(string name)
         {
-			var fixedName = FixupIndexName(name, path);
+			var fixedName = FixupIndexName(name);
 			return Path.Combine(path, MonoHttpUtility.UrlEncode(fixedName));
         }
 

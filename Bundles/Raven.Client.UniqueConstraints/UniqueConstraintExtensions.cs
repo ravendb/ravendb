@@ -20,20 +20,13 @@ namespace Raven.Client.UniqueConstraints
 		{
 			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
-			MemberExpression body;
-			if (keySelector.Body is MemberExpression)
-			{
-				body = ((MemberExpression)keySelector.Body);
-			}
-			else
-			{
-				var op = ((UnaryExpression)keySelector.Body).Operand;
-				body = ((MemberExpression)op);
-			}
-			var propertyName = body.Member.Name;
+			var body = GetMemberExpression(keySelector);
+		    var propertyName = body.Member.Name;
+            var att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(body.Member, typeof(UniqueConstraintAttribute));
+
 
 			var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-			               Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value);
+                           Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, att.CaseInsensitive);
 			var constraintDoc = session.Include("RelatedId").Load<RavenJObject>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
@@ -42,8 +35,23 @@ namespace Raven.Client.UniqueConstraints
 			return string.IsNullOrEmpty(id) ? default(T) : session.Load<T>(id);
 		}
 
+	    private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector)
+	    {
+	        MemberExpression body;
+	        if (keySelector.Body is MemberExpression)
+	        {
+	            body = ((MemberExpression) keySelector.Body);
+	        }
+	        else
+	        {
+	            var op = ((UnaryExpression) keySelector.Body).Operand;
+	            body = ((MemberExpression) op);
+	        }
+	        return body;
+	    }
 
-		public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
+
+	    public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
 		{
 			var properties = UniqueConstraintsTypeDictionary.GetProperties(typeof (T));
 			T[] loadedDocs = null;
@@ -51,10 +59,11 @@ namespace Raven.Client.UniqueConstraints
 
 			var constraintsIds = from property in properties
 			                     let propertyValue = property.GetValue(entity, null)
+                                 let att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(property, typeof(UniqueConstraintAttribute))
 			                     where propertyValue != null
 			                     select
 				                     "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() +
-				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString());
+				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString(),att.CaseInsensitive);
 
 			var constraintDocs = session.Include<ConstraintDocument>(x => x.RelatedId).Load(constraintsIds.ToArray());
 
@@ -75,11 +84,12 @@ namespace Raven.Client.UniqueConstraints
 		{
 			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
-			var body = (MemberExpression) keySelector.Body;
+            var body = GetMemberExpression(keySelector);
 			var propertyName = body.Member.Name;
+		    var att = (UniqueConstraintAttribute) Attribute.GetCustomAttribute(body.Member, typeof (UniqueConstraintAttribute));
 
-			var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-			               Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value);
+		    var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
+			               Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value,att.CaseInsensitive);
 
 			return session.Include<ConstraintDocument>(x => x.RelatedId).LoadAsync(uniqueId)
 			              .ContinueWith(x =>
@@ -101,8 +111,9 @@ namespace Raven.Client.UniqueConstraints
 
 				var constraintsIds = from property in properties
 				                     let propertyValue = property.GetValue(entity, null)
+                                     let att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(property, typeof(UniqueConstraintAttribute))
 				                     where propertyValue != null
-				                     select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString());
+				                     select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString(), att.CaseInsensitive);
 
 				return session.Include<ConstraintDocument>(x => x.RelatedId).LoadAsync(constraintsIds.ToArray())
 				              .ContinueWith(task =>

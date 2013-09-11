@@ -655,14 +655,23 @@ namespace Raven.Client.Indexes
 					var expression = ((UnaryExpression)left).Operand;
 					if (expression.Type.IsEnum() == false)
 						return;
-					var constantExpression = right as ConstantExpression;
+
+					var constantExpression = SkipConvertExpressions(right) as ConstantExpression;
 					if (constantExpression == null)
 						return;
 					left = expression;
-					right = convention.SaveEnumsAsIntegers ?
-						Expression.Constant((int)constantExpression.Value) :
-						Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
-					break;
+					if (constantExpression.Value == null)
+					{
+						right = Expression.Constant(null);
+					}
+					else
+					{
+						right = convention.SaveEnumsAsIntegers
+							        ? Expression.Constant((int) constantExpression.Value)
+							        : Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+
+					}
+				break;
 			}
 
 			while (true)
@@ -676,6 +685,18 @@ namespace Raven.Client.Indexes
 					default:
 						return;
 				}
+			}
+		}
+
+		private Expression SkipConvertExpressions(Expression expression)
+		{
+			switch (expression.NodeType)
+			{
+				case ExpressionType.ConvertChecked:
+				case ExpressionType.Convert:
+					return SkipConvertExpressions(((UnaryExpression) expression).Operand);
+				default:
+					return expression;
 			}
 		}
 
@@ -999,7 +1020,7 @@ namespace Raven.Client.Indexes
 			if (type.Assembly() == typeof(object).Assembly()) // mscorlib
 				return true;
 
-			if (type.Assembly() == typeof (HashSet<>).Assembly()) // System.Core
+			if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core
 				return true;
 
 			if (type.Assembly() == typeof(RavenJObject).Assembly())
@@ -1298,6 +1319,13 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitMember(MemberExpression node)
 		{
+
+			if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null && node.Member.Name == "Value")
+			{
+				Visit(node.Expression);
+				return node; // we don't have nullable type on the server side, we can safely ignore this.
+			}
+
 			OutMember(node.Expression, node.Member, node.Expression == null ? node.Type : node.Expression.Type);
 			return node;
 		}
@@ -1426,7 +1454,7 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitMethodCall(MethodCallExpression node)
 		{
 			var constantExpression = node.Object as ConstantExpression;
-			if (constantExpression != null && node.Type == typeof(Delegate)) 
+			if (constantExpression != null && node.Type == typeof(Delegate))
 			{
 				var methodInfo = constantExpression.Value as MethodInfo;
 				if (methodInfo != null && methodInfo.DeclaringType == typeof(AbstractCommonApiForIndexesAndTransformers))// a delegate call
@@ -1488,7 +1516,7 @@ namespace Raven.Client.Indexes
 			}
 			else if (node.Method.IsStatic && IsExtensionMethod(node) == false)
 			{
-				if (node.Method.DeclaringType == typeof (Enumerable) && node.Method.Name == "Cast")
+				if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
 				{
 					Out("new Raven.Abstractions.Linq.DynamicList(");
 					Visit(node.Arguments[0]);

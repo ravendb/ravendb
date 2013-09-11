@@ -51,11 +51,21 @@ namespace Raven.Client.Connection
 			var metadata = (RavenJObject) doc["@metadata"];
 			doc.Remove("@metadata");
 			var key = Extract(metadata, "@id", string.Empty);
+            if (string.IsNullOrEmpty(key))
+            {
+                // projection, it seems.
+                return new JsonDocument
+                {
+                    DataAsJson = doc,
+                    LastModified = SystemTime.UtcNow,
+                };
+            }
 
 			var lastModified = GetLastModified(metadata);
 
 			var etag = Extract(metadata, "@etag", Etag.Empty, (string g) => HttpExtensions.EtagHeaderToEtag(g));
 			var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
+
 			var jsonDocument = new JsonDocument
 			{
 				Key = key,

@@ -183,7 +183,7 @@ task MeasurePerformance -depends Compile {
 	}
 }
 
-task TestSilverlight -depends Compile, CopyServer {
+task TestSilverlight -depends Compile, CopyServer  {
 	try
 	{
 		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
@@ -194,7 +194,9 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 	finally
 	{
-		Stop-Process -InputObject $process
+		if ($process -ne $null) {
+			Stop-Process -InputObject $process
+		}
 	}
 }
 
@@ -466,6 +468,7 @@ task DoRelease -depends Compile, `
 	CopyInstaller, `
 	SignInstaller, `
 	CreateNugetPackages, `
+	PublishSymbolSources, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
 }
@@ -622,109 +625,26 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
-	$nugetVersion = "$version.$env:buildlabel"
+	$global:nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$nugetVersion += "-Unstable"
+		$global:nugetVersion += "-Unstable"
 	}
 	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 
 		$nuspec = [xml](Get-Content $_.FullName)
-		$nuspec.package.metadata.version = $nugetVersion
+		$nuspec.package.metadata.version = $global:nugetVersion
 		$nuspec | Select-Xml '//dependency' |% {
 			if($_.Node.Id.StartsWith('RavenDB')){
-				$_.Node.Version = "[$nugetVersion]"
+				$_.Node.Version = "[$global:nugetVersion]"
 			}
 		}
 		$nuspec.Save($_.FullName);
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
 	
-	# Package the symbols package
-	$packages | ForEach-Object { 
-		$dirName = [io.path]::GetFileNameWithoutExtension($_)
-		New-Item $nuget_dir\$dirName\src -Type directory | Out-Null
-		
-		$srcDirName = $dirName
-		$srcDirName = $srcDirName.Replace("RavenDB.", "Raven.")
-		$srcDirName = $srcDirName.Replace(".AspNetHost", ".Web")
-		$srcDirName = $srcDirName -replace "Raven.Client$", "Raven.Client.Lightweight"
-		$srcDirName = $srcDirName.Replace("Raven.Bundles.", "Bundles\Raven.Bundles.")
-		$srcDirName = $srcDirName.Replace("Raven.Client.Authorization", "Bundles\Raven.Client.Authorization")
-		$srcDirName = $srcDirName.Replace("Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints")
-		$srcDirName = $srcDirName.Replace("Raven.Embedded", "Raven.Client.Embedded")
-		Write-Host $srcDirName
-		$csprojFile = $srcDirName -replace ".*\\", ""
-		$csprojFile += ".csproj"
-		
-		Write-Host .csprojFile $csprojFile -Fore Yellow
-		Write-Host Copy Linked Files of $srcDirName -Fore Yellow
-		
-		[xml]$csProj = Get-Content $srcDirName\$csprojFile
-		Write-Host $srcDirName\$csprojFile -Fore Green
-		foreach ($compile in $csProj.Project.ItemGroup.Compile){
-	        if ($compile.Link.Length -gt 0) {
-                $fileToCopy = $compile.Include
-                $copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
-                
-				Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
-				Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
-				New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
-                Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
-            }
-		}
-		
-		Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
-			$indexOf = $_.FullName.IndexOf($srcDirName)
-			$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
-			$copyTo = "$nuget_dir\$dirName\src\$copyTo"
-			New-Item -ItemType File -Path $copyTo -Force | Out-Null
-			Copy-Item $_.FullName $copyTo -Recurse -Force
-		}
-		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
-		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
-		
-		foreach ($projectReference in $csProj.Project.ItemGroup.ProjectReference){
-			Write-Host "Visiting project $($projectReference.Include) of $dirName" -Fore Green
-	        if ($projectReference.Include.Length -gt 0) {
-			
-				$projectPath = $projectReference.Include
-				Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
-
-                $srcDirName2 = [io.path]::GetFileNameWithoutExtension($projectPath)
-
-				[xml]$global:csProj2;
-				try {
-					[xml]$global:csProj2 = Get-Content "$srcDirName2\$projectPath"
-				} catch {
-					$projectPath = $projectPath.Replace("..\..\", "..\")
-					Write-Host "Try to include also linked files of $($projectReference.Include)" -Fore Green
-					[xml]$global:csProj2 = Get-Content "$srcDirName2\$projectPath"
-				}
-				
-				foreach ($compile in $global:csProj2.Project.ItemGroup.Compile){
-					if ($compile.Link.Length -gt 0) {
-						$fileToCopy = ""
-						if ($srcDirName2.Contains("Bundles\") -and !$srcDirName2.EndsWith("\..")) {
-							$srcDirName2 += "\.."
-						}
-						$fileToCopy = $compile.Include;
-						$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
-						
-						Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
-						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
-						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
-						Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
-					}
-				}  
-				
-			}
-		}
-
-		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
-	}
-		
+	
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
@@ -741,16 +661,171 @@ task CreateNugetPackages -depends Compile {
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey -Source $sourceFeed }
+			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed }
 		}
+		
+	}
+	else {
+		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+	}
+}
+
+task PublishSymbolSources -depends CreateNugetPackages {
+
+	$nuget_dir = "$build_dir\NuGet"
+	
+	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
+	
+	# Package the symbols package
+	$packages | ForEach-Object { 
+		$dirName = [io.path]::GetFileNameWithoutExtension($_)
+		Remove-Item $nuget_dir\$dirName\src -Force -Recurse -ErrorAction SilentlyContinue
+		New-Item $nuget_dir\$dirName\src -Type directory | Out-Null
+		
+		$srcDirName1 = $dirName
+		$srcDirName1 = $srcDirName1.Replace("RavenDB.", "Raven.")
+		$srcDirName1 = $srcDirName1.Replace(".AspNetHost", ".Web")
+		$srcDirName1 = $srcDirName1 -replace "Raven.Client$", "Raven.Client.Lightweight"
+		$srcDirName1 = $srcDirName1.Replace("Raven.Bundles.", "Bundles\Raven.Bundles.")
+		$srcDirName1 = $srcDirName1.Replace("Raven.Client.Authorization", "Bundles\Raven.Client.Authorization")
+		$srcDirName1 = $srcDirName1.Replace("Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints")
+		$srcDirName1 = $srcDirName1.Replace("Raven.Embedded", "Raven.Client.Embedded")
+		
+		$srcDirNames = @($srcDirName1)
+		if ($dirName -eq "RavenDB.Client") {
+			$srcDirNames += @("Raven.Client.Silverlight")
+		}
+		elseif ($dirName -eq "RavenDB.Server") {
+			$srcDirNames += @("Raven.Smuggler")
+		}		
+		
+        foreach ($srcDirName in $srcDirNames) {
+			Write-Host $srcDirName
+			$csprojFile = $srcDirName -replace ".*\\", ""
+			$csprojFile += ".csproj"
+		
+			Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
+				$indexOf = $_.FullName.IndexOf($srcDirName)
+				$copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
+				$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+                
+				New-Item -ItemType File -Path $copyTo -Force | Out-Null
+				Copy-Item $_.FullName $copyTo -Recurse -Force
+			}
+
+			Write-Host .csprojFile $csprojFile -Fore Yellow
+			Write-Host Copy Linked Files of $srcDirName -Fore Yellow
+			
+			[xml]$csProj = Get-Content $srcDirName\$csprojFile
+			Write-Host $srcDirName\$csprojFile -Fore Green
+			foreach ($compile in $csProj.Project.ItemGroup.Compile){
+				if ($compile.Link.Length -gt 0) {
+					$fileToCopy = $compile.Include
+					$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
+					
+					
+						Write-Host "Copy $srcDirName\$fileToCopy" -ForegroundColor Magenta
+						Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+					
+					if ($fileToCopy.EndsWith("\*.cs")) {
+						#Get-ChildItem "$srcDirName\$fileToCopy" | ForEach-Object {
+						#	Copy-Item $_.FullName "$nuget_dir\$dirName\src\$copyToPath".Replace("\*.cs", "\") -Recurse -Force
+						#}
+					} else {
+						New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
+						Copy-Item "$srcDirName\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+					}
+				}
+			}
+			
+			
+			foreach ($projectReference in $csProj.Project.ItemGroup.ProjectReference){
+				Write-Host "Visiting project $($projectReference.Include) of $dirName" -Fore Green
+				if ($projectReference.Include.Length -gt 0) {
+				
+					$projectPath = $projectReference.Include
+					Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
+
+					$srcDirName2 = [io.path]::GetFileNameWithoutExtension($projectPath)
+
+					Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
+						$indexOf = $_.FullName.IndexOf($srcDirName2)
+						$copyTo = $_.FullName.Substring($indexOf + $srcDirName2.Length + 1)
+						$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+						New-Item -ItemType File -Path $copyTo -Force | Out-Null
+						Copy-Item $_.FullName $copyTo -Recurse -Force
+					}
+					
+					[xml]$global:csProj2;
+					try {
+						[xml]$global:csProj2 = Get-Content "$srcDirName2\$projectPath"
+					} catch {
+						$projectPath = $projectPath.Replace("..\..\", "..\")
+						Write-Host "Try to include also linked files of $($projectReference.Include)" -Fore Green
+						[xml]$global:csProj2 = Get-Content "$srcDirName2\$projectPath"
+					}
+					
+					foreach ($compile in $global:csProj2.Project.ItemGroup.Compile){
+						if ($compile.Link.Length -gt 0) {
+							$fileToCopy = ""
+							if ($srcDirName2.Contains("Bundles\") -and !$srcDirName2.EndsWith("\..")) {
+								$srcDirName2 += "\.."
+							}
+							$fileToCopy = $compile.Include;
+							$copyToPath = $fileToCopy -replace "(\.\.\\)*", ""
+							
+							if ($global:isDebugEnabled) {
+								Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
+								Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
+							}
+							New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
+							Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+						}
+					}  
+					
+				}
+			}
+		}
+		
+		Get-ChildItem "$nuget_dir\$dirName\*.dll" -recurse -exclude Raven* | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+		}
+		Get-ChildItem "$nuget_dir\$dirName\*.pdb" -recurse -exclude Raven* | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+		}
+		Get-ChildItem "$nuget_dir\$dirName\*.xml" -recurse | ForEach-Object {
+			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
+		}
+		
+		Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
+		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
+		
+		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
+	}
+	
+	# Upload packages
+	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	$sourceFeed = "https://nuget.org/"
+	
+	if ($global:uploadMode -eq "Vnext3") {
+		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
+		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
+	}
+	
+	if ( (Test-Path $accessPath) ) {
+		$accessKey = Get-Content $accessPath
+		$accessKey = $accessKey.Trim()
 		
 		$packages | ForEach-Object {
 			try {
-				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet
+				Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
+				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
 			} catch {
 				Write-Host $error[0]
+				$LastExitCode = 0
 			}
 		}
+		
 	}
 	else {
 		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow

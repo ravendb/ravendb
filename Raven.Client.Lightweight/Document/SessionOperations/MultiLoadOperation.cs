@@ -64,7 +64,7 @@ namespace Raven.Client.Document.SessionOperations
 			for (var i = 0; i < includeResults.Length; i++)
 			{
 				var include = includeResults[i];
-				var entityType = this.includes.Length > i ? this.includes[i].Value : typeof(object);
+				var entityType = includes.Length > i ? includes[i].Value : typeof(object);
 				sessionOperations.TrackEntity(entityType, include);
 			}
 
@@ -78,7 +78,7 @@ namespace Raven.Client.Document.SessionOperations
 					sessionOperations.RegisterMissing(ids[i]);
 			}
 
-			var includePaths = this.includes != null ? this.includes.Select(x => x.Key).ToArray() : null;
+			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
 			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includePaths);
 
 			return finalResults;

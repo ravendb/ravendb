@@ -152,7 +152,7 @@ namespace Raven.Client.Embedded
 			return jsonDocument;
 		}
 
-	    /// <summary>
+		/// <summary>
 	    /// Retrieves the document with the specified key and performs the transform operation specified on that document
 	    /// </summary>
 	    /// <param name="key">The key</param>
@@ -465,7 +465,8 @@ namespace Raven.Client.Embedded
 		/// <param name="indexEntriesOnly">Include index entries</param>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
+            if(query.PageSizeSet)
+			    query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
 			// metadataOnly is not supported for embedded

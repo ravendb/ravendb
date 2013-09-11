@@ -103,8 +103,7 @@ namespace Raven.Client.Connection
 		/// <value>The operations headers.</value>
 		public NameValueCollection OperationsHeaders
 		{
-			get;
-			set;
+			get; set;
 		}
 
 		/// <summary>
@@ -115,7 +114,6 @@ namespace Raven.Client.Connection
 		public JsonDocument Get(string key)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
-
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
@@ -191,12 +189,12 @@ namespace Raven.Client.Connection
 		/// <param name="serverUrl">The server URL.</param>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		public JsonDocument DirectGet(string serverUrl, string key, string transform = null)
+		public JsonDocument DirectGet(string serverUrl, string key, string transformer = null)
 		{
-			if (key.Length > 127)
+			if (key.Length > 127 || string.IsNullOrEmpty(transformer) == false)
 			{
 				// avoid hitting UrlSegmentMaxLength limits in Http.sys
-				var multiLoadResult = DirectGet(new string[] {key}, serverUrl, new string[0], null, new Dictionary<string, RavenJToken>(), false);
+				var multiLoadResult = DirectGet(new[] {key}, serverUrl, new string[0], transformer, new Dictionary<string, RavenJToken>(), false);
 				var result = multiLoadResult.Results.FirstOrDefault();
 				if (result == null)
 					return null;
@@ -205,8 +203,6 @@ namespace Raven.Client.Connection
 
 			var metadata = new RavenJObject();
 		    var actualUrl = serverUrl + "/docs/" + Uri.EscapeDataString(key);
-		    if (!string.IsNullOrEmpty(transform))
-		        actualUrl += "?=" + Uri.EscapeDataString(transform);
 
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1325,7 +1321,7 @@ namespace Raven.Client.Connection
 	            Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList()
 	        };
 
-            if(String.IsNullOrEmpty(transformer)) {
+            if(string.IsNullOrEmpty(transformer)) {
                 multiLoadResult.Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase))).ToList();
 			} 
             else

@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reactive.Linq;
-using Orders;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Tests;
-using Raven.Tests.Issues;
+using Raven.Tests.Indexes;
+using Raven.Tests.Notifications;
+using Raven.Tests.Track;
 
 namespace Raven.Tryouts
 {
@@ -13,24 +10,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-            using (var s = new DocumentStore
-            {
-                Url = "http://localhost.fiddler:8080",
-                DefaultDatabase = "test"
-            }.Initialize())
-            {
-                (from change in s.Changes().ForDocumentsStartingWith("companies/")
-                 where change.Type == DocumentChangeTypes.Put
-                 select change.Id)
-                 .Subscribe(state => Console.WriteLine("Item changed: " + state));
-
-                while (true)
-                {
-                    var cmd = Console.ReadLine();
-                    GC.Collect(2);
-                    GC.WaitForPendingFinalizers();
-                }
-            }
+			for (int i = 0; i < 100; i++)
+			{
+				Console.WriteLine(i);
+                using (var x = new RavenDB_1280())
+				{
+					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();
+				}
+			}
 			
 		}
 	}

@@ -143,10 +143,11 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 
     public static bool IsEnum(this Type type)
     {
+	    type = Nullable.GetUnderlyingType(type) ?? type;
 #if !NETFX_CORE
-      return type.IsEnum;
+		return type.IsEnum;
 #else
-      return type.GetTypeInfo().IsEnum;
+		return type.GetTypeInfo().IsEnum;
 #endif
     }
 

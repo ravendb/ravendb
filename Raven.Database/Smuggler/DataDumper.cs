@@ -62,9 +62,9 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		protected override Task<RavenJArray> GetTransformers(int totalCount)
+		protected override Task<RavenJArray> GetTransformers(int start)
 		{
-			return new CompletedTask<RavenJArray>(_database.GetTransformers(totalCount, SmugglerOptions.BatchSize));
+			return new CompletedTask<RavenJArray>(_database.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
 		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
