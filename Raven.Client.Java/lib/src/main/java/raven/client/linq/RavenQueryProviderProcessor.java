@@ -145,10 +145,27 @@ public class RavenQueryProviderProcessor<T> {
         // we have root node - just skip it
         return;
       } else {
-        visitMemberAccess((Constant<?>) expression, true);
+        visitConstant((Constant<?>) expression, true);
       }
+    } else if (expression instanceof Path) {
+      visitMemberAccess((Path<?>)expression);
     } else {
       throw new IllegalArgumentException("Expression is not supported:" + expression);
+    }
+  }
+
+  private void visitMemberAccess(Path< ? > expression) {
+    if (expression.getType().equals(Boolean.class)) {
+      ExpressionInfo memberInfo = getMember(expression);
+
+      WhereParams whereParams = new WhereParams();
+      whereParams.setFieldName(memberInfo.getPath());
+      whereParams.setValue(true);
+      whereParams.setAnalyzed(true);
+      whereParams.setAllowWildcards(false);
+      luceneQuery.whereEquals(whereParams);
+    } else {
+      throw new IllegalStateException("Path type is not supported: " + expression + " " + expression.getType());
     }
   }
 
@@ -178,6 +195,8 @@ public class RavenQueryProviderProcessor<T> {
         if (subOp1.getOperator().equals(Ops.COL_IS_EMPTY)) {
           visitCollectionEmpty(subOp1.getArg(0), false);
           return;
+        } else if (subOp1.getOperator().equals(Ops.STRING_IS_EMPTY)) {
+          visitStringEmpty(subOp1.getArg(0), true);
         }
       }
 
@@ -189,7 +208,6 @@ public class RavenQueryProviderProcessor<T> {
       luceneQuery.closeSubclause();
     } else if (expression.getOperator().equals(Ops.COL_IS_EMPTY)) {
       visitCollectionEmpty(expression.getArg(0), true);
-      return ;
     } else if (expression.getOperator().equals(Ops.IN)) {
       visitContains(expression);
     } else if (expression.getOperator().equals(Ops.CONTAINS_KEY)) {
@@ -198,6 +216,8 @@ public class RavenQueryProviderProcessor<T> {
       visitContainsValue(expression);
     } else if (expression.getOperator().equals(Ops.IS_NULL)) {
       visitIsNull(expression);
+    } else if (expression.getOperator().equals(Ops.STRING_IS_EMPTY)) {
+      visitStringEmpty(expression.getArg(0), false);
     } else if (expression.getOperator().equals(Ops.STRING_CONTAINS)) {
       throw new IllegalStateException("Contains is not supported, doing a substring match over a text field is a" +
       		" very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
@@ -257,6 +277,26 @@ public class RavenQueryProviderProcessor<T> {
       luceneQuery.closeSubclause();
     }
 
+  }
+
+  public void visitStringEmpty(Expression<?> expression, boolean isNegated) {
+
+    if (isNegated) {
+      luceneQuery.openSubclause();
+      luceneQuery.where("*:*");
+      luceneQuery.andAlso();
+      luceneQuery.negateNext();
+    }
+    ExpressionInfo memberInfo = getMember(expression);
+    luceneQuery.openSubclause();
+    luceneQuery.whereEquals(memberInfo.getPath(), Constants.NULL_VALUE, false);
+    luceneQuery.orElse();
+    luceneQuery.whereEquals(memberInfo.getPath(), Constants.EMPTY_STRING, false);
+    luceneQuery.closeSubclause();
+
+    if (isNegated) {
+      luceneQuery.closeSubclause();
+    }
   }
 
   private void visitAndAlso(Operation<Boolean> andAlso) {
@@ -519,7 +559,7 @@ public class RavenQueryProviderProcessor<T> {
     currentPath = oldPath;
   }
 
-  private void visitMemberAccess(Constant< ? > expression, boolean boolValue) {
+  private void visitConstant(Constant< ? > expression, boolean boolValue) {
     //TODO: handle non-strings
 
     if (String.class.equals(expression.getType())) {
@@ -597,7 +637,10 @@ public class RavenQueryProviderProcessor<T> {
     } else if (operatorId.equals(LinqOps.Query.COUNT.getId())) {
       visitExpression(expression.getArg(0));
       visitCount();
-      //TODO: all, any, count, long count, distinct, order by, then by, then by descinding, order by descending
+    } else if (operatorId.equals(LinqOps.Query.LONG_COUNT.getId())) {
+      visitExpression(expression.getArg(0));
+      visitLongCount();
+      //TODO: all, any, distinct, order by, then by, then by descinding, order by descending
     } else if (operatorId.equals(LinqOps.Query.ORDER_BY.getId())) {
       visitExpression(expression.getArg(0));
       Expression< ? > orderSpecExpression = expression.getArg(1);
@@ -904,7 +947,7 @@ public class RavenQueryProviderProcessor<T> {
     case FIRST:
       return finalQuery.first();
     case FIRST_OR_DEFAULT:
-      return finalQuery.first();
+      return finalQuery.firstOrDefault();
     case SINGLE:
       list = finalQuery.toList();
       if (list.size() != 1) {
